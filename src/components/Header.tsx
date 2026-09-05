@@ -44,31 +44,33 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <>
-      <header className="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-              <BookOpen className="w-5 h-5" />
+      <header className="bg-slate-900/95 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md shadow-md">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+          {/* App Brand & Title */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold text-white tracking-tight leading-none">
-                  Accounting Double-Entry Assistant
+                <h1 className="text-sm sm:text-base md:text-lg font-bold text-white tracking-tight leading-tight truncate">
+                  <span className="xs:hidden">Accounting AI</span>
+                  <span className="hidden xs:inline">Accounting Assistant</span>
                 </h1>
-                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
+                <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 shrink-0">
                   <ShieldCheck className="w-3.5 h-3.5" />
                   SFRS(I) & IFRS Dual Compliant
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-0.5 hidden sm:block truncate">
                 Universal Accounting Engine • Sourced from ASC Singapore & IASB (Singapore DD/MM/YYYY)
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* Frankfurter API Indicator */}
-            <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/80 text-slate-300 text-xs font-medium" title="Live foreign exchange rates powered by Frankfurter API (ECB)">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/80 text-slate-300 text-xs font-medium" title="Live foreign exchange rates powered by Frankfurter API (ECB)">
               <Globe className="w-3.5 h-3.5 text-blue-400" />
               <span>ECB FX Live</span>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -76,12 +78,12 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Font Size Adjuster (Bigger Default with Standard, Large, XL Options) */}
             <div className="flex items-center bg-slate-800/90 p-0.5 rounded-lg border border-slate-700/80 text-xs shadow-inner" title="Adjust application font size">
-              <span className="px-1.5 text-slate-400 hidden sm:inline-flex items-center">
+              <span className="px-1 text-slate-400 hidden md:inline-flex items-center">
                 <Type className="w-3 h-3 text-slate-400 mr-0.5" />
               </span>
               <button
                 onClick={() => onFontSizeChange('normal')}
-                className={`px-2 py-1 rounded-md font-semibold transition-all ${
+                className={`px-1.5 sm:px-2 py-1 rounded font-semibold text-[11px] sm:text-xs transition-all ${
                   fontSize === 'normal'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -92,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
               <button
                 onClick={() => onFontSizeChange('large')}
-                className={`px-2.5 py-1 rounded-md font-semibold transition-all ${
+                className={`px-1.5 sm:px-2.5 py-1 rounded font-semibold text-[11px] sm:text-xs transition-all ${
                   fontSize === 'large'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -103,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
               <button
                 onClick={() => onFontSizeChange('xl')}
-                className={`px-2 py-1 rounded-md font-semibold transition-all ${
+                className={`px-1.5 sm:px-2 py-1 rounded font-semibold text-[11px] sm:text-xs transition-all ${
                   fontSize === 'xl'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
@@ -121,22 +123,25 @@ export const Header: React.FC<HeaderProps> = ({
                 setTempModel(modelName);
                 setShowSettings(true);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
                 apiKey
                   ? 'bg-indigo-950/80 text-indigo-300 border-indigo-700/80 hover:bg-indigo-900/80'
                   : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
               }`}
+              title={apiKey ? `Connected: ${getModelDisplayName(modelName)}` : 'Connect Gemini API'}
             >
-              <Key className="w-3.5 h-3.5" />
+              <Key className="w-3.5 h-3.5 shrink-0" />
               {apiKey ? (
                 <span className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="font-semibold">{getModelDisplayName(modelName)}</span>
+                  <span className="font-semibold hidden sm:inline">{getModelDisplayName(modelName)}</span>
+                  <span className="font-semibold sm:hidden text-[11px]">API</span>
                 </span>
               ) : (
                 <span className="flex items-center gap-1">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  Connect Gemini API
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="hidden sm:inline">Connect Gemini API</span>
+                  <span className="sm:hidden text-[11px]">API</span>
                 </span>
               )}
             </button>

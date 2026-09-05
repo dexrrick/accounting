@@ -138,15 +138,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Sample Quick-Click Scenarios */}
-      <div className="px-4 py-3 bg-slate-950/70 border-t border-slate-800">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-950/70 border-t border-slate-800">
         <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
           Try Any Accounting Question:
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
           {/* Quick chip for entertainment expenses */}
           <button
             onClick={() => handleSampleClick('i pay for entertainment expenses 3k with bank')}
-            className="text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[60px]"
+            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Expense</span>
@@ -161,7 +161,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
           <button
             onClick={() => handleSampleClick('a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?')}
-            className="text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[60px]"
+            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">FX Shares</span>
@@ -176,7 +176,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
           <button
             onClick={() => handleSampleClick('I have a rental agreement for 3 years, paying 1 month SGD 3,000. What is the double entry under SFRS(I) 16 / IFRS 16?')}
-            className="text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[60px]"
+            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Lease</span>
@@ -192,7 +192,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-3 border-t border-slate-800 bg-slate-900">
+      <form onSubmit={handleSubmit} className="p-2.5 sm:p-3 border-t border-slate-800 bg-slate-900">
         <div className="relative flex items-center">
           <textarea
             value={inputText}
@@ -221,8 +221,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </button>
         </div>
         <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-slate-500">
-          <span>Press Enter to send, Shift+Enter for newline</span>
-          <span>Frankfurter ECB FX Connected</span>
+          <span className="hidden sm:inline">Press Enter to send, Shift+Enter for newline</span>
+          <span className="sm:hidden">Tap send icon to calculate</span>
+          <span className="truncate">Frankfurter ECB FX</span>
         </div>
       </form>
     </div>

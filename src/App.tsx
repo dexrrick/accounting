@@ -158,11 +158,11 @@ export const App: React.FC = () => {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 pb-12 sm:pb-8">
         {/* Top Grid: Chat on Left, Input Handlers + Journal on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
           {/* Left Column: Conversational AI Panel (5 cols) */}
-          <div className="lg:col-span-5 h-[620px]">
+          <div className="lg:col-span-5 h-[520px] sm:h-[620px]">
             <ChatPanel
               messages={messages}
               onSendMessage={handleSendMessage}
@@ -172,7 +172,7 @@ export const App: React.FC = () => {
           </div>
 
           {/* Right Column: Parameters + Journal (7 cols) */}
-          <div className="lg:col-span-7 space-y-6">
+          <div className="lg:col-span-7 space-y-5 sm:space-y-6">
             {/* Structured Parameters Panel */}
             <InputHandlerPanel
               scenario={scenario}
@@ -183,28 +183,28 @@ export const App: React.FC = () => {
             {/* View Switcher Tabs (T-Account Removed) */}
             {scenario && computed.groups.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 pt-2 rounded-t-xl">
+                <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-800 bg-slate-900 px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar">
                   <button
                     onClick={() => setActiveTab('entries')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
                       activeTab === 'entries'
                         ? 'border-blue-500 text-blue-400'
                         : 'border-transparent text-slate-400 hover:text-white'
                     }`}
                   >
-                    <FileSpreadsheet className="w-4 h-4" />
+                    <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Double Entry Journal
                   </button>
 
                   <button
                     onClick={() => setActiveTab('compliance')}
-                    className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition-all ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
                       activeTab === 'compliance'
                         ? 'border-blue-500 text-blue-400'
                         : 'border-transparent text-slate-400 hover:text-white'
                     }`}
                   >
-                    <BookCheck className="w-4 h-4" />
+                    <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Statutory Citations & "Why"
                   </button>
                 </div>

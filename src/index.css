@@ -3,21 +3,41 @@
 @tailwind utilities;
 
 @layer base {
-  /* Default font size: bigger (17px default) */
+  /* Default font size: responsive (15px on mobile, 17px on desktop) */
   html {
-    font-size: 17px;
+    font-size: 15px;
+  }
+  @media (min-width: 640px) {
+    html {
+      font-size: 17px;
+    }
   }
 
   html.font-normal {
-    font-size: 14.5px;
+    font-size: 13.5px;
+  }
+  @media (min-width: 640px) {
+    html.font-normal {
+      font-size: 14.5px;
+    }
   }
 
   html.font-large {
-    font-size: 17px;
+    font-size: 15px;
+  }
+  @media (min-width: 640px) {
+    html.font-large {
+      font-size: 17px;
+    }
   }
 
   html.font-xl {
-    font-size: 19.5px;
+    font-size: 17px;
+  }
+  @media (min-width: 640px) {
+    html.font-xl {
+      font-size: 19.5px;
+    }
   }
 
   body {
@@ -49,4 +69,14 @@ html.font-xl .text-\[11px\] { font-size: 0.88rem; }
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
