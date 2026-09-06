@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AccountingScenarioState } from '../types/accounting';
-import { Sliders, Lock, RefreshCw, Layers, Sparkles } from 'lucide-react';
+import { Sliders, Lock, RefreshCw, Layers, Sparkles, Scale } from 'lucide-react';
 
 interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
@@ -52,7 +52,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                  Transaction Facts & Extracted Parameters
+                  {scenario.queryIntent === 'STATUTORY_ADVISORY' ? 'Singapore Statutory Directives' : 'Transaction Facts & Extracted Parameters'}
                 </h3>
                 {scenario.transactionTitle && (
                   <span className="px-2.5 py-0.5 bg-blue-950/90 text-blue-400 border border-blue-800/60 rounded font-mono text-[11px] font-semibold">
@@ -61,7 +61,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
                 )}
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Live synchronized parameters extracted from natural language
+                {scenario.queryIntent === 'STATUTORY_ADVISORY' ? 'Authoritative compliance facts grounded in Singapore law' : 'Live synchronized parameters extracted from natural language'}
               </p>
             </div>
           </div>
@@ -117,8 +117,18 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
           </div>
         )}
 
-        {/* Transaction Summary Footer */}
-        {scenario.directGroups && scenario.directGroups.length > 0 && (
+        {/* Transaction / Statutory Summary Footer */}
+        {scenario.queryIntent === 'STATUTORY_ADVISORY' ? (
+          <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-emerald-400 font-medium">
+              <Scale className="w-4 h-4 text-emerald-400" />
+              <span>Singapore Statutory Grounding Active</span>
+            </div>
+            <div className="font-mono text-slate-400 text-xs">
+              Directives Verified: <strong className="text-white">IRAS / ACRA / SSO</strong>
+            </div>
+          </div>
+        ) : scenario.directGroups && scenario.directGroups.length > 0 && scenario.directGroups.some(g => g.lines.length > 0) ? (
           <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2 text-slate-300">
               <Layers className="w-4 h-4 text-blue-400" />
@@ -130,7 +140,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
               Currency: <strong className="text-white">{scenario.functionalCurrency}</strong>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

@@ -8,12 +8,35 @@ export type AccountCategory =
   | 'EXPENSE' 
   | 'OTHER_COMPREHENSIVE_INCOME';
 
+export type StatutoryAuthority = 
+  | 'IRAS' 
+  | 'ACRA' 
+  | 'CPF' 
+  | 'MOM' 
+  | 'MAS' 
+  | 'CUSTOMS' 
+  | 'ASC' 
+  | 'SSO';
+
 export interface StandardCitation {
-  standard: string; // e.g. "SFRS(I) 1-1", "SFRS(I) 9", "SFRS(I) 16"
-  paragraph: string; // e.g. "§5.1.1", "§22"
+  standard: string; // e.g. "SFRS(I) 1-1", "Income Tax Act 1947", "Companies Act 1967"
+  paragraph: string; // e.g. "§5.1.1", "Section 14(1)", "Section 205C"
   title: string;
   text: string;
   officialSourceUrl?: string;
+  authority?: StatutoryAuthority;
+}
+
+export interface StatutoryAdvisoryInfo {
+  authority: StatutoryAuthority;
+  statuteOrAct: string;
+  sectionOrSchedule: string;
+  topic: string;
+  summary: string;
+  keyRules: string[];
+  officialUrl: string;
+  isTaxDeductible?: boolean;
+  isGstClaimable?: boolean;
 }
 
 export interface JournalLine {
@@ -78,6 +101,10 @@ export interface AccountingScenarioState {
   // Universal Dynamic Facts & Direct Journal Groups
   keyParameters?: TransactionFact[];
   directGroups?: JournalEntryGroup[];
+
+  // Statutory Advisory & Tax Grounding
+  queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
+  statutoryAdvisory?: StatutoryAdvisoryInfo[];
 
   // Optional legacy fields for backward compatibility
   expenseAccountName?: string;

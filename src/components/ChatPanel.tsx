@@ -38,17 +38,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
           <div>
             <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-              Universal Query Assistant
+              Universal Query & Statutory Assistant
             </h2>
             <p className="text-[11px] text-slate-400">
-              Ask any transaction in business (expenses, leases, forex, loans, etc.)
+              IFRS/SFRS(I) Double Entries • IRAS, ACRA, CPF Board & Singapore Statutes
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-950/70 text-emerald-400 rounded-full text-[11px] font-medium border border-emerald-800/60">
           <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-          Zero Distortion Active
+          Statutory Grounding Active
         </div>
       </div>
 
@@ -131,7 +131,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce"></span>
               <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 rounded-full bg-blue-400 animate-bounce [animation-delay:0.4s]"></span>
-              <span className="text-[11px] font-medium ml-1">Analyzing double entries under IFRS/SFRS...</span>
+              <span className="text-[11px] font-medium ml-1">Analyzing statutory citations under IRAS, ACRA & SFRS...</span>
             </div>
           </div>
         )}
@@ -140,18 +140,66 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Sample Quick-Click Scenarios */}
       <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-950/70 border-t border-slate-800">
         <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
-          Try Any Accounting Question:
+          Try Accounting or Singapore Statutory Queries:
         </div>
-        <div className="flex sm:grid sm:grid-cols-3 gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
-          {/* Quick chip for entertainment expenses */}
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {/* Chip 1: ACRA Audit Exemption */}
+          <button
+            onClick={() => handleSampleClick('What are the ACRA requirements for small company audit exemption?')}
+            className="shrink-0 w-44 sm:w-auto text-left p-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">ACRA</span>
+              <span className="text-[9px] px-1.5 py-0.5 bg-indigo-950 text-indigo-300 rounded font-mono leading-none border border-indigo-800">
+                §205C
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 group-hover:text-white mt-1 leading-snug line-clamp-2">
+              Small Company Audit Exemption
+            </p>
+          </button>
+
+          {/* Chip 2: CPF Ceiling 2026 */}
+          <button
+            onClick={() => handleSampleClick('What is the 2026 CPF Ordinary Wage ceiling and monthly contribution rate?')}
+            className="shrink-0 w-44 sm:w-auto text-left p-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">CPF Board</span>
+              <span className="text-[9px] px-1.5 py-0.5 bg-blue-950 text-blue-300 rounded font-mono leading-none border border-blue-800">
+                $8,000 OW
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 group-hover:text-white mt-1 leading-snug line-clamp-2">
+              2026 CPF Ceilings & Deductions
+            </p>
+          </button>
+
+          {/* Chip 3: Passenger Car Blocked Tax */}
+          <button
+            onClick={() => handleSampleClick('I bought a company car for SGD 120k with bank. How to record double entries and can I claim 9% GST under IRAS?')}
+            className="shrink-0 w-44 sm:w-auto text-left p-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
+          >
+            <div className="flex items-center justify-between gap-1">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">IRAS Tax</span>
+              <span className="text-[9px] px-1.5 py-0.5 bg-emerald-950 text-emerald-300 rounded font-mono leading-none border border-emerald-800">
+                Reg 26
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 group-hover:text-white mt-1 leading-snug line-clamp-2">
+              Company Car: Blocked GST & Tax
+            </p>
+          </button>
+
+          {/* Chip 4: Entertainment Expense */}
           <button
             onClick={() => handleSampleClick('i pay for entertainment expenses 3k with bank')}
-            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
+            className="shrink-0 w-40 sm:w-auto text-left p-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-amber-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Expense</span>
               <span className="text-[9px] px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded font-mono leading-none">
-                IAS 1
+                IAS 1 / S14
               </span>
             </div>
             <p className="text-[11px] text-slate-300 group-hover:text-white mt-1 leading-snug line-clamp-2">
@@ -159,33 +207,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </p>
           </button>
 
+          {/* Chip 5: FX Shares */}
           <button
             onClick={() => handleSampleClick('a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?')}
-            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
+            className="shrink-0 w-44 sm:w-auto text-left p-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-purple-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
           >
             <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">FX Shares</span>
+              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">FX Shares</span>
               <span className="text-[9px] px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded font-mono leading-none">
                 IFRS 9
               </span>
             </div>
             <p className="text-[11px] text-slate-300 group-hover:text-white mt-1 leading-snug line-clamp-2">
               Apple Shares (USD 300k to 400k)
-            </p>
-          </button>
-
-          <button
-            onClick={() => handleSampleClick('I have a rental agreement for 3 years, paying 1 month SGD 3,000. What is the double entry under SFRS(I) 16 / IFRS 16?')}
-            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-blue-500 rounded-xl transition-all shadow-sm group flex flex-col justify-between min-h-[58px]"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Lease</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded font-mono leading-none">
-                IFRS 16
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-300 group-hover:text-white mt-1 leading-snug line-clamp-2">
-              Rental Lease (3 yrs, 3k/mo)
             </p>
           </button>
         </div>
@@ -203,7 +237,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 handleSubmit(e);
               }
             }}
-            placeholder="Ask any question (e.g., 'i pay for entertainment expenses 3k with bank', office lease, forex shares...)"
+            placeholder="Ask any accounting or tax question (e.g. 'ACRA audit exemption', 'CPF ceiling 2026', 'bought company car 120k', 'entertainment 3k')..."
             rows={2}
             className="w-full pl-3 pr-12 py-2 text-xs bg-slate-950 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none leading-relaxed"
           />

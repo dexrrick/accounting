@@ -1,6 +1,12 @@
 import type { AccountingScenarioState, JournalEntryGroup, JournalLine } from '../types/accounting';
 import { getExchangeRate } from '../services/frankfurterService';
 import { getCitation } from '../standards/standardsKnowledge';
+import { 
+  querySingaporeStatutes, 
+  convertToCitation, 
+  convertToAdvisory, 
+  SINGAPORE_STATUTORY_REPOSITORY 
+} from '../standards/singaporeStatutesKnowledge';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
 export async function parseAccountingQuery(
@@ -20,6 +26,188 @@ export async function parseAccountingQuery(
     functionalCurrency = 'SGD';
   } else if (q.includes('usd') && !q.includes('sgd')) {
     functionalCurrency = 'USD';
+  }
+
+  // =========================================================================
+  // SCENARIO -1: SINGAPORE STATUTORY & REGULATORY ADVISORY (IRAS / ACRA / CPF / MOM / MAS)
+  // e.g. "What are the ACRA requirements for small company audit exemption?"
+  // e.g. "What is the 2026 CPF Ordinary Wage ceiling?"
+  // e.g. "Can I claim input GST on a passenger car?"
+  // =========================================================================
+  const isCarPurchase = (q.includes('car') || q.includes('motor car') || q.includes('passenger car')) &&
+    (q.includes('bought') || q.includes('purchas') || q.includes('paid') || q.includes('pay')) &&
+    !q.includes('rental') && !q.includes('lease');
+
+  const isStatutoryQuestion = 
+    q.includes('audit exemption') ||
+    q.includes('small company') ||
+    q.includes('small group') ||
+    q.includes('cpf ceiling') ||
+    q.includes('ordinary wage') ||
+    q.includes('aw ceiling') ||
+    q.includes('skills development levy') ||
+    q.includes('sdl') ||
+    q.includes('tax deduct') ||
+    q.includes('non-deductible') ||
+    q.includes('prohibited expense') ||
+    q.includes('section 14') ||
+    q.includes('section 15') ||
+    q.includes('15(1)(k)') ||
+    q.includes('sute') ||
+    q.includes('pte') ||
+    q.includes('form c-s') ||
+    q.includes('form c') ||
+    q.includes('corporate tax rate') ||
+    q.includes('gst registration') ||
+    q.includes('compulsory gst') ||
+    q.includes('blocked input') ||
+    q.includes('regulation 26') ||
+    q.includes('zero rated') ||
+    q.includes('zero-rated') ||
+    q.includes('agm deadline') ||
+    q.includes('annual return') ||
+    q.includes('bizfile') ||
+    q.includes('resident director') ||
+    q.includes('company secretary') ||
+    q.includes('record retention') ||
+    q.includes('salary deadline') ||
+    q.includes('overtime pay') ||
+    q.includes('employment act') ||
+    q.includes('exchange control') ||
+    q.includes('capital control') ||
+    q.includes('digital payment token') ||
+    q.includes('payment services act') ||
+    q.includes('mas notice') ||
+    (q.startsWith('can i claim') || q.startsWith('can we claim') || q.includes('is it deductible') || q.includes('is it claimable'));
+
+  if (isCarPurchase) {
+    let carCost = 120000;
+    const costMatch = query.match(/(?:for|cost|price|at)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i) ||
+      query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i);
+    if (costMatch && costMatch[1]) {
+      let rawVal = parseFloat(costMatch[1].replace(/,/g, ''));
+      const unit = costMatch[2]?.toLowerCase();
+      if (unit === 'k' || unit === 'thousand') rawVal *= 1000;
+      if (unit === 'm') rawVal *= 1000000;
+      if (rawVal > 1000) carCost = rawVal;
+    }
+
+    const lines: JournalLine[] = [
+      {
+        id: 'l-car-cost',
+        accountCode: '1700',
+        accountName: 'Motor Vehicles - Cost (Non-Current Asset)',
+        category: 'ASSET',
+        debit: carCost,
+        credit: 0,
+        lineExplanation: 'Capitalization of motor vehicle at gross purchase price. Input GST is completely capitalized into cost because input tax recovery is blocked under Singapore GST Regulation 26.'
+      },
+      {
+        id: 'l-car-bank',
+        accountCode: '1010',
+        accountName: 'Cash at Bank',
+        category: 'ASSET',
+        debit: 0,
+        credit: carCost,
+        lineExplanation: 'Full settlement of vehicle purchase paid via bank transfer.'
+      }
+    ];
+
+    const carCitations = [
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_1_K_MOTOR_CAR),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX)
+    ];
+
+    const carAdvisories = [
+      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_1_K_MOTOR_CAR),
+      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX)
+    ];
+
+    return {
+      scenarioType: 'CAR_PURCHASE_STATUTORY',
+      queryIntent: 'HYBRID',
+      rawQuery: query,
+      transactionTitle: 'Purchase of Passenger Motor Car (Tax Disallowed & GST Blocked)',
+      functionalCurrency,
+      transactionCurrency: functionalCurrency,
+      statutoryAdvisory: carAdvisories,
+      directGroups: [
+        {
+          id: 'grp-car-purchase',
+          eventDate: formatSingaporeDate(new Date()),
+          title: 'Single Compound Journal Entry: Acquisition of Passenger Motor Car',
+          summary: `Acquisition of passenger motor car for ${functionalCurrency} ${carCost.toLocaleString()} (Gross Cost capitalized with Zero Input GST Claim)`,
+          lines,
+          totalDebit: carCost,
+          totalCredit: carCost,
+          isBalanced: true,
+          citations: carCitations,
+          rationalePoints: [
+            'Under IRAS GST Regulation 26: 9% Input GST incurred on passenger cars (S-plate) is strictly blocked from recovery. The full invoice amount is capitalized into the asset cost.',
+            'Under Section 15(1)(k) of the Income Tax Act 1947: No deduction or capital allowance is granted on passenger cars. Depreciation in accounting records must be added back 100% in the corporate tax computation.',
+            'Sum of Debits = Sum of Credits ($' + carCost.toLocaleString() + '). Journal entry is 100% balanced.'
+          ]
+        }
+      ],
+      keyParameters: [
+        { label: 'Asset Recognized', value: 'Motor Vehicles (Gross Cost)', badge: 'Asset Cost' },
+        { label: 'Total Purchase Outlay', value: `${functionalCurrency} ${carCost.toLocaleString()}`, badge: 'Outflow' },
+        { label: '9% Input GST Status', value: 'BLOCKED (Regulation 26)', badge: 'IRAS Disallowed', highlight: true },
+        { label: 'Corporate Tax Deduction', value: 'DISALLOWED (§15(1)(k))', badge: 'No CA Granted', highlight: true },
+        { label: 'Depreciation Add-Back', value: 'Mandatory in Form C-S', badge: 'Tax Add-Back' },
+        { label: 'Governing Authorities', value: 'IRAS & AGC Singapore', badge: 'SSO Verified' }
+      ],
+      isComplete: true,
+      missingFields: []
+    };
+  }
+
+  if (isStatutoryQuestion) {
+    const matchedRules = querySingaporeStatutes(query);
+    if (matchedRules.length > 0) {
+      const primaryRule = matchedRules[0];
+      const advisories = matchedRules.map(convertToAdvisory);
+      const citations = matchedRules.map(convertToCitation);
+
+      const keyParams = [
+        { label: 'Governing Authority', value: primaryRule.authorityName, badge: primaryRule.authority },
+        { label: 'Statute / Act', value: primaryRule.actTitle, badge: primaryRule.actCode },
+        { label: 'Section / Schedule', value: primaryRule.sectionOrSchedule, badge: 'Statutory Section', highlight: true },
+        ...primaryRule.practicalRules.slice(0, 3).map((r, idx) => ({
+          label: `Rule #${idx + 1}`,
+          value: r.length > 70 ? r.slice(0, 67) + '...' : r,
+          badge: 'Compliance'
+        })),
+        { label: 'Official SSO Source', value: 'Singapore Statutes Online', badge: 'Verified', highlight: true }
+      ];
+
+      return {
+        scenarioType: 'SINGAPORE_STATUTORY_ADVISORY',
+        queryIntent: 'STATUTORY_ADVISORY',
+        rawQuery: query,
+        transactionTitle: primaryRule.ruleTitle,
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        statutoryAdvisory: advisories,
+        keyParameters: keyParams,
+        directGroups: [
+          {
+            id: 'grp-statutory-directive',
+            eventDate: formatSingaporeDate(new Date()),
+            title: `Statutory Directive: ${primaryRule.ruleTitle}`,
+            summary: primaryRule.principle,
+            lines: [],
+            totalDebit: 0,
+            totalCredit: 0,
+            isBalanced: true,
+            citations,
+            rationalePoints: primaryRule.practicalRules
+          }
+        ],
+        isComplete: true,
+        missingFields: []
+      };
+    }
   }
 
   // =========================================================================

@@ -53,7 +53,7 @@ export const App: React.FC = () => {
       id: 'welcome-msg',
       sender: 'assistant',
       timestamp: getSingaporeTimestamp(),
-      text: `Hello! I am your **Universal IFRS & SFRS(I) Accounting Assistant**.\n\nYou can ask **any accounting question** in business (e.g. *"i pay for entertainment expenses 3k with bank"*, office leases, salary with CPF, or foreign share trading).\n\n* **Universal Scope**: Handles any transaction without needing predefined scenarios.\n* **Live Spot Rates**: Powered by the **Frankfurter API (European Central Bank)**.\n* **Statutory Compliance**: Exact debit & credit rules with ASC Singapore & IASB citations.`
+      text: `Hello! I am your **Universal Accounting & Singapore Statutory Assistant**.\n\nYou can ask **any business transaction or regulatory compliance question**:\n* **Double Entry Accounting**: Exact debits & credits under SFRS(I) & IFRS (e.g. *"entertainment 3k with bank"*, office leases, shares with forex).\n* **IRAS Tax Directives**: Section 14/15 tax deductibility, Capital Allowances, SUTE/PTE, Form C-S, and 9% GST blocked rules.\n* **ACRA Compliance**: Small Company Audit Exemption (Section 205C), AGM & Annual Return statutory timelines.\n* **CPF Board & MOM**: 2026 Ordinary Wage ceiling ($8,000 cap), SDL calculations, and Employment Act payment deadlines.\n* **MAS & Trade**: Payment Services Act, zero foreign exchange controls, and Singapore Customs import GST.`
     }
   ]);
 
@@ -82,6 +82,18 @@ export const App: React.FC = () => {
       const response = await processAccountingQuery(text, scenario, standard, apiKey, modelName, [...messages, userMsg]);
 
       setScenario(response.scenarioState);
+
+      // Auto-switch tabs based on query intent
+      if (
+        response.scenarioState?.queryIntent === 'STATUTORY_ADVISORY' ||
+        (!response.scenarioState?.directGroups?.some((g) => g.lines.length > 0) &&
+          response.scenarioState?.statutoryAdvisory &&
+          response.scenarioState.statutoryAdvisory.length > 0)
+      ) {
+        setActiveTab('compliance');
+      } else if (response.scenarioState?.directGroups?.some((g) => g.lines.length > 0)) {
+        setActiveTab('entries');
+      }
 
       const assistantMsg: ChatMessage = {
         id: `asst-${Date.now()}`,
@@ -180,37 +192,39 @@ export const App: React.FC = () => {
               onResetToDefaults={handleResetToDefaults}
             />
 
-            {/* View Switcher Tabs (T-Account Removed) */}
-            {scenario && computed.groups.length > 0 && (
+            {/* View Switcher Tabs */}
+            {scenario && (computed.groups.some((g) => g.lines.length > 0) || (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0)) && (
               <div className="space-y-4">
                 <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-800 bg-slate-900 px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar">
-                  <button
-                    onClick={() => setActiveTab('entries')}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
-                      activeTab === 'entries'
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Double Entry Journal
-                  </button>
+                  {computed.groups.some((g) => g.lines.length > 0) && (
+                    <button
+                      onClick={() => setActiveTab('entries')}
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+                        activeTab === 'entries'
+                          ? 'border-blue-500 text-blue-400'
+                          : 'border-transparent text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      Double Entry Journal
+                    </button>
+                  )}
 
                   <button
                     onClick={() => setActiveTab('compliance')}
                     className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
-                      activeTab === 'compliance'
+                      activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
                         ? 'border-blue-500 text-blue-400'
                         : 'border-transparent text-slate-400 hover:text-white'
                     }`}
                   >
                     <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Statutory Citations & "Why"
+                    Statutory Citations & Directives
                   </button>
                 </div>
 
                 {/* Tab Content */}
-                {activeTab === 'entries' && (
+                {activeTab === 'entries' && computed.groups.some((g) => g.lines.length > 0) && (
                   <JournalTable
                     groups={computed.groups}
                     standard={standard}
@@ -218,9 +232,13 @@ export const App: React.FC = () => {
                   />
                 )}
 
-                {activeTab === 'compliance' && (
+                {(activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)) && (
                   <ComplianceRationale
-                    citations={computed.groups.flatMap((g) => g.citations)}
+                    citations={[
+                      ...computed.groups.flatMap((g) => g.citations),
+                      ...(scenario.directGroups?.[0]?.citations || [])
+                    ]}
+                    advisories={scenario.statutoryAdvisory}
                     standard={standard}
                     classification={scenario.classification}
                   />
@@ -234,7 +252,7 @@ export const App: React.FC = () => {
       {/* Footer */}
       <footer className="bg-slate-900/60 border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
         <p>
-          Universal IFRS & SFRS(I) Accounting Engine • Spot rates powered by Frankfurter API (ECB) • Compliant with ASC Singapore & IASB
+          Universal Accounting & Singapore Statutory Engine • Grounded in IRAS, ACRA, CPF Board, MOM, MAS & Singapore Statutes • ECB Spot rates via Frankfurter API
         </p>
       </footer>
     </div>
