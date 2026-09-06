@@ -169,7 +169,7 @@ export const App: React.FC = () => {
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FA] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-[#F4F7FA] dark:bg-[#131A29] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       {/* App Header */}
       <Header
         theme={theme}
@@ -206,7 +206,7 @@ export const App: React.FC = () => {
             {/* View Switcher Tabs */}
             {scenario && (computed.groups.some((g) => g.lines.length > 0) || (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0)) && (
               <div className="space-y-4">
-                <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
+                <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538] px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
                   {computed.groups.some((g) => g.lines.length > 0) && (
                     <button
                       onClick={() => setActiveTab('entries')}
@@ -261,7 +261,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white/80 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800/80 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+      <footer className="bg-white/80 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E] py-4 text-center text-xs text-slate-500 dark:text-slate-400">
         <p>
           Universal Accounting & Singapore Statutory Engine • Grounded in IRAS, ACRA, CPF Board, MOM, MAS & Singapore Statutes • ECB Spot rates via Frankfurter API
         </p>

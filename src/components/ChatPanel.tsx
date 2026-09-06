@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MissingFieldInfo } from '../types/accounting';
 import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react';
 
@@ -23,6 +23,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const hasMovedRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Non-passive wheel event listener to ensure smooth mouse-wheel horizontal sliding
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || isLoading) return;
@@ -30,49 +44,39 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     setInputText('');
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!scrollContainerRef.current) return;
     isDraggingRef.current = true;
     hasMovedRef.current = false;
     startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
     scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
     setIsDragging(true);
+    try {
+      scrollContainerRef.current.setPointerCapture(e.pointerId);
+    } catch {}
   };
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current || !scrollContainerRef.current) return;
     const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = x - startXRef.current;
+    const walk = (x - startXRef.current) * 1.4;
     if (Math.abs(walk) > 4) {
       hasMovedRef.current = true;
     }
     scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     isDraggingRef.current = false;
     setIsDragging(false);
+    try {
+      if (scrollContainerRef.current?.hasPointerCapture(e.pointerId)) {
+        scrollContainerRef.current.releasePointerCapture(e.pointerId);
+      }
+    } catch {}
     setTimeout(() => {
       hasMovedRef.current = false;
-    }, 80);
-  };
-
-  const handleMouseLeave = () => {
-    if (isDraggingRef.current) {
-      isDraggingRef.current = false;
-      setIsDragging(false);
-      setTimeout(() => {
-        hasMovedRef.current = false;
-      }, 80);
-    }
-  };
-
-  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!scrollContainerRef.current) return;
-    if (e.deltaY !== 0) {
-      e.preventDefault();
-      scrollContainerRef.current.scrollLeft += e.deltaY;
-    }
+    }, 100);
   };
 
   const handleSampleClick = (query: string) => {
@@ -87,15 +91,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden transition-colors duration-200">
+    <div className="flex flex-col h-full bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden transition-colors duration-200">
       {/* Panel Top Banner */}
-      <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/80 dark:bg-slate-950/50">
+      <div className="p-4 border-b border-slate-200 dark:border-[#2B374E] flex items-center justify-between bg-slate-50/80 dark:bg-[#151D2C]">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-ynab-navy dark:bg-slate-800 text-white flex items-center justify-center border border-slate-700/30 dark:border-slate-700/60 shadow-xs">
+          <div className="w-8 h-8 rounded-lg bg-ynab-navy dark:bg-[#242F46] text-white flex items-center justify-center border border-slate-700/30 dark:border-[#2B374E] shadow-xs">
             <Bot className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
           </div>
           <div>
-            <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-sans">
               Universal Query & Statutory Assistant
             </h2>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -104,7 +108,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700/60 rounded-full text-[11px] font-medium">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-[#1C2538] dark:text-emerald-300 dark:border-emerald-900/60 rounded-full text-[11px] font-medium">
           <span className="w-1.5 h-1.5 rounded-full bg-ynab-green"></span>
           Statutory Grounding Active
         </div>
@@ -118,7 +122,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.sender !== 'user' && (
-              <div className="w-8 h-8 rounded-xl bg-ynab-navy dark:bg-slate-800 border border-slate-700/40 dark:border-slate-700 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-ynab-navy dark:bg-[#242F46] border border-slate-700/40 dark:border-[#2B374E] text-white flex items-center justify-center shrink-0 shadow-sm">
                 <Bot className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
               </div>
             )}
@@ -127,14 +131,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed ${
                 msg.sender === 'user'
                   ? 'bg-ynab-blue text-white rounded-br-none shadow-sm'
-                  : 'bg-slate-100 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-200 dark:border-slate-700/80 shadow-xs'
+                  : 'bg-slate-100 dark:bg-[#242F46] text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-200 dark:border-[#2B374E] shadow-xs'
               }`}
             >
               <div className="whitespace-pre-line font-normal">{msg.text}</div>
 
               {/* Clarification prompt cards if info missing */}
               {msg.clarificationPrompt && msg.clarificationPrompt.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 space-y-2.5">
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-[#2B374E] space-y-2.5">
                   <div className="flex items-center gap-1.5 text-slate-800 dark:text-slate-300 font-semibold text-[11px]">
                     <AlertCircle className="w-3.5 h-3.5 text-ynab-amber shrink-0" />
                     <span>Statutory Clarification:</span>
@@ -143,7 +147,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   {msg.clarificationPrompt.map((field: MissingFieldInfo) => (
                     <div
                       key={field.fieldKey}
-                      className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/80 rounded-xl p-3 text-slate-800 dark:text-slate-200 space-y-2 shadow-xs"
+                      className="bg-white dark:bg-[#1C2538] border border-slate-200 dark:border-[#2B374E] rounded-xl p-3 text-slate-800 dark:text-slate-200 space-y-2 shadow-xs"
                     >
                       <div className="text-[11px] font-medium text-slate-900 dark:text-slate-200">
                         {field.prompt}
@@ -158,7 +162,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             <button
                               key={idx}
                               onClick={() => onSelectSuggestion(field.fieldKey, sug.value)}
-                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
+                              className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-[#242F46] dark:hover:bg-[#2D3B58] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2B374E] rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
                             >
                               <span>{sug.label}</span>
                               <ArrowRight className="w-2.5 h-2.5 opacity-60" />
@@ -173,7 +177,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
 
             {msg.sender === 'user' && (
-              <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-[#242F46] text-slate-800 dark:text-white flex items-center justify-center shrink-0 shadow-sm border border-slate-300 dark:border-[#2B374E]">
                 <User className="w-4 h-4" />
               </div>
             )}
@@ -182,10 +186,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
         {isLoading && (
           <div className="flex gap-3 justify-start items-center text-slate-500 dark:text-slate-400 text-xs">
-            <div className="w-8 h-8 rounded-xl bg-ynab-navy dark:bg-slate-800 border border-slate-700/40 dark:border-slate-700 text-white flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-ynab-navy dark:bg-[#242F46] border border-slate-700/40 dark:border-[#2B374E] text-white flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
             </div>
-            <div className="bg-slate-100 dark:bg-slate-800 px-4 py-2.5 rounded-2xl rounded-bl-none text-slate-800 dark:text-slate-300 flex items-center gap-2 border border-slate-200 dark:border-slate-700 shadow-xs">
+            <div className="bg-slate-100 dark:bg-[#242F46] px-4 py-2.5 rounded-2xl rounded-bl-none text-slate-800 dark:text-slate-300 flex items-center gap-2 border border-slate-200 dark:border-[#2B374E] shadow-xs">
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span>
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]"></span>
@@ -196,18 +200,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Sample Quick-Click Scenarios */}
-      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50/90 dark:bg-slate-950/70 border-t border-slate-200 dark:border-slate-800">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50/90 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E]">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
             <MoveHorizontal className="w-3.5 h-3.5 text-slate-400" />
             <span>Try Accounting or Singapore Statutory Queries:</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline select-none">Click & drag to slide</span>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline select-none">Click & drag or wheel to slide</span>
             <button
               type="button"
               onClick={() => scrollHorizontally(-220)}
-              className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-colors"
+              className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] transition-colors"
               title="Scroll left"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
@@ -215,7 +219,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <button
               type="button"
               onClick={() => scrollHorizontally(220)}
-              className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 transition-colors"
+              className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] transition-colors"
               title="Scroll right"
             >
               <ChevronRight className="w-3.5 h-3.5" />
@@ -223,35 +227,33 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </div>
         </div>
 
-        {/* Scrollable Container with Mouse Drag & Wheel */}
+        {/* Scrollable Container with Pointer Drag & Wheel */}
         <div
           ref={scrollContainerRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseLeave}
-          onWheel={handleWheel}
-          className={`flex gap-2 overflow-x-auto pb-1.5 select-none transition-colors scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-slate-700 scrollbar-track-transparent ${
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          className={`flex gap-2 overflow-x-auto pb-1.5 select-none transition-colors scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-[#2B374E] scrollbar-track-transparent ${
             isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
           }`}
           style={{
             scrollbarWidth: 'thin',
-            WebkitOverflowScrolling: 'touch'
+            touchAction: 'pan-x'
           }}
         >
           {/* Chip 1: ACRA Audit Exemption */}
           <button
             type="button"
             onClick={() => handleSampleClick('What are the ACRA requirements for small company audit exemption?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ACRA</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 §205C
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               Small Company Audit Exemption
             </p>
           </button>
@@ -260,15 +262,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             type="button"
             onClick={() => handleSampleClick('What is the 2026 CPF Ordinary Wage ceiling and monthly contribution rate?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CPF Board</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 $8,000 OW
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               2026 CPF Ceilings & Deductions
             </p>
           </button>
@@ -277,15 +279,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             type="button"
             onClick={() => handleSampleClick('I bought a company car for SGD 120k with bank. How to record double entries and can I claim 9% GST under IRAS?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">IRAS Tax</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 Reg 26
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               Company Car: Blocked GST & Tax
             </p>
           </button>
@@ -294,15 +296,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             type="button"
             onClick={() => handleSampleClick('What is the Singapore corporate tax rate and how does Start-Up Tax Exemption (SUTE) work under IRAS?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">IRAS Tax</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 17% SUTE
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               Corporate Tax & SUTE Exemption
             </p>
           </button>
@@ -311,15 +313,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             type="button"
             onClick={() => handleSampleClick('What are the MOM Employment Act deadlines for salary payment and overtime rate?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">MOM</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 EA §21
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               Salary Payment & Overtime Rules
             </p>
           </button>
@@ -328,15 +330,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             type="button"
             onClick={() => handleSampleClick('i pay for entertainment expenses 3k with bank')}
-            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Expense</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 IAS 1 / S14
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               Entertainment 3k with bank
             </p>
           </button>
@@ -345,15 +347,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             type="button"
             onClick={() => handleSampleClick('a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">FX Shares</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 IFRS 9
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               Apple Shares (USD 300k to 400k)
             </p>
           </button>
@@ -362,15 +364,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <button
             type="button"
             onClick={() => handleSampleClick('I bought a new machine for 100k, trade in old machine for 20k, paid cash 30k, balance financed by 2-year equipment loan with 5% annual interest. How to record double entries?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
           >
             <div className="flex items-center justify-between gap-1">
               <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Machinery</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-slate-700/60">
+              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
                 IAS 16 / IFRS 9
               </span>
             </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2">
+            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
               Machine 100k, Trade-in & Loan
             </p>
           </button>
@@ -378,7 +380,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-2.5 sm:p-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <form onSubmit={handleSubmit} className="p-2.5 sm:p-3 border-t border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538]">
         <div className="relative flex items-center">
           <textarea
             value={inputText}
@@ -391,7 +393,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             }}
             placeholder="Ask any accounting or tax question (e.g. 'ACRA audit exemption', 'CPF ceiling 2026', 'bought company car 120k', 'entertainment 3k')..."
             rows={2}
-            className="w-full pl-3 pr-12 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-ynab-blue focus:border-transparent resize-none leading-relaxed font-sans"
+            className="w-full pl-3 pr-12 py-2 text-xs bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2B374E] rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-ynab-blue focus:border-transparent resize-none leading-relaxed font-sans"
           />
           <button
             type="submit"
@@ -399,7 +401,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             className={`absolute right-2 p-2 rounded-lg transition-all ${
               inputText.trim() && !isLoading
                 ? 'bg-ynab-blue text-white hover:bg-blue-600 shadow-sm'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                : 'bg-slate-200 dark:bg-[#242F46] text-slate-400 dark:text-slate-500 cursor-not-allowed'
             }`}
             title="Send query"
           >

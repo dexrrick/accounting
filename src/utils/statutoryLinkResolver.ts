@@ -16,7 +16,9 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
   EA: { ssoCode: 'EA1968', title: 'Employment Act 1968' },
   EMPLOYMENT_ACT: { ssoCode: 'EA1968', title: 'Employment Act 1968' },
   PSA: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
-  PAYMENT_SERVICES: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' }
+  PAYMENT_SERVICES: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
+  MAS: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' },
+  MASA: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' }
 };
 
 /**
@@ -45,6 +47,85 @@ export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
   return secClean 
     ? `https://sso.agc.gov.sg/Act/${ssoCode}#pr${secClean}-` 
     : `https://sso.agc.gov.sg/Act/${ssoCode}`;
+}
+
+/**
+ * Safely resolves any official URL (whether from static knowledge or dynamic AI response)
+ * into a guaranteed 200 OK link. Replaces dead deep-links with canonical SSO permalinks.
+ */
+export function getSafeOfficialUrl(
+  rawUrl?: string,
+  statuteOrAct?: string,
+  sectionOrSchedule?: string,
+  authority?: string
+): string {
+  const url = (rawUrl || '').trim();
+
+  // 1. Intercept known dead deep-links on IRAS and MAS
+  if (url.includes('tax-rates-and-tax-exemption-schemes')) {
+    return 'https://sso.agc.gov.sg/Act/ITA1947#pr43-';
+  }
+  if (url.includes('filing-your-corporate-income-tax-return')) {
+    return 'https://sso.agc.gov.sg/Act/ITA1947#pr62-';
+  }
+  if (url.includes('monetary-authority-of-singapore-act')) {
+    return 'https://sso.agc.gov.sg/Act/MASA1970';
+  }
+
+  // 2. If it's already a valid Singapore Statutes Online (SSO) URL, return it directly
+  if (url.startsWith('https://sso.agc.gov.sg/Act/')) {
+    return url;
+  }
+
+  // 3. If statute or act name is specified, resolve to authoritative SSO permalink
+  const act = (statuteOrAct || '').toLowerCase();
+  const sec = sectionOrSchedule || '';
+
+  if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
+    return buildSsoUrl('ITA1947', sec);
+  }
+  if (act.includes('companies act') || act.includes('ca1967') || act.includes('audit')) {
+    return buildSsoUrl('CA1967', sec);
+  }
+  if (act.includes('goods and services') || act.includes('gst')) {
+    return buildSsoUrl('GSTA1993', sec);
+  }
+  if (act.includes('provident fund') || act.includes('cpf')) {
+    return buildSsoUrl('CPFA1953', sec);
+  }
+  if (act.includes('employment act') || act.includes('ea1968') || act.includes('mom')) {
+    return buildSsoUrl('EA1968', sec);
+  }
+  if (act.includes('monetary authority') || act.includes('mas') || act.includes('exchange control')) {
+    return 'https://sso.agc.gov.sg/Act/MASA1970';
+  }
+  if (act.includes('payment services') || act.includes('psa')) {
+    return buildSsoUrl('PSA2019', sec);
+  }
+
+  // 4. Check if rawUrl is a verified domain
+  if (
+    url.startsWith('https://www.iras.gov.sg') ||
+    url.startsWith('https://www.acra.gov.sg') ||
+    url.startsWith('https://www.cpf.gov.sg') ||
+    url.startsWith('https://www.mom.gov.sg') ||
+    url.startsWith('https://www.mas.gov.sg') ||
+    url.startsWith('https://www.asc.gov.sg')
+  ) {
+    return url;
+  }
+
+  // 5. Authority fallback
+  const auth = (authority || '').toUpperCase();
+  if (auth === 'IRAS') return 'https://sso.agc.gov.sg/Act/ITA1947';
+  if (auth === 'ACRA') return 'https://sso.agc.gov.sg/Act/CA1967';
+  if (auth === 'CPF') return 'https://www.cpf.gov.sg';
+  if (auth === 'MOM') return 'https://sso.agc.gov.sg/Act/EA1968';
+  if (auth === 'MAS') return 'https://sso.agc.gov.sg/Act/MASA1970';
+  if (auth === 'ASC') return 'https://www.asc.gov.sg';
+
+  // 6. Default canonical SSO root
+  return url || 'https://sso.agc.gov.sg';
 }
 
 /**
@@ -153,6 +234,17 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
     const lowerUrl = url.toLowerCase();
     const lowerAnchor = anchorText.toLowerCase();
 
+    // Intercept known dead deep-links
+    if (lowerUrl.includes('tax-rates-and-tax-exemption-schemes')) {
+      return `[${anchorText}](https://sso.agc.gov.sg/Act/ITA1947#pr43-)`;
+    }
+    if (lowerUrl.includes('filing-your-corporate-income-tax-return')) {
+      return `[${anchorText}](https://sso.agc.gov.sg/Act/ITA1947#pr62-)`;
+    }
+    if (lowerUrl.includes('monetary-authority-of-singapore-act')) {
+      return `[${anchorText}](https://sso.agc.gov.sg/Act/MASA1970)`;
+    }
+
     // Preserve validated SSO, IRAS, ACRA, CPF, MAS, MOM, and ASC links
     if (
       lowerUrl.startsWith('https://sso.agc.gov.sg') ||
@@ -192,7 +284,7 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
       return `[${anchorText}](https://www.cpf.gov.sg)`;
     }
     if (lowerAnchor.includes('mas')) {
-      return `[${anchorText}](https://www.mas.gov.sg/regulation/acts)`;
+      return `[${anchorText}](https://sso.agc.gov.sg/Act/MASA1970)`;
     }
 
     return match;
@@ -223,10 +315,11 @@ export function appendStatutorySourceFooter(
   // 1. Extract from statutory advisory
   if (scenarioState?.statutoryAdvisory && scenarioState.statutoryAdvisory.length > 0) {
     for (const adv of scenarioState.statutoryAdvisory) {
-      if (adv.officialUrl && !links.some((l) => l.url === adv.officialUrl)) {
+      const safeUrl = getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority);
+      if (safeUrl && !links.some((l) => l.url === safeUrl)) {
         links.push({
           title: `${adv.statuteOrAct} — ${adv.sectionOrSchedule}`,
-          url: adv.officialUrl,
+          url: safeUrl,
           authority: adv.authority
         });
       }
@@ -237,10 +330,11 @@ export function appendStatutorySourceFooter(
   if (scenarioState?.directGroups) {
     for (const grp of scenarioState.directGroups) {
       for (const cite of grp.citations || []) {
-        if (cite.officialSourceUrl && !links.some((l) => l.url === cite.officialSourceUrl)) {
+        const safeUrl = getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority);
+        if (safeUrl && !links.some((l) => l.url === safeUrl)) {
           links.push({
             title: `${cite.standard} ${cite.paragraph || ''}`.trim(),
-            url: cite.officialSourceUrl,
+            url: safeUrl,
             authority: cite.authority
           });
         }

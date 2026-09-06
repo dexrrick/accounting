@@ -3,6 +3,7 @@ import type { AzureConfig, OpenAIConfig } from '../types/provider';
 import type { GeminiResponse } from './geminiService';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
+import { repairAndParseAIJson } from '../utils/jsonRepair';
 
 /**
  * Normalizes an Azure OpenAI endpoint input into a valid URL base.
@@ -54,6 +55,10 @@ CRITICAL RULES:
 7. MANDATORY FOREIGN EXCHANGE (FX) GAIN/LOSS RECOGNITION (IAS 21 / SFRS(I) 1-21):
    - Whenever ANY transaction involves foreign currency differing from SGD, exchange difference MUST be explicitly recorded.
    - Bifurcate capital return and realized FX gain when disposing of foreign investments/shares.
+8. CRITICAL JSON ESCAPING MANDATE:
+   - Inside "messageText", write all LaTeX backslashes with double backslashes (e.g. \\\\text, \\\\times, \\\\le, \\\\checkmark, \\\\mathbf).
+   - Never use unescaped double quotes inside string values; always escape them as \\" or use single quotes.
+   - Ensure the JSON is 100% syntactically valid and parseable.
 
 QUERY INTENTS:
 1. Pure Statutory / Tax / Compliance Queries (e.g. "What are the ACRA small company audit exemption criteria?"):
@@ -164,24 +169,7 @@ export function parseAccountingAIResponse(
     throw new Error('No content returned by AI provider.');
   }
 
-  let cleanedJson = rawJsonText.trim();
-  if (cleanedJson.startsWith('```json')) {
-    cleanedJson = cleanedJson.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
-  } else if (cleanedJson.startsWith('```')) {
-    cleanedJson = cleanedJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
-  }
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleanedJson);
-  } catch (e) {
-    const jsonMatch = cleanedJson.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      parsed = JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error(`Failed to parse AI JSON response: ${e}`);
-    }
-  }
+  const parsed = repairAndParseAIJson(rawJsonText);
 
   // Validate and compute totals on directGroups
   let directGroups = (parsed.directGroups || []).map((grp: any, gIdx: number) => {

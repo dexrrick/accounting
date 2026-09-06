@@ -119,7 +119,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Partial Tax Exemption (PTE) for all other companies:\n  - 75% exemption on the first SGD 10,000\n  - 50% exemption on the next SGD 190,000\n  - Maximum tax exemption of SGD 102,500.',
       'SUTE Qualifying Conditions: Incorporated in Singapore, tax resident in Singapore, max 20 individual shareholders (or at least 1 individual holding $\\ge 10\\%$ of ordinary shares).'
     ],
-    canonicalUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-rates-and-tax-exemption-schemes',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr43-',
     tags: ['tax rate', 'sute', 'pte', 'corporate tax', 'tax exemption', '17%']
   },
 
@@ -140,7 +140,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Form C: For companies with annual revenue $>\$5,000,000$ or claiming complex incentives, foreign tax credits, or group relief. Mandatory to attach audited/unaudited accounts and tax computations.',
       'Filing Deadline: 30 November of the Year of Assessment (YA) via myTax Portal.'
     ],
-    canonicalUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/filing-your-corporate-income-tax-return-(form-c-s-form-c-s-(lite)-form-c)',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr62-',
     tags: ['form c-s', 'form c-s lite', 'form c', 'tax filing deadline', 'annual revenue 5m']
   },
 
@@ -407,7 +407,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Repatriation: 100% of capital, dividends, and profits can be remitted overseas freely without withholding tax on dividends.',
       'SFRS Accounting: Foreign exchange transactions must be translated at spot rate in accordance with SFRS(I) 1-21 / IAS 21, and monetary items revalued at closing rates.'
     ],
-    canonicalUrl: 'https://www.mas.gov.sg/regulation/acts/monetary-authority-of-singapore-act',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/MASA1970',
     tags: ['exchange control', 'capital controls', 'profit repatriation', 'mas policy', 'foreign currency']
   },
 

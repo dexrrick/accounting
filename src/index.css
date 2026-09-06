@@ -1,9 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* Default font size: responsive (15px on mobile, 17px on desktop) */
+  /* Enforce Figtree & Inter across all elements and form controls */
+  *, *::before, *::after {
+    font-family: 'Figtree', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  code, kbd, samp, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  }
+
+  button, input, select, textarea {
+    font-family: inherit;
+  }
+
+  /* Default font size: responsive */
   html {
     font-size: 15px;
   }
@@ -41,8 +56,7 @@
   }
 
   body {
-    @apply bg-[#F4F7FA] text-slate-800 dark:bg-slate-950 dark:text-slate-100 antialiased min-h-screen font-sans selection:bg-ynab-blue selection:text-white transition-colors duration-150;
-    font-family: 'Figtree', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-[#F4F7FA] text-slate-800 dark:bg-[#131A29] dark:text-slate-100 antialiased min-h-screen font-sans selection:bg-ynab-blue selection:text-white transition-colors duration-150;
   }
 }
 
@@ -61,7 +75,7 @@ html.font-normal .text-\[11px\] { font-size: 0.72rem; }
 html.font-xl .text-\[10px\] { font-size: 0.82rem; }
 html.font-xl .text-\[11px\] { font-size: 0.88rem; }
 
-/* Custom theme-responsive scrollbars */
+/* Custom theme-responsive scrollbars matching YNAB */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -70,21 +84,21 @@ html.font-xl .text-\[11px\] { font-size: 0.88rem; }
   background: #E2E8F0;
 }
 .dark ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: #131A29;
 }
 ::-webkit-scrollbar-thumb {
   background: #94A3B8;
   border-radius: 3px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #2B374E;
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #64748B;
 }
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: #3B4A68;
 }
 
 @layer utilities {

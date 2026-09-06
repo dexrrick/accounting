@@ -3,6 +3,7 @@ import type { ProviderSettings } from '../types/provider';
 import { parseAccountingQuery } from '../engine/scenarioParser';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
+import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
 
 export interface GeminiResponse {
@@ -423,6 +424,10 @@ CRITICAL STATUTORY RULES:
        1. Underlying Capital / Stock Price Gain: (Disposal Price in FC - Cost in FC) × Disposal Spot Rate
        2. Realized Foreign Exchange Gain (or Loss): Cost in FC × (Disposal Spot Rate - Initial Spot Rate)
      * Both lines MUST appear explicitly in directGroups.
+8. CRITICAL JSON ESCAPING MANDATE:
+   - Inside "messageText", write all LaTeX backslashes with double backslashes (e.g. \\\\text, \\\\times, \\\\le, \\\\checkmark, \\\\mathbf).
+   - Never use unescaped double quotes inside string values; always escape them as \\" or use single quotes.
+   - Ensure the JSON is 100% syntactically valid and parseable.
 
 CRITICAL INSTRUCTIONS FOR QUERY INTENTS:
 1. Pure Statutory / Tax / Compliance Queries (e.g. "What are the ACRA small company audit exemption criteria?", "What is the 2026 CPF Ordinary Wage ceiling?", "When is the Form C-S filing deadline?"):
@@ -566,24 +571,7 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
     throw new Error('No content returned by Gemini');
   }
 
-  let cleanedJson = rawJsonText.trim();
-  if (cleanedJson.startsWith('```json')) {
-    cleanedJson = cleanedJson.replace(/^```json\s*/i, '').replace(/\s*```$/, '');
-  } else if (cleanedJson.startsWith('```')) {
-    cleanedJson = cleanedJson.replace(/^```\s*/, '').replace(/\s*```$/, '');
-  }
-
-  let parsed: any;
-  try {
-    parsed = JSON.parse(cleanedJson);
-  } catch (e) {
-    const jsonMatch = cleanedJson.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      parsed = JSON.parse(jsonMatch[0]);
-    } else {
-      throw new Error(`Failed to parse AI JSON response: ${e}`);
-    }
-  }
+  const parsed = repairAndParseAIJson(rawJsonText);
 
   // Validate and compute totals on directGroups
   let directGroups = (parsed.directGroups || []).map((grp: any, gIdx: number) => {

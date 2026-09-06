@@ -1,7 +1,7 @@
 import React from 'react';
 import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo } from '../types/accounting';
 import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText } from 'lucide-react';
-import { getAuthorityBadgeInfo } from '../utils/statutoryLinkResolver';
+import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 
 interface ComplianceRationaleProps {
   citations: StandardCitation[];
@@ -22,11 +22,11 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
     : 'International Accounting Standards Board (IASB)';
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden space-y-6 transition-colors duration-200">
+    <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden space-y-6 transition-colors duration-200">
       {/* Statutory Header */}
-      <div className="p-4 bg-slate-50/80 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
+      <div className="p-4 bg-slate-50/80 dark:bg-[#151D2C] text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-[#2B374E]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-ynab-navy dark:bg-slate-800 flex items-center justify-center text-white border border-slate-700/20 dark:border-slate-700 shadow-xs">
+          <div className="w-8 h-8 rounded-lg bg-ynab-navy dark:bg-[#242F46] flex items-center justify-center text-white border border-slate-700/20 dark:border-[#2B374E] shadow-xs">
             <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
           </div>
           <div>
@@ -43,7 +43,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
           href="https://sso.agc.gov.sg"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-[#242F46] dark:hover:bg-[#2D3B58] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#2B374E] text-[11px] font-medium transition-colors"
         >
           <span>Singapore Statutes Online</span>
           <ExternalLink className="w-3 h-3 text-slate-400" />
@@ -64,7 +64,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               return (
                 <div
                   key={idx}
-                  className="p-4 bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs"
+                  className="p-4 bg-slate-50/70 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-3 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-xs"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -77,21 +77,24 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                       </span>
                     </div>
 
-                    {adv.officialUrl && (
-                      <a
-                        href={adv.officialUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-ynab-blue dark:text-slate-300 hover:underline transition-colors"
-                      >
-                        <span>Official Legislation</span>
-                        <ExternalLink className="w-3 h-3 text-slate-400" />
-                      </a>
-                    )}
+                    {(() => {
+                      const safeUrl = getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority);
+                      return safeUrl ? (
+                        <a
+                          href={safeUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[11px] text-ynab-blue dark:text-blue-400 hover:underline transition-colors"
+                        >
+                          <span>Official Legislation</span>
+                          <ExternalLink className="w-3 h-3 text-slate-400" />
+                        </a>
+                      ) : null;
+                    })()}
                   </div>
 
                   <h4 className="font-semibold text-slate-900 dark:text-white text-xs">{adv.topic}</h4>
-                  <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                  <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed bg-white dark:bg-[#1C2538] p-3 rounded-lg border border-slate-200 dark:border-[#2B374E]">
                     {adv.summary}
                   </p>
 
@@ -112,12 +115,12 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                   )}
 
                   {(adv.isTaxDeductible !== undefined || adv.isGstClaimable !== undefined) && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-800/80">
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-[#2B374E]">
                       {adv.isTaxDeductible !== undefined && (
                         <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-medium border ${
                           adv.isTaxDeductible
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-slate-900 dark:text-emerald-400/90 dark:border-slate-700/80'
-                            : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-slate-900 dark:text-rose-400/90 dark:border-slate-700/80'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                            : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
                         }`}>
                           Corporate Tax: {adv.isTaxDeductible ? '✓ Fully Deductible (S14)' : '✗ Disallowed / Non-Deductible (S15)'}
                         </span>
@@ -125,8 +128,8 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                       {adv.isGstClaimable !== undefined && (
                         <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-medium border ${
                           adv.isGstClaimable
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-slate-900 dark:text-emerald-400/90 dark:border-slate-700/80'
-                            : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-slate-900 dark:text-rose-400/90 dark:border-slate-700/80'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                            : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
                         }`}>
                           GST 9%: {adv.isGstClaimable ? '✓ Claimable Input Tax' : '✗ Blocked Input Tax (Reg 26)'}
                         </span>
@@ -155,7 +158,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                 return (
                   <div
                     key={cIdx}
-                    className="p-3.5 bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs"
+                    className="p-3.5 bg-slate-50/70 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-xs"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
@@ -166,24 +169,29 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                           {cite.standard} {cite.paragraph}
                         </span>
                       </div>
-                      {cite.officialSourceUrl ? (
-                        <a
-                          href={cite.officialSourceUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] text-ynab-blue dark:text-slate-400 hover:underline flex items-center gap-1 transition-colors"
-                        >
-                          <span>Source</span>
-                          <ExternalLink className="w-2.5 h-2.5" />
-                        </a>
-                      ) : (
-                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700 font-medium">
-                          Mandatory
-                        </span>
-                      )}
+                      {(() => {
+                        const safeCiteUrl = cite.officialSourceUrl
+                          ? getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority)
+                          : null;
+                        return safeCiteUrl ? (
+                          <a
+                            href={safeCiteUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-ynab-blue dark:text-blue-400 hover:underline flex items-center gap-1 transition-colors"
+                          >
+                            <span>Source</span>
+                            <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-[#2B374E] font-medium">
+                            Mandatory
+                          </span>
+                        );
+                      })()}
                     </div>
                     <h4 className="font-semibold text-slate-900 dark:text-white text-xs">{cite.title}</h4>
-                    <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed italic bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed italic bg-white dark:bg-[#1C2538] p-2.5 rounded-lg border border-slate-200 dark:border-[#2B374E]">
                       "{cite.text}"
                     </p>
                   </div>
@@ -194,7 +202,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
         )}
 
         {/* Technical In-Depth "Why" Deep Dive */}
-        <div className="p-4 bg-slate-50/80 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 shadow-xs">
+        <div className="p-4 bg-slate-50/80 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-3 shadow-xs">
           <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-semibold text-xs font-sans">
             <BookCheck className="w-4 h-4 text-slate-400" />
             <span>Statutory Grounding & Axioms (Why these rules apply)</span>
