@@ -22,18 +22,18 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
     : 'International Accounting Standards Board (IASB)';
 
   return (
-    <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xl overflow-hidden space-y-6">
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden space-y-6 transition-colors duration-200">
       {/* Statutory Header */}
-      <div className="p-4 bg-slate-950 text-white flex items-center justify-between border-b border-slate-800">
+      <div className="p-4 bg-slate-50/80 dark:bg-slate-950 text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-200 border border-slate-700">
-            <ShieldCheck className="w-5 h-5 text-blue-400" />
+          <div className="w-8 h-8 rounded-lg bg-ynab-navy dark:bg-slate-800 flex items-center justify-center text-white border border-slate-700/20 dark:border-slate-700 shadow-xs">
+            <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 font-sans">
               Statutory Compliance & Legal Authority
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Grounded in IRAS, ACRA, CPF Board, MOM, MAS, and Singapore Statutes Online {classification ? `(${classification})` : ''}
             </p>
           </div>
@@ -43,7 +43,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
           href="https://sso.agc.gov.sg"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 text-[11px] font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-[11px] font-medium transition-colors"
         >
           <span>Singapore Statutes Online</span>
           <ExternalLink className="w-3 h-3 text-slate-400" />
@@ -53,7 +53,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       {/* Advisory Breakdown Cards (if available) */}
       {advisories && advisories.length > 0 && (
         <div className="px-5 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
             <Scale className="w-4 h-4 text-slate-400" />
             <span>Singapore Statutory & Tax Directives</span>
           </div>
@@ -64,7 +64,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               return (
                 <div
                   key={idx}
-                  className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3 hover:border-slate-700 transition-colors"
+                  className="p-4 bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                         <span className={`w-1.5 h-1.5 rounded-full ${badge.dotColor}`}></span>
                         {badge.label}
                       </span>
-                      <span className="font-mono text-xs font-semibold text-white">
+                      <span className="font-mono text-xs font-semibold text-slate-900 dark:text-white">
                         {adv.statuteOrAct} • {adv.sectionOrSchedule}
                       </span>
                     </div>
@@ -82,7 +82,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                         href={adv.officialUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] text-slate-300 hover:text-white transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] text-ynab-blue dark:text-slate-300 hover:underline transition-colors"
                       >
                         <span>Official Legislation</span>
                         <ExternalLink className="w-3 h-3 text-slate-400" />
@@ -90,20 +90,20 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     )}
                   </div>
 
-                  <h4 className="font-semibold text-white text-xs">{adv.topic}</h4>
-                  <p className="text-slate-300 text-[11px] leading-relaxed bg-slate-900/80 p-3 rounded-lg border border-slate-800">
+                  <h4 className="font-semibold text-slate-900 dark:text-white text-xs">{adv.topic}</h4>
+                  <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed bg-white dark:bg-slate-900/80 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
                     {adv.summary}
                   </p>
 
                   {adv.keyRules && adv.keyRules.length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                      <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
                         Key Statutory Rules & Thresholds:
                       </div>
-                      <ul className="space-y-1 text-[11px] text-slate-300">
+                      <ul className="space-y-1 text-[11px] text-slate-700 dark:text-slate-300">
                         {adv.keyRules.map((rule, rIdx) => (
-                          <li key={rIdx} className="flex items-start gap-2">
-                            <span className="text-slate-500 font-bold">•</span>
+                          <li key={rIdx} className="flex items-start gap-2 leading-relaxed">
+                            <span className="text-slate-400 font-bold">•</span>
                             <span>{rule}</span>
                           </li>
                         ))}
@@ -112,12 +112,12 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                   )}
 
                   {(adv.isTaxDeductible !== undefined || adv.isGstClaimable !== undefined) && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-800/80">
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-800/80">
                       {adv.isTaxDeductible !== undefined && (
                         <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-medium border ${
                           adv.isTaxDeductible
-                            ? 'bg-slate-900 text-emerald-400/90 border-slate-700/80'
-                            : 'bg-slate-900 text-rose-400/90 border-slate-700/80'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-slate-900 dark:text-emerald-400/90 dark:border-slate-700/80'
+                            : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-slate-900 dark:text-rose-400/90 dark:border-slate-700/80'
                         }`}>
                           Corporate Tax: {adv.isTaxDeductible ? '✓ Fully Deductible (S14)' : '✗ Disallowed / Non-Deductible (S15)'}
                         </span>
@@ -125,8 +125,8 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                       {adv.isGstClaimable !== undefined && (
                         <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-medium border ${
                           adv.isGstClaimable
-                            ? 'bg-slate-900 text-emerald-400/90 border-slate-700/80'
-                            : 'bg-slate-900 text-rose-400/90 border-slate-700/80'
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-slate-900 dark:text-emerald-400/90 dark:border-slate-700/80'
+                            : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-slate-900 dark:text-rose-400/90 dark:border-slate-700/80'
                         }`}>
                           GST 9%: {adv.isGstClaimable ? '✓ Claimable Input Tax' : '✗ Blocked Input Tax (Reg 26)'}
                         </span>
@@ -144,7 +144,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       <div className="p-5 pt-0 space-y-4 text-xs">
         {citations.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-300">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
               <FileText className="w-4 h-4 text-slate-400" />
               <span>Standard Accounting & Statutory Citations</span>
             </div>
@@ -155,14 +155,14 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                 return (
                   <div
                     key={cIdx}
-                    className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-2 hover:border-slate-700 transition-colors"
+                    className="p-3.5 bg-slate-50/70 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-700 transition-colors shadow-xs"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className={`text-[9px] px-2 py-0.5 rounded-md border font-medium ${badge.badgeClass}`}>
                           {badge.label}
                         </span>
-                        <span className="font-semibold text-slate-200 font-mono text-xs">
+                        <span className="font-semibold text-slate-900 dark:text-slate-200 font-mono text-xs">
                           {cite.standard} {cite.paragraph}
                         </span>
                       </div>
@@ -171,19 +171,19 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                           href={cite.officialSourceUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                          className="text-[10px] text-ynab-blue dark:text-slate-400 hover:underline flex items-center gap-1 transition-colors"
                         >
                           <span>Source</span>
                           <ExternalLink className="w-2.5 h-2.5" />
                         </a>
                       ) : (
-                        <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.2 rounded border border-slate-700 font-medium">
+                        <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-slate-700 font-medium">
                           Mandatory
                         </span>
                       )}
                     </div>
-                    <h4 className="font-semibold text-white text-xs">{cite.title}</h4>
-                    <p className="text-slate-400 text-[11px] leading-relaxed italic bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                    <h4 className="font-semibold text-slate-900 dark:text-white text-xs">{cite.title}</h4>
+                    <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed italic bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
                       "{cite.text}"
                     </p>
                   </div>
@@ -194,29 +194,29 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
         )}
 
         {/* Technical In-Depth "Why" Deep Dive */}
-        <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
-          <div className="flex items-center gap-2 text-slate-200 font-semibold text-xs">
+        <div className="p-4 bg-slate-50/80 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3 shadow-xs">
+          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-semibold text-xs font-sans">
             <BookCheck className="w-4 h-4 text-slate-400" />
             <span>Statutory Grounding & Axioms (Why these rules apply)</span>
           </div>
 
-          <div className="space-y-2 text-[11px] text-slate-300 leading-relaxed">
+          <div className="space-y-2 text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
             <div className="flex items-start gap-2">
-              <Check className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+              <Check className="w-3.5 h-3.5 text-ynab-green shrink-0 mt-0.5" />
               <div>
                 <strong>Statutory Precedence:</strong> In Singapore, corporate reporting follows {authorityName} pursuant to Section 201 of the Companies Act 1967. Tax computations must reconcile accounting profit to taxable profit under the Income Tax Act 1947.
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <Check className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+              <Check className="w-3.5 h-3.5 text-ynab-green shrink-0 mt-0.5" />
               <div>
                 <strong>Tax Depreciation vs. Capital Allowances:</strong> Accounting depreciation is an internal estimate and is always added back in tax computation. Tax deductions for fixed assets are governed exclusively by Section 19/19A Capital Allowances.
               </div>
             </div>
 
             <div className="flex items-start gap-2">
-              <Check className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+              <Check className="w-3.5 h-3.5 text-ynab-green shrink-0 mt-0.5" />
               <div>
                 <strong>GST Recovery Divergence:</strong> Being a legitimate business expense under accounting standards does not guarantee GST claimability. Blocked categories under Regulation 26 (e.g. passenger cars, club memberships) must be recognized as non-claimable input GST.
               </div>
@@ -227,4 +227,5 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
     </div>
   );
 };
+
 export default ComplianceRationale;

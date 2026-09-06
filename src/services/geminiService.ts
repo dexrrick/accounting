@@ -1,7 +1,9 @@
 import type { AccountingStandard, AccountingScenarioState, MissingFieldInfo, ChatMessage } from '../types/accounting';
+import type { ProviderSettings } from '../types/provider';
 import { parseAccountingQuery } from '../engine/scenarioParser';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
+import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
 
 export interface GeminiResponse {
   messageText: string;
@@ -13,7 +15,7 @@ export async function processAccountingQuery(
   userInput: string,
   currentScenario: AccountingScenarioState | null,
   standard: AccountingStandard,
-  apiKey?: string,
+  providerOrApiKey?: ProviderSettings | string,
   modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = []
 ): Promise<GeminiResponse> {
@@ -23,16 +25,62 @@ export async function processAccountingQuery(
   const std21 = standard === 'SFRS_I' ? 'SFRS(I) 1-21' : 'IAS 21';
   let apiErrorMessage: string | null = null;
 
-  // Live Gemini API call if key is provided
-  if (apiKey && apiKey.trim().length > 10) {
-    try {
-      const response = await callGeminiAPI(userInput, currentScenario, standard, apiKey.trim(), modelName, chatHistory);
-      return response;
-    } catch (err: any) {
-      console.warn('Gemini API call failed, falling back to smart universal engine:', err);
-      apiErrorMessage = err?.message || 'Gemini API Error';
+  // Live AI API call if provider settings or apiKey is provided
+  if (providerOrApiKey) {
+    if (typeof providerOrApiKey === 'object') {
+      const active = providerOrApiKey.activeProvider;
+      if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
+        try {
+          return await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory);
+        } catch (err: any) {
+          console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
+          apiErrorMessage = err?.message || 'Azure OpenAI Error';
+        }
+      } else if (active === 'gemini' && providerOrApiKey.gemini?.apiKey && providerOrApiKey.gemini.apiKey.trim().length > 10) {
+        try {
+          return await callGeminiAPI(
+            userInput,
+            currentScenario,
+            standard,
+            providerOrApiKey.gemini.apiKey.trim(),
+            providerOrApiKey.gemini.model || modelName,
+            chatHistory
+          );
+        } catch (err: any) {
+          console.warn('Gemini API call failed, falling back to smart universal engine:', err);
+          apiErrorMessage = err?.message || 'Gemini API Error';
+        }
+      } else if (active === 'openai' && providerOrApiKey.openai?.apiKey && providerOrApiKey.openai.apiKey.trim().length > 10) {
+        try {
+          return await callStandardOpenAI(
+            userInput,
+            currentScenario,
+            standard,
+            providerOrApiKey.openai,
+            chatHistory
+          );
+        } catch (err: any) {
+          console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
+          apiErrorMessage = err?.message || 'OpenAI API Error';
+        }
+      }
+    } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
+      try {
+        return await callGeminiAPI(userInput, currentScenario, standard, providerOrApiKey.trim(), modelName, chatHistory);
+      } catch (err: any) {
+        console.warn('Gemini API call failed, falling back to smart universal engine:', err);
+        apiErrorMessage = err?.message || 'Gemini API Error';
+      }
     }
   }
+
+  // Helper to append fallback warning notice if an API error occurred
+  const finalizeMessage = (text: string, state: AccountingScenarioState) => {
+    const fullText = apiErrorMessage
+      ? `> ⚠️ **Provider Notice**: ${apiErrorMessage}. Reverted seamlessly to the Singapore Statutory Offline Engine.\n\n${text}`
+      : text;
+    return appendStatutorySourceFooter(fullText, state);
+  };
 
   // Smart Universal Parser (works offline for ANY query or fallback)
   const parsed = await parseAccountingQuery(userInput, currentScenario);
@@ -66,7 +114,7 @@ export async function processAccountingQuery(
       `* Review the **Statutory Citations & "Why"** tab for full legal references and citations.`;
 
     return {
-      messageText: appendStatutorySourceFooter(replyText, parsed),
+      messageText: finalizeMessage(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -93,7 +141,7 @@ export async function processAccountingQuery(
       `**Balance Check**: $\\text{Total Debits (SGD } ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
 
     return {
-      messageText: appendStatutorySourceFooter(replyText, parsed),
+      messageText: finalizeMessage(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -154,7 +202,7 @@ export async function processAccountingQuery(
     }
 
     return {
-      messageText: appendStatutorySourceFooter(replyText, parsed),
+      messageText: finalizeMessage(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -201,7 +249,7 @@ export async function processAccountingQuery(
       `Review the **Double Entry Journal** tab for the full verified ledger table with citations!`;
 
     return {
-      messageText: appendStatutorySourceFooter(replyText, parsed),
+      messageText: finalizeMessage(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -222,7 +270,7 @@ export async function processAccountingQuery(
       `3. **Balance Sheet & P&L Impact**: Total Assets decrease by ${parsed.functionalCurrency} ${amt.toLocaleString()}, and Net Profit decreases by ${parsed.functionalCurrency} ${amt.toLocaleString()}.`;
 
     return {
-      messageText: appendStatutorySourceFooter(replyText, parsed),
+      messageText: finalizeMessage(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -251,7 +299,7 @@ export async function processAccountingQuery(
       `Check the **Double Entry Journal** tab to review the complete statutory breakdown!`;
 
     return {
-      messageText: appendStatutorySourceFooter(replyText, parsed),
+      messageText: finalizeMessage(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -300,7 +348,7 @@ export async function processAccountingQuery(
     `   * **Cr. Realized Foreign Exchange Gain (P&L / IAS 21)**: ${parsed.functionalCurrency} ${fxGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Currency gain on capital)*`;
 
   return {
-    messageText: appendStatutorySourceFooter(replyText, parsed),
+    messageText: finalizeMessage(replyText, parsed),
     scenarioState: parsed
   };
 }

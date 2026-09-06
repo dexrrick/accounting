@@ -11,6 +11,7 @@ import { JournalTable } from './components/JournalTable';
 import { ComplianceRationale } from './components/ComplianceRationale';
 import { calculateDoubleEntries } from './engine/accountingEngine';
 import { processAccountingQuery } from './services/geminiService';
+import { loadProviderSettings, saveProviderSettings, type ProviderSettings } from './types/provider';
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { getSingaporeTimestamp } from './utils/dateUtils';
 
@@ -29,20 +30,33 @@ export const App: React.FC = () => {
     localStorage.setItem('app_font_size', fontSize);
   }, [fontSize]);
 
-  const [apiKey, setApiKey] = useState<string>(() => {
-    return localStorage.getItem('gemini_api_key') || '';
+  // Theme Management (Light mode default with YNAB styling, seamless Dark mode toggle)
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('app_theme') as 'light' | 'dark') || 'light';
   });
-  const [modelName, setModelName] = useState<string>(() => {
-    const saved = localStorage.getItem('gemini_model');
-    const migrated = localStorage.getItem('gemini_model_v3');
-    const allowed = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
-    if (!migrated || !saved || !allowed.includes(saved)) {
-      localStorage.setItem('gemini_model', 'gemini-3.5-flash-lite');
-      localStorage.setItem('gemini_model_v3', 'true');
-      return 'gemini-3.5-flash-lite';
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-    return saved;
+    localStorage.setItem('app_theme', theme);
+  }, [theme]);
+
+  const handleThemeToggle = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  // Provider Settings Management (Azure OpenAI, Gemini, OpenAI, Offline)
+  const [providerSettings, setProviderSettings] = useState<ProviderSettings>(() => {
+    return loadProviderSettings();
   });
+
+  const handleProviderSettingsSave = (newSettings: ProviderSettings) => {
+    setProviderSettings(newSettings);
+    saveProviderSettings(newSettings);
+  };
 
   const [scenario, setScenario] = useState<AccountingScenarioState | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
@@ -57,16 +71,6 @@ export const App: React.FC = () => {
     }
   ]);
 
-  const handleApiKeySave = (newKey: string) => {
-    setApiKey(newKey);
-    localStorage.setItem('gemini_api_key', newKey);
-  };
-
-  const handleModelChange = (newModel: string) => {
-    setModelName(newModel);
-    localStorage.setItem('gemini_model', newModel);
-  };
-
   const handleSendMessage = async (text: string) => {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -79,7 +83,14 @@ export const App: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await processAccountingQuery(text, scenario, standard, apiKey, modelName, [...messages, userMsg]);
+      const response = await processAccountingQuery(
+        text,
+        scenario,
+        standard,
+        providerSettings,
+        providerSettings.gemini.model,
+        [...messages, userMsg]
+      );
 
       setScenario(response.scenarioState);
 
@@ -158,13 +169,13 @@ export const App: React.FC = () => {
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans transition-all">
+    <div className="min-h-screen bg-[#F4F7FA] dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       {/* App Header */}
       <Header
-        apiKey={apiKey}
-        onApiKeySave={handleApiKeySave}
-        modelName={modelName}
-        onModelChange={handleModelChange}
+        theme={theme}
+        onThemeToggle={handleThemeToggle}
+        providerSettings={providerSettings}
+        onProviderSettingsSave={handleProviderSettingsSave}
         fontSize={fontSize}
         onFontSizeChange={setFontSize}
       />
@@ -195,17 +206,17 @@ export const App: React.FC = () => {
             {/* View Switcher Tabs */}
             {scenario && (computed.groups.some((g) => g.lines.length > 0) || (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0)) && (
               <div className="space-y-4">
-                <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-800 bg-slate-900 px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar">
+                <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
                   {computed.groups.some((g) => g.lines.length > 0) && (
                     <button
                       onClick={() => setActiveTab('entries')}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
                         activeTab === 'entries'
-                          ? 'border-blue-500 text-white'
-                          : 'border-transparent text-slate-400 hover:text-slate-200'
+                          ? 'border-ynab-blue text-ynab-blue dark:border-blue-400 dark:text-blue-400'
+                          : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                       }`}
                     >
-                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       Double Entry Journal
                     </button>
                   )}
@@ -214,11 +225,11 @@ export const App: React.FC = () => {
                     onClick={() => setActiveTab('compliance')}
                     className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
                       activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
-                        ? 'border-blue-500 text-white'
-                        : 'border-transparent text-slate-400 hover:text-slate-200'
+                        ? 'border-ynab-blue text-ynab-blue dark:border-blue-400 dark:text-blue-400'
+                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
-                    <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+                    <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Statutory Citations & Directives
                   </button>
                 </div>
@@ -250,7 +261,7 @@ export const App: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900/60 border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+      <footer className="bg-white/80 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-800/80 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
         <p>
           Universal Accounting & Singapore Statutory Engine • Grounded in IRAS, ACRA, CPF Board, MOM, MAS & Singapore Statutes • ECB Spot rates via Frankfurter API
         </p>
