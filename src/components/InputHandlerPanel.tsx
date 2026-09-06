@@ -1,6 +1,6 @@
 import React from 'react';
 import type { AccountingScenarioState } from '../types/accounting';
-import { Sliders, Lock, RefreshCw, Layers, Sparkles, Scale } from 'lucide-react';
+import { Sliders, RefreshCw, Layers, Sparkles, Scale } from 'lucide-react';
 
 interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
@@ -46,8 +46,8 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
       <div className="p-4 border-b border-slate-800 bg-slate-950/70">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-950 text-indigo-400 flex items-center justify-center border border-indigo-800/60 shadow-sm shrink-0">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
+            <div className="w-9 h-9 rounded-xl bg-slate-800 text-slate-200 flex items-center justify-center border border-slate-700 shadow-sm shrink-0">
+              <Sparkles className="w-4 h-4 text-blue-400" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -55,7 +55,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
                   {scenario.queryIntent === 'STATUTORY_ADVISORY' ? 'Singapore Statutory Directives' : 'Transaction Facts & Extracted Parameters'}
                 </h3>
                 {scenario.transactionTitle && (
-                  <span className="px-2.5 py-0.5 bg-blue-950/90 text-blue-400 border border-blue-800/60 rounded font-mono text-[11px] font-semibold">
+                  <span className="px-2.5 py-0.5 bg-slate-800/90 text-slate-200 border border-slate-700 rounded font-mono text-[11px] font-medium">
                     {scenario.transactionTitle}
                   </span>
                 )}
@@ -67,8 +67,8 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-2.5 py-1 rounded-lg">
-              <Lock className="w-3 h-3 text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-300 bg-slate-800/80 border border-slate-700/80 px-2.5 py-1 rounded-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80"></span>
               Facts Synchronized
             </span>
             <button
@@ -85,27 +85,27 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
       {/* Dynamic Key Facts Grid - Standardized Shapes & Fully Displayed Words */}
       <div className="p-4 space-y-3">
         {facts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {facts.map((fact, idx) => (
               <div
                 key={idx}
-                className={`p-3.5 bg-slate-950/90 rounded-xl border flex flex-col justify-between min-h-[82px] transition-all shadow-sm ${
+                className={`p-3.5 bg-slate-950/90 rounded-xl border flex flex-col justify-between min-h-[84px] overflow-hidden transition-all shadow-sm ${
                   fact.highlight
-                    ? 'border-amber-500/60 bg-amber-950/25'
+                    ? 'border-amber-600/60 bg-slate-900/90'
                     : 'border-slate-800/90 hover:border-slate-700'
                 }`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-snug break-words">
+                <div className="flex flex-wrap items-start justify-between gap-1.5 min-w-0">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-snug break-words min-w-0">
                     {fact.label}
                   </span>
                   {fact.badge && (
-                    <span className="shrink-0 text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800/90 text-slate-300 border border-slate-700/60 font-medium leading-none">
+                    <span className="inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-800/90 text-slate-300 border border-slate-700/60 font-medium leading-none whitespace-nowrap">
                       {fact.badge}
                     </span>
                   )}
                 </div>
-                <div className="text-sm font-bold font-mono text-white tracking-tight break-words mt-2">
+                <div className="text-sm font-bold font-mono text-white tracking-tight break-words mt-2.5">
                   {fact.value}
                 </div>
               </div>
@@ -120,8 +120,8 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
         {/* Transaction / Statutory Summary Footer */}
         {scenario.queryIntent === 'STATUTORY_ADVISORY' ? (
           <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 text-emerald-400 font-medium">
-              <Scale className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 text-slate-300 font-medium">
+              <Scale className="w-4 h-4 text-slate-400" />
               <span>Singapore Statutory Grounding Active</span>
             </div>
             <div className="font-mono text-slate-400 text-xs">

@@ -199,26 +199,26 @@ export const App: React.FC = () => {
                   {computed.groups.some((g) => g.lines.length > 0) && (
                     <button
                       onClick={() => setActiveTab('entries')}
-                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
                         activeTab === 'entries'
-                          ? 'border-blue-500 text-blue-400'
-                          : 'border-transparent text-slate-400 hover:text-white'
+                          ? 'border-blue-500 text-white'
+                          : 'border-transparent text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
                       Double Entry Journal
                     </button>
                   )}
 
                   <button
                     onClick={() => setActiveTab('compliance')}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
                       activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-slate-400 hover:text-white'
+                        ? 'border-blue-500 text-white'
+                        : 'border-transparent text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
                     Statutory Citations & Directives
                   </button>
                 </div>

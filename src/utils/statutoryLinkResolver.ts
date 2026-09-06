@@ -61,44 +61,44 @@ export function getAuthorityBadgeInfo(authority?: StatutoryAuthority | string): 
     case 'IRAS':
       return {
         label: 'IRAS Singapore',
-        badgeClass: 'bg-emerald-950 text-emerald-300 border-emerald-800/80',
-        dotColor: 'bg-emerald-400'
+        badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
+        dotColor: 'bg-emerald-500/80'
       };
     case 'ACRA':
       return {
         label: 'ACRA Singapore',
-        badgeClass: 'bg-indigo-950 text-indigo-300 border-indigo-800/80',
-        dotColor: 'bg-indigo-400'
+        badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
+        dotColor: 'bg-blue-400'
       };
     case 'CPF':
       return {
         label: 'CPF Board',
-        badgeClass: 'bg-blue-950 text-blue-300 border-blue-800/80',
+        badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
         dotColor: 'bg-blue-400'
       };
     case 'MOM':
       return {
         label: 'MOM Singapore',
-        badgeClass: 'bg-amber-950 text-amber-300 border-amber-800/80',
-        dotColor: 'bg-amber-400'
+        badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
+        dotColor: 'bg-amber-500/80'
       };
     case 'MAS':
       return {
         label: 'MAS Singapore',
-        badgeClass: 'bg-purple-950 text-purple-300 border-purple-800/80',
-        dotColor: 'bg-purple-400'
+        badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
+        dotColor: 'bg-slate-400'
       };
     case 'CUSTOMS':
       return {
         label: 'Singapore Customs',
-        badgeClass: 'bg-cyan-950 text-cyan-300 border-cyan-800/80',
-        dotColor: 'bg-cyan-400'
+        badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
+        dotColor: 'bg-slate-400'
       };
     default:
       return {
         label: 'Singapore Statutes',
-        badgeClass: 'bg-slate-800 text-slate-300 border-slate-700',
-        dotColor: 'bg-slate-400'
+        badgeClass: 'bg-slate-800/90 text-slate-300 border-slate-700',
+        dotColor: 'bg-slate-500'
       };
   }
 }
@@ -199,4 +199,107 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
   });
 
   return sanitized;
+}
+
+/**
+ * Ensures EVERY response ends with a verified, clickable government source link.
+ */
+export function appendStatutorySourceFooter(
+  messageText: string,
+  scenarioState?: any
+): string {
+  if (!messageText) return '';
+
+  // If already has an explicit source footer block, just sanitize links
+  if (
+    messageText.includes('Official Statutory & Regulatory Verification Sources') ||
+    messageText.includes('Official Verification Sources')
+  ) {
+    return sanitizeStatutoryLinks(messageText);
+  }
+
+  const links: { title: string; url: string; authority?: string }[] = [];
+
+  // 1. Extract from statutory advisory
+  if (scenarioState?.statutoryAdvisory && scenarioState.statutoryAdvisory.length > 0) {
+    for (const adv of scenarioState.statutoryAdvisory) {
+      if (adv.officialUrl && !links.some((l) => l.url === adv.officialUrl)) {
+        links.push({
+          title: `${adv.statuteOrAct} — ${adv.sectionOrSchedule}`,
+          url: adv.officialUrl,
+          authority: adv.authority
+        });
+      }
+    }
+  }
+
+  // 2. Extract from directGroups citations
+  if (scenarioState?.directGroups) {
+    for (const grp of scenarioState.directGroups) {
+      for (const cite of grp.citations || []) {
+        if (cite.officialSourceUrl && !links.some((l) => l.url === cite.officialSourceUrl)) {
+          links.push({
+            title: `${cite.standard} ${cite.paragraph || ''}`.trim(),
+            url: cite.officialSourceUrl,
+            authority: cite.authority
+          });
+        }
+      }
+    }
+  }
+
+  // 3. Fallback keyword extraction if links empty
+  if (links.length === 0) {
+    const lower = messageText.toLowerCase();
+    if (lower.includes('income tax') || lower.includes('section 14') || lower.includes('section 15') || lower.includes('motor car') || lower.includes('passenger car')) {
+      links.push({
+        title: 'Income Tax Act 1947',
+        url: 'https://sso.agc.gov.sg/Act/ITA1947',
+        authority: 'IRAS'
+      });
+    }
+    if (lower.includes('companies act') || lower.includes('205c') || lower.includes('audit')) {
+      links.push({
+        title: 'Companies Act 1967 (Section 205C)',
+        url: 'https://sso.agc.gov.sg/Act/CA1967#pr205C-',
+        authority: 'ACRA'
+      });
+    }
+    if (lower.includes('gst') || lower.includes('goods and services') || lower.includes('regulation 26')) {
+      links.push({
+        title: 'Goods and Services Tax Act 1993',
+        url: 'https://sso.agc.gov.sg/Act/GSTA1993',
+        authority: 'IRAS'
+      });
+    }
+    if (lower.includes('cpf') || lower.includes('ordinary wage')) {
+      links.push({
+        title: 'Central Provident Fund Act 1953',
+        url: 'https://sso.agc.gov.sg/Act/CPFA1953',
+        authority: 'CPF'
+      });
+    }
+    if (lower.includes('lease') || lower.includes('ifrs 16') || lower.includes('sfrs(i) 16')) {
+      links.push({
+        title: 'SFRS(I) 16 Leases (ASC Singapore)',
+        url: 'https://www.asc.gov.sg',
+        authority: 'ASC'
+      });
+    }
+    if (links.length === 0) {
+      links.push({
+        title: 'Singapore Financial Reporting Standards [SFRS(I)]',
+        url: 'https://www.asc.gov.sg',
+        authority: 'ASC'
+      });
+    }
+  }
+
+  const sourceItems = links
+    .map((l) => `* 🔗 [**${l.title}**](${l.url}) ${l.authority ? `*(${l.authority} / Verified Official Source)*` : ''}`)
+    .join('\n');
+
+  const footerBlock = `\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n${sourceItems}\n*(Click any link to verify directly on official Singapore government legislation or regulatory directory)*`;
+
+  return sanitizeStatutoryLinks(messageText + footerBlock);
 }

@@ -1,7 +1,7 @@
 import type { AccountingStandard, AccountingScenarioState, MissingFieldInfo, ChatMessage } from '../types/accounting';
 import { parseAccountingQuery } from '../engine/scenarioParser';
 import { formatSingaporeDate } from '../utils/dateUtils';
-import { sanitizeStatutoryLinks } from '../utils/statutoryLinkResolver';
+import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 
 export interface GeminiResponse {
   messageText: string;
@@ -66,7 +66,7 @@ export async function processAccountingQuery(
       `* Review the **Statutory Citations & "Why"** tab for full legal references and citations.`;
 
     return {
-      messageText: sanitizeStatutoryLinks(replyText),
+      messageText: appendStatutorySourceFooter(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -93,7 +93,7 @@ export async function processAccountingQuery(
       `**Balance Check**: $\\text{Total Debits (SGD } ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
 
     return {
-      messageText: sanitizeStatutoryLinks(replyText),
+      messageText: appendStatutorySourceFooter(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -154,7 +154,7 @@ export async function processAccountingQuery(
     }
 
     return {
-      messageText: replyText,
+      messageText: appendStatutorySourceFooter(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -201,7 +201,7 @@ export async function processAccountingQuery(
       `Review the **Double Entry Journal** tab for the full verified ledger table with citations!`;
 
     return {
-      messageText: replyText,
+      messageText: appendStatutorySourceFooter(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -222,7 +222,7 @@ export async function processAccountingQuery(
       `3. **Balance Sheet & P&L Impact**: Total Assets decrease by ${parsed.functionalCurrency} ${amt.toLocaleString()}, and Net Profit decreases by ${parsed.functionalCurrency} ${amt.toLocaleString()}.`;
 
     return {
-      messageText: replyText,
+      messageText: appendStatutorySourceFooter(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -251,7 +251,7 @@ export async function processAccountingQuery(
       `Check the **Double Entry Journal** tab to review the complete statutory breakdown!`;
 
     return {
-      messageText: replyText,
+      messageText: appendStatutorySourceFooter(replyText, parsed),
       scenarioState: parsed
     };
   }
@@ -300,7 +300,7 @@ export async function processAccountingQuery(
     `   * **Cr. Realized Foreign Exchange Gain (P&L / IAS 21)**: ${parsed.functionalCurrency} ${fxGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Currency gain on capital)*`;
 
   return {
-    messageText: replyText,
+    messageText: appendStatutorySourceFooter(replyText, parsed),
     scenarioState: parsed
   };
 }
@@ -600,7 +600,7 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   };
 
   return {
-    messageText: sanitizeStatutoryLinks(parsed.messageText || ''),
+    messageText: appendStatutorySourceFooter(parsed.messageText || '', scenarioState),
     scenarioState
   };
 }

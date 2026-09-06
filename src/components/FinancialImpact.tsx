@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import type { FinancialImpactSummary } from '../types/accounting';
 import { TrendingUp, Scale, Building2, PieChart } from 'lucide-react';
 
@@ -10,10 +10,10 @@ export const FinancialImpact: React.FC<FinancialImpactProps> = ({ impact }) => {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {/* Assets Delta */}
-      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-md">
+      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-sm">
         <div className="flex items-center justify-between text-slate-400 mb-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider">Assets Impact</span>
-          <Building2 className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Assets Impact</span>
+          <Building2 className="w-3.5 h-3.5 text-slate-400" />
         </div>
         <div className="text-sm font-bold font-mono text-white">
           {impact.totalAssetsDelta >= 0 ? '+' : ''}
@@ -23,12 +23,12 @@ export const FinancialImpact: React.FC<FinancialImpactProps> = ({ impact }) => {
       </div>
 
       {/* P&L Gain/Loss */}
-      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-md">
+      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-sm">
         <div className="flex items-center justify-between text-slate-400 mb-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider">Profit & Loss (P&L)</span>
-          <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Profit & Loss (P&L)</span>
+          <TrendingUp className="w-3.5 h-3.5 text-slate-400" />
         </div>
-        <div className={`text-sm font-bold font-mono ${impact.pnlImpact >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+        <div className={`text-sm font-bold font-mono ${impact.pnlImpact >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
           {impact.pnlImpact >= 0 ? '+' : ''}
           {impact.functionalCurrency} {impact.pnlImpact.toLocaleString(undefined, { minimumFractionDigits: 2 })}
         </div>
@@ -36,10 +36,10 @@ export const FinancialImpact: React.FC<FinancialImpactProps> = ({ impact }) => {
       </div>
 
       {/* OCI Impact */}
-      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-md">
+      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-sm">
         <div className="flex items-center justify-between text-slate-400 mb-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider">OCI Reserve</span>
-          <PieChart className="w-3.5 h-3.5 text-purple-400" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider">OCI Reserve</span>
+          <PieChart className="w-3.5 h-3.5 text-slate-400" />
         </div>
         <div className="text-sm font-bold font-mono text-white">
           {impact.ociImpact >= 0 ? '+' : ''}
@@ -49,15 +49,15 @@ export const FinancialImpact: React.FC<FinancialImpactProps> = ({ impact }) => {
       </div>
 
       {/* Balance Sheet Equilibrium */}
-      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-md">
+      <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800 shadow-sm">
         <div className="flex items-center justify-between text-slate-400 mb-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider">Balance Equation</span>
-          <Scale className="w-3.5 h-3.5 text-blue-400" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider">Balance Equation</span>
+          <Scale className="w-3.5 h-3.5 text-slate-400" />
         </div>
-        <div className="text-sm font-bold font-mono text-blue-400">
+        <div className="text-sm font-bold font-mono text-white">
           ΔAssets = ΔL + ΔE
         </div>
-        <p className="text-[10px] text-emerald-400 font-medium mt-0.5">Strict Equilibrium Verified</p>
+        <p className="text-[10px] text-emerald-400/90 font-medium mt-0.5">Strict Equilibrium Verified</p>
       </div>
     </div>
   );

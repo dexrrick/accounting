@@ -30,7 +30,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
           {/* Header of Journal Event */}
           <div className="p-3 sm:p-4 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
             <div className="flex items-center gap-2 sm:gap-2.5">
-              <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-blue-600 text-white font-mono text-[10px] sm:text-xs font-bold flex items-center justify-center shadow-sm shrink-0">
+              <span className="w-5 h-5 sm:w-6 sm:h-6 rounded-md bg-slate-800 border border-slate-700 text-slate-300 font-mono text-[10px] sm:text-xs font-bold flex items-center justify-center shadow-sm shrink-0">
                 #{gIdx + 1}
               </span>
               <div>
@@ -50,7 +50,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
               {/* Mobile Line Notes Toggle */}
               <button
                 onClick={() => setShowMobileNotes(!showMobileNotes)}
-                className="sm:hidden inline-flex items-center gap-1 text-[11px] font-medium text-blue-400 hover:text-blue-300 bg-slate-800/80 px-2 py-1 rounded-md border border-slate-700 transition-colors"
+                className="sm:hidden inline-flex items-center gap-1 text-[11px] font-medium text-slate-300 hover:text-white bg-slate-800/80 px-2 py-1 rounded-md border border-slate-700 transition-colors"
                 title="Toggle line explanations"
               >
                 <Info className="w-3 h-3" />
@@ -59,7 +59,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
 
               {/* Imbalance Alert (Only shown if entry does not balance) */}
               {!group.isBalanced && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-rose-950/80 text-rose-400 border border-rose-800/80 rounded-full text-[10px] sm:text-xs font-semibold">
+                <div className="flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 bg-slate-900 text-rose-400 border border-rose-800/80 rounded-full text-[10px] sm:text-xs font-medium">
                   <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
                   <span>Imbalance</span>
                 </div>
@@ -100,14 +100,14 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                             {isCredit && <span className="text-slate-500 font-normal text-[11px] sm:text-xs">To:</span>}
                             <span className="break-words leading-tight">{line.accountName}</span>
                             <span
-                              className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 font-mono uppercase rounded-full border ${
+                              className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 font-mono uppercase rounded-md border ${
                                 line.category === 'ASSET'
-                                  ? 'bg-blue-950 text-blue-400 border-blue-800'
+                                  ? 'bg-slate-800/90 text-slate-300 border-slate-700/70'
                                   : line.category === 'REVENUE'
-                                  ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                                  ? 'bg-slate-800/90 text-emerald-300/90 border-slate-700/70'
                                   : line.category === 'EXPENSE'
-                                  ? 'bg-rose-950 text-rose-400 border-rose-800'
-                                  : 'bg-purple-950 text-purple-400 border-purple-800'
+                                  ? 'bg-slate-800/90 text-rose-300/90 border-slate-700/70'
+                                  : 'bg-slate-800/90 text-slate-300 border-slate-700/70'
                               }`}
                             >
                               {line.category}
@@ -122,7 +122,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                           )}
 
                           {line.foreignCurrency && line.exchangeRate && (
-                            <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 text-[10px] sm:text-xs font-mono text-blue-300 border border-slate-700">
+                            <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800/80 text-[10px] sm:text-xs font-mono text-slate-300 border border-slate-700">
                               <span>
                                 FX: {line.foreignCurrency} {(line.foreignDebit || line.foreignCredit || 0).toLocaleString()} @ {line.exchangeRate}
                               </span>
@@ -153,10 +153,10 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                   <td className="py-2.5 sm:py-3 px-2 sm:px-4 text-right uppercase text-[10px] sm:text-xs tracking-wider text-slate-400">
                     Totals
                   </td>
-                  <td className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right font-mono text-xs sm:text-sm text-blue-400 border-b-2 border-double border-slate-600 whitespace-nowrap">
+                  <td className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right font-mono text-xs sm:text-sm text-white border-b-2 border-double border-slate-600 whitespace-nowrap">
                     {group.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right font-mono text-xs sm:text-sm text-blue-400 border-b-2 border-double border-slate-600 whitespace-nowrap">
+                  <td className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right font-mono text-xs sm:text-sm text-white border-b-2 border-double border-slate-600 whitespace-nowrap">
                     {group.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
                 </tr>
@@ -167,13 +167,13 @@ export const JournalTable: React.FC<JournalTableProps> = ({
           {/* Rationale & Standard References Accordion Summary */}
           <div className="p-4 bg-slate-950/60 border-t border-slate-800">
             <div className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5 mb-2">
-              <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+              <BookOpen className="w-3.5 h-3.5 text-slate-400" />
               <span>Accounting Rationale & Statutory Basis ({standard === 'SFRS_I' ? 'SFRS(I)' : 'IFRS'}):</span>
             </div>
             <ul className="space-y-1.5">
               {group.rationalePoints.map((point, pIdx) => (
                 <li key={pIdx} className="text-xs text-slate-400 flex items-start gap-2">
-                  <span className="text-blue-400 font-bold shrink-0 mt-0.5">•</span>
+                  <span className="text-slate-500 font-bold shrink-0 mt-0.5">•</span>
                   <span>{point}</span>
                 </li>
               ))}
