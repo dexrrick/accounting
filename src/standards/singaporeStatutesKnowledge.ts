@@ -51,7 +51,8 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
     evidenceTier: 'PRIMARY_SOURCE',
-    isVerbatimText: true
+    isVerbatimText: true,
+    effectiveDate: '1948-01-01'
   },
 
   ITA_SEC15_PROHIBITED_DEDUCTIONS: {
@@ -179,7 +180,12 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'GST Rate: Standard rate is 9% (effective 1 January 2024).'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#Sc1-',
-    tags: ['gst registration', 'turnover 1m', 'compulsory gst', 'prospective', 'retrospective']
+    tags: ['gst registration', 'turnover 1m', 'compulsory gst', 'prospective', 'retrospective'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2024-01-01'
   },
 
   GST_REG26_BLOCKED_INPUT_TAX: {
@@ -333,7 +339,12 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Due Date: CPF contributions are due at the end of the calendar month and must be paid by the 14th of the following month.'
     ],
     canonicalUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay',
-    tags: ['cpf ceiling', 'ordinary wage 8000', 'aw ceiling', 'cpf rates 2026', 'cpf contribution']
+    tags: ['cpf ceiling', 'ordinary wage 8000', 'aw ceiling', 'cpf rates 2026', 'cpf contribution'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2026-01-01'
   },
 
   CPF_SDL_SKILLS_DEVELOPMENT_LEVY: {
@@ -465,7 +476,12 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Public Holidays (Section 88): 11 statutory gazetted public holidays per year. If required to work on a public holiday, an employee is entitled to an extra day of basic salary or a day off in lieu.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr89-',
-    tags: ['annual leave', 'sick leave', 'hospitalisation leave', 'leave entitlement', 'public holiday', 'section 89', 'employment act leave']
+    tags: ['annual leave', 'sick leave', 'hospitalisation leave', 'leave entitlement', 'public holiday', 'section 89', 'employment act leave'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2019-04-01'
   },
 
   MOM_OVERTIME_PART_IV: {
@@ -486,7 +502,12 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Payment Deadline: Under Section 21, overtime payment must be disbursed within 14 days after the end of the salary period.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr38-',
-    tags: ['overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '44 hours']
+    tags: ['overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '44 hours'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2019-04-01'
   },
 
   // -------------------------------------------------------------
@@ -513,7 +534,12 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Additional Wage (AW) Ceiling: $$\\text{AW Ceiling} = \\text{SGD 102,000} - \\text{Total OW subject to CPF in the year}$$.'
     ],
     canonicalUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay',
-    tags: ['cpf rates by age', 'cpf contribution table', 'senior worker cpf', 'cpf 55 60', 'cpf rates 2026', 'cpf age brackets']
+    tags: ['cpf rates by age', 'cpf contribution table', 'senior worker cpf', 'cpf 55 60', 'cpf rates 2026', 'cpf age brackets'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2026-01-01'
   },
 
   // -------------------------------------------------------------

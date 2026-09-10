@@ -18,6 +18,105 @@ export interface GeminiResponse {
   clarifications?: MissingFieldInfo[];
 }
 
+export interface FastPathEvaluation {
+  canBypass: boolean;
+  reason: string;
+}
+
+/**
+ * Strict 6-Condition Test for Fast-Path Zero-LLM Execution.
+ * Core Principle: Deterministic != Authoritative.
+ * The zero-Gemini fast path should ONLY be used when ALL of the following are true:
+ * 1. The deterministic engine can fully answer the question.
+ * 2. The required supporting source/evidence is verified.
+ * 3. The source is authoritative for the question (verbatim primary law).
+ * 4. The source is current/effective for the relevant period.
+ * 5. No professional interpretation or judgment is required (not an accounting transaction/journal).
+ * 6. No material facts are missing.
+ */
+export function evaluateFastPathEligibility(
+  _userInput: string,
+  deterministicScenario: AccountingScenarioState | null,
+  groundedContext: GroundedReasoningContext
+): FastPathEvaluation {
+  // Condition 1: The deterministic engine can fully answer the question
+  if (!deterministicScenario) {
+    return { canBypass: false, reason: 'Deterministic scenario is missing' };
+  }
+  if (!deterministicScenario.isComplete) {
+    return { canBypass: false, reason: 'Deterministic scenario is incomplete' };
+  }
+  if (deterministicScenario.scenarioType === 'UNRECOGNIZED') {
+    return { canBypass: false, reason: 'Scenario is unrecognized by deterministic engine' };
+  }
+  if (deterministicScenario.missingFields && deterministicScenario.missingFields.length > 0) {
+    return { canBypass: false, reason: 'Deterministic scenario has missing fields' };
+  }
+
+  // Condition 5: No professional interpretation or judgment is required
+  // Transactions requiring account determination, standard selection, or journal synthesis must route to Gemini.
+  const classification = groundedContext.classification;
+  if (
+    classification.accountingAnalysisRequired ||
+    classification.journalEntryRequired ||
+    classification.intent === 'TRANSACTION' ||
+    classification.intent === 'HYBRID'
+  ) {
+    return { canBypass: false, reason: 'Professional accounting interpretation, transaction analysis, or journal entry required' };
+  }
+
+  // Condition 6: No material facts are missing
+  if (
+    (groundedContext.missingFacts && groundedContext.missingFacts.length > 0) ||
+    (deterministicScenario.missingFacts && deterministicScenario.missingFacts.length > 0)
+  ) {
+    return { canBypass: false, reason: 'Material facts are missing from query' };
+  }
+
+  // Condition 2 & 3: The required supporting source/evidence is verified and authoritative
+  const supportingCitations = deterministicScenario.directGroups?.[0]?.citations || [];
+  const supportingAdvisories = deterministicScenario.statutoryAdvisory || [];
+
+  if (supportingCitations.length === 0 && supportingAdvisories.length === 0) {
+    return { canBypass: false, reason: 'No supporting citations or statutory advisories found' };
+  }
+
+  const allRetrieved = [
+    ...groundedContext.primaryEvidence,
+    ...groundedContext.officialGuidance,
+    ...groundedContext.curatedSummaries
+  ];
+
+  for (const cite of supportingCitations) {
+    const rawStd = (cite.standard || '').toLowerCase().replace(/[\s\-_()]/g, '');
+    const matched = allRetrieved.find(r => {
+      const rCode = r.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
+      const rTitle = r.documentTitle.toLowerCase().replace(/[\s\-_()]/g, '');
+      return rawStd.includes(rCode) || rCode.includes(rawStd) || rawStd.includes(rTitle) || rTitle.includes(rawStd);
+    });
+
+    if (!matched) {
+      return { canBypass: false, reason: `Supporting citation '${cite.standard}' not found in retrieved sources` };
+    }
+    if (matched.sourceStatus !== 'VERIFIED') {
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' has status '${matched.sourceStatus}', not VERIFIED` };
+    }
+    if (matched.sourceType !== 'AUTHORITATIVE_SOURCE' && matched.evidenceTier !== 'PRIMARY_SOURCE') {
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is '${matched.sourceType}', not AUTHORITATIVE_SOURCE` };
+    }
+    if (!matched.isVerbatimText) {
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is not verbatim text` };
+    }
+
+    // Condition 4: The source is current/effective for the relevant period
+    if (!matched.effectiveDate || matched.effectiveDate.toLowerCase().includes('unknown')) {
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' lacks a verified effective date` };
+    }
+  }
+
+  return { canBypass: true, reason: 'All 6 authoritative deterministic conditions satisfied' };
+}
+
 export async function processAccountingQuery(
   userInput: string,
   currentScenario: AccountingScenarioState | null,
@@ -26,15 +125,31 @@ export async function processAccountingQuery(
   modelName: string = 'gemini-2.5-flash',
   chatHistory: ChatMessage[] = []
 ): Promise<GeminiResponse> {
+  const profiler = new RequestProfiler(userInput, modelName);
   let apiErrorMessage: string | null = null;
 
   // 1. Run deterministic accounting engine first to establish authoritative calculations
+  const tDet0 = Date.now();
   const deterministicScenario = await parseAccountingQuery(userInput, currentScenario);
+  profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
-  // 2. Live AI API call if provider settings or apiKey is provided
+  // 2. Build grounded context to evaluate evidence provenance and classification
+  const tGround0 = Date.now();
+  const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario);
+  profiler.recordStage('grounding', Date.now() - tGround0);
+
+  // 3. Evaluate Fast-Path Bypass (Strict 6-Condition Check)
+  const fastPathCheck = evaluateFastPathEligibility(userInput, deterministicScenario, groundedContext);
+  if (fastPathCheck.canBypass) {
+    profiler.recordFirstVisibleResponse();
+    profiler.setTokenCounts(0, 0, 0);
+    profiler.logSummary();
+
+    return renderStructuredOfflineResponse(deterministicScenario, standard, null);
+  }
+
+  // 4. Live AI API call if provider settings or apiKey is provided
   if (providerOrApiKey) {
-    const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario);
-
     if (typeof providerOrApiKey === 'object') {
       const active = providerOrApiKey.activeProvider;
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
@@ -54,7 +169,8 @@ export async function processAccountingQuery(
             providerOrApiKey.gemini.model || modelName,
             chatHistory,
             groundedContext,
-            deterministicScenario
+            deterministicScenario,
+            profiler
           );
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -86,7 +202,8 @@ export async function processAccountingQuery(
           modelName,
           chatHistory,
           groundedContext,
-          deterministicScenario
+          deterministicScenario,
+          profiler
         );
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -95,7 +212,7 @@ export async function processAccountingQuery(
     }
   }
 
-  // 3. Structured offline response rendered from deterministic state
+  // 5. Fallback structured offline response rendered from deterministic state
   return renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage);
 }
 
@@ -430,9 +547,10 @@ export async function callGeminiAPI(
   modelName: string = 'gemini-2.5-flash',
   chatHistory: ChatMessage[] = [],
   groundedContext?: GroundedReasoningContext,
-  deterministicScenario?: AccountingScenarioState | null
+  deterministicScenario?: AccountingScenarioState | null,
+  existingProfiler?: RequestProfiler
 ): Promise<GeminiResponse> {
-  const profiler = new RequestProfiler(userInput, modelName);
+  const profiler = existingProfiler || new RequestProfiler(userInput, modelName);
   const tGround0 = Date.now();
   const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
@@ -553,6 +671,7 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   const parsed = repairAndParseAIJson(rawJsonText);
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
   profiler.recordStage('assembly', Date.now() - tPost0);
+  profiler.recordFirstVisibleResponse();
 
   // Transparent telemetry console output
   profiler.logSummary();

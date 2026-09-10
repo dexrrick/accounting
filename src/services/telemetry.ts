@@ -9,6 +9,7 @@ export interface RequestTelemetry {
   query_mode: string;
   modelName?: string;
   total_ms: number;
+  time_to_first_visible_ms?: number;
   classification_ms: number;
   retrieval_ms: number;
   grounding_ms: number;
@@ -30,6 +31,7 @@ export class RequestProfiler {
   private query: string;
   private modelName?: string;
   private startTime: number;
+  private timeToFirstVisibleMs = 0;
   private classificationMs = 0;
   private retrievalMs = 0;
   private groundingMs = 0;
@@ -50,6 +52,12 @@ export class RequestProfiler {
     this.query = query;
     this.modelName = modelName;
     this.startTime = performance.now();
+  }
+
+  public recordFirstVisibleResponse(): void {
+    if (this.timeToFirstVisibleMs === 0) {
+      this.timeToFirstVisibleMs = Math.round((performance.now() - this.startTime) * 100) / 100;
+    }
   }
 
   public setQueryMode(mode: string): void {
@@ -131,6 +139,7 @@ export class RequestProfiler {
       query_mode: this.queryMode,
       modelName: this.modelName,
       total_ms: totalMs,
+      time_to_first_visible_ms: this.timeToFirstVisibleMs || totalMs,
       classification_ms: Math.round(this.classificationMs * 100) / 100,
       retrieval_ms: Math.round(this.retrievalMs * 100) / 100,
       grounding_ms: Math.round(this.groundingMs * 100) / 100,
@@ -162,10 +171,25 @@ export class RequestProfiler {
     return this.finalize();
   }
 
+  public static calculatePercentiles(values: number[]): { min: number; max: number; p50: number; p95: number } {
+    if (values.length === 0) return { min: 0, max: 0, p50: 0, p95: 0 };
+    const sorted = [...values].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    const p50Index = Math.floor(sorted.length * 0.5);
+    const p95Index = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+    return {
+      min: Math.round(min * 100) / 100,
+      max: Math.round(max * 100) / 100,
+      p50: Math.round(sorted[p50Index] * 100) / 100,
+      p95: Math.round(sorted[p95Index] * 100) / 100
+    };
+  }
+
   public logSummary(): void {
     const r = this.finalize();
     console.log(
-      `[Telemetry] ${r.query_mode} (${this.modelName || 'offline'}): total=${r.total_ms}ms (gemini=${r.gemini_request_ms}ms, ground=${r.grounding_ms}ms, post=${r.post_processing_ms}ms) | tokens: in=${r.gemini_input_tokens}, out=${r.gemini_output_tokens}, think=${r.thinking_tokens || 0}`
+      `[Telemetry] ${r.query_mode} (${this.modelName || 'offline'}): total=${r.total_ms}ms (first_vis=${r.time_to_first_visible_ms}ms, gemini=${r.gemini_request_ms}ms, ground=${r.grounding_ms}ms, post=${r.post_processing_ms}ms) | tokens: in=${r.gemini_input_tokens}, out=${r.gemini_output_tokens}, think=${r.thinking_tokens || 0}`
     );
   }
 }

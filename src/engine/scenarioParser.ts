@@ -351,8 +351,9 @@ export async function parseAccountingQuery(
     const matchedRules = querySingaporeStatutes(query);
     if (matchedRules.length > 0) {
       const primaryRule = matchedRules[0];
-      const advisories = matchedRules.map(convertToAdvisory);
-      const citations = matchedRules.map(convertToCitation);
+      const relevantRules = [primaryRule];
+      const advisories = relevantRules.map(convertToAdvisory);
+      const citations = relevantRules.map(convertToCitation);
 
       let primaryDomain: QueryDomain = 'GENERAL';
       if (primaryRule.category === 'ACRA_COMPLIANCE') primaryDomain = 'ACRA_CORP';

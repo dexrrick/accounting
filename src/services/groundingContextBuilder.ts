@@ -100,6 +100,7 @@ export function extractUserFacts(query: string, scenario?: AccountingScenarioSta
 
 /**
  * Formulates deterministic application and calculation rules relevant to query.
+ * Eliminates domain cross-contamination (e.g. no FX or lease rules in tax/employment queries).
  */
 export function formulateApplicationRules(
   classification: QuestionClassificationResult,
@@ -108,23 +109,32 @@ export function formulateApplicationRules(
   const rules: string[] = [];
   const q = query.toLowerCase();
 
-  // Computational double-entry balancing convention
-  if (q.includes('journal') || q.includes('entry') || q.includes('debit') || q.includes('credit') || classification.journalEntryRequired) {
+  // Computational double-entry balancing convention (strictly for transactions / journal requests)
+  if (
+    (q.includes('journal') || q.includes('entry') || q.includes('debit') || q.includes('credit') || classification.journalEntryRequired) &&
+    (classification.intent === 'TRANSACTION' || classification.intent === 'HYBRID' || classification.journalEntryRequired)
+  ) {
     rules.push('Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double-entry journals must balance to 2 decimal places.');
   }
 
-  // Acquisition consideration arithmetic convention
-  if (classification.accountingAnalysisRequired || q.includes('discount') || q.includes('cost')) {
+  // Acquisition consideration arithmetic convention (strictly for trade discount purchase queries)
+  if (q.includes('trade discount') || (q.includes('discount') && (q.includes('supplier') || q.includes('purchase') || q.includes('equipment') || q.includes('goods') || q.includes('invoice')))) {
     rules.push('Calculation Convention: Supplier trade discounts are deducted directly from the gross purchase price to derive initial cost consideration; trade discounts are not recorded as operating expenses.');
   }
 
-  // Foreign currency transaction bifurcation arithmetic convention
-  if (classification.accountingAnalysisRequired && (q.includes('fx') || q.includes('foreign') || q.includes('usd') || q.includes('gain') || q.includes('share'))) {
+  // Foreign currency transaction bifurcation arithmetic convention (strictly for forex / foreign currency queries)
+  if (
+    (q.includes('fx') || q.includes('forex') || q.includes('exchange rate') || (q.includes('foreign') && q.includes('currency')) || (q.includes('usd') && (q.includes('share') || q.includes('stock') || q.includes('gain')))) &&
+    (classification.intent === 'TRANSACTION' || classification.accountingAnalysisRequired)
+  ) {
     rules.push('Calculation Convention: Currency variance on monetary settlement is calculated as Foreign Amount * (Spot_disposal - Spot_acquisition); asset valuation variance is calculated as (Disposal_price - Cost_price) * Spot_disposal.');
   }
 
-  // Cost allocation calculation convention
-  if (q.includes('depreciation') || q.includes('amortis') || q.includes('amortiz')) {
+  // Cost allocation calculation convention (strictly for depreciation/amortization queries)
+  if (
+    (q.includes('depreciation') || q.includes('amortis') || q.includes('amortiz')) &&
+    (classification.intent === 'TRANSACTION' || classification.accountingAnalysisRequired)
+  ) {
     rules.push('Calculation Convention: Straight-line cost allocation formula is (Initial Cost - Residual Value) / Useful Life.');
   }
 
@@ -357,8 +367,9 @@ Return pure JSON only.
 RESPONSE FORMAT SPECIFICATION (COMPACT TRANSACTION & JOURNAL DECISION SCHEMA)
 ================================================================================
 CRITICAL FOR LATENCY & ACCURACY:
-Do NOT write verbose markdown essays, redundant nested structures, or complete balancing numbers in JSON.
-The deterministic accounting engine automatically computes debit/credit balancing, foreign exchange rates, and UI parameters.
+Do NOT write verbose markdown essays, redundant nested structures, or monetary amounts in JSON.
+The deterministic accounting engine automatically computes debit/credit balancing, monetary amounts, foreign exchange rates, and UI parameters.
+Gemini must NOT calculate amounts, balances, or invent placeholder numbers ($1,000, $50,000, etc.). Focus strictly on accounting classification, applicable standard, required account names, categories, debit/credit orientation, and missing valuation facts.
 Return ONLY this concise, compact JSON payload:
 {
   "transactionNature": "Brief title/nature of the transaction",

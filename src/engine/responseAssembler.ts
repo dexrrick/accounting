@@ -197,33 +197,92 @@ export function assembleDeterministicResponse(
       };
     });
   } else if (compact.requiredAccounts && compact.requiredAccounts.length > 0) {
-    // Build balanced double entry from required accounts
-    const lines: JournalLine[] = compact.requiredAccounts.map((acc, aIdx) => ({
-      id: `line-ai-${aIdx + 1}`,
-      accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EXPENSE' ? '5000' : '4000',
-      accountName: acc.accountName,
-      category: acc.category,
-      debit: acc.debitCredit === 'DEBIT' ? 1000 : 0,
-      credit: acc.debitCredit === 'CREDIT' ? 1000 : 0,
-      lineExplanation: acc.rationale || `Recognition of ${acc.accountName}`
-    }));
+    // Check if deterministic state or query provides an explicit numerical amount
+    let knownAmount: number | undefined = undefined;
+    if (deterministicScenario?.amount && deterministicScenario.amount > 0) {
+      knownAmount = deterministicScenario.amount;
+    } else {
+      const match = userInput.match(/(?:sgd|\$|usd|eur)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand|million)?\b/i);
+      if (match && match[1]) {
+        let val = parseFloat(match[1].replace(/,/g, ''));
+        const unit = match[2]?.toLowerCase();
+        if (unit === 'k' || unit === 'thousand') val *= 1000;
+        if (unit === 'm' || unit === 'million') val *= 1000000;
+        if (val > 0) knownAmount = val;
+      }
+    }
 
-    directGroups = [{
-      id: 'grp-ai-proposed-1',
-      eventDate: formatSingaporeDate(new Date()),
-      title: compact.transactionNature || 'AI-Proposed Double Entry',
-      summary: compact.treatment || 'Illustrative journal proposal',
-      lines,
-      totalDebit: lines.reduce((s, l) => s + l.debit, 0),
-      totalCredit: lines.reduce((s, l) => s + l.credit, 0),
-      isBalanced: true,
-      citations: verifiedCitations,
-      rationalePoints: [
-        compact.treatment || 'Accounting treatment proposed by AI reasoning',
-        `Authority Status: ${authorityStatus} (Subject to review)`
-      ],
-      authorityStatus
-    }];
+    const isUnvaluedOrBarter = !knownAmount || userInput.toLowerCase().includes('barter') || userInput.toLowerCase().includes('exchange');
+
+    if (isUnvaluedOrBarter) {
+      // Missing monetary amounts: DO NOT manufacture fake balanced entries ($1000 / $50000)
+      const lines: JournalLine[] = compact.requiredAccounts.map((acc, aIdx) => ({
+        id: `line-ai-${aIdx + 1}`,
+        accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EXPENSE' ? '5000' : '4000',
+        accountName: acc.accountName,
+        category: acc.category,
+        debit: 0,
+        credit: 0,
+        lineExplanation: `${acc.rationale || `Recognition of ${acc.accountName}`} — [Valuation pending determination]`
+      }));
+
+      directGroups = [{
+        id: 'grp-ai-proposed-unvalued-1',
+        eventDate: formatSingaporeDate(new Date()),
+        title: compact.transactionNature || 'AI-Proposed Double Entry (Pending Valuation)',
+        summary: compact.treatment || 'Illustrative journal proposal with uncalculated monetary amounts',
+        lines,
+        totalDebit: 0,
+        totalCredit: 0,
+        isBalanced: false, // Cannot be balanced without valuations
+        citations: verifiedCitations,
+        rationalePoints: [
+          compact.treatment || 'Accounting treatment proposed by AI reasoning',
+          '⚠️ AMOUNTS PENDING: Transaction amounts/fair values were not specified in query. Journal structure is proposed by AI; monetary amounts must be determined before posting.',
+          'Authority Status: CONDITIONAL (Subject to independent valuation and audit review)'
+        ],
+        authorityStatus: 'CONDITIONAL'
+      }];
+    } else {
+      // Deterministically assign the known amount to debit and credit sides
+      const debitsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'DEBIT').length;
+      const creditsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'CREDIT').length;
+
+      const lines: JournalLine[] = compact.requiredAccounts.map((acc, aIdx) => {
+        const isDebit = acc.debitCredit === 'DEBIT';
+        const amt = isDebit ? (debitsCount === 1 ? knownAmount! : 0) : (creditsCount === 1 ? knownAmount! : 0);
+        return {
+          id: `line-ai-${aIdx + 1}`,
+          accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EXPENSE' ? '5000' : '4000',
+          accountName: acc.accountName,
+          category: acc.category,
+          debit: isDebit ? amt : 0,
+          credit: !isDebit ? amt : 0,
+          lineExplanation: acc.rationale || `Recognition of ${acc.accountName}`
+        };
+      });
+
+      const totalDebit = lines.reduce((s, l) => s + l.debit, 0);
+      const totalCredit = lines.reduce((s, l) => s + l.credit, 0);
+      const isBalanced = totalDebit > 0 && Math.abs(totalDebit - totalCredit) < 0.01;
+
+      directGroups = [{
+        id: 'grp-ai-proposed-1',
+        eventDate: formatSingaporeDate(new Date()),
+        title: compact.transactionNature || 'AI-Proposed Double Entry',
+        summary: compact.treatment || 'Illustrative journal proposal',
+        lines,
+        totalDebit,
+        totalCredit,
+        isBalanced,
+        citations: verifiedCitations,
+        rationalePoints: [
+          compact.treatment || 'Accounting treatment proposed by AI reasoning',
+          `Authority Status: ${authorityStatus} (Proposed by AI)`
+        ],
+        authorityStatus: authorityStatus === 'DETERMINISTIC' ? 'AI_PROPOSED' : authorityStatus
+      }];
+    }
   }
 
   // 4. Assemble Statutory Advisories
@@ -301,7 +360,15 @@ export function assembleDeterministicResponse(
   let messageText = compact.messageText || '';
 
   if (!messageText || messageText.length < 30) {
-    if (queryMode === 'STATUTORY_ADVISORY' || statutoryAdvisory.length > 0) {
+    const isAccountingOrJournal = Boolean(
+      (compact.requiredAccounts && compact.requiredAccounts.length > 0) ||
+      compact.treatment ||
+      compact.decision ||
+      queryMode === 'TRANSACTION' ||
+      queryMode === 'HYBRID'
+    );
+
+    if (!isAccountingOrJournal && (queryMode === 'STATUTORY_ADVISORY' || statutoryAdvisory.length > 0)) {
       const adv = statutoryAdvisory[0];
       messageText = `### Statutory Directive: ${deterministicScenario?.transactionTitle || adv?.topic || 'Singapore Statutory Compliance'}\n\n` +
         `**Governing Authority**: **${adv?.authority || 'Singapore Regulatory Authority'}** | **Legislation**: **${adv?.statuteOrAct || 'Singapore Statutes'}** | **Authority Status**: **` +
@@ -330,6 +397,33 @@ export function assembleDeterministicResponse(
           messageText += `* **${c.standard} ${c.paragraph}** (${c.authority}): [${c.title}](${c.officialSourceUrl || 'https://sso.agc.gov.sg'})\n`;
         }
       }
+
+      if (directGroups.length > 0) {
+        const grp = directGroups[0];
+        messageText += `\n---\n\n### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
+
+        const isPendingValuation = !grp.isBalanced || grp.authorityStatus === 'CONDITIONAL' || grp.lines.every(l => l.debit === 0 && l.credit === 0);
+        if (isPendingValuation) {
+          messageText += `> ⚠️ **Uncertified Journal Proposal**: Account selections proposed by AI. Monetary amounts are uncalculated because required transaction values were not provided. Do not post to general ledger without independent valuation.\n\n`;
+        }
+
+        for (const line of grp.lines) {
+          if (line.debit > 0) {
+            messageText += `* **Debit**: **${line.accountName}** — **SGD ${line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(${line.lineExplanation})*\n`;
+          } else if (line.credit > 0) {
+            messageText += `* **Credit**: **${line.accountName}** — **SGD ${line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(${line.lineExplanation})*\n`;
+          } else {
+            const side = line.lineExplanation.toLowerCase().includes('debit') || line.category === 'ASSET' || line.category === 'EXPENSE' ? 'Debit' : 'Credit';
+            messageText += `* **${side}**: **${line.accountName}** — **[Valuation pending]** *(${line.lineExplanation})*\n`;
+          }
+        }
+
+        if (grp.isBalanced) {
+          messageText += `\n**Balance Check**: Total Debits (SGD ${grp.totalDebit.toLocaleString()}) == Total Credits (SGD ${grp.totalCredit.toLocaleString()})  ✓ Balanced\n`;
+        } else {
+          messageText += `\n**Balance Check**: ⚠️ **Pending Valuation**: Cannot verify balancing until transaction values or asset appraisals are determined.\n`;
+        }
+      }
     } else {
       messageText = `### SFRS(I) Accounting Assessment: ${deterministicScenario?.transactionTitle || 'Financial Reporting Treatment'}\n\n` +
         `**Authority Status**: **${authorityStatus === 'DETERMINISTIC' ? '✓ Deterministic Calculations' : authorityStatus === 'CONDITIONAL' ? '⚠️ Conditional (Missing Facts)' : '🤖 AI Proposed'}**\n\n` +
@@ -349,17 +443,42 @@ export function assembleDeterministicResponse(
       if (directGroups.length > 0) {
         const grp = directGroups[0];
         messageText += `---\n\n### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
+
+        const isPendingValuation = !grp.isBalanced || grp.authorityStatus === 'CONDITIONAL' || grp.lines.every(l => l.debit === 0 && l.credit === 0);
+        if (isPendingValuation) {
+          messageText += `> ⚠️ **Uncertified Journal Proposal**: Account selections proposed by AI. Monetary amounts are uncalculated because required transaction values were not provided. Do not post to general ledger without independent valuation.\n\n`;
+        }
+
         for (const line of grp.lines) {
           if (line.debit > 0) {
             messageText += `* **Debit**: **${line.accountName}** — **SGD ${line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(${line.lineExplanation})*\n`;
-          } else {
+          } else if (line.credit > 0) {
             messageText += `* **Credit**: **${line.accountName}** — **SGD ${line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(${line.lineExplanation})*\n`;
+          } else {
+            const side = line.lineExplanation.toLowerCase().includes('debit') || line.category === 'ASSET' || line.category === 'EXPENSE' ? 'Debit' : 'Credit';
+            messageText += `* **${side}**: **${line.accountName}** — **[Valuation pending]** *(${line.lineExplanation})*\n`;
           }
         }
-        messageText += `\n**Balance Check**: Total Debits (SGD ${grp.totalDebit.toLocaleString()}) == Total Credits (SGD ${grp.totalCredit.toLocaleString()})  ✓ Balanced\n`;
+
+        if (grp.isBalanced) {
+          messageText += `\n**Balance Check**: Total Debits (SGD ${grp.totalDebit.toLocaleString()}) == Total Credits (SGD ${grp.totalCredit.toLocaleString()})  ✓ Balanced\n`;
+        } else {
+          messageText += `\n**Balance Check**: ⚠️ **Pending Valuation**: Cannot verify balancing until transaction values or asset appraisals are determined.\n`;
+        }
       }
     }
   }
+
+  const hasPendingValuation = directGroups.some(g => !g.isBalanced && g.authorityStatus === 'CONDITIONAL');
+  if (hasPendingValuation) {
+    if (!missingFacts.includes('Fair value or transaction price for exchange consideration')) {
+      missingFacts.push('Fair value or transaction price for exchange consideration');
+    }
+  }
+
+  const finalAuthorityStatus: JournalAuthorityStatus = hasPendingValuation
+    ? 'CONDITIONAL'
+    : authorityStatus;
 
   const scenarioState: AccountingScenarioState = {
     scenarioType: deterministicScenario?.scenarioType || compact.scenarioType || (queryMode === 'STATUTORY_ADVISORY' ? 'SINGAPORE_STATUTORY_ADVISORY' : 'UNIVERSAL'),
@@ -376,7 +495,7 @@ export function assembleDeterministicResponse(
     transactionTitle: deterministicScenario?.transactionTitle || compact.transactionTitle || 'Accounting & Statutory Advisory',
     functionalCurrency: deterministicScenario?.functionalCurrency || 'SGD',
     transactionCurrency: deterministicScenario?.transactionCurrency || 'SGD',
-    authorityStatus,
+    authorityStatus: finalAuthorityStatus,
     accountingTreatmentSummary: compact.treatment || deterministicScenario?.accountingTreatmentSummary,
     singaporeTaxTreatmentSummary: compact.singaporeTaxImpact || deterministicScenario?.singaporeTaxTreatmentSummary,
     regulatoryMandatesSummary: deterministicScenario?.regulatoryMandatesSummary,
@@ -387,7 +506,7 @@ export function assembleDeterministicResponse(
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: missingFacts.length > 0 ? missingFacts : undefined,
-    isComplete: missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
+    isComplete: !hasPendingValuation && missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };
 
