@@ -1,5 +1,5 @@
 import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption } from '../types/accounting';
-import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText, Calendar, AlertTriangle, Building, Landmark } from 'lucide-react';
+import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText, Calendar, AlertTriangle, Building, Landmark, Info } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 
@@ -301,6 +301,15 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               <span>Standard Accounting & Statutory Citations</span>
             </div>
 
+            {/* Prominent Structural Verification Disclosure Notice */}
+            <div className="p-3 bg-slate-100/90 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl text-[11px] text-slate-600 dark:text-slate-400 flex items-start gap-2.5 leading-relaxed">
+              <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">Structural Verification Notice:</span>{' '}
+                Structural verification checks that the statute, section, governing authority, and official URL exist in verified Singapore repositories and match the retrieved evidence scope. It confirms anti-fabrication and structural validity, but does <strong>NOT</strong> certify semantic claim validity or replace professional accounting advice.
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {citations.map((cite, cIdx) => {
                 const badge = getAuthorityBadgeInfo(cite.authority);
@@ -322,14 +331,14 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                           if (verification.status === 'VERIFIED_PRIMARY_SOURCE') {
                             return (
                               <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
-                                ✓ Primary Source Verified
+                                ✓ Primary Source (Structural Match)
                               </span>
                             );
                           }
                           if (verification.status === 'SOURCE_NEEDS_REVIEW' || verification.status === 'STRUCTURALLY_VERIFIED_SUMMARY') {
                             return (
                               <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
-                                📝 Curated Summary (Needs Review)
+                                📝 Curated Summary (Review Needed)
                               </span>
                             );
                           }

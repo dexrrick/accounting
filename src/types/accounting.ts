@@ -39,7 +39,11 @@ export interface StandardCitation {
   isAuthoritativePrimarySource?: boolean;
   isStructurallyValid?: boolean;
   verificationReason?: string;
+  /** Confirms structural verification validates existence and URLs only, not semantic claim validity */
+  structuralVerificationOnly?: boolean;
 }
+
+export type JournalAuthorityStatus = 'DETERMINISTIC' | 'AI_PROPOSED' | 'CONDITIONAL';
 
 export interface StatutoryAdvisoryInfo {
   authority: StatutoryAuthority;
@@ -78,6 +82,7 @@ export interface JournalEntryGroup {
   isBalanced: boolean;
   citations: StandardCitation[];
   rationalePoints: string[];
+  authorityStatus?: JournalAuthorityStatus;
 }
 
 export interface FinancialImpactSummary {
@@ -124,6 +129,7 @@ export interface AccountingScenarioState {
   // Universal Dynamic Facts & Direct Journal Groups
   keyParameters?: TransactionFact[];
   directGroups?: JournalEntryGroup[];
+  authorityStatus?: JournalAuthorityStatus;
 
   // Explicit Assumptions (Needed because facts are missing)
   assumptions?: ExplicitAssumption[];

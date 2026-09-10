@@ -3,7 +3,8 @@ import type {
   AccountingScenarioState,
   JournalEntryGroup,
   JournalLine,
-  FinancialImpactSummary
+  FinancialImpactSummary,
+  JournalAuthorityStatus
 } from '../types/accounting';
 import { getCitation } from '../standards/standardsKnowledge';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -25,6 +26,11 @@ export function calculateDoubleEntries(
   const foreign = (scenario.transactionCurrency || 'USD').toUpperCase();
   const isForeign = func !== foreign;
 
+  const defaultStatus: JournalAuthorityStatus = scenario.authorityStatus ||
+    (scenario.scenarioType === 'UNRECOGNIZED'
+      ? 'AI_PROPOSED'
+      : (scenario.missingFacts && scenario.missingFacts.length > 0 ? 'CONDITIONAL' : 'DETERMINISTIC'));
+
   // =========================================================================
   // SCENARIO 0: UNIVERSAL DIRECT GROUPS (From Gemini API or Smart Engine)
   // =========================================================================
@@ -34,7 +40,12 @@ export function calculateDoubleEntries(
     let pnlImpact = 0;
     let ociImpact = 0;
 
-    for (const grp of scenario.directGroups) {
+    const normalizedGroups = scenario.directGroups.map((grp) => ({
+      ...grp,
+      authorityStatus: grp.authorityStatus || defaultStatus
+    }));
+
+    for (const grp of normalizedGroups) {
       for (const line of grp.lines) {
         if (line.category === 'ASSET') {
           assetsDelta += (line.debit - line.credit);
@@ -51,7 +62,7 @@ export function calculateDoubleEntries(
     }
 
     return {
-      groups: scenario.directGroups,
+      groups: normalizedGroups,
       financialImpact: {
         totalAssetsDelta: Math.round(assetsDelta * 100) / 100,
         totalLiabilitiesDelta: Math.round(liabDelta * 100) / 100,
@@ -488,5 +499,10 @@ export function calculateDoubleEntries(
     functionalCurrency: func
   };
 
-  return { groups, financialImpact };
+  const normalizedGroups = groups.map((grp) => ({
+    ...grp,
+    authorityStatus: grp.authorityStatus || defaultStatus
+  }));
+
+  return { groups: normalizedGroups, financialImpact };
 }

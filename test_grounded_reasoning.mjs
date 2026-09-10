@@ -517,8 +517,115 @@ async function runTests() {
   console.log('✓ 7E. PROOF 5: No retrieved evidence → no claim presented as authoritative (enforced fallback & UNVERIFIED status)');
   passed++;
 
+  // =========================================================================
+  // TEST 8: PHASE 2.2 HARDENING SUITE — AUTHORITY STATUS TRIAD & STRUCTURAL VERIFICATION
+  // =========================================================================
+  console.log('\n[8. PHASE 2.2 HARDENING: AUTHORITY STATUS TRIAD & STRUCTURAL VERIFICATION]');
+
+  // 8A. UNRECOGNIZED transaction journal entries are strictly AI_PROPOSED (never DETERMINISTIC)
+  const unrecognizedQuery = 'A company enters into a complex tripartite cross-border swap of non-fungible carbon credits for commodities';
+  const unrecContext = await buildGroundedReasoningContext(unrecognizedQuery);
+  const unrecDeterministic = await parseAccountingQuery(unrecognizedQuery);
+  assert.strictEqual(unrecDeterministic.scenarioType, 'UNRECOGNIZED', 'Transaction must be classified as UNRECOGNIZED');
+  assert.strictEqual(unrecDeterministic.authorityStatus, 'AI_PROPOSED', 'Deterministic scenario parser must tag UNRECOGNIZED as AI_PROPOSED');
+
+  const aiProposedPayload = {
+    scenarioType: 'UNRECOGNIZED',
+    messageText: 'Proposed accounting for cross-border swap.',
+    directGroups: [
+      {
+        id: 'grp-ai-swap',
+        title: 'Illustrative Carbon Credit Swap',
+        lines: [
+          { id: 'l1', accountCode: '1750', accountName: 'Carbon Credit Assets', category: 'ASSET', debit: 50000, credit: 0 },
+          { id: 'l2', accountCode: '1010', accountName: 'Cash', category: 'ASSET', debit: 0, credit: 50000 }
+        ],
+        citations: []
+      }
+    ]
+  };
+
+  const unrecProcessed = postProcessAIResponse(aiProposedPayload, null, unrecognizedQuery, unrecContext, unrecDeterministic);
+  assert.strictEqual(unrecProcessed.scenarioState.authorityStatus, 'AI_PROPOSED', 'Unrecognized transaction scenarioState MUST be AI_PROPOSED');
+  assert.notStrictEqual(unrecProcessed.scenarioState.authorityStatus, 'DETERMINISTIC', 'Unrecognized transaction MUST NEVER be DETERMINISTIC');
+  assert.strictEqual(unrecProcessed.scenarioState.directGroups[0].authorityStatus, 'AI_PROPOSED', 'AI proposed direct group MUST have authorityStatus === AI_PROPOSED');
+  console.log('✓ 8A. Unrecognized transactions with AI proposed journals are strictly AI_PROPOSED (never DETERMINISTIC)');
+  passed++;
+
+  // 8B. Recognized transactions calculated by the deterministic accounting engine have authorityStatus === 'DETERMINISTIC'
+  const recognizedCarQuery = 'Company buys passenger car for 100000 with bank';
+  const carDeterministic = await parseAccountingQuery(recognizedCarQuery);
+  assert.strictEqual(carDeterministic.scenarioType, 'CAR_PURCHASE_STATUTORY');
+  assert.strictEqual(carDeterministic.authorityStatus, 'DETERMINISTIC');
+  assert.strictEqual(carDeterministic.directGroups[0].authorityStatus, 'DETERMINISTIC');
+
+  const carContext = await buildGroundedReasoningContext(recognizedCarQuery);
+  const carProcessed = postProcessAIResponse(
+    { messageText: 'Car purchase accounting.' },
+    null,
+    recognizedCarQuery,
+    carContext,
+    carDeterministic
+  );
+  assert.strictEqual(carProcessed.scenarioState.authorityStatus, 'DETERMINISTIC', 'Recognized transaction must have authorityStatus === DETERMINISTIC');
+  assert.strictEqual(carProcessed.scenarioState.directGroups[0].authorityStatus, 'DETERMINISTIC', 'Recognized directGroup must have authorityStatus === DETERMINISTIC');
+  console.log('✓ 8B. Fully specified recognized transactions computed by deterministic engine receive DETERMINISTIC');
+  passed++;
+
+  // 8C. Incomplete queries or missing facts produce CONDITIONAL status
+  const conditionalQuery = 'Can we capitalize 150000 software development expenditure?';
+  const condDeterministic = await parseAccountingQuery(conditionalQuery);
+  assert.strictEqual(condDeterministic.authorityStatus, 'CONDITIONAL', 'SFRS(I) 1-38 without established criteria must be CONDITIONAL');
+  assert.strictEqual(condDeterministic.directGroups[0].authorityStatus, 'CONDITIONAL', 'Provisional directGroup must be CONDITIONAL');
+
+  const condContext = await buildGroundedReasoningContext(conditionalQuery);
+  const condProcessed = postProcessAIResponse(
+    { messageText: 'Assessment under SFRS(I) 1-38.' },
+    null,
+    conditionalQuery,
+    condContext,
+    condDeterministic
+  );
+  assert.strictEqual(condProcessed.scenarioState.authorityStatus, 'CONDITIONAL', 'Missing facts must produce scenarioState.authorityStatus === CONDITIONAL');
+  assert.strictEqual(condProcessed.scenarioState.directGroups[0].authorityStatus, 'CONDITIONAL', 'Direct group with missing facts must be CONDITIONAL');
+  console.log('✓ 8C. Missing material facts strictly enforce CONDITIONAL status on scenario and direct groups');
+  passed++;
+
+  // 8D. Citations processed have structuralVerificationOnly: true
+  const taxQuery = 'Is entertainment deductible under Section 14(1)?';
+  const taxCtx = await buildGroundedReasoningContext(taxQuery);
+  const taxAIOutput = {
+    scenarioType: 'UNIVERSAL',
+    messageText: 'Deductible if wholly and exclusively incurred.',
+    directGroups: [
+      {
+        id: 'grp-test-tax',
+        title: 'Tax Advisory Entry',
+        lines: [],
+        citations: [
+          {
+            standard: 'Income Tax Act 1947',
+            paragraph: 'Section 14(1)',
+            authority: 'IRAS',
+            officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-'
+          }
+        ]
+      }
+    ]
+  };
+  const taxProcessed = postProcessAIResponse(taxAIOutput, null, taxQuery, taxCtx);
+  const taxCite = taxProcessed.scenarioState.directGroups[0].citations[0];
+  assert.strictEqual(taxCite.structuralVerificationOnly, true, 'Citation must declare structuralVerificationOnly: true');
+  assert.strictEqual(taxCite.verificationStatus, 'VERIFIED_PRIMARY_SOURCE', 'Section 14(1) citation must be structurally verified');
+
+  // Verify defaultCitationVerifier also returns structuralVerificationOnly: true
+  const verifierResult = defaultCitationVerifier.verifyCitation(taxCite);
+  assert.strictEqual(verifierResult.structuralVerificationOnly, true, 'defaultCitationVerifier must declare structuralVerificationOnly: true');
+  console.log('✓ 8D. Structural verification integrity guaranteed (structuralVerificationOnly: true explicit on results and citations)');
+  passed++;
+
   console.log('\n=============================================================');
-  console.log(`ALL PHASE 2 & 2.1 TESTS PASSED SUCCESSFULLY! (${passed}/${passed} GREEN)`);
+  console.log(`ALL PHASE 2, 2.1 & 2.2 TESTS PASSED SUCCESSFULLY! (${passed}/${passed} GREEN)`);
   console.log('=============================================================\n');
 }
 

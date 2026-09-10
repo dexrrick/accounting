@@ -5,7 +5,8 @@ import type {
   QueryDomain,
   StatutoryAuthority,
   JournalEntryGroup,
-  StandardCitation
+  StandardCitation,
+  JournalAuthorityStatus
 } from '../types/accounting';
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
 import { classifyQuestion } from '../classification/questionClassifier';
@@ -424,10 +425,24 @@ export function postProcessAIResponse(
     deterministicScenario.directGroups &&
     deterministicScenario.directGroups.length > 0;
 
+  // Enforce Phase 2.2 Hardening: Authority status triad
+  // Deterministic engine recognized transaction -> DETERMINISTIC (or CONDITIONAL if missing facts exist)
+  // Unrecognized transaction (AI proposed entries) -> strictly AI_PROPOSED (or CONDITIONAL if missing facts exist)
+  // Missing facts ALWAYS trigger CONDITIONAL status.
+  const hasMissingFacts = Boolean(groundedContext.missingFacts && groundedContext.missingFacts.length > 0);
+  const computedAuthorityStatus: JournalAuthorityStatus = hasMissingFacts
+    ? 'CONDITIONAL'
+    : (hasAuthoritativeDeterministicEntries
+        ? (deterministicScenario.authorityStatus || 'DETERMINISTIC')
+        : 'AI_PROPOSED');
+
   let directGroups: JournalEntryGroup[];
 
   if (hasAuthoritativeDeterministicEntries) {
-    directGroups = deterministicScenario.directGroups!;
+    directGroups = deterministicScenario.directGroups!.map((grp) => ({
+      ...grp,
+      authorityStatus: grp.authorityStatus || computedAuthorityStatus
+    }));
   } else {
     // Validate and compute totals on AI-supplied directGroups
     directGroups = (parsed.directGroups || []).map((grp: any, gIdx: number) => {
@@ -475,7 +490,8 @@ export function postProcessAIResponse(
           verificationStatus: verification.status,
           isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
           isStructurallyValid: verification.isStructurallyValid,
-          verificationReason: verification.reason
+          verificationReason: verification.reason,
+          structuralVerificationOnly: true
         };
       });
 
@@ -489,14 +505,18 @@ export function postProcessAIResponse(
         totalCredit,
         isBalanced,
         citations: verifiedCitations,
-        rationalePoints: grp.rationalePoints || []
+        rationalePoints: grp.rationalePoints || [],
+        authorityStatus: computedAuthorityStatus
       };
     });
   }
 
   // Safeguard: If AI response didn't supply directGroups (e.g. conceptual advisory query), preserve current
   if (directGroups.length === 0 && currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
-    directGroups = currentScenario.directGroups;
+    directGroups = currentScenario.directGroups.map((grp) => ({
+      ...grp,
+      authorityStatus: grp.authorityStatus || computedAuthorityStatus
+    }));
   }
 
   // If deterministic scenario provided keyParameters, prioritize them
@@ -565,6 +585,7 @@ export function postProcessAIResponse(
     regulatoryMandatesSummary: parsed.regulatoryMandatesSummary || deterministicScenario?.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary,
     effectiveDateOrTiming: parsed.effectiveDateOrTiming || deterministicScenario?.effectiveDateOrTiming || currentScenario?.effectiveDateOrTiming,
     uncertaintyDisclaimer: uncertaintyDisclaimer || undefined,
+    authorityStatus: computedAuthorityStatus,
     keyParameters,
     directGroups,
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,

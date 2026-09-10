@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { JournalEntryGroup, AccountingStandard } from '../types/accounting';
-import { AlertOctagon, Calendar, BookOpen, Info } from 'lucide-react';
+import { AlertOctagon, Calendar, BookOpen, Info, AlertTriangle, CheckCircle2, Cpu } from 'lucide-react';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
 interface JournalTableProps {
@@ -22,7 +22,9 @@ export const JournalTable: React.FC<JournalTableProps> = ({
 
   return (
     <div className="space-y-6">
-      {groups.map((group, gIdx) => (
+      {groups.map((group, gIdx) => {
+        const status = group.authorityStatus || 'DETERMINISTIC';
+        return (
         <div
           key={group.id}
           className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden transition-colors duration-200"
@@ -49,6 +51,26 @@ export const JournalTable: React.FC<JournalTableProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Authority Status Badge */}
+              {status === 'DETERMINISTIC' && (
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span>Deterministic</span>
+                </span>
+              )}
+              {status === 'AI_PROPOSED' && (
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border bg-purple-50 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800">
+                  <Cpu className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                  <span>AI Proposed</span>
+                </span>
+              )}
+              {status === 'CONDITIONAL' && (
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                  <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <span>Conditional</span>
+                </span>
+              )}
+
               {/* Mobile Line Notes Toggle */}
               <button
                 onClick={() => setShowMobileNotes(!showMobileNotes)}
@@ -68,6 +90,36 @@ export const JournalTable: React.FC<JournalTableProps> = ({
               )}
             </div>
           </div>
+
+          {/* Prominent Warning Callout for AI Proposed Journals */}
+          {status === 'AI_PROPOSED' && (
+            <div className="p-3 sm:p-3.5 bg-purple-50/90 dark:bg-purple-950/40 border-b border-purple-200 dark:border-purple-900/60 flex items-start gap-2.5 text-xs text-purple-900 dark:text-purple-200">
+              <AlertTriangle className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold uppercase tracking-wider text-[10px] text-purple-800 dark:text-purple-300 block">
+                  AI-Synthesized Proposal (Not Authoritative)
+                </span>
+                <p className="mt-0.5 leading-relaxed text-[11px] text-purple-950 dark:text-purple-200">
+                  This double entry was synthesized by AI for an uncatalogued transaction pattern. It has not been calculated or certified by the deterministic accounting engine. Review and verify before recording.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Prominent Warning Callout for Conditional Journals */}
+          {status === 'CONDITIONAL' && (
+            <div className="p-3 sm:p-3.5 bg-amber-50/90 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/60 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold uppercase tracking-wider text-[10px] text-amber-800 dark:text-amber-300 block">
+                  Conditional Illustrative Entry (Subject to Verification)
+                </span>
+                <p className="mt-0.5 leading-relaxed text-[11px] text-amber-950 dark:text-amber-200">
+                  This entry is illustrative and conditional upon establishing material facts or satisfying statutory recognition criteria. Do not record as final until all required facts are established.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Journal Entries Table - Clean ledger styling with tabular-nums */}
           <div className="w-full overflow-x-auto">
@@ -184,7 +236,8 @@ export const JournalTable: React.FC<JournalTableProps> = ({
             </ul>
           </div>
         </div>
-      ))}
+      );
+    })}
     </div>
   );
 };

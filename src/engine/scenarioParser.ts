@@ -1,4 +1,4 @@
-import type { AccountingScenarioState, JournalEntryGroup, JournalLine, QueryDomain, ExplicitAssumption, MissingFieldInfo } from '../types/accounting';
+import type { AccountingScenarioState, JournalEntryGroup, JournalLine, QueryDomain, ExplicitAssumption, MissingFieldInfo, JournalAuthorityStatus } from '../types/accounting';
 import { getExchangeRate } from '../services/frankfurterService';
 import { getCitation } from '../standards/standardsKnowledge';
 import { 
@@ -148,8 +148,11 @@ export async function parseAccountingQuery(
       { label: 'Tangible Asset Treatment', value: 'Capitalise if future benefits probable (SFRS(I) 1-16 §7)', badge: 'PP&E Cost' }
     ];
 
+    const capAuthorityStatus: JournalAuthorityStatus = (hasExplicitAmount && userEstablishedCriteria) ? 'DETERMINISTIC' : 'CONDITIONAL';
+
     return {
       scenarioType: 'CAPITALISATION_SFRS138',
+      authorityStatus: capAuthorityStatus,
       queryIntent: hasExplicitAmount && userEstablishedCriteria ? 'HYBRID' : 'STATUTORY_ADVISORY',
       primaryDomain: 'ACCOUNTING_SFRS',
       rawQuery: query,
@@ -175,6 +178,7 @@ export async function parseAccountingQuery(
           totalCredit: effectiveAmount,
           isBalanced: true,
           citations,
+          authorityStatus: capAuthorityStatus,
           rationalePoints: [
             'Under SFRS(I) 1-38 §54: All research phase costs must be expensed in P&L as incurred.',
             'Under SFRS(I) 1-38 §57: Development expenditure can be capitalised only when all 6 cumulative criteria are demonstrated.',
@@ -195,7 +199,7 @@ export async function parseAccountingQuery(
   // e.g. "Can I claim input GST on a passenger car?"
   // =========================================================================
   const isCarPurchase = (q.includes('car') || q.includes('motor car') || q.includes('passenger car')) &&
-    (q.includes('bought') || q.includes('purchas') || q.includes('paid') || q.includes('pay')) &&
+    (q.includes('bought') || q.includes('purchas') || q.includes('paid') || q.includes('pay') || q.includes('buy')) &&
     !q.includes('rental') && !q.includes('lease');
 
   const isStatutoryQuestion = 
@@ -298,6 +302,7 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'CAR_PURCHASE_STATUTORY',
+      authorityStatus: 'DETERMINISTIC',
       queryIntent: 'HYBRID',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
@@ -321,6 +326,7 @@ export async function parseAccountingQuery(
           totalCredit: carCost,
           isBalanced: true,
           citations: carCitations,
+          authorityStatus: 'DETERMINISTIC',
           rationalePoints: [
             'Under IRAS GST Regulation 26: 9% Input GST incurred on passenger cars (S-plate) is strictly blocked from recovery. The full invoice amount is capitalized into the asset cost.',
             'Under Section 15(1)(k) of the Income Tax Act 1947: No deduction or capital allowance is granted on passenger cars. Depreciation in accounting records must be added back 100% in the corporate tax computation.',
@@ -395,6 +401,7 @@ export async function parseAccountingQuery(
 
       return {
         scenarioType: 'SINGAPORE_STATUTORY_ADVISORY',
+        authorityStatus: 'DETERMINISTIC',
         queryIntent: 'STATUTORY_ADVISORY',
         primaryDomain,
         rawQuery: query,
@@ -419,6 +426,7 @@ export async function parseAccountingQuery(
             totalCredit: 0,
             isBalanced: true,
             citations,
+            authorityStatus: 'DETERMINISTIC',
             rationalePoints: primaryRule.practicalRules
           }
         ],
@@ -729,8 +737,11 @@ export async function parseAccountingQuery(
       }
     ];
 
+    directGroups.forEach(g => { g.authorityStatus = 'DETERMINISTIC'; });
+
     return {
       scenarioType: 'PPE_IAS16',
+      authorityStatus: 'DETERMINISTIC',
       queryIntent: 'TRANSACTION',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
@@ -983,9 +994,11 @@ export async function parseAccountingQuery(
     }
 
     const hasSettlement = isSettlement || directGroups.some(g => g.id === 'grp-equip-settle');
+    directGroups.forEach(g => { g.authorityStatus = 'DETERMINISTIC'; });
 
     return {
       scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+      authorityStatus: 'DETERMINISTIC',
       queryIntent: 'TRANSACTION',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
@@ -1064,6 +1077,7 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'GENERAL_EXPENSE',
+      authorityStatus: 'DETERMINISTIC',
       queryIntent: 'TRANSACTION',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
@@ -1136,6 +1150,7 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'LEASE_IFRS16',
+      authorityStatus: rateAssumed ? 'CONDITIONAL' : 'DETERMINISTIC',
       queryIntent: 'TRANSACTION',
       primaryDomain: 'ACCOUNTING_SFRS',
       rawQuery: query,
@@ -1209,6 +1224,7 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'UNRECOGNIZED',
+      authorityStatus: 'AI_PROPOSED',
       queryIntent: classification.intent,
       primaryDomain: resolvedDomain,
       rawQuery: query,
@@ -1468,8 +1484,11 @@ export async function parseAccountingQuery(
     });
   }
 
+  directGroups.forEach(g => { g.authorityStatus = 'DETERMINISTIC'; });
+
   return {
     scenarioType: 'EQUITY_INVESTMENT_FX',
+    authorityStatus: 'DETERMINISTIC',
     queryIntent: 'TRANSACTION',
     primaryDomain: 'ACCOUNTING_SFRS',
     rawQuery: query,
