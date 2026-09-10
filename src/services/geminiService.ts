@@ -10,6 +10,7 @@ import {
   postProcessAIResponse,
   type GroundedReasoningContext
 } from './groundingContextBuilder';
+import { RequestProfiler } from './telemetry';
 
 export interface GeminiResponse {
   messageText: string;
@@ -22,7 +23,7 @@ export async function processAccountingQuery(
   currentScenario: AccountingScenarioState | null,
   standard: AccountingStandard,
   providerOrApiKey?: ProviderSettings | string,
-  modelName: string = 'gemini-3.5-flash-lite',
+  modelName: string = 'gemini-2.5-flash',
   chatHistory: ChatMessage[] = []
 ): Promise<GeminiResponse> {
   let apiErrorMessage: string | null = null;
@@ -426,13 +427,16 @@ export async function callGeminiAPI(
   currentScenario: AccountingScenarioState | null,
   standard: AccountingStandard,
   apiKey: string,
-  modelName: string = 'gemini-3.5-flash-lite',
+  modelName: string = 'gemini-2.5-flash',
   chatHistory: ChatMessage[] = [],
   groundedContext?: GroundedReasoningContext,
   deterministicScenario?: AccountingScenarioState | null
 ): Promise<GeminiResponse> {
+  const profiler = new RequestProfiler(userInput, modelName);
+  const tGround0 = Date.now();
   const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
+  profiler.recordStage('grounding', Date.now() - tGround0);
 
   // Multi-turn conversational history for Gemini
   const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
@@ -473,35 +477,85 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
     contents.push({ role: 'user', parts: [{ text: currentTurnText }] });
   }
 
+  // Optimize generationConfig:
+  // For models with thinking support (gemini-2.5-flash / thinking models), set thinking budget
+  // to prevent runaway chain-of-thought tokens on statutory and transactional queries.
+  const generationConfig: any = {
+    temperature: 0.1,
+    responseMimeType: 'application/json'
+  };
+
+  if (modelName.includes('2.5') || modelName.includes('thinking')) {
+    if (context.classification.intent === 'STATUTORY_ADVISORY') {
+      generationConfig.thinkingConfig = { thinkingBudget: 0 };
+    } else if (context.classification.intent === 'TRANSACTION') {
+      generationConfig.thinkingConfig = { thinkingBudget: 512 };
+    } else {
+      generationConfig.thinkingConfig = { thinkingBudget: 1024 };
+    }
+  }
+
   const requestBody = {
     contents,
     systemInstruction: {
       parts: [{ text: systemInstruction }]
     },
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: 'application/json'
-    }
+    generationConfig
   };
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestBody)
-  });
+  // 12-second AbortController timeout to guarantee fast interactive latency
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  const tReq0 = Date.now();
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal
+    });
+  } catch (netErr: any) {
+    clearTimeout(timeoutId);
+    if (netErr.name === 'AbortError' || controller.signal.aborted) {
+      throw new Error(`Gemini request timed out after 12s. Reverting to deterministic accounting engine.`);
+    }
+    throw netErr;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+
+  profiler.recordStage('gemini_request', Date.now() - tReq0);
 
   if (!res.ok) {
     throw new Error(`Gemini HTTP Error ${res.status}: ${await res.text()}`);
   }
 
   const data = await res.json();
+  const usage = data?.usageMetadata;
+  if (usage) {
+    profiler.setTokenCounts(
+      usage.promptTokenCount || 0,
+      usage.candidatesTokenCount || 0,
+      usage.candidatesTokensDetails?.[0]?.thinkingTokenCount || 0
+    );
+  }
+
   const rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!rawJsonText) {
     throw new Error('No content returned by Gemini');
   }
 
+  const tPost0 = Date.now();
   const parsed = repairAndParseAIJson(rawJsonText);
-  return postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario);
+  const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
+  profiler.recordStage('assembly', Date.now() - tPost0);
+
+  // Transparent telemetry console output
+  profiler.logSummary();
+
+  return result;
 }

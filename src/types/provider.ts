@@ -9,7 +9,7 @@ export interface AzureConfig {
 
 export interface GeminiConfig {
   apiKey: string;
-  model: string;           // "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"
+  model: string;           // "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"
 }
 
 export interface OpenAIConfig {
@@ -35,7 +35,7 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
   },
   gemini: {
     apiKey: '',
-    model: 'gemini-3.5-flash-lite'
+    model: 'gemini-2.5-flash'
   },
   openai: {
     apiKey: '',
@@ -44,6 +44,13 @@ export const DEFAULT_PROVIDER_SETTINGS: ProviderSettings = {
 };
 
 const SETTINGS_STORAGE_KEY = 'app_ai_provider_settings';
+
+function normalizeGeminiModel(m?: string): string {
+  if (!m || m.startsWith('gemini-3.') || m.includes('flash-lite')) {
+    return 'gemini-2.5-flash';
+  }
+  return m;
+}
 
 export function loadProviderSettings(): ProviderSettings {
   try {
@@ -60,7 +67,7 @@ export function loadProviderSettings(): ProviderSettings {
         },
         gemini: {
           apiKey: parsed.gemini?.apiKey || localStorage.getItem('gemini_api_key') || '',
-          model: parsed.gemini?.model || localStorage.getItem('gemini_model') || 'gemini-3.5-flash-lite'
+          model: normalizeGeminiModel(parsed.gemini?.model || localStorage.getItem('gemini_model'))
         },
         openai: {
           apiKey: parsed.openai?.apiKey || '',
@@ -75,7 +82,7 @@ export function loadProviderSettings(): ProviderSettings {
 
   // Fallback: migrate existing standalone gemini key if present
   const existingGeminiKey = localStorage.getItem('gemini_api_key') || '';
-  const existingGeminiModel = localStorage.getItem('gemini_model') || 'gemini-3.5-flash-lite';
+  const existingGeminiModel = normalizeGeminiModel(localStorage.getItem('gemini_model') || 'gemini-2.5-flash');
   
   return {
     ...DEFAULT_PROVIDER_SETTINGS,

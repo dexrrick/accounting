@@ -9,6 +9,7 @@ import {
   postProcessAIResponse,
   type GroundedReasoningContext
 } from './groundingContextBuilder';
+import { RequestProfiler } from './telemetry';
 
 /**
  * Normalizes an Azure OpenAI endpoint input into a valid URL base.
@@ -88,7 +89,8 @@ export function parseAccountingAIResponse(
   currentScenario: AccountingScenarioState | null,
   userInput: string,
   groundedContext?: GroundedReasoningContext,
-  deterministicScenario?: AccountingScenarioState | null
+  deterministicScenario?: AccountingScenarioState | null,
+  standard: AccountingStandard = 'SFRS_I'
 ): GeminiResponse {
   if (!rawJsonText) {
     throw new Error('No content returned by AI provider.');
@@ -107,7 +109,7 @@ export function parseAccountingAIResponse(
     currentInformationRequired: false
   };
 
-  return postProcessAIResponse(parsed, currentScenario, userInput, fallbackContext, deterministicScenario);
+  return postProcessAIResponse(parsed, currentScenario, userInput, fallbackContext, deterministicScenario, standard);
 }
 
 export async function callAzureOpenAI(
@@ -130,12 +132,15 @@ export async function callAzureOpenAI(
     throw new Error('Azure OpenAI Deployment Name is required (e.g. gpt-4o). Please configure in Settings.');
   }
 
-  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
   const deployment = azureConfig.deploymentName.trim();
+  const profiler = new RequestProfiler(userInput, `azure-${deployment}`);
+  const tGround0 = Date.now();
+  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
   const apiVersion = (azureConfig.apiVersion || '2024-08-01-preview').trim();
   const url = `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
 
   const messages = buildAccountingMessages(userInput, currentScenario, standard, chatHistory, context);
+  profiler.recordStage('grounding', Date.now() - tGround0);
 
   const requestPayload = {
     messages,
@@ -143,6 +148,11 @@ export async function callAzureOpenAI(
     response_format: { type: 'json_object' }
   };
 
+  // 12-second AbortController timeout to guarantee fast interactive latency
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  const tReq0 = Date.now();
   let res: Response;
   try {
     res = await fetch(url, {
@@ -151,11 +161,20 @@ export async function callAzureOpenAI(
         'Content-Type': 'application/json',
         'api-key': azureConfig.apiKey.trim()
       },
-      body: JSON.stringify(requestPayload)
+      body: JSON.stringify(requestPayload),
+      signal: controller.signal
     });
   } catch (netErr: any) {
+    clearTimeout(timeoutId);
+    if (netErr.name === 'AbortError' || controller.signal.aborted) {
+      throw new Error(`Azure OpenAI request timed out after 12s. Reverting to deterministic accounting engine.`);
+    }
     throw new Error(`Azure OpenAI Connection Failed: Network error reaching ${endpoint}. Check endpoint address or CORS settings (${netErr?.message})`);
+  } finally {
+    clearTimeout(timeoutId);
   }
+
+  profiler.recordStage('gemini_request', Date.now() - tReq0);
 
   if (!res.ok) {
     const errorText = await res.text();
@@ -172,8 +191,17 @@ export async function callAzureOpenAI(
   }
 
   const data = await res.json();
+  if (data?.usage) {
+    profiler.setTokenCounts(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
+  }
+
   const rawJsonText = data?.choices?.[0]?.message?.content;
-  return parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context, deterministicScenario);
+  const tPost0 = Date.now();
+  const result = parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context, deterministicScenario, standard);
+  profiler.recordStage('assembly', Date.now() - tPost0);
+
+  profiler.logSummary();
+  return result;
 }
 
 export async function callStandardOpenAI(
@@ -189,10 +217,13 @@ export async function callStandardOpenAI(
     throw new Error('Valid OpenAI API Key is required. Please configure in Settings.');
   }
 
-  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
   const model = openaiConfig.model || 'gpt-4o';
+  const profiler = new RequestProfiler(userInput, `openai-${model}`);
+  const tGround0 = Date.now();
+  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
   const url = 'https://api.openai.com/v1/chat/completions';
   const messages = buildAccountingMessages(userInput, currentScenario, standard, chatHistory, context);
+  profiler.recordStage('grounding', Date.now() - tGround0);
 
   const requestPayload = {
     model,
@@ -201,6 +232,11 @@ export async function callStandardOpenAI(
     response_format: { type: 'json_object' }
   };
 
+  // 12-second AbortController timeout to guarantee fast interactive latency
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+  const tReq0 = Date.now();
   let res: Response;
   try {
     res = await fetch(url, {
@@ -209,11 +245,20 @@ export async function callStandardOpenAI(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${openaiConfig.apiKey.trim()}`
       },
-      body: JSON.stringify(requestPayload)
+      body: JSON.stringify(requestPayload),
+      signal: controller.signal
     });
   } catch (netErr: any) {
+    clearTimeout(timeoutId);
+    if (netErr.name === 'AbortError' || controller.signal.aborted) {
+      throw new Error(`OpenAI request timed out after 12s. Reverting to deterministic accounting engine.`);
+    }
     throw new Error(`OpenAI Connection Failed: Network error reaching ${url} (${netErr?.message})`);
+  } finally {
+    clearTimeout(timeoutId);
   }
+
+  profiler.recordStage('gemini_request', Date.now() - tReq0);
 
   if (!res.ok) {
     const errorText = await res.text();
@@ -226,6 +271,15 @@ export async function callStandardOpenAI(
   }
 
   const data = await res.json();
+  if (data?.usage) {
+    profiler.setTokenCounts(data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
+  }
+
   const rawJsonText = data?.choices?.[0]?.message?.content;
-  return parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context, deterministicScenario);
+  const tPost0 = Date.now();
+  const result = parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context, deterministicScenario, standard);
+  profiler.recordStage('assembly', Date.now() - tPost0);
+
+  profiler.logSummary();
+  return result;
 }

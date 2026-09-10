@@ -15,6 +15,7 @@ import { defaultSourceRetriever, type ISourceRetriever } from '../retrieval/sour
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { assembleDeterministicResponse } from '../engine/responseAssembler';
 
 /**
  * Provider-neutral structured reasoning context.
@@ -320,74 +321,102 @@ GROUNDED REASONING CONTEXT SUPPLIED TO YOU
     prompt += `• Standard accounting accrual and math balancing conventions apply.\n`;
   }
 
-  // Section 8: Required JSON Output Format
-  prompt += `
+  // Section 8: Compact Decision Schema Specification
+  if (context.classification.intent === 'STATUTORY_ADVISORY') {
+    prompt += `
 ================================================================================
-RESPONSE FORMAT SPECIFICATION
+RESPONSE FORMAT SPECIFICATION (COMPACT STATUTORY DECISION SCHEMA)
 ================================================================================
-Respond in pure JSON adhering strictly to this schema:
+CRITICAL FOR LATENCY & ACCURACY:
+Do NOT write verbose markdown essays or redundant nested structures in JSON.
+Deterministic application code automatically renders the markdown headers, citation badges, and UI cards.
+Return ONLY this concise, compact JSON payload:
 {
-  "scenarioType": "UNIVERSAL",
-  "queryIntent": "TRANSACTION" | "STATUTORY_ADVISORY" | "HYBRID",
-  "primaryDomain": "ACCOUNTING_SFRS" | "IRAS_TAX" | "IRAS_GST" | "ACRA_CORP" | "MOM_EMPLOYMENT" | "CPF_BOARD" | "MULTI_AUTHORITY" | "GENERAL",
-  "transactionTitle": "string",
-  "functionalCurrency": "SGD",
-  "transactionCurrency": "SGD",
-  "accountingTreatmentSummary": "Detailed SFRS(I) financial statement treatment",
-  "singaporeTaxTreatmentSummary": "Detailed IRAS tax deductibility, capital allowances, and GST treatment",
-  "regulatoryMandatesSummary": "ACRA, MOM, or CPF compliance directives",
-  "effectiveDateOrTiming": "Current effective dates or note if unverified",
-  "uncertaintyDisclaimer": "State any missing facts, conditional criteria, or required verification",
-  "messageText": "Comprehensive markdown response with structured headers, calculations, and citations",
-  "keyParameters": [
-    { "label": "string", "value": "string", "badge": "string", "highlight": boolean }
+  "directAnswer": "Clear, direct answer and statutory entitlement/principle under Singapore law",
+  "keyRules": [
+    "Specific statutory rule 1 with statutory numbers/thresholds/formula",
+    "Specific statutory rule 2..."
   ],
-  "directGroups": [
-    {
-      "id": "grp-1",
-      "eventDate": "DD/MM/YYYY",
-      "title": "string",
-      "summary": "string",
-      "lines": [
-        {
-          "id": "line-1",
-          "accountCode": "string",
-          "accountName": "string",
-          "category": "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE",
-          "debit": number,
-          "credit": number,
-          "lineExplanation": "string"
-        }
-      ],
-      "citations": [
-        {
-          "standard": "string",
-          "paragraph": "string",
-          "title": "string",
-          "text": "string",
-          "officialSourceUrl": "string",
-          "authority": "IRAS" | "ACRA" | "CPF" | "MOM" | "MAS" | "ASC" | "SSO"
-        }
-      ],
-      "rationalePoints": ["string"]
-    }
+  "caveats": [
+    "Qualifying condition or exception 1..."
   ],
-  "statutoryAdvisory": [
+  "statuteReferences": [
     {
-      "authority": "IRAS" | "ACRA" | "CPF" | "MOM" | "MAS" | "CUSTOMS" | "ASC" | "SSO",
-      "statuteOrAct": "string",
-      "sectionOrSchedule": "string",
-      "topic": "string",
-      "summary": "string",
-      "keyRules": ["string"],
-      "officialUrl": "string",
-      "isTaxDeductible": boolean,
-      "isGstClaimable": boolean
+      "standard": "Act Name (e.g. Employment Act 1968)",
+      "paragraph": "Section or Part (e.g. Part IV §38)",
+      "authority": "MOM" | "CPF" | "IRAS" | "ACRA",
+      "officialSourceUrl": "https://sso.agc.gov.sg/..."
     }
   ]
 }
 Return pure JSON only.
 `;
+  } else if (context.classification.intent === 'TRANSACTION' || context.classification.journalEntryRequired) {
+    prompt += `
+================================================================================
+RESPONSE FORMAT SPECIFICATION (COMPACT TRANSACTION & JOURNAL DECISION SCHEMA)
+================================================================================
+CRITICAL FOR LATENCY & ACCURACY:
+Do NOT write verbose markdown essays, redundant nested structures, or complete balancing numbers in JSON.
+The deterministic accounting engine automatically computes debit/credit balancing, foreign exchange rates, and UI parameters.
+Return ONLY this concise, compact JSON payload:
+{
+  "transactionNature": "Brief title/nature of the transaction",
+  "treatment": "Authoritative financial reporting treatment under ${stdLabel}",
+  "requiredAccounts": [
+    {
+      "accountName": "Account Name (e.g. Office Equipment)",
+      "category": "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE",
+      "debitCredit": "DEBIT" | "CREDIT",
+      "rationale": "Why debited/credited"
+    }
+  ],
+  "bifurcateFx": true | false,
+  "tradeDiscountHandling": "string",
+  "missingFacts": ["Any missing facts required to establish final treatment"],
+  "assumptions": [
+    { "field": "string", "assumedValue": "string", "basis": "string", "materiality": "HIGH" | "MEDIUM" | "LOW" }
+  ],
+  "citations": [
+    {
+      "standard": "SFRS(I) Standard or Act Name",
+      "paragraph": "§Paragraph or Section",
+      "authority": "ASC" | "ACRA" | "IRAS" | "MOM" | "CPF",
+      "officialSourceUrl": "string"
+    }
+  ]
+}
+Return pure JSON only.
+`;
+  } else {
+    prompt += `
+================================================================================
+RESPONSE FORMAT SPECIFICATION (COMPACT ACCOUNTING REASONING SCHEMA)
+================================================================================
+CRITICAL FOR LATENCY & ACCURACY:
+Do NOT write verbose markdown essays or duplicate boilerplate. Focus strictly on professional reasoning and technical treatment.
+Return ONLY this concise, compact JSON payload:
+{
+  "decision": "Core conclusion on recognition, measurement, or compliance",
+  "treatment": "Detailed financial reporting treatment under ${stdLabel}",
+  "reasoning": "Technical rationale applying the standard or statutory provision to user facts",
+  "singaporeTaxImpact": "Tax deductibility under Income Tax Act, capital allowances, or GST impact",
+  "missingFacts": ["Any missing material facts required before reaching final conclusion"],
+  "assumptions": [
+    { "field": "string", "assumedValue": "string", "basis": "string", "materiality": "HIGH" | "MEDIUM" | "LOW" }
+  ],
+  "citations": [
+    {
+      "standard": "Standard or Act Name",
+      "paragraph": "§Paragraph or Section",
+      "authority": "ASC" | "ACRA" | "IRAS" | "MOM" | "CPF",
+      "officialSourceUrl": "string"
+    }
+  ]
+}
+Return pure JSON only.
+`;
+  }
 
   return prompt;
 }
@@ -404,11 +433,34 @@ export function postProcessAIResponse(
   currentScenario: AccountingScenarioState | null,
   userInput: string,
   groundedContext: GroundedReasoningContext,
-  deterministicScenario?: AccountingScenarioState | null
+  deterministicScenario?: AccountingScenarioState | null,
+  standard: AccountingStandard = 'SFRS_I'
 ): {
   messageText: string;
   scenarioState: AccountingScenarioState;
 } {
+  // If parsed is a compact decision (has directAnswer, treatment, decision, requiredAccounts, or lacks directGroups and messageText),
+  // delegate to assembleDeterministicResponse which compiles the complete verified markdown, journal entries, and scenario state.
+  const isCompactPayload = Boolean(
+    parsed &&
+    (parsed.directAnswer !== undefined ||
+     parsed.requiredAccounts !== undefined ||
+     (parsed.treatment !== undefined && (!parsed.directGroups || parsed.directGroups.length === 0)) ||
+     (parsed.decision !== undefined && (!parsed.directGroups || parsed.directGroups.length === 0)) ||
+     (!parsed.messageText && (!parsed.directGroups || parsed.directGroups.length === 0)))
+  );
+
+  if (isCompactPayload) {
+    return assembleDeterministicResponse(
+      parsed,
+      userInput,
+      currentScenario,
+      groundedContext,
+      deterministicScenario || null,
+      standard
+    );
+  }
+
   const retrievedEvidenceScope: AuthoritativeSourceRecord[] = [
     ...groundedContext.primaryEvidence,
     ...groundedContext.officialGuidance,

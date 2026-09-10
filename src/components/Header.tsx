@@ -514,9 +514,9 @@ export const Header: React.FC<HeaderProps> = ({
                       onChange={(e) => setGeminiModel(e.target.value)}
                       className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2B374E] rounded-lg text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-ynab-blue"
                     >
-                      <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Default - High Daily Quota, 500 RPD)</option>
-                      <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (High Daily Quota - 500 RPD)</option>
-                      <option value="gemini-3.8-flash">Gemini 3.8 Flash (High Capacity - 20 RPD)</option>
+                      <option value="gemini-2.5-flash">Gemini 2.5 Flash (Recommended - Ultra-Fast Grounded Reasoning)</option>
+                      <option value="gemini-2.0-flash">Gemini 2.0 Flash (Fast Interactive - Low Latency)</option>
+                      <option value="gemini-1.5-flash">Gemini 1.5 Flash (High Stability & Quota)</option>
                     </select>
                   </div>
                 </div>
