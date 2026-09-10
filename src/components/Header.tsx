@@ -168,16 +168,16 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base md:text-lg font-bold text-ynab-navy dark:text-white tracking-tight leading-tight truncate font-sans">
-                  <span className="xs:hidden">Accounting AI</span>
-                  <span className="hidden xs:inline">Accounting Assistant</span>
+                  <span className="xs:hidden">SG Accounting AI</span>
+                  <span className="hidden xs:inline">Singapore Accounting & Statutory Assistant</span>
                 </h1>
                 <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-[#1C2538] dark:text-emerald-300 dark:border-emerald-900/60 shrink-0">
                   <span className="w-1.5 h-1.5 rounded-full bg-ynab-green"></span>
-                  SFRS(I) & IFRS Dual Compliant
+                  SFRS(I) • IRAS • ACRA • MOM • CPF
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block truncate">
-                Universal Accounting Engine • IRAS • ACRA • CPF • MOM • MAS (Singapore DD/MM/YYYY)
+                Singapore Authoritative Accounting, Tax & Regulatory Research Engine • DD/MM/YYYY • SGD
               </p>
             </div>
           </div>

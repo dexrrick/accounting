@@ -80,8 +80,61 @@ async function runTests() {
   assert(entRes.messageText.includes('IAS 1') || entRes.messageText.includes('SFRS(I) 1-1'), 'Must cite IAS 1 / SFRS(I) 1-1');
   console.log('✓ Existing double entry engine intact.\n');
 
+  // TEST 7: Capitalisation of Software Development Expenditure (SFRS(I) 1-38 §57 vs IRAS S14 / EIS)
+  console.log('Test 7: Software Development Capitalisation (SFRS(I) 1-38 vs S14/EIS)');
+  const capRes = await processAccountingQuery(
+    'Can software development expenditure be capitalised under SFRS(I) 1-38, and how does IRAS treat it for tax deduction?',
+    null,
+    'SFRS_I'
+  );
+  assert(capRes.scenarioState.scenarioType === 'CAPITALISATION_SFRS138', 'Must match CAPITALISATION_SFRS138 scenario');
+  assert(capRes.scenarioState.primaryDomain === 'ACCOUNTING_SFRS', 'Must be primaryDomain ACCOUNTING_SFRS');
+  assert(capRes.messageText.includes('SFRS(I) 1-38'), 'Must cite SFRS(I) 1-38');
+  assert(capRes.messageText.includes('54'), 'Must mention §54 research phase expensing');
+  assert(capRes.messageText.includes('57'), 'Must mention §57 6 capitalisation criteria');
+  assert(capRes.messageText.includes('Enterprise Innovation Scheme') || capRes.messageText.includes('EIS'), 'Must mention EIS or Section 14C');
+  assert(capRes.scenarioState.accountingTreatmentSummary, 'accountingTreatmentSummary must be populated');
+  assert(capRes.scenarioState.singaporeTaxTreatmentSummary, 'singaporeTaxTreatmentSummary must be populated');
+  console.log('✓ Software Development Capitalisation query verified.\n');
+
+  // TEST 8: GST Compulsory Registration Threshold
+  console.log('Test 8: GST Compulsory Registration Threshold ($1M Turnover)');
+  const gstRes = await processAccountingQuery(
+    'Does our company need to register for GST if annual taxable turnover reaches SGD 1.2 million?',
+    null,
+    'SFRS_I'
+  );
+  assert(gstRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
+  assert(gstRes.messageText.includes('1,000,000') || gstRes.messageText.includes('1 million'), 'Must cite $1M threshold');
+  assert(gstRes.messageText.includes('Retrospective') || gstRes.messageText.includes('Prospective'), 'Must cite registration tests');
+  console.log('✓ GST Compulsory Registration query verified.\n');
+
+  // TEST 9: MOM Statutory Leave Entitlements
+  console.log('Test 9: MOM Annual and Outpatient Sick Leave Entitlements');
+  const momRes = await processAccountingQuery(
+    'What are MOM statutory annual leave and outpatient sick leave entitlements, and overtime calculation rules?',
+    null,
+    'SFRS_I'
+  );
+  assert(momRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
+  assert(momRes.messageText.includes('Employment Act 1968'), 'Must cite Employment Act 1968');
+  assert(momRes.messageText.includes('14 days') || momRes.messageText.includes('89'), 'Must cite Section 89 or 14 days sick leave');
+  console.log('✓ MOM Statutory Leave query verified.\n');
+
+  // TEST 10: CPF Tiered Rates by Age & $8,000 Ceiling
+  console.log('Test 10: CPF Tiered Contribution Rates by Age');
+  const cpfAgeRes = await processAccountingQuery(
+    'What is the 2026 CPF Ordinary Wage ceiling and monthly contribution rates by employee age?',
+    null,
+    'SFRS_I'
+  );
+  assert(cpfAgeRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
+  assert(cpfAgeRes.messageText.includes('8,000'), 'Must cite $8,000 OW ceiling');
+  assert(cpfAgeRes.messageText.includes('55'), 'Must cite age tiers');
+  console.log('✓ CPF Tiered Rates by Age verified.\n');
+
   console.log('====================================================');
-  console.log('ALL TESTS PASSED! Statutory Engine 100% Verified.');
+  console.log('ALL 10 TESTS PASSED! Statutory Engine 100% Verified.');
   console.log('====================================================');
 }
 

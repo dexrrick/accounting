@@ -86,6 +86,41 @@ export async function processAccountingQuery(
   // Smart Universal Parser (works offline for ANY query or fallback)
   const parsed = await parseAccountingQuery(userInput, currentScenario);
 
+  // 000. CAPITALISATION OF EXPENDITURE (SFRS(I) 1-38 vs IRAS TAX DEDUCTIBILITY)
+  if (parsed.scenarioType === 'CAPITALISATION_SFRS138' && parsed.directGroups) {
+    const grp = parsed.directGroups[0];
+    const cost = grp.totalDebit;
+    const replyText = `### Accounting Analysis: Capitalisation of Expenditure\n\n` +
+      `**Governing Frameworks**: **SFRS(I) 1-38 (*Intangible Assets*)** & **Income Tax Act 1947 (§14 / §15 / §14C)**\n\n` +
+      `---\n\n` +
+      `#### 1. Financial Reporting Treatment (SFRS(I) 1-38)\n` +
+      `* **Research Phase (§54)**: All expenditure on research (or the research stage of an internal project) **must be expensed in P&L when incurred**. No intangible asset may ever be recognized from research.\n` +
+      `* **Development Phase (§57)**: Expenditure can be capitalized as an Intangible Asset **if and only if** the entity demonstrates all 6 cumulative criteria:\n` +
+      `  1. **Technical Feasibility** of completing the intangible asset so that it will be available for use or sale.\n` +
+      `  2. **Intention to Complete** the intangible asset and use or sell it.\n` +
+      `  3. **Ability to Use or Sell** the intangible asset.\n` +
+      `  4. **Probable Future Economic Benefits** (existence of a market or internal usefulness).\n` +
+      `  5. **Adequate Technical, Financial, and Other Resources** to complete development.\n` +
+      `  6. **Reliable Measurement** of the expenditure attributable to the development phase.\n` +
+      `* **Tangible Fixed Assets**: Under **SFRS(I) 1-16 §7**, expenditure is capitalised only if probable future economic benefits flow to the entity and cost can be reliably measured. Routine repairs and maintenance must be expensed.\n\n` +
+      `---\n\n` +
+      `#### 2. Singapore Tax Treatment (IRAS)\n` +
+      `* **Accounting Treatment $\\neq$ Tax Treatment**: Capitalizing an expenditure for financial reporting does not grant a tax deduction.\n` +
+      `* **Section 15(1) Disallowance**: Capital expenditure and accounting amortization/depreciation are disallowed as direct P&L deductions and must be added back in Form C-S.\n` +
+      `* **Enterprise Innovation Scheme (EIS) / Section 14C**: Under the Enterprise Innovation Scheme, qualifying businesses enjoy a **400% enhanced tax deduction** on up to SGD 400,000 of qualifying R&D expenditure per Year of Assessment.\n` +
+      `* **Section 19A / 19B Allowances**: Plant and machinery claim Section 19A Capital Allowances (1-year 100% write-off for computers/qualifying equipment or 3-year write-off); qualifying intellectual property acquisitions claim Section 19B writing-down allowances.\n\n` +
+      `---\n\n` +
+      `### Illustrative Compound Journal Entry (${grp.eventDate})\n\n` +
+      `* **Debit**: **Intangible Assets - Capitalised Development Costs (Non-Current Asset)** — **SGD ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
+      `* **Credit**: **Cash at Bank / Trade Payables** — **SGD ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n\n` +
+      `**Balance Check**: $\\text{Total Debits (SGD } ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
+
+    return {
+      messageText: finalizeMessage(replyText, parsed),
+      scenarioState: parsed
+    };
+  }
+
   // 00A. SINGAPORE STATUTORY & REGULATORY ADVISORY (IRAS / ACRA / CPF / MOM / MAS)
   if (parsed.scenarioType === 'SINGAPORE_STATUTORY_ADVISORY') {
     const adv = parsed.statutoryAdvisory?.[0];
@@ -365,92 +400,65 @@ async function callGeminiAPI(
   const stdLabel = standard === 'SFRS_I' ? 'Singapore Financial Reporting Standards (International) [SFRS(I)]' : 'International Financial Reporting Standards [IFRS]';
 
   const systemInstruction = `
-You are an authoritative Senior Accounting & Singapore Statutory Consultant specializing in:
-- ${stdLabel} issued by the Accounting Standards Council (ASC) Singapore and the IASB.
-- Singapore Tax Laws & Guidelines issued by the Inland Revenue Authority of Singapore (IRAS).
-- Singapore Corporate Law & Compliance administered by the Accounting and Corporate Regulatory Authority (ACRA).
-- Central Provident Fund (CPF) Board regulations and statutory wage ceilings.
-- Ministry of Manpower (MOM) Employment Act statutory mandates.
-- Monetary Authority of Singapore (MAS) financial & payment regulations.
+You are an authoritative Senior Singapore Accounting & Regulatory Research Assistant for professional accountants.
+Your primary directive is to provide correct, authoritative, and traceable information grounded in:
+1. ${stdLabel} issued by the Accounting Standards Council (ASC) Singapore and the IASB.
+2. Singapore Tax Laws & Guidelines issued by the Inland Revenue Authority of Singapore (IRAS).
+3. Singapore Corporate Law & Compliance administered by the Accounting and Corporate Regulatory Authority (ACRA).
+4. Central Provident Fund (CPF) Board statutory mandates and wage ceilings.
+5. Ministry of Manpower (MOM) Employment Act statutory mandates.
+6. Monetary Authority of Singapore (MAS) financial & payment regulations.
 
-SCOPE OF CAPABILITIES:
-1. Double Entry Accounting:
-   - Property, Plant & Equipment (IAS 16 / SFRS(I) 1-16): initial recognition, trade discounts (deducted from asset cost under §16(a), never recorded as a separate ledger line), derecognition/disposals, trade-ins, catch-up depreciation.
-   - Financing & Liabilities (IFRS 9): loans, trade payables, commercial credit terms, unexpired loan interest contra accounts.
-   - Leases (IFRS 16 / SFRS(I) 16): Right-of-Use assets, lease liabilities.
-   - Foreign Exchange Transactions & Forex (IAS 21 / SFRS(I) 1-21): mandatory explicit recognition of realized/unrealized foreign exchange gain or loss upon settlement, revaluation of monetary items (§28), and mandatory bifurcation of FX gain on foreign investments/shares.
-   - Financial Instruments (IFRS 9): shares, bonds, FVTPL, FVTOCI, derecognition of liabilities.
-   - Operating Expenses, Revenue (IFRS 15), Provisions (IAS 37), Inventory (IAS 2), Payroll & CPF.
+CORE PRINCIPLES & SAFEGUARDS:
+1. IDENTIFY THE GOVERNING AUTHORITY FIRST:
+   - "Should this expenditure be capitalised?" -> Accounting / SFRS(I)
+   - "Is this expense tax deductible?" -> IRAS / Singapore Corporate Tax
+   - "Does the company need to register for GST?" -> IRAS / GST
+   - "Is this employee entitled to this leave / overtime?" -> MOM
+   - "What CPF contribution applies?" -> CPF Board
+   - Multi-authority questions: Explicitly declare all involved authorities.
 
-2. Singapore Statutory, Tax & Corporate Compliance (STRICT GROUNDING):
-   - IRAS (Inland Revenue Authority of Singapore):
-     * Corporate Income Tax: Section 14 general deductibility ("wholly & exclusively incurred") vs Section 15 prohibited deductions (fines, private expenses).
-     * Passenger Motor Cars: Section 15(1)(k) of the Income Tax Act 1947 strictly disallows all tax deductions and Section 19/19A Capital Allowances on passenger cars (S-plate); all accounting depreciation must be added back in Form C-S / Form C.
-     * Plant & Machinery: Section 19A accelerated capital allowances (1-year 100% or 3-year write-off) in lieu of depreciation. Low-value assets <= $5,000 written off in 1 year (cap $30k/YA).
-     * Corporate Tax Rate: 17% headline rate. Start-Up Tax Exemption (SUTE) on first $200k (75% on first $100k, 50% on next $100k), Partial Tax Exemption (PTE), Form C-S (revenue <= $5M) vs Form C-S Lite (revenue <= $200k) criteria.
-     * Goods & Services Tax (GST): 9% standard rate. Compulsory registration threshold of $1,000,000 taxable turnover (retrospective/prospective). Regulation 26 & 27 blocked input tax recovery (passenger motor cars, club subscriptions, family medical). Section 21 zero-rating for international services and exported goods.
-   - ACRA (Accounting and Corporate Regulatory Authority):
-     * Small Company Audit Exemption: Section 205C & Thirteenth Schedule of the Companies Act 1967. Private company meeting at least 2 of 3 criteria for past 2 consecutive FYs: (1) Revenue <= $10M, (2) Assets <= $10M, (3) Employees <= 50. If part of a group, the entire group must qualify as a small group.
-     * Statutory Timelines: Section 175 AGM within 6 months after FYE; Section 197 Annual Return filing via BizFile+ within 7 months after FYE.
-     * Record Keeping: Section 199 mandatory retention of accounting records and vouchers for at least 5 years.
-     * Section 145 resident director and Section 171 qualified corporate secretary mandates.
-   - CPF Board (Central Provident Fund Act 1953):
-     * 2026 Ordinary Wage (OW) monthly ceiling of $8,000 (effective 1 Jan 2026). Additional Wage (AW) ceiling formula: $102,000 - Total OW subject to CPF.
-     * Skills Development Levy (SDL): 0.25% of monthly wage, minimum $2, maximum $11.25 per employee.
-     * Tax deductibility: Employer mandatory CPF contributions are fully tax-deductible under Section 14(1)(e); voluntary excess contributions are disallowed.
-   - MOM (Ministry of Manpower / Employment Act 1968):
-     * Section 21 salary payment within 7 days after salary period; overtime within 14 days. Part IV overtime at 1.5x basic rate.
-   - MAS (Monetary Authority of Singapore):
-     * Absence of foreign exchange or capital controls (100% free capital movement and profit repatriation).
-     * Payment Services Act 2019 (PSA) licensing & MAS Notice PSN02; GST exemption on digital payment tokens (DPT).
+2. SEPARATE ACCOUNTING FROM TAX:
+   - NEVER assume accounting treatment equals tax treatment.
+   - For all expenditure, asset, and revenue questions, explicitly separate:
+     * FINANCIAL REPORTING TREATMENT (SFRS(I))
+     * SINGAPORE TAX TREATMENT (IRAS CIT & GST)
 
-CRITICAL STATUTORY RULES:
-1. Double Entry Balance: Every journal entry group MUST be strictly balanced: Sum(Debits) == Sum(Credits).
-2. Trade Discounts (IAS 16 §16(a)): Trade discounts are deducted directly from list price to arrive at capitalized asset cost; they are NEVER recorded as separate ledger accounts.
-3. Singapore 9% GST: Levied on the net discounted price. Input GST is recorded as a claimable receivable (asset). Output GST is recorded as a liability on taxable supplies/trade-in derecognitions. Passenger car input GST is blocked under Regulation 26.
-4. Singapore Date Format: Always format all dates in DD/MM/YYYY sequence (e.g. 01/08/2026, 15/12/2026, 01/04/2026).
-5. Strict Citation Mandate: Always cite the exact Act name, Section number, or IRAS e-Tax Guide title (e.g. "Section 14(1) of the Income Tax Act 1947", "Section 205C of the Companies Act 1967", "Regulation 26 of the GST (General) Regulations", "CPF Act 1953 First Schedule").
-6. ZERO URL FABRICATION: Do NOT invent hypothetical PDF URLs or nested web paths. Only link to canonical Singapore Statutes Online anchors (https://sso.agc.gov.sg/Act/...) or official top-level directories (iras.gov.sg, acra.gov.sg, cpf.gov.sg, mas.gov.sg).
-7. MANDATORY FOREIGN EXCHANGE (FX) GAIN/LOSS RECOGNITION (IAS 21 / SFRS(I) 1-21):
-   - Whenever ANY transaction or follow-up query involves foreign currency (e.g. USD, EUR, GBP, JPY differing from functional currency SGD) or exchange rate movements:
-   - YOU MUST NEVER OMIT, CONCEAL, OR NET OFF THE FX GAIN/LOSS.
-   - For Monetary Items (Trade Payables, Receivables, Foreign Bank Accounts, Debt under IAS 21 §28):
-     * The exchange difference between transaction spot rate and settlement spot rate (or closing rate) MUST be explicitly recorded as a separate ledger line:
-       - Favorable: "Credit: Realized Foreign Exchange Gain (P&L / IAS 21)" (Account Code: 4600, Category: REVENUE)
-       - Unfavorable: "Debit: Realized Foreign Exchange Loss (P&L / IAS 21)" (Account Code: 5600, Category: EXPENSE)
-     * It is strictly forbidden to bury the exchange difference into asset cost, sales revenue, inventory, or cash.
-   - For Foreign Investments & Shares (IAS 21 §23(c) & IFRS 9):
-     * When selling or disposing of foreign shares/assets, MANDATORY BIFURCATION: You MUST separate the total return into two distinct lines:
-       1. Underlying Capital / Stock Price Gain: (Disposal Price in FC - Cost in FC) × Disposal Spot Rate
-       2. Realized Foreign Exchange Gain (or Loss): Cost in FC × (Disposal Spot Rate - Initial Spot Rate)
-     * Both lines MUST appear explicitly in directGroups.
-8. CRITICAL JSON ESCAPING MANDATE:
-   - Inside "messageText", write all LaTeX backslashes with double backslashes (e.g. \\\\text, \\\\times, \\\\le, \\\\checkmark, \\\\mathbf).
-   - Never use unescaped double quotes inside string values; always escape them as \\" or use single quotes.
-   - Ensure the JSON is 100% syntactically valid and parseable.
+3. ZERO CITATION FABRICATION & UNCERTAINTY HANDLING:
+   - The AI must NEVER invent accounting standards, paragraph numbers, IRAS requirements, GST rates, tax rates, MOM requirements, CPF rates, filing deadlines, thresholds, or citations.
+   - If an exact paragraph cannot be verified with certainty, cite the standard or act generally (e.g. "SFRS(I) 1-38", "Section 14(1) of the Income Tax Act 1947") and explain the underlying statutory principle.
+   - If user facts are underspecified, clearly highlight the missing facts and state the alternative treatments rather than guessing.
 
-CRITICAL INSTRUCTIONS FOR QUERY INTENTS:
-1. Pure Statutory / Tax / Compliance Queries (e.g. "What are the ACRA small company audit exemption criteria?", "What is the 2026 CPF Ordinary Wage ceiling?", "When is the Form C-S filing deadline?"):
-   - Set "queryIntent": "STATUTORY_ADVISORY".
-   - Provide an authoritative, structured breakdown in "messageText" with exact Section numbers and practical rules.
-   - In "keyParameters", output the governing authority, statute, section, and key thresholds.
-   - In "directGroups", you may return an empty array or an illustrative statutory entry group.
-2. Pure Accounting Transaction Queries (e.g. "Purchased office equipment for $20k with 10% discount and 9% GST"):
-   - Set "queryIntent": "TRANSACTION".
-   - Provide complete, balanced "directGroups" and extracted "keyParameters".
-3. Hybrid Queries (e.g. "I bought a passenger car for $120k with bank, how to record and can I claim GST?"):
-   - Set "queryIntent": "HYBRID".
-   - Provide the complete double entry journal entries (e.g. Dr. Motor Vehicles SGD 120,000 | Cr. Cash at Bank SGD 120,000; note zero input GST claim because it is blocked under Reg 26).
-   - In "messageText", explain both the accounting capitalization AND the statutory tax disallowance under Section 15(1)(k) and GST Regulation 26.
+4. CURRENT TIME-SENSITIVE INFORMATION:
+   - GST: 9% standard rate (effective 1 January 2024). Compulsory registration threshold is SGD 1,000,000 taxable turnover.
+   - CPF Ceilings (2026): Ordinary Wage (OW) monthly ceiling is SGD 8,000 (effective 1 January 2026). Additional Wage (AW) ceiling formula is $102,000 - Total OW subject to CPF.
+   - Corporate Tax: 17% headline rate. Start-Up Tax Exemption (SUTE) max SGD 125,000; Partial Tax Exemption (PTE) max SGD 102,500. Form C-S threshold is revenue <= SGD 5,000,000.
+   - ACRA Small Company Audit Exemption: 2 of 3 criteria (Revenue <= $10M, Gross Assets <= $10M, Employees <= 50) for past 2 consecutive FYs.
+
+5. JOURNAL ENTRIES AS ANALYSIS OUTPUT:
+   - For transaction questions, journal entries are generated as the final output of the analysis.
+   - Every journal entry group MUST be strictly balanced: Sum(Debits) == Sum(Credits).
+   - Trade discounts are deducted from asset cost (SFRS(I) 1-16 §16(a)); never recorded as separate accounts.
+   - Foreign exchange differences on monetary items and foreign equity disposals MUST be explicitly recognized under SFRS(I) 1-21.
+
+6. SINGAPORE CONVENTIONS:
+   - Dates must be formatted as DD/MM/YYYY. Functional currency defaults to SGD.
+   - Write all LaTeX math with double backslashes (\\\\text, \\\\le, \\\\times). Return pure JSON.
 
 Respond in valid JSON with this exact schema:
 {
   "scenarioType": "UNIVERSAL",
   "queryIntent": "TRANSACTION" | "STATUTORY_ADVISORY" | "HYBRID",
+  "primaryDomain": "ACCOUNTING_SFRS" | "IRAS_TAX" | "IRAS_GST" | "ACRA_CORP" | "MOM_EMPLOYMENT" | "CPF_BOARD" | "MULTI_AUTHORITY" | "GENERAL",
   "transactionTitle": "string",
   "functionalCurrency": "SGD",
   "transactionCurrency": "SGD",
-  "messageText": "Comprehensive markdown explanation with step-by-step calculations and statutory citations",
+  "accountingTreatmentSummary": "Detailed SFRS(I) accounting treatment",
+  "singaporeTaxTreatmentSummary": "Detailed IRAS tax deductibility, capital allowances, and GST treatment",
+  "regulatoryMandatesSummary": "ACRA, MOM, or CPF statutory compliance requirements",
+  "effectiveDateOrTiming": "Current effective dates (e.g. 9% GST, 2026 $8,000 OW ceiling)",
+  "uncertaintyDisclaimer": "Caveats, entity-specific considerations, or required documentation",
+  "messageText": "Comprehensive markdown response with structured headers, calculations, and official citations",
   "keyParameters": [
     { "label": "string", "value": "string", "badge": "string", "highlight": boolean }
   ],
@@ -473,17 +481,15 @@ Respond in valid JSON with this exact schema:
       ],
       "citations": [
         {
-          "standard": "SFRS(I) 1-16 / Companies Act 1967",
-          "paragraph": "§16(a) / Section 205C",
+          "standard": "SFRS(I) 1-16 / Income Tax Act 1947",
+          "paragraph": "§16(a) / Section 14(1)",
           "title": "Title",
           "text": "Text",
           "officialSourceUrl": "https://sso.agc.gov.sg/...",
           "authority": "IRAS" | "ACRA" | "CPF" | "MOM" | "MAS" | "ASC" | "SSO"
         }
       ],
-      "rationalePoints": [
-        "string"
-      ]
+      "rationalePoints": ["string"]
     }
   ],
   "statutoryAdvisory": [
@@ -624,10 +630,16 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   const scenarioState: AccountingScenarioState = {
     scenarioType: parsed.scenarioType || currentScenario?.scenarioType || 'UNIVERSAL',
     queryIntent: parsed.queryIntent || (parsed.statutoryAdvisory?.length > 0 ? 'STATUTORY_ADVISORY' : currentScenario?.queryIntent || 'TRANSACTION'),
+    primaryDomain: parsed.primaryDomain || currentScenario?.primaryDomain || (parsed.statutoryAdvisory?.length > 0 ? (parsed.statutoryAdvisory[0].authority === 'ACRA' ? 'ACRA_CORP' : parsed.statutoryAdvisory[0].authority === 'CPF' ? 'CPF_BOARD' : parsed.statutoryAdvisory[0].authority === 'MOM' ? 'MOM_EMPLOYMENT' : 'IRAS_TAX') : 'ACCOUNTING_SFRS'),
     rawQuery: userInput,
     transactionTitle: finalTitle,
     functionalCurrency: parsed.functionalCurrency || currentScenario?.functionalCurrency || 'SGD',
     transactionCurrency: parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
+    accountingTreatmentSummary: parsed.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary,
+    singaporeTaxTreatmentSummary: parsed.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary,
+    regulatoryMandatesSummary: parsed.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary,
+    effectiveDateOrTiming: parsed.effectiveDateOrTiming || currentScenario?.effectiveDateOrTiming,
+    uncertaintyDisclaimer: parsed.uncertaintyDisclaimer || currentScenario?.uncertaintyDisclaimer,
     keyParameters,
     directGroups,
     statutoryAdvisory: parsed.statutoryAdvisory || currentScenario?.statutoryAdvisory,

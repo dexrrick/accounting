@@ -1,4 +1,4 @@
-import type { AccountingScenarioState, JournalEntryGroup, JournalLine } from '../types/accounting';
+import type { AccountingScenarioState, JournalEntryGroup, JournalLine, QueryDomain } from '../types/accounting';
 import { getExchangeRate } from '../services/frankfurterService';
 import { getCitation } from '../standards/standardsKnowledge';
 import { 
@@ -29,6 +29,104 @@ export async function parseAccountingQuery(
   }
 
   // =========================================================================
+  // SCENARIO -2: EXPENDITURE CAPITALISATION VS EXPENSE (SFRS(I) 1-38 / 1-16 vs IRAS S14/S15)
+  // e.g. "Can this expenditure be capitalised?", "Should this expenditure be capitalised?"
+  // =========================================================================
+  const isCapitalisationQuestion =
+    (q.includes('capitalis') || q.includes('capitaliz')) &&
+    (q.includes('expenditure') || q.includes('expense') || q.includes('cost') || q.includes('software') || q.includes('development') || q.includes('r&d') || q.includes('asset') || q.includes('should') || q.includes('can') || q.includes('how') || q.includes('treatment') || q.includes('criteria'));
+
+  if (isCapitalisationQuestion) {
+    let costAmount = 50000;
+    const costMatch = query.match(/(?:for|cost|price|amount|of|at)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i);
+    if (costMatch && costMatch[1]) {
+      let rawVal = parseFloat(costMatch[1].replace(/,/g, ''));
+      const unit = costMatch[2]?.toLowerCase();
+      if (unit === 'k' || unit === 'thousand') rawVal *= 1000;
+      if (unit === 'm') rawVal *= 1000000;
+      if (rawVal > 0) costAmount = rawVal;
+    }
+
+    const citations = [
+      getCitation('SFRS_I_1_38_INTANGIBLES', 'SFRS_I'),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14_GENERAL_DEDUCTION),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14C_EIS_INNOVATION)
+    ];
+
+    const advisories = [
+      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14_GENERAL_DEDUCTION),
+      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14C_EIS_INNOVATION)
+    ];
+
+    const lines: JournalLine[] = [
+      {
+        id: 'l-cap-asset',
+        accountCode: '1800',
+        accountName: 'Intangible Assets - Capitalised Development Costs',
+        category: 'ASSET',
+        debit: costAmount,
+        credit: 0,
+        lineExplanation: 'Capitalisation of qualifying development expenditure under SFRS(I) 1-38 §57 upon fulfilling all 6 cumulative recognition criteria.'
+      },
+      {
+        id: 'l-cap-bank',
+        accountCode: '1010',
+        accountName: 'Cash at Bank / Trade Payables',
+        category: 'ASSET',
+        debit: 0,
+        credit: costAmount,
+        lineExplanation: 'Settlement of directly attributable software engineering, testing, and payroll expenditure.'
+      }
+    ];
+
+    const keyParams = [
+      { label: 'Governing Authority', value: 'ASC Singapore (SFRS(I)) & IRAS', badge: 'Dual Authority' },
+      { label: 'Accounting Standard', value: 'SFRS(I) 1-38 §54 & §57', badge: 'SFRS(I)', highlight: true },
+      { label: 'Research Phase Outlay', value: 'Strictly Expensed in P&L (§54)', badge: 'P&L Expense' },
+      { label: 'Development Phase Outlay', value: 'Capitalise upon 6 Criteria (§57)', badge: 'Intangible Asset', highlight: true },
+      { label: 'Singapore Tax Treatment', value: 'Disallowed as P&L deduction (§15); 400% EIS Deduction (§14C)', badge: 'IRAS S14C/EIS', highlight: true },
+      { label: 'Tangible Asset Treatment', value: 'Capitalise if future benefits probable (SFRS(I) 1-16 §7)', badge: 'PP&E Cost' }
+    ];
+
+    return {
+      scenarioType: 'CAPITALISATION_SFRS138',
+      queryIntent: 'STATUTORY_ADVISORY',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: 'Capitalisation of Expenditure: SFRS(I) vs Singapore Tax Treatment',
+      functionalCurrency,
+      transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: 'Under SFRS(I) 1-38 §54, all research expenditure must be recognized as an expense in P&L when incurred. Development expenditure can be capitalised as an Intangible Asset ONLY IF an entity demonstrates all 6 cumulative criteria under §57: (1) Technical feasibility, (2) Intention to complete, (3) Ability to use or sell, (4) Probable future economic benefits, (5) Technical and financial resources, and (6) Reliable measurement of expenditure. For tangible assets, SFRS(I) 1-16 §7 requires probable future economic benefits and reliable cost measurement; routine repairs are expensed.',
+      singaporeTaxTreatmentSummary: 'Accounting treatment does not dictate tax treatment. Under Section 14(1) of the Income Tax Act 1947, only revenue expenses wholly and exclusively incurred in the production of income are deductible. Capitalised expenditure is disallowed as a direct P&L deduction under Section 15(1). However, qualifying staff costs for R&D/software development enjoy an enhanced 400% tax deduction under Section 14C / Enterprise Innovation Scheme (EIS) up to $400k cap. Tangible assets claim Section 19A Capital Allowances (1-year or 3-year write-off).',
+      regulatoryMandatesSummary: 'Section 201 of the Companies Act 1967 legally mandates that financial statements laid before AGM must comply with Accounting Standards Council standards.',
+      effectiveDateOrTiming: 'SFRS(I) 1-38 active; Enterprise Innovation Scheme (EIS) 400% tax deduction active for YAs 2024–2028.',
+      uncertaintyDisclaimer: 'Entity must maintain contemporaneous records (timesheets, technical milestones, commercial feasibility studies) to support capitalisation for statutory audits and IRAS EIS claims.',
+      statutoryAdvisory: advisories,
+      keyParameters: keyParams,
+      directGroups: [
+        {
+          id: 'grp-capitalisation-illustrative',
+          eventDate: formatSingaporeDate(new Date()),
+          title: 'Illustrative Compound Journal Entry: Capitalisation of Development Costs',
+          summary: `Capitalisation of qualifying development costs of ${functionalCurrency} ${costAmount.toLocaleString()} upon meeting all 6 criteria under SFRS(I) 1-38 §57`,
+          lines,
+          totalDebit: costAmount,
+          totalCredit: costAmount,
+          isBalanced: true,
+          citations,
+          rationalePoints: [
+            'Under SFRS(I) 1-38 §54: All research phase costs must be expensed in P&L as incurred.',
+            'Under SFRS(I) 1-38 §57: Development expenditure is capitalised only when all 6 cumulative criteria are demonstrated.',
+            'Under IRAS: Capitalised development costs are not deductible under Section 14(1). Qualifying R&D activities claim the 400% EIS enhanced deduction separately in tax computation.'
+          ]
+        }
+      ],
+      isComplete: true,
+      missingFields: []
+    };
+  }
+
+  // =========================================================================
   // SCENARIO -1: SINGAPORE STATUTORY & REGULATORY ADVISORY (IRAS / ACRA / CPF / MOM / MAS)
   // e.g. "What are the ACRA requirements for small company audit exemption?"
   // e.g. "What is the 2026 CPF Ordinary Wage ceiling?"
@@ -47,6 +145,9 @@ export async function parseAccountingQuery(
     q.includes('aw ceiling') ||
     q.includes('skills development levy') ||
     q.includes('sdl') ||
+    q.includes('cpf rate') ||
+    q.includes('cpf contribution') ||
+    q.includes('senior worker') ||
     q.includes('tax deduct') ||
     q.includes('non-deductible') ||
     q.includes('prohibited expense') ||
@@ -72,13 +173,23 @@ export async function parseAccountingQuery(
     q.includes('record retention') ||
     q.includes('salary deadline') ||
     q.includes('overtime pay') ||
+    q.includes('overtime rate') ||
+    q.includes('leave entitlement') ||
+    q.includes('annual leave') ||
+    q.includes('sick leave') ||
+    q.includes('hospitalisation') ||
+    q.includes('public holiday') ||
     q.includes('employment act') ||
+    q.includes('enterprise innovation') ||
+    q.includes('eis') ||
+    q.includes('r&d deduction') ||
+    q.includes('turnover') ||
     q.includes('exchange control') ||
     q.includes('capital control') ||
     q.includes('digital payment token') ||
     q.includes('payment services act') ||
     q.includes('mas notice') ||
-    (q.startsWith('can i claim') || q.startsWith('can we claim') || q.includes('is it deductible') || q.includes('is it claimable'));
+    (q.startsWith('can i claim') || q.startsWith('can we claim') || q.includes('is it deductible') || q.includes('is it claimable') || q.includes('need to register for gst'));
 
   if (isCarPurchase) {
     let carCost = 120000;
@@ -126,10 +237,16 @@ export async function parseAccountingQuery(
     return {
       scenarioType: 'CAR_PURCHASE_STATUTORY',
       queryIntent: 'HYBRID',
+      primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
       transactionTitle: 'Purchase of Passenger Motor Car (Tax Disallowed & GST Blocked)',
       functionalCurrency,
       transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: 'Capitalize gross motor vehicle cost into Non-Current Assets under SFRS(I) 1-16 §16. Input GST is capitalized because it is non-recoverable. Depreciate straight-line over useful life through P&L.',
+      singaporeTaxTreatmentSummary: 'Under Section 15(1)(k) of the Income Tax Act 1947, no tax deduction or Section 19/19A Capital Allowances are granted on passenger cars (S-plate). Accounting depreciation must be added back 100% in Form C-S. Under Regulation 26 of the GST Regulations, 9% input GST is strictly blocked from recovery.',
+      regulatoryMandatesSummary: 'Companies Act 1967 Section 199 mandatory retention of purchase vouchers, invoices, and payment proof for at least 5 years.',
+      effectiveDateOrTiming: 'Singapore 9% GST rate (since 1 Jan 2024); ITA Section 15(1)(k) active.',
+      uncertaintyDisclaimer: 'Commercial goods vehicles (G/Y plate) are eligible for Section 19A Capital Allowances and GST recovery; this disallowance strictly applies to passenger motor cars (S-plate).',
       statutoryAdvisory: carAdvisories,
       directGroups: [
         {
@@ -169,6 +286,39 @@ export async function parseAccountingQuery(
       const advisories = matchedRules.map(convertToAdvisory);
       const citations = matchedRules.map(convertToCitation);
 
+      let primaryDomain: QueryDomain = 'GENERAL';
+      if (primaryRule.category === 'ACRA_COMPLIANCE') primaryDomain = 'ACRA_CORP';
+      else if (primaryRule.category === 'CPF_PAYROLL') primaryDomain = 'CPF_BOARD';
+      else if (primaryRule.category === 'MOM_LABOUR') primaryDomain = 'MOM_EMPLOYMENT';
+      else if (primaryRule.category === 'TAX_GST') primaryDomain = 'IRAS_GST';
+      else if (primaryRule.category === 'TAX_INCOME') primaryDomain = 'IRAS_TAX';
+
+      let acctSummary = 'Financial statements must be prepared under the accrual basis compliant with SFRS(I) pursuant to Section 201 of the Companies Act 1967.';
+      let taxSummary = `${primaryRule.actTitle} (${primaryRule.sectionOrSchedule}): ${primaryRule.principle}`;
+      let effDate = 'Current Singapore Legislation';
+
+      if (primaryRule.category === 'ACRA_COMPLIANCE') {
+        acctSummary = 'Eligible private companies are exempt from statutory audit and prepare unaudited financial statements compliant with SFRS.';
+        taxSummary = 'Tax filing (Form C-S / Form C) remains mandatory with IRAS regardless of ACRA audit exemption.';
+        effDate = 'Companies Act 1967 Section 205C & Thirteenth Schedule active.';
+      } else if (primaryRule.category === 'CPF_PAYROLL') {
+        acctSummary = 'Employer mandatory CPF contributions and employee gross wages are debited to Operating Expenses (Staff Costs) under SFRS(I) 1-1 §28.';
+        taxSummary = 'Employer mandatory CPF contributions are 100% tax-deductible under Section 14(1)(e) of the Income Tax Act up to statutory ceilings. Excess voluntary contributions are disallowed.';
+        effDate = '2026 Ordinary Wage monthly ceiling of SGD 8,000 effective 1 January 2026.';
+      } else if (primaryRule.category === 'MOM_LABOUR') {
+        acctSummary = 'Accrued annual leave, overtime pay, and salaries are recognized under the accrual basis as Operating Expenses (Staff Costs) with corresponding credit to Accrued Expenses.';
+        taxSummary = 'Allowable staff operating expenses under Section 14(1) of the Income Tax Act 1947.';
+        effDate = 'Employment Act 1968 active.';
+      } else if (primaryRule.category === 'TAX_GST') {
+        acctSummary = 'Output GST is recognized as a current liability upon issuing tax invoices. Recoverable input GST is recorded as a tax receivable asset under SFRS(I) 1-1.';
+        taxSummary = 'GST standard rate is 9%. Compulsory registration is mandated when taxable turnover exceeds SGD 1,000,000 under retrospective (calendar year) or prospective (next 12 months) tests.';
+        effDate = 'Standard 9% GST rate effective 1 January 2024.';
+      } else if (primaryRule.category === 'TAX_INCOME') {
+        acctSummary = 'Operating expenses are debited to P&L in the financial statements. Depreciation is recognized over asset useful life.';
+        taxSummary = 'Accounting depreciation is disallowed and added back in tax computation. Tax deductions are governed by Section 14(1) ("wholly and exclusively incurred") and Section 19/19A Capital Allowances.';
+        effDate = 'Headline Corporate Tax Rate is 17%; Form C-S filing deadline 30 November of Year of Assessment.';
+      }
+
       const keyParams = [
         { label: 'Governing Authority', value: primaryRule.authorityName, badge: primaryRule.authority },
         { label: 'Statute / Act', value: primaryRule.actTitle, badge: primaryRule.actCode },
@@ -184,10 +334,16 @@ export async function parseAccountingQuery(
       return {
         scenarioType: 'SINGAPORE_STATUTORY_ADVISORY',
         queryIntent: 'STATUTORY_ADVISORY',
+        primaryDomain,
         rawQuery: query,
         transactionTitle: primaryRule.ruleTitle,
         functionalCurrency,
         transactionCurrency: functionalCurrency,
+        accountingTreatmentSummary: acctSummary,
+        singaporeTaxTreatmentSummary: taxSummary,
+        regulatoryMandatesSummary: `${primaryRule.authority} compliance mandated under Singapore statutory law.`,
+        effectiveDateOrTiming: effDate,
+        uncertaintyDisclaimer: 'Grounded in current Singapore statutory provisions and regulatory guidelines. Review specific corporate facts or engage a licensed Singapore tax agent / public accountant for complex situations.',
         statutoryAdvisory: advisories,
         keyParameters: keyParams,
         directGroups: [
@@ -513,10 +669,16 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'PPE_IAS16',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
       transactionTitle: 'Machinery Acquisition with Trade-In & Equipment Loan',
       functionalCurrency,
       transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: 'Under SFRS(I) 1-16 §55, record catch-up depreciation up to the disposal date. Derecognize the carrying amount of the old asset (§67-§71) and recognize Loss on Disposal in P&L. New machine is recognized at cost net of recoverable GST. Under SFRS(I) 9, equipment loan is recognized at gross note amount with upfront unexpired loan interest contra-liability.',
+      singaporeTaxTreatmentSummary: 'The trade-in consideration represents a taxable supply subject to 9% Output GST (SGD 1,800). 9% Input GST on new machine (SGD 9,000) is recoverable from IRAS. Loss on disposal is not tax-deductible; accounting depreciation is added back in tax computation and qualifying plant & machinery claims Section 19A Capital Allowances.',
+      regulatoryMandatesSummary: 'Record keeping compliance under Section 199 of the Companies Act 1967.',
+      effectiveDateOrTiming: 'Singapore standard 9% GST rate; Section 19A Capital Allowances active.',
       directGroups,
       keyParameters: [
         { label: 'New Machine Cost (Excl. GST)', value: `${functionalCurrency} ${newCost.toLocaleString()}`, badge: 'Asset Cost' },
@@ -762,10 +924,16 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
       transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
       functionalCurrency,
       transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: `Under SFRS(I) 1-16 §16(a), trade discounts are deducted directly from the list price to arrive at the asset cost (${functionalCurrency} ${netAssetCost.toLocaleString()}). Trade discounts are never recorded as separate ledger accounts. Unsettled balance is recorded in Trade Payables under SFRS(I) 9.`,
+      singaporeTaxTreatmentSummary: `Under Singapore GST law, 9% GST (${functionalCurrency} ${inputGst.toLocaleString()}) is calculated on the net discounted price and claimed as an input tax asset. Qualifying equipment is eligible for Section 19A Capital Allowances (e.g. 100% 1-year write-off for computers or low-value assets $\\le$ $5,000).`,
+      regulatoryMandatesSummary: 'Tax invoices and commercial receipts must be retained for 5 years under Section 199 of the Companies Act 1967.',
+      effectiveDateOrTiming: 'Singapore standard 9% GST rate (effective 1 January 2024).',
       directGroups,
       keyParameters: [
         { label: 'List Price (Excl. GST)', value: `${functionalCurrency} ${listPrice.toLocaleString()}`, badge: 'List Price' },
@@ -834,10 +1002,16 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'GENERAL_EXPENSE',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
       transactionTitle: `Payment of ${expenseTitle}`,
       functionalCurrency,
       transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: `Under SFRS(I) 1-1 §28 accrual basis, ${expenseTitle} of ${functionalCurrency} ${expenseAmount.toLocaleString()} is recognized as an operating expense in profit or loss when economic benefits are consumed, matched with a credit to ${paymentMethod}.`,
+      singaporeTaxTreatmentSummary: `Deductible under Section 14(1) of the Income Tax Act 1947 if wholly and exclusively incurred in the production of business income. Non-business, personal, or fine expenses are prohibited under Section 15 and must be added back in Form C-S.`,
+      regulatoryMandatesSummary: 'Receipts and supporting documents must be maintained for 5 years under Section 199 of the Companies Act 1967.',
+      effectiveDateOrTiming: 'Current Year of Assessment (YA).',
       expenseAccountName: expenseTitle,
       paymentMethodAccountName: paymentMethod,
       amount: expenseAmount,
@@ -886,10 +1060,16 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'LEASE_IFRS16',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
       rawQuery: query,
       transactionTitle: `${termYears}-Year Property Lease Inception (IFRS 16)`,
       functionalCurrency,
       transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: `Under SFRS(I) 16 §22-§26, capitalize a Right-of-Use (ROU) Asset and corresponding Lease Liability measured at the present value of ${termMonths} monthly payments of ${functionalCurrency} ${monthlyRent.toLocaleString()} discounted at incremental borrowing rate (${discountRateAnnual}% p.a.). Subsequent payments are apportioned between finance charge (interest) and liability principal reduction (§36). Straight-line depreciation of ROU asset is recognized in P&L (§31).`,
+      singaporeTaxTreatmentSummary: `Accounting depreciation and lease finance expense are non-deductible and added back in tax computation. Actual contractual rental paid during the basis period is claimed as a tax deduction under Section 14(1) of the Income Tax Act 1947.`,
+      regulatoryMandatesSummary: 'Tenancy agreements must be registered via IRAS e-Stamping under the Stamp Duties Act 1929.',
+      effectiveDateOrTiming: 'SFRS(I) 16 standard active.',
       assetName: `Leased Property (${termYears}-Year Agreement)`,
       purchaseDate: '2026-01-01',
       purchaseAmountForeign: monthlyRent * termMonths,
@@ -929,14 +1109,18 @@ export async function parseAccountingQuery(
     }
     return {
       scenarioType: 'UNRECOGNIZED',
+      queryIntent: 'STATUTORY_ADVISORY',
+      primaryDomain: 'GENERAL',
       rawQuery: query,
       transactionTitle: 'Unrecognized Query (Offline Mode)',
       functionalCurrency,
       transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: 'Connect an AI Provider (Gemini, Azure OpenAI, or OpenAI) in Settings for dynamic reasoning and source citation on unmapped accounting queries.',
+      singaporeTaxTreatmentSummary: 'Refer to Singapore Statutes Online (sso.agc.gov.sg) or official IRAS e-Tax Guides for statutory directives.',
       directGroups: [],
       keyParameters: [
         { label: 'Evaluation Mode', value: 'Offline Rule Parser', badge: 'Offline' },
-        { label: 'AI Status', value: 'Connect Gemini API Key for Universal Accounting', badge: 'Setup' }
+        { label: 'AI Status', value: 'Connect Gemini/Azure API Key in Settings', badge: 'Setup' }
       ],
       isComplete: false,
       missingFields: []
@@ -1034,10 +1218,16 @@ export async function parseAccountingQuery(
 
   return {
     scenarioType: 'EQUITY_INVESTMENT_FX',
+    queryIntent: 'TRANSACTION',
+    primaryDomain: 'ACCOUNTING_SFRS',
     rawQuery: query,
     transactionTitle: `Investment & Sale of ${assetName} (USD/SGD)`,
     functionalCurrency,
     transactionCurrency,
+    accountingTreatmentSummary: `Under SFRS(I) 9 §5.1.1 and SFRS(I) 1-21 §21, financial assets at FVTPL are initially measured at fair value translated at the transaction spot exchange rate. Upon disposal, stock price appreciation is recognized in P&L, and realized foreign exchange difference is explicitly recognized under SFRS(I) 1-21 §23(c).`,
+    singaporeTaxTreatmentSummary: 'Capital gains on foreign shares held as long-term capital investments are not taxable in Singapore (no capital gains tax). Short-term trading profits by active traders/dealers are subject to 17% corporate income tax.',
+    regulatoryMandatesSummary: 'MAS Act 1970 zero exchange control policy applies: multi-currency balances and capital remittances are unrestricted in Singapore.',
+    effectiveDateOrTiming: 'Frankfurter API live spot rates from ECB; 17% headline CIT rate.',
     assetName,
     quantity,
     purchaseDate,

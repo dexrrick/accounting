@@ -18,6 +18,16 @@ export type StatutoryAuthority =
   | 'ASC' 
   | 'SSO';
 
+export type QueryDomain = 
+  | 'ACCOUNTING_SFRS' 
+  | 'IRAS_TAX' 
+  | 'IRAS_GST' 
+  | 'ACRA_CORP' 
+  | 'MOM_EMPLOYMENT' 
+  | 'CPF_BOARD' 
+  | 'MULTI_AUTHORITY' 
+  | 'GENERAL';
+
 export interface StandardCitation {
   standard: string; // e.g. "SFRS(I) 1-1", "Income Tax Act 1947", "Companies Act 1967"
   paragraph: string; // e.g. "§5.1.1", "Section 14(1)", "Section 205C"
@@ -104,7 +114,15 @@ export interface AccountingScenarioState {
 
   // Statutory Advisory & Tax Grounding
   queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
+  primaryDomain?: QueryDomain;
   statutoryAdvisory?: StatutoryAdvisoryInfo[];
+
+  // Explicit Accounting vs Tax Separation & Regulatory Summaries
+  accountingTreatmentSummary?: string;
+  singaporeTaxTreatmentSummary?: string;
+  regulatoryMandatesSummary?: string;
+  effectiveDateOrTiming?: string;
+  uncertaintyDisclaimer?: string;
 
   // Optional legacy fields for backward compatibility
   expenseAccountName?: string;

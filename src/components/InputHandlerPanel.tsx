@@ -42,6 +42,29 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
         ...(scenario.leaseTermYears ? [{ label: 'Lease Term', value: `${scenario.leaseTermYears} Years`, badge: 'Duration' }] : [])
       ];
 
+  const getDomainBadge = (domain?: string) => {
+    switch (domain) {
+      case 'ACCOUNTING_SFRS':
+        return { label: 'SFRS(I) Standards', color: 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800' };
+      case 'IRAS_TAX':
+        return { label: 'IRAS Corporate Tax', color: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800' };
+      case 'IRAS_GST':
+        return { label: 'IRAS GST (9%)', color: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-800' };
+      case 'ACRA_CORP':
+        return { label: 'ACRA Companies Act', color: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800' };
+      case 'MOM_EMPLOYMENT':
+        return { label: 'MOM Employment Act', color: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/70 dark:text-orange-300 dark:border-orange-800' };
+      case 'CPF_BOARD':
+        return { label: 'CPF Board Mandates', color: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/70 dark:text-blue-300 dark:border-blue-800' };
+      case 'MULTI_AUTHORITY':
+        return { label: 'Multi-Authority Scope', color: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800' };
+      default:
+        return { label: 'Singapore Jurisdiction', color: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-[#242F46] dark:text-slate-200 dark:border-[#2B374E]' };
+    }
+  };
+
+  const domainBadge = getDomainBadge(scenario.primaryDomain);
+
   return (
     <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden transition-colors duration-200">
       {/* Header */}
@@ -56,6 +79,11 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
                 <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-sans">
                   {scenario.queryIntent === 'STATUTORY_ADVISORY' ? 'Singapore Statutory Directives' : 'Transaction Facts & Extracted Parameters'}
                 </h3>
+                {scenario.primaryDomain && (
+                  <span className={`px-2 py-0.5 border rounded-md text-[10px] font-semibold tracking-wide ${domainBadge.color}`}>
+                    {domainBadge.label}
+                  </span>
+                )}
                 {scenario.transactionTitle && (
                   <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2B374E] rounded font-mono text-[11px] font-semibold">
                     {scenario.transactionTitle}

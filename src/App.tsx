@@ -67,7 +67,7 @@ export const App: React.FC = () => {
       id: 'welcome-msg',
       sender: 'assistant',
       timestamp: getSingaporeTimestamp(),
-      text: `Hello! I am your **Universal Accounting & Singapore Statutory Assistant**.\n\nYou can ask **any business transaction or regulatory compliance question**:\n* **Double Entry Accounting**: Exact debits & credits under SFRS(I) & IFRS (e.g. *"entertainment 3k with bank"*, office leases, shares with forex).\n* **IRAS Tax Directives**: Section 14/15 tax deductibility, Capital Allowances, SUTE/PTE, Form C-S, and 9% GST blocked rules.\n* **ACRA Compliance**: Small Company Audit Exemption (Section 205C), AGM & Annual Return statutory timelines.\n* **CPF Board & MOM**: 2026 Ordinary Wage ceiling ($8,000 cap), SDL calculations, and Employment Act payment deadlines.\n* **MAS & Trade**: Payment Services Act, zero foreign exchange controls, and Singapore Customs import GST.`
+      text: `Hello! I am your authoritative **Singapore Accounting, Tax & Regulatory Research Assistant**.\n\nI provide correct, traceable guidance for Singapore accounting professionals grounded in official legislation and accounting standards:\n* **SFRS(I) & Financial Reporting**: Capitalisation criteria (SFRS(I) 1-38 §57), revenue recognition (SFRS(I) 15), provisions, leases, and balanced double entries.\n* **IRAS Corporate Tax & GST**: Section 14 deductibility vs Section 15 disallowance, Enterprise Innovation Scheme (EIS 400%), Capital Allowances (S19/19A), and 9% GST registration ($1M) / blocked input tax (Reg 26).\n* **ACRA Compliance**: Small company audit exemption criteria (Companies Act §205C 2-of-3 criteria), AGM and annual return statutory timelines.\n* **CPF Board & MOM**: 2026 CPF Ordinary Wage monthly ceiling ($8,000 cap), tiered age rates, and Employment Act statutory leave & overtime rules.\n* **Dual View Grounding**: Systematic bifurcation of Financial Reporting Treatment from Singapore Tax Treatment with verified statutory citations.`
     }
   ]);
 
@@ -98,8 +98,10 @@ export const App: React.FC = () => {
       if (
         response.scenarioState?.queryIntent === 'STATUTORY_ADVISORY' ||
         (!response.scenarioState?.directGroups?.some((g) => g.lines.length > 0) &&
-          response.scenarioState?.statutoryAdvisory &&
-          response.scenarioState.statutoryAdvisory.length > 0)
+          ((response.scenarioState?.statutoryAdvisory && response.scenarioState.statutoryAdvisory.length > 0) ||
+            response.scenarioState?.accountingTreatmentSummary ||
+            response.scenarioState?.singaporeTaxTreatmentSummary ||
+            response.scenarioState?.regulatoryMandatesSummary))
       ) {
         setActiveTab('compliance');
       } else if (response.scenarioState?.directGroups?.some((g) => g.lines.length > 0)) {
@@ -204,7 +206,13 @@ export const App: React.FC = () => {
             />
 
             {/* View Switcher Tabs */}
-            {scenario && (computed.groups.some((g) => g.lines.length > 0) || (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0)) && (
+            {scenario && (
+              computed.groups.some((g) => g.lines.length > 0) ||
+              (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
+              Boolean(scenario.accountingTreatmentSummary) ||
+              Boolean(scenario.singaporeTaxTreatmentSummary) ||
+              Boolean(scenario.regulatoryMandatesSummary)
+            ) && (
               <div className="space-y-4">
                 <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538] px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
                   {computed.groups.some((g) => g.lines.length > 0) && (
@@ -252,6 +260,12 @@ export const App: React.FC = () => {
                     advisories={scenario.statutoryAdvisory}
                     standard={standard}
                     classification={scenario.classification}
+                    primaryDomain={scenario.primaryDomain}
+                    accountingTreatmentSummary={scenario.accountingTreatmentSummary}
+                    singaporeTaxTreatmentSummary={scenario.singaporeTaxTreatmentSummary}
+                    regulatoryMandatesSummary={scenario.regulatoryMandatesSummary}
+                    effectiveDateOrTiming={scenario.effectiveDateOrTiming}
+                    uncertaintyDisclaimer={scenario.uncertaintyDisclaimer}
                   />
                 )}
               </div>

@@ -161,6 +161,56 @@ export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
     principle: 'An entity shall remove a financial liability (or a part of a financial liability) from its statement of financial position when, and only when, it is extinguished—ie when the obligation specified in the contract is discharged or cancelled or expires.',
     application: 'Payment of trade payables via bank transfer extinguishes the contractual obligation: Dr. Trade Payables | Cr. Cash at Bank.',
     sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  SFRS_I_1_38_INTANGIBLES: {
+    code: 'SFRS(I) 1-38 / IAS 38 §54 & §57',
+    sfrsCode: 'SFRS(I) 1-38 §54 & §57',
+    ifrsCode: 'IAS 38 §54 & §57',
+    standardTitle: 'Intangible Assets - Capitalisation of Development Costs vs Research Expense',
+    paragraph: '§54 & §57',
+    principle: 'No intangible asset arising from research shall be recognised; expenditure on research must be expensed when incurred (§54). Development expenditure shall be capitalised if and only if an entity demonstrates all 6 cumulative criteria under §57: technical feasibility, intention to complete, ability to use/sell, probable future economic benefits, resource availability, and reliable cost measurement.',
+    application: 'Research stage project costs must be debited to P&L. Once all 6 development criteria are met, development payroll and directly attributable expenditure are capitalised as an Intangible Asset: Dr. Intangible Assets - Software Development | Cr. Cash / Bank / Payables.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  SFRS_I_1_2_INVENTORIES: {
+    code: 'SFRS(I) 1-2 / IAS 2 §9 & §28',
+    sfrsCode: 'SFRS(I) 1-2 §9 & §28',
+    ifrsCode: 'IAS 2 §9 & §28',
+    standardTitle: 'Inventories - Lower of Cost and Net Realizable Value (NRV)',
+    paragraph: '§9 & §28',
+    principle: 'Inventories shall be measured at the lower of cost and net realisable value (NRV). When NRV falls below cost due to damage, obsolescence, or declining market price, the carrying amount is written down to NRV in profit or loss.',
+    application: 'End-of-period review comparing historical cost against net realizable value: Dr. Inventory Write-down / Cost of Sales | Cr. Inventory / Allowance for NRV.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  SFRS_I_15_REVENUE: {
+    code: 'SFRS(I) 15 / IFRS 15 §31',
+    sfrsCode: 'SFRS(I) 15 §31',
+    ifrsCode: 'IFRS 15 §31',
+    standardTitle: 'Revenue from Contracts with Customers - 5-Step Model & Transfer of Control',
+    paragraph: '§31',
+    principle: 'An entity shall recognise revenue when (or as) the entity satisfies a performance obligation by transferring a promised good or service (control of an asset) to a customer. Revenue is recognized either over time (§35) or at a point in time (§38) following the 5-step recognition model.',
+    application: 'Determining timing of billing vs delivery of goods/services: Dr. Trade Receivables / Contract Asset | Cr. Revenue / Contract Liability.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  SFRS_I_1_37_PROVISIONS: {
+    code: 'SFRS(I) 1-37 / IAS 37 §14',
+    sfrsCode: 'SFRS(I) 1-37 §14',
+    ifrsCode: 'IAS 37 §14',
+    standardTitle: 'Provisions, Contingent Liabilities and Contingent Assets',
+    paragraph: '§14',
+    principle: 'A provision shall be recognised when: (a) an entity has a present obligation (legal or constructive) as a result of a past event; (b) it is probable that an outflow of resources will be required to settle the obligation; and (c) a reliable estimate can be made.',
+    application: 'Warranties, legal settlements, and restructuring provisions meeting all 3 tests: Dr. Provision Expense (P&L) | Cr. Provision for Obligations (Liability).',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  SFRS_I_1_12_INCOME_TAXES: {
+    code: 'SFRS(I) 1-12 / IAS 12 §15 & §24',
+    sfrsCode: 'SFRS(I) 1-12 §15 & §24',
+    ifrsCode: 'IAS 12 §15 & §24',
+    standardTitle: 'Income Taxes - Accounting vs Tax Bases & Deferred Tax',
+    paragraph: '§15 & §24',
+    principle: 'Deferred tax arises from temporary differences between the accounting carrying amounts of assets/liabilities and their corresponding tax bases under the Income Tax Act. Taxable temporary differences require Deferred Tax Liabilities; deductible temporary differences generate Deferred Tax Assets.',
+    application: 'Accelerated tax capital allowances under Section 19A of the Income Tax Act exceed accounting depreciation, producing a taxable temporary difference: Dr. Deferred Tax Expense (P&L) | Cr. Deferred Tax Liability.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
   }
 };
 

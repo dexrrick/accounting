@@ -1,6 +1,6 @@
 import React from 'react';
-import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo } from '../types/accounting';
-import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText } from 'lucide-react';
+import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain } from '../types/accounting';
+import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText, Calendar, AlertTriangle, Building, Landmark } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 
 interface ComplianceRationaleProps {
@@ -8,13 +8,25 @@ interface ComplianceRationaleProps {
   advisories?: StatutoryAdvisoryInfo[];
   standard: AccountingStandard;
   classification?: 'FVTPL' | 'FVTOCI';
+  primaryDomain?: QueryDomain;
+  accountingTreatmentSummary?: string;
+  singaporeTaxTreatmentSummary?: string;
+  regulatoryMandatesSummary?: string;
+  effectiveDateOrTiming?: string;
+  uncertaintyDisclaimer?: string;
 }
 
 export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   citations,
   advisories = [],
   standard,
-  classification = 'FVTPL'
+  classification = 'FVTPL',
+  primaryDomain,
+  accountingTreatmentSummary,
+  singaporeTaxTreatmentSummary,
+  regulatoryMandatesSummary,
+  effectiveDateOrTiming,
+  uncertaintyDisclaimer
 }) => {
   const isSfrs = standard === 'SFRS_I';
   const authorityName = isSfrs 
@@ -30,9 +42,16 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
             <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 font-sans">
-              Statutory Compliance & Legal Authority
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 font-sans">
+                Statutory Compliance & Legal Authority
+              </h3>
+              {primaryDomain && (
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2B374E] font-medium">
+                  {primaryDomain}
+                </span>
+              )}
+            </div>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Grounded in IRAS, ACRA, CPF Board, MOM, MAS, and Singapore Statutes Online {classification ? `(${classification})` : ''}
             </p>
@@ -49,6 +68,93 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
           <ExternalLink className="w-3 h-3 text-slate-400" />
         </a>
       </div>
+
+      {/* Effective Timing Banner */}
+      {effectiveDateOrTiming && (
+        <div className="mx-5 p-3.5 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl flex items-start gap-3">
+          <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/70 flex items-center justify-center shrink-0 mt-0.5">
+            <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">
+              Current Applicable Period & Threshold Status
+            </span>
+            <p className="text-xs text-blue-900 dark:text-blue-200 mt-0.5 leading-relaxed font-medium">
+              {effectiveDateOrTiming}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Dual Authority Comparison: Financial Reporting (SFRS(I)) vs Singapore Tax Treatment (IRAS) */}
+      {(accountingTreatmentSummary || singaporeTaxTreatmentSummary) && (
+        <div className="px-5 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
+            <Scale className="w-4 h-4 text-slate-400" />
+            <span>Financial Reporting vs Singapore Tax Bifurcation</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Column 1: Financial Reporting Treatment */}
+            <div className="p-4 bg-indigo-50/50 dark:bg-[#1A2234] border border-indigo-200/80 dark:border-indigo-900/50 rounded-xl space-y-2.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/70 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800">
+                    <Building className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                    ASC / SFRS(I) Treatment
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">Financial Reporting</span>
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Financial Statement Recognition & Policies</h4>
+              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white/90 dark:bg-[#151D2C] p-3 rounded-lg border border-indigo-100 dark:border-indigo-950">
+                {accountingTreatmentSummary || 'Standard SFRS(I) double entry recognition applies according to accrual basis accounting.'}
+              </p>
+            </div>
+
+            {/* Column 2: Singapore Tax Treatment */}
+            <div className="p-4 bg-emerald-50/50 dark:bg-[#162724] border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl space-y-2.5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
+                    <Landmark className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                    IRAS Tax & GST Treatment
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">Tax Computation</span>
+              </div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">Tax Deductibility, Capital Allowances & GST</h4>
+              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white/90 dark:bg-[#151D2C] p-3 rounded-lg border border-emerald-100 dark:border-emerald-950">
+                {singaporeTaxTreatmentSummary || 'Expenses must satisfy Section 14(1) wholly and exclusively test. Capital items are subject to S19/19A allowances or S15 disallowance.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Regulatory Mandates (ACRA / MOM / CPF) */}
+      {regulatoryMandatesSummary && (
+        <div className="mx-5 p-4 bg-slate-50 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 font-sans">
+            <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
+            <span>Singapore Regulatory Compliance Mandates</span>
+          </div>
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-[#1C2538] p-3 rounded-lg border border-slate-200 dark:border-[#2B374E]">
+            {regulatoryMandatesSummary}
+          </p>
+        </div>
+      )}
+
+      {/* Uncertainty Disclaimer & Caveats */}
+      {uncertaintyDisclaimer && (
+        <div className="mx-5 p-3.5 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+            <strong className="font-semibold block mb-0.5">Professional Advisory Caveat:</strong>
+            {uncertaintyDisclaimer}
+          </div>
+        </div>
+      )}
 
       {/* Advisory Breakdown Cards (if available) */}
       {advisories && advisories.length > 0 && (

@@ -428,6 +428,102 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/PSA2019',
     tags: ['payment services act', 'crypto tax', 'digital tokens', 'mas notice psn02', 'psa 2019']
+  },
+
+  // -------------------------------------------------------------
+  // 7. MOM & LEAVE / OVERTIME MANDATES
+  // -------------------------------------------------------------
+  MOM_ANNUAL_SICK_LEAVE: {
+    id: 'MOM_ANNUAL_SICK_LEAVE',
+    authority: 'MOM',
+    authorityName: 'Ministry of Manpower (MOM)',
+    actTitle: 'Employment Act 1968',
+    actCode: 'EA1968',
+    sectionOrSchedule: 'Section 88A & Section 89',
+    ruleTitle: 'Annual Leave and Paid Sick / Hospitalisation Leave Statutory Entitlements',
+    category: 'MOM_LABOUR',
+    principle: 'Employees covered by the Employment Act who have served an employer for at least 3 months are entitled to paid sick leave. Employees who have served for at least 12 months are entitled to statutory paid annual leave.',
+    application: 'Leave administration and payroll accrual calculations for permanent and contract employees.',
+    practicalRules: [
+      'Paid Annual Leave (Section 88A): Minimum 7 days after 1 year of service, increasing by 1 additional day per completed year of service, up to a statutory maximum of 14 days for 8 or more years of service.',
+      'Paid Outpatient Sick Leave (Section 89): Up to 14 days per calendar year if certified by an approved medical practitioner. Graduated during first 6 months of employment (5 days at 3 months, 8 days at 4 months, 11 days at 5 months, 14 days at 6+ months).',
+      'Paid Hospitalisation Leave (Section 89): Up to 60 days per calendar year (which includes the 14 days of outpatient sick leave).',
+      'Public Holidays (Section 88): 11 statutory gazetted public holidays per year. If required to work on a public holiday, an employee is entitled to an extra day of basic salary or a day off in lieu.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr89-',
+    tags: ['annual leave', 'sick leave', 'hospitalisation leave', 'leave entitlement', 'public holiday', 'section 89', 'employment act leave']
+  },
+
+  MOM_OVERTIME_PART_IV: {
+    id: 'MOM_OVERTIME_PART_IV',
+    authority: 'MOM',
+    authorityName: 'Ministry of Manpower (MOM)',
+    actTitle: 'Employment Act 1968',
+    actCode: 'EA1968',
+    sectionOrSchedule: 'Section 38 (Part IV)',
+    ruleTitle: 'Part IV Working Hours, Overtime Limits & Overtime Pay Rate (1.5x Hourly Rate)',
+    category: 'MOM_LABOUR',
+    principle: 'Part IV of the Employment Act protects workmen earning up to $4,500/month and non-workmen earning up to $2,600/month. Hours worked beyond contractual standard hours (max 44 hours/week) must be paid at overtime rates.',
+    application: 'Payroll calculation for overtime hours worked by eligible employees.',
+    practicalRules: [
+      'Coverage Threshold: Non-workmen earning monthly basic salary $\\le$ SGD 2,600; Workmen earning $\\le$ SGD 4,500.',
+      'Overtime Rate: At least 1.5 times the hourly basic rate of pay (for non-workmen, salary capped at SGD 2,600 or SGD 13.60/hour for calculation).',
+      'Maximum Overtime Cap: An employee cannot work more than 72 hours of overtime in a calendar month, except with an MOM overtime exemption.',
+      'Payment Deadline: Under Section 21, overtime payment must be disbursed within 14 days after the end of the salary period.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr38-',
+    tags: ['overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '44 hours']
+  },
+
+  // -------------------------------------------------------------
+  // 8. CPF BOARD & TIERED CONTRIBUTION RATES BY AGE
+  // -------------------------------------------------------------
+  CPF_RATES_BY_AGE_2026: {
+    id: 'CPF_RATES_BY_AGE_2026',
+    authority: 'CPF',
+    authorityName: 'Central Provident Fund Board (CPF)',
+    actTitle: 'Central Provident Fund Act 1953',
+    actCode: 'CPFA1953',
+    sectionOrSchedule: 'First Schedule (Statutory Contribution Rates)',
+    ruleTitle: 'Tiered CPF Contribution Rates by Employee Age Bracket & 2026 Ceilings',
+    category: 'CPF_PAYROLL',
+    principle: 'Mandatory CPF contributions for Singapore Citizens and Permanent Residents (from 3rd year of PR status onwards) are calculated using tiered statutory percentage rates based on the employee\'s age.',
+    application: 'Monthly payroll computation for all citizen and permanent resident employees.',
+    practicalRules: [
+      'Age 55 and below: Employer 17%, Employee 20% (Total: 37%).',
+      'Age above 55 to 60: Employer 15%, Employee 15% (Total: 30% - ongoing senior worker rate enhancement).',
+      'Age above 60 to 65: Employer 11.5%, Employee 9.5% (Total: 21%).',
+      'Age above 65 to 70: Employer 9%, Employee 7.5% (Total: 16.5%).',
+      'Age above 70: Employer 7.5%, Employee 5% (Total: 12.5%).',
+      '2026 Ordinary Wage (OW) Monthly Ceiling: SGD 8,000 (effective 1 January 2026). Max monthly contribution for age $\\le 55$ is SGD 1,360 (employer) + SGD 1,600 (employee) = SGD 2,960.',
+      'Additional Wage (AW) Ceiling: $$\\text{AW Ceiling} = \\text{SGD 102,000} - \\text{Total OW subject to CPF in the year}$$.'
+    ],
+    canonicalUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay',
+    tags: ['cpf rates by age', 'cpf contribution table', 'senior worker cpf', 'cpf 55 60', 'cpf rates 2026', 'cpf age brackets']
+  },
+
+  // -------------------------------------------------------------
+  // 9. IRAS & ENTERPRISE INNOVATION SCHEME (EIS) / R&D
+  // -------------------------------------------------------------
+  ITA_SEC14C_EIS_INNOVATION: {
+    id: 'ITA_SEC14C_EIS_INNOVATION',
+    authority: 'IRAS',
+    authorityName: 'Inland Revenue Authority of Singapore (IRAS)',
+    actTitle: 'Income Tax Act 1947',
+    actCode: 'ITA1947',
+    sectionOrSchedule: 'Section 14C & Section 14D (Enterprise Innovation Scheme)',
+    ruleTitle: '400% Enhanced Tax Deduction on Qualifying R&D and Enterprise Innovation Scheme (EIS)',
+    category: 'TAX_INCOME',
+    principle: 'Under the Enterprise Innovation Scheme (EIS), qualifying businesses enjoy an enhanced 400% tax deduction on up to SGD 400,000 of qualifying expenditure per activity incurred on qualifying R&D, innovation, and IP registration.',
+    application: 'Companies undertaking internal product development, software engineering, or filing patents/trademarks in Singapore.',
+    practicalRules: [
+      'Enhanced Deduction: 400% tax deduction (100% baseline under Section 14C + 300% enhanced under EIS) on qualifying R&D staff costs and consumables.',
+      'Expenditure Cap: Capped at SGD 400,000 per qualifying activity per Year of Assessment.',
+      'Cash Conversion Option: Qualifying businesses can opt to convert up to SGD 100,000 of total qualifying expenditure across all activities into a non-taxable cash payout at a 20% conversion rate (max SGD 20,000).',
+      'Accounting vs Tax Divergence: For financial reporting under SFRS(I) 1-38, development costs meeting all 6 criteria are capitalized as an intangible asset and amortized over time. For tax purposes, qualifying R&D expenses claim the enhanced 400% deduction in the YA incurred.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14C-',
+    tags: ['eis', 'enterprise innovation scheme', '400% deduction', 'r&d tax deduction', 'section 14c', 'intangibles tax']
   }
 };
 
@@ -504,7 +600,7 @@ export function convertToAdvisory(rule: SingaporeStatuteRule): StatutoryAdvisory
     summary: rule.principle,
     keyRules: rule.practicalRules,
     officialUrl: rule.canonicalUrl,
-    isTaxDeductible: rule.id === 'ITA_SEC15_1_K_MOTOR_CAR' ? false : rule.id === 'ITA_SEC14_GENERAL_DEDUCTION' ? true : undefined,
-    isGstClaimable: rule.id === 'GST_REG26_BLOCKED_INPUT_TAX' ? false : undefined
+    isTaxDeductible: (rule.id === 'ITA_SEC15_1_K_MOTOR_CAR' || rule.id === 'ITA_SEC15_PROHIBITED_DEDUCTIONS') ? false : (rule.id === 'ITA_SEC14_GENERAL_DEDUCTION' || rule.id === 'ITA_SEC14C_EIS_INNOVATION') ? true : undefined,
+    isGstClaimable: rule.id === 'GST_REG26_BLOCKED_INPUT_TAX' ? false : rule.id === 'GST_SEC21_ZERO_RATED_EXPORTS' ? true : undefined
   };
 }

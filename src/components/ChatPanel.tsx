@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MissingFieldInfo } from '../types/accounting';
 import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react';
+import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -241,141 +242,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             touchAction: 'pan-x'
           }}
         >
-          {/* Chip 1: ACRA Audit Exemption */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('What are the ACRA requirements for small company audit exemption?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">ACRA</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                §205C
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              Small Company Audit Exemption
-            </p>
-          </button>
-
-          {/* Chip 2: CPF Ceiling 2026 */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('What is the 2026 CPF Ordinary Wage ceiling and monthly contribution rate?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">CPF Board</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                $8,000 OW
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              2026 CPF Ceilings & Deductions
-            </p>
-          </button>
-
-          {/* Chip 3: Passenger Car Blocked Tax */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('I bought a company car for SGD 120k with bank. How to record double entries and can I claim 9% GST under IRAS?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">IRAS Tax</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                Reg 26
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              Company Car: Blocked GST & Tax
-            </p>
-          </button>
-
-          {/* Chip 4: IRAS SUTE & Tax Exemption */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('What is the Singapore corporate tax rate and how does Start-Up Tax Exemption (SUTE) work under IRAS?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">IRAS Tax</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                17% SUTE
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              Corporate Tax & SUTE Exemption
-            </p>
-          </button>
-
-          {/* Chip 5: MOM Salary Deadlines */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('What are the MOM Employment Act deadlines for salary payment and overtime rate?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">MOM</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                EA §21
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              Salary Payment & Overtime Rules
-            </p>
-          </button>
-
-          {/* Chip 6: Entertainment Expense */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('i pay for entertainment expenses 3k with bank')}
-            className="shrink-0 w-40 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Expense</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                IAS 1 / S14
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              Entertainment 3k with bank
-            </p>
-          </button>
-
-          {/* Chip 7: FX Shares */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">FX Shares</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                IFRS 9
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              Apple Shares (USD 300k to 400k)
-            </p>
-          </button>
-
-          {/* Chip 8: PPE Machinery & Trade-in */}
-          <button
-            type="button"
-            onClick={() => handleSampleClick('I bought a new machine for 100k, trade in old machine for 20k, paid cash 30k, balance financed by 2-year equipment loan with 5% annual interest. How to record double entries?')}
-            className="shrink-0 w-44 sm:w-auto text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-          >
-            <div className="flex items-center justify-between gap-1">
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Machinery</span>
-              <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E]">
-                IAS 16 / IFRS 9
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-              Machine 100k, Trade-in & Loan
-            </p>
-          </button>
+          {SAMPLE_PROMPTS.map((sample) => (
+            <button
+              key={sample.id}
+              type="button"
+              onClick={() => handleSampleClick(sample.query)}
+              className="shrink-0 w-48 sm:w-56 text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
+            >
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate max-w-[110px]">
+                  {sample.tag}
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E] shrink-0 truncate max-w-[80px]">
+                  {sample.standard}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
+                {sample.title}
+              </p>
+            </button>
+          ))}
         </div>
       </div>
 
