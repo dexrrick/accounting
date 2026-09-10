@@ -87,7 +87,8 @@ export function parseAccountingAIResponse(
   rawJsonText: string,
   currentScenario: AccountingScenarioState | null,
   userInput: string,
-  groundedContext?: GroundedReasoningContext
+  groundedContext?: GroundedReasoningContext,
+  deterministicScenario?: AccountingScenarioState | null
 ): GeminiResponse {
   if (!rawJsonText) {
     throw new Error('No content returned by AI provider.');
@@ -106,7 +107,7 @@ export function parseAccountingAIResponse(
     currentInformationRequired: false
   };
 
-  return postProcessAIResponse(parsed, currentScenario, userInput, fallbackContext);
+  return postProcessAIResponse(parsed, currentScenario, userInput, fallbackContext, deterministicScenario);
 }
 
 export async function callAzureOpenAI(
@@ -115,7 +116,8 @@ export async function callAzureOpenAI(
   standard: AccountingStandard,
   azureConfig: AzureConfig,
   chatHistory: ChatMessage[] = [],
-  groundedContext?: GroundedReasoningContext
+  groundedContext?: GroundedReasoningContext,
+  deterministicScenario?: AccountingScenarioState | null
 ): Promise<GeminiResponse> {
   const endpoint = normalizeAzureEndpoint(azureConfig.endpoint);
   if (!endpoint) {
@@ -171,7 +173,7 @@ export async function callAzureOpenAI(
 
   const data = await res.json();
   const rawJsonText = data?.choices?.[0]?.message?.content;
-  return parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context);
+  return parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context, deterministicScenario);
 }
 
 export async function callStandardOpenAI(
@@ -180,7 +182,8 @@ export async function callStandardOpenAI(
   standard: AccountingStandard,
   openaiConfig: OpenAIConfig,
   chatHistory: ChatMessage[] = [],
-  groundedContext?: GroundedReasoningContext
+  groundedContext?: GroundedReasoningContext,
+  deterministicScenario?: AccountingScenarioState | null
 ): Promise<GeminiResponse> {
   if (!openaiConfig.apiKey || openaiConfig.apiKey.trim().length < 10) {
     throw new Error('Valid OpenAI API Key is required. Please configure in Settings.');
@@ -224,5 +227,5 @@ export async function callStandardOpenAI(
 
   const data = await res.json();
   const rawJsonText = data?.choices?.[0]?.message?.content;
-  return parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context);
+  return parseAccountingAIResponse(rawJsonText, currentScenario, userInput, context, deterministicScenario);
 }

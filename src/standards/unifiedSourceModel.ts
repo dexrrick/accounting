@@ -4,7 +4,9 @@ import { SINGAPORE_STATUTORY_REPOSITORY } from './singaporeStatutesKnowledge';
 
 export type SourceStatus = 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
 
-export type SourceType = 'AUTHORITATIVE_SOURCE' | 'CURATED_SUMMARY' | 'APPLICATION_RULE';
+export type SourceType = 'AUTHORITATIVE_SOURCE' | 'OFFICIAL_GUIDANCE' | 'CURATED_SUMMARY' | 'APPLICATION_RULE';
+
+export type EvidenceTier = 'PRIMARY_SOURCE' | 'OFFICIAL_GUIDANCE' | 'CURATED_SUMMARY' | 'APPLICATION_RULE';
 
 export interface AuthoritativeSourceRecord {
   id: string;
@@ -25,6 +27,7 @@ export interface AuthoritativeSourceRecord {
   tags: string[];
   sourceStatus: SourceStatus;
   sourceType: SourceType;
+  evidenceTier: EvidenceTier; // Explicitly declared provenance tier
   isVerbatimText: boolean; // Explicitly declared, NEVER inferred from length or URL
 }
 
@@ -63,7 +66,8 @@ for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
   // Unknown effective dates are undefined, NOT populated with generic fake dates.
   const isVerbatim = rule.isVerbatimText === true;
   const status: SourceStatus = isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'VERIFIED' : 'NEEDS_REVIEW';
-  const type: SourceType = isVerbatim && rule.sourceType === 'AUTHORITATIVE_SOURCE' ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY';
+  const type: SourceType = rule.sourceType || (isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY');
+  const tier: EvidenceTier = rule.evidenceTier || (isVerbatim ? 'PRIMARY_SOURCE' : 'CURATED_SUMMARY');
 
   UNIFIED_SOURCE_REGISTRY[key] = {
     id: rule.id,
@@ -84,6 +88,7 @@ for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
     tags: rule.tags || [],
     sourceStatus: status,
     sourceType: type,
+    evidenceTier: tier,
     isVerbatimText: isVerbatim
   };
 }
@@ -91,7 +96,7 @@ for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
 // 2. Ingest Financial Reporting Standards from ACRA / ASC repository
 for (const [key, std] of Object.entries(STANDARDS_REPOSITORY)) {
   // All standards repository entries in code are curated summaries until verbatim ASC text is ingested.
-  // They are strictly tagged as NEEDS_REVIEW + CURATED_SUMMARY.
+  // They are strictly tagged as NEEDS_REVIEW + CURATED_SUMMARY + CURATED_SUMMARY tier.
   // Effective date is undefined if not explicitly pinned, NEVER generic fake dates.
   UNIFIED_SOURCE_REGISTRY[key] = {
     id: key,
@@ -111,6 +116,7 @@ for (const [key, std] of Object.entries(STANDARDS_REPOSITORY)) {
     tags: [std.standardTitle.toLowerCase(), std.paragraph.toLowerCase(), 'accounting standard', 'sfrs(i)'],
     sourceStatus: 'NEEDS_REVIEW',
     sourceType: 'CURATED_SUMMARY',
+    evidenceTier: 'CURATED_SUMMARY',
     isVerbatimText: false
   };
 }

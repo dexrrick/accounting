@@ -52,16 +52,19 @@ export class CitationVerifier {
 
   /**
    * Validates a single standard citation structurally against authoritative records.
+   * When retrievedEvidenceScope is provided, validates that the citation is grounded
+   * strictly in the retrieved evidence supplied to the model.
    */
   public verifyCitation(
     citation: StandardCitation,
-    expectedAuthority?: StatutoryAuthority
+    expectedAuthority?: StatutoryAuthority,
+    retrievedEvidenceScope?: AuthoritativeSourceRecord[]
   ): CitationVerificationResult {
     const rawStd = citation.standard || '';
     const rawPara = citation.paragraph || '';
     const rawUrl = citation.officialSourceUrl || '';
 
-    // 1. Check if source standard or statute exists
+    // 1. Check if source standard or statute exists in verified repository
     const matchedRecords = this.retriever.findSourcesByStandardOrAct(rawStd);
     if (!matchedRecords || matchedRecords.length === 0) {
       return {
@@ -94,8 +97,14 @@ export class CitationVerifier {
       };
     }
 
-    // 3. Authority alignment check
-    if (citation.authority && citation.authority !== matchedRecord.authority) {
+    // 3. Authority alignment check (with ASC/ACRA merger compatibility)
+    const authorityMatches =
+      !citation.authority ||
+      citation.authority === matchedRecord.authority ||
+      (citation.authority === 'ASC' && matchedRecord.authority === 'ACRA') ||
+      (citation.authority === 'ACRA' && matchedRecord.authority === 'ASC');
+
+    if (!authorityMatches) {
       return {
         citation,
         status: 'AUTHORITY_MISMATCH',
@@ -108,17 +117,24 @@ export class CitationVerifier {
       };
     }
 
-    if (expectedAuthority && matchedRecord.authority !== expectedAuthority) {
-      return {
-        citation,
-        status: 'AUTHORITY_MISMATCH',
-        isValid: false,
-        isStructurallyValid: false,
-        isAuthoritativePrimarySource: false,
-        matchedRecord,
-        reason: `Authority mismatch: expected domain authority '${expectedAuthority}' but citation belongs to '${matchedRecord.authority}'.`,
-        structuralVerificationOnly: true
-      };
+    if (expectedAuthority) {
+      const expectedMatches =
+        matchedRecord.authority === expectedAuthority ||
+        (expectedAuthority === 'ASC' && matchedRecord.authority === 'ACRA') ||
+        (expectedAuthority === 'ACRA' && matchedRecord.authority === 'ASC');
+
+      if (!expectedMatches) {
+        return {
+          citation,
+          status: 'AUTHORITY_MISMATCH',
+          isValid: false,
+          isStructurallyValid: false,
+          isAuthoritativePrimarySource: false,
+          matchedRecord,
+          reason: `Authority mismatch: expected domain authority '${expectedAuthority}' but citation belongs to '${matchedRecord.authority}'.`,
+          structuralVerificationOnly: true
+        };
+      }
     }
 
     // 4. Canonical URL verification
@@ -162,13 +178,57 @@ export class CitationVerifier {
       }
     }
 
-    // 5. Verification passes - Strictly distinguish Primary Statutory Source vs Curated Summary
+    // 5. Retrieved Evidence Scope check: Citation must be supported by the retrieved evidence in context
+    if (retrievedEvidenceScope !== undefined) {
+      if (retrievedEvidenceScope.length === 0) {
+        return {
+          citation,
+          status: 'UNVERIFIED',
+          isValid: false,
+          isStructurallyValid: true,
+          isAuthoritativePrimarySource: false,
+          matchedRecord,
+          reason: 'No authoritative evidence was retrieved in context to support this citation.',
+          structuralVerificationOnly: true
+        };
+      }
+
+      const codeClean = rawStd.toLowerCase().replace(/[\s\-_()]/g, '');
+      const inScopeRecord = retrievedEvidenceScope.find((r) => {
+        const rCodeClean = r.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
+        const rTitleClean = r.documentTitle.toLowerCase().replace(/[\s\-_()]/g, '');
+        const codeMatches = rCodeClean.includes(codeClean) || rTitleClean.includes(codeClean) || codeClean.includes(rCodeClean);
+        if (!codeMatches) return false;
+        if (!paraClean) return true;
+        const rSecClean = this.normalizeSection(r.paragraphOrSection);
+        return rSecClean.includes(paraClean) || paraClean.includes(rSecClean);
+      });
+
+      if (!inScopeRecord) {
+        return {
+          citation,
+          status: 'UNVERIFIED',
+          isValid: false,
+          isStructurallyValid: true,
+          isAuthoritativePrimarySource: false,
+          matchedRecord,
+          reason: `Citation '${rawStd} ${rawPara}' is structurally valid in law but was not retrieved in the evidence context for this query.`,
+          structuralVerificationOnly: true
+        };
+      }
+    }
+
+    // 6. Verification passes - Strictly distinguish Primary Statutory Source vs Curated Summary
     const isVerifiedPrimary =
+      matchedRecord.evidenceTier === 'PRIMARY_SOURCE' &&
       matchedRecord.sourceStatus === 'VERIFIED' &&
       matchedRecord.sourceType === 'AUTHORITATIVE_SOURCE' &&
       matchedRecord.isVerbatimText === true;
 
-    const isNeedsReview = matchedRecord.sourceStatus === 'NEEDS_REVIEW' || matchedRecord.sourceType === 'CURATED_SUMMARY';
+    const isNeedsReview =
+      matchedRecord.evidenceTier === 'CURATED_SUMMARY' ||
+      matchedRecord.sourceStatus === 'NEEDS_REVIEW' ||
+      matchedRecord.sourceType === 'CURATED_SUMMARY';
 
     const status: CitationVerificationStatus = isVerifiedPrimary
       ? 'VERIFIED_PRIMARY_SOURCE'
@@ -193,14 +253,15 @@ export class CitationVerifier {
    */
   public verifyCitationBatch(
     citations: StandardCitation[],
-    expectedAuthority?: StatutoryAuthority
+    expectedAuthority?: StatutoryAuthority,
+    retrievedEvidenceScope?: AuthoritativeSourceRecord[]
   ): {
     results: CitationVerificationResult[];
     allValid: boolean;
     validCitations: StandardCitation[];
     rejectedCitations: CitationVerificationResult[];
   } {
-    const results = citations.map((c) => this.verifyCitation(c, expectedAuthority));
+    const results = citations.map((c) => this.verifyCitation(c, expectedAuthority, retrievedEvidenceScope));
     const allValid = results.every((r) => r.isValid);
     const validCitations = results.filter((r) => r.isValid).map((r) => r.citation);
     const rejectedCitations = results.filter((r) => !r.isValid);

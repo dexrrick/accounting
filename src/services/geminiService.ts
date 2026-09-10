@@ -25,13 +25,12 @@ export async function processAccountingQuery(
   modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = []
 ): Promise<GeminiResponse> {
-  const std1 = standard === 'SFRS_I' ? 'SFRS(I) 1-1' : 'IAS 1';
-  const std9 = standard === 'SFRS_I' ? 'SFRS(I) 9' : 'IFRS 9';
-  const std16 = standard === 'SFRS_I' ? 'SFRS(I) 16' : 'IFRS 16';
-  const std21 = standard === 'SFRS_I' ? 'SFRS(I) 1-21' : 'IAS 21';
   let apiErrorMessage: string | null = null;
 
-  // Live AI API call if provider settings or apiKey is provided
+  // 1. Run deterministic accounting engine first to establish authoritative calculations
+  const deterministicScenario = await parseAccountingQuery(userInput, currentScenario);
+
+  // 2. Live AI API call if provider settings or apiKey is provided
   if (providerOrApiKey) {
     const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario);
 
@@ -39,7 +38,7 @@ export async function processAccountingQuery(
       const active = providerOrApiKey.activeProvider;
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext);
+          return await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext, deterministicScenario);
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -53,7 +52,8 @@ export async function processAccountingQuery(
             providerOrApiKey.gemini.apiKey.trim(),
             providerOrApiKey.gemini.model || modelName,
             chatHistory,
-            groundedContext
+            groundedContext,
+            deterministicScenario
           );
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -67,7 +67,8 @@ export async function processAccountingQuery(
             standard,
             providerOrApiKey.openai,
             chatHistory,
-            groundedContext
+            groundedContext,
+            deterministicScenario
           );
         } catch (err: any) {
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
@@ -76,7 +77,16 @@ export async function processAccountingQuery(
       }
     } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       try {
-        return await callGeminiAPI(userInput, currentScenario, standard, providerOrApiKey.trim(), modelName, chatHistory, groundedContext);
+        return await callGeminiAPI(
+          userInput,
+          currentScenario,
+          standard,
+          providerOrApiKey.trim(),
+          modelName,
+          chatHistory,
+          groundedContext,
+          deterministicScenario
+        );
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
@@ -84,7 +94,26 @@ export async function processAccountingQuery(
     }
   }
 
-  // Helper to append fallback warning notice if an API error occurred
+  // 3. Structured offline response rendered from deterministic state
+  return renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage);
+}
+
+/**
+ * Structured offline response renderer.
+ * Modularizes offline message generation cleanly without cluttering the pipeline coordinator.
+ */
+export function renderStructuredOfflineResponse(
+  parsed: AccountingScenarioState,
+  standard: AccountingStandard,
+  apiErrorMessage: string | null
+): GeminiResponse {
+  const std1 = standard === 'SFRS_I' ? 'SFRS(I) 1-1' : 'IAS 1';
+  const std9 = standard === 'SFRS_I' ? 'SFRS(I) 9' : 'IFRS 9';
+  const std16 = standard === 'SFRS_I' ? 'SFRS(I) 16' : 'IFRS 16';
+  const std21 = standard === 'SFRS_I' ? 'SFRS(I) 1-21' : 'IAS 21';
+  const std16Name = standard === 'SFRS_I' ? 'SFRS(I) 1-16' : 'IAS 16';
+  const std38Name = standard === 'SFRS_I' ? 'SFRS(I) 1-38' : 'IAS 38';
+
   const finalizeMessage = (text: string, state: AccountingScenarioState) => {
     const fullText = apiErrorMessage
       ? `> ⚠️ **Provider Notice**: ${apiErrorMessage}. Reverted seamlessly to the Singapore Statutory Offline Engine.\n\n${text}`
@@ -92,17 +121,34 @@ export async function processAccountingQuery(
     return appendStatutorySourceFooter(fullText, state);
   };
 
-  // Smart Universal Parser (works offline for ANY query or fallback)
-  const parsed = await parseAccountingQuery(userInput, currentScenario);
+  // 1. UNRECOGNIZED OFFLINE QUERY
+  if (parsed.scenarioType === 'UNRECOGNIZED') {
+    const errorPrefix = apiErrorMessage
+      ? `> ⚠️ **Gemini API Call Notice**: ${apiErrorMessage}\n> Please verify your API Key and Model in the **Settings** panel.\n\n`
+      : '';
 
-  // 000. CAPITALISATION OF EXPENDITURE (SFRS(I) 1-38 vs IRAS TAX DEDUCTIBILITY)
+    const replyText = `${errorPrefix}### Query Analysis Notice\n\n` +
+      `The local offline rule engine could not find a predefined pattern for this specific transaction.\n\n` +
+      `**To answer ANY accounting transaction in business** (including trade discounts, equipment loans, leases, provisions, and IFRS questions):\n` +
+      `1. Open **Settings** (top right).\n` +
+      `2. Connect your **Google Gemini API Key**.\n` +
+      `3. Verify the model (e.g. **gemini-3.5-flash-lite**).\n\n` +
+      `With your Gemini API key connected, the AI parses any custom query and generates complete, audit-ready double entries with 100% precision.`;
+
+    return {
+      messageText: replyText,
+      scenarioState: parsed
+    };
+  }
+
+  // 2. CAPITALISATION OF EXPENDITURE (SFRS(I) 1-38 vs IRAS TAX DEDUCTIBILITY)
   if (parsed.scenarioType === 'CAPITALISATION_SFRS138' && parsed.directGroups) {
     const grp = parsed.directGroups[0];
     const cost = grp.totalDebit;
     const replyText = `### Accounting Analysis: Capitalisation of Expenditure\n\n` +
-      `**Governing Frameworks**: **SFRS(I) 1-38 (*Intangible Assets*)** & **Income Tax Act 1947 (§14 / §15 / §14C)**\n\n` +
+      `**Governing Frameworks**: **${std38Name} (*Intangible Assets*)** & **Income Tax Act 1947 (§14 / §15 / §14C)**\n\n` +
       `---\n\n` +
-      `#### 1. Financial Reporting Treatment (SFRS(I) 1-38)\n` +
+      `#### 1. Financial Reporting Treatment (${std38Name})\n` +
       `* **Research Phase (§54)**: All expenditure on research (or the research stage of an internal project) **must be expensed in P&L when incurred**. No intangible asset may ever be recognized from research.\n` +
       `* **Development Phase (§57)**: Expenditure can be capitalized as an Intangible Asset **if and only if** the entity demonstrates all 6 cumulative criteria:\n` +
       `  1. **Technical Feasibility** of completing the intangible asset so that it will be available for use or sale.\n` +
@@ -111,7 +157,7 @@ export async function processAccountingQuery(
       `  4. **Probable Future Economic Benefits** (existence of a market or internal usefulness).\n` +
       `  5. **Adequate Technical, Financial, and Other Resources** to complete development.\n` +
       `  6. **Reliable Measurement** of the expenditure attributable to the development phase.\n` +
-      `* **Tangible Fixed Assets**: Under **SFRS(I) 1-16 §7**, expenditure is capitalised only if probable future economic benefits flow to the entity and cost can be reliably measured. Routine repairs and maintenance must be expensed.\n\n` +
+      `* **Tangible Fixed Assets**: Under **${std16Name} §7**, expenditure is capitalised only if probable future economic benefits flow to the entity and cost can be reliably measured. Routine repairs and maintenance must be expensed.\n\n` +
       `---\n\n` +
       `#### 2. Singapore Tax Treatment (IRAS)\n` +
       `* **Accounting Treatment $\\neq$ Tax Treatment**: Capitalizing an expenditure for financial reporting does not grant a tax deduction.\n` +
@@ -130,7 +176,7 @@ export async function processAccountingQuery(
     };
   }
 
-  // 00A. SINGAPORE STATUTORY & REGULATORY ADVISORY (IRAS / ACRA / CPF / MOM / MAS)
+  // 3. SINGAPORE STATUTORY & REGULATORY ADVISORY (IRAS / ACRA / CPF / MOM / MAS)
   if (parsed.scenarioType === 'SINGAPORE_STATUTORY_ADVISORY') {
     const adv = parsed.statutoryAdvisory?.[0];
     const authority = adv?.authority || 'IRAS / ACRA';
@@ -164,7 +210,7 @@ export async function processAccountingQuery(
     };
   }
 
-  // 00B. CAR PURCHASE WITH BLOCKED GST & DISALLOWED TAX DEPRECIATION
+  // 4. CAR PURCHASE WITH BLOCKED GST & DISALLOWED TAX DEPRECIATION
   if (parsed.scenarioType === 'CAR_PURCHASE_STATUTORY' && parsed.directGroups) {
     const grp = parsed.directGroups[0];
     const cost = grp.totalDebit;
@@ -191,9 +237,8 @@ export async function processAccountingQuery(
     };
   }
 
-  // 0A. ASSET PURCHASE WITH TRADE DISCOUNT, GST, CASH & CREDIT TERMS
+  // 5. ASSET PURCHASE WITH TRADE DISCOUNT, GST, CASH & CREDIT TERMS
   if (parsed.scenarioType === 'ASSET_PURCHASE_DISCOUNT' && parsed.directGroups) {
-    const std16Name = standard === 'SFRS_I' ? 'SFRS(I) 1-16' : 'IAS 16';
     const grp = parsed.directGroups[0];
     const equipLine = grp.lines.find(l => l.category === 'ASSET' && l.debit > 0 && l.accountCode === '1500');
     const gstLine = grp.lines.find(l => l.accountCode === '1190');
@@ -243,7 +288,7 @@ export async function processAccountingQuery(
       replyText += `\n\n---\n\n### Subsequent Event: ${grp2.title} (${grp2.eventDate})\n\n` +
         `* **Debit**: **Trade Payables (Current Liability)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Derecognition of liability)*\n` +
         `* **Credit**: **Cash at Bank (Current Asset)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Cash outflow)*\n\n` +
-        `*(Under IFRS 9 §3.3.1, the financial liability is extinguished upon full settlement).*`;
+        `*(Under ${std9} §3.3.1, the financial liability is extinguished upon full settlement).*`;
     }
 
     return {
@@ -252,11 +297,9 @@ export async function processAccountingQuery(
     };
   }
 
-  // 0B. PPE MACHINERY ACQUISITION WITH TRADE-IN, GST, DEPRECIATION & LOAN
+  // 6. PPE MACHINERY ACQUISITION WITH TRADE-IN, GST, DEPRECIATION & LOAN
   if (parsed.scenarioType === 'PPE_IAS16' && parsed.directGroups) {
-    const std16Name = standard === 'SFRS_I' ? 'SFRS(I) 1-16' : 'IAS 16';
-    const std9Name = standard === 'SFRS_I' ? 'SFRS(I) 9' : 'IFRS 9';
-    const replyText = `### Under ${std16Name} (*Property, Plant and Equipment*), Singapore GST Act, & ${std9Name} (*Financial Instruments*)\n\n` +
+    const replyText = `### Under ${std16Name} (*Property, Plant and Equipment*), Singapore GST Act, & ${std9} (*Financial Instruments*)\n\n` +
       `Here is the complete statutory accounting schedule and double entries on **1 April 2026** for your machinery purchase, trade-in derecognition, and equipment loan:\n\n` +
       `---\n\n` +
       `#### 1. Depreciation Catch-Up Schedule (1 Jan 2026 – 31 Mar 2026)\n` +
@@ -276,7 +319,7 @@ export async function processAccountingQuery(
       `  $$\\text{Loss on Disposal} = \\text{Carrying Amount } (\\text{SGD } 27,500) - \\text{Net Consideration } (\\text{SGD } 20,000) = \\mathbf{SGD\\ 7,500.00}$$\n\n` +
       `---\n\n` +
       `#### 3. New Machinery Cost & Equipment Loan Funding\n` +
-      `* **New Machine Cost (IAS 16 §16)**: **SGD 100,000.00** (capitalized net of recoverable tax)\n` +
+      `* **New Machine Cost (${std16Name} §16)**: **SGD 100,000.00** (capitalized net of recoverable tax)\n` +
       `* **Input GST (9% Claimable Receivable)**: **SGD 9,000.00** $\\rightarrow$ Total invoice: **SGD 109,000.00**\n` +
       `* **Less Trade-in credit**: SGD 21,800.00\n` +
       `* **Less Bank cash paid**: SGD 30,000.00\n` +
@@ -285,7 +328,7 @@ export async function processAccountingQuery(
       `* **2-Year 5% p.a. Flat Interest**:\n` +
       `  $$\\text{Unexpired Loan Interest} = 57,200 \\times 5\\% \\times 2 = \\mathbf{SGD\\ 5,720.00}$$\n` +
       `* **Gross Equipment Loan Payable**: $57,200 + 5,720 = \\mathbf{SGD\\ 62,920.00}$\n` +
-      `  *(The SGD 5,720 unexpired interest is recorded upfront as a contra-liability account, so the net loan obligation on initial recognition is exactly SGD 57,200 under ${std9Name})*.\n\n` +
+      `  *(The SGD 5,720 unexpired interest is recorded upfront as a contra-liability account, so the net loan obligation on initial recognition is exactly SGD 57,200 under ${std9})*.\n\n` +
       `---\n\n` +
       `### Summary of Double Entries (1 April 2026)\n` +
       `1. **Catch-up Depreciation**: Dr. Depreciation Expense SGD 2,500 | Cr. Accumulated Depreciation SGD 2,500\n` +
@@ -299,7 +342,7 @@ export async function processAccountingQuery(
     };
   }
 
-  // 1. GENERAL EXPENSES (Entertainment, Travel, Utilities, Salaries, etc.)
+  // 7. GENERAL EXPENSES (Entertainment, Travel, Utilities, Salaries, etc.)
   if (parsed.scenarioType === 'GENERAL_EXPENSE') {
     const amt = parsed.amount || 3000;
     const exp = parsed.expenseAccountName || 'Entertainment & Hospitality Expenses';
@@ -320,7 +363,7 @@ export async function processAccountingQuery(
     };
   }
 
-  // 2. LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
+  // 8. LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
   if (parsed.scenarioType === 'LEASE_IFRS16') {
     const termYears = parsed.leaseTermYears || 3;
     const termMonths = parsed.leaseTermMonths || 36;
@@ -349,27 +392,7 @@ export async function processAccountingQuery(
     };
   }
 
-  // 4. UNRECOGNIZED OFFLINE QUERY
-  if (parsed.scenarioType === 'UNRECOGNIZED') {
-    const errorPrefix = apiErrorMessage
-      ? `> ⚠️ **Gemini API Call Notice**: ${apiErrorMessage}\n> Please verify your API Key and Model in the **Settings** panel.\n\n`
-      : '';
-
-    const replyText = `${errorPrefix}### Query Analysis Notice\n\n` +
-      `The local offline rule engine could not find a predefined pattern for this specific transaction.\n\n` +
-      `**To answer ANY accounting transaction in business** (including trade discounts, equipment loans, leases, provisions, and IFRS questions):\n` +
-      `1. Open **Settings** (top right).\n` +
-      `2. Connect your **Google Gemini API Key**.\n` +
-      `3. Verify the model (e.g. **gemini-3.5-flash-lite**).\n\n` +
-      `With your Gemini API key connected, the AI parses any custom query and generates complete, audit-ready double entries with 100% precision.`;
-
-    return {
-      messageText: replyText,
-      scenarioState: parsed
-    };
-  }
-
-  // 3. EQUITY SHARES WITH FOREX (IFRS 9 / IAS 21)
+  // 9. EQUITY SHARES WITH FOREX (IFRS 9 / IAS 21)
   const buyRate = parsed.purchaseFxRate ?? 1.34;
   const sellRate = parsed.saleFxRate ?? 1.36;
   const initialSGD = (parsed.purchaseAmountForeign || 0) * buyRate;
@@ -405,7 +428,8 @@ export async function callGeminiAPI(
   apiKey: string,
   modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = [],
-  groundedContext?: GroundedReasoningContext
+  groundedContext?: GroundedReasoningContext,
+  deterministicScenario?: AccountingScenarioState | null
 ): Promise<GeminiResponse> {
   const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
@@ -479,5 +503,5 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   }
 
   const parsed = repairAndParseAIJson(rawJsonText);
-  return postProcessAIResponse(parsed, currentScenario, userInput, context);
+  return postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario);
 }

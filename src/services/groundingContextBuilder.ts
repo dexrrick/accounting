@@ -106,33 +106,24 @@ export function formulateApplicationRules(
   const rules: string[] = [];
   const q = query.toLowerCase();
 
-  // Accounting rules
-  if (classification.accountingAnalysisRequired || q.includes('discount') || q.includes('cost')) {
-    rules.push('Application Rule: Trade discounts must be deducted directly from asset purchase cost (SFRS(I) 1-16 §16(a)); never recorded as an expense.');
-  }
-
-  if (classification.accountingAnalysisRequired && (q.includes('fx') || q.includes('foreign') || q.includes('usd') || q.includes('gain') || q.includes('share'))) {
-    rules.push('Application Rule: Realized foreign exchange gain/loss on monetary items must be strictly bifurcated from equity market appreciation (SFRS(I) 1-21 & SFRS(I) 9).');
-  }
-
+  // Computational double-entry balancing convention
   if (q.includes('journal') || q.includes('entry') || q.includes('debit') || q.includes('credit') || classification.journalEntryRequired) {
-    rules.push('Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double entry journals must balance to 2 decimal places.');
+    rules.push('Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double-entry journals must balance to 2 decimal places.');
   }
 
-  // Tax and GST rules
-  if (classification.taxAnalysisRequired || q.includes('tax') || q.includes('gst')) {
-    rules.push('Statutory Rule: Singapore standard GST rate is 9% (effective 1 Jan 2024). Input tax on S-plate passenger cars is blocked under Regulation 26.');
-    rules.push('Statutory Rule: Accounting depreciation is disallowed for corporate tax and added back in Form C-S; capital allowances claimed under Section 19/19A.');
+  // Acquisition consideration arithmetic convention
+  if (classification.accountingAnalysisRequired || q.includes('discount') || q.includes('cost')) {
+    rules.push('Calculation Convention: Supplier trade discounts are deducted directly from the gross purchase price to derive initial cost consideration; trade discounts are not recorded as operating expenses.');
   }
 
-  // Payroll / Corporate rules
-  if (classification.regulatoryAnalysisRequired || q.includes('cpf') || q.includes('audit')) {
-    if (q.includes('cpf') || q.includes('wage') || q.includes('ceiling')) {
-      rules.push('Statutory Rule: Singapore CPF Ordinary Wage (OW) monthly ceiling is SGD 8,000 in 2026.');
-    }
-    if (q.includes('audit') || q.includes('small company')) {
-      rules.push('Statutory Rule: Small company audit exemption requires satisfying at least 2 of 3 quantitative criteria (Revenue <= $10M, Assets <= $10M, Staff <= 50) for 2 consecutive FYs.');
-    }
+  // Foreign currency transaction bifurcation arithmetic convention
+  if (classification.accountingAnalysisRequired && (q.includes('fx') || q.includes('foreign') || q.includes('usd') || q.includes('gain') || q.includes('share'))) {
+    rules.push('Calculation Convention: Currency variance on monetary settlement is calculated as Foreign Amount * (Spot_disposal - Spot_acquisition); asset valuation variance is calculated as (Disposal_price - Cost_price) * Spot_disposal.');
+  }
+
+  // Cost allocation calculation convention
+  if (q.includes('depreciation') || q.includes('amortis') || q.includes('amortiz')) {
+    rules.push('Calculation Convention: Straight-line cost allocation formula is (Initial Cost - Residual Value) / Useful Life.');
   }
 
   return rules;
@@ -160,31 +151,21 @@ export async function buildGroundedReasoningContext(
     maxResults: 6
   });
 
-  // 3. Four-Tier Evidence Sorting
+  // 3. Four-Tier Evidence Sorting based explicitly on evidenceTier
   const primaryEvidence: AuthoritativeSourceRecord[] = [];
   const officialGuidance: AuthoritativeSourceRecord[] = [];
   const curatedSummaries: AuthoritativeSourceRecord[] = [];
 
   for (const record of retrieved) {
-    // A. Verified Primary Source: only when sourceStatus === 'VERIFIED', sourceType === 'AUTHORITATIVE_SOURCE', and isVerbatimText === true
     if (
+      record.evidenceTier === 'PRIMARY_SOURCE' &&
       record.sourceStatus === 'VERIFIED' &&
-      record.sourceType === 'AUTHORITATIVE_SOURCE' &&
       record.isVerbatimText === true
     ) {
       primaryEvidence.push(record);
-    }
-    // B. Official Guidance: official gov portal link but not verbatim primary statute
-    else if (
-      record.officialSourceUrl &&
-      record.officialSourceUrl.includes('gov.sg') &&
-      !record.isVerbatimText &&
-      record.sourceType === 'APPLICATION_RULE'
-    ) {
+    } else if (record.evidenceTier === 'OFFICIAL_GUIDANCE') {
       officialGuidance.push(record);
-    }
-    // C. Curated Summaries: SFRS(I) standards, editorial statutory summaries
-    else {
+    } else {
       curatedSummaries.push(record);
     }
   }
@@ -421,97 +402,140 @@ export function postProcessAIResponse(
   parsed: any,
   currentScenario: AccountingScenarioState | null,
   userInput: string,
-  groundedContext: GroundedReasoningContext
+  groundedContext: GroundedReasoningContext,
+  deterministicScenario?: AccountingScenarioState | null
 ): {
   messageText: string;
   scenarioState: AccountingScenarioState;
 } {
-  // Validate and compute totals on directGroups
-  let directGroups: JournalEntryGroup[] = (parsed.directGroups || []).map((grp: any, gIdx: number) => {
-    const lines = (grp.lines || []).map((l: any, lIdx: number) => ({
-      id: l.id || `line-${gIdx}-${lIdx}`,
-      accountCode: l.accountCode || '1000',
-      accountName: l.accountName || 'Account',
-      category: l.category || 'ASSET',
-      debit: typeof l.debit === 'number' ? Math.round(l.debit * 100) / 100 : 0,
-      credit: typeof l.credit === 'number' ? Math.round(l.credit * 100) / 100 : 0,
-      foreignCurrency: l.foreignCurrency,
-      foreignDebit: l.foreignDebit,
-      foreignCredit: l.foreignCredit,
-      exchangeRate: l.exchangeRate,
-      lineExplanation: l.lineExplanation || ''
-    }));
+  const retrievedEvidenceScope: AuthoritativeSourceRecord[] = [
+    ...groundedContext.primaryEvidence,
+    ...groundedContext.officialGuidance,
+    ...groundedContext.curatedSummaries
+  ];
 
-    // Trade discount guardrail: Deducted directly from asset purchase cost (SFRS(I) 1-16 §16(a))
-    // If an expense line was mistakenly generated for a trade discount, remove it
-    const tradeDiscountExpenseIdx = lines.findIndex(
-      (l: any) => l.accountName.toLowerCase().includes('trade discount') && l.category === 'EXPENSE'
-    );
-    if (tradeDiscountExpenseIdx !== -1) {
-      lines.splice(tradeDiscountExpenseIdx, 1);
-    }
+  // 1. Deterministic Accounting Engine Governance:
+  // If the deterministic accounting engine recognized this transaction and calculated authoritative entries,
+  // the deterministic engine's directGroups and calculations govern the journal output.
+  // Gemini is responsible for accounting interpretation, tax summaries, and narrative advisory.
+  const hasAuthoritativeDeterministicEntries =
+    deterministicScenario &&
+    deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+    deterministicScenario.directGroups &&
+    deterministicScenario.directGroups.length > 0;
 
-    const totalDebit = Math.round(lines.reduce((s: number, l: any) => s + l.debit, 0) * 100) / 100;
-    const totalCredit = Math.round(lines.reduce((s: number, l: any) => s + l.credit, 0) * 100) / 100;
-    const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+  let directGroups: JournalEntryGroup[];
 
-    // Post-generation citation verification on all citations in this group
-    const verifiedCitations: StandardCitation[] = (grp.citations || []).map((cite: any) => {
-      const verification = defaultCitationVerifier.verifyCitation(cite, cite.authority);
-      const safeUrl = verification.matchedRecord?.officialSourceUrl ||
-        getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority) ||
-        cite.officialSourceUrl;
+  if (hasAuthoritativeDeterministicEntries) {
+    directGroups = deterministicScenario.directGroups!;
+  } else {
+    // Validate and compute totals on AI-supplied directGroups
+    directGroups = (parsed.directGroups || []).map((grp: any, gIdx: number) => {
+      const lines = (grp.lines || []).map((l: any, lIdx: number) => ({
+        id: l.id || `line-${gIdx}-${lIdx}`,
+        accountCode: l.accountCode || '1000',
+        accountName: l.accountName || 'Account',
+        category: l.category || 'ASSET',
+        debit: typeof l.debit === 'number' ? Math.round(l.debit * 100) / 100 : 0,
+        credit: typeof l.credit === 'number' ? Math.round(l.credit * 100) / 100 : 0,
+        foreignCurrency: l.foreignCurrency,
+        foreignDebit: l.foreignDebit,
+        foreignCredit: l.foreignCredit,
+        exchangeRate: l.exchangeRate,
+        lineExplanation: l.lineExplanation || ''
+      }));
+
+      // Trade discount guardrail: Deducted directly from asset purchase cost (SFRS(I) 1-16 §16(a))
+      // If an expense line was mistakenly generated for a trade discount, remove it
+      const tradeDiscountExpenseIdx = lines.findIndex(
+        (l: any) => l.accountName.toLowerCase().includes('trade discount') && l.category === 'EXPENSE'
+      );
+      if (tradeDiscountExpenseIdx !== -1) {
+        lines.splice(tradeDiscountExpenseIdx, 1);
+      }
+
+      const totalDebit = Math.round(lines.reduce((s: number, l: any) => s + l.debit, 0) * 100) / 100;
+      const totalCredit = Math.round(lines.reduce((s: number, l: any) => s + l.credit, 0) * 100) / 100;
+      const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
+      // Post-generation citation verification on all citations in this group
+      const verifiedCitations: StandardCitation[] = (grp.citations || []).map((cite: any) => {
+        const verification = defaultCitationVerifier.verifyCitation(cite, cite.authority, retrievedEvidenceScope);
+        const safeUrl = verification.matchedRecord?.officialSourceUrl ||
+          getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority) ||
+          cite.officialSourceUrl;
+
+        return {
+          standard: cite.standard || '',
+          paragraph: cite.paragraph || '',
+          title: cite.title || '',
+          text: cite.text || '',
+          authority: cite.authority,
+          officialSourceUrl: safeUrl,
+          verificationStatus: verification.status,
+          isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
+          isStructurallyValid: verification.isStructurallyValid,
+          verificationReason: verification.reason
+        };
+      });
 
       return {
-        standard: cite.standard || '',
-        paragraph: cite.paragraph || '',
-        title: cite.title || '',
-        text: cite.text || '',
-        authority: cite.authority,
-        officialSourceUrl: safeUrl,
-        verificationStatus: verification.status,
-        isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
-        isStructurallyValid: verification.isStructurallyValid,
-        verificationReason: verification.reason
+        id: grp.id || `grp-${gIdx + 1}`,
+        eventDate: formatSingaporeDate(grp.eventDate || new Date()),
+        title: grp.title || `Entry Group ${gIdx + 1}`,
+        summary: grp.summary || '',
+        lines,
+        totalDebit,
+        totalCredit,
+        isBalanced,
+        citations: verifiedCitations,
+        rationalePoints: grp.rationalePoints || []
       };
     });
-
-    return {
-      id: grp.id || `grp-${gIdx + 1}`,
-      eventDate: formatSingaporeDate(grp.eventDate || new Date()),
-      title: grp.title || `Entry Group ${gIdx + 1}`,
-      summary: grp.summary || '',
-      lines,
-      totalDebit,
-      totalCredit,
-      isBalanced,
-      citations: verifiedCitations,
-      rationalePoints: grp.rationalePoints || []
-    };
-  });
+  }
 
   // Safeguard: If AI response didn't supply directGroups (e.g. conceptual advisory query), preserve current
   if (directGroups.length === 0 && currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
     directGroups = currentScenario.directGroups;
   }
 
-  // Safeguard: If AI response didn't supply keyParameters, preserve current
-  const keyParameters = (parsed.keyParameters && Array.isArray(parsed.keyParameters) && parsed.keyParameters.length > 0)
-    ? parsed.keyParameters
-    : (currentScenario?.keyParameters || []);
+  // If deterministic scenario provided keyParameters, prioritize them
+  const keyParameters = (hasAuthoritativeDeterministicEntries && deterministicScenario.keyParameters && deterministicScenario.keyParameters.length > 0)
+    ? deterministicScenario.keyParameters
+    : ((parsed.keyParameters && Array.isArray(parsed.keyParameters) && parsed.keyParameters.length > 0)
+      ? parsed.keyParameters
+      : (currentScenario?.keyParameters || []));
 
   const finalTitle = (parsed.transactionTitle && parsed.transactionTitle !== 'Accounting Transaction')
     ? parsed.transactionTitle
-    : (currentScenario?.transactionTitle || parsed.transactionTitle || 'Accounting Transaction');
+    : (deterministicScenario?.transactionTitle || currentScenario?.transactionTitle || 'Accounting Transaction');
 
   // Verify and normalize statutory advisories
-  const statutoryAdvisory = (parsed.statutoryAdvisory || currentScenario?.statutoryAdvisory || []).map((adv: any) => ({
+  const statutoryAdvisory = (parsed.statutoryAdvisory || deterministicScenario?.statutoryAdvisory || currentScenario?.statutoryAdvisory || []).map((adv: any) => ({
     ...adv,
     officialUrl: getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority) || adv.officialUrl
   }));
 
-  // Uncertainty handling: If current time-sensitive info required but evidence is missing
+  // Uncertainty handling & conditional conclusions
   let uncertaintyDisclaimer = parsed.uncertaintyDisclaimer || currentScenario?.uncertaintyDisclaimer || '';
+
+  // 1. Missing material facts produce conditional conclusions
+  if (groundedContext.missingFacts && groundedContext.missingFacts.length > 0) {
+    const missingConditionNotice = `Conclusion is conditional upon establishing: ${groundedContext.missingFacts.join('; ')}.`;
+    if (!uncertaintyDisclaimer.includes('conditional upon establishing') && !uncertaintyDisclaimer.includes(missingConditionNotice)) {
+      uncertaintyDisclaimer = uncertaintyDisclaimer ? `${missingConditionNotice} ${uncertaintyDisclaimer}` : missingConditionNotice;
+    }
+  }
+
+  // 2. No retrieved evidence -> no claim presented as authoritative
+  if (retrievedEvidenceScope.length === 0) {
+    const noEvidenceNotice = "No authoritative evidence was retrieved from the verified repository to support this claim.";
+    if (!uncertaintyDisclaimer.includes(noEvidenceNotice) && !(parsed.messageText || '').includes(noEvidenceNotice)) {
+      uncertaintyDisclaimer = uncertaintyDisclaimer ? `${noEvidenceNotice} ${uncertaintyDisclaimer}` : noEvidenceNotice;
+    }
+  }
+
+  // 3. Time-sensitivity fallback
   if (groundedContext.currentInformationRequired && groundedContext.primaryEvidence.length === 0) {
     const fallbackNotice = "I couldn't verify the applicable current source from the available evidence.";
     if (!uncertaintyDisclaimer.includes(fallbackNotice) && !(parsed.messageText || '').includes(fallbackNotice)) {
@@ -522,30 +546,31 @@ export function postProcessAIResponse(
   // Ensure assumptions are explicit and separated from missing facts
   const assumptions: ExplicitAssumption[] = [
     ...(parsed.assumptions || []),
+    ...(deterministicScenario?.assumptions || []),
     ...groundedContext.assumptions.filter(
       (ga) => !(parsed.assumptions || []).some((pa: any) => pa.field === ga.field)
     )
   ];
 
   const scenarioState: AccountingScenarioState = {
-    scenarioType: parsed.scenarioType || currentScenario?.scenarioType || 'UNIVERSAL',
+    scenarioType: parsed.scenarioType || deterministicScenario?.scenarioType || currentScenario?.scenarioType || 'UNIVERSAL',
     queryIntent: parsed.queryIntent || (statutoryAdvisory.length > 0 ? 'STATUTORY_ADVISORY' : currentScenario?.queryIntent || 'TRANSACTION'),
-    primaryDomain: parsed.primaryDomain || currentScenario?.primaryDomain || (statutoryAdvisory.length > 0 ? (statutoryAdvisory[0].authority === 'ACRA' ? 'ACRA_CORP' : statutoryAdvisory[0].authority === 'CPF' ? 'CPF_BOARD' : statutoryAdvisory[0].authority === 'MOM' ? 'MOM_EMPLOYMENT' : 'IRAS_TAX') : 'ACCOUNTING_SFRS'),
+    primaryDomain: parsed.primaryDomain || deterministicScenario?.primaryDomain || currentScenario?.primaryDomain || (statutoryAdvisory.length > 0 ? (statutoryAdvisory[0].authority === 'ACRA' ? 'ACRA_CORP' : statutoryAdvisory[0].authority === 'CPF' ? 'CPF_BOARD' : statutoryAdvisory[0].authority === 'MOM' ? 'MOM_EMPLOYMENT' : 'IRAS_TAX') : 'ACCOUNTING_SFRS'),
     rawQuery: userInput,
     transactionTitle: finalTitle,
-    functionalCurrency: parsed.functionalCurrency || currentScenario?.functionalCurrency || 'SGD',
-    transactionCurrency: parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
-    accountingTreatmentSummary: parsed.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary,
-    singaporeTaxTreatmentSummary: parsed.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary,
-    regulatoryMandatesSummary: parsed.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary,
-    effectiveDateOrTiming: parsed.effectiveDateOrTiming || currentScenario?.effectiveDateOrTiming,
+    functionalCurrency: parsed.functionalCurrency || deterministicScenario?.functionalCurrency || currentScenario?.functionalCurrency || 'SGD',
+    transactionCurrency: parsed.transactionCurrency || deterministicScenario?.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
+    accountingTreatmentSummary: parsed.accountingTreatmentSummary || deterministicScenario?.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary,
+    singaporeTaxTreatmentSummary: parsed.singaporeTaxTreatmentSummary || deterministicScenario?.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary,
+    regulatoryMandatesSummary: parsed.regulatoryMandatesSummary || deterministicScenario?.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary,
+    effectiveDateOrTiming: parsed.effectiveDateOrTiming || deterministicScenario?.effectiveDateOrTiming || currentScenario?.effectiveDateOrTiming,
     uncertaintyDisclaimer: uncertaintyDisclaimer || undefined,
     keyParameters,
     directGroups,
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: groundedContext.missingFacts.length > 0 ? groundedContext.missingFacts : undefined,
-    isComplete: groundedContext.missingFacts.length === 0,
+    isComplete: groundedContext.missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };
 

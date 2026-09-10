@@ -9,6 +9,7 @@ import {
 import { buildAccountingMessages, parseAccountingAIResponse } from './src/services/azureOpenAiService.ts';
 import { defaultCitationVerifier } from './src/verification/citationVerifier.ts';
 import { classifyQuestion } from './src/classification/questionClassifier.ts';
+import { parseAccountingQuery } from './src/engine/scenarioParser.ts';
 
 console.log('=== RUNNING PHASE 2: GROUNDED GEMINI REASONING PIPELINE TESTS ===\n');
 
@@ -147,6 +148,13 @@ async function runTests() {
   // =========================================================================
   console.log('\n[4. POST-GENERATION CITATION VERIFICATION ON AI RESPONSES]');
 
+  // 4. Citation verification on combined evidence context (containing both primary statutory provision and curated SFRS standard)
+  const testEvidenceContext = {
+    ...taxContext,
+    primaryEvidence: taxContext.primaryEvidence,
+    curatedSummaries: sfrsContext.curatedSummaries
+  };
+
   const mockAiOutputWithCitations = {
     scenarioType: 'UNIVERSAL',
     transactionTitle: 'Multi-Citation Test',
@@ -161,7 +169,7 @@ async function runTests() {
           { id: 'l2', accountCode: '2000', accountName: 'Revenue', category: 'REVENUE', debit: 0, credit: 100 }
         ],
         citations: [
-          // Case A: Valid primary statutory source
+          // Case A: Valid primary statutory source (in scope)
           {
             standard: 'Income Tax Act 1947',
             paragraph: 'Section 14(1)',
@@ -170,7 +178,7 @@ async function runTests() {
             authority: 'IRAS',
             officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-'
           },
-          // Case B: Valid curated standard summary
+          // Case B: Valid curated standard summary (in scope, never primary source)
           {
             standard: 'SFRS(I) 1-38',
             paragraph: '§57',
@@ -220,7 +228,7 @@ async function runTests() {
     ]
   };
 
-  const processedAi = postProcessAIResponse(mockAiOutputWithCitations, null, 'test query', taxContext);
+  const processedAi = postProcessAIResponse(mockAiOutputWithCitations, null, 'test query', testEvidenceContext);
   const resultCitations = processedAi.scenarioState.directGroups[0].citations;
 
   // Verify Case A: Valid primary statutory source
@@ -336,7 +344,7 @@ async function runTests() {
 
   // 6B. parseAccountingAIResponse enforces identical citation verification and guardrails
   const rawAiJson = JSON.stringify(mockAiOutputWithCitations);
-  const azureParsed = parseAccountingAIResponse(rawAiJson, null, 'test query', taxContext);
+  const azureParsed = parseAccountingAIResponse(rawAiJson, null, 'test query', testEvidenceContext);
   const azureCitations = azureParsed.scenarioState.directGroups[0].citations;
   assert.strictEqual(azureCitations[0].verificationStatus, 'VERIFIED_PRIMARY_SOURCE', 'Azure parsed output must have Case A verified');
   assert.strictEqual(azureCitations[1].verificationStatus, 'SOURCE_NEEDS_REVIEW', 'Azure parsed output must have Case B marked needs review');
@@ -344,8 +352,173 @@ async function runTests() {
   console.log('✓ 6B. Azure OpenAI and OpenAI adapter uses identical postProcessAIResponse verification');
   passed++;
 
+  // =========================================================================
+  // TEST 7: PHASE 2.1 EXPLICIT PROOF SUITE
+  // =========================================================================
+  console.log('\n[7. PHASE 2.1 EXPLICIT PROOF SUITE]');
+
+  // 7A. Unsupported GST/CPF/tax claims aren't treated as verified
+  const taxOnlyContext = await buildGroundedReasoningContext('is business entertainment deductible under section 14(1) of income tax act?');
+  const unsupportedCitations = [
+    {
+      standard: 'Goods and Services Tax Act 1993',
+      paragraph: 'Section 21(3)',
+      title: 'Zero-Rating of International Services and Exported Goods',
+      text: 'taxed at 0% for international services',
+      authority: 'IRAS',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr21-'
+    },
+    {
+      standard: 'Skills Development Levy Act 1979',
+      paragraph: 'Section 3',
+      title: 'Skills Development Levy',
+      text: 'payable at prescribed statutory rates',
+      authority: 'CPF',
+      officialSourceUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/skills-development-levy'
+    }
+  ];
+  const retrievedEvidenceForTax = [
+    ...taxOnlyContext.primaryEvidence,
+    ...taxOnlyContext.officialGuidance,
+    ...taxOnlyContext.curatedSummaries
+  ];
+  for (const cite of unsupportedCitations) {
+    const verified = defaultCitationVerifier.verifyCitation(cite, cite.authority, retrievedEvidenceForTax);
+    assert.strictEqual(verified.status, 'UNVERIFIED', `${cite.standard} must be UNVERIFIED when not in retrieved evidence`);
+    assert.strictEqual(verified.isValid, false, 'Unsupported claim isValid must be false');
+    assert.strictEqual(verified.isAuthoritativePrimarySource, false, 'Unsupported claim cannot be authoritative primary source');
+  }
+  console.log('✓ 7A. PROOF 1: Unsupported GST/CPF/tax claims are strictly rejected as UNVERIFIED');
+  passed++;
+
+  // 7B. Fabricated citations are rejected
+  const fakeStdRes = defaultCitationVerifier.verifyCitation({
+    standard: 'Imaginary Singapore Tax Law 2099',
+    paragraph: 'Section 1',
+    authority: 'IRAS',
+    officialSourceUrl: 'https://sso.agc.gov.sg/Act/FAKE'
+  });
+  assert.strictEqual(fakeStdRes.status, 'SOURCE_NOT_FOUND', 'Fabricated standard must be SOURCE_NOT_FOUND');
+  assert.strictEqual(fakeStdRes.isValid, false);
+
+  const fakeSecRes = defaultCitationVerifier.verifyCitation({
+    standard: 'Income Tax Act 1947',
+    paragraph: 'Section 8888ZZ',
+    authority: 'IRAS',
+    officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947'
+  });
+  assert.strictEqual(fakeSecRes.status, 'PARAGRAPH_NOT_FOUND', 'Fabricated section must be PARAGRAPH_NOT_FOUND');
+  assert.strictEqual(fakeSecRes.isValid, false);
+  console.log('✓ 7B. PROOF 2: Fabricated standards and paragraphs are strictly rejected');
+  passed++;
+
+  // 7C. Missing material facts produce conditional conclusions
+  const devMissingQuery = 'Can we capitalize 100k software development costs?';
+  const devMissingContext = await buildGroundedReasoningContext(devMissingQuery);
+  assert(devMissingContext.missingFacts.length > 0, 'Must have missing facts for unverified development costs');
+
+  const processedConditional = postProcessAIResponse({
+    scenarioType: 'UNIVERSAL',
+    messageText: 'We should capitalize this.',
+    directGroups: []
+  }, null, devMissingQuery, devMissingContext);
+
+  assert.strictEqual(processedConditional.scenarioState.isComplete, false, 'Scenario with missing facts must be isComplete: false');
+  assert(processedConditional.scenarioState.missingFacts && processedConditional.scenarioState.missingFacts.length > 0, 'missingFacts must be preserved');
+  assert(
+    processedConditional.scenarioState.uncertaintyDisclaimer?.includes('conditional upon establishing'),
+    'Uncertainty disclaimer must state that conclusion is conditional upon establishing missing facts'
+  );
+  console.log('✓ 7C. PROOF 3: Missing material facts produce explicitly conditional conclusions');
+  passed++;
+
+  // 7D. AI cannot override deterministic journal calculations
+  const appleQuery = 'A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?';
+  const deterministicApple = await parseAccountingQuery(appleQuery);
+  assert(deterministicApple.directGroups && deterministicApple.directGroups.length > 0, 'Deterministic engine must generate Apple shares entries');
+
+  // Simulate AI attempting to override journal entries with completely wrong numbers and missing FX gain
+  const hallucinatedAiOutput = {
+    scenarioType: 'UNIVERSAL',
+    transactionTitle: 'Hallucinated AI Response',
+    messageText: 'AI explanation with wrong numbers',
+    directGroups: [
+      {
+        id: 'grp-wrong',
+        eventDate: '15/12/2026',
+        title: 'Hallucinated Entry',
+        lines: [
+          { id: 'l1', accountCode: '1010', accountName: 'Cash', category: 'ASSET', debit: 999999, credit: 0 },
+          { id: 'l2', accountCode: '4000', accountName: 'Revenue', category: 'REVENUE', debit: 0, credit: 999999 }
+        ]
+      }
+    ]
+  };
+
+  const appleContext = await buildGroundedReasoningContext(appleQuery);
+  const governedResult = postProcessAIResponse(hallucinatedAiOutput, null, appleQuery, appleContext, deterministicApple);
+
+  // Deterministic calculations MUST govern
+  const governedGroups = governedResult.scenarioState.directGroups;
+  assert.strictEqual(governedGroups.length, deterministicApple.directGroups.length, 'Must have deterministic groups count');
+  assert.strictEqual(governedGroups[0].totalDebit, deterministicApple.directGroups[0].totalDebit, 'Deterministic initial debit must govern');
+  assert.strictEqual(governedGroups[1].totalDebit, deterministicApple.directGroups[1].totalDebit, 'Deterministic sale debit must govern');
+  const fxGainLine = governedGroups[1].lines.find(l => l.accountCode === '4600' || l.accountName.includes('Foreign Exchange'));
+  assert(fxGainLine, 'Realized FX gain line from deterministic engine must be present');
+  assert.strictEqual(fxGainLine.credit, 6000, 'Realized FX gain must be exactly SGD 6,000 (ECB benchmark rate calculation)');
+  console.log('✓ 7D. PROOF 4: AI cannot override deterministic journal calculations (deterministic engine strictly governs)');
+  passed++;
+
+  // 7E. No retrieved evidence → no claim presented as authoritative
+  const zeroEvidenceContext = {
+    classification: classifyQuestion('hypothetical future regulation xyz'),
+    userFacts: [],
+    missingFacts: [],
+    assumptions: [],
+    primaryEvidence: [],
+    officialGuidance: [],
+    curatedSummaries: [],
+    applicationRules: [],
+    currentInformationRequired: false
+  };
+
+  const ungroundedAiOutput = {
+    scenarioType: 'UNIVERSAL',
+    messageText: 'Under hypothetical law, this is allowable.',
+    directGroups: [
+      {
+        id: 'grp-1',
+        eventDate: '01/01/2026',
+        lines: [
+          { id: 'l1', accountCode: '1000', accountName: 'Cash', category: 'ASSET', debit: 100, credit: 0 },
+          { id: 'l2', accountCode: '2000', accountName: 'Sales', category: 'REVENUE', debit: 0, credit: 100 }
+        ],
+        citations: [
+          {
+            standard: 'Income Tax Act 1947',
+            paragraph: 'Section 14(1)',
+            authority: 'IRAS',
+            officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-'
+          }
+        ]
+      }
+    ]
+  };
+
+  const zeroEvidenceResult = postProcessAIResponse(ungroundedAiOutput, null, 'hypothetical query', zeroEvidenceContext);
+  assert.strictEqual(zeroEvidenceResult.scenarioState.isComplete, false, 'isComplete must be false when 0 evidence is retrieved');
+  assert(
+    zeroEvidenceResult.scenarioState.uncertaintyDisclaimer?.includes('No authoritative evidence was retrieved'),
+    'Mandatory uncertainty disclaimer must be injected when no evidence is retrieved'
+  );
+  const zeroCitations = zeroEvidenceResult.scenarioState.directGroups[0].citations;
+  assert.strictEqual(zeroCitations[0].verificationStatus, 'UNVERIFIED', 'Citation must be UNVERIFIED when no evidence was retrieved');
+  assert.strictEqual(zeroCitations[0].isAuthoritativePrimarySource, false, 'No claim can be presented as authoritative primary source without retrieved evidence');
+  console.log('✓ 7E. PROOF 5: No retrieved evidence → no claim presented as authoritative (enforced fallback & UNVERIFIED status)');
+  passed++;
+
   console.log('\n=============================================================');
-  console.log(`ALL PHASE 2 TESTS PASSED SUCCESSFULLY! (${passed}/${passed} GREEN)`);
+  console.log(`ALL PHASE 2 & 2.1 TESTS PASSED SUCCESSFULLY! (${passed}/${passed} GREEN)`);
   console.log('=============================================================\n');
 }
 

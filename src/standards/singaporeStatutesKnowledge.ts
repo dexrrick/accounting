@@ -18,6 +18,7 @@ export interface SingaporeStatuteRule {
   tags: string[];
   sourceStatus?: 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
   sourceType?: 'AUTHORITATIVE_SOURCE' | 'CURATED_SUMMARY' | 'APPLICATION_RULE';
+  evidenceTier?: 'PRIMARY_SOURCE' | 'OFFICIAL_GUIDANCE' | 'CURATED_SUMMARY' | 'APPLICATION_RULE';
   isVerbatimText?: boolean;
   effectiveDate?: string;
   revisionDate?: string;
@@ -49,6 +50,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     tags: ['tax deduction', 'deductible expenses', 'section 14', 'business expenses', 'p&l deduction'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
     isVerbatimText: true
   },
 
