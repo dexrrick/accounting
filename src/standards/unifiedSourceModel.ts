@@ -10,6 +10,8 @@ export interface AuthoritativeSourceRecord {
   id: string;
   authority: StatutoryAuthority;
   authorityName: string;
+  sourcePublisher: string; // Official publisher e.g. "Singapore Statutes Online / AGC", "Accounting Standards Council"
+  legalOrStandardInstrument: string; // Instrument e.g. "Income Tax Act 1947", "SFRS(I) 1-38 Intangible Assets"
   documentTitle: string;
   standardOrActCode: string;
   paragraphOrSection: string;
@@ -54,13 +56,16 @@ export const UNIFIED_SOURCE_REGISTRY: Record<string, AuthoritativeSourceRecord> 
 
 // 1. Ingest Statutory Rules from Singapore Statutes
 for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
-  // Verbatim statutory provisions with official SSO links are authoritative
-  const isAuthoritativeText = rule.principle && rule.principle.length > 50 && rule.canonicalUrl.includes('sso.agc.gov.sg');
+  // Only genuine verbatim primary statutory provisions with official SSO AGC links are marked VERIFIED AUTHORITATIVE_SOURCE
+  const isSsoStatute = rule.canonicalUrl.startsWith('https://sso.agc.gov.sg');
+  const isVerbatimPrimaryProvision = isSsoStatute && rule.principle && rule.principle.length > 40 && rule.sectionOrSchedule.includes('Section');
   
   UNIFIED_SOURCE_REGISTRY[key] = {
     id: rule.id,
     authority: rule.authority,
     authorityName: rule.authorityName,
+    sourcePublisher: isSsoStatute ? 'Singapore Statutes Online / AGC' : rule.authorityName,
+    legalOrStandardInstrument: rule.actTitle,
     documentTitle: rule.actTitle,
     standardOrActCode: rule.actCode,
     paragraphOrSection: rule.sectionOrSchedule,
@@ -72,20 +77,21 @@ for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
     domain: mapStatuteCategoryToDomain(rule.category),
     jurisdiction: 'Singapore',
     tags: rule.tags || [],
-    sourceStatus: isAuthoritativeText ? 'VERIFIED' : 'NEEDS_REVIEW',
-    sourceType: isAuthoritativeText ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY'
+    sourceStatus: isVerbatimPrimaryProvision ? 'VERIFIED' : 'NEEDS_REVIEW',
+    sourceType: isVerbatimPrimaryProvision ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY'
   };
 }
 
 // 2. Ingest Financial Reporting Standards from ACRA / ASC repository
 for (const [key, std] of Object.entries(STANDARDS_REPOSITORY)) {
-  // Check if standard has explicit recognition criteria or principle
-  const isRecognizedStandard = Boolean(std.sfrsCode && std.paragraph && std.standardTitle);
-  
+  // All standards repository entries in code are curated summaries until verbatim ASC text is ingested.
+  // They are strictly tagged as NEEDS_REVIEW + CURATED_SUMMARY to prevent false verification claims.
   UNIFIED_SOURCE_REGISTRY[key] = {
     id: key,
     authority: 'ACRA',
-    authorityName: 'Accounting Standards Committee (ACRA) & IASB',
+    authorityName: 'Accounting Standards Council (ACRA) & IASB',
+    sourcePublisher: 'Accounting Standards Council (Singapore) / IFRS Foundation',
+    legalOrStandardInstrument: std.sfrsCode ? `${std.sfrsCode} ${std.standardTitle}` : std.standardTitle,
     documentTitle: std.standardTitle,
     standardOrActCode: std.sfrsCode.split(' ')[0] || 'SFRS(I)',
     paragraphOrSection: std.paragraph,
@@ -96,8 +102,7 @@ for (const [key, std] of Object.entries(STANDARDS_REPOSITORY)) {
     domain: 'ACCOUNTING_SFRS',
     jurisdiction: 'Singapore',
     tags: [std.standardTitle.toLowerCase(), std.paragraph.toLowerCase(), 'accounting standard', 'sfrs(i)'],
-    // Standards summaries in code are curated summaries until verbatim ASC text is licensed/retrieved
-    sourceStatus: isRecognizedStandard ? 'VERIFIED' : 'NEEDS_REVIEW',
+    sourceStatus: 'NEEDS_REVIEW',
     sourceType: 'CURATED_SUMMARY'
   };
 }

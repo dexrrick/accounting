@@ -150,70 +150,93 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   }
 
   // 4. Time-Sensitive Current Information Check
-  const currentInformationRequired =
-    q.includes('2024') ||
-    q.includes('2025') ||
-    q.includes('2026') ||
-    q.includes('current') ||
-    q.includes('rate') ||
-    q.includes('ceiling') ||
-    q.includes('threshold') ||
-    q.includes('audit exemption') ||
-    q.includes('gst');
+  // Guard against false positives like "depreciation rate" or "burn rate"
+  const hasYear = /\b(202[4-9]|203\d)\b/.test(q);
+  const asksCurrentStatus = /\b(current|currently|latest|prevailing|recent|new rate|effective date|now)\b/i.test(q);
+  const asksStatutoryCeilingOrThreshold =
+    (hasGst && (q.includes('register') || q.includes('threshold') || q.includes('turnover') || q.includes('rate') || q.includes('exceeds') || q.includes('million'))) ||
+    (hasPayroll && (q.includes('ceiling') || q.includes('rate') || q.includes('tier') || q.includes('ow'))) ||
+    (hasTax && (q.includes('tax rate') || q.includes('corporate rate') || q.includes('sute') || q.includes('pte'))) ||
+    (hasCorporate && (q.includes('audit exemption') && (q.includes('qualify') || q.includes('threshold') || q.includes('criteria'))));
+
+  const currentInformationRequired = hasYear || asksCurrentStatus || asksStatutoryCeilingOrThreshold;
 
   // 5. Intent and Calculation / Journal Requirements
-  const hasNumbers = /\d+/.test(q);
+  // Guard against numbers in statutory advisory queries falsely triggering journal entries
   const asksForEntries =
     q.includes('double entr') ||
     q.includes('journal') ||
-    q.includes('entries') ||
+    q.includes('accounting entr') ||
     q.includes('how to record') ||
-    q.includes('accounting entry') ||
-    q.includes('debit');
+    q.includes('how do i record') ||
+    q.includes('debit and credit') ||
+    q.includes('dr and cr') ||
+    q.includes('show entries') ||
+    q.includes('bookkeeping entry') ||
+    q.includes('post entry');
 
-  const asksPureAdvisory =
-    q.includes('can i') ||
-    q.includes('what are the requirements') ||
-    q.includes('is it allowed') ||
-    q.includes('what is the ceiling') ||
-    q.includes('entitled') ||
-    q.includes('threshold');
+  const isConceptualOrAdvisory =
+    /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize|can i|can we|do we qualify|does it qualify|is it allowed|is it deductible|is it claimable|must we|must i|guidance on|requirements for|criteria for)\b/i.test(q.trim()) ||
+    q.includes('do we qualify') ||
+    q.includes('is it deductible') ||
+    q.includes('is it claimable') ||
+    q.includes('can i claim') ||
+    q.includes('can we claim');
+
+  const hasTransactionAction =
+    (q.includes('bought') || q.includes('sold') || q.includes('purchased') || q.includes('acquired') || q.includes('invested') || q.includes('disposed of')) &&
+    (asksForEntries || q.includes('shares') || q.includes('usd') || q.includes('asset') || q.includes('goods'));
 
   let intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID' = 'STATUTORY_ADVISORY';
-  if (hasNumbers && asksForEntries) {
-    intent = asksPureAdvisory ? 'HYBRID' : 'TRANSACTION';
-  } else if (hasNumbers && !asksPureAdvisory) {
+  if (asksForEntries && isConceptualOrAdvisory) {
+    intent = 'HYBRID';
+  } else if (asksForEntries || hasTransactionAction) {
     intent = 'TRANSACTION';
+  } else {
+    intent = 'STATUTORY_ADVISORY';
   }
 
-  const calculationRequired = hasNumbers || q.includes('calculat') || q.includes('how much') || intent === 'TRANSACTION';
-  const journalEntryRequired = asksForEntries || intent === 'TRANSACTION';
+  // Journal entry is required ONLY if user explicitly asked for entries or it is an active transaction
+  const journalEntryRequired = asksForEntries || (hasTransactionAction && !isConceptualOrAdvisory);
+
+  // Calculation required ONLY if quantitative computation requested or active quantitative transaction
+  const calculationRequired =
+    q.includes('calculat') ||
+    q.includes('compute') ||
+    q.includes('how much') ||
+    q.includes('what is the amount') ||
+    q.includes('fx gain') ||
+    q.includes('foreign exchange') ||
+    q.includes('tax payable') ||
+    (intent === 'TRANSACTION' && /\d+/.test(q) && !isConceptualOrAdvisory);
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];
+  const isPureConceptualQuery =
+    /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize)\b/i.test(q.trim());
 
-  // Capitalisation missing facts
-  if (q.includes('capitalis') || q.includes('capitaliz') || q.includes('development cost') || q.includes('r&d')) {
+  // Capitalisation missing facts (only for scenario/transactional evaluation, not pure conceptual definitions)
+  if (!isPureConceptualQuery && (q.includes('capitalis') || q.includes('capitaliz') || q.includes('development cost') || q.includes('r&d'))) {
     if (!q.includes('research') && !q.includes('development')) {
       missingFacts.push('Separation between research phase (expensed) and development phase');
     }
     if (!q.includes('criteria') && !q.includes('feasible') && !q.includes('feasibility')) {
       missingFacts.push('Confirmation of all 6 cumulative recognition criteria under SFRS(I) 1-38 §57');
     }
-    if (!hasNumbers) {
+    if (!/\d+/.test(q)) {
       missingFacts.push('Specific expenditure amounts attributable to development activities');
     }
   }
 
-  // Vehicle purchase missing facts
-  if (q.includes('car') || q.includes('vehicle')) {
+  // Vehicle purchase missing facts (only when assessing a specific acquisition or claim)
+  if (!isPureConceptualQuery && (q.includes('car') || q.includes('vehicle')) && (q.includes('bought') || q.includes('purchas') || q.includes('claim') || q.includes('deduct') || q.includes('entry'))) {
     if (!q.includes('s-plate') && !q.includes('g-plate') && !q.includes('passenger') && !q.includes('commercial')) {
       missingFacts.push('Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)');
     }
   }
 
-  // Lease missing facts
-  if (q.includes('lease') || q.includes('rental')) {
+  // Lease missing facts (only for active lease scenarios, not conceptual questions like "What is a lease under SFRS(I) 16?")
+  if (!isPureConceptualQuery && (q.includes('rental agreement') || q.includes('lease agreement') || q.includes('renting') || q.includes('paying') || (q.includes('lease') && (/\d+/.test(q) || q.includes('term') || asksForEntries)))) {
     if (!q.includes('discount rate') && !q.includes('borrowing rate') && !q.includes('interest rate') && !q.includes('%')) {
       missingFacts.push('Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26');
     }

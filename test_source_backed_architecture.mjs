@@ -57,12 +57,32 @@ async function runPhase1Tests() {
   assert.ok(cMixed.authorities.includes('IRAS'), 'Must include IRAS');
   console.log('✓ 1E. Mixed Accounting + Tax question correctly classified');
 
-  // -------------------------------------------------------------
-  // 2. RETRIEVAL TESTS
-  // -------------------------------------------------------------
-  console.log('\n[2. SOURCE RETRIEVAL]');
+  // 1F. False-Positive Resistance: Numbers in statutory advisory query
+  const qAdvisoryWithNumbers = 'I have 45 employees and $8M annual revenue, do we qualify for ACRA small company audit exemption?';
+  const cAdvisory = classifyQuestion(qAdvisoryWithNumbers);
+  assert.strictEqual(cAdvisory.intent, 'STATUTORY_ADVISORY', 'Advisory with numbers must remain STATUTORY_ADVISORY intent');
+  assert.strictEqual(cAdvisory.journalEntryRequired, false, 'Advisory query must NOT require journal entry');
+  assert.strictEqual(cAdvisory.calculationRequired, false, 'Audit exemption query must NOT require quantitative journal calculation');
+  console.log('✓ 1F. Numbers in statutory advisory query resisted false-positive journal trigger');
 
-  // 2A. Known SFRS(I) Source
+  // 1G. False-Positive Resistance: Conceptual depreciation "rate" query
+  const qConceptualRate = 'What is the depreciation rate under the straight-line method in SFRS(I) 1-16?';
+  const cConceptualRate = classifyQuestion(qConceptualRate);
+  assert.strictEqual(cConceptualRate.currentInformationRequired, false, 'The word "rate" in conceptual depreciation must NOT trigger time-sensitive alert');
+  console.log('✓ 1G. "rate" in conceptual accounting query resisted false-positive time-sensitivity alert');
+
+  // 1H. False-Positive Resistance: Conceptual lease definition
+  const qConceptualLease = 'What is the definition of a lease under SFRS(I) 16?';
+  const cConceptualLease = classifyQuestion(qConceptualLease);
+  assert.strictEqual(cConceptualLease.missingFacts.length, 0, 'Conceptual lease question must NOT flag missing discount rate');
+  console.log('✓ 1H. Conceptual lease question resisted false-positive missing facts');
+
+  // -------------------------------------------------------------
+  // 2. RETRIEVAL & PROVENANCE TESTS
+  // -------------------------------------------------------------
+  console.log('\n[2. SOURCE RETRIEVAL & PROVENANCE]');
+
+  // 2A. Known SFRS(I) Curated Summary Source
   const rSfrs = await defaultSourceRetriever.retrieveSources({
     query: 'capitalisation of software development costs criteria',
     domain: 'ACCOUNTING_SFRS',
@@ -73,9 +93,12 @@ async function runPhase1Tests() {
   assert.ok(sfrsRec, 'Must retrieve SFRS(I) 1-38 Intangible Assets');
   assert.strictEqual(sfrsRec.jurisdiction, 'Singapore', 'Must specify Singapore jurisdiction');
   assert.strictEqual(sfrsRec.authority, 'ACRA', 'Governed by ACRA');
-  console.log(`✓ 2A. Retrieved SFRS source: ${sfrsRec.documentTitle} (${sfrsRec.paragraphOrSection})`);
+  assert.strictEqual(sfrsRec.sourceStatus, 'NEEDS_REVIEW', 'Curated summary must be marked NEEDS_REVIEW');
+  assert.strictEqual(sfrsRec.sourceType, 'CURATED_SUMMARY', 'Curated standard in code is CURATED_SUMMARY');
+  assert.strictEqual(sfrsRec.sourcePublisher, 'Accounting Standards Council (Singapore) / IFRS Foundation', 'Must specify sourcePublisher');
+  console.log(`✓ 2A. Retrieved SFRS curated summary: ${sfrsRec.documentTitle} [${sfrsRec.sourceStatus} / ${sfrsRec.sourceType}]`);
 
-  // 2B. Known Singapore Statutory / Tax Source
+  // 2B. Known Singapore Primary Statutory Source
   const rTax = await defaultSourceRetriever.retrieveSources({
     query: 'general deduction wholly and exclusively incurred in the production of income',
     domain: 'IRAS_TAX',
@@ -85,10 +108,11 @@ async function runPhase1Tests() {
   const taxRec = rTax.find((r) => r.standardOrActCode === 'ITA1947');
   assert.ok(taxRec, 'Must retrieve Income Tax Act 1947');
   assert.strictEqual(taxRec.paragraphOrSection, 'Section 14(1)', 'Must match Section 14(1)');
-  assert.strictEqual(taxRec.sourceStatus, 'VERIFIED', 'Statute with canonical SSO is VERIFIED');
+  assert.strictEqual(taxRec.sourceStatus, 'VERIFIED', 'Primary verbatim statute with SSO AGC link is VERIFIED');
   assert.strictEqual(taxRec.sourceType, 'AUTHORITATIVE_SOURCE', 'Verbatim provision is AUTHORITATIVE_SOURCE');
+  assert.strictEqual(taxRec.sourcePublisher, 'Singapore Statutes Online / AGC', 'SSO AGC publisher recorded');
   assert.ok(taxRec.officialSourceUrl.includes('sso.agc.gov.sg'), 'URL must be official SSO AGC link');
-  console.log(`✓ 2B. Retrieved verified statutory source: ${taxRec.documentTitle} (${taxRec.paragraphOrSection})`);
+  console.log(`✓ 2B. Retrieved verified primary statutory source: ${taxRec.documentTitle} (${taxRec.paragraphOrSection})`);
 
   // 2C. Unknown Source does NOT produce false matches
   const rUnknown = defaultSourceRetriever.findSourcesByStandardOrAct('NonExistentStandard999', '§999');
@@ -100,8 +124,8 @@ async function runPhase1Tests() {
   // -------------------------------------------------------------
   console.log('\n[3. CITATION VERIFICATION]');
 
-  // 3A. Valid Source + Paragraph
-  const validCitation = {
+  // 3A. Curated Standard Summary (SFRS(I) 1-38 §57)
+  const summaryCitation = {
     standard: 'SFRS(I) 1-38',
     paragraph: '§57',
     title: 'Intangible Assets - Development Phase',
@@ -109,13 +133,30 @@ async function runPhase1Tests() {
     officialSourceUrl: 'https://www.acra.gov.sg/accountancy/accounting-standards',
     authority: 'ACRA'
   };
-  const v1 = defaultCitationVerifier.verifyCitation(validCitation, 'ACRA');
-  assert.strictEqual(v1.isValid, true, 'Valid citation must pass');
-  assert.strictEqual(v1.status, 'VERIFIED', 'Status must be VERIFIED');
+  const v1 = defaultCitationVerifier.verifyCitation(summaryCitation, 'ACRA');
+  assert.strictEqual(v1.isValid, true, 'Curated summary citation structurally matches');
+  assert.strictEqual(v1.status, 'STRUCTURALLY_VERIFIED_SUMMARY', 'Must be tagged STRUCTURALLY_VERIFIED_SUMMARY');
+  assert.strictEqual(v1.isAuthoritativePrimarySource, false, 'Curated summary must NOT be marked authoritative primary source');
+  assert.notStrictEqual(v1.status, 'VERIFIED_PRIMARY_SOURCE', 'Curated summary CANNOT masquerade as VERIFIED_PRIMARY_SOURCE');
   assert.strictEqual(v1.structuralVerificationOnly, true, 'Must state structural verification only');
-  console.log('✓ 3A. Valid citation verified successfully');
+  console.log('✓ 3A. Curated summary structurally verified without masquerading as primary authority');
 
-  // 3B. Invalid Paragraph on Valid Source
+  // 3B. Primary Statutory Provision (ITA 1947 Section 14(1))
+  const primaryCitation = {
+    standard: 'Income Tax Act 1947',
+    paragraph: 'Section 14(1)',
+    title: 'General Deduction',
+    text: 'Wholly and exclusively incurred in the production of income',
+    officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-',
+    authority: 'IRAS'
+  };
+  const vPrimary = defaultCitationVerifier.verifyCitation(primaryCitation, 'IRAS');
+  assert.strictEqual(vPrimary.isValid, true, 'Primary citation must pass');
+  assert.strictEqual(vPrimary.status, 'VERIFIED_PRIMARY_SOURCE', 'Must be tagged VERIFIED_PRIMARY_SOURCE');
+  assert.strictEqual(vPrimary.isAuthoritativePrimarySource, true, 'Must be marked authoritative primary source');
+  console.log('✓ 3B. Verbatim statutory provision verified as VERIFIED_PRIMARY_SOURCE');
+
+  // 3C. Invalid Paragraph on Valid Source
   const invalidParaCitation = {
     standard: 'SFRS(I) 1-38',
     paragraph: '§9999',
@@ -127,9 +168,9 @@ async function runPhase1Tests() {
   const v2 = defaultCitationVerifier.verifyCitation(invalidParaCitation);
   assert.strictEqual(v2.isValid, false, 'Invalid paragraph must fail');
   assert.strictEqual(v2.status, 'PARAGRAPH_NOT_FOUND', 'Status must be PARAGRAPH_NOT_FOUND');
-  console.log('✓ 3B. Fabricated paragraph correctly rejected (PARAGRAPH_NOT_FOUND)');
+  console.log('✓ 3C. Fabricated paragraph correctly rejected (PARAGRAPH_NOT_FOUND)');
 
-  // 3C. Unknown Source
+  // 3D. Unknown Source
   const unknownSourceCitation = {
     standard: 'FakeTaxAct2099',
     paragraph: 'Section 1',
@@ -140,9 +181,9 @@ async function runPhase1Tests() {
   const v3 = defaultCitationVerifier.verifyCitation(unknownSourceCitation);
   assert.strictEqual(v3.isValid, false, 'Unknown source must fail');
   assert.strictEqual(v3.status, 'SOURCE_NOT_FOUND', 'Status must be SOURCE_NOT_FOUND');
-  console.log('✓ 3C. Unknown source correctly rejected (SOURCE_NOT_FOUND)');
+  console.log('✓ 3D. Unknown source correctly rejected (SOURCE_NOT_FOUND)');
 
-  // 3D. Authority Mismatch
+  // 3E. Authority Mismatch
   const mismatchedAuthorityCitation = {
     standard: 'Income Tax Act 1947',
     paragraph: 'Section 14(1)',
@@ -154,9 +195,9 @@ async function runPhase1Tests() {
   const v4 = defaultCitationVerifier.verifyCitation(mismatchedAuthorityCitation);
   assert.strictEqual(v4.isValid, false, 'Authority mismatch must fail');
   assert.strictEqual(v4.status, 'AUTHORITY_MISMATCH', 'Status must be AUTHORITY_MISMATCH');
-  console.log('✓ 3D. Authority mismatch correctly rejected (AUTHORITY_MISMATCH)');
+  console.log('✓ 3E. Authority mismatch correctly rejected (AUTHORITY_MISMATCH)');
 
-  // 3E. Non-Canonical URL
+  // 3F. Non-Canonical External Domain URL
   const nonCanonicalUrlCitation = {
     standard: 'Income Tax Act 1947',
     paragraph: 'Section 14(1)',
@@ -168,7 +209,21 @@ async function runPhase1Tests() {
   const v5 = defaultCitationVerifier.verifyCitation(nonCanonicalUrlCitation);
   assert.strictEqual(v5.isValid, false, 'Non-canonical URL must fail');
   assert.strictEqual(v5.status, 'NON_CANONICAL_URL', 'Status must be NON_CANONICAL_URL');
-  console.log('✓ 3E. Non-canonical URL correctly rejected (NON_CANONICAL_URL)');
+  console.log('✓ 3F. Non-canonical domain URL correctly rejected (NON_CANONICAL_URL)');
+
+  // 3G. Canonical URL Path Mismatch (e.g. Income Tax Act citing Companies Act URL)
+  const mismatchedUrlCitation = {
+    standard: 'Income Tax Act 1947',
+    paragraph: 'Section 14(1)',
+    title: 'General Deduction',
+    text: 'Wholly and exclusively',
+    officialSourceUrl: 'https://sso.agc.gov.sg/Act/CA1967', // points to CA1967 instead of ITA1947
+    authority: 'IRAS'
+  };
+  const v6 = defaultCitationVerifier.verifyCitation(mismatchedUrlCitation);
+  assert.strictEqual(v6.isValid, false, 'Mismatched canonical URL path must fail');
+  assert.strictEqual(v6.status, 'NON_CANONICAL_URL', 'Status must be NON_CANONICAL_URL');
+  console.log('✓ 3G. Mismatched canonical statute URL path correctly rejected');
 
   // -------------------------------------------------------------
   // 4. CAPITALISATION & ASSUMPTION TESTS

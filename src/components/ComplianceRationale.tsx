@@ -319,13 +319,23 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                         </span>
                         {(() => {
                           const verification = defaultCitationVerifier.verifyCitation(cite);
+                          if (verification.status === 'VERIFIED_PRIMARY_SOURCE') {
+                            return (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
+                                ✓ Primary Source Verified
+                              </span>
+                            );
+                          }
+                          if (verification.status === 'STRUCTURALLY_VERIFIED_SUMMARY') {
+                            return (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
+                                📝 Curated Summary
+                              </span>
+                            );
+                          }
                           return (
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium border ${
-                              verification.isValid
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
-                                : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
-                            }`}>
-                              {verification.isValid ? '✓ Verified Source' : '⚠️ Unverified'}
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                              ⚠️ Unverified Citation
                             </span>
                           );
                         })()}
@@ -360,7 +370,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               })}
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-1.5">
-              * Structural verification confirms the cited standard, section/paragraph, governing authority, and official source URL exist in verified repositories. It does not constitute legal or audit sign-off.
+              * Structural verification confirms the cited standard, section/paragraph, governing authority, and official source URL exist in verified repositories. It does not constitute legal or audit sign-off or prove semantic claim validity.
             </p>
           </div>
         )}
