@@ -221,6 +221,6 @@ export function getCitation(ruleKey: keyof typeof STANDARDS_REPOSITORY, standard
     paragraph: rule.paragraph,
     title: rule.standardTitle,
     text: rule.principle,
-    officialSourceUrl: standardMode === 'SFRS_I' ? 'https://www.asc.gov.sg' : 'https://www.ifrs.org'
+    officialSourceUrl: standardMode === 'SFRS_I' ? 'https://www.acra.gov.sg/accountancy/accounting-standards' : 'https://www.ifrs.org'
   };
 }

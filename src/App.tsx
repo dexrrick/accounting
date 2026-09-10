@@ -187,7 +187,7 @@ export const App: React.FC = () => {
         {/* Top Grid: Chat on Left, Input Handlers + Journal on Right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
           {/* Left Column: Conversational AI Panel (5 cols) */}
-          <div className="lg:col-span-5 h-[520px] sm:h-[620px]">
+          <div className="lg:col-span-5 h-[580px] sm:h-[680px] lg:h-[750px]">
             <ChatPanel
               messages={messages}
               onSendMessage={handleSendMessage}

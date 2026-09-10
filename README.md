@@ -118,7 +118,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 ---
 
 ## ⚖️ Standards Reference
-* **ASC Singapore**: [Singapore Financial Reporting Standards (International)](https://www.asc.gov.sg/)
+* **ACRA / ASC Singapore**: [Singapore Financial Reporting Standards (International)](https://www.acra.gov.sg/accountancy/accounting-standards)
 * **IASB**: [IFRS Accounting Standards Navigator](https://www.ifrs.org/issued-standards/list-of-standards/)
 * **IRAS Singapore**: [Goods & Services Tax (GST) Guide on Business Assets & Trade-ins](https://www.iras.gov.sg/)
 

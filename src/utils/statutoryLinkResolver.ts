@@ -104,13 +104,17 @@ export function getSafeOfficialUrl(
   }
 
   // 4. Check if rawUrl is a verified domain
+  if (url.includes('asc.gov.sg')) {
+    return 'https://www.acra.gov.sg/accountancy/accounting-standards';
+  }
+
   if (
     url.startsWith('https://www.iras.gov.sg') ||
     url.startsWith('https://www.acra.gov.sg') ||
     url.startsWith('https://www.cpf.gov.sg') ||
     url.startsWith('https://www.mom.gov.sg') ||
     url.startsWith('https://www.mas.gov.sg') ||
-    url.startsWith('https://www.asc.gov.sg')
+    url.startsWith('https://www.ifrs.org')
   ) {
     return url;
   }
@@ -122,7 +126,7 @@ export function getSafeOfficialUrl(
   if (auth === 'CPF') return 'https://www.cpf.gov.sg';
   if (auth === 'MOM') return 'https://sso.agc.gov.sg/Act/EA1968';
   if (auth === 'MAS') return 'https://sso.agc.gov.sg/Act/MASA1970';
-  if (auth === 'ASC') return 'https://www.asc.gov.sg';
+  if (auth === 'ASC') return 'https://www.acra.gov.sg/accountancy/accounting-standards';
 
   // 6. Default canonical SSO root
   return url || 'https://sso.agc.gov.sg';
@@ -168,6 +172,12 @@ export function getAuthorityBadgeInfo(authority?: StatutoryAuthority | string): 
         label: 'MAS Singapore',
         badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
         dotColor: 'bg-slate-400'
+      };
+    case 'ASC':
+      return {
+        label: 'ACRA / ASC',
+        badgeClass: 'bg-slate-800/90 text-slate-200 border-slate-700',
+        dotColor: 'bg-indigo-400'
       };
     case 'CUSTOMS':
       return {
@@ -245,7 +255,12 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
       return `[${anchorText}](https://sso.agc.gov.sg/Act/MASA1970)`;
     }
 
-    // Preserve validated SSO, IRAS, ACRA, CPF, MAS, MOM, and ASC links
+    // Intercept decommissioned ASC domain and rewrite to ACRA accounting standards portal
+    if (lowerUrl.includes('asc.gov.sg')) {
+      return `[${anchorText}](https://www.acra.gov.sg/accountancy/accounting-standards)`;
+    }
+
+    // Preserve validated SSO, IRAS, ACRA, CPF, MAS, MOM, and IFRS links
     if (
       lowerUrl.startsWith('https://sso.agc.gov.sg') ||
       lowerUrl.startsWith('https://www.iras.gov.sg') ||
@@ -253,7 +268,6 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
       lowerUrl.startsWith('https://www.cpf.gov.sg') ||
       lowerUrl.startsWith('https://www.mom.gov.sg') ||
       lowerUrl.startsWith('https://www.mas.gov.sg') ||
-      lowerUrl.startsWith('https://www.asc.gov.sg') ||
       lowerUrl.startsWith('https://www.ifrs.org')
     ) {
       return match;
@@ -375,16 +389,16 @@ export function appendStatutorySourceFooter(
     }
     if (lower.includes('lease') || lower.includes('ifrs 16') || lower.includes('sfrs(i) 16')) {
       links.push({
-        title: 'SFRS(I) 16 Leases (ASC Singapore)',
-        url: 'https://www.asc.gov.sg',
-        authority: 'ASC'
+        title: 'SFRS(I) 16 Leases (ACRA Accounting Standards)',
+        url: 'https://www.acra.gov.sg/accountancy/accounting-standards',
+        authority: 'ACRA'
       });
     }
     if (links.length === 0) {
       links.push({
-        title: 'Singapore Financial Reporting Standards [SFRS(I)]',
-        url: 'https://www.asc.gov.sg',
-        authority: 'ASC'
+        title: 'Singapore Financial Reporting Standards [SFRS(I)] (ACRA)',
+        url: 'https://www.acra.gov.sg/accountancy/accounting-standards',
+        authority: 'ACRA'
       });
     }
   }

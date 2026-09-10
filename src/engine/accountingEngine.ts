@@ -359,7 +359,8 @@ export function calculateDoubleEntries(
         lineExplanation: `Derecognition of investment carrying amount of ${func} ${purchaseFunctional.toLocaleString()}.`
       });
 
-      if (scenario.bifurcateFxGain) {
+      // Always bifurcate FX gain/loss unless explicitly disabled
+      if (scenario.bifurcateFxGain !== false) {
         if (stockGainFunctional > 0) {
           sellLines.push({
             id: 'line-sell-stock-gain',
@@ -376,7 +377,7 @@ export function calculateDoubleEntries(
           sellLines.push({
             id: 'line-sell-fx-gain',
             accountCode: '4600',
-            accountName: `Realized Foreign Exchange Gain (${foreign}/${func}) [P&L / IAS 21]`,
+            accountName: `Realized Foreign Exchange Gain (${foreign}/${func}) [P&L / ${stdPrefix21}]`,
             category: 'REVENUE',
             debit: 0,
             credit: fxGainFunctional,
@@ -386,7 +387,7 @@ export function calculateDoubleEntries(
           sellLines.push({
             id: 'line-sell-fx-loss',
             accountCode: '5600',
-            accountName: `Realized Foreign Exchange Loss (${foreign}/${func}) [P&L / IAS 21]`,
+            accountName: `Realized Foreign Exchange Loss (${foreign}/${func}) [P&L / ${stdPrefix21}]`,
             category: 'EXPENSE',
             debit: Math.abs(fxGainFunctional),
             credit: 0,
@@ -397,7 +398,7 @@ export function calculateDoubleEntries(
           sellLines.push({
             id: 'line-sell-fx-gain-zero',
             accountCode: '4600',
-            accountName: `Realized Foreign Exchange Gain/Loss (${foreign}/${func}) [P&L / IAS 21]`,
+            accountName: `Realized Foreign Exchange Gain/Loss (${foreign}/${func}) [P&L / ${stdPrefix21}]`,
             category: 'REVENUE',
             debit: 0,
             credit: 0,

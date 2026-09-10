@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MissingFieldInfo } from '../types/accounting';
-import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react';
+import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff } from 'lucide-react';
 import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 
 interface ChatPanelProps {
@@ -17,12 +17,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   isLoading
 }) => {
   const [inputText, setInputText] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(() => {
+    const saved = localStorage.getItem('chat_show_suggestions');
+    return saved !== null ? saved === 'true' : true;
+  });
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const scrollLeftRef = useRef(0);
-  const hasMovedRef = useRef(false);
-  const [isDragging, setIsDragging] = useState(false);
+
+  const toggleSuggestions = () => {
+    setShowSuggestions((prev) => {
+      const next = !prev;
+      localStorage.setItem('chat_show_suggestions', String(next));
+      return next;
+    });
+  };
 
   // Non-passive wheel event listener to ensure smooth mouse-wheel horizontal sliding
   useEffect(() => {
@@ -36,53 +44,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [showSuggestions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || isLoading) return;
     onSendMessage(inputText.trim());
     setInputText('');
-  };
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!scrollContainerRef.current) return;
-    isDraggingRef.current = true;
-    hasMovedRef.current = false;
-    startXRef.current = e.pageX - scrollContainerRef.current.offsetLeft;
-    scrollLeftRef.current = scrollContainerRef.current.scrollLeft;
-    setIsDragging(true);
-    try {
-      scrollContainerRef.current.setPointerCapture(e.pointerId);
-    } catch {}
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current || !scrollContainerRef.current) return;
-    const x = e.pageX - scrollContainerRef.current.offsetLeft;
-    const walk = (x - startXRef.current) * 1.4;
-    if (Math.abs(walk) > 4) {
-      hasMovedRef.current = true;
-    }
-    scrollContainerRef.current.scrollLeft = scrollLeftRef.current - walk;
-  };
-
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-    try {
-      if (scrollContainerRef.current?.hasPointerCapture(e.pointerId)) {
-        scrollContainerRef.current.releasePointerCapture(e.pointerId);
-      }
-    } catch {}
-    setTimeout(() => {
-      hasMovedRef.current = false;
-    }, 100);
-  };
-
-  const handleSampleClick = (query: string) => {
-    if (hasMovedRef.current) return;
-    onSendMessage(query);
   };
 
   const scrollHorizontally = (offset: number) => {
@@ -200,70 +168,92 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         )}
       </div>
 
-      {/* Sample Quick-Click Scenarios */}
-      <div className="px-3 sm:px-4 py-2.5 sm:py-3 bg-slate-50/90 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E]">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-            <MoveHorizontal className="w-3.5 h-3.5 text-slate-400" />
-            <span>Try Accounting or Singapore Statutory Queries:</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-[10px] text-slate-400 dark:text-slate-500 mr-1 hidden sm:inline select-none">Click & drag or wheel to slide</span>
-            <button
-              type="button"
-              onClick={() => scrollHorizontally(-220)}
-              className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] transition-colors"
-              title="Scroll left"
-            >
-              <ChevronLeft className="w-3.5 h-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollHorizontally(220)}
-              className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] transition-colors"
-              title="Scroll right"
-            >
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Container with Pointer Drag & Wheel */}
-        <div
-          ref={scrollContainerRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          className={`flex gap-2 overflow-x-auto pb-1.5 select-none transition-colors scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-[#2B374E] scrollbar-track-transparent ${
-            isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
-          }`}
-          style={{
-            scrollbarWidth: 'thin',
-            touchAction: 'pan-x'
-          }}
-        >
-          {SAMPLE_PROMPTS.map((sample) => (
-            <button
-              key={sample.id}
-              type="button"
-              onClick={() => handleSampleClick(sample.query)}
-              className="shrink-0 w-48 sm:w-56 text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] select-none cursor-pointer"
-            >
-              <div className="flex items-center justify-between gap-1">
-                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate max-w-[110px]">
-                  {sample.tag}
-                </span>
-                <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E] shrink-0 truncate max-w-[80px]">
-                  {sample.standard}
-                </span>
+      {/* Sample Quick-Click Scenarios (Collapsible) */}
+      {showSuggestions ? (
+        <div className="px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-50/90 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E] transition-all">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+              <MoveHorizontal className="w-3.5 h-3.5 text-slate-400" />
+              <span>Try Singapore Accounting & Statutory Queries:</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => scrollHorizontally(-220)}
+                  className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] transition-colors"
+                  title="Scroll left"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollHorizontally(220)}
+                  className="p-1 rounded-md text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] transition-colors"
+                  title="Scroll right"
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
-                {sample.title}
-              </p>
-            </button>
-          ))}
+              <button
+                type="button"
+                onClick={toggleSuggestions}
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white rounded-md hover:bg-slate-200 dark:hover:bg-[#242F46] border border-transparent hover:border-slate-200 dark:hover:border-[#2B374E] transition-colors cursor-pointer"
+                title="Hide suggestions to expand chat screen"
+              >
+                <EyeOff className="w-3 h-3" />
+                <span>Hide</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Scrollable Container with Smooth Chevron and Wheel Scrolling */}
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-slate-300 dark:scrollbar-thumb-[#2B374E] scrollbar-track-transparent scroll-smooth"
+            style={{
+              scrollbarWidth: 'thin'
+            }}
+          >
+            {SAMPLE_PROMPTS.map((sample) => (
+              <button
+                key={sample.id}
+                type="button"
+                onClick={() => onSendMessage(sample.query)}
+                className="shrink-0 w-48 sm:w-56 text-left p-2.5 bg-white dark:bg-[#1C2538] hover:bg-slate-50 dark:hover:bg-[#242F46] border border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-500 rounded-xl transition-all shadow-xs group flex flex-col justify-between min-h-[58px] cursor-pointer"
+              >
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider truncate max-w-[110px]">
+                    {sample.tag}
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 rounded font-mono leading-none border border-slate-200 dark:border-[#2B374E] shrink-0 truncate max-w-[80px]">
+                    {sample.standard}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-800 dark:text-slate-300 group-hover:text-ynab-blue dark:group-hover:text-white mt-1 leading-snug line-clamp-2 font-medium">
+                  {sample.title}
+                </p>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* Minimized Rail: Gives Maximum Room for Chat */
+        <div className="px-3 sm:px-4 py-1.5 bg-slate-50/80 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E] flex items-center justify-between">
+          <button
+            type="button"
+            onClick={toggleSuggestions}
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600 hover:text-ynab-blue dark:text-slate-400 dark:hover:text-blue-400 transition-colors cursor-pointer"
+            title="Show Singapore query suggestions"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Show Query Suggestions ({SAMPLE_PROMPTS.length})</span>
+          </button>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+            Expanded Chat View Active
+          </span>
+        </div>
+      )}
 
       {/* Input Form */}
       <form onSubmit={handleSubmit} className="p-2.5 sm:p-3 border-t border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538]">
