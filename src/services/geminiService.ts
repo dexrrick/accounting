@@ -1,10 +1,15 @@
 import type { AccountingStandard, AccountingScenarioState, MissingFieldInfo, ChatMessage } from '../types/accounting';
 import type { ProviderSettings } from '../types/provider';
 import { parseAccountingQuery } from '../engine/scenarioParser';
-import { formatSingaporeDate } from '../utils/dateUtils';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
+import {
+  buildGroundedReasoningContext,
+  formatGroundedSystemPrompt,
+  postProcessAIResponse,
+  type GroundedReasoningContext
+} from './groundingContextBuilder';
 
 export interface GeminiResponse {
   messageText: string;
@@ -28,11 +33,13 @@ export async function processAccountingQuery(
 
   // Live AI API call if provider settings or apiKey is provided
   if (providerOrApiKey) {
+    const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario);
+
     if (typeof providerOrApiKey === 'object') {
       const active = providerOrApiKey.activeProvider;
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory);
+          return await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext);
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -45,7 +52,8 @@ export async function processAccountingQuery(
             standard,
             providerOrApiKey.gemini.apiKey.trim(),
             providerOrApiKey.gemini.model || modelName,
-            chatHistory
+            chatHistory,
+            groundedContext
           );
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -58,7 +66,8 @@ export async function processAccountingQuery(
             currentScenario,
             standard,
             providerOrApiKey.openai,
-            chatHistory
+            chatHistory,
+            groundedContext
           );
         } catch (err: any) {
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
@@ -67,7 +76,7 @@ export async function processAccountingQuery(
       }
     } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       try {
-        return await callGeminiAPI(userInput, currentScenario, standard, providerOrApiKey.trim(), modelName, chatHistory);
+        return await callGeminiAPI(userInput, currentScenario, standard, providerOrApiKey.trim(), modelName, chatHistory, groundedContext);
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
@@ -389,130 +398,17 @@ export async function processAccountingQuery(
   };
 }
 
-async function callGeminiAPI(
+export async function callGeminiAPI(
   userInput: string,
   currentScenario: AccountingScenarioState | null,
   standard: AccountingStandard,
   apiKey: string,
   modelName: string = 'gemini-3.5-flash-lite',
-  chatHistory: ChatMessage[] = []
+  chatHistory: ChatMessage[] = [],
+  groundedContext?: GroundedReasoningContext
 ): Promise<GeminiResponse> {
-  const stdLabel = standard === 'SFRS_I' ? 'Singapore Financial Reporting Standards (International) [SFRS(I)]' : 'International Financial Reporting Standards [IFRS]';
-
-  const systemInstruction = `
-You are an authoritative Senior Singapore Accounting & Regulatory Research Assistant for professional accountants.
-Your primary directive is to provide correct, authoritative, and traceable information grounded in:
-1. ${stdLabel} issued by the Accounting Standards Council (ASC) Singapore and the IASB.
-2. Singapore Tax Laws & Guidelines issued by the Inland Revenue Authority of Singapore (IRAS).
-3. Singapore Corporate Law & Compliance administered by the Accounting and Corporate Regulatory Authority (ACRA).
-4. Central Provident Fund (CPF) Board statutory mandates and wage ceilings.
-5. Ministry of Manpower (MOM) Employment Act statutory mandates.
-6. Monetary Authority of Singapore (MAS) financial & payment regulations.
-
-CORE PRINCIPLES & SAFEGUARDS:
-1. IDENTIFY THE GOVERNING AUTHORITY FIRST:
-   - "Should this expenditure be capitalised?" -> Accounting / SFRS(I)
-   - "Is this expense tax deductible?" -> IRAS / Singapore Corporate Tax
-   - "Does the company need to register for GST?" -> IRAS / GST
-   - "Is this employee entitled to this leave / overtime?" -> MOM
-   - "What CPF contribution applies?" -> CPF Board
-   - Multi-authority questions: Explicitly declare all involved authorities.
-
-2. SEPARATE ACCOUNTING FROM TAX:
-   - NEVER assume accounting treatment equals tax treatment.
-   - For all expenditure, asset, and revenue questions, explicitly separate:
-     * FINANCIAL REPORTING TREATMENT (SFRS(I))
-     * SINGAPORE TAX TREATMENT (IRAS CIT & GST)
-
-3. ZERO CITATION FABRICATION & UNCERTAINTY HANDLING:
-   - The AI must NEVER invent accounting standards, paragraph numbers, IRAS requirements, GST rates, tax rates, MOM requirements, CPF rates, filing deadlines, thresholds, or citations.
-   - If an exact paragraph cannot be verified with certainty, cite the standard or act generally (e.g. "SFRS(I) 1-38", "Section 14(1) of the Income Tax Act 1947") and explain the underlying statutory principle.
-   - If user facts are underspecified, clearly highlight the missing facts and state the alternative treatments rather than guessing.
-   - OFFICIAL SOURCES & DOMAINS: The Accounting Standards Council (ASC) functions merged into ACRA in April 2023. All official SFRS(I) standards are published on ACRA's portal (https://www.acra.gov.sg/accountancy/accounting-standards). Singapore statutes are on Singapore Statutes Online (https://sso.agc.gov.sg). NEVER cite the decommissioned domain asc.gov.sg.
-
-4. CURRENT TIME-SENSITIVE INFORMATION:
-   - GST: 9% standard rate (effective 1 January 2024). Compulsory registration threshold is SGD 1,000,000 taxable turnover.
-   - CPF Ceilings (2026): Ordinary Wage (OW) monthly ceiling is SGD 8,000 (effective 1 January 2026). Additional Wage (AW) ceiling formula is $102,000 - Total OW subject to CPF.
-   - Corporate Tax: 17% headline rate. Start-Up Tax Exemption (SUTE) max SGD 125,000; Partial Tax Exemption (PTE) max SGD 102,500. Form C-S threshold is revenue <= SGD 5,000,000.
-   - ACRA Small Company Audit Exemption: 2 of 3 criteria (Revenue <= $10M, Gross Assets <= $10M, Employees <= 50) for past 2 consecutive FYs.
-
-5. JOURNAL ENTRIES AS ANALYSIS OUTPUT:
-   - For transaction questions, journal entries are generated as the final output of the analysis.
-   - Every journal entry group MUST be strictly balanced: Sum(Debits) == Sum(Credits).
-   - Trade discounts are deducted from asset cost (SFRS(I) 1-16 §16(a)); never recorded as separate accounts.
-   - MANDATORY FOREIGN EXCHANGE (FX) GAIN/LOSS BIFURCATION (SFRS(I) 1-21 & SFRS(I) 9):
-     When disposing of foreign investments, shares, or foreign monetary assets, ALWAYS explicitly bifurcate the gain/loss into TWO separate lines on the credit (or debit) side:
-     1. "Fair Value Gain on Shares ([Asset Name]) [P&L]": (Disposal Foreign Amount - Cost Foreign Amount) * Disposal Spot Rate
-     2. "Realized Foreign Exchange Gain ([Foreign Currency]/SGD) [P&L / SFRS(I) 1-21]": Acquisition Foreign Amount * (Disposal Spot Rate - Acquisition Spot Rate)
-     If exchange rates are not explicitly stated in the prompt, adopt standard benchmark rates (e.g. 1.34 buy / 1.36 sell for USD/SGD) to demonstrate the currency gain separation. NEVER combine them into a single credit line. Foreign exchange differences on monetary items and foreign equity disposals MUST be explicitly recognized under SFRS(I) 1-21.
-
-6. SINGAPORE CONVENTIONS:
-   - Dates must be formatted as DD/MM/YYYY. Functional currency defaults to SGD.
-   - Write all LaTeX math with double backslashes (\\\\text, \\\\le, \\\\times). Return pure JSON.
-
-Respond in valid JSON with this exact schema:
-{
-  "scenarioType": "UNIVERSAL",
-  "queryIntent": "TRANSACTION" | "STATUTORY_ADVISORY" | "HYBRID",
-  "primaryDomain": "ACCOUNTING_SFRS" | "IRAS_TAX" | "IRAS_GST" | "ACRA_CORP" | "MOM_EMPLOYMENT" | "CPF_BOARD" | "MULTI_AUTHORITY" | "GENERAL",
-  "transactionTitle": "string",
-  "functionalCurrency": "SGD",
-  "transactionCurrency": "SGD",
-  "accountingTreatmentSummary": "Detailed SFRS(I) accounting treatment",
-  "singaporeTaxTreatmentSummary": "Detailed IRAS tax deductibility, capital allowances, and GST treatment",
-  "regulatoryMandatesSummary": "ACRA, MOM, or CPF statutory compliance requirements",
-  "effectiveDateOrTiming": "Current effective dates (e.g. 9% GST, 2026 $8,000 OW ceiling)",
-  "uncertaintyDisclaimer": "Caveats, entity-specific considerations, or required documentation",
-  "messageText": "Comprehensive markdown response with structured headers, calculations, and official citations",
-  "keyParameters": [
-    { "label": "string", "value": "string", "badge": "string", "highlight": boolean }
-  ],
-  "directGroups": [
-    {
-      "id": "grp-1",
-      "eventDate": "DD/MM/YYYY",
-      "title": "string",
-      "summary": "string",
-      "lines": [
-        {
-          "id": "line-1",
-          "accountCode": "4-digit code e.g. 1500",
-          "accountName": "Account Title",
-          "category": "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE",
-          "debit": number,
-          "credit": number,
-          "lineExplanation": "string"
-        }
-      ],
-      "citations": [
-        {
-          "standard": "SFRS(I) 1-16 / Income Tax Act 1947",
-          "paragraph": "§16(a) / Section 14(1)",
-          "title": "Title",
-          "text": "Text",
-          "officialSourceUrl": "https://sso.agc.gov.sg/...",
-          "authority": "IRAS" | "ACRA" | "CPF" | "MOM" | "MAS" | "ASC" | "SSO"
-        }
-      ],
-      "rationalePoints": ["string"]
-    }
-  ],
-  "statutoryAdvisory": [
-    {
-      "authority": "IRAS" | "ACRA" | "CPF" | "MOM" | "MAS" | "CUSTOMS" | "ASC" | "SSO",
-      "statuteOrAct": "string",
-      "sectionOrSchedule": "string",
-      "topic": "string",
-      "summary": "string",
-      "keyRules": ["string"],
-      "officialUrl": "string",
-      "isTaxDeductible": boolean,
-      "isGstClaimable": boolean
-    }
-  ]
-}
-Return pure JSON only.
-`;
+  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
+  const systemInstruction = formatGroundedSystemPrompt(context, standard);
 
   // Multi-turn conversational history for Gemini
   const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
@@ -583,77 +479,5 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   }
 
   const parsed = repairAndParseAIJson(rawJsonText);
-
-  // Validate and compute totals on directGroups
-  let directGroups = (parsed.directGroups || []).map((grp: any, gIdx: number) => {
-    const lines = (grp.lines || []).map((l: any, lIdx: number) => ({
-      id: l.id || `line-${gIdx}-${lIdx}`,
-      accountCode: l.accountCode || '1000',
-      accountName: l.accountName || 'Account',
-      category: l.category || 'ASSET',
-      debit: typeof l.debit === 'number' ? Math.round(l.debit * 100) / 100 : 0,
-      credit: typeof l.credit === 'number' ? Math.round(l.credit * 100) / 100 : 0,
-      foreignCurrency: l.foreignCurrency,
-      foreignDebit: l.foreignDebit,
-      foreignCredit: l.foreignCredit,
-      exchangeRate: l.exchangeRate,
-      lineExplanation: l.lineExplanation || ''
-    }));
-
-    const totalDebit = Math.round(lines.reduce((s: number, l: any) => s + l.debit, 0) * 100) / 100;
-    const totalCredit = Math.round(lines.reduce((s: number, l: any) => s + l.credit, 0) * 100) / 100;
-    const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
-
-    return {
-      id: grp.id || `grp-${gIdx + 1}`,
-      eventDate: formatSingaporeDate(grp.eventDate || new Date()),
-      title: grp.title || `Entry Group ${gIdx + 1}`,
-      summary: grp.summary || '',
-      lines,
-      totalDebit,
-      totalCredit,
-      isBalanced,
-      citations: grp.citations || [],
-      rationalePoints: grp.rationalePoints || []
-    };
-  });
-
-  // Safeguard: If AI response didn't supply directGroups (e.g. conceptual question), preserve current
-  if (directGroups.length === 0 && currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
-    directGroups = currentScenario.directGroups;
-  }
-
-  // Safeguard: If AI response didn't supply keyParameters, preserve current
-  let keyParameters = (parsed.keyParameters && Array.isArray(parsed.keyParameters) && parsed.keyParameters.length > 0)
-    ? parsed.keyParameters
-    : (currentScenario?.keyParameters || []);
-
-  let finalTitle = (parsed.transactionTitle && parsed.transactionTitle !== 'Accounting Transaction')
-    ? parsed.transactionTitle
-    : (currentScenario?.transactionTitle || parsed.transactionTitle || 'Accounting Transaction');
-
-  const scenarioState: AccountingScenarioState = {
-    scenarioType: parsed.scenarioType || currentScenario?.scenarioType || 'UNIVERSAL',
-    queryIntent: parsed.queryIntent || (parsed.statutoryAdvisory?.length > 0 ? 'STATUTORY_ADVISORY' : currentScenario?.queryIntent || 'TRANSACTION'),
-    primaryDomain: parsed.primaryDomain || currentScenario?.primaryDomain || (parsed.statutoryAdvisory?.length > 0 ? (parsed.statutoryAdvisory[0].authority === 'ACRA' ? 'ACRA_CORP' : parsed.statutoryAdvisory[0].authority === 'CPF' ? 'CPF_BOARD' : parsed.statutoryAdvisory[0].authority === 'MOM' ? 'MOM_EMPLOYMENT' : 'IRAS_TAX') : 'ACCOUNTING_SFRS'),
-    rawQuery: userInput,
-    transactionTitle: finalTitle,
-    functionalCurrency: parsed.functionalCurrency || currentScenario?.functionalCurrency || 'SGD',
-    transactionCurrency: parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
-    accountingTreatmentSummary: parsed.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary,
-    singaporeTaxTreatmentSummary: parsed.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary,
-    regulatoryMandatesSummary: parsed.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary,
-    effectiveDateOrTiming: parsed.effectiveDateOrTiming || currentScenario?.effectiveDateOrTiming,
-    uncertaintyDisclaimer: parsed.uncertaintyDisclaimer || currentScenario?.uncertaintyDisclaimer,
-    keyParameters,
-    directGroups,
-    statutoryAdvisory: parsed.statutoryAdvisory || currentScenario?.statutoryAdvisory,
-    isComplete: true,
-    missingFields: []
-  };
-
-  return {
-    messageText: appendStatutorySourceFooter(parsed.messageText || '', scenarioState),
-    scenarioState
-  };
+  return postProcessAIResponse(parsed, currentScenario, userInput, context);
 }

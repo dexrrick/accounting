@@ -35,6 +35,10 @@ export interface StandardCitation {
   text: string;
   officialSourceUrl?: string;
   authority?: StatutoryAuthority;
+  verificationStatus?: string;
+  isAuthoritativePrimarySource?: boolean;
+  isStructurallyValid?: boolean;
+  verificationReason?: string;
 }
 
 export interface StatutoryAdvisoryInfo {
@@ -123,6 +127,7 @@ export interface AccountingScenarioState {
 
   // Explicit Assumptions (Needed because facts are missing)
   assumptions?: ExplicitAssumption[];
+  missingFacts?: string[];
 
   // Statutory Advisory & Tax Grounding
   queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
