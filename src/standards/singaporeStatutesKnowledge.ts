@@ -4,6 +4,8 @@ export interface SingaporeStatuteRule {
   id: string;
   authority: StatutoryAuthority;
   authorityName: string;
+  sourcePublisher?: string; // Publishing entity e.g. "Singapore Statutes Online / AGC"
+  legalOrStandardInstrument?: string; // Governing statutory instrument e.g. "Income Tax Act 1947"
   actTitle: string;
   actCode: string; // Short code for SSO, e.g. "ITA1947", "CA1967", "GSTA1993", "CPFA1953"
   sectionOrSchedule: string;
@@ -14,6 +16,11 @@ export interface SingaporeStatuteRule {
   practicalRules: string[];
   canonicalUrl: string;
   tags: string[];
+  sourceStatus?: 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
+  sourceType?: 'AUTHORITATIVE_SOURCE' | 'CURATED_SUMMARY' | 'APPLICATION_RULE';
+  isVerbatimText?: boolean;
+  effectiveDate?: string;
+  revisionDate?: string;
 }
 
 export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule> = {
@@ -23,7 +30,9 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
   ITA_SEC14_GENERAL_DEDUCTION: {
     id: 'ITA_SEC14_GENERAL_DEDUCTION',
     authority: 'IRAS',
-    authorityName: 'Inland Revenue Authority of Singapore & AGC',
+    authorityName: 'Inland Revenue Authority of Singapore',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Income Tax Act 1947',
     actTitle: 'Income Tax Act 1947',
     actCode: 'ITA1947',
     sectionOrSchedule: 'Section 14(1)',
@@ -37,7 +46,10 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Must not be prohibited under Section 15 of the Income Tax Act.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-',
-    tags: ['tax deduction', 'deductible expenses', 'section 14', 'business expenses', 'p&l deduction']
+    tags: ['tax deduction', 'deductible expenses', 'section 14', 'business expenses', 'p&l deduction'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    isVerbatimText: true
   },
 
   ITA_SEC15_PROHIBITED_DEDUCTIONS: {

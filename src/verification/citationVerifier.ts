@@ -16,6 +16,7 @@ export interface CitationVerificationResult {
   citation: StandardCitation;
   status: CitationVerificationStatus;
   isValid: boolean;
+  isStructurallyValid: boolean;
   isAuthoritativePrimarySource: boolean;
   matchedRecord?: AuthoritativeSourceRecord;
   reason: string;
@@ -67,6 +68,7 @@ export class CitationVerifier {
         citation,
         status: 'SOURCE_NOT_FOUND',
         isValid: false,
+        isStructurallyValid: false,
         isAuthoritativePrimarySource: false,
         reason: `Standard or statute '${rawStd}' is not found in the verified repository.`,
         structuralVerificationOnly: true
@@ -85,6 +87,7 @@ export class CitationVerifier {
         citation,
         status: 'PARAGRAPH_NOT_FOUND',
         isValid: false,
+        isStructurallyValid: false,
         isAuthoritativePrimarySource: false,
         reason: `Paragraph/Section '${rawPara}' does not exist in records for '${rawStd}'.`,
         structuralVerificationOnly: true
@@ -97,6 +100,7 @@ export class CitationVerifier {
         citation,
         status: 'AUTHORITY_MISMATCH',
         isValid: false,
+        isStructurallyValid: false,
         isAuthoritativePrimarySource: false,
         matchedRecord,
         reason: `Authority mismatch: citation claims '${citation.authority}' but record is governed by '${matchedRecord.authority}'.`,
@@ -109,6 +113,7 @@ export class CitationVerifier {
         citation,
         status: 'AUTHORITY_MISMATCH',
         isValid: false,
+        isStructurallyValid: false,
         isAuthoritativePrimarySource: false,
         matchedRecord,
         reason: `Authority mismatch: expected domain authority '${expectedAuthority}' but citation belongs to '${matchedRecord.authority}'.`,
@@ -131,6 +136,7 @@ export class CitationVerifier {
         citation,
         status: 'NON_CANONICAL_URL',
         isValid: false,
+        isStructurallyValid: false,
         isAuthoritativePrimarySource: false,
         matchedRecord,
         reason: `URL '${rawUrl}' is not an official Singapore government or standard-setter portal.`,
@@ -147,6 +153,7 @@ export class CitationVerifier {
           citation,
           status: 'NON_CANONICAL_URL',
           isValid: false,
+          isStructurallyValid: false,
           isAuthoritativePrimarySource: false,
           matchedRecord,
           reason: `Citation URL '${rawUrl}' does not match official record URL '${matchedRecord.officialSourceUrl}'.`,
@@ -158,17 +165,25 @@ export class CitationVerifier {
     // 5. Verification passes - Strictly distinguish Primary Statutory Source vs Curated Summary
     const isVerifiedPrimary =
       matchedRecord.sourceStatus === 'VERIFIED' &&
-      matchedRecord.sourceType === 'AUTHORITATIVE_SOURCE';
+      matchedRecord.sourceType === 'AUTHORITATIVE_SOURCE' &&
+      matchedRecord.isVerbatimText === true;
+
+    const isNeedsReview = matchedRecord.sourceStatus === 'NEEDS_REVIEW' || matchedRecord.sourceType === 'CURATED_SUMMARY';
+
+    const status: CitationVerificationStatus = isVerifiedPrimary
+      ? 'VERIFIED_PRIMARY_SOURCE'
+      : (isNeedsReview ? 'SOURCE_NEEDS_REVIEW' : 'STRUCTURALLY_VERIFIED_SUMMARY');
 
     return {
       citation,
-      status: isVerifiedPrimary ? 'VERIFIED_PRIMARY_SOURCE' : 'STRUCTURALLY_VERIFIED_SUMMARY',
+      status,
       isValid: true,
+      isStructurallyValid: true,
       isAuthoritativePrimarySource: isVerifiedPrimary,
       matchedRecord,
       reason: isVerifiedPrimary
         ? `Citation structurally verified against primary statutory provision in ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}).`
-        : `Citation structurally matches curated summary record for ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}), pending primary source licensing.`,
+        : `Citation is structurally valid against ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}), but underlying record is a curated summary marked SOURCE_NEEDS_REVIEW.`,
       structuralVerificationOnly: true
     };
   }

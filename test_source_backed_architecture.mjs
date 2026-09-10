@@ -96,7 +96,10 @@ async function runPhase1Tests() {
   assert.strictEqual(sfrsRec.sourceStatus, 'NEEDS_REVIEW', 'Curated summary must be marked NEEDS_REVIEW');
   assert.strictEqual(sfrsRec.sourceType, 'CURATED_SUMMARY', 'Curated standard in code is CURATED_SUMMARY');
   assert.strictEqual(sfrsRec.sourcePublisher, 'Accounting Standards Council (Singapore) / IFRS Foundation', 'Must specify sourcePublisher');
-  console.log(`✓ 2A. Retrieved SFRS curated summary: ${sfrsRec.documentTitle} [${sfrsRec.sourceStatus} / ${sfrsRec.sourceType}]`);
+  assert.strictEqual(sfrsRec.isVerbatimText, false, 'Curated summary must have isVerbatimText = false');
+  // PROOF 1: Unknown effective date doesn't become a fake date (no generic 2018-01-01 / 2024-01-01)
+  assert.strictEqual(sfrsRec.effectiveDate, undefined, 'Unknown effective date must remain undefined, never hardcoded fake date');
+  console.log(`✓ 2A. Retrieved SFRS curated summary: ${sfrsRec.documentTitle} [${sfrsRec.sourceStatus} / ${sfrsRec.sourceType}] (EffectiveDate: undefined - no fake date)`);
 
   // 2B. Known Singapore Primary Statutory Source
   const rTax = await defaultSourceRetriever.retrieveSources({
@@ -111,6 +114,7 @@ async function runPhase1Tests() {
   assert.strictEqual(taxRec.sourceStatus, 'VERIFIED', 'Primary verbatim statute with SSO AGC link is VERIFIED');
   assert.strictEqual(taxRec.sourceType, 'AUTHORITATIVE_SOURCE', 'Verbatim provision is AUTHORITATIVE_SOURCE');
   assert.strictEqual(taxRec.sourcePublisher, 'Singapore Statutes Online / AGC', 'SSO AGC publisher recorded');
+  assert.strictEqual(taxRec.isVerbatimText, true, 'Verbatim text is explicitly flagged true, not inferred');
   assert.ok(taxRec.officialSourceUrl.includes('sso.agc.gov.sg'), 'URL must be official SSO AGC link');
   console.log(`✓ 2B. Retrieved verified primary statutory source: ${taxRec.documentTitle} (${taxRec.paragraphOrSection})`);
 
@@ -119,12 +123,22 @@ async function runPhase1Tests() {
   assert.strictEqual(rUnknown.length, 0, 'Unknown standard must return 0 records');
   console.log('✓ 2C. Unknown source safely rejected without false matches');
 
+  // 2D. PROOF 2: Official URL alone cannot make text authoritative
+  const rAcra = defaultSourceRetriever.getSourceById('ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION');
+  assert.ok(rAcra, 'Must find ACRA Section 205C record');
+  assert.ok(rAcra.officialSourceUrl.startsWith('https://sso.agc.gov.sg'), 'URL is an official AGC SSO portal link');
+  assert.strictEqual(rAcra.isVerbatimText, false, 'Curated summary of Act has isVerbatimText = false');
+  assert.strictEqual(rAcra.sourceStatus, 'NEEDS_REVIEW', 'Must be marked NEEDS_REVIEW despite having official SSO URL');
+  assert.strictEqual(rAcra.sourceType, 'CURATED_SUMMARY', 'Must be CURATED_SUMMARY despite having official SSO URL');
+  console.log('✓ 2D. Proved: Official URL alone cannot make text authoritative (remains NEEDS_REVIEW + CURATED_SUMMARY)');
+
   // -------------------------------------------------------------
   // 3. CITATION VERIFICATION TESTS
   // -------------------------------------------------------------
   console.log('\n[3. CITATION VERIFICATION]');
 
-  // 3A. Curated Standard Summary (SFRS(I) 1-38 §57)
+  // 3A. PROOF 3 & 4: Curated SFRS summary can never become VERIFIED_PRIMARY_SOURCE
+  // AND a citation can be structurally valid but still SOURCE_NEEDS_REVIEW
   const summaryCitation = {
     standard: 'SFRS(I) 1-38',
     paragraph: '§57',
@@ -134,12 +148,12 @@ async function runPhase1Tests() {
     authority: 'ACRA'
   };
   const v1 = defaultCitationVerifier.verifyCitation(summaryCitation, 'ACRA');
-  assert.strictEqual(v1.isValid, true, 'Curated summary citation structurally matches');
-  assert.strictEqual(v1.status, 'STRUCTURALLY_VERIFIED_SUMMARY', 'Must be tagged STRUCTURALLY_VERIFIED_SUMMARY');
-  assert.strictEqual(v1.isAuthoritativePrimarySource, false, 'Curated summary must NOT be marked authoritative primary source');
+  assert.strictEqual(v1.isStructurallyValid, true, 'Citation must be structurally valid (standard, para, authority, URL exist)');
+  assert.strictEqual(v1.status, 'SOURCE_NEEDS_REVIEW', 'Structurally valid curated citation must return SOURCE_NEEDS_REVIEW');
+  assert.strictEqual(v1.isAuthoritativePrimarySource, false, 'Curated SFRS summary can never become VERIFIED_PRIMARY_SOURCE');
   assert.notStrictEqual(v1.status, 'VERIFIED_PRIMARY_SOURCE', 'Curated summary CANNOT masquerade as VERIFIED_PRIMARY_SOURCE');
   assert.strictEqual(v1.structuralVerificationOnly, true, 'Must state structural verification only');
-  console.log('✓ 3A. Curated summary structurally verified without masquerading as primary authority');
+  console.log('✓ 3A. Proved: Structurally valid citation correctly returned SOURCE_NEEDS_REVIEW (cannot become VERIFIED_PRIMARY_SOURCE)');
 
   // 3B. Primary Statutory Provision (ITA 1947 Section 14(1))
   const primaryCitation = {
@@ -152,6 +166,7 @@ async function runPhase1Tests() {
   };
   const vPrimary = defaultCitationVerifier.verifyCitation(primaryCitation, 'IRAS');
   assert.strictEqual(vPrimary.isValid, true, 'Primary citation must pass');
+  assert.strictEqual(vPrimary.isStructurallyValid, true, 'Primary citation is structurally valid');
   assert.strictEqual(vPrimary.status, 'VERIFIED_PRIMARY_SOURCE', 'Must be tagged VERIFIED_PRIMARY_SOURCE');
   assert.strictEqual(vPrimary.isAuthoritativePrimarySource, true, 'Must be marked authoritative primary source');
   console.log('✓ 3B. Verbatim statutory provision verified as VERIFIED_PRIMARY_SOURCE');
@@ -167,6 +182,7 @@ async function runPhase1Tests() {
   };
   const v2 = defaultCitationVerifier.verifyCitation(invalidParaCitation);
   assert.strictEqual(v2.isValid, false, 'Invalid paragraph must fail');
+  assert.strictEqual(v2.isStructurallyValid, false, 'Invalid paragraph cannot be structurally valid');
   assert.strictEqual(v2.status, 'PARAGRAPH_NOT_FOUND', 'Status must be PARAGRAPH_NOT_FOUND');
   console.log('✓ 3C. Fabricated paragraph correctly rejected (PARAGRAPH_NOT_FOUND)');
 
@@ -180,6 +196,7 @@ async function runPhase1Tests() {
   };
   const v3 = defaultCitationVerifier.verifyCitation(unknownSourceCitation);
   assert.strictEqual(v3.isValid, false, 'Unknown source must fail');
+  assert.strictEqual(v3.isStructurallyValid, false, 'Unknown source cannot be structurally valid');
   assert.strictEqual(v3.status, 'SOURCE_NOT_FOUND', 'Status must be SOURCE_NOT_FOUND');
   console.log('✓ 3D. Unknown source correctly rejected (SOURCE_NOT_FOUND)');
 
@@ -194,6 +211,7 @@ async function runPhase1Tests() {
   };
   const v4 = defaultCitationVerifier.verifyCitation(mismatchedAuthorityCitation);
   assert.strictEqual(v4.isValid, false, 'Authority mismatch must fail');
+  assert.strictEqual(v4.isStructurallyValid, false, 'Authority mismatch cannot be structurally valid');
   assert.strictEqual(v4.status, 'AUTHORITY_MISMATCH', 'Status must be AUTHORITY_MISMATCH');
   console.log('✓ 3E. Authority mismatch correctly rejected (AUTHORITY_MISMATCH)');
 
@@ -208,6 +226,7 @@ async function runPhase1Tests() {
   };
   const v5 = defaultCitationVerifier.verifyCitation(nonCanonicalUrlCitation);
   assert.strictEqual(v5.isValid, false, 'Non-canonical URL must fail');
+  assert.strictEqual(v5.isStructurallyValid, false, 'Non-canonical URL cannot be structurally valid');
   assert.strictEqual(v5.status, 'NON_CANONICAL_URL', 'Status must be NON_CANONICAL_URL');
   console.log('✓ 3F. Non-canonical domain URL correctly rejected (NON_CANONICAL_URL)');
 
@@ -222,8 +241,25 @@ async function runPhase1Tests() {
   };
   const v6 = defaultCitationVerifier.verifyCitation(mismatchedUrlCitation);
   assert.strictEqual(v6.isValid, false, 'Mismatched canonical URL path must fail');
+  assert.strictEqual(v6.isStructurallyValid, false, 'Mismatched URL cannot be structurally valid');
   assert.strictEqual(v6.status, 'NON_CANONICAL_URL', 'Status must be NON_CANONICAL_URL');
   console.log('✓ 3G. Mismatched canonical statute URL path correctly rejected');
+
+  // 3H. PROOF 4: Citation to curated statute with official SSO URL returns SOURCE_NEEDS_REVIEW
+  const acraCitation = {
+    standard: 'Companies Act 1967',
+    paragraph: 'Section 205C',
+    title: 'Small Company Audit Exemption Criteria',
+    text: 'Fulfills at least 2 of 3 criteria for past 2 FYs',
+    officialSourceUrl: 'https://sso.agc.gov.sg/Act/CA1967#pr205C-',
+    authority: 'ACRA'
+  };
+  const vAcra = defaultCitationVerifier.verifyCitation(acraCitation, 'ACRA');
+  assert.strictEqual(vAcra.isStructurallyValid, true, 'Citation with official SSO URL is structurally valid');
+  assert.strictEqual(vAcra.status, 'SOURCE_NEEDS_REVIEW', 'Curated summary statute must return SOURCE_NEEDS_REVIEW despite official SSO URL');
+  assert.strictEqual(vAcra.isAuthoritativePrimarySource, false, 'Curated summary is NOT an authoritative primary source');
+  assert.notStrictEqual(vAcra.status, 'VERIFIED_PRIMARY_SOURCE', 'Curated summary statute cannot be VERIFIED_PRIMARY_SOURCE');
+  console.log('✓ 3H. Proved: Official SSO URL alone on curated summary returns SOURCE_NEEDS_REVIEW (not VERIFIED_PRIMARY_SOURCE)');
 
   // -------------------------------------------------------------
   // 4. CAPITALISATION & ASSUMPTION TESTS

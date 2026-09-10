@@ -17,7 +17,7 @@ export interface AuthoritativeSourceRecord {
   paragraphOrSection: string;
   sourceText: string;
   principleSummary: string;
-  effectiveDate: string;
+  effectiveDate?: string; // Optional: unknown effective dates must remain undefined, NEVER generic fake dates
   revisionDate?: string;
   officialSourceUrl: string;
   domain: QueryDomain;
@@ -25,6 +25,7 @@ export interface AuthoritativeSourceRecord {
   tags: string[];
   sourceStatus: SourceStatus;
   sourceType: SourceType;
+  isVerbatimText: boolean; // Explicitly declared, NEVER inferred from length or URL
 }
 
 /**
@@ -56,36 +57,42 @@ export const UNIFIED_SOURCE_REGISTRY: Record<string, AuthoritativeSourceRecord> 
 
 // 1. Ingest Statutory Rules from Singapore Statutes
 for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
-  // Only genuine verbatim primary statutory provisions with official SSO AGC links are marked VERIFIED AUTHORITATIVE_SOURCE
-  const isSsoStatute = rule.canonicalUrl.startsWith('https://sso.agc.gov.sg');
-  const isVerbatimPrimaryProvision = isSsoStatute && rule.principle && rule.principle.length > 40 && rule.sectionOrSchedule.includes('Section');
-  
+  // CRITICAL PRINCIPLE:
+  // Never infer primary verbatim authority from URL or text length.
+  // Authority, publisher, and instrument are separated.
+  // Unknown effective dates are undefined, NOT populated with generic fake dates.
+  const isVerbatim = rule.isVerbatimText === true;
+  const status: SourceStatus = isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'VERIFIED' : 'NEEDS_REVIEW';
+  const type: SourceType = isVerbatim && rule.sourceType === 'AUTHORITATIVE_SOURCE' ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY';
+
   UNIFIED_SOURCE_REGISTRY[key] = {
     id: rule.id,
     authority: rule.authority,
     authorityName: rule.authorityName,
-    sourcePublisher: isSsoStatute ? 'Singapore Statutes Online / AGC' : rule.authorityName,
-    legalOrStandardInstrument: rule.actTitle,
+    sourcePublisher: rule.sourcePublisher || (rule.canonicalUrl.includes('sso.agc.gov.sg') ? 'Singapore Statutes Online / AGC' : rule.authorityName),
+    legalOrStandardInstrument: rule.legalOrStandardInstrument || rule.actTitle,
     documentTitle: rule.actTitle,
     standardOrActCode: rule.actCode,
     paragraphOrSection: rule.sectionOrSchedule,
     sourceText: rule.principle,
     principleSummary: rule.ruleTitle,
-    effectiveDate: '2024-01-01', // Standard Singapore statutory baseline
-    revisionDate: rule.actCode === 'CPFA1953' ? '2026-01-01' : undefined,
+    effectiveDate: rule.effectiveDate, // Optional: undefined if unknown, NEVER hard-coded to fake dates!
+    revisionDate: rule.revisionDate,
     officialSourceUrl: rule.canonicalUrl,
     domain: mapStatuteCategoryToDomain(rule.category),
     jurisdiction: 'Singapore',
     tags: rule.tags || [],
-    sourceStatus: isVerbatimPrimaryProvision ? 'VERIFIED' : 'NEEDS_REVIEW',
-    sourceType: isVerbatimPrimaryProvision ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY'
+    sourceStatus: status,
+    sourceType: type,
+    isVerbatimText: isVerbatim
   };
 }
 
 // 2. Ingest Financial Reporting Standards from ACRA / ASC repository
 for (const [key, std] of Object.entries(STANDARDS_REPOSITORY)) {
   // All standards repository entries in code are curated summaries until verbatim ASC text is ingested.
-  // They are strictly tagged as NEEDS_REVIEW + CURATED_SUMMARY to prevent false verification claims.
+  // They are strictly tagged as NEEDS_REVIEW + CURATED_SUMMARY.
+  // Effective date is undefined if not explicitly pinned, NEVER generic fake dates.
   UNIFIED_SOURCE_REGISTRY[key] = {
     id: key,
     authority: 'ACRA',
@@ -97,13 +104,14 @@ for (const [key, std] of Object.entries(STANDARDS_REPOSITORY)) {
     paragraphOrSection: std.paragraph,
     sourceText: std.principle,
     principleSummary: std.standardTitle,
-    effectiveDate: '2018-01-01', // SFRS(I) mandatory adoption date in Singapore
+    effectiveDate: undefined, // Unknown/unpinned provision effective date must remain undefined!
     officialSourceUrl: 'https://www.acra.gov.sg/accountancy/accounting-standards',
     domain: 'ACCOUNTING_SFRS',
     jurisdiction: 'Singapore',
     tags: [std.standardTitle.toLowerCase(), std.paragraph.toLowerCase(), 'accounting standard', 'sfrs(i)'],
     sourceStatus: 'NEEDS_REVIEW',
-    sourceType: 'CURATED_SUMMARY'
+    sourceType: 'CURATED_SUMMARY',
+    isVerbatimText: false
   };
 }
 

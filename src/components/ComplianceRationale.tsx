@@ -326,10 +326,10 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                               </span>
                             );
                           }
-                          if (verification.status === 'STRUCTURALLY_VERIFIED_SUMMARY') {
+                          if (verification.status === 'SOURCE_NEEDS_REVIEW' || verification.status === 'STRUCTURALLY_VERIFIED_SUMMARY') {
                             return (
                               <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
-                                📝 Curated Summary
+                                📝 Curated Summary (Needs Review)
                               </span>
                             );
                           }
