@@ -1,7 +1,7 @@
-import React from 'react';
-import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain } from '../types/accounting';
+import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption } from '../types/accounting';
 import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText, Calendar, AlertTriangle, Building, Landmark } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
+import { defaultCitationVerifier } from '../verification/citationVerifier';
 
 interface ComplianceRationaleProps {
   citations: StandardCitation[];
@@ -9,6 +9,7 @@ interface ComplianceRationaleProps {
   standard: AccountingStandard;
   classification?: 'FVTPL' | 'FVTOCI';
   primaryDomain?: QueryDomain;
+  assumptions?: ExplicitAssumption[];
   accountingTreatmentSummary?: string;
   singaporeTaxTreatmentSummary?: string;
   regulatoryMandatesSummary?: string;
@@ -22,6 +23,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   standard,
   classification = 'FVTPL',
   primaryDomain,
+  assumptions = [],
   accountingTreatmentSummary,
   singaporeTaxTreatmentSummary,
   regulatoryMandatesSummary,
@@ -82,6 +84,47 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
             <p className="text-xs text-blue-900 dark:text-blue-200 mt-0.5 leading-relaxed font-medium">
               {effectiveDateOrTiming}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Explicit Accounting Assumptions Notice */}
+      {assumptions && assumptions.length > 0 && (
+        <div className="mx-5 p-3.5 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+              Explicit Accounting Assumptions (Missing Facts Identified)
+            </span>
+          </div>
+          <p className="text-[11px] text-amber-800 dark:text-amber-200/90 leading-relaxed">
+            The following parameters were assumed because specific transaction facts were omitted. Accounting conclusions depend on verifying these assumptions:
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+            {assumptions.map((a) => (
+              <div
+                key={a.id}
+                className="p-2.5 rounded-lg bg-white/80 dark:bg-[#1C2538] border border-amber-200/70 dark:border-amber-900/40 text-[11px] space-y-1"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-slate-900 dark:text-white capitalize">{a.field}</span>
+                  <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium border ${
+                    a.materiality === 'HIGH'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
+                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300'
+                  }`}>
+                    {a.materiality} Materiality
+                  </span>
+                </div>
+                <div className="text-slate-700 dark:text-slate-300">
+                  <span className="text-slate-500 dark:text-slate-400">Assumed Value: </span>
+                  <strong className="font-mono">{String(a.assumedValue)}</strong>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight">
+                  {a.basisOrRationale}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -267,13 +310,25 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     className="p-3.5 bg-slate-50/70 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-xs"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-[9px] px-2 py-0.5 rounded-md border font-medium ${badge.badgeClass}`}>
                           {badge.label}
                         </span>
                         <span className="font-semibold text-slate-900 dark:text-slate-200 font-mono text-xs">
                           {cite.standard} {cite.paragraph}
                         </span>
+                        {(() => {
+                          const verification = defaultCitationVerifier.verifyCitation(cite);
+                          return (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium border ${
+                              verification.isValid
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                                : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800'
+                            }`}>
+                              {verification.isValid ? '✓ Verified Source' : '⚠️ Unverified'}
+                            </span>
+                          );
+                        })()}
                       </div>
                       {(() => {
                         const safeCiteUrl = cite.officialSourceUrl
@@ -304,6 +359,9 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                 );
               })}
             </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-1.5">
+              * Structural verification confirms the cited standard, section/paragraph, governing authority, and official source URL exist in verified repositories. It does not constitute legal or audit sign-off.
+            </p>
           </div>
         )}
 

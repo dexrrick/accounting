@@ -261,6 +261,7 @@ export const App: React.FC = () => {
                     standard={standard}
                     classification={scenario.classification}
                     primaryDomain={scenario.primaryDomain}
+                    assumptions={scenario.assumptions}
                     accountingTreatmentSummary={scenario.accountingTreatmentSummary}
                     singaporeTaxTreatmentSummary={scenario.singaporeTaxTreatmentSummary}
                     regulatoryMandatesSummary={scenario.regulatoryMandatesSummary}

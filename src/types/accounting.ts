@@ -101,6 +101,15 @@ export interface TransactionFact {
   highlight?: boolean;
 }
 
+export interface ExplicitAssumption {
+  id: string;
+  field: string;
+  assumedValue: string | number;
+  basisOrRationale: string;
+  materiality: 'HIGH' | 'MEDIUM' | 'LOW';
+  userClarificationPrompt?: string;
+}
+
 export interface AccountingScenarioState {
   scenarioType: string;
   rawQuery: string;
@@ -111,6 +120,9 @@ export interface AccountingScenarioState {
   // Universal Dynamic Facts & Direct Journal Groups
   keyParameters?: TransactionFact[];
   directGroups?: JournalEntryGroup[];
+
+  // Explicit Assumptions (Needed because facts are missing)
+  assumptions?: ExplicitAssumption[];
 
   // Statutory Advisory & Tax Grounding
   queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';

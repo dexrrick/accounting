@@ -1,4 +1,4 @@
-import type { AccountingScenarioState, JournalEntryGroup, JournalLine, QueryDomain } from '../types/accounting';
+import type { AccountingScenarioState, JournalEntryGroup, JournalLine, QueryDomain, ExplicitAssumption, MissingFieldInfo } from '../types/accounting';
 import { getExchangeRate } from '../services/frankfurterService';
 import { getCitation } from '../standards/standardsKnowledge';
 import { 
@@ -8,6 +8,7 @@ import {
   SINGAPORE_STATUTORY_REPOSITORY 
 } from '../standards/singaporeStatutesKnowledge';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { classifyQuestion } from '../classification/questionClassifier';
 
 export async function parseAccountingQuery(
   query: string,
@@ -37,7 +38,7 @@ export async function parseAccountingQuery(
     (q.includes('expenditure') || q.includes('expense') || q.includes('cost') || q.includes('software') || q.includes('development') || q.includes('r&d') || q.includes('asset') || q.includes('should') || q.includes('can') || q.includes('how') || q.includes('treatment') || q.includes('criteria'));
 
   if (isCapitalisationQuestion) {
-    let costAmount = 50000;
+    let costAmount: number | undefined = undefined;
     const costMatch = query.match(/(?:for|cost|price|amount|of|at)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i);
     if (costMatch && costMatch[1]) {
       let rawVal = parseFloat(costMatch[1].replace(/,/g, ''));
@@ -45,6 +46,54 @@ export async function parseAccountingQuery(
       if (unit === 'k' || unit === 'thousand') rawVal *= 1000;
       if (unit === 'm') rawVal *= 1000000;
       if (rawVal > 0) costAmount = rawVal;
+    }
+
+    const hasExplicitAmount = costAmount !== undefined;
+    const effectiveAmount = costAmount ?? 50000;
+
+    // Track explicit assumptions so assumptions are NEVER silently converted into facts
+    const assumptions: ExplicitAssumption[] = [];
+    const missingFields: MissingFieldInfo[] = [];
+
+    if (!hasExplicitAmount) {
+      assumptions.push({
+        id: 'assump-cap-amount',
+        field: 'amount',
+        assumedValue: `SGD ${effectiveAmount.toLocaleString()}`,
+        basisOrRationale: 'No expenditure outlay stated by user; $50,000 assumed solely for illustrative journal entry calculations.',
+        materiality: 'MEDIUM',
+        userClarificationPrompt: 'Please provide the exact development expenditure outlay.'
+      });
+      missingFields.push({
+        fieldKey: 'amount',
+        fieldName: 'Qualifying Expenditure Outlay',
+        prompt: 'What is the total expenditure outlay incurred on the project?',
+        whyNeeded: 'Directly measurable expenditure is required before any amount can be capitalized under SFRS(I) 1-38 §57(f).'
+      });
+    }
+
+    const userEstablishedCriteria = q.includes('met all criteria') || q.includes('criteria met') || q.includes('established feasibility');
+    if (!userEstablishedCriteria) {
+      assumptions.push({
+        id: 'assump-cap-criteria',
+        field: 'recognitionCriteriaEstablished',
+        assumedValue: 'Conditional on management formally documenting all 6 criteria under SFRS(I) 1-38 §57',
+        basisOrRationale: 'Under SFRS(I) 1-38 §54 & §57, capitalisation is strictly prohibited until all 6 recognition criteria are proven. Research costs must be expensed immediately.',
+        materiality: 'HIGH',
+        userClarificationPrompt: 'Are all 6 cumulative criteria under SFRS(I) 1-38 §57 established and supported by technical and commercial documentation?'
+      });
+      missingFields.push({
+        fieldKey: 'stage',
+        fieldName: 'Project Stage Distinction',
+        prompt: 'Is this expenditure incurred in the research phase or development phase?',
+        whyNeeded: 'Research phase expenditure must be recognized as an expense in P&L when incurred (§54). Only development phase expenditure can be capitalised (§57).'
+      });
+      missingFields.push({
+        fieldKey: 'sixCriteria',
+        fieldName: 'SFRS(I) 1-38 §57 Criteria Satisfaction',
+        prompt: 'Have all 6 criteria (technical feasibility, completion intent, ability to use/sell, future economic benefits, available resources, reliable measurement) been established?',
+        whyNeeded: 'Capitalisation cannot begin until the exact date all 6 criteria are met. Past expensed costs cannot be retrospectively capitalized.'
+      });
     }
 
     const citations = [
@@ -64,9 +113,9 @@ export async function parseAccountingQuery(
         accountCode: '1800',
         accountName: 'Intangible Assets - Capitalised Development Costs',
         category: 'ASSET',
-        debit: costAmount,
+        debit: effectiveAmount,
         credit: 0,
-        lineExplanation: 'Capitalisation of qualifying development expenditure under SFRS(I) 1-38 §57 upon fulfilling all 6 cumulative recognition criteria.'
+        lineExplanation: 'Capitalisation of qualifying development expenditure under SFRS(I) 1-38 §57 (strictly conditional on meeting all 6 cumulative criteria).'
       },
       {
         id: 'l-cap-bank',
@@ -74,55 +123,68 @@ export async function parseAccountingQuery(
         accountName: 'Cash at Bank / Trade Payables',
         category: 'ASSET',
         debit: 0,
-        credit: costAmount,
-        lineExplanation: 'Settlement of directly attributable software engineering, testing, and payroll expenditure.'
+        credit: effectiveAmount,
+        lineExplanation: 'Settlement of directly attributable software engineering, testing, and contractor expenditure.'
       }
     ];
 
     const keyParams = [
-      { label: 'Governing Authority', value: 'ASC Singapore (SFRS(I)) & IRAS', badge: 'Dual Authority' },
+      { label: 'Governing Authorities', value: 'ACRA / ASC Singapore (SFRS(I)) & IRAS', badge: 'Dual Authority' },
       { label: 'Accounting Standard', value: 'SFRS(I) 1-38 §54 & §57', badge: 'SFRS(I)', highlight: true },
       { label: 'Research Phase Outlay', value: 'Strictly Expensed in P&L (§54)', badge: 'P&L Expense' },
       { label: 'Development Phase Outlay', value: 'Capitalise upon 6 Criteria (§57)', badge: 'Intangible Asset', highlight: true },
+      {
+        label: 'Recognition Status',
+        value: userEstablishedCriteria ? 'Established' : 'Conditional (Assessment Required)',
+        badge: userEstablishedCriteria ? 'Criteria Met' : 'Assumed Parameter',
+        highlight: !userEstablishedCriteria
+      },
+      {
+        label: 'Expenditure Amount',
+        value: hasExplicitAmount ? `${functionalCurrency} ${effectiveAmount.toLocaleString()}` : `${functionalCurrency} ${effectiveAmount.toLocaleString()} (Illustrative)`,
+        badge: hasExplicitAmount ? 'Stated Fact' : 'Assumed Parameter'
+      },
       { label: 'Singapore Tax Treatment', value: 'Disallowed as P&L deduction (§15); 400% EIS Deduction (§14C)', badge: 'IRAS S14C/EIS', highlight: true },
       { label: 'Tangible Asset Treatment', value: 'Capitalise if future benefits probable (SFRS(I) 1-16 §7)', badge: 'PP&E Cost' }
     ];
 
     return {
       scenarioType: 'CAPITALISATION_SFRS138',
-      queryIntent: 'STATUTORY_ADVISORY',
+      queryIntent: hasExplicitAmount && userEstablishedCriteria ? 'HYBRID' : 'STATUTORY_ADVISORY',
       primaryDomain: 'ACCOUNTING_SFRS',
       rawQuery: query,
-      transactionTitle: 'Capitalisation of Expenditure: SFRS(I) vs Singapore Tax Treatment',
+      transactionTitle: 'Capitalisation Assessment: SFRS(I) 1-38 Recognition vs Singapore Tax Treatment',
       functionalCurrency,
       transactionCurrency: functionalCurrency,
-      accountingTreatmentSummary: 'Under SFRS(I) 1-38 §54, all research expenditure must be recognized as an expense in P&L when incurred. Development expenditure can be capitalised as an Intangible Asset ONLY IF an entity demonstrates all 6 cumulative criteria under §57: (1) Technical feasibility, (2) Intention to complete, (3) Ability to use or sell, (4) Probable future economic benefits, (5) Technical and financial resources, and (6) Reliable measurement of expenditure. For tangible assets, SFRS(I) 1-16 §7 requires probable future economic benefits and reliable cost measurement; routine repairs are expensed.',
-      singaporeTaxTreatmentSummary: 'Accounting treatment does not dictate tax treatment. Under Section 14(1) of the Income Tax Act 1947, only revenue expenses wholly and exclusively incurred in the production of income are deductible. Capitalised expenditure is disallowed as a direct P&L deduction under Section 15(1). However, qualifying staff costs for R&D/software development enjoy an enhanced 400% tax deduction under Section 14C / Enterprise Innovation Scheme (EIS) up to $400k cap. Tangible assets claim Section 19A Capital Allowances (1-year or 3-year write-off).',
+      accountingTreatmentSummary: 'Under SFRS(I) 1-38 §54, all research phase expenditure must be recognized as an expense in P&L when incurred. Capitalisation is permitted ONLY for development phase expenditure when the entity demonstrates all 6 cumulative criteria under §57: (1) Technical feasibility, (2) Intention to complete, (3) Ability to use or sell, (4) Probable future economic benefits, (5) Technical and financial resources, and (6) Reliable measurement of expenditure. Capitalisation begins only on the date all 6 criteria are established; prior costs expensed cannot be retrospectively reinstated. Routine repairs and maintenance of tangible assets must be expensed under SFRS(I) 1-16 §7.',
+      singaporeTaxTreatmentSummary: 'Accounting treatment does not dictate tax treatment. Under Section 14(1) of the Income Tax Act 1947, capitalised expenditure is disallowed as a direct P&L deduction under Section 15(1) and must be added back in Form C-S. However, qualifying staff costs for R&D and software development qualify for the enhanced 400% tax deduction under Section 14C (Enterprise Innovation Scheme) up to the statutory cap of SGD 400,000 per YA.',
       regulatoryMandatesSummary: 'Section 201 of the Companies Act 1967 legally mandates that financial statements laid before AGM must comply with Accounting Standards Council standards.',
       effectiveDateOrTiming: 'SFRS(I) 1-38 active; Enterprise Innovation Scheme (EIS) 400% tax deduction active for YAs 2024–2028.',
-      uncertaintyDisclaimer: 'Entity must maintain contemporaneous records (timesheets, technical milestones, commercial feasibility studies) to support capitalisation for statutory audits and IRAS EIS claims.',
+      uncertaintyDisclaimer: 'Professional Caution: Management must maintain contemporaneous evidence (timesheets, technical milestones, commercial feasibility models) to substantiate capitalisation for statutory audits and IRAS EIS claims. Do not capitalised expenditure without audit-ready documentation.',
       statutoryAdvisory: advisories,
       keyParameters: keyParams,
+      assumptions,
       directGroups: [
         {
           id: 'grp-capitalisation-illustrative',
           eventDate: formatSingaporeDate(new Date()),
-          title: 'Illustrative Compound Journal Entry: Capitalisation of Development Costs',
-          summary: `Capitalisation of qualifying development costs of ${functionalCurrency} ${costAmount.toLocaleString()} upon meeting all 6 criteria under SFRS(I) 1-38 §57`,
+          title: 'Conditional Illustrative Entry: Capitalisation of Qualifying Development Costs',
+          summary: `Provisional entry for ${functionalCurrency} ${effectiveAmount.toLocaleString()}. Valid ONLY if management documents all 6 cumulative recognition criteria under SFRS(I) 1-38 §57. If criteria are not met, the required accounting entry is Dr. R&D Expense (P&L) | Cr. Bank.`,
           lines,
-          totalDebit: costAmount,
-          totalCredit: costAmount,
+          totalDebit: effectiveAmount,
+          totalCredit: effectiveAmount,
           isBalanced: true,
           citations,
           rationalePoints: [
             'Under SFRS(I) 1-38 §54: All research phase costs must be expensed in P&L as incurred.',
-            'Under SFRS(I) 1-38 §57: Development expenditure is capitalised only when all 6 cumulative criteria are demonstrated.',
-            'Under IRAS: Capitalised development costs are not deductible under Section 14(1). Qualifying R&D activities claim the 400% EIS enhanced deduction separately in tax computation.'
+            'Under SFRS(I) 1-38 §57: Development expenditure can be capitalised only when all 6 cumulative criteria are demonstrated.',
+            'Provisional Entry Warning: If technical feasibility or commercial intent cannot be documented, expenditure must be charged to P&L.',
+            'Under IRAS: Capitalised development costs are non-deductible under Section 14(1). Qualifying R&D activities claim the 400% EIS enhanced deduction separately in tax computation.'
           ]
         }
       ],
-      isComplete: true,
-      missingFields: []
+      isComplete: hasExplicitAmount && userEstablishedCriteria,
+      missingFields
     };
   }
 
@@ -1054,8 +1116,22 @@ export async function parseAccountingQuery(
 
     let discountRateAnnual = 5.0;
     const rateMatch = query.match(/(?:discount\s*rate|ibr|interest|rate)\s*(?:of|is|at)?\s*(\d+(?:\.\d+)?)\s*%/i);
+    let rateAssumed = true;
     if (rateMatch && rateMatch[1]) {
       discountRateAnnual = parseFloat(rateMatch[1]);
+      rateAssumed = false;
+    }
+
+    const leaseAssumptions: ExplicitAssumption[] = [];
+    if (rateAssumed) {
+      leaseAssumptions.push({
+        id: 'assump-lease-ibr',
+        field: 'leaseDiscountRateAnnual',
+        assumedValue: '5.0% p.a.',
+        basisOrRationale: 'User omitted incremental borrowing rate (IBR). 5.0% assumed as standard commercial SME baseline under SFRS(I) 16 §26.',
+        materiality: 'HIGH',
+        userClarificationPrompt: 'Please specify the lessee incremental borrowing rate (IBR) or rate implicit in the lease.'
+      });
     }
 
     return {
@@ -1080,6 +1156,17 @@ export async function parseAccountingQuery(
       leasePaymentMonthly: monthlyRent,
       leaseDiscountRateAnnual: discountRateAnnual,
       leaseCommencementDate: '2026-01-01',
+      keyParameters: [
+        { label: 'Monthly Rent', value: `${functionalCurrency} ${monthlyRent.toLocaleString()}`, badge: 'Stated Fact' },
+        { label: 'Lease Term', value: `${termYears} Years (${termMonths} Months)`, badge: 'Stated Fact' },
+        {
+          label: 'Discount Rate (IBR)',
+          value: `${discountRateAnnual}% p.a.`,
+          badge: rateAssumed ? 'Assumed Parameter' : 'Stated Fact',
+          highlight: rateAssumed
+        }
+      ],
+      assumptions: leaseAssumptions,
       isComplete: true,
       missingFields: []
     };
@@ -1107,10 +1194,23 @@ export async function parseAccountingQuery(
         rawQuery: query
       };
     }
+    const classification = classifyQuestion(query);
+    const domainMap: Record<string, QueryDomain> = {
+      ACCOUNTING: 'ACCOUNTING_SFRS',
+      TAX: 'IRAS_TAX',
+      GST: 'IRAS_GST',
+      CORPORATE_REGULATORY: 'ACRA_CORP',
+      EMPLOYMENT: 'MOM_EMPLOYMENT',
+      PAYROLL: 'CPF_BOARD',
+      MIXED: 'MULTI_AUTHORITY',
+      GENERAL: 'GENERAL'
+    };
+    const resolvedDomain: QueryDomain = domainMap[classification.primaryDomain] || 'GENERAL';
+
     return {
       scenarioType: 'UNRECOGNIZED',
-      queryIntent: 'STATUTORY_ADVISORY',
-      primaryDomain: 'GENERAL',
+      queryIntent: classification.intent,
+      primaryDomain: resolvedDomain,
       rawQuery: query,
       transactionTitle: 'Unrecognized Query (Offline Mode)',
       functionalCurrency,
@@ -1120,6 +1220,7 @@ export async function parseAccountingQuery(
       directGroups: [],
       keyParameters: [
         { label: 'Evaluation Mode', value: 'Offline Rule Parser', badge: 'Offline' },
+        { label: 'Detected Domain', value: resolvedDomain, badge: 'Classification' },
         { label: 'AI Status', value: 'Connect Gemini/Azure API Key in Settings', badge: 'Setup' }
       ],
       isComplete: false,
