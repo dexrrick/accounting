@@ -14,9 +14,29 @@
  */
 
 import type { ProviderSettings } from '../types/provider';
-import type { ConversationAccountingContext, FollowUpEventAnalysis, TargetResolutionCriteria } from '../types/conversationState';
+import type {
+  ConversationAccountingContext,
+  FollowUpEventAnalysis,
+  TargetResolutionCriteria,
+  OwnershipContext,
+  CounterpartyRole,
+  TransactionNatureType,
+  InstrumentType
+} from '../types/conversationState';
 import { executeStructuredLlmCall } from './aiTransport';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
+
+export type SemanticExtractionTier = 'AI_REASONING' | 'DETERMINISTIC_HEURISTIC_FALLBACK';
+
+export interface SemanticProvenance {
+  tier: SemanticExtractionTier;
+  isFallback: boolean;
+  engine: string;
+  appliedRules?: string[];
+  confidenceCapped: boolean;
+  notice?: string;
+  timestamp?: string;
+}
 
 export interface SemanticCurrency {
   value: string | null;
@@ -27,32 +47,19 @@ export interface SemanticCurrency {
 
 export interface TransactionUnderstanding {
   extractionSource?: 'ai' | 'deterministic_fallback';
+  provenance: SemanticProvenance;
   reportingEntity: {
     type: 'company' | 'individual' | 'other' | 'unknown';
     description?: string;
   };
   counterparty?: {
-    role:
-      | 'shareholder'
-      | 'customer'
-      | 'supplier'
-      | 'employee'
-      | 'lender'
-      | 'director'
-      | 'government'
-      | 'investor'
-      | 'other'
-      | 'unknown';
+    role: CounterpartyRole;
     description?: string;
   };
-  transactionType?: string;
+  transactionType?: TransactionNatureType | string;
   subject?: string;
-  instrument?: string;
-  ownershipContext?:
-    | 'own_equity'
-    | 'external_investment'
-    | 'not_applicable'
-    | 'unknown';
+  instrument?: InstrumentType | string;
+  ownershipContext?: OwnershipContext;
   paymentStatus?:
     | 'paid'
     | 'unpaid'
@@ -95,6 +102,15 @@ export function validateAndNormalizeUnderstanding(
       errors: ['Raw understanding payload must be a non-null object'],
       normalizedUnderstanding: {
         extractionSource: source,
+        provenance: {
+          tier: source === 'ai' ? 'AI_REASONING' : 'DETERMINISTIC_HEURISTIC_FALLBACK',
+          isFallback: source !== 'ai',
+          engine: 'error_handler',
+          appliedRules: ['empty_payload_fallback'],
+          confidenceCapped: true,
+          notice: 'Empty or invalid understanding payload fallback',
+          timestamp: new Date().toISOString()
+        },
         reportingEntity: { type: 'unknown' },
         currency: { value: null, source: 'unknown', confidence: 0 },
         factsMissing: ['Invalid or empty understanding payload'],
@@ -199,12 +215,35 @@ export function validateAndNormalizeUnderstanding(
     factsMissing.push('Transaction currency is unspecified');
   }
 
-  const confidence = typeof raw?.confidence === 'number'
+  let confidence = typeof raw?.confidence === 'number'
     ? Math.min(1, Math.max(0, raw.confidence))
     : (errors.length === 0 ? 0.85 : 0.4);
 
+  const isFallback = source === 'deterministic_fallback';
+  if (isFallback) {
+    confidence = Math.min(0.65, confidence);
+  }
+
+  const provenance: SemanticProvenance = raw?.provenance ? {
+    ...raw.provenance,
+    tier: raw.provenance.tier || (isFallback ? 'DETERMINISTIC_HEURISTIC_FALLBACK' : 'AI_REASONING'),
+    isFallback,
+    confidenceCapped: isFallback
+  } : {
+    tier: isFallback ? 'DETERMINISTIC_HEURISTIC_FALLBACK' : 'AI_REASONING',
+    isFallback,
+    engine: isFallback ? 'heuristic_pattern_matcher' : 'llm_structured',
+    appliedRules: isFallback ? (raw?.appliedRules || ['heuristic_lexical_fallback']) : undefined,
+    confidenceCapped: isFallback,
+    notice: isFallback
+      ? 'Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning'
+      : undefined,
+    timestamp: new Date().toISOString()
+  };
+
   const normalized: TransactionUnderstanding = {
     extractionSource: source,
+    provenance,
     reportingEntity: {
       type: (raw?.reportingEntity?.type || 'unknown'),
       description: raw?.reportingEntity?.description || undefined
@@ -416,12 +455,35 @@ export class DeterministicSemanticExtractor {
       }
     }
 
-    let confidence = 0.90;
-    if (ownershipContext === 'unknown') confidence -= 0.20;
+    // In heuristic fallback, track applied rules and cap confidence at <= 0.65
+    const appliedRules: string[] = [];
+    if (reportingEntity.type !== 'unknown') appliedRules.push(`reporting_entity:${reportingEntity.type}`);
+    if (counterparty && counterparty.role !== 'unknown') appliedRules.push(`counterparty_role:${counterparty.role}`);
+    if (ownershipContext !== 'unknown') appliedRules.push(`ownership_context:${ownershipContext}`);
+    if (transactionType && transactionType !== 'unclassified_transaction') appliedRules.push(`transaction_type:${transactionType}`);
+    if (paymentStatus !== 'unknown') appliedRules.push(`payment_status:${paymentStatus}`);
+    if (currency.source !== 'unknown') appliedRules.push(`currency:${currency.source}`);
+    if (followUpAnalysis?.isFollowUp) appliedRules.push(`follow_up:${followUpAnalysis.eventType}`);
+
+    let confidence = 0.65;
+    if (ownershipContext === 'unknown') confidence -= 0.15;
     if (currency.source === 'unknown') confidence -= 0.10;
     if (amount === undefined) confidence -= 0.10;
+    confidence = Math.min(0.65, Math.max(0.20, Math.round(confidence * 100) / 100));
+
+    const provenance: SemanticProvenance = {
+      tier: 'DETERMINISTIC_HEURISTIC_FALLBACK',
+      isFallback: true,
+      engine: 'heuristic_pattern_matcher',
+      appliedRules,
+      confidenceCapped: true,
+      notice: 'Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning',
+      timestamp: new Date().toISOString()
+    };
 
     const rawUnderstanding: TransactionUnderstanding = {
+      extractionSource: 'deterministic_fallback',
+      provenance,
       reportingEntity,
       counterparty,
       transactionType,
@@ -435,7 +497,7 @@ export class DeterministicSemanticExtractor {
       jurisdiction,
       factsMissing,
       assumptions,
-      confidence: Math.round(confidence * 100) / 100,
+      confidence,
       followUpAnalysis
     };
 
@@ -619,7 +681,7 @@ export class DeterministicSemanticExtractor {
     _reportingEntity: { type: string },
     _counterparty?: { role: string }
   ): {
-    ownershipContext: 'own_equity' | 'external_investment' | 'not_applicable' | 'unknown';
+    ownershipContext: OwnershipContext;
     subject?: string;
     instrument?: string;
     transactionType?: string;
@@ -652,33 +714,7 @@ export class DeterministicSemanticExtractor {
       };
     }
 
-    // 3. Own Equity Issuance / Subscription
-    const isOwnEquity =
-      q.includes('own company share capital') ||
-      q.includes('own company') ||
-      q.includes('our company') ||
-      q.includes('share capital was issued') ||
-      q.includes('issued one dollar of ordinary shares') ||
-      q.includes('issued shares to the founder') ||
-      q.includes('shares issued to founder') ||
-      q.includes('founder took up shares') ||
-      q.includes('subscription money is outstanding') ||
-      q.includes('amount subscribed for') ||
-      q.includes('subscribed for $1 of shares') ||
-      q.includes('subscribed for shares in our company') ||
-      (q.includes('shareholder') && q.includes('invested') && q.includes('share capital')) ||
-      (q.includes('share capital') && q.includes('unpaid'));
-
-    if (isOwnEquity) {
-      return {
-        ownershipContext: 'own_equity',
-        subject: 'ordinary share capital of reporting entity',
-        instrument: 'own_equity',
-        transactionType: 'equity_issuance_subscription'
-      };
-    }
-
-    // 4. External Investment
+    // 3. External Investment (evaluated before general equity to properly isolate named external assets)
     const isExternalInvestment =
       q.includes('apple') ||
       q.includes('aapl') ||
@@ -695,6 +731,33 @@ export class DeterministicSemanticExtractor {
         subject: 'quoted equity securities in external entity',
         instrument: 'financial_asset_equity',
         transactionType: 'equity_investment_acquisition'
+      };
+    }
+
+    // 4. Own Equity Issuance / Subscription
+    const isOwnEquity =
+      !isExternalInvestment && (
+        q.includes('own company share capital') ||
+        q.includes('own company') ||
+        q.includes('our company') ||
+        q.includes('share capital was issued') ||
+        q.includes('issued one dollar of ordinary shares') ||
+        q.includes('issued shares to the founder') ||
+        q.includes('shares issued to founder') ||
+        q.includes('founder took up shares') ||
+        q.includes('subscription money is outstanding') ||
+        q.includes('amount subscribed for') ||
+        (q.includes('shareholder') && (q.includes('contributed') || q.includes('invested') || q.includes('shares'))) ||
+        q.includes('company shares') ||
+        (q.includes('share capital') && q.includes('unpaid'))
+      );
+
+    if (isOwnEquity) {
+      return {
+        ownershipContext: 'own_equity',
+        subject: 'ordinary share capital of reporting entity',
+        instrument: 'own_equity',
+        transactionType: 'equity_issuance_subscription'
       };
     }
 
@@ -907,7 +970,17 @@ export class AISemanticExtractor {
       { jsonMode: true, temperature: 0.1 }
     );
 
-    return repairAndParseAIJson(rawJsonText);
+    const parsed = repairAndParseAIJson(rawJsonText);
+    if (parsed && typeof parsed === 'object') {
+      parsed.provenance = {
+        tier: 'AI_REASONING',
+        isFallback: false,
+        engine: typeof providerOrApiKey === 'object' ? (providerOrApiKey.activeProvider || 'llm_structured') : 'llm_structured',
+        confidenceCapped: false,
+        timestamp: new Date().toISOString()
+      };
+    }
+    return parsed;
   }
 }
 

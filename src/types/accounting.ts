@@ -1,5 +1,12 @@
 export type AccountingStandard = 'SFRS_I' | 'IFRS';
 
+export type {
+  OwnershipContext,
+  CounterpartyRole,
+  TransactionNatureType,
+  InstrumentType
+} from './conversationState';
+
 export type AccountCategory = 
   | 'ASSET' 
   | 'LIABILITY' 
@@ -147,8 +154,8 @@ export interface AccountingScenarioState {
 
   // Structured Transaction Semantics (Side Quest 2 & 3 Integration)
   semanticUnderstanding?: import('../services/transactionUnderstandingService').TransactionUnderstanding;
-  ownershipContext?: 'own_equity' | 'external_investment' | 'not_applicable' | 'unknown';
-  counterpartyRole?: string;
+  ownershipContext?: import('./conversationState').OwnershipContext;
+  counterpartyRole?: import('./conversationState').CounterpartyRole;
   transactionNature?: string;
 
   // Explicit Assumptions (Needed because facts are missing)

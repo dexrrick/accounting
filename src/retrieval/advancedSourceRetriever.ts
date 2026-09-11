@@ -132,6 +132,10 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
       this.embeddingService.vectorizerVersion
     );
 
+    if (retrievalQuery.semanticContext) {
+      recorder.recordSemanticContext(retrievalQuery.semanticContext);
+    }
+
     recorder.startTimer('total');
 
     // 1. Lexical Path via Composite Retriever

@@ -18,12 +18,20 @@ export interface RetrievalTelemetry {
   semanticEvaluations?: number;
   semanticBoostsApplied?: number;
   semanticPenaltiesApplied?: number;
+  semanticConflictsDetected?: number;
+  semanticExtractionTier?: import('../services/transactionUnderstandingService').SemanticExtractionTier;
+  isFallbackSemanticExtraction?: boolean;
   semanticBreakdown?: Array<{
     chunkId: string;
+    baseDeltaSemantics?: number;
+    provenanceMultiplier?: number;
+    finalDeltaSemantics?: number;
     deltaSemantics: number;
     explanation: string;
     matchedAttributes: string[];
     conflictAttributes: string[];
+    hasSemanticConflict?: boolean;
+    provenanceTier?: string;
   }>;
 
   // Runtime measurements (non-deterministic observations):
@@ -85,13 +93,27 @@ export class RetrievalTelemetryRecorder {
     Object.assign(this.telemetry, counters);
   }
 
+  public recordSemanticContext(
+    understanding?: import('../services/transactionUnderstandingService').TransactionUnderstanding
+  ): void {
+    if (understanding?.provenance) {
+      this.telemetry.semanticExtractionTier = understanding.provenance.tier;
+      this.telemetry.isFallbackSemanticExtraction = understanding.provenance.isFallback;
+    }
+  }
+
   public recordSemanticEvaluation(
     chunkId: string,
     score: {
+      baseDeltaSemantics?: number;
+      provenanceMultiplier?: number;
+      finalDeltaSemantics?: number;
       deltaSemantics: number;
       explanation: string;
       matchedAttributes: string[];
       conflictAttributes: string[];
+      hasSemanticConflict?: boolean;
+      provenanceTier?: string;
     }
   ): void {
     if (!this.telemetry.semanticBreakdown) {
@@ -99,6 +121,7 @@ export class RetrievalTelemetryRecorder {
       this.telemetry.semanticEvaluations = 0;
       this.telemetry.semanticBoostsApplied = 0;
       this.telemetry.semanticPenaltiesApplied = 0;
+      this.telemetry.semanticConflictsDetected = 0;
     }
     this.telemetry.semanticEvaluations = (this.telemetry.semanticEvaluations || 0) + 1;
     if (score.deltaSemantics > 0) {
@@ -106,12 +129,20 @@ export class RetrievalTelemetryRecorder {
     } else if (score.deltaSemantics < 0) {
       this.telemetry.semanticPenaltiesApplied = (this.telemetry.semanticPenaltiesApplied || 0) + 1;
     }
+    if (score.hasSemanticConflict || (score.conflictAttributes && score.conflictAttributes.length > 0)) {
+      this.telemetry.semanticConflictsDetected = (this.telemetry.semanticConflictsDetected || 0) + 1;
+    }
     this.telemetry.semanticBreakdown.push({
       chunkId,
+      baseDeltaSemantics: score.baseDeltaSemantics,
+      provenanceMultiplier: score.provenanceMultiplier,
+      finalDeltaSemantics: score.finalDeltaSemantics,
       deltaSemantics: score.deltaSemantics,
       explanation: score.explanation,
       matchedAttributes: score.matchedAttributes,
-      conflictAttributes: score.conflictAttributes
+      conflictAttributes: score.conflictAttributes,
+      hasSemanticConflict: Boolean(score.hasSemanticConflict || (score.conflictAttributes && score.conflictAttributes.length > 0)),
+      provenanceTier: score.provenanceTier
     });
   }
 

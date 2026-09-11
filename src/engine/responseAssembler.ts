@@ -424,23 +424,31 @@ export function assembleDeterministicResponse(
 
     if (groundedContext.semanticUnderstanding) {
       const sem = groundedContext.semanticUnderstanding;
-      if (sem.reportingEntity?.type) {
-        keyParameters.push({ label: 'Reporting Entity', value: sem.reportingEntity.type.toUpperCase(), badge: 'Perspective' });
+      const provenanceBadge = sem.provenance?.isFallback ? 'Heuristic Rule' : 'AI Semantic';
+      if (sem.reportingEntity?.type && sem.reportingEntity.type !== 'unknown') {
+        keyParameters.push({ label: 'Reporting Entity', value: sem.reportingEntity.type.toUpperCase(), badge: provenanceBadge });
       }
-      if (sem.counterparty?.role) {
-        keyParameters.push({ label: 'Counterparty', value: sem.counterparty.role.toUpperCase(), badge: 'Counterparty' });
+      if (sem.counterparty?.role && sem.counterparty.role !== 'unknown') {
+        keyParameters.push({ label: 'Counterparty', value: sem.counterparty.role.toUpperCase(), badge: provenanceBadge });
       }
-      if (sem.ownershipContext && sem.ownershipContext !== 'not_applicable') {
-        keyParameters.push({ label: 'Ownership Context', value: sem.ownershipContext.toUpperCase(), badge: 'Equity' });
+      if (sem.ownershipContext && sem.ownershipContext !== 'not_applicable' && sem.ownershipContext !== 'unknown') {
+        keyParameters.push({ label: 'Ownership Context', value: sem.ownershipContext.toUpperCase(), badge: provenanceBadge });
       }
-      if (sem.paymentStatus) {
-        keyParameters.push({ label: 'Payment Status', value: sem.paymentStatus.toUpperCase(), badge: 'Settlement' });
+      if (sem.paymentStatus && sem.paymentStatus !== 'unknown') {
+        keyParameters.push({ label: 'Payment Status', value: sem.paymentStatus.toUpperCase(), badge: provenanceBadge });
       }
-      if (sem.currency?.value) {
-        keyParameters.push({ label: 'Currency', value: `${sem.currency.value} (${sem.currency.source})`, badge: 'Currency' });
+      if (sem.currency?.value && sem.currency.value !== 'UNKNOWN') {
+        keyParameters.push({ label: 'Currency', value: `${sem.currency.value} (${sem.currency.source})`, badge: provenanceBadge });
       }
       if (sem.amount !== undefined && sem.amount > 0) {
-        keyParameters.push({ label: 'Transaction Amount', value: `${sem.currency?.value || 'SGD'} ${sem.amount.toLocaleString()}`, badge: 'Stated Fact' });
+        keyParameters.push({ label: 'Transaction Amount', value: `${sem.currency?.value || 'SGD'} ${sem.amount.toLocaleString()}`, badge: provenanceBadge });
+      }
+      if (sem.provenance) {
+        keyParameters.push({
+          label: 'Semantic Provenance',
+          value: sem.provenance.tier === 'AI_REASONING' ? 'AI Grounded Reasoning' : 'Deterministic Heuristic Fallback',
+          badge: provenanceBadge
+        });
       }
     }
 

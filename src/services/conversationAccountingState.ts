@@ -8,7 +8,8 @@ import type {
   OutstandingAccountBalance,
   TargetResolutionResult,
   CandidateScore,
-  TargetResolutionCriteria
+  TargetResolutionCriteria,
+  OwnershipContext
 } from '../types/conversationState';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
@@ -370,7 +371,7 @@ export function extractAccountingContext(
   const recognizedEquityTotal = derived.recognizedEquityTotal;
 
   // Determine ownership context from prior scenario structured state
-  let ownershipContext: 'own_equity' | 'external_investment' | 'not_applicable' | 'unknown' = 'unknown';
+  let ownershipContext: OwnershipContext = 'unknown';
   if (currentScenario?.ownershipContext && currentScenario.ownershipContext !== 'unknown') {
     ownershipContext = currentScenario.ownershipContext;
   } else if (currentScenario?.semanticUnderstanding?.ownershipContext && currentScenario.semanticUnderstanding.ownershipContext !== 'unknown') {

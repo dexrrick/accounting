@@ -1,5 +1,79 @@
 import type { JournalEntryGroup, JournalLine } from './accounting';
 
+export type OwnershipContext =
+  | 'own_equity'
+  | 'own_company_equity'
+  | 'external_investment'
+  | 'external_entity_equity'
+  | 'not_applicable'
+  | 'unknown';
+
+export type CounterpartyRole =
+  | 'shareholder'
+  | 'director_shareholder'
+  | 'customer'
+  | 'supplier'
+  | 'employee'
+  | 'lender'
+  | 'director'
+  | 'government'
+  | 'investor'
+  | 'other'
+  | 'unknown';
+
+export type TransactionNatureType =
+  | 'equity_issuance_subscription'
+  | 'share_capital_issuance'
+  | 'share_subscription'
+  | 'capital_reduction'
+  | 'equity_investment_acquisition'
+  | 'lease_contract'
+  | 'lease_payment'
+  | 'lease_liability_accrual'
+  | 'software_development_expenditure'
+  | 'rd_capitalization'
+  | 'asset_acquisition'
+  | 'asset_purchase'
+  | 'depreciation_expense'
+  | 'trade_discount_purchase'
+  | 'customer_advance_payment'
+  | 'customer_invoice'
+  | 'director_expense_settlement'
+  | 'director_fee_payment'
+  | 'expense_payment'
+  | 'inventory_purchase'
+  | 'payroll_payment'
+  | 'tax_payment'
+  | 'tax_provision'
+  | 'dividend_payment'
+  | 'debt_settlement'
+  | 'unclassified_transaction';
+
+export type InstrumentType =
+  | 'cash_at_bank'
+  | 'accounts_receivable'
+  | 'accounts_payable'
+  | 'own_equity'
+  | 'equity_instrument'
+  | 'financial_asset_equity'
+  | 'marketable_securities'
+  | 'debt_instrument'
+  | 'derivative'
+  | 'fixed_asset'
+  | 'property_plant_equipment'
+  | 'intangible_asset'
+  | 'right_of_use_asset'
+  | 'lease_liability'
+  | 'cash / trade receivable'
+  | 'director current account liability'
+  | 'right_of_use_asset_and_lease_liability'
+  | 'unknown'
+  | 'intangible_asset_or_expense'
+  | 'ppe_asset'
+  | 'trade_payable'
+  | 'director_current_account'
+  | 'financial_instrument';
+
 export type AccountingEventType =
   | 'initial_transaction'
   | 'settlement'
@@ -46,7 +120,7 @@ export interface OutstandingAccountBalance {
 
 export interface TargetResolutionCriteria {
   accountName?: string;
-  counterpartyRole?: string;
+  counterpartyRole?: CounterpartyRole | string;
   counterpartyName?: string;
   transactionId?: string;
   nature?: 'RECEIVABLE' | 'PAYABLE' | 'DEPOSIT';
@@ -78,10 +152,10 @@ export interface ConversationAccountingContext {
     description?: string;
   };
   underlyingTransaction?: {
-    type: string;
+    type: TransactionNatureType | string;
     subject: string;
-    ownershipContext: 'own_equity' | 'external_investment' | 'not_applicable' | 'unknown';
-    instrument: string;
+    ownershipContext: OwnershipContext;
+    instrument: InstrumentType | string;
     totalAmount?: number;
     currency: string;
   };
