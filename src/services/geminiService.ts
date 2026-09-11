@@ -971,9 +971,9 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
     generationConfig
   };
 
-  // 12-second AbortController timeout to guarantee fast interactive latency
+  // 45-second AbortController timeout to guarantee reliable completion of complex statutory reasoning
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
 
   const tReq0 = Date.now();
   let rawJsonText = '';
@@ -1029,7 +1029,7 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
       profiler.recordStage('gemini_request', Date.now() - tReq0);
       profiler.recordTimeout();
       profiler.recordFallback();
-      throw new Error(`Gemini request timed out after 12s. Reverting to deterministic accounting engine.`);
+      throw new Error(`Gemini request timed out after 45s. Reverting to deterministic accounting engine.`);
     }
 
     // Fallback to standard generateContent if streaming is unavailable
@@ -1056,7 +1056,7 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
       if (stdErr?.name === 'AbortError' || controller.signal.aborted) {
         profiler.recordTimeout();
         profiler.recordFallback();
-        throw new Error(`Gemini request timed out after 12s. Reverting to deterministic accounting engine.`);
+        throw new Error(`Gemini request timed out after 45s. Reverting to deterministic accounting engine.`);
       }
       throw stdErr;
     }

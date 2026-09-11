@@ -42,7 +42,7 @@ export async function executeStructuredLlmCall(
   providerOrApiKey?: ProviderSettings | string,
   options: StructuredLlmOptions = {}
 ): Promise<string> {
-  const timeoutMs = options.timeoutMs ?? 10000;
+  const timeoutMs = options.timeoutMs ?? 45000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 

@@ -148,9 +148,9 @@ export async function callAzureOpenAI(
     response_format: { type: 'json_object' }
   };
 
-  // 12-second AbortController timeout to guarantee fast interactive latency
+  // 45-second AbortController timeout to guarantee reliable completion of complex statutory reasoning
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
 
   const tReq0 = Date.now();
   let res: Response;
@@ -167,7 +167,7 @@ export async function callAzureOpenAI(
   } catch (netErr: any) {
     clearTimeout(timeoutId);
     if (netErr.name === 'AbortError' || controller.signal.aborted) {
-      throw new Error(`Azure OpenAI request timed out after 12s. Reverting to deterministic accounting engine.`);
+      throw new Error(`Azure OpenAI request timed out after 45s. Reverting to deterministic accounting engine.`);
     }
     throw new Error(`Azure OpenAI Connection Failed: Network error reaching ${endpoint}. Check endpoint address or CORS settings (${netErr?.message})`);
   } finally {
@@ -232,9 +232,9 @@ export async function callStandardOpenAI(
     response_format: { type: 'json_object' }
   };
 
-  // 12-second AbortController timeout to guarantee fast interactive latency
+  // 45-second AbortController timeout to guarantee reliable completion of complex statutory reasoning
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
 
   const tReq0 = Date.now();
   let res: Response;
@@ -251,7 +251,7 @@ export async function callStandardOpenAI(
   } catch (netErr: any) {
     clearTimeout(timeoutId);
     if (netErr.name === 'AbortError' || controller.signal.aborted) {
-      throw new Error(`OpenAI request timed out after 12s. Reverting to deterministic accounting engine.`);
+      throw new Error(`OpenAI request timed out after 45s. Reverting to deterministic accounting engine.`);
     }
     throw new Error(`OpenAI Connection Failed: Network error reaching ${url} (${netErr?.message})`);
   } finally {
