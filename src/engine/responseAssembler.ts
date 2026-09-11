@@ -197,25 +197,18 @@ export function assembleDeterministicResponse(
       };
     });
   } else if (compact.requiredAccounts && compact.requiredAccounts.length > 0) {
-    // Check if deterministic state or query provides an explicit numerical amount
+    // Amounts for journal lines can ONLY come from scenario-specific structured facts/formulas
+    // in deterministicScenario. Arbitrary numbers (dates, quantities, terms, percentages) from user text
+    // MUST NEVER be extracted via regex into journal amounts.
     let knownAmount: number | undefined = undefined;
-    if (deterministicScenario?.amount && deterministicScenario.amount > 0) {
+    if (deterministicScenario?.isComplete && deterministicScenario?.amount && deterministicScenario.amount > 0) {
       knownAmount = deterministicScenario.amount;
-    } else {
-      const match = userInput.match(/(?:sgd|\$|usd|eur)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand|million)?\b/i);
-      if (match && match[1]) {
-        let val = parseFloat(match[1].replace(/,/g, ''));
-        const unit = match[2]?.toLowerCase();
-        if (unit === 'k' || unit === 'thousand') val *= 1000;
-        if (unit === 'm' || unit === 'million') val *= 1000000;
-        if (val > 0) knownAmount = val;
-      }
     }
 
-    const isUnvaluedOrBarter = !knownAmount || userInput.toLowerCase().includes('barter') || userInput.toLowerCase().includes('exchange');
+    const isUnvaluedOrNovel = !knownAmount || userInput.toLowerCase().includes('barter') || userInput.toLowerCase().includes('exchange');
 
-    if (isUnvaluedOrBarter) {
-      // Missing monetary amounts: DO NOT manufacture fake balanced entries ($1000 / $50000)
+    if (isUnvaluedOrNovel) {
+      // Missing or unstructured monetary amounts: NEVER manufacture numbers from raw text.
       const lines: JournalLine[] = compact.requiredAccounts.map((acc, aIdx) => ({
         id: `line-ai-${aIdx + 1}`,
         accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EXPENSE' ? '5000' : '4000',
@@ -244,7 +237,7 @@ export function assembleDeterministicResponse(
         authorityStatus: 'CONDITIONAL'
       }];
     } else {
-      // Deterministically assign the known amount to debit and credit sides
+      // Structured amount available from complete deterministic scenario formula
       const debitsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'DEBIT').length;
       const creditsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'CREDIT').length;
 
@@ -438,6 +431,14 @@ export function assembleDeterministicResponse(
       if (compact.singaporeTaxImpact || deterministicScenario?.singaporeTaxTreatmentSummary) {
         messageText += `---\n\n#### 3. Singapore Tax Treatment (IRAS)\n` +
           `${compact.singaporeTaxImpact || deterministicScenario?.singaporeTaxTreatmentSummary}\n\n`;
+      }
+
+      if (deterministicScenario?.keyParameters && deterministicScenario.keyParameters.length > 0) {
+        messageText += `---\n\n#### 4. Key Statutory & Computational Facts\n`;
+        for (const p of deterministicScenario.keyParameters) {
+          messageText += `* **${p.label}**: ${p.value}\n`;
+        }
+        messageText += `\n`;
       }
 
       if (directGroups.length > 0) {

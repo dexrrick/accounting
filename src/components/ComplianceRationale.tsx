@@ -311,13 +311,21 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {citations.map((cite, cIdx) => {
-                const badge = getAuthorityBadgeInfo(cite.authority);
-                return (
-                  <div
-                    key={cIdx}
-                    className="p-3.5 bg-slate-50/70 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-xs"
-                  >
+              {(() => {
+                const seen = new Set<string>();
+                const uniqueCitations = citations.filter((c) => {
+                  const key = `${(c.standard || '').toLowerCase()}-${(c.paragraph || '').toLowerCase()}-${(c.officialSourceUrl || '').toLowerCase()}`;
+                  if (seen.has(key)) return false;
+                  seen.add(key);
+                  return true;
+                });
+                return uniqueCitations.map((cite, cIdx) => {
+                  const badge = getAuthorityBadgeInfo(cite.authority);
+                  return (
+                    <div
+                      key={cIdx}
+                      className="p-3.5 bg-slate-50/70 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-xs"
+                    >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-[9px] px-2 py-0.5 rounded-md border font-medium ${badge.badgeClass}`}>
@@ -376,7 +384,8 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     </p>
                   </div>
                 );
-              })}
+              });
+            })()}
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-1.5">
               * Structural verification confirms the cited standard, section/paragraph, governing authority, and official source URL exist in verified repositories. It does not constitute legal or audit sign-off or prove semantic claim validity.

@@ -188,8 +188,13 @@ export class RequestProfiler {
 
   public logSummary(): void {
     const r = this.finalize();
+    const flags = [];
+    if (r.timeout_count > 0) flags.push(`timeouts=${r.timeout_count}`);
+    if (r.fallback_used) flags.push(`fallback=true`);
+    if (r.retry_count > 0) flags.push(`retries=${r.retry_count}`);
+    const flagStr = flags.length > 0 ? ` [${flags.join(', ')}]` : '';
     console.log(
-      `[Telemetry] ${r.query_mode} (${this.modelName || 'offline'}): total=${r.total_ms}ms (first_vis=${r.time_to_first_visible_ms}ms, gemini=${r.gemini_request_ms}ms, ground=${r.grounding_ms}ms, post=${r.post_processing_ms}ms) | tokens: in=${r.gemini_input_tokens}, out=${r.gemini_output_tokens}, think=${r.thinking_tokens || 0}`
+      `[Telemetry] ${r.query_mode} (${this.modelName || 'offline'})${flagStr}: total=${r.total_ms}ms (first_vis=${r.time_to_first_visible_ms}ms, gemini=${r.gemini_request_ms}ms, ground=${r.grounding_ms}ms, post=${r.post_processing_ms}ms) | tokens: in=${r.gemini_input_tokens}, out=${r.gemini_output_tokens}, think=${r.thinking_tokens || 0}`
     );
   }
 }

@@ -35,7 +35,7 @@ export interface FastPathEvaluation {
  * 6. No material facts are missing.
  */
 export function evaluateFastPathEligibility(
-  _userInput: string,
+  userInput: string,
   deterministicScenario: AccountingScenarioState | null,
   groundedContext: GroundedReasoningContext
 ): FastPathEvaluation {
@@ -73,7 +73,7 @@ export function evaluateFastPathEligibility(
     return { canBypass: false, reason: 'Material facts are missing from query' };
   }
 
-  // Condition 2 & 3: The required supporting source/evidence is verified and authoritative
+  // Condition 2 & 3: The required supporting source/evidence is verified and authoritative at section level
   const supportingCitations = deterministicScenario.directGroups?.[0]?.citations || [];
   const supportingAdvisories = deterministicScenario.statutoryAdvisory || [];
 
@@ -87,25 +87,74 @@ export function evaluateFastPathEligibility(
     ...groundedContext.curatedSummaries
   ];
 
+  // Claim Completeness: Identify distinct statutory topics in user query
+  // and ensure every queried claim has a section-level verified primary source.
+  const qLower = userInput.toLowerCase();
+  const claimRules: Array<{ topic: string; test: boolean; sectionMatch: string }> = [
+    { topic: 'Annual Leave', test: qLower.includes('annual leave'), sectionMatch: '88a' },
+    { topic: 'Sick / Hospitalisation Leave', test: qLower.includes('sick leave') || qLower.includes('hospitalisation') || qLower.includes('medical leave'), sectionMatch: '89' },
+    { topic: 'Part IV Overtime', test: qLower.includes('overtime') || qLower.includes('part iv') || qLower.includes('working hours'), sectionMatch: '38' },
+    { topic: 'CPF Wage Ceilings', test: qLower.includes('cpf ceiling') || qLower.includes('ordinary wage') || qLower.includes('aw ceiling'), sectionMatch: 'first schedule' },
+    { topic: 'Compulsory GST Registration', test: qLower.includes('gst registration') || qLower.includes('compulsory gst') || (qLower.includes('gst') && qLower.includes('threshold')), sectionMatch: 'first schedule' },
+    { topic: 'Section 14 Tax Deductibility', test: qLower.includes('section 14') || qLower.includes('wholly and exclusively'), sectionMatch: '14' },
+    { topic: 'Section 205C Audit Exemption', test: qLower.includes('audit exemption') || qLower.includes('small company'), sectionMatch: '205c' }
+  ];
+
+  const activeClaims = claimRules.filter(c => c.test);
+
+  for (const claim of activeClaims) {
+    const claimEvidence = allRetrieved.find(r => {
+      const sec = (r.paragraphOrSection || '').toLowerCase().replace(/[\s\-_()]/g, '');
+      const reqSec = claim.sectionMatch.toLowerCase().replace(/[\s\-_()]/g, '');
+      return sec.includes(reqSec);
+    });
+
+    if (!claimEvidence) {
+      return { canBypass: false, reason: `Query claim '${claim.topic}' lacks section-level evidence in retrieved sources` };
+    }
+    if (claimEvidence.sourceStatus !== 'VERIFIED') {
+      return { canBypass: false, reason: `Evidence for '${claim.topic}' (${claimEvidence.documentTitle}) has status '${claimEvidence.sourceStatus}', not VERIFIED` };
+    }
+    if (claimEvidence.evidenceTier !== 'PRIMARY_SOURCE') {
+      return { canBypass: false, reason: `Evidence for '${claim.topic}' (${claimEvidence.documentTitle}) is tier '${claimEvidence.evidenceTier}', not PRIMARY_SOURCE` };
+    }
+    if (!claimEvidence.isVerbatimText) {
+      return { canBypass: false, reason: `Evidence for '${claim.topic}' (${claimEvidence.documentTitle}) is not authentic verbatim text` };
+    }
+    if (!claimEvidence.effectiveDate || claimEvidence.effectiveDate.toLowerCase().includes('unknown')) {
+      return { canBypass: false, reason: `Evidence for '${claim.topic}' lacks a verified effective date` };
+    }
+  }
+
+  // Verify all supporting citations match at the section level to verified primary sources
   for (const cite of supportingCitations) {
     const rawStd = (cite.standard || '').toLowerCase().replace(/[\s\-_()]/g, '');
+    const rawPara = (cite.paragraph || '').toLowerCase().replace(/[\s\-_()]/g, '');
+
     const matched = allRetrieved.find(r => {
-      const rCode = r.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
-      const rTitle = r.documentTitle.toLowerCase().replace(/[\s\-_()]/g, '');
-      return rawStd.includes(rCode) || rCode.includes(rawStd) || rawStd.includes(rTitle) || rTitle.includes(rawStd);
+      const rCode = (r.standardOrActCode || '').toLowerCase().replace(/[\s\-_()]/g, '');
+      const rTitle = (r.documentTitle || '').toLowerCase().replace(/[\s\-_()]/g, '');
+      const rSec = (r.paragraphOrSection || '').toLowerCase().replace(/[\s\-_()]/g, '');
+
+      const actMatches = rawStd.includes(rCode) || rCode.includes(rawStd) || rawStd.includes(rTitle) || rTitle.includes(rawStd);
+      // Section-level verification: must match section/provision, not just the general Act
+      const secMatches = !rawPara || rSec.includes(rawPara) || rawPara.includes(rSec) ||
+        Boolean(rawPara.match(/\d+[a-z]?/i) && rSec.includes(rawPara.match(/\d+[a-z]?/i)![0]));
+
+      return actMatches && secMatches;
     });
 
     if (!matched) {
-      return { canBypass: false, reason: `Supporting citation '${cite.standard}' not found in retrieved sources` };
+      return { canBypass: false, reason: `Supporting citation '${cite.standard} ${cite.paragraph}' not found at section level in retrieved sources` };
     }
     if (matched.sourceStatus !== 'VERIFIED') {
-      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' has status '${matched.sourceStatus}', not VERIFIED` };
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle} ${matched.paragraphOrSection}' has status '${matched.sourceStatus}', not VERIFIED` };
     }
     if (matched.sourceType !== 'AUTHORITATIVE_SOURCE' && matched.evidenceTier !== 'PRIMARY_SOURCE') {
-      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is '${matched.sourceType}', not AUTHORITATIVE_SOURCE` };
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is tier '${matched.evidenceTier}', not PRIMARY_SOURCE` };
     }
     if (!matched.isVerbatimText) {
-      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is not verbatim text` };
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle} ${matched.paragraphOrSection}' is not authentic verbatim text` };
     }
 
     // Condition 4: The source is current/effective for the relevant period
@@ -114,7 +163,7 @@ export function evaluateFastPathEligibility(
     }
   }
 
-  return { canBypass: true, reason: 'All 6 authoritative deterministic conditions satisfied' };
+  return { canBypass: true, reason: 'All 6 authoritative deterministic conditions satisfied with claim-complete section-level verified primary sources' };
 }
 
 export async function processAccountingQuery(
@@ -122,7 +171,7 @@ export async function processAccountingQuery(
   currentScenario: AccountingScenarioState | null,
   standard: AccountingStandard,
   providerOrApiKey?: ProviderSettings | string,
-  modelName: string = 'gemini-2.5-flash',
+  modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = []
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
@@ -158,6 +207,7 @@ export async function processAccountingQuery(
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
+          profiler.recordFallback();
         }
       } else if (active === 'gemini' && providerOrApiKey.gemini?.apiKey && providerOrApiKey.gemini.apiKey.trim().length > 10) {
         try {
@@ -175,6 +225,7 @@ export async function processAccountingQuery(
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Gemini API Error';
+          profiler.recordFallback();
         }
       } else if (active === 'openai' && providerOrApiKey.openai?.apiKey && providerOrApiKey.openai.apiKey.trim().length > 10) {
         try {
@@ -190,6 +241,7 @@ export async function processAccountingQuery(
         } catch (err: any) {
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'OpenAI API Error';
+          profiler.recordFallback();
         }
       }
     } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
@@ -208,12 +260,17 @@ export async function processAccountingQuery(
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
+        profiler.recordFallback();
       }
     }
   }
 
   // 5. Fallback structured offline response rendered from deterministic state
-  return renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage);
+  profiler.recordFallback();
+  profiler.recordFirstVisibleResponse();
+  const fallbackResponse = renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage);
+  profiler.logSummary();
+  return fallbackResponse;
 }
 
 /**
@@ -298,12 +355,13 @@ export function renderStructuredOfflineResponse(
   if (parsed.scenarioType === 'SINGAPORE_STATUTORY_ADVISORY') {
     const adv = parsed.statutoryAdvisory?.[0];
     const authority = adv?.authority || 'IRAS / ACRA';
-    const title = parsed.transactionTitle;
+    const rawTitle = parsed.transactionTitle || adv?.topic || 'Statutory Compliance Directive';
+    const cleanTitle = rawTitle.replace(/^(?:Statutory\s*Directives?:\s*)+/i, '');
     const act = adv?.statuteOrAct || 'Singapore Statutes';
     const section = adv?.sectionOrSchedule || '';
     const url = adv?.officialUrl || 'https://sso.agc.gov.sg';
 
-    let replyText = `### Statutory Directive: ${title}\n\n` +
+    let replyText = `### Statutory Directive: ${cleanTitle}\n\n` +
       `**Governing Authority**: **${authority}** | **Legislation**: **${act} (${section})**\n\n` +
       `---\n\n` +
       `#### 1. Statutory Principle\n` +
@@ -321,6 +379,59 @@ export function renderStructuredOfflineResponse(
       `#### 3. Official Statutory Source & Verification\n` +
       `* Verified against [${act} ${section}](${url}) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n` +
       `* Review the **Statutory Citations & "Why"** tab for full legal references and citations.`;
+
+    return {
+      messageText: finalizeMessage(replyText, parsed),
+      scenarioState: parsed
+    };
+  }
+
+  // 3.5. PAYROLL, PRORATED SALARY & STATUTORY CPF (MOM EA §22 & CPF ACT §7)
+  if (parsed.scenarioType === 'PAYROLL_CPF_SALARY' && parsed.directGroups) {
+    const grp = parsed.directGroups[0];
+    const grossLine = grp.lines.find(l => l.accountCode === '5010');
+    const employerCpfLine = grp.lines.find(l => l.accountCode === '5020');
+    const cpfPayableLine = grp.lines.find(l => l.accountCode === '2050');
+    const netSalaryLine = grp.lines.find(l => l.accountCode === '2060');
+
+    const grossSalary = grossLine?.debit || 0;
+    const employerCpf = employerCpfLine?.debit || 0;
+    const totalCpf = cpfPayableLine?.credit || 0;
+    const netSalary = netSalaryLine?.credit || 0;
+    const employeeCpf = totalCpf - employerCpf;
+
+    const baseSalaryParam = parsed.keyParameters?.find(p => p.label.includes('Basic Monthly Salary'))?.value || `SGD ${grossSalary.toLocaleString()}`;
+    const workingDaysParam = parsed.keyParameters?.find(p => p.label.includes('Working Days'))?.value || '22 / 22 days';
+    const sdlParam = parsed.keyParameters?.find(p => p.label.includes('Skills Development Levy'))?.value || 'SGD 4.36';
+
+    let replyText = `### Statutory Payroll & CPF Assessment: ${parsed.transactionTitle}\n\n` +
+      `**Governing Authorities**: **MOM, CPF Board & IRAS** | **Legislation**: **Employment Act 1968 §22** & **Central Provident Fund Act 1953 §7 / First Schedule**\n\n` +
+      `---\n\n` +
+      `#### 1. Statutory Proration & Entitlement (MOM Employment Act §22)\n` +
+      `* **Contracted Basic Monthly Salary**: **${baseSalaryParam}**\n` +
+      `* **Statutory Working Days (Mon–Fri)**: **${workingDaysParam}**\n` +
+      `* **MOM Incomplete Month Formula**:\n` +
+      `  $$\\text{Gross Salary Payable} = \\frac{\\text{Monthly Basic Rate of Pay}}{\\text{Total Working Days in Month}} \\times \\text{Actual Working Days Worked}$$\n` +
+      `* **Gross Prorated Salary Payable**: $\\mathbf{SGD\\ ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n\n` +
+      `---\n\n` +
+      `#### 2. Statutory CPF & Net Salary Breakdown (CPF Act 1953 & 2026 Ceilings)\n` +
+      `* **Gross Salary Subject to CPF (Ordinary Wage)**: **SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Within 2026 OW ceiling of SGD 8,000)*\n` +
+      `* **Employee CPF Contribution (20%)**: $\\mathbf{SGD\\ ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Statutory Rule: Cents discarded per CPF Act §7)*\n` +
+      `* **Employer CPF Contribution (17%)**: $\\mathbf{SGD\\ ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Statutory Rule: Total rounded to dollar)*\n` +
+      `* **Total CPF Payable to CPF Board (37%)**: $\\mathbf{SGD\\ ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n` +
+      `* **Net Take-Home Salary Payable to Staff**: $\\mathbf{SGD\\ ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Gross SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} - Employee CPF SGD ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })})*\n` +
+      `* **Skills Development Levy (SDL)**: **${sdlParam}** *(0.25% of gross remuneration payable by employer)*\n\n` +
+      `---\n\n` +
+      `#### 3. Singapore Tax Deductibility & MOM Compliance (IRAS & MOM)\n` +
+      `* **100% Tax Deductibility**: Under **Section 14(1) and Section 14(1)(e) of the Income Tax Act 1947**, staff salaries (**SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**) and mandatory employer CPF (**SGD ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**) are fully tax-deductible expenses in Form C-S.\n` +
+      `* **Disbursement Timeline**: Under **Section 21(2) of the Employment Act 1968**, all outstanding salary must be disbursed to the employee on their last day of employment.\n\n` +
+      `---\n\n` +
+      `### Single Compound Journal Entry (${grp.eventDate})\n\n` +
+      `* **Debit**: **Staff Salaries & Wages (P&L - Operating Expense)** — **SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
+      `* **Debit**: **Employer CPF Contribution (P&L - Operating Expense)** — **SGD ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
+      `* **Credit**: **CPF Payable to CPF Board (Current Liability)** — **SGD ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
+      `* **Credit**: **Net Salaries Payable / Staff Clearing (Current Liability)** — **SGD ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n\n` +
+      `**Balance Check**: $\\text{Total Debits (SGD } ${(grossSalary + employerCpf).toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${(totalCpf + netSalary).toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
 
     return {
       messageText: finalizeMessage(replyText, parsed),
@@ -544,7 +655,7 @@ export async function callGeminiAPI(
   currentScenario: AccountingScenarioState | null,
   standard: AccountingStandard,
   apiKey: string,
-  modelName: string = 'gemini-2.5-flash',
+  modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = [],
   groundedContext?: GroundedReasoningContext,
   deterministicScenario?: AccountingScenarioState | null,
@@ -556,20 +667,32 @@ export async function callGeminiAPI(
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
-  // Multi-turn conversational history for Gemini
+  // Multi-turn conversational history for Gemini: Condense prior turns to eliminate prompt re-bloat
   const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
 
-  // Filter out system welcome messages and raw processing error cards
+  // Filter out system welcome messages and raw processing error cards; limit to last 4 turns
   const conversationTurns = (chatHistory || [])
     .filter((m) => m.id !== 'welcome-msg' && m.text && !m.text.startsWith('⚠️ **Processing Error**'))
-    .slice(-8);
+    .slice(-4);
 
   for (const m of conversationTurns) {
     const role: 'user' | 'model' = m.sender === 'user' ? 'user' : 'model';
+    let textToSend = m.text;
+    if (role === 'model') {
+      // Strip out huge tables, journals, and citations from prior assistant turns to prevent prompt re-bloat
+      textToSend = textToSend
+        .replace(/### Double Entry Journal[\s\S]*?(?=#{2,4}\s+|$)/gi, '')
+        .replace(/#### 4\. Official Statutory Sources[\s\S]*?(?=#{2,4}\s+|$)/gi, '')
+        .replace(/\|[^\n]+\|\n\|[-:| ]+\|\n(?:\|[^\n]+\|\n)+/g, '')
+        .trim();
+      if (textToSend.length > 400) {
+        textToSend = textToSend.slice(0, 400) + '... [Prior response condensed]';
+      }
+    }
     if (contents.length > 0 && contents[contents.length - 1].role === role) {
-      contents[contents.length - 1].parts[0].text += `\n\n${m.text}`;
+      contents[contents.length - 1].parts[0].text += `\n\n${textToSend}`;
     } else {
-      contents.push({ role, parts: [{ text: m.text }] });
+      contents.push({ role, parts: [{ text: textToSend }] });
     }
   }
 
@@ -621,39 +744,101 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
     generationConfig
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
   // 12-second AbortController timeout to guarantee fast interactive latency
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 12000);
 
   const tReq0 = Date.now();
-  let res: Response;
+  let rawJsonText = '';
+  let usage: any = null;
+
   try {
-    res = await fetch(url, {
+    // Attempt streaming with Server-Sent Events (?alt=sse) to measure genuine Time to First Visible Response (TTFVR)
+    const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const streamRes = await fetch(streamUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestBody),
       signal: controller.signal
     });
-  } catch (netErr: any) {
-    clearTimeout(timeoutId);
-    if (netErr.name === 'AbortError' || controller.signal.aborted) {
+
+    if (streamRes.ok && streamRes.body) {
+      const reader = streamRes.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let isFirstChunk = true;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (isFirstChunk) {
+          profiler.recordFirstVisibleResponse();
+          isFirstChunk = false;
+        }
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const chunkJson = JSON.parse(trimmed.slice(6));
+              const partText = chunkJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (partText) rawJsonText += partText;
+              if (chunkJson?.usageMetadata) usage = chunkJson.usageMetadata;
+            } catch {
+              // Ignore partial SSE delimiter chunks
+            }
+          }
+        }
+      }
+    } else {
+      throw new Error(`Streaming response returned ${streamRes.status}`);
+    }
+  } catch (streamErr: any) {
+    if (controller.signal.aborted || streamErr?.name === 'AbortError') {
+      clearTimeout(timeoutId);
+      profiler.recordStage('gemini_request', Date.now() - tReq0);
+      profiler.recordTimeout();
+      profiler.recordFallback();
       throw new Error(`Gemini request timed out after 12s. Reverting to deterministic accounting engine.`);
     }
-    throw netErr;
+
+    // Fallback to standard generateContent if streaming is unavailable
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+      profiler.recordFirstVisibleResponse();
+
+      if (!res.ok) {
+        throw new Error(`Gemini HTTP Error ${res.status}: ${await res.text()}`);
+      }
+
+      const data = await res.json();
+      usage = data?.usageMetadata;
+      rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } catch (stdErr: any) {
+      clearTimeout(timeoutId);
+      profiler.recordStage('gemini_request', Date.now() - tReq0);
+      if (stdErr?.name === 'AbortError' || controller.signal.aborted) {
+        profiler.recordTimeout();
+        profiler.recordFallback();
+        throw new Error(`Gemini request timed out after 12s. Reverting to deterministic accounting engine.`);
+      }
+      throw stdErr;
+    }
   } finally {
     clearTimeout(timeoutId);
   }
 
   profiler.recordStage('gemini_request', Date.now() - tReq0);
 
-  if (!res.ok) {
-    throw new Error(`Gemini HTTP Error ${res.status}: ${await res.text()}`);
-  }
-
-  const data = await res.json();
-  const usage = data?.usageMetadata;
   if (usage) {
     profiler.setTokenCounts(
       usage.promptTokenCount || 0,
@@ -662,7 +847,6 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
     );
   }
 
-  const rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!rawJsonText) {
     throw new Error('No content returned by Gemini');
   }

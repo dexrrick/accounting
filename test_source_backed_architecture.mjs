@@ -251,7 +251,7 @@ async function runPhase1Tests() {
     paragraph: 'Section 205C',
     title: 'Small Company Audit Exemption Criteria',
     text: 'Fulfills at least 2 of 3 criteria for past 2 FYs',
-    officialSourceUrl: 'https://sso.agc.gov.sg/Act/CA1967#pr205C-',
+    officialSourceUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr205C-',
     authority: 'ACRA'
   };
   const vAcra = defaultCitationVerifier.verifyCitation(acraCitation, 'ACRA');

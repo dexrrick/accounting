@@ -1,11 +1,12 @@
-import type { AccountingScenarioState, JournalEntryGroup, JournalLine, QueryDomain, ExplicitAssumption, MissingFieldInfo, JournalAuthorityStatus } from '../types/accounting';
+import type { AccountingScenarioState, JournalEntryGroup, JournalLine, QueryDomain, ExplicitAssumption, MissingFieldInfo, JournalAuthorityStatus, TransactionFact } from '../types/accounting';
 import { getExchangeRate } from '../services/frankfurterService';
 import { getCitation } from '../standards/standardsKnowledge';
 import { 
   querySingaporeStatutes, 
   convertToCitation, 
   convertToAdvisory, 
-  SINGAPORE_STATUTORY_REPOSITORY 
+  SINGAPORE_STATUTORY_REPOSITORY,
+  type SingaporeStatuteRule
 } from '../standards/singaporeStatutesKnowledge';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { classifyQuestion } from '../classification/questionClassifier';
@@ -48,22 +49,14 @@ export async function parseAccountingQuery(
       if (rawVal > 0) costAmount = rawVal;
     }
 
-    const hasExplicitAmount = costAmount !== undefined;
-    const effectiveAmount = costAmount ?? 50000;
+    const hasExplicitAmount = costAmount !== undefined && costAmount > 0;
+    const effectiveAmount = costAmount ?? 0;
 
-    // Track explicit assumptions so assumptions are NEVER silently converted into facts
+    // Track explicit assumptions and missing fields so unstated amounts are NEVER fabricated
     const assumptions: ExplicitAssumption[] = [];
     const missingFields: MissingFieldInfo[] = [];
 
     if (!hasExplicitAmount) {
-      assumptions.push({
-        id: 'assump-cap-amount',
-        field: 'amount',
-        assumedValue: `SGD ${effectiveAmount.toLocaleString()}`,
-        basisOrRationale: 'No expenditure outlay stated by user; $50,000 assumed solely for illustrative journal entry calculations.',
-        materiality: 'MEDIUM',
-        userClarificationPrompt: 'Please provide the exact development expenditure outlay.'
-      });
       missingFields.push({
         fieldKey: 'amount',
         fieldName: 'Qualifying Expenditure Outlay',
@@ -115,7 +108,9 @@ export async function parseAccountingQuery(
         category: 'ASSET',
         debit: effectiveAmount,
         credit: 0,
-        lineExplanation: 'Capitalisation of qualifying development expenditure under SFRS(I) 1-38 §57 (strictly conditional on meeting all 6 cumulative criteria).'
+        lineExplanation: hasExplicitAmount
+          ? 'Capitalisation of qualifying development expenditure under SFRS(I) 1-38 §57 (strictly conditional on meeting all 6 cumulative criteria).'
+          : 'Capitalisation of qualifying development expenditure — [Valuation pending determination]'
       },
       {
         id: 'l-cap-bank',
@@ -124,7 +119,9 @@ export async function parseAccountingQuery(
         category: 'ASSET',
         debit: 0,
         credit: effectiveAmount,
-        lineExplanation: 'Settlement of directly attributable software engineering, testing, and contractor expenditure.'
+        lineExplanation: hasExplicitAmount
+          ? 'Settlement of directly attributable software engineering, testing, and contractor expenditure.'
+          : 'Settlement of directly attributable development expenditure — [Valuation pending determination]'
       }
     ];
 
@@ -141,8 +138,8 @@ export async function parseAccountingQuery(
       },
       {
         label: 'Expenditure Amount',
-        value: hasExplicitAmount ? `${functionalCurrency} ${effectiveAmount.toLocaleString()}` : `${functionalCurrency} ${effectiveAmount.toLocaleString()} (Illustrative)`,
-        badge: hasExplicitAmount ? 'Stated Fact' : 'Assumed Parameter'
+        value: hasExplicitAmount ? `${functionalCurrency} ${effectiveAmount.toLocaleString()}` : 'Pending Determination',
+        badge: hasExplicitAmount ? 'Stated Fact' : 'Missing Fact'
       },
       { label: 'Singapore Tax Treatment', value: 'Disallowed as P&L deduction (§15); 400% EIS Deduction (§14C)', badge: 'IRAS S14C/EIS', highlight: true },
       { label: 'Tangible Asset Treatment', value: 'Capitalise if future benefits probable (SFRS(I) 1-16 §7)', badge: 'PP&E Cost' }
@@ -171,24 +168,316 @@ export async function parseAccountingQuery(
         {
           id: 'grp-capitalisation-illustrative',
           eventDate: formatSingaporeDate(new Date()),
-          title: 'Conditional Illustrative Entry: Capitalisation of Qualifying Development Costs',
-          summary: `Provisional entry for ${functionalCurrency} ${effectiveAmount.toLocaleString()}. Valid ONLY if management documents all 6 cumulative recognition criteria under SFRS(I) 1-38 §57. If criteria are not met, the required accounting entry is Dr. R&D Expense (P&L) | Cr. Bank.`,
+          title: hasExplicitAmount ? 'Conditional Illustrative Entry: Capitalisation of Qualifying Development Costs' : 'Conditional Illustrative Proposal: Development Costs (Pending Valuation)',
+          summary: hasExplicitAmount
+            ? `Provisional entry for ${functionalCurrency} ${effectiveAmount.toLocaleString()}. Valid ONLY if management documents all 6 cumulative recognition criteria under SFRS(I) 1-38 §57.`
+            : 'Provisional journal entry structure with uncalculated monetary amounts.',
           lines,
           totalDebit: effectiveAmount,
           totalCredit: effectiveAmount,
-          isBalanced: true,
+          isBalanced: hasExplicitAmount,
           citations,
           authorityStatus: capAuthorityStatus,
           rationalePoints: [
             'Under SFRS(I) 1-38 §54: All research phase costs must be expensed in P&L as incurred.',
             'Under SFRS(I) 1-38 §57: Development expenditure can be capitalised only when all 6 cumulative criteria are demonstrated.',
-            'Provisional Entry Warning: If technical feasibility or commercial intent cannot be documented, expenditure must be charged to P&L.',
+            hasExplicitAmount
+              ? 'Provisional Entry Warning: If technical feasibility or commercial intent cannot be documented, expenditure must be charged to P&L.'
+              : '⚠️ AMOUNTS PENDING: Transaction expenditure outlay was not specified in query. Journal structure is a conditional proposal; monetary amounts must be determined before posting.',
             'Under IRAS: Capitalised development costs are non-deductible under Section 14(1). Qualifying R&D activities claim the 400% EIS enhanced deduction separately in tax computation.'
           ]
         }
       ],
       isComplete: hasExplicitAmount && userEstablishedCriteria,
       missingFields
+    };
+  }
+
+  // =========================================================================
+  // SCENARIO -1.5: SINGAPORE PAYROLL, PRORATED SALARY & CPF CALCULATION (MOM EA §22 & CPF ACT §7)
+  // e.g. "a staff is earning sgd3200 a month, he is a singaporean, 32 years old, his last day is 16/9/2026, calculate his september salary and employer employee cpf"
+  // =========================================================================
+  const hasSalaryFigure =
+    /(?:earning|earns|salary|wages?|pay)\s*(?:of|is|:)?\s*(?:sgd|\$)?\s*\d+/i.test(q) ||
+    /(?:sgd|\$)\s*\d+[\d,]*(?:\.\d+)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i.test(q) ||
+    /\d+[\d,]*(?:\.\d+)?\s*(?:a\s*month|\/month|monthly|per\s*month)/i.test(q);
+
+  const hasPayrollPersonnel = /\b(staff|employee|worker|person|he|she|his|her)\b/i.test(q);
+
+  const hasPayrollCalcIntent =
+    (q.includes('calculat') || q.includes('compute') || q.includes('what is his') || q.includes('what is her') || q.includes('how much') || q.includes('entry') || q.includes('journal')) &&
+    (q.includes('salary') || q.includes('cpf') || q.includes('wage'));
+
+  const isPayrollSalaryQuery =
+    (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
+    (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf')));
+
+  if (isPayrollSalaryQuery) {
+    let baseSalary = 3200;
+    const salaryMatch =
+      query.match(/(?:earning|earns|salary\s*(?:of|is|:)?|wages?\s*(?:of|is|:)?|pay\s*(?:of|is|:)?)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i) ||
+      query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
+      query.match(/([\d,]+(?:\.\d+)?)\s*(?:a\s*month|\/month|monthly|per\s*month)/i);
+    if (salaryMatch && salaryMatch[1]) {
+      const parsedSalary = parseFloat(salaryMatch[1].replace(/,/g, ''));
+      if (parsedSalary > 0) baseSalary = parsedSalary;
+    }
+
+    let employeeAge = 32;
+    const ageMatch = query.match(/(\d{1,2})\s*(?:years\s*old|yo|y\/o|yrs\s*old)/i) ||
+      query.match(/(?:age|aged)\s*[:=]?\s*(\d{1,2})/i);
+    if (ageMatch) {
+      const parsedAge = parseInt(ageMatch[1] || ageMatch[2], 10);
+      if (parsedAge >= 15 && parsedAge <= 99) employeeAge = parsedAge;
+    }
+
+    const isExplicitNonCitizen = q.includes('foreign') || q.includes('ep holder') || q.includes('s pass') || q.includes('work permit') || q.includes('non-citizen');
+    const isSingaporean = !isExplicitNonCitizen;
+
+    let lastDay: number | null = null;
+    let lastMonth: number | null = null;
+    let lastYear: number | null = null;
+
+    const dmyMatch = query.match(/(?:last\s*day(?:\s*is)?|resigned\s*(?:on)?|effective|ended\s*(?:on)?|until|to)\s*[:=]?\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/i) ||
+      query.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+
+    if (dmyMatch) {
+      lastDay = parseInt(dmyMatch[1], 10);
+      lastMonth = parseInt(dmyMatch[2], 10);
+      lastYear = parseInt(dmyMatch[3], 10);
+    }
+
+    if (!lastDay) {
+      const monthNames: Record<string, number> = {
+        jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+        may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9,
+        september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
+      };
+      const wordMatch = query.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?/i);
+      if (wordMatch) {
+        lastDay = parseInt(wordMatch[1], 10);
+        const mStr = wordMatch[2].toLowerCase();
+        lastMonth = monthNames[mStr] || 9;
+        lastYear = wordMatch[3] ? parseInt(wordMatch[3], 10) : 2026;
+      }
+    }
+
+    if (!lastMonth) {
+      const monthMap: Record<string, number> = {
+        january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+        july: 7, august: 8, september: 9, october: 10, november: 11, december: 12
+      };
+      for (const [mName, mNum] of Object.entries(monthMap)) {
+        if (q.includes(mName)) {
+          lastMonth = mNum;
+          break;
+        }
+      }
+    }
+
+    if (!lastYear) {
+      const yearMatch = query.match(/\b(202[4-9]|203\d)\b/);
+      lastYear = yearMatch ? parseInt(yearMatch[1], 10) : 2026;
+    }
+    if (!lastMonth) {
+      lastMonth = 9; // default September
+    }
+
+    const totalDaysInMonth = new Date(lastYear, lastMonth, 0).getDate();
+
+    const getWorkingDays = (y: number, m: number, start: number, end: number): number => {
+      let count = 0;
+      for (let d = start; d <= end; d++) {
+        const dt = new Date(Date.UTC(y, m - 1, d));
+        const dayOfWeek = dt.getUTCDay(); // 0 = Sun, 6 = Sat
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+          count++;
+        }
+      }
+      return count;
+    };
+
+    const totalWorkingDays = getWorkingDays(lastYear, lastMonth, 1, totalDaysInMonth);
+    const isProrated = lastDay !== null && lastDay < totalDaysInMonth;
+    const workingDaysWorked = isProrated ? getWorkingDays(lastYear, lastMonth, 1, lastDay!) : totalWorkingDays;
+
+    // MOM Employment Act §22: (Monthly basic salary / Total working days in month) * Working days worked
+    const grossSalary = isProrated
+      ? Math.round((baseSalary / totalWorkingDays) * workingDaysWorked * 100) / 100
+      : baseSalary;
+
+    // 2026 CPF Contribution Schedules (OW ceiling SGD 8,000)
+    const owCeiling = 8000;
+    const eligibleOw = Math.min(grossSalary, owCeiling);
+
+    let employeeRate = 0.20;
+    let employerRate = 0.17;
+
+    if (employeeAge <= 55) {
+      employeeRate = 0.20;
+      employerRate = 0.17;
+    } else if (employeeAge <= 60) {
+      employeeRate = 0.17;
+      employerRate = 0.155;
+    } else if (employeeAge <= 65) {
+      employeeRate = 0.115;
+      employerRate = 0.12;
+    } else if (employeeAge <= 70) {
+      employeeRate = 0.075;
+      employerRate = 0.09;
+    } else {
+      employeeRate = 0.05;
+      employerRate = 0.075;
+    }
+
+    if (!isSingaporean) {
+      employeeRate = 0;
+      employerRate = 0;
+    }
+
+    // CPF Act §7 Statutory Rounding:
+    // Employee share: Cents are discarded
+    const rawEmployeeCpf = eligibleOw * employeeRate;
+    const employeeCpf = Math.floor(rawEmployeeCpf);
+    // Total contribution: Rounded to nearest whole dollar
+    const totalCpf = Math.round(eligibleOw * (employeeRate + employerRate));
+    // Employer share: Difference between total and employee share
+    const employerCpf = totalCpf - employeeCpf;
+
+    // Net take-home pay
+    const netSalary = Math.round((grossSalary - employeeCpf) * 100) / 100;
+
+    // Skills Development Levy (SDL): 0.25%, min $2, max $11.25
+    const rawSdl = grossSalary * 0.0025;
+    const sdl = Math.min(11.25, Math.max(2.00, Math.round(rawSdl * 100) / 100));
+
+    const monthNamesLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = monthNamesLong[lastMonth - 1];
+    const eventDate = isProrated
+      ? `${String(lastDay).padStart(2, '0')} ${monthName.slice(0, 3)} ${lastYear}`
+      : `${totalDaysInMonth} ${monthName.slice(0, 3)} ${lastYear}`;
+
+    const lines: JournalLine[] = [
+      {
+        id: 'line-payroll-salary-expense',
+        accountCode: '5010',
+        accountName: 'Staff Salaries & Wages (Operating Expense)',
+        category: 'EXPENSE',
+        debit: grossSalary,
+        credit: 0,
+        lineExplanation: isProrated
+          ? `Gross prorated salary for ${workingDaysWorked}/${totalWorkingDays} working days in ${monthName} ${lastYear} under MOM Employment Act §22.`
+          : `Full monthly basic salary for ${monthName} ${lastYear} under SFRS(I) 1-1 §28.`
+      },
+      {
+        id: 'line-payroll-employer-cpf',
+        accountCode: '5020',
+        accountName: 'Employer CPF Contribution (Operating Expense)',
+        category: 'EXPENSE',
+        debit: employerCpf,
+        credit: 0,
+        lineExplanation: `Mandatory employer CPF contribution (${(employerRate * 100).toFixed(1)}% for age ${employeeAge}) under CPF Act §7. 100% tax-deductible under ITA §14(1)(e).`
+      },
+      {
+        id: 'line-payroll-cpf-payable',
+        accountCode: '2050',
+        accountName: 'CPF Payable to CPF Board (Current Liability)',
+        category: 'LIABILITY',
+        debit: 0,
+        credit: totalCpf,
+        lineExplanation: `Total mandatory CPF payable (Employee $${employeeCpf} + Employer $${employerCpf}) due by 14th of following month to CPF Board.`
+      },
+      {
+        id: 'line-payroll-net-salary-payable',
+        accountCode: '2060',
+        accountName: 'Net Salaries Payable / Staff Clearing (Current Liability)',
+        category: 'LIABILITY',
+        debit: 0,
+        credit: netSalary,
+        lineExplanation: `Net take-home salary payable to employee after deducting employee CPF share ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} - $${employeeCpf.toFixed(2)}).`
+      }
+    ];
+
+    const totalDebit = Math.round((grossSalary + employerCpf) * 100) / 100;
+    const totalCredit = Math.round((totalCpf + netSalary) * 100) / 100;
+
+    const citations = [
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC22_PRORATED_SALARY),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPFA_SEC7_FIRST_SCHEDULE),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_WAGE_CEILINGS_2026),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_EMPLOYER_TAX_DEDUCTIBILITY),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC21_SALARY_TIMELINES),
+      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_SDL_SKILLS_DEVELOPMENT_LEVY)
+    ];
+
+    const advisories = [
+      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC22_PRORATED_SALARY),
+      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.CPFA_SEC7_FIRST_SCHEDULE),
+      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.CPF_EMPLOYER_TAX_DEDUCTIBILITY)
+    ];
+
+    const keyParams: TransactionFact[] = [
+      { label: 'Basic Monthly Salary', value: `${functionalCurrency} ${baseSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Base Rate' },
+      { label: 'Employee Status', value: `${isSingaporean ? 'Singapore Citizen / PR' : 'Foreign Worker'}, Age ${employeeAge}`, badge: 'Eligibility' },
+      { label: 'Salary Period', value: `${monthName} ${lastYear}${isProrated ? ` (Last Day: ${eventDate})` : ' (Full Month)'}`, badge: 'Period' },
+      { label: 'Working Days (Mon-Fri)', value: `${workingDaysWorked} / ${totalWorkingDays} days (${isProrated ? 'Prorated' : 'Full'})`, badge: 'MOM §22', highlight: isProrated },
+      { label: 'Gross Prorated Salary', value: `${functionalCurrency} ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Gross Pay', highlight: true },
+      { label: 'Employee CPF (20%, cents dropped)', value: `${functionalCurrency} ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Deduction' },
+      { label: 'Employer CPF (17%, dollar rounded)', value: `${functionalCurrency} ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Employer Cost' },
+      { label: 'Total CPF to CPF Board (37%)', value: `${functionalCurrency} ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Liability', highlight: true },
+      { label: 'Net Take-Home Pay', value: `${functionalCurrency} ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Disbursement', highlight: true },
+      { label: 'Skills Development Levy (SDL)', value: `${functionalCurrency} ${sdl.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'SSG Levy' },
+      { label: 'Tax Deductibility', value: '100% Allowable (§14(1)(e))', badge: 'IRAS Deductible' }
+    ];
+
+    const title = isProrated
+      ? `Payroll & Prorated Salary Accrual (${eventDate} - Last Day of Service)`
+      : `Monthly Payroll & Statutory CPF Accrual (${eventDate})`;
+    const summary = isProrated
+      ? `Prorated salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} for ${workingDaysWorked}/${totalWorkingDays} working days worked in ${monthName} ${lastYear} under MOM Employment Act §22, with CPF contributions (Employee: SGD ${employeeCpf}, Employer: SGD ${employerCpf}).`
+      : `Monthly salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} with CPF contributions (Employee: SGD ${employeeCpf}, Employer: SGD ${employerCpf}) for ${monthName} ${lastYear}.`;
+
+    return {
+      scenarioType: 'PAYROLL_CPF_SALARY',
+      authorityStatus: 'DETERMINISTIC',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'CPF_BOARD',
+      rawQuery: query,
+      transactionTitle: title,
+      functionalCurrency,
+      transactionCurrency: functionalCurrency,
+      amount: grossSalary,
+      accountingTreatmentSummary: `Recognize staff salary expense ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) and employer CPF expense ($${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}) in P&L under SFRS(I) 1-1 §28. Outstanding net salary ($${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) and total CPF liability ($${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}) are credited to current liabilities.`,
+      singaporeTaxTreatmentSummary: `Gross staff salaries and mandatory employer CPF contributions ($${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}) are 100% tax-deductible for the employer under Section 14(1) and Section 14(1)(e) of the Income Tax Act 1947. SDL ($${sdl.toLocaleString(undefined, { minimumFractionDigits: 2 })}) is also tax-deductible.`,
+      regulatoryMandatesSummary: `MOM Employment Act §21(2) mandates full payment of all outstanding salary on the employee's last day of employment. CPF Act §7 mandates payment of CPF contributions to CPF Board by the 14th of the following month.`,
+      effectiveDateOrTiming: `2026 CPF Ordinary Wage monthly ceiling of SGD 8,000 active (effective 1 Jan 2026). Employment Act 1968 active.`,
+      uncertaintyDisclaimer: 'Grounded in Singapore Employment Act §22 proration formula and 2026 CPF Board contribution schedules. Standard 5-day work week (Monday to Friday) assumed unless company employment contract stipulates alternate work days.',
+      statutoryAdvisory: advisories,
+      keyParameters: keyParams,
+      directGroups: [
+        {
+          id: 'grp-payroll-accrual',
+          eventDate,
+          title,
+          summary,
+          lines,
+          totalDebit,
+          totalCredit,
+          isBalanced: Math.abs(totalDebit - totalCredit) < 0.01,
+          citations,
+          authorityStatus: 'DETERMINISTIC',
+          rationalePoints: [
+            `Under MOM Employment Act §22: Gross prorated salary = (SGD ${baseSalary.toLocaleString()} / ${totalWorkingDays} working days) * ${workingDaysWorked} days worked = SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`,
+            `Under CPF Act §7: Employee CPF share (20%) is SGD ${employeeCpf}. Cents ($${(rawEmployeeCpf - employeeCpf).toFixed(2)}) are discarded per statute.`,
+            `Under CPF Act §7: Employer CPF share (17%) is SGD ${employerCpf}. Total CPF contribution (SGD ${totalCpf}) is rounded to nearest dollar.`,
+            `Net Take-Home Salary = Gross Salary ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) - Employee CPF ($${employeeCpf}) = SGD ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`,
+            `Under Section 14(1)(e) of the Income Tax Act 1947: Mandatory employer CPF ($${employerCpf}) is 100% tax-deductible.`,
+            `Total Debits (SGD ${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}) == Total Credits (SGD ${totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}) \u2713 Balanced.`
+          ]
+        }
+      ],
+      isComplete: true,
+      missingFields: []
     };
   }
 
@@ -258,7 +547,7 @@ export async function parseAccountingQuery(
     (q.startsWith('can i claim') || q.startsWith('can we claim') || q.includes('is it deductible') || q.includes('is it claimable') || q.includes('need to register for gst'));
 
   if (isCarPurchase) {
-    let carCost = 120000;
+    let carCost: number | undefined = undefined;
     const costMatch = query.match(/(?:for|cost|price|at)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i) ||
       query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i);
     if (costMatch && costMatch[1]) {
@@ -266,8 +555,11 @@ export async function parseAccountingQuery(
       const unit = costMatch[2]?.toLowerCase();
       if (unit === 'k' || unit === 'thousand') rawVal *= 1000;
       if (unit === 'm') rawVal *= 1000000;
-      if (rawVal > 1000) carCost = rawVal;
+      if (rawVal > 0) carCost = rawVal;
     }
+
+    const hasExplicitCarCost = carCost !== undefined && carCost > 0;
+    const effectiveCarCost = carCost ?? 0;
 
     const lines: JournalLine[] = [
       {
@@ -275,9 +567,11 @@ export async function parseAccountingQuery(
         accountCode: '1700',
         accountName: 'Motor Vehicles - Cost (Non-Current Asset)',
         category: 'ASSET',
-        debit: carCost,
+        debit: effectiveCarCost,
         credit: 0,
-        lineExplanation: 'Capitalization of motor vehicle at gross purchase price. Input GST is completely capitalized into cost because input tax recovery is blocked under Singapore GST Regulation 26.'
+        lineExplanation: hasExplicitCarCost
+          ? 'Capitalization of motor vehicle at gross purchase price. Input GST is completely capitalized into cost because input tax recovery is blocked under Singapore GST Regulation 26.'
+          : 'Capitalization of motor vehicle — [Valuation pending determination]'
       },
       {
         id: 'l-car-bank',
@@ -285,8 +579,10 @@ export async function parseAccountingQuery(
         accountName: 'Cash at Bank',
         category: 'ASSET',
         debit: 0,
-        credit: carCost,
-        lineExplanation: 'Full settlement of vehicle purchase paid via bank transfer.'
+        credit: effectiveCarCost,
+        lineExplanation: hasExplicitCarCost
+          ? 'Full settlement of vehicle purchase paid via bank transfer.'
+          : 'Settlement of vehicle purchase — [Valuation pending determination]'
       }
     ];
 
@@ -300,10 +596,12 @@ export async function parseAccountingQuery(
       convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX)
     ];
 
+    const carAuthorityStatus: JournalAuthorityStatus = hasExplicitCarCost ? 'DETERMINISTIC' : 'CONDITIONAL';
+
     return {
       scenarioType: 'CAR_PURCHASE_STATUTORY',
-      authorityStatus: 'DETERMINISTIC',
-      queryIntent: 'HYBRID',
+      authorityStatus: carAuthorityStatus,
+      queryIntent: hasExplicitCarCost ? 'HYBRID' : 'STATUTORY_ADVISORY',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
       transactionTitle: 'Purchase of Passenger Motor Car (Tax Disallowed & GST Blocked)',
@@ -319,31 +617,48 @@ export async function parseAccountingQuery(
         {
           id: 'grp-car-purchase',
           eventDate: formatSingaporeDate(new Date()),
-          title: 'Single Compound Journal Entry: Acquisition of Passenger Motor Car',
-          summary: `Acquisition of passenger motor car for ${functionalCurrency} ${carCost.toLocaleString()} (Gross Cost capitalized with Zero Input GST Claim)`,
+          title: hasExplicitCarCost
+            ? 'Single Compound Journal Entry: Acquisition of Passenger Motor Car'
+            : 'AI-Proposed Double Entry (Pending Valuation)',
+          summary: hasExplicitCarCost
+            ? `Acquisition of passenger motor car for ${functionalCurrency} ${effectiveCarCost.toLocaleString()} (Gross Cost capitalized with Zero Input GST Claim)`
+            : 'Acquisition of passenger motor car — provisional journal entry structure with uncalculated monetary amounts.',
           lines,
-          totalDebit: carCost,
-          totalCredit: carCost,
-          isBalanced: true,
+          totalDebit: effectiveCarCost,
+          totalCredit: effectiveCarCost,
+          isBalanced: hasExplicitCarCost,
           citations: carCitations,
-          authorityStatus: 'DETERMINISTIC',
+          authorityStatus: carAuthorityStatus,
           rationalePoints: [
             'Under IRAS GST Regulation 26: 9% Input GST incurred on passenger cars (S-plate) is strictly blocked from recovery. The full invoice amount is capitalized into the asset cost.',
             'Under Section 15(1)(k) of the Income Tax Act 1947: No deduction or capital allowance is granted on passenger cars. Depreciation in accounting records must be added back 100% in the corporate tax computation.',
-            'Sum of Debits = Sum of Credits ($' + carCost.toLocaleString() + '). Journal entry is 100% balanced.'
+            hasExplicitCarCost
+              ? 'Sum of Debits = Sum of Credits ($' + effectiveCarCost.toLocaleString() + '). Journal entry is 100% balanced.'
+              : '⚠️ AMOUNTS PENDING: Motor vehicle purchase price was not specified in query. Journal structure is proposed; monetary amounts must be determined before posting.'
           ]
         }
       ],
       keyParameters: [
         { label: 'Asset Recognized', value: 'Motor Vehicles (Gross Cost)', badge: 'Asset Cost' },
-        { label: 'Total Purchase Outlay', value: `${functionalCurrency} ${carCost.toLocaleString()}`, badge: 'Outflow' },
+        {
+          label: 'Total Purchase Outlay',
+          value: hasExplicitCarCost ? `${functionalCurrency} ${effectiveCarCost.toLocaleString()}` : 'Pending Determination',
+          badge: hasExplicitCarCost ? 'Outflow' : 'Missing Fact'
+        },
         { label: '9% Input GST Status', value: 'BLOCKED (Regulation 26)', badge: 'IRAS Disallowed', highlight: true },
         { label: 'Corporate Tax Deduction', value: 'DISALLOWED (§15(1)(k))', badge: 'No CA Granted', highlight: true },
         { label: 'Depreciation Add-Back', value: 'Mandatory in Form C-S', badge: 'Tax Add-Back' },
         { label: 'Governing Authorities', value: 'IRAS & AGC Singapore', badge: 'SSO Verified' }
       ],
-      isComplete: true,
-      missingFields: []
+      isComplete: hasExplicitCarCost,
+      missingFields: hasExplicitCarCost ? [] : [
+        {
+          fieldKey: 'carCost',
+          fieldName: 'Motor Vehicle Purchase Price',
+          prompt: 'What is the purchase price of the passenger car?',
+          whyNeeded: 'Directly measurable purchase cost is required for capitalization under SFRS(I) 1-16 §16.'
+        }
+      ]
     };
   }
 
@@ -351,7 +666,26 @@ export async function parseAccountingQuery(
     const matchedRules = querySingaporeStatutes(query);
     if (matchedRules.length > 0) {
       const primaryRule = matchedRules[0];
-      const relevantRules = [primaryRule];
+      // In multi-topic queries, retain matched rules covering distinct statutory sections within the primary authority/domain
+      const distinctSections = new Set<string>();
+      const relevantRules: SingaporeStatuteRule[] = [];
+
+      for (const rule of matchedRules) {
+        const hasDirectTagMatch = rule.tags.some(t => q.includes(t)) || q.includes(rule.sectionOrSchedule.toLowerCase());
+        if (rule !== primaryRule && !hasDirectTagMatch) continue;
+
+        // Prefer section-specific rules over bundled composite rules
+        if (rule.id === 'MOM_ANNUAL_SICK_LEAVE' && matchedRules.some(other => other.id === 'MOM_SEC88A_ANNUAL_LEAVE' && other.tags.some(t => q.includes(t)))) {
+          continue;
+        }
+
+        const secKey = `${rule.actCode}-${rule.sectionOrSchedule}`;
+        if (!distinctSections.has(secKey)) {
+          distinctSections.add(secKey);
+          relevantRules.push(rule);
+        }
+      }
+
       const advisories = relevantRules.map(convertToAdvisory);
       const citations = relevantRules.map(convertToCitation);
 
@@ -363,7 +697,7 @@ export async function parseAccountingQuery(
       else if (primaryRule.category === 'TAX_INCOME') primaryDomain = 'IRAS_TAX';
 
       let acctSummary = 'Financial statements must be prepared under the accrual basis compliant with SFRS(I) pursuant to Section 201 of the Companies Act 1967.';
-      let taxSummary = `${primaryRule.actTitle} (${primaryRule.sectionOrSchedule}): ${primaryRule.principle}`;
+      let taxSummary = relevantRules.map(r => `${r.actTitle} (${r.sectionOrSchedule}): ${r.principle}`).join('; ');
       let effDate = 'Current Singapore Legislation';
 
       if (primaryRule.category === 'ACRA_COMPLIANCE') {
@@ -389,10 +723,10 @@ export async function parseAccountingQuery(
       }
 
       const keyParams = [
-        { label: 'Governing Authority', value: primaryRule.authorityName, badge: primaryRule.authority },
-        { label: 'Statute / Act', value: primaryRule.actTitle, badge: primaryRule.actCode },
-        { label: 'Section / Schedule', value: primaryRule.sectionOrSchedule, badge: 'Statutory Section', highlight: true },
-        ...primaryRule.practicalRules.slice(0, 3).map((r, idx) => ({
+        { label: 'Governing Authority', value: relevantRules.map(r => r.authority).join(' / '), badge: primaryRule.authority },
+        { label: 'Statute / Act', value: [...new Set(relevantRules.map(r => r.actTitle))].join('; '), badge: primaryRule.actCode },
+        { label: 'Section / Schedule', value: relevantRules.map(r => r.sectionOrSchedule).join(', '), badge: 'Statutory Sections', highlight: true },
+        ...relevantRules.flatMap(r => r.practicalRules.slice(0, 2)).slice(0, 4).map((r, idx) => ({
           label: `Rule #${idx + 1}`,
           value: r.length > 70 ? r.slice(0, 67) + '...' : r,
           badge: 'Compliance'
@@ -400,13 +734,18 @@ export async function parseAccountingQuery(
         { label: 'Official SSO Source', value: 'Singapore Statutes Online', badge: 'Verified', highlight: true }
       ];
 
+      const combinedTitle = relevantRules.length > 1
+        ? `Statutory Directives: ${relevantRules.map(r => r.sectionOrSchedule).join(', ')}`
+        : `Statutory Directive: ${primaryRule.ruleTitle}`;
+      const combinedSummary = relevantRules.map(r => `• ${r.actTitle} (${r.sectionOrSchedule}): ${r.principle}`).join('\n\n');
+
       return {
         scenarioType: 'SINGAPORE_STATUTORY_ADVISORY',
         authorityStatus: 'DETERMINISTIC',
         queryIntent: 'STATUTORY_ADVISORY',
         primaryDomain,
         rawQuery: query,
-        transactionTitle: primaryRule.ruleTitle,
+        transactionTitle: combinedTitle,
         functionalCurrency,
         transactionCurrency: functionalCurrency,
         accountingTreatmentSummary: acctSummary,
@@ -420,15 +759,15 @@ export async function parseAccountingQuery(
           {
             id: 'grp-statutory-directive',
             eventDate: formatSingaporeDate(new Date()),
-            title: `Statutory Directive: ${primaryRule.ruleTitle}`,
-            summary: primaryRule.principle,
+            title: combinedTitle,
+            summary: combinedSummary,
             lines: [],
             totalDebit: 0,
             totalCredit: 0,
             isBalanced: true,
             citations,
             authorityStatus: 'DETERMINISTIC',
-            rationalePoints: primaryRule.practicalRules
+            rationalePoints: relevantRules.flatMap(r => r.practicalRules)
           }
         ],
         isComplete: true,

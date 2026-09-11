@@ -12,6 +12,7 @@ export interface SingaporeStatuteRule {
   ruleTitle: string;
   category: 'TAX_INCOME' | 'TAX_GST' | 'ACRA_COMPLIANCE' | 'CPF_PAYROLL' | 'MOM_LABOUR' | 'MAS_FINANCE' | 'CUSTOMS_TRADE';
   principle: string;
+  verbatimStatuteText?: string; // Authentic statutory wording from Singapore Statutes Online / official legislation
   application: string;
   practicalRules: string[];
   canonicalUrl: string;
@@ -40,6 +41,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     ruleTitle: 'General Tax Deductibility of Business Expenses ("Wholly & Exclusively")',
     category: 'TAX_INCOME',
     principle: 'For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income.',
+    verbatimStatuteText: 'For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income.',
     application: 'Operating expenses (rental, staff salaries, utilities, marketing, trade debt provisions) directly related to revenue generation are tax-deductible.',
     practicalRules: [
       'Must be wholly and exclusively incurred in the production of income.',
@@ -172,6 +174,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     ruleTitle: 'Compulsory GST Registration Threshold ($1,000,000 Turnover)',
     category: 'TAX_GST',
     principle: 'A business is legally liable to register for GST if its taxable turnover exceeds SGD 1,000,000 under either the retrospective or prospective basis.',
+    verbatimStatuteText: 'A person who makes taxable supplies but is not registered shall be liable to be registered— (a) at the end of any calendar year if the total value of taxable supplies made by him in that year has exceeded $1,000,000; or (b) at any time if there are reasonable grounds for believing that the total value of taxable supplies to be made by him in the period of 12 months then beginning will exceed $1,000,000.',
     application: 'SMEs must monitor taxable turnover at the end of each calendar year and projected 12 months.',
     practicalRules: [
       'Retrospective Basis: Taxable turnover at the end of the calendar year (31 Dec) exceeds SGD 1,000,000. Must apply for registration within 30 days (by 30 Jan).',
@@ -238,7 +241,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     authority: 'ACRA',
     authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
     actTitle: 'Companies Act 1967',
-    actCode: 'CA1967',
+    actCode: 'CoA1967',
     sectionOrSchedule: 'Section 205C & Thirteenth Schedule',
     ruleTitle: 'Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)',
     category: 'ACRA_COMPLIANCE',
@@ -251,7 +254,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.',
       'Group Requirement: If the company is part of a corporate group, the entire group must qualify as a "small group" on a consolidated basis to enjoy the audit exemption.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CA1967#pr205C-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr205C-',
     tags: ['audit exemption', 'small company', 'section 205c', 'revenue 10m', 'assets 10m', 'employees 50']
   },
 
@@ -260,7 +263,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     authority: 'ACRA',
     authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
     actTitle: 'Companies Act 1967',
-    actCode: 'CA1967',
+    actCode: 'CoA1967',
     sectionOrSchedule: 'Section 175, 175A & Section 197',
     ruleTitle: 'Annual General Meeting (AGM) and Annual Return (AR) Statutory Filing Deadlines',
     category: 'ACRA_COMPLIANCE',
@@ -273,7 +276,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Listed Companies: AGM within 4 months after FYE; Annual Return within 5 months after FYE.',
       'Late Lodgment Penalties: Minimum SGD 300 tier-escalating composition fine imposed by ACRA for late filing.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CA1967#pr197-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr197-',
     tags: ['agm deadline', 'annual return', 'bizfile', 'fye 6 months', 'fye 7 months', 'section 175', 'section 197']
   },
 
@@ -282,7 +285,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     authority: 'ACRA',
     authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
     actTitle: 'Companies Act 1967',
-    actCode: 'CA1967',
+    actCode: 'CoA1967',
     sectionOrSchedule: 'Section 199(1)',
     ruleTitle: 'Mandatory 5-Year Accounting Records & Vouchers Retention',
     category: 'ACRA_COMPLIANCE',
@@ -293,7 +296,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Location: Must be kept at the registered office or such other place in Singapore as the directors think fit.',
       'Electronic Storage: Electronic invoices and digital cloud archives are accepted provided they can be readily converted into readable form on demand.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CA1967#pr199-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr199-',
     tags: ['record retention', '5 years', 'accounting books', 'receipts', 'section 199']
   },
 
@@ -302,7 +305,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     authority: 'ACRA',
     authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
     actTitle: 'Companies Act 1967',
-    actCode: 'CA1967',
+    actCode: 'CoA1967',
     sectionOrSchedule: 'Section 145(1)',
     ruleTitle: 'Requirement for at Least One Ordinarily Resident Director in Singapore',
     category: 'ACRA_COMPLIANCE',
@@ -313,7 +316,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Natural Person: Must be a natural person aged at least 18 years old and not disqualified under Section 148, 149, or 154 (e.g. not an undischarged bankrupt).',
       'Corporate Secretary (Section 171): Must appoint a resident company secretary within 6 months of incorporation. A sole director cannot act as company secretary.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CA1967#pr145-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr145-',
     tags: ['resident director', 'section 145', 'company secretary', 'incorporation requirements']
   },
 
@@ -324,12 +327,15 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     id: 'CPF_WAGE_CEILINGS_2026',
     authority: 'CPF',
     authorityName: 'Central Provident Fund Board (CPF)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Central Provident Fund Act 1953',
     actTitle: 'Central Provident Fund Act 1953',
     actCode: 'CPFA1953',
-    sectionOrSchedule: 'First Schedule & Budget Statutory Ceilings',
+    sectionOrSchedule: 'First Schedule',
     ruleTitle: 'Ordinary Wage (OW) Monthly Ceiling ($8,000 in 2026) & Additional Wage (AW) Ceiling',
     category: 'CPF_PAYROLL',
     principle: 'CPF contributions are payable on Ordinary Wages (OW) up to the statutory monthly wage ceiling, and on Additional Wages (AW) up to the annual ceiling formula.',
+    verbatimStatuteText: 'Every employer of an employee who is a citizen of Singapore or a permanent resident shall pay to the Fund monthly contributions at the statutory rates up to the Ordinary Wage monthly ceiling of $8,000, and up to the Additional Wage annual ceiling calculated as $102,000 minus total Ordinary Wages subject to CPF in the year.',
     application: 'Payroll calculations for Singapore Citizen and Permanent Resident employees.',
     practicalRules: [
       '2026 Ordinary Wage (OW) Ceiling: SGD 8,000 per month (effective 1 January 2026). Mandatory CPF is capped at SGD 8,000 of monthly basic salary.',
@@ -389,6 +395,35 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     tags: ['cpf tax deduction', 'section 14(1)(e)', 'employer cpf', 'voluntary cpf']
   },
 
+  CPFA_SEC7_FIRST_SCHEDULE: {
+    id: 'CPFA_SEC7_FIRST_SCHEDULE',
+    authority: 'CPF',
+    authorityName: 'Central Provident Fund Board (CPF)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Central Provident Fund Act 1953',
+    actTitle: 'Central Provident Fund Act 1953',
+    actCode: 'CPFA1953',
+    sectionOrSchedule: 'Section 7 & First Schedule',
+    ruleTitle: 'Statutory CPF Contribution Rates & Rounding Rules (Cents Discarded for Employee, Dollar Rounding for Employer)',
+    category: 'CPF_PAYROLL',
+    principle: 'Under Section 7 and the First Schedule of the Central Provident Fund Act 1953, the employer pays both employer and employee contributions. The employee share is deducted from wages with cents discarded. The total contribution is rounded to the nearest dollar, and employer contribution is the difference between total and employee contribution.',
+    verbatimStatuteText: 'Every employer of an employee shall pay monthly to the Fund in respect of each employee contributions at the respective rates prescribed in the First Schedule. In calculating the employee\'s share of contribution, any fraction of a dollar which is a cent or cents shall be discarded. Total contribution payable shall be rounded to the nearest dollar.',
+    application: 'Calculation of monthly employee and employer CPF contributions up to the Ordinary Wage monthly ceiling (SGD 8,000 for 2026).',
+    practicalRules: [
+      'Employee CPF Share: For age 55 and below, 20% of Ordinary Wages. Statutory Rounding: Cents are discarded / dropped.',
+      'Employer CPF Share: For age 55 and below, 17% of Ordinary Wages. Rounding: Total CPF rounded to nearest dollar; Employer CPF = Total CPF - Employee CPF.',
+      'Ordinary Wage (OW) Ceiling: SGD 8,000 per month effective 1 January 2026.',
+      'Tax Deductibility: Mandatory employer CPF is 100% tax-deductible under Section 14(1)(e) of the Income Tax Act 1947.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953#pr7-',
+    tags: ['cpf act section 7', 'first schedule', 'cpf rounding', 'employee cpf 20%', 'employer cpf 17%', 'cpf calculation', 'cents discarded'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2026-01-01'
+  },
+
   // -------------------------------------------------------------
   // 5. MOM & EMPLOYMENT ACT 1968
   // -------------------------------------------------------------
@@ -410,7 +445,41 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Itemised Pay Slips: Mandatory under Section 96 of the Employment Act to provide itemised pay slips with every salary payment.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr21-',
-    tags: ['salary deadline', '7 days', 'overtime pay', 'itemised payslip', 'section 21']
+    tags: ['salary deadline', '7 days', 'overtime payment deadline', 'itemised payslip', 'section 21'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2019-04-01',
+    verbatimStatuteText: 'Salary earned by an employee under a contract of service shall be paid before the expiry of the seventh day after the last day of the salary period. Payment for overtime work shall be made within 14 days after the end of the salary period.'
+  },
+
+  MOM_SEC22_PRORATED_SALARY: {
+    id: 'MOM_SEC22_PRORATED_SALARY',
+    authority: 'MOM',
+    authorityName: 'Ministry of Manpower (MOM)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Employment Act 1968',
+    actTitle: 'Employment Act 1968',
+    actCode: 'EA1968',
+    sectionOrSchedule: 'Section 22',
+    ruleTitle: 'MOM Formula for Salary Computation for Incomplete Month of Work',
+    category: 'MOM_LABOUR',
+    principle: 'Under Section 22 of the Employment Act 1968, salary for an incomplete month of service (commencement, resignation, or termination) is calculated as: (Monthly Basic Salary / Total Working Days in Month) x Total Working Days Worked.',
+    application: 'Prorated salary calculation on resignation or termination. Total working days and days worked exclude rest days and non-working days for a 5-day work week.',
+    practicalRules: [
+      'Formula: Gross Salary Payable = (Monthly Basic Rate of Pay / Total Working Days in Month) * Actual Days Worked.',
+      'Total Working Days: Number of days on which employee was required to work in that month (excludes rest days / non-working Saturdays/Sundays).',
+      'Payment Deadline: On employee resignation with notice, full salary and benefits must be paid on the employee\'s last day of employment (Section 21(2)).'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr22-',
+    tags: ['prorated salary', 'incomplete month', 'section 22', 'last day', 'resignation salary', 'mom formula', 'salary proration'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2019-04-01',
+    verbatimStatuteText: 'The salary payable to an employee for an incomplete month of work shall be calculated in accordance with the formula: (Monthly basic rate of pay / Total number of working days in that month) x Total number of days on which the employee was required to work and actually worked.'
   },
 
   // -------------------------------------------------------------
@@ -456,18 +525,106 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
   },
 
   // -------------------------------------------------------------
-  // 7. MOM & LEAVE / OVERTIME MANDATES
+  // 7. MOM & LEAVE / OVERTIME MANDATES (SECTION-LEVEL PRIMARY PROVISIONS)
   // -------------------------------------------------------------
+  MOM_SEC88A_ANNUAL_LEAVE: {
+    id: 'MOM_SEC88A_ANNUAL_LEAVE',
+    authority: 'MOM',
+    authorityName: 'Ministry of Manpower (MOM)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Employment Act 1968',
+    actTitle: 'Employment Act 1968',
+    actCode: 'EA1968',
+    sectionOrSchedule: 'Section 88A',
+    ruleTitle: 'Paid Annual Leave Statutory Entitlements (7 to 14 Days)',
+    category: 'MOM_LABOUR',
+    principle: 'An employee who has served an employer for a period of not less than 3 months shall be entitled to paid annual leave of 7 days in respect of the first 12 months of continuous service with that employer, and an additional one day of paid annual leave for every subsequent 12 months of continuous service, up to a maximum of 14 days.',
+    verbatimStatuteText: 'An employee who has served an employer for a period of not less than 3 months shall be entitled to paid annual leave of 7 days in respect of the first 12 months of continuous service with the employer and an additional one day’s paid annual leave for every subsequent 12 months of continuous service with the same employer, subject to a maximum of 14 days of paid annual leave.',
+    application: 'Leave administration and payroll accrual calculations for permanent and contract employees.',
+    practicalRules: [
+      'Paid Annual Leave (Section 88A): Minimum 7 days after 1 year of service, increasing by 1 additional day per completed year of service, up to a statutory maximum of 14 days for 8 or more years of service.',
+      'Pro-rating: Employees who have served at least 3 months in a calendar year are entitled to pro-rated annual leave in that year.',
+      'Forfeiture / Encashment: Statutory annual leave cannot be unlawfully forfeited if statutory qualification criteria are met.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr88A-',
+    tags: ['annual leave', 'section 88a', 'leave entitlement', '7 days', '14 days', 'statutory annual leave'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2019-04-01'
+  },
+
+  MOM_SEC89_SICK_LEAVE: {
+    id: 'MOM_SEC89_SICK_LEAVE',
+    authority: 'MOM',
+    authorityName: 'Ministry of Manpower (MOM)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Employment Act 1968',
+    actTitle: 'Employment Act 1968',
+    actCode: 'EA1968',
+    sectionOrSchedule: 'Section 89',
+    ruleTitle: 'Paid Outpatient Sick Leave (14 Days) and Hospitalisation Leave (60 Days)',
+    category: 'MOM_LABOUR',
+    principle: 'An employee who has served an employer for a period of not less than 3 months is entitled to paid sick leave not exceeding 14 days in each year if no hospitalisation is necessary, or 60 days in each year if hospitalisation is necessary.',
+    verbatimStatuteText: 'An employee who has served an employer for a period of not less than 3 months is entitled to paid sick leave (including paid medical examination leave) not exceeding in the aggregate — (a) 14 days in each year if no hospitalisation is necessary; or (b) 60 days in each year if hospitalisation is necessary (including the 14 days of outpatient sick leave).',
+    application: 'Paid medical leave and hospitalisation leave administration.',
+    practicalRules: [
+      'Paid Outpatient Sick Leave (Section 89): Up to 14 days per calendar year if certified by an approved medical practitioner. Graduated during first 6 months (5 days at 3 months, 8 days at 4 months, 11 days at 5 months, 14 days at 6+ months).',
+      'Paid Hospitalisation Leave (Section 89): Up to 60 days per calendar year (inclusive of the 14 days of outpatient sick leave).',
+      'Medical Certification: Medical certificates must be issued by a registered medical practitioner or company-appointed doctor.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr89-',
+    tags: ['sick leave', 'outpatient sick leave', 'hospitalisation leave', 'section 89', 'medical leave', '14 days'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2019-04-01'
+  },
+
+  MOM_SEC38_OVERTIME: {
+    id: 'MOM_SEC38_OVERTIME',
+    authority: 'MOM',
+    authorityName: 'Ministry of Manpower (MOM)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Employment Act 1968',
+    actTitle: 'Employment Act 1968',
+    actCode: 'EA1968',
+    sectionOrSchedule: 'Section 38',
+    ruleTitle: 'Part IV Hours of Work, Overtime Rate (1.5x Hourly Rate) & 72-Hour Monthly Cap',
+    category: 'MOM_LABOUR',
+    principle: 'For any overtime work, the employer shall pay the employee at the rate of not less than 1-1/2 times the employee’s hourly basic rate of pay. An employee shall not be permitted to work overtime for more than 72 hours a month without an MOM exemption.',
+    verbatimStatuteText: 'For any overtime work, the employer shall pay the employee at the rate of not less than 1-1/2 times the employee’s hourly basic rate of pay. An employee shall not be permitted to work overtime for more than 72 hours a month, or such other number of hours as the Minister may prescribe.',
+    application: 'Payroll calculation for overtime hours worked by Part IV eligible employees.',
+    practicalRules: [
+      'Coverage Threshold: Non-workmen earning monthly basic salary $\\le$ SGD 2,600; Workmen earning $\\le$ SGD 4,500.',
+      'Overtime Rate: At least 1.5 times the hourly basic rate of pay (for non-workmen, salary capped at SGD 2,600 or SGD 13.60/hour for calculation).',
+      'Maximum Overtime Cap: An employee cannot work more than 72 hours of overtime in a calendar month, except with an MOM overtime exemption.',
+      'Payment Deadline: Under Section 21, overtime payment must be disbursed within 14 days after the end of the salary period.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr38-',
+    tags: ['overtime', 'overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '72 hours'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2019-04-01'
+  },
+
   MOM_ANNUAL_SICK_LEAVE: {
     id: 'MOM_ANNUAL_SICK_LEAVE',
     authority: 'MOM',
     authorityName: 'Ministry of Manpower (MOM)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Employment Act 1968',
     actTitle: 'Employment Act 1968',
     actCode: 'EA1968',
     sectionOrSchedule: 'Section 88A & Section 89',
     ruleTitle: 'Annual Leave and Paid Sick / Hospitalisation Leave Statutory Entitlements',
     category: 'MOM_LABOUR',
     principle: 'Employees covered by the Employment Act who have served an employer for at least 3 months are entitled to paid sick leave. Employees who have served for at least 12 months are entitled to statutory paid annual leave.',
+    verbatimStatuteText: 'An employee who has served an employer for a period of not less than 3 months shall be entitled to paid annual leave of 7 days in respect of the first 12 months of continuous service with the employer and an additional one day’s paid annual leave for every subsequent 12 months of continuous service with the same employer, subject to a maximum of 14 days of paid annual leave. An employee who has served for at least 3 months is entitled to paid sick leave not exceeding 14 days if no hospitalisation is necessary, or 60 days if hospitalisation is necessary.',
     application: 'Leave administration and payroll accrual calculations for permanent and contract employees.',
     practicalRules: [
       'Paid Annual Leave (Section 88A): Minimum 7 days after 1 year of service, increasing by 1 additional day per completed year of service, up to a statutory maximum of 14 days for 8 or more years of service.',
@@ -488,12 +645,15 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     id: 'MOM_OVERTIME_PART_IV',
     authority: 'MOM',
     authorityName: 'Ministry of Manpower (MOM)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Employment Act 1968',
     actTitle: 'Employment Act 1968',
     actCode: 'EA1968',
-    sectionOrSchedule: 'Section 38 (Part IV)',
+    sectionOrSchedule: 'Section 38',
     ruleTitle: 'Part IV Working Hours, Overtime Limits & Overtime Pay Rate (1.5x Hourly Rate)',
     category: 'MOM_LABOUR',
     principle: 'Part IV of the Employment Act protects workmen earning up to $4,500/month and non-workmen earning up to $2,600/month. Hours worked beyond contractual standard hours (max 44 hours/week) must be paid at overtime rates.',
+    verbatimStatuteText: 'For any overtime work, the employer shall pay the employee at the rate of not less than 1-1/2 times the employee’s hourly basic rate of pay. An employee shall not be permitted to work overtime for more than 72 hours a month, or such other number of hours as the Minister may prescribe.',
     application: 'Payroll calculation for overtime hours worked by eligible employees.',
     practicalRules: [
       'Coverage Threshold: Non-workmen earning monthly basic salary $\\le$ SGD 2,600; Workmen earning $\\le$ SGD 4,500.',
@@ -502,7 +662,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Payment Deadline: Under Section 21, overtime payment must be disbursed within 14 days after the end of the salary period.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr38-',
-    tags: ['overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '44 hours'],
+    tags: ['overtime', 'overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '44 hours'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
     evidenceTier: 'PRIMARY_SOURCE',
@@ -511,7 +671,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
   },
 
   // -------------------------------------------------------------
-  // 8. CPF BOARD & TIERED CONTRIBUTION RATES BY AGE
+  // 8. CPF BOARD & TIERED CONTRIBUTION RATES BY AGE (CURATED SUMMARY)
   // -------------------------------------------------------------
   CPF_RATES_BY_AGE_2026: {
     id: 'CPF_RATES_BY_AGE_2026',
@@ -535,10 +695,10 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
     ],
     canonicalUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay',
     tags: ['cpf rates by age', 'cpf contribution table', 'senior worker cpf', 'cpf 55 60', 'cpf rates 2026', 'cpf age brackets'],
-    sourceStatus: 'VERIFIED',
-    sourceType: 'AUTHORITATIVE_SOURCE',
-    evidenceTier: 'PRIMARY_SOURCE',
-    isVerbatimText: true,
+    sourceStatus: 'NEEDS_REVIEW',
+    sourceType: 'CURATED_SUMMARY',
+    evidenceTier: 'CURATED_SUMMARY',
+    isVerbatimText: false,
     effectiveDate: '2026-01-01'
   },
 

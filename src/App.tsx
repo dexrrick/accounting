@@ -253,10 +253,19 @@ export const App: React.FC = () => {
 
                 {(activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)) && (
                   <ComplianceRationale
-                    citations={[
-                      ...computed.groups.flatMap((g) => g.citations),
-                      ...(scenario.directGroups?.[0]?.citations || [])
-                    ]}
+                    citations={(() => {
+                      const all = [
+                        ...computed.groups.flatMap((g) => g.citations),
+                        ...(scenario.directGroups?.[0]?.citations || [])
+                      ];
+                      const seen = new Set<string>();
+                      return all.filter((c) => {
+                        const k = `${(c.standard || '').toLowerCase()}-${(c.paragraph || '').toLowerCase()}-${(c.officialSourceUrl || '').toLowerCase()}`;
+                        if (seen.has(k)) return false;
+                        seen.add(k);
+                        return true;
+                      });
+                    })()}
                     advisories={scenario.statutoryAdvisory}
                     standard={standard}
                     classification={scenario.classification}

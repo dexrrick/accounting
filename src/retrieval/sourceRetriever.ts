@@ -44,13 +44,22 @@ export class InMemorySourceRetriever implements ISourceRetriever {
     standardOrActCode: string,
     paragraphOrSection?: string
   ): AuthoritativeSourceRecord[] {
-    const codeClean = standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
+    const codeClean = standardOrActCode
+      .toLowerCase()
+      .replace(/\s*\((?:acra|mom|iras|cpf|mas|asc|sso|singapore)\)/gi, '')
+      .replace(/[\s\-_()]/g, '');
     const secClean = paragraphOrSection ? paragraphOrSection.toLowerCase().replace(/[§\s\-_()]/g, '') : null;
 
     return this.sources.filter((s) => {
       const sCodeClean = s.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
       const sTitleClean = s.documentTitle.toLowerCase().replace(/[\s\-_()]/g, '');
-      const codeMatches = sCodeClean.includes(codeClean) || sTitleClean.includes(codeClean) || codeClean.includes(sCodeClean);
+      const sInstClean = (s.legalOrStandardInstrument || '').toLowerCase().replace(/[\s\-_()]/g, '');
+      const codeMatches = 
+        sCodeClean.includes(codeClean) || 
+        codeClean.includes(sCodeClean) ||
+        sTitleClean.includes(codeClean) || 
+        codeClean.includes(sTitleClean) ||
+        (sInstClean && (sInstClean.includes(codeClean) || codeClean.includes(sInstClean)));
 
       if (!codeMatches) return false;
       if (!secClean) return true;

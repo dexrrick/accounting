@@ -121,13 +121,18 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('rest day') ||
     q.includes('retrenchment');
 
+  const hasPayrollCalculation =
+    (q.includes('salary') || q.includes('earning') || q.includes('earns') || q.includes('payroll') || q.includes('wages') || q.includes('wage')) &&
+    (q.includes('cpf') || q.includes('last day') || q.includes('resignation') || q.includes('prorat') || q.includes('staff') || q.includes('employee')) &&
+    (q.includes('calculat') || q.includes('compute') || q.includes('how much') || /\d+/.test(q));
+
   // 2. Map Authorities
   const authorities: string[] = [];
   if (hasAccounting) authorities.push('ACRA'); // ACRA ASC sets accounting standards
-  if (hasTax || hasGst) authorities.push('IRAS');
+  if (hasTax || hasGst || hasPayrollCalculation) authorities.push('IRAS');
   if (hasCorporate && !authorities.includes('ACRA')) authorities.push('ACRA');
-  if (hasPayroll) authorities.push('CPF');
-  if (hasEmployment) authorities.push('MOM');
+  if (hasPayroll || hasPayrollCalculation) authorities.push('CPF');
+  if (hasEmployment || hasPayrollCalculation) authorities.push('MOM');
 
   const multiAuthority = authorities.length > 1;
 
@@ -190,14 +195,14 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   let intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID' = 'STATUTORY_ADVISORY';
   if (asksForEntries && isConceptualOrAdvisory) {
     intent = 'HYBRID';
-  } else if (asksForEntries || hasTransactionAction) {
+  } else if (asksForEntries || hasTransactionAction || hasPayrollCalculation) {
     intent = 'TRANSACTION';
   } else {
     intent = 'STATUTORY_ADVISORY';
   }
 
-  // Journal entry is required ONLY if user explicitly asked for entries or it is an active transaction
-  const journalEntryRequired = asksForEntries || (hasTransactionAction && !isConceptualOrAdvisory);
+  // Journal entry is required if user asked for entries, active transaction, or payroll calculation
+  const journalEntryRequired = asksForEntries || hasPayrollCalculation || (hasTransactionAction && !isConceptualOrAdvisory);
 
   // Calculation required ONLY if quantitative computation requested or active quantitative transaction
   const calculationRequired =
@@ -208,6 +213,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('fx gain') ||
     q.includes('foreign exchange') ||
     q.includes('tax payable') ||
+    hasPayrollCalculation ||
     (intent === 'TRANSACTION' && /\d+/.test(q) && !isConceptualOrAdvisory);
 
   // 6. Missing Facts Identification

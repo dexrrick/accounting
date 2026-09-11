@@ -63,11 +63,13 @@ for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
   // CRITICAL PRINCIPLE:
   // Never infer primary verbatim authority from URL or text length.
   // Authority, publisher, and instrument are separated.
+  // Source text must be authentic verbatim statute text, NOT a local editorial summary.
   // Unknown effective dates are undefined, NOT populated with generic fake dates.
-  const isVerbatim = rule.isVerbatimText === true;
+  const hasVerbatimText = Boolean(rule.verbatimStatuteText && rule.verbatimStatuteText.trim().length > 0);
+  const isVerbatim = rule.isVerbatimText === true && hasVerbatimText;
   const status: SourceStatus = isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'VERIFIED' : 'NEEDS_REVIEW';
-  const type: SourceType = rule.sourceType || (isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY');
-  const tier: EvidenceTier = rule.evidenceTier || (isVerbatim ? 'PRIMARY_SOURCE' : 'CURATED_SUMMARY');
+  const type: SourceType = isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY';
+  const tier: EvidenceTier = isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'PRIMARY_SOURCE' : 'CURATED_SUMMARY';
 
   UNIFIED_SOURCE_REGISTRY[key] = {
     id: rule.id,
@@ -78,7 +80,7 @@ for (const [key, rule] of Object.entries(SINGAPORE_STATUTORY_REPOSITORY)) {
     documentTitle: rule.actTitle,
     standardOrActCode: rule.actCode,
     paragraphOrSection: rule.sectionOrSchedule,
-    sourceText: rule.principle,
+    sourceText: rule.verbatimStatuteText || rule.principle,
     principleSummary: rule.ruleTitle,
     effectiveDate: rule.effectiveDate, // Optional: undefined if unknown, NEVER hard-coded to fake dates!
     revisionDate: rule.revisionDate,
