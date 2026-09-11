@@ -1,6 +1,7 @@
 import type { AccountingScenarioState, JournalEntryGroup, JournalLine } from '../types/accounting';
 import type {
   AccountingEvent,
+  AccountingEventType,
   AccountingDelta,
   ConversationAccountingContext,
   FollowUpEventAnalysis,
@@ -143,28 +144,6 @@ export function deriveAccountingStateFromEvents(
           if (b.transactionId === ev.targetTransactionId) {
             targetBal = b;
             break;
-          }
-        }
-      }
-      
-      // Fallback match by matching credit line
-      if (!targetBal) {
-        const creditRecLine = lines.find(
-          l => l.credit > 0 &&
-          (l.accountName.toLowerCase().includes('due from') ||
-           l.accountName.toLowerCase().includes('receivable') ||
-           l.accountName.toLowerCase().includes('debtor'))
-        );
-        if (creditRecLine) {
-          for (const b of balancesMap.values()) {
-            if (
-              (b.accountCode && b.accountCode === creditRecLine.accountCode) ||
-              b.accountName.toLowerCase() === creditRecLine.accountName.toLowerCase() ||
-              b.accountName.toLowerCase().includes(creditRecLine.accountName.toLowerCase())
-            ) {
-              targetBal = b;
-              break;
-            }
           }
         }
       }
@@ -491,6 +470,8 @@ export function calculateAccountingDelta(
 
   const previousBalance = targetBalance.remainingAmount;
   const isOverpayment = settlementAmount > previousBalance;
+  const isPartial = settlementAmount < previousBalance;
+  const resolvedEventType: AccountingEventType = isPartial ? 'partial_settlement' : 'settlement';
   const effectiveSettledOnReceivable = isOverpayment ? previousBalance : settlementAmount;
   const resultingBalance = Math.max(0, Math.round((previousBalance - settlementAmount) * 100) / 100);
 
@@ -539,7 +520,7 @@ export function calculateAccountingDelta(
     id: `evt-settle-${uniqueIdSuffix}`,
     transactionId: `tx-settle-${uniqueIdSuffix}`,
     targetTransactionId: targetBalance.transactionId,
-    type: eventAnalysis.eventType,
+    type: resolvedEventType,
     description: explanation,
     amount: settlementAmount,
     currency,
@@ -552,7 +533,7 @@ export function calculateAccountingDelta(
   };
 
   return {
-    eventType: eventAnalysis.eventType,
+    eventType: resolvedEventType,
     journalLines: lines,
     amount: settlementAmount,
     currency,
@@ -630,8 +611,9 @@ export function validateAccountingStateTransition(
  * Commits an accounting event to the committed event history.
  * Enforces:
  * 1. Events must not be hypothetical.
- * 2. transactionId is mandatory at the committed boundary.
- * 3. Enforces uniqueness of transactionId.
+ * 2. transactionId is mandatory and authoritative (non-empty, != "default").
+ * 3. Settlement events must have an authoritative target identity (targetTransactionId or targetBalanceKey).
+ * 4. Enforces uniqueness of transactionId across committed events.
  */
 export function commitAccountingEvent(
   committedList: AccountingEvent[],
@@ -640,18 +622,29 @@ export function commitAccountingEvent(
   if (newEvent.isHypothetical) {
     throw new Error(`Cannot commit hypothetical event [${newEvent.id || 'unknown'}] to actual history.`);
   }
-  const txId = newEvent.transactionId || newEvent.id;
-  if (!txId) {
-    throw new Error(`Committed event must have an authoritative transactionId or id.`);
+
+  const txId = (newEvent.transactionId || '').trim();
+  if (!txId || txId.toLowerCase() === 'default') {
+    throw new Error(`INVALID_TRANSACTION_ID: Committed event must have an authoritative, non-empty transactionId (received "${newEvent.transactionId}"). "default" is not permitted.`);
   }
+
+  // Settlement events require target identity
+  if (newEvent.type === 'settlement' || newEvent.type === 'partial_settlement') {
+    const hasTargetTx = Boolean(newEvent.targetTransactionId && newEvent.targetTransactionId.trim() && newEvent.targetTransactionId.trim().toLowerCase() !== 'default');
+    const hasTargetBal = Boolean(newEvent.targetBalanceKey && newEvent.targetBalanceKey.trim());
+    if (!hasTargetTx && !hasTargetBal) {
+      throw new Error(`INVALID_SETTLEMENT_TARGET: Committed settlement event [${txId}] must have an authoritative targetTransactionId or targetBalanceKey.`);
+    }
+  }
+
   const eventToCommit: AccountingEvent = {
     ...newEvent,
     transactionId: txId,
     isHypothetical: false
   };
   
-  if (committedList.some(e => (e.transactionId || e.id) === txId)) {
-    throw new Error(`Duplicate transactionId: Event with transactionId "${txId}" is already committed.`);
+  if (committedList.some(e => (e.transactionId || '').trim().toLowerCase() === txId.toLowerCase())) {
+    throw new Error(`DUPLICATE_TRANSACTION_ID: Event with transactionId "${txId}" is already committed.`);
   }
 
   return [...committedList, eventToCommit];

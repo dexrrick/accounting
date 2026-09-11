@@ -14,7 +14,7 @@
  */
 
 import type { ProviderSettings } from '../types/provider';
-import type { ConversationAccountingContext, FollowUpEventAnalysis } from '../types/conversationState';
+import type { ConversationAccountingContext, FollowUpEventAnalysis, TargetResolutionCriteria } from '../types/conversationState';
 import { executeStructuredLlmCall } from './aiTransport';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 
@@ -300,54 +300,70 @@ export class DeterministicSemanticExtractor {
     const isHypothetical = /\b(what if|suppose|assuming|if)\b/i.test(query);
 
     if (hasPriorContext && !introducesNewSubject && isPaymentOrSettlementAction) {
-      // Find target receivable or payable to settle from recorded balances
-      const targetBalance = conversationContext!.outstandingBalances.find(b => b.nature === 'RECEIVABLE');
+      // Pure criteria extraction from query (NO first-receivable selection!)
+      const targetRole = q.includes('shareholder') ? 'shareholder' :
+                         q.includes('director') ? 'director' :
+                         q.includes('customer') ? 'customer' :
+                         q.includes('supplier') ? 'supplier' : undefined;
 
-      if (targetBalance) {
-        // If amount was not specified in the follow-up, inherit full remaining balance
-        if (amount === undefined) {
-          amount = targetBalance.remainingAmount;
-        }
+      const isReceivingPayment = q.includes('paid to company') ||
+                                 q.includes('paid into') ||
+                                 q.includes('received') ||
+                                 q.includes('deposit') ||
+                                 q.includes('shareholder did pay') ||
+                                 q.includes('shareholder paid') ||
+                                 q.includes('customer paid') ||
+                                 q.includes('did pay') ||
+                                 q.includes('did paid');
 
-        const isPartial = amount < targetBalance.remainingAmount;
-        const remaining = Math.max(0, Math.round((targetBalance.remainingAmount - amount) * 100) / 100);
+      const targetNature: 'RECEIVABLE' | 'PAYABLE' = isReceivingPayment ? 'RECEIVABLE' : 'PAYABLE';
 
-        followUpAnalysis = {
-          eventType: isPartial ? 'partial_settlement' : 'settlement',
-          isFollowUp: true,
-          targetOutstandingAccount: targetBalance.accountName,
-          settlementAmount: amount,
-          remainingReceivableOrPayable: remaining,
-          settlementAccount: 'cash_at_bank',
-          isHypothetical,
-          explanation: isPartial
-            ? `Partial settlement of ${targetBalance.accountName} for ${currency.value || targetBalance.currency || functionalCurrency} ${amount}. Remaining balance: ${currency.value || targetBalance.currency || functionalCurrency} ${remaining}.`
-            : `Full settlement of ${targetBalance.accountName} via bank transfer. Share Capital is not credited again.`
+      const txMatch = query.match(/\b(tx-[a-zA-Z0-9_-]+)\b/i);
+      const targetTransactionId = txMatch ? txMatch[1] : undefined;
+
+      const targetCriteria: TargetResolutionCriteria = {
+        counterpartyRole: targetRole,
+        nature: targetNature,
+        transactionId: targetTransactionId,
+        queryTokens: query.toLowerCase().split(/\s+/).filter(Boolean),
+        amount,
+        currency: currency.value || undefined
+      };
+
+      followUpAnalysis = {
+        eventType: 'settlement',
+        isFollowUp: true,
+        targetCriteria,
+        targetTransactionId,
+        targetOutstandingAccount: targetRole ? `${targetRole} balance` : undefined,
+        settlementAmount: amount,
+        settlementAccount: 'cash_at_bank',
+        isHypothetical,
+        explanation: `Settlement action for ${targetRole || 'counterparty'} ${targetNature.toLowerCase()}`
+      };
+
+      // Align transaction nature and perspective to settlement
+      paymentStatus = 'paid';
+      instrument = 'cash_at_bank';
+      ownershipContext = conversationContext!.underlyingTransaction?.ownershipContext || 'own_equity';
+      subject = `Settlement of ${targetRole || 'outstanding'} balance`;
+      transactionType = 'debt_settlement';
+      reportingEntity = { type: 'company', description: 'Reporting entity is the corporate business' };
+      if (!counterparty || counterparty.role === 'unknown') {
+        counterparty = {
+          role: (targetRole as any) || 'shareholder',
+          description: targetRole === 'shareholder' ? 'Company shareholder' : 'Counterparty'
         };
+      }
 
-        // Align transaction nature and perspective to settlement
-        paymentStatus = 'paid';
-        instrument = 'cash_at_bank';
-        ownershipContext = conversationContext!.underlyingTransaction?.ownershipContext || 'own_equity';
-        subject = `Settlement of ${targetBalance.accountName}`;
-        transactionType = isPartial ? 'partial_debt_settlement' : 'debt_settlement';
-        reportingEntity = { type: 'company', description: 'Reporting entity is the corporate business' };
-        if (!counterparty || counterparty.role === 'unknown') {
-          counterparty = {
-            role: (targetBalance.counterpartyRole as any) || 'shareholder',
-            description: targetBalance.counterpartyRole === 'shareholder' ? 'Company shareholder' : 'Counterparty'
-          };
-        }
-
-        // Inherit currency if unspecified in query
-        if (currency.source === 'unknown') {
-          currency = {
-            value: targetBalance.currency || functionalCurrency,
-            source: 'context_inference',
-            confidence: 0.95,
-            rationale: 'Inherited from active transaction context'
-          };
-        }
+      // Inherit currency if unspecified in query
+      if (currency.source === 'unknown') {
+        currency = {
+          value: conversationContext?.underlyingTransaction?.currency || functionalCurrency,
+          source: 'context_inference',
+          confidence: 0.95,
+          rationale: 'Inherited from active transaction context'
+        };
       }
     }
 

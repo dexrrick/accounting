@@ -820,7 +820,7 @@ console.log('--- TEST 16: Deterministic Event Replay & Committed History Boundar
       description: 'Hypothetical attempt',
       isHypothetical: true
     });
-  } catch (err) {
+  } catch (_err) {
     caughtHypo = true;
   }
   assert(caughtHypo, 'commitAccountingEvent must throw when attempting to commit a hypothetical event');
@@ -835,12 +835,140 @@ console.log('--- TEST 16: Deterministic Event Replay & Committed History Boundar
       description: 'Duplicate transaction attempt',
       isHypothetical: false
     });
-  } catch (err) {
+  } catch (_err) {
     caughtDup = true;
   }
   assert(caughtDup, 'commitAccountingEvent must throw when attempting to commit a duplicate transactionId');
 
+  // 3. Reject missing or 'default' transaction ID
+  let caughtDefaultTx = false;
+  try {
+    commitAccountingEvent(immutableEvents, {
+      id: 'evt-default-fail',
+      transactionId: 'default',
+      targetTransactionId: 'tx-seed-1',
+      type: 'settlement',
+      description: 'Default transaction ID attempt',
+      isHypothetical: false
+    });
+  } catch (err) {
+    assert(err.message.includes('INVALID_TRANSACTION_ID'), `Expected INVALID_TRANSACTION_ID error, got: ${err.message}`);
+    caughtDefaultTx = true;
+  }
+  assert(caughtDefaultTx, 'commitAccountingEvent must throw when transactionId is "default"');
+
+  // 4. Reject settlement without target identity (neither targetTransactionId nor targetBalanceKey)
+  let caughtNoTarget = false;
+  try {
+    commitAccountingEvent(immutableEvents, {
+      id: 'evt-no-target-fail',
+      transactionId: 'tx-valid-tx-id',
+      type: 'settlement',
+      description: 'Settlement without target identity attempt',
+      isHypothetical: false
+    });
+  } catch (err) {
+    assert(err.message.includes('INVALID_SETTLEMENT_TARGET'), `Expected INVALID_SETTLEMENT_TARGET error, got: ${err.message}`);
+    caughtNoTarget = true;
+  }
+  assert(caughtNoTarget, 'commitAccountingEvent must throw when settlement lacks targetTransactionId and targetBalanceKey');
+
   console.log('✅ Test 16 Passed: Deterministic event replay and committed event boundary enforcement verified\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST 17: True End-to-End Multi-Turn Replay Equivalence (4-Turn Actual Lifecycle)
+// --------------------------------------------------------------------------
+console.log('--- TEST 17: True End-to-End Multi-Turn Replay Equivalence (4-Turn Lifecycle) ---');
+{
+  // Turn 1: Initial allotment $1,000 unpaid (actual)
+  const q1 = "shareholder has invested in own company share capital of SGD 1000 but unpaid what's the double entry";
+  const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
+  assert(!r1.scenarioState.isHypothetical, 'Turn 1 must be actual');
+  assert(r1.scenarioState.actualEvents?.length === 1, 'Turn 1 actualEvents must have 1 event');
+  const t1TxId = r1.scenarioState.actualEvents[0].transactionId;
+  assert(Boolean(t1TxId) && t1TxId !== 'default', `Turn 1 transactionId must be authoritative, got "${t1TxId}"`);
+
+  // Turn 2: Shareholder paid $300 to company bank account (actual partial)
+  const q2 = "shareholder paid SGD 300 to company bank account";
+  const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
+  assert(!r2.scenarioState.isHypothetical, 'Turn 2 must be actual');
+  assert(r2.scenarioState.actualEvents?.length === 2, `Turn 2 actualEvents must have 2 events, got ${r2.scenarioState.actualEvents?.length}`);
+  const t2Event = r2.scenarioState.actualEvents[1];
+  assert(t2Event.type === 'partial_settlement', `Turn 2 event type must be partial_settlement, got ${t2Event.type}`);
+  assert(t2Event.targetTransactionId === t1TxId, `Turn 2 targetTransactionId must match Turn 1 transactionId "${t1TxId}", got "${t2Event.targetTransactionId}"`);
+
+  // Turn 3: Shareholder paid another $200 to company bank account (actual partial)
+  const q3 = "shareholder paid another SGD 200 to company bank account";
+  const r3 = await processAccountingQuery(q3, r2.scenarioState, 'SFRS_I');
+  assert(!r3.scenarioState.isHypothetical, 'Turn 3 must be actual');
+  assert(r3.scenarioState.actualEvents?.length === 3, `Turn 3 actualEvents must have 3 events, got ${r3.scenarioState.actualEvents?.length}`);
+  const t3Event = r3.scenarioState.actualEvents[2];
+  assert(t3Event.type === 'partial_settlement', `Turn 3 event type must be partial_settlement, got ${t3Event.type}`);
+  assert(t3Event.targetTransactionId === t1TxId, `Turn 3 targetTransactionId must match Turn 1 transactionId "${t1TxId}", got "${t3Event.targetTransactionId}"`);
+
+  // Turn 4: Shareholder paid remaining $500 to company bank account (actual final settlement)
+  const q4 = "shareholder paid remaining SGD 500 to company bank account";
+  const r4 = await processAccountingQuery(q4, r3.scenarioState, 'SFRS_I');
+  assert(!r4.scenarioState.isHypothetical, 'Turn 4 must be actual');
+  assert(r4.scenarioState.actualEvents?.length === 4, `Turn 4 actualEvents must have 4 events, got ${r4.scenarioState.actualEvents?.length}`);
+  const t4Event = r4.scenarioState.actualEvents[3];
+  assert(t4Event.type === 'settlement', `Turn 4 event type must be settlement (final), got ${t4Event.type}`);
+  assert(t4Event.targetTransactionId === t1TxId, `Turn 4 targetTransactionId must match Turn 1 transactionId "${t1TxId}", got "${t4Event.targetTransactionId}"`);
+
+  // Verify all 4 events have unique, authoritative transaction IDs
+  const txIds = r4.scenarioState.actualEvents.map(e => e.transactionId);
+  const uniqueTxIds = new Set(txIds);
+  assert(uniqueTxIds.size === 4, `All 4 events must have unique transaction IDs, got ${uniqueTxIds.size}`);
+  assert(!txIds.includes('default'), 'No event may have transactionId "default"');
+
+  // Verify cumulative UI projection in directGroups: 4 groups
+  assert(r4.scenarioState.directGroups?.length === 4, `UI projection directGroups must have 4 groups, got ${r4.scenarioState.directGroups?.length}`);
+
+  // INVARIANT 1: Share Capital is recognized EXACTLY once ($1,000) across all 4 journals
+  const totalShareCapitalCredit = r4.scenarioState.directGroups.reduce((acc, g) =>
+    acc + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0
+  );
+  assert(totalShareCapitalCredit === 1000, `Cumulative Share Capital credit must remain exactly 1,000, got ${totalShareCapitalCredit}`);
+
+  // INVARIANT 2: Total Cash received at bank across settlements is $1,000 ($300 + $200 + $500)
+  const totalCashDebit = r4.scenarioState.directGroups.reduce((acc, g) =>
+    acc + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('cash at bank') ? l.debit : 0), 0), 0
+  );
+  assert(totalCashDebit === 1000, `Total Cash at Bank debit must be 1,000, got ${totalCashDebit}`);
+
+  // TRUE REPLAY EQUIVALENCE TEST:
+  // Replay from actualEvents source of truth must produce the EXACT same state as incremental processing
+  const incrementalContext = extractAccountingContext(r4.scenarioState);
+  const replayedState = deriveAccountingStateFromEvents(r4.scenarioState.actualEvents, 'SGD');
+
+  // Assert Replayed Equity === Incremental Equity === 1000
+  assert(replayedState.recognizedEquityTotal === 1000, `Replayed equity total must be 1,000, got ${replayedState.recognizedEquityTotal}`);
+  assert(incrementalContext.recognizedEquityTotal === 1000, `Incremental equity total must be 1,000, got ${incrementalContext.recognizedEquityTotal}`);
+  assert(replayedState.recognizedEquityTotal === incrementalContext.recognizedEquityTotal, 'Replayed equity total must match incremental equity total exactly');
+
+  // Assert Replayed Balances === Incremental Balances
+  assert(replayedState.outstandingBalances.length === 1, `Must have exactly 1 outstanding balance tracking the allotment, got ${replayedState.outstandingBalances.length}`);
+  assert(incrementalContext.outstandingBalances.length === 1, `Incremental context must have 1 balance, got ${incrementalContext.outstandingBalances.length}`);
+
+  const replayedBal = replayedState.outstandingBalances[0];
+  const incrementalBal = incrementalContext.outstandingBalances[0];
+
+  assert(replayedBal.originalAmount === 1000, `Replayed originalAmount must be 1,000, got ${replayedBal.originalAmount}`);
+  assert(incrementalBal.originalAmount === 1000, `Incremental originalAmount must be 1,000, got ${incrementalBal.originalAmount}`);
+
+  assert(replayedBal.settledAmount === 1000, `Replayed settledAmount must be 1,000, got ${replayedBal.settledAmount}`);
+  assert(incrementalBal.settledAmount === 1000, `Incremental settledAmount must be 1,000, got ${incrementalBal.settledAmount}`);
+
+  assert(replayedBal.remainingAmount === 0, `Replayed remainingAmount must be 0, got ${replayedBal.remainingAmount}`);
+  assert(incrementalBal.remainingAmount === 0, `Incremental remainingAmount must be 0, got ${incrementalBal.remainingAmount}`);
+
+  assert(replayedBal.remainingAmount === incrementalBal.remainingAmount, 'Replay remaining amount must equal incremental remaining amount');
+  assert(replayedBal.settledAmount === incrementalBal.settledAmount, 'Replay settled amount must equal incremental settled amount');
+  assert(replayedBal.balanceKey === incrementalBal.balanceKey, 'Replay balanceKey must equal incremental balanceKey');
+
+  console.log('✅ Test 17 Passed: True end-to-end multi-turn replay equivalence verified across 4-turn lifecycle (Allotment -> $300 -> $200 -> $500)\n');
   testsPassed++;
 }
 

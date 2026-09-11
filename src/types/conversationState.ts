@@ -13,7 +13,7 @@ export type AccountingEventType =
 
 export interface AccountingEvent {
   id: string;
-  transactionId?: string;
+  transactionId: string;
   targetTransactionId?: string;
   type: AccountingEventType;
   description: string;
@@ -96,8 +96,10 @@ export interface ConversationAccountingContext {
 export interface FollowUpEventAnalysis {
   eventType: AccountingEventType;
   isFollowUp: boolean;
+  targetCriteria?: TargetResolutionCriteria;
   targetOutstandingAccount?: string;
   targetBalanceKey?: string;
+  targetTransactionId?: string;
   settlementAmount?: number;
   remainingReceivableOrPayable?: number;
   settlementAccount?: string;

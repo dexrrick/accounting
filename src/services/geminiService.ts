@@ -1,4 +1,5 @@
-import type { AccountingStandard, AccountingScenarioState, MissingFieldInfo, ChatMessage } from '../types/accounting';
+import type { AccountingStandard, AccountingScenarioState, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
 import { defaultAccountingGuardrails } from '../engine/accountingGuardrails';
@@ -351,6 +352,39 @@ export function renderStructuredOfflineResponse(
     return appendStatutorySourceFooter(fullText, state);
   };
 
+  const ensureEventSourcedState = (state: AccountingScenarioState): AccountingScenarioState => {
+    if (state.directGroups && state.directGroups.length > 0 && (!state.actualEvents || state.actualEvents.length === 0)) {
+      const committed = (state.committedDirectGroups && state.committedDirectGroups.length > 0)
+        ? state.committedDirectGroups
+        : state.directGroups.filter(g => !g.isHypothetical);
+      const actualEvts: AccountingEvent[] = committed.map((grp, idx) => {
+        const txId = grp.transactionId || grp.id || `tx-init-${idx + 1}`;
+        grp.transactionId = txId;
+        return {
+          id: grp.id || `evt-init-${idx + 1}`,
+          transactionId: txId,
+          targetTransactionId: grp.targetTransactionId,
+          type: (grp.title && grp.title.toLowerCase().includes('settle')) ? 'settlement' : 'initial_transaction',
+          description: grp.title || 'Initial transaction',
+          amount: grp.totalDebit,
+          currency: state.transactionCurrency || state.functionalCurrency || 'SGD',
+          affectedAccounts: grp.lines.map(l => l.accountName),
+          journalLines: grp.lines,
+          eventDate: grp.eventDate,
+          isHypothetical: false
+        };
+      });
+      return {
+        ...state,
+        transactionId: state.transactionId || committed[0]?.transactionId || 'tx-init-1',
+        committedDirectGroups: committed,
+        actualEvents: actualEvts,
+        accountingEvents: state.accountingEvents || actualEvts
+      };
+    }
+    return state;
+  };
+
   // 1. UNRECOGNIZED / FREE-FORM QUERY (OFFLINE MODE)
   if (parsed.scenarioType === 'UNRECOGNIZED') {
     const errorPrefix = apiErrorMessage
@@ -385,49 +419,68 @@ export function renderStructuredOfflineResponse(
           `* **Debit**: **${debitAccountName}** — **${curr} ${amt.toFixed(2)}** *(${debitLineExplanation})*\n` +
           `* **Credit**: **Share Capital (Ordinary Shares)** — **${curr} ${amt.toFixed(2)}** *(Credited 100% to share capital under Companies Act §68)*\n\n`;
 
+        const allotmentTxId = `tx-allot-${Date.now()}`;
+        const initialGroup: JournalEntryGroup = {
+          id: 'grp-equity-allotment-1',
+          transactionId: allotmentTxId,
+          eventDate: formatSingaporeDate(new Date()),
+          title: isUnpaid ? 'Share Capital Allotment (Unpaid)' : 'Share Capital Issuance (Paid)',
+          summary: `Allotment of ordinary shares ${isUnpaid ? 'unpaid' : 'fully paid'} under Singapore Companies Act §68`,
+          lines: [
+            {
+              id: 'l-equity-dr',
+              accountCode: debitAccountCode,
+              accountName: debitAccountName,
+              category: 'ASSET',
+              debit: amt,
+              credit: 0,
+              lineExplanation: debitLineExplanation
+            },
+            {
+              id: 'l-equity-cr',
+              accountCode: '3000',
+              accountName: 'Share Capital (Ordinary Shares)',
+              category: 'EQUITY',
+              debit: 0,
+              credit: amt,
+              lineExplanation: 'Credited 100% to share capital under Companies Act §68 (par value abolished)'
+            }
+          ],
+          totalDebit: amt,
+          totalCredit: amt,
+          isBalanced: true,
+          citations: [],
+          rationalePoints: [
+            'Under Singapore Companies Act 1967 §68, shares have no nominal/par value. 100% of consideration is credited to share capital.',
+            isUnpaid ? 'Under §63(1), shares can be allotted unpaid, creating an enforceable receivable.' : 'Funds received directly into bank account.',
+            'Under SFRS(I) 1-32 §33, own equity instruments are never financial assets.'
+          ],
+          authorityStatus: 'DETERMINISTIC'
+        };
+
+        const initialEvent: AccountingEvent = {
+          id: 'evt-allot-1',
+          transactionId: allotmentTxId,
+          type: 'initial_transaction',
+          description: initialGroup.title,
+          amount: amt,
+          currency: curr,
+          affectedAccounts: initialGroup.lines.map(l => l.accountName),
+          journalLines: initialGroup.lines,
+          eventDate: initialGroup.eventDate,
+          isHypothetical: false
+        };
+
         parsed = {
           ...parsed,
           scenarioType: 'UNIVERSAL',
+          transactionId: allotmentTxId,
           amount: amt,
           transactionTitle: isUnpaid ? 'Issuance of Unpaid Share Capital' : 'Issuance of Share Capital',
-          directGroups: [
-            {
-              id: 'grp-equity-allotment-1',
-              eventDate: formatSingaporeDate(new Date()),
-              title: isUnpaid ? 'Share Capital Allotment (Unpaid)' : 'Share Capital Issuance (Paid)',
-              summary: `Allotment of ordinary shares ${isUnpaid ? 'unpaid' : 'fully paid'} under Singapore Companies Act §68`,
-              lines: [
-                {
-                  id: 'l-equity-dr',
-                  accountCode: debitAccountCode,
-                  accountName: debitAccountName,
-                  category: 'ASSET',
-                  debit: amt,
-                  credit: 0,
-                  lineExplanation: debitLineExplanation
-                },
-                {
-                  id: 'l-equity-cr',
-                  accountCode: '3000',
-                  accountName: 'Share Capital (Ordinary Shares)',
-                  category: 'EQUITY',
-                  debit: 0,
-                  credit: amt,
-                  lineExplanation: 'Credited 100% to share capital under Companies Act §68 (par value abolished)'
-                }
-              ],
-              totalDebit: amt,
-              totalCredit: amt,
-              isBalanced: true,
-              citations: [],
-              rationalePoints: [
-                'Under Singapore Companies Act 1967 §68, shares have no nominal/par value. 100% of consideration is credited to share capital.',
-                isUnpaid ? 'Under §63(1), shares can be allotted unpaid, creating an enforceable receivable.' : 'Funds received directly into bank account.',
-                'Under SFRS(I) 1-32 §33, own equity instruments are never financial assets.'
-              ],
-              authorityStatus: 'DETERMINISTIC'
-            }
-          ]
+          directGroups: [initialGroup],
+          committedDirectGroups: [initialGroup],
+          actualEvents: [initialEvent],
+          accountingEvents: [initialEvent]
         };
       }
     } else {
@@ -436,9 +489,10 @@ export function renderStructuredOfflineResponse(
 
     replyText += `*Note: To answer free-form, custom commercial transactions with dynamic reasoning, connect an AI Provider (Google Gemini, Azure OpenAI, or OpenAI) in Settings.*`;
 
+    const finalState = ensureEventSourcedState(parsed);
     return {
       messageText: replyText,
-      scenarioState: parsed
+      scenarioState: finalState
     };
   }
 
