@@ -1,6 +1,7 @@
 import type { AccountingStandard, AccountingScenarioState, MissingFieldInfo, ChatMessage } from '../types/accounting';
 import type { ProviderSettings } from '../types/provider';
-import { parseAccountingQuery } from '../engine/scenarioParser';
+import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
+import { defaultAccountingGuardrails } from '../engine/accountingGuardrails';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
@@ -226,7 +227,8 @@ export async function processAccountingQuery(
   const profiler = new RequestProfiler(userInput, modelName);
   let apiErrorMessage: string | null = null;
 
-  // 1. Run deterministic accounting engine first to establish authoritative calculations
+  // 1. Check if query matches an explicit deterministic test fixture
+  const isFixture = isDeterministicFixture(userInput);
   const tDet0 = Date.now();
   const deterministicScenario = await parseAccountingQuery(userInput, currentScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
@@ -236,14 +238,16 @@ export async function processAccountingQuery(
   const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
-  // 3. Evaluate Fast-Path Bypass (Strict 6-Condition Check)
-  const fastPathCheck = evaluateFastPathEligibility(userInput, deterministicScenario, groundedContext);
-  if (fastPathCheck.canBypass) {
-    profiler.recordFirstVisibleResponse();
-    profiler.setTokenCounts(0, 0, 0);
-    profiler.logSummary();
+  // 3. Evaluate Fast-Path Bypass (ONLY for explicit deterministic fixtures)
+  if (isFixture) {
+    const fastPathCheck = evaluateFastPathEligibility(userInput, deterministicScenario, groundedContext);
+    if (fastPathCheck.canBypass) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
 
-    return renderStructuredOfflineResponse(deterministicScenario, standard, null);
+      return renderStructuredOfflineResponse(deterministicScenario, standard, null, groundedContext);
+    }
   }
 
   // 4. Live AI API call if provider settings or apiKey is provided
@@ -317,7 +321,7 @@ export async function processAccountingQuery(
   // 5. Fallback structured offline response rendered from deterministic state
   profiler.recordFallback();
   profiler.recordFirstVisibleResponse();
-  const fallbackResponse = renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage);
+  const fallbackResponse = renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage, groundedContext);
   profiler.logSummary();
   return fallbackResponse;
 }
@@ -329,7 +333,8 @@ export async function processAccountingQuery(
 export function renderStructuredOfflineResponse(
   parsed: AccountingScenarioState,
   standard: AccountingStandard,
-  apiErrorMessage: string | null
+  apiErrorMessage: string | null = null,
+  groundedContext?: GroundedReasoningContext
 ): GeminiResponse {
   const std1 = standard === 'SFRS_I' ? 'SFRS(I) 1-1' : 'IAS 1';
   const std9 = standard === 'SFRS_I' ? 'SFRS(I) 9' : 'IFRS 9';
@@ -345,19 +350,38 @@ export function renderStructuredOfflineResponse(
     return appendStatutorySourceFooter(fullText, state);
   };
 
-  // 1. UNRECOGNIZED OFFLINE QUERY
+  // 1. UNRECOGNIZED / FREE-FORM QUERY (OFFLINE MODE)
   if (parsed.scenarioType === 'UNRECOGNIZED') {
     const errorPrefix = apiErrorMessage
       ? `> ⚠️ **Gemini API Call Notice**: ${apiErrorMessage}\n> Please verify your API Key and Model in the **Settings** panel.\n\n`
       : '';
 
-    const replyText = `${errorPrefix}### Query Analysis Notice\n\n` +
-      `The local offline rule engine could not find a predefined pattern for this specific transaction.\n\n` +
-      `**To answer ANY accounting transaction in business** (including trade discounts, equipment loans, leases, provisions, and IFRS questions):\n` +
-      `1. Open **Settings** (top right).\n` +
-      `2. Connect your **Google Gemini API Key**.\n` +
-      `3. Verify the model (e.g. **gemini-3.5-flash-lite**).\n\n` +
-      `With your Gemini API key connected, the AI parses any custom query and generates complete, audit-ready double entries with 100% precision.`;
+    let replyText = `${errorPrefix}### Semantic Transaction Analysis (Offline Mode)\n\n`;
+
+    if (groundedContext?.semanticUnderstanding) {
+      const sem = groundedContext.semanticUnderstanding;
+      replyText += `**Extracted Economic Facts**:\n` +
+        `* **Reporting Entity**: ${sem.reportingEntity.type.toUpperCase()}${sem.reportingEntity.description ? ` (${sem.reportingEntity.description})` : ''}\n` +
+        (sem.counterparty ? `* **Counterparty Role**: ${sem.counterparty.role.toUpperCase()}${sem.counterparty.description ? ` (${sem.counterparty.description})` : ''}\n` : '') +
+        `* **Transaction Nature**: ${sem.transactionType || 'General Commercial Transaction'}\n` +
+        `* **Ownership Context**: ${(sem.ownershipContext || 'unknown').toUpperCase()}\n` +
+        `* **Payment Status**: ${(sem.paymentStatus || 'unknown').toUpperCase()}\n` +
+        `* **Currency Fact**: ${sem.currency.value || 'Unspecified'} (Source: ${sem.currency.source}, Confidence: ${sem.currency.confidence})\n\n`;
+
+      if (sem.ownershipContext === 'own_equity') {
+        replyText += `**Statutory & Standard Directives**:\n` +
+          `* **Singapore Companies Act 1967 §68**: Shares of a Singapore company have no nominal or par value. Share premium is abolished; 100% of consideration is credited to Share Capital under Equity.\n` +
+          `* **Singapore Companies Act 1967 §63(1)**: Allotment of shares can be fully paid, partly paid, or unpaid. When shares are unpaid, an enforceable allotment receivable is recognized against the subscriber.\n` +
+          `* **SFRS(I) 1-32 §33**: An entity's own equity instruments can NEVER be recognized as a financial asset (no FVTPL/FVTOCI).\n\n` +
+          `**Accounting Classification & Required Entries**:\n` +
+          `* **Credit**: **Share Capital** (Equity)\n` +
+          `* **Debit**: **Amount Due from Shareholder / Unpaid Share Capital** (Current Asset / Receivables)\n\n`;
+      }
+    } else {
+      replyText += `The local offline rule engine could not find a predefined pattern for this specific transaction.\n\n`;
+    }
+
+    replyText += `*Note: To answer free-form, custom commercial transactions with dynamic reasoning, connect an AI Provider (Google Gemini, Azure OpenAI, or OpenAI) in Settings.*`;
 
     return {
       messageText: replyText,
@@ -903,6 +927,14 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   const tPost0 = Date.now();
   const parsed = repairAndParseAIJson(rawJsonText);
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
+  // Validate AI proposed groups against deterministic accounting guardrails
+  if (result.scenarioState.directGroups && result.scenarioState.directGroups.length > 0 && context.semanticUnderstanding) {
+    const valResult = defaultAccountingGuardrails.validate(context.semanticUnderstanding, result.scenarioState.directGroups);
+    if (!valResult.isValid) {
+      console.warn(`[Guardrails] Detected ${valResult.violations.length} accounting violation(s) in AI proposal:`, valResult.violations.map(v => v.code));
+    }
+  }
+
   profiler.recordStage('assembly', Date.now() - tPost0);
   profiler.recordFirstVisibleResponse();
 

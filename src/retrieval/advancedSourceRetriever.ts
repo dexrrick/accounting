@@ -183,13 +183,14 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
 
     // 3. Deterministic Reranker with Topic Coverage
     recorder.startTimer('rerank');
-    const topicDecomp = this.topicResolver.decomposeQuery(retrievalQuery.query);
+    const topicDecomp = this.topicResolver.decomposeQuery(retrievalQuery.query, retrievalQuery.semanticContext);
     const reranked = this.reranker.rerank(hybridOutput.candidates, {
       query: retrievalQuery.query,
       targetDate: retrievalQuery.targetDate,
       referenceDate: retrievalQuery.referenceDate,
       topics: topicDecomp.topics,
-      includeHistorical: retrievalQuery.includeHistorical
+      includeHistorical: retrievalQuery.includeHistorical,
+      semanticContext: retrievalQuery.semanticContext
     });
     recorder.stopTimer('rerank');
 

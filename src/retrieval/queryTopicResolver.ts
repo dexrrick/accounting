@@ -125,13 +125,27 @@ export class QueryTopicResolver {
       keywords: ['ppe', 'catch up depreciation', 'derecognition', 'trade in machinery', 'carrying amount', 'sfrs(i) 1-16'],
       actOrStandard: 'SFRS(I) 1-16',
       sectionMatch: '55'
+    },
+    {
+      id: 'acra_share_capital',
+      name: 'Companies Act 1967 Section 68 / 63 Share Capital & Allotment',
+      keywords: ['share capital', 'allotment', 'no par value', 'unpaid shares', 'section 68', 'section 63', 'own company share'],
+      actOrStandard: 'Companies Act 1967',
+      sectionMatch: '68'
+    },
+    {
+      id: 'sfrsi_own_equity',
+      name: 'SFRS(I) 1-32 Own Equity Presentation vs Financial Assets',
+      keywords: ['equity instrument', 'own shares', 'sfrs(i) 1-32', 'ias 32', 'share capital equity'],
+      actOrStandard: 'SFRS(I) 1-32',
+      sectionMatch: '33'
     }
   ];
 
   /**
    * Decomposes user query into identified statutory and accounting topics.
    */
-  public decomposeQuery(query: string): TopicDecompositionResult {
+  public decomposeQuery(query: string, semanticContext?: { ownershipContext?: string }): TopicDecompositionResult {
     if (!query || typeof query !== 'string') {
       return { isMultiTopic: false, topics: [], unresolvedTopics: [] };
     }
@@ -143,6 +157,14 @@ export class QueryTopicResolver {
       const hasMatch = topic.keywords.some((kw) => qLower.includes(kw));
       if (hasMatch) {
         matchedTopics.push(topic);
+      }
+    }
+
+    // Integrate semantic context signals if present
+    if (semanticContext?.ownershipContext === 'own_equity') {
+      const shareTopic = QueryTopicResolver.CANONICAL_TOPICS.find(t => t.id === 'acra_share_capital');
+      if (shareTopic && !matchedTopics.some(t => t.id === shareTopic.id)) {
+        matchedTopics.push(shareTopic);
       }
     }
 

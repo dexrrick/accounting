@@ -26,6 +26,7 @@ export interface HybridRetrievalQuery {
   referenceDate?: string;
   includeHistorical?: boolean;
   maxCandidates?: number;
+  semanticContext?: import('../services/transactionUnderstandingService').TransactionUnderstanding;
 }
 
 /**

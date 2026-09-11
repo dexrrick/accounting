@@ -10,6 +10,7 @@ export interface RerankContext {
   intent?: string;
   authorities?: string[];
   includeHistorical?: boolean;
+  semanticContext?: import('../services/transactionUnderstandingService').TransactionUnderstanding;
 }
 
 /**
@@ -63,7 +64,7 @@ export class DeterministicReranker {
     if (!candidates || candidates.length === 0) return [];
 
     const normLexMap = this.normalizeLexicalScores(candidates);
-    const resolvedTopics = context.topics || defaultQueryTopicResolver.decomposeQuery(context.query).topics;
+    const resolvedTopics = context.topics || defaultQueryTopicResolver.decomposeQuery(context.query, context.semanticContext).topics;
 
     const scoredCandidates: Array<{ item: HybridSearchResult; finalScore: number }> = [];
 

@@ -10,6 +10,7 @@ import type {
 } from '../types/accounting';
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
 import { classifyQuestion } from '../classification/questionClassifier';
+import { defaultTransactionUnderstandingService, type TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import type { ISourceRetriever } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
@@ -32,6 +33,7 @@ export interface GroundedReasoningContext {
   curatedSummaries: AuthoritativeSourceRecord[];
   applicationRules: string[];
   currentInformationRequired: boolean;
+  semanticUnderstanding?: TransactionUnderstanding;
 }
 
 /**
@@ -150,10 +152,11 @@ export async function buildGroundedReasoningContext(
   currentScenario?: AccountingScenarioState | null,
   retriever: ISourceRetriever = defaultAdvancedSourceRetriever
 ): Promise<GroundedReasoningContext> {
-  // 1. Question Classification
+  // 1. Semantic Transaction Understanding & Question Classification
+  const semanticUnderstanding = defaultTransactionUnderstandingService.understandTransactionSync(userInput);
   const classification = classifyQuestion(userInput);
 
-  // 2. Source Retrieval
+  // 2. Source Retrieval (Supplied with Semantic Context for Reranking)
   const targetDomain = mapCanonicalDomainToQueryDomain(classification.primaryDomain);
   const targetAuthorities = classification.authorities as StatutoryAuthority[];
 
@@ -161,7 +164,8 @@ export async function buildGroundedReasoningContext(
     query: userInput,
     domain: targetDomain !== 'GENERAL' ? targetDomain : undefined,
     authorities: targetAuthorities.length > 0 ? targetAuthorities : undefined,
-    maxResults: 6
+    maxResults: 6,
+    semanticContext: semanticUnderstanding
   });
 
   // 3. Four-Tier Evidence Sorting based explicitly on evidenceTier
@@ -187,10 +191,38 @@ export async function buildGroundedReasoningContext(
   const userFacts = extractUserFacts(userInput, currentScenario);
   const missingFacts = [...classification.missingFacts];
 
+  const isTransactionQuery =
+    classification.intent === 'TRANSACTION' ||
+    classification.intent === 'HYBRID' ||
+    classification.journalEntryRequired;
+
+  if (isTransactionQuery && semanticUnderstanding.factsMissing) {
+    for (const mf of semanticUnderstanding.factsMissing) {
+      if (!missingFacts.includes(mf)) {
+        missingFacts.push(mf);
+      }
+    }
+  }
+
   // Assumptions: only when genuinely needed for an illustrative calculation/scenario
   const assumptions: ExplicitAssumption[] = [];
   if (currentScenario?.assumptions) {
     assumptions.push(...currentScenario.assumptions);
+  }
+
+  if (semanticUnderstanding.assumptions) {
+    for (const asm of semanticUnderstanding.assumptions) {
+      if (!assumptions.some(a => a.field === 'currency_assumption' || a.basisOrRationale === asm)) {
+        assumptions.push({
+          id: `sem-asm-${assumptions.length + 1}`,
+          field: 'currency_or_transaction_parameter',
+          assumedValue: asm,
+          basisOrRationale: asm,
+          materiality: 'LOW',
+          userClarificationPrompt: 'Please confirm currency or transaction parameters if different.'
+        });
+      }
+    }
   }
 
   // 5. Application and Calculation Rules
@@ -205,7 +237,8 @@ export async function buildGroundedReasoningContext(
     officialGuidance,
     curatedSummaries,
     applicationRules,
-    currentInformationRequired: classification.currentInformationRequired
+    currentInformationRequired: classification.currentInformationRequired,
+    semanticUnderstanding
   };
 }
 
@@ -260,6 +293,25 @@ GROUNDED REASONING CONTEXT SUPPLIED TO YOU
     }
   } else {
     prompt += `• None explicitly extracted from query.\n`;
+  }
+
+  // Section 1.1: Semantic Transaction Facts & Mandatory Guardrails
+  if (context.semanticUnderstanding) {
+    const sem = context.semanticUnderstanding;
+    prompt += `\n[1.1 UNDERSTOOD TRANSACTION FACTS & MANDATORY ACCOUNTING GUARDRAILS]\n`;
+    prompt += `• Reporting Entity: ${sem.reportingEntity.type.toUpperCase()}${sem.reportingEntity.description ? ` (${sem.reportingEntity.description})` : ''}\n`;
+    if (sem.counterparty) {
+      prompt += `• Counterparty Role: ${sem.counterparty.role.toUpperCase()}${sem.counterparty.description ? ` (${sem.counterparty.description})` : ''}\n`;
+    }
+    prompt += `• Ownership Context: ${(sem.ownershipContext || 'unknown').toUpperCase()}\n`;
+    prompt += `• Payment Status: ${(sem.paymentStatus || 'unknown').toUpperCase()}\n`;
+    prompt += `• Currency Fact: ${sem.currency.value || 'UNSPECIFIED'} (Source: ${sem.currency.source}, Confidence: ${sem.currency.confidence})\n`;
+    if (sem.ownershipContext === 'own_equity') {
+      prompt += `⚠️ MANDATORY GUARDRAIL (SFRS(I) 1-32 §33): The reporting entity is issuing its own equity. An entity's own shares can NEVER be recognized as a Financial Asset at FVTPL/FVTOCI. Credit Share Capital under Equity.\n`;
+    }
+    if (sem.currency.value === null || sem.currency.source === 'unknown') {
+      prompt += `⚠️ MANDATORY GUARDRAIL: Currency is unspecified. Do NOT invent USD or execute foreign exchange translation.\n`;
+    }
   }
 
   // Section 2: Missing Facts

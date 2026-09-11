@@ -16,6 +16,7 @@ export interface SourceRetrievalQuery {
   includeHistorical?: boolean;
   referenceDate?: string;
   enableLiveCheck?: boolean;
+  semanticContext?: import('../services/transactionUnderstandingService').TransactionUnderstanding;
 }
 
 export interface GroundingEvidence {
