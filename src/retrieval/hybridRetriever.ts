@@ -6,6 +6,8 @@ import { RETRIEVAL_CONFIG } from './retrievalConfig';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 
+import type { SemanticAlignmentScore } from './semanticAlignmentEvaluator';
+
 export interface HybridSearchResult {
   chunk: VerifiedChunk;
   parentRecord: AuthoritativeSourceRecord;
@@ -16,6 +18,8 @@ export interface HybridSearchResult {
   rrfScore: number;
   normalizedRrfScore: number;
   finalScore?: number;
+  deltaSemantics?: number;
+  semanticScoreExplanation?: SemanticAlignmentScore;
 }
 
 export interface HybridRetrievalQuery {

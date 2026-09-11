@@ -369,27 +369,15 @@ export function extractAccountingContext(
   const outstandingBalances: OutstandingAccountBalance[] = [...derived.outstandingBalances];
   const recognizedEquityTotal = derived.recognizedEquityTotal;
 
-  // Determine ownership context from prior scenario
+  // Determine ownership context from prior scenario structured state
   let ownershipContext: 'own_equity' | 'external_investment' | 'not_applicable' | 'unknown' = 'unknown';
-  const titleLower = (currentScenario?.transactionTitle || '').toLowerCase();
-  const rawQueryLower = (currentScenario?.rawQuery || '').toLowerCase();
-
-  if (
-    recognizedEquityTotal > 0 ||
-    titleLower.includes('share capital') ||
-    rawQueryLower.includes('own company') ||
-    rawQueryLower.includes('share capital')
-  ) {
+  if (currentScenario?.ownershipContext && currentScenario.ownershipContext !== 'unknown') {
+    ownershipContext = currentScenario.ownershipContext;
+  } else if (currentScenario?.semanticUnderstanding?.ownershipContext && currentScenario.semanticUnderstanding.ownershipContext !== 'unknown') {
+    ownershipContext = currentScenario.semanticUnderstanding.ownershipContext;
+  } else if (recognizedEquityTotal > 0) {
     ownershipContext = 'own_equity';
-  } else if (
-    currentScenario?.scenarioType === 'EQUITY_INVESTMENT_FX' ||
-    (currentScenario?.assetName && (currentScenario.assetName.toLowerCase().includes('apple') || currentScenario.assetName.toLowerCase().includes('aapl') || currentScenario.assetName.toLowerCase().includes('tesla'))) ||
-    titleLower.includes('foreign') ||
-    titleLower.includes('apple') ||
-    rawQueryLower.includes('apple') ||
-    rawQueryLower.includes('aapl') ||
-    rawQueryLower.includes('foreign shares')
-  ) {
+  } else if (currentScenario?.scenarioType === 'EQUITY_INVESTMENT_FX') {
     ownershipContext = 'external_investment';
   } else if (currentScenario) {
     ownershipContext = 'not_applicable';

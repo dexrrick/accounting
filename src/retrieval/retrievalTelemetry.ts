@@ -14,6 +14,18 @@ export interface RetrievalTelemetry {
 
   vectorIndexSize: number;
 
+  // Semantic Alignment Telemetry
+  semanticEvaluations?: number;
+  semanticBoostsApplied?: number;
+  semanticPenaltiesApplied?: number;
+  semanticBreakdown?: Array<{
+    chunkId: string;
+    deltaSemantics: number;
+    explanation: string;
+    matchedAttributes: string[];
+    conflictAttributes: string[];
+  }>;
+
   // Runtime measurements (non-deterministic observations):
   lexicalLatencyMs: number;
   vectorLatencyMs: number;
@@ -71,6 +83,36 @@ export class RetrievalTelemetryRecorder {
 
   public recordCounters(counters: Partial<RetrievalTelemetry>): void {
     Object.assign(this.telemetry, counters);
+  }
+
+  public recordSemanticEvaluation(
+    chunkId: string,
+    score: {
+      deltaSemantics: number;
+      explanation: string;
+      matchedAttributes: string[];
+      conflictAttributes: string[];
+    }
+  ): void {
+    if (!this.telemetry.semanticBreakdown) {
+      this.telemetry.semanticBreakdown = [];
+      this.telemetry.semanticEvaluations = 0;
+      this.telemetry.semanticBoostsApplied = 0;
+      this.telemetry.semanticPenaltiesApplied = 0;
+    }
+    this.telemetry.semanticEvaluations = (this.telemetry.semanticEvaluations || 0) + 1;
+    if (score.deltaSemantics > 0) {
+      this.telemetry.semanticBoostsApplied = (this.telemetry.semanticBoostsApplied || 0) + 1;
+    } else if (score.deltaSemantics < 0) {
+      this.telemetry.semanticPenaltiesApplied = (this.telemetry.semanticPenaltiesApplied || 0) + 1;
+    }
+    this.telemetry.semanticBreakdown.push({
+      chunkId,
+      deltaSemantics: score.deltaSemantics,
+      explanation: score.explanation,
+      matchedAttributes: score.matchedAttributes,
+      conflictAttributes: score.conflictAttributes
+    });
   }
 
   public getTelemetry(): RetrievalTelemetry {

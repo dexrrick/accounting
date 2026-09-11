@@ -18,5 +18,8 @@ export const RETRIEVAL_CONFIG = {
   },
 
   topicMatchWeight: 0.10,
+  semanticAlignmentBoost: 0.15,
+  semanticConflictPenalty: -0.20,
+  minTopicCoverageScore: 0.35,
   finalTopK: 10
 } as const;

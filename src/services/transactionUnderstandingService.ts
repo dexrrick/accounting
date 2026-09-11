@@ -84,7 +84,8 @@ export interface UnderstandingValidationResult {
 export function validateAndNormalizeUnderstanding(
   raw: any,
   fallbackJurisdiction: string = 'SG',
-  source: 'ai' | 'deterministic_fallback' = 'deterministic_fallback'
+  source: 'ai' | 'deterministic_fallback' = 'deterministic_fallback',
+  conversationContext?: ConversationAccountingContext
 ): UnderstandingValidationResult {
   const errors: string[] = [];
 
@@ -169,6 +170,18 @@ export function validateAndNormalizeUnderstanding(
 
   if (typeof raw?.amount === 'number' && raw.amount < 0) {
     errors.push('Transaction amount cannot be negative.');
+  }
+
+  // Follow-up invariant: follow-up claims require active prior context
+  if (raw?.followUpAnalysis?.isFollowUp && conversationContext !== undefined) {
+    const hasPriorState = Boolean(
+      conversationContext.outstandingBalances.length > 0 ||
+      conversationContext.recognizedEquityTotal > 0 ||
+      conversationContext.underlyingTransaction
+    );
+    if (!hasPriorState) {
+      errors.push('Invalid follow-up claim: followUpAnalysis.isFollowUp is true but conversationContext has no outstanding balances, equity, or underlying transaction.');
+    }
   }
 
   const factsMissing: string[] = Array.isArray(raw?.factsMissing) ? [...raw.factsMissing] : [];
@@ -275,15 +288,6 @@ export class DeterministicSemanticExtractor {
        conversationContext.underlyingTransaction)
     );
 
-    const introducesNewSubject =
-      q.includes('apple') ||
-      q.includes('aapl') ||
-      q.includes('tesla') ||
-      q.includes('office equipment') ||
-      q.includes('machinery') ||
-      q.includes('rental agreement') ||
-      q.includes('entertainment expenses');
-
     const isPaymentOrSettlementAction =
       (q.includes('paid') ||
        q.includes('pay') ||
@@ -296,6 +300,20 @@ export class DeterministicSemanticExtractor {
        q.includes('deposit') ||
        q.includes('did pay') ||
        q.includes('did paid'));
+
+    // Check if query explicitly introduces a new transaction subject distinct from underlying transaction
+    const introducesNewSubject = Boolean(
+      conversationContext?.underlyingTransaction && (
+        (ownershipContext !== 'unknown' &&
+         conversationContext.underlyingTransaction.ownershipContext &&
+         conversationContext.underlyingTransaction.ownershipContext !== 'unknown' &&
+         ownershipContext !== conversationContext.underlyingTransaction.ownershipContext) ||
+        (transactionType &&
+         !['debt_settlement', 'unclassified_transaction'].includes(transactionType) &&
+         transactionType !== conversationContext.underlyingTransaction.type &&
+         !isPaymentOrSettlementAction)
+      )
+    );
 
     const isHypothetical = /\b(what if|suppose|assuming|if)\b/i.test(query);
 
@@ -421,7 +439,7 @@ export class DeterministicSemanticExtractor {
       followUpAnalysis
     };
 
-    const validation = validateAndNormalizeUnderstanding(rawUnderstanding, jurisdiction, 'deterministic_fallback');
+    const validation = validateAndNormalizeUnderstanding(rawUnderstanding, jurisdiction, 'deterministic_fallback', conversationContext);
     return validation.normalizedUnderstanding;
   }
 
@@ -700,6 +718,36 @@ export class DeterministicSemanticExtractor {
       };
     }
 
+    // 7. Software Development / Intangible Asset (SFRS(I) 1-38)
+    if (q.includes('software') || q.includes('development') || q.includes('r&d') || q.includes('intangible')) {
+      return {
+        ownershipContext: 'not_applicable',
+        subject: 'Software development / R&D expenditure',
+        instrument: 'intangible_asset_or_expense',
+        transactionType: 'software_development_expenditure'
+      };
+    }
+
+    // 8. PPE / Motor Vehicle Acquisition (SFRS(I) 1-16)
+    if (q.includes('car') || q.includes('vehicle') || q.includes('machinery') || q.includes('equipment')) {
+      return {
+        ownershipContext: 'not_applicable',
+        subject: 'property, plant and equipment acquisition',
+        instrument: 'ppe_asset',
+        transactionType: 'asset_acquisition'
+      };
+    }
+
+    // 9. Trade Discount Purchase / Inventory (SFRS(I) 1-2)
+    if (q.includes('trade discount')) {
+      return {
+        ownershipContext: 'not_applicable',
+        subject: 'inventory or goods purchase with trade discount',
+        instrument: 'trade_payable',
+        transactionType: 'trade_discount_purchase'
+      };
+    }
+
     return {
       ownershipContext: 'unknown',
       subject: undefined,
@@ -915,7 +963,7 @@ export class TransactionUnderstandingService {
     if (hasProvider) {
       try {
         const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction, conversationContext);
-        const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai');
+        const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai', conversationContext);
         if (validation.isValid) {
           return validation.normalizedUnderstanding;
         }

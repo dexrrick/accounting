@@ -730,6 +730,8 @@ export function assembleDeterministicResponse(
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: missingFacts.length > 0 ? missingFacts : undefined,
+    ownershipContext: deterministicScenario?.ownershipContext || groundedContext.semanticUnderstanding?.ownershipContext || currentScenario?.ownershipContext,
+    semanticUnderstanding: groundedContext.semanticUnderstanding || currentScenario?.semanticUnderstanding,
     isComplete: !hasPendingValuation && missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };

@@ -1,6 +1,10 @@
 import type { HybridSearchResult } from './hybridRetriever';
 import { RETRIEVAL_CONFIG } from './retrievalConfig';
 import { defaultQueryTopicResolver, type QueryTopic } from './queryTopicResolver';
+import {
+  type ISemanticAlignmentEvaluator,
+  defaultSemanticAlignmentEvaluator
+} from './semanticAlignmentEvaluator';
 
 export interface RerankContext {
   query: string;
@@ -18,18 +22,26 @@ export interface RerankContext {
  *
  * Implements the Exact Stage 2 Formula:
  * S_base(d) = 0.55 * S_lex(d) + 0.45 * S_sem(d)
- * S_final(d) = S_base(d) + 0.10 * S_rrf(d) + Delta_tier(d) + Delta_topic(d)
+ * S_final(d) = S_base(d) + 0.10 * S_rrf(d) + Delta_tier(d) + Delta_topic(d) + Delta_semantics(d)
  *
- * Invariants:
+ * Invariants & Constraints:
  * 1. Evidence Tier: PRIMARY_SOURCE (+0.15) > OFFICIAL_GUIDANCE (+0.05) > CURATED_SUMMARY (0.00).
- * 2. Multi-topic coverage: Guarantees balanced representation across distinct queried topics.
- * 3. Deterministic tie-breaking:
+ * 2. Semantic Alignment: Decoupled ISemanticAlignmentEvaluator applies structured Delta_semantics(d)
+ *    evaluating source metadata (standardOrActCode, paragraphOrSection) against TransactionUnderstanding.
+ * 3. Multi-topic coverage: Guarantees balanced representation across distinct queried topics,
+ *    WITHOUT forcing weak or irrelevant candidates (enforces minTopicCoverageScore >= 0.35).
+ * 4. Deterministic tie-breaking:
  *    - Score descending
  *    - Evidence Tier precedence
  *    - parentRecordId lexicographical ascending
  *    - startOffset ascending
  */
 export class DeterministicReranker {
+  private semanticEvaluator: ISemanticAlignmentEvaluator;
+
+  constructor(semanticEvaluator: ISemanticAlignmentEvaluator = defaultSemanticAlignmentEvaluator) {
+    this.semanticEvaluator = semanticEvaluator;
+  }
   /**
    * Normalizes lexical scores to [0, 1] across candidate set.
    */
@@ -103,12 +115,22 @@ export class DeterministicReranker {
         }
       }
 
-      // S_final = S_base + 0.10 * S_rrf + Delta_tier + Delta_topic
-      const finalScore = Math.round((sBase + sRrfTerm + deltaTier + deltaTopic) * 1e6) / 1e6;
+      // 7. Delta_semantics: Decoupled evaluation of source metadata against TransactionUnderstanding
+      const semScore = this.semanticEvaluator.evaluateAlignment(
+        chunk,
+        item.parentRecord,
+        context.semanticContext
+      );
+      const deltaSemantics = semScore.deltaSemantics;
+
+      // S_final = S_base + 0.10 * S_rrf + Delta_tier + Delta_topic + Delta_semantics
+      const finalScore = Math.round((sBase + sRrfTerm + deltaTier + deltaTopic + deltaSemantics) * 1e6) / 1e6;
 
       const scoredItem: HybridSearchResult = {
         ...item,
-        finalScore
+        finalScore,
+        deltaSemantics,
+        semanticScoreExplanation: semScore
       };
 
       scoredCandidates.push({ item: scoredItem, finalScore });
@@ -140,19 +162,22 @@ export class DeterministicReranker {
 
     // Multi-Topic Coverage Pass:
     // If multi-topic query, ensure each identified topic gets at least one top slot
+    // WITHOUT forcing weak/irrelevant evidence (enforces minTopicCoverageScore)
     const finalSelection: HybridSearchResult[] = [];
     const remainingSlots = RETRIEVAL_CONFIG.finalTopK;
 
     if (resolvedTopics.length > 1) {
       const topicCovered = new Set<string>();
       const candidateList = [...scoredCandidates];
+      const minCoverageScore = RETRIEVAL_CONFIG.minTopicCoverageScore ?? 0.35;
 
-      // First pass: pick best candidate for each topic
+      // First pass: pick best candidate for each topic IF it meets minimum quality threshold
       for (const topic of resolvedTopics) {
         const bestForTopic = candidateList.find(
           (c) =>
             !finalSelection.some((s) => s.chunk.id === c.item.chunk.id) &&
-            defaultQueryTopicResolver.chunkMatchesTopic(c.item.chunk.chunkText, topic)
+            defaultQueryTopicResolver.chunkMatchesTopic(c.item.chunk.chunkText, topic) &&
+            c.finalScore >= minCoverageScore
         );
 
         if (bestForTopic) {

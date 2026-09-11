@@ -145,6 +145,12 @@ export interface AccountingScenarioState {
   cumulativeBalances?: import('./conversationState').OutstandingAccountBalance[];
   isHypothetical?: boolean;
 
+  // Structured Transaction Semantics (Side Quest 2 & 3 Integration)
+  semanticUnderstanding?: import('../services/transactionUnderstandingService').TransactionUnderstanding;
+  ownershipContext?: 'own_equity' | 'external_investment' | 'not_applicable' | 'unknown';
+  counterpartyRole?: string;
+  transactionNature?: string;
+
   // Explicit Assumptions (Needed because facts are missing)
   assumptions?: ExplicitAssumption[];
   missingFacts?: string[];

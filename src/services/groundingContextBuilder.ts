@@ -63,7 +63,11 @@ function mapCanonicalDomainToQueryDomain(domain: string): QueryDomain {
 /**
  * Extracts facts explicitly stated in user input.
  */
-export function extractUserFacts(query: string, scenario?: AccountingScenarioState | null): string[] {
+export function extractUserFacts(
+  query: string,
+  scenario?: AccountingScenarioState | null,
+  semanticUnderstanding?: TransactionUnderstanding | null
+): string[] {
   const facts: string[] = [];
   const q = query.trim();
 
@@ -74,23 +78,46 @@ export function extractUserFacts(query: string, scenario?: AccountingScenarioSta
   }
 
   // Dates
-  const dateMatches = q.match(/\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g);
+  const dateMatches = q.match(/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/g);
   if (dateMatches && dateMatches.length > 0) {
     facts.push(`Transaction dates specified: ${dateMatches.join(', ')}`);
   }
 
-  // Functional currency
-  if (q.toLowerCase().includes('usd')) facts.push('Foreign currency involved: USD');
-  if (q.toLowerCase().includes('sgd')) facts.push('Singapore Dollar (SGD) referenced');
+  // Resolve semantic understanding: explicit parameter > scenario attached > synchronous deterministic parse
+  const understanding = semanticUnderstanding || scenario?.semanticUnderstanding || defaultTransactionUnderstandingService.understandTransactionSync(query, scenario?.functionalCurrency || 'SGD');
 
-  // Key entities / transactions
-  if (q.toLowerCase().includes('share') || q.toLowerCase().includes('stock')) facts.push('Equity instrument / share transaction');
-  if (q.toLowerCase().includes('lease') || q.toLowerCase().includes('rental')) facts.push('Lease or rental agreement transaction');
-  if (q.toLowerCase().includes('car') || q.toLowerCase().includes('vehicle')) facts.push('Motor vehicle acquisition / outlay');
-  if (q.toLowerCase().includes('software') || q.toLowerCase().includes('development') || q.toLowerCase().includes('r&d')) {
-    facts.push('Software development / R&D expenditure');
+  // Currency from structured understanding
+  if (understanding?.currency?.value) {
+    if (understanding.currency.value === 'USD') {
+      facts.push('Foreign currency involved: USD');
+    } else if (understanding.currency.value === 'SGD') {
+      facts.push('Singapore Dollar (SGD) referenced');
+    } else {
+      facts.push(`Currency involved: ${understanding.currency.value}`);
+    }
   }
-  if (q.toLowerCase().includes('trade discount')) facts.push('Supplier trade discount granted');
+
+  // Structured facts from understanding
+  if (understanding) {
+    if (understanding.transactionType && understanding.transactionType !== 'unclassified_transaction') {
+      facts.push(`Transaction type: ${understanding.transactionType}`);
+    }
+    if (understanding.ownershipContext && understanding.ownershipContext !== 'unknown') {
+      facts.push(`Ownership context: ${understanding.ownershipContext}`);
+    }
+    if (understanding.counterparty?.role && understanding.counterparty.role !== 'unknown') {
+      facts.push(`Counterparty role: ${understanding.counterparty.role}`);
+    }
+    if (understanding.subject) {
+      facts.push(`Transaction subject: ${understanding.subject}`);
+    }
+    if (understanding.amount !== undefined) {
+      facts.push(`Stated transaction amount: ${understanding.amount}`);
+    }
+    if (understanding.paymentStatus && understanding.paymentStatus !== 'unknown') {
+      facts.push(`Payment status: ${understanding.paymentStatus}`);
+    }
+  }
 
   if (scenario?.keyParameters) {
     for (const p of scenario.keyParameters) {
@@ -198,7 +225,7 @@ export async function buildGroundedReasoningContext(
   }
 
   // 4. Facts, Missing Facts, and Assumptions
-  const userFacts = extractUserFacts(userInput, currentScenario);
+  const userFacts = extractUserFacts(userInput, currentScenario, semanticUnderstanding);
   const missingFacts = [...classification.missingFacts];
 
   const isTransactionQuery =
@@ -737,6 +764,8 @@ export function postProcessAIResponse(
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: groundedContext.missingFacts.length > 0 ? groundedContext.missingFacts : undefined,
+    ownershipContext: deterministicScenario?.ownershipContext || groundedContext.semanticUnderstanding?.ownershipContext || currentScenario?.ownershipContext,
+    semanticUnderstanding: groundedContext.semanticUnderstanding || currentScenario?.semanticUnderstanding,
     isComplete: groundedContext.missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };

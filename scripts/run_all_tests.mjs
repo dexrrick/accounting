@@ -9,6 +9,7 @@ const testSuites = [
   { name: '0A. AI Semantic Extraction & Schema Validation Gate', file: 'test_ai_semantic_extraction.mjs' },
   { name: '0B. Side Quest 2 Semantic Understanding & Routing', file: 'test_sidequest2_semantic_understanding.mjs' },
   { name: '0C. Side Quest 3 Multi-Turn Accounting State & Follow-Ups', file: 'test_followup_accounting_state.mjs' },
+  { name: '0D. Side Quest 2 → Phase 5 Integration & Semantics', file: 'test_sidequest2_phase5_integration.mjs' },
   { name: '1. Phase 5 Advanced Hybrid Retrieval & Vector Index', file: 'test_phase5_advanced_retrieval.mjs' },
   { name: '2. Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs' },
   { name: '3. Phase 3 Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs' },

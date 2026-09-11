@@ -194,6 +194,12 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
     });
     recorder.stopTimer('rerank');
 
+    for (const item of reranked) {
+      if (item.semanticScoreExplanation) {
+        recorder.recordSemanticEvaluation(item.chunk.id, item.semanticScoreExplanation);
+      }
+    }
+
     recorder.stopTimer('total');
 
     recorder.recordCounters({
