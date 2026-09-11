@@ -279,9 +279,21 @@ export class LiveRegulatoryFeedService {
 
   /**
    * Verifies an entire update package.
+   * Security invariant: rawDocument is mandatory. A candidate record must never reach VERIFIED
+   * without proving that candidate sourceText matches content reconstructed from raw document boundary.
    * Atomic rule: If even 1 record fails validation or structural check, the entire package is REJECTED.
    */
-  public async verifyUpdatePackage(packageId: string): Promise<PackageVerificationResult> {
+  public async verifyUpdatePackage(packageId: string, rawDocument: string): Promise<PackageVerificationResult> {
+    if (!rawDocument || typeof rawDocument !== 'string' || rawDocument.trim().length === 0) {
+      this.rejectedPackages.set(packageId, 'Raw document is required for package verification');
+      return {
+        isValid: false,
+        packageId,
+        verifiedRecordsCount: 0,
+        rejectionReason: 'Raw document is strictly required to verify update package and validate source boundary'
+      };
+    }
+
     const pkg = this.stagedPackages.get(packageId);
     if (!pkg) {
       return {
@@ -365,6 +377,19 @@ export class LiveRegulatoryFeedService {
           verifiedRecordsCount: 0,
           failedRecordId: rec.id,
           rejectionReason: `Atomic validation failure on record '${rec.id}': ${provCheck.reason}`
+        };
+      }
+
+      // Source boundary verification (ties candidate sourceText back to raw document offsets)
+      const boundaryCheck = this.validator.validateSourceBoundary(rec, rawDocument);
+      if (!boundaryCheck.isValid) {
+        this.rejectedPackages.set(packageId, `Record #${i + 1} (${rec.id}): ${boundaryCheck.reason}`);
+        return {
+          isValid: false,
+          packageId,
+          verifiedRecordsCount: 0,
+          failedRecordId: rec.id,
+          rejectionReason: `Atomic validation failure on record '${rec.id}': ${boundaryCheck.reason}`
         };
       }
 

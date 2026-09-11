@@ -14,6 +14,7 @@ export interface ProvisionExtraction {
   extractionStatus: 'EXACT' | 'PARTIAL' | 'FAILED';
   sourceLocator: SourceLocator;
   extractionMethod: string;
+  isVerbatimText?: boolean;
 }
 
 /**
@@ -135,9 +136,59 @@ export function extractBalancedContainer(
 }
 
 /**
+ * Finds a balanced HTML container starting at an exact offset in raw unstripped HTML.
+ */
+export function findBalancedContainerFrom(
+  html: string,
+  startOffset: number,
+  tagName: string
+): BalancedContainerResult | null {
+  if (!html || typeof html !== 'string' || startOffset < 0 || startOffset >= html.length) return null;
+
+  const openTagMatch = new RegExp(`^<${tagName}\\b([^>]*)>`, 'i').exec(html.slice(startOffset));
+  if (!openTagMatch) return null;
+
+  const attrString = openTagMatch[1];
+  const openTagLen = openTagMatch[0].length;
+  const contentStart = startOffset + openTagLen;
+
+  const idMatch = attrString.match(/id=["']([^"']+)["']/i);
+  const elementId = idMatch ? idMatch[1] : undefined;
+
+  const tokenRegex = new RegExp(`(<${tagName}\\b[^>]*>)|(<\\/${tagName}\\s*>)`, 'gi');
+  tokenRegex.lastIndex = contentStart;
+
+  let depth = 1;
+  let tokenMatch: RegExpExecArray | null;
+
+  while ((tokenMatch = tokenRegex.exec(html)) !== null) {
+    if (tokenMatch[1]) {
+      if (!/\/\s*>$/.test(tokenMatch[1])) {
+        depth++;
+      }
+    } else if (tokenMatch[2]) {
+      depth--;
+      if (depth === 0) {
+        const endOffset = tokenMatch.index + tokenMatch[0].length;
+        return {
+          outerHtml: html.slice(startOffset, endOffset),
+          innerHtml: html.slice(contentStart, tokenMatch.index),
+          startOffset,
+          endOffset,
+          tagName: tagName.toLowerCase(),
+          elementId
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * SSO / AGC Provision Extractor.
  * Deterministically locates and extracts an unabridged statutory subsection from Singapore Statutes Online HTML
- * using balanced tag structural container matching.
+ * using structural subsection container matching.
  */
 export function extractSSOProvision(
   html: string,
@@ -151,61 +202,174 @@ export function extractSSOProvision(
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
-  // Structural extraction: locate container <div ... id="pr201-..." or id="pr201">
-  const container = extractBalancedContainer(html, 'div', /id=["'](?:pr201-[^"']*|pr201)["']/i);
-  if (!container) {
-    // Fail-closed: No hard-coded statutory text fallback!
+  // Parse target section number (e.g. '201') and subsection (e.g. '5')
+  const secMatch = section.match(/(?:Section|Sec\.?|S\.?)\s*(\d+)/i);
+  const subMatch = section.match(/\((\d+[a-zA-Z]?)\)/);
+  const targetSec = secMatch ? secMatch[1] : '201';
+  const targetSub = subMatch ? subMatch[1] : '5';
+
+  // Strategy 1: Check for discrete subsection container explicitly matching id (e.g. pr201-5- or pr201-5)
+  const explicitSubRegex = new RegExp(`id=["'](?:pr${targetSec}-${targetSub}-?|sec${targetSec}-${targetSub}-?|pr${targetSec}_${targetSub})["']`, 'i');
+  const explicitSubContainer = extractBalancedContainer(html, 'div', explicitSubRegex) ||
+                               extractBalancedContainer(html, 'p', explicitSubRegex);
+
+  if (explicitSubContainer) {
+    const rawOuter = html.slice(explicitSubContainer.startOffset, explicitSubContainer.endOffset);
+    const cleaned = cleanHtmlText(rawOuter);
+    if (cleaned.length > 20 && (cleaned.startsWith(`(${targetSub})`) || new RegExp(`^\\s*\\(${targetSub}\\)\\s+`).test(cleaned))) {
+      return {
+        standardOrActCode: actCode,
+        paragraphOrSection: section,
+        text: cleaned,
+        extractionStatus: 'EXACT',
+        isVerbatimText: true,
+        sourceLocator: {
+          document: 'Companies Act 1967',
+          act: 'CoA1967',
+          section: targetSec,
+          subsection: targetSub,
+          sourceNode: `${explicitSubContainer.tagName}#${explicitSubContainer.elementId}`,
+          elementId: explicitSubContainer.elementId,
+          heading: `Section ${targetSec}(${targetSub})`,
+          startOffset: explicitSubContainer.startOffset,
+          endOffset: explicitSubContainer.endOffset,
+          boundary: {
+            startOffset: explicitSubContainer.startOffset,
+            endOffset: explicitSubContainer.endOffset
+          },
+          sourceType: 'HTML',
+          canonicalLocator: `Companies Act 1967 > Section ${targetSec} > Subsection (${targetSub})`
+        },
+        extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER'
+      };
+    }
+  }
+
+  // Strategy 2: Locate Section container (div#pr201- or div#sec201)
+  const secContainer = extractBalancedContainer(html, 'div', new RegExp(`id=["'](?:pr${targetSec}-[^"']*|pr${targetSec}|sec${targetSec})["']`, 'i'));
+  if (!secContainer) {
     return {
       standardOrActCode: actCode,
       paragraphOrSection: section,
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
-  const cleaned = cleanHtmlText(container.innerHtml);
+  // Scan discrete child containers inside secContainer in the raw unstripped HTML
+  const childTagRegex = /<(div|p)\b([^>]*)>/gi;
+  const openTagMatch = /^<div\b([^>]*)>/i.exec(html.slice(secContainer.startOffset));
+  const openTagLen = openTagMatch ? openTagMatch[0].length : 0;
+  const innerStart = secContainer.startOffset + openTagLen;
+  const innerEnd = secContainer.endOffset - 6;
 
-  // Affirmative identification of subsection (5) within the structural node
-  if (cleaned.length > 20 && (cleaned.startsWith('(5)') || cleaned.includes('(5)'))) {
+  childTagRegex.lastIndex = innerStart;
+  let childMatch: RegExpExecArray | null;
+  let matchedChildContainer: BalancedContainerResult | null = null;
+
+  while ((childMatch = childTagRegex.exec(html)) !== null) {
+    if (childMatch.index >= innerEnd) break;
+
+    const childStart = childMatch.index;
+    const tagName = childMatch[1];
+    const childContainer = findBalancedContainerFrom(html, childStart, tagName);
+    if (childContainer && childContainer.endOffset <= secContainer.endOffset) {
+      const rawChild = html.slice(childContainer.startOffset, childContainer.endOffset);
+      const childCleaned = cleanHtmlText(rawChild);
+      if (childCleaned.startsWith(`(${targetSub})`) || new RegExp(`^\\s*\\(${targetSub}\\)\\s+`).test(childCleaned)) {
+        matchedChildContainer = {
+          outerHtml: rawChild,
+          innerHtml: childContainer.innerHtml,
+          startOffset: childContainer.startOffset,
+          endOffset: childContainer.endOffset,
+          tagName: tagName.toLowerCase(),
+          elementId: childMatch[2].match(/id=["']([^"']+)["']/i)?.[1]
+        };
+        break;
+      }
+      childTagRegex.lastIndex = childContainer.endOffset;
+    }
+  }
+
+  if (matchedChildContainer) {
+    const rawOuter = html.slice(matchedChildContainer.startOffset, matchedChildContainer.endOffset);
+    const cleaned = cleanHtmlText(rawOuter);
     return {
       standardOrActCode: actCode,
       paragraphOrSection: section,
       text: cleaned,
       extractionStatus: 'EXACT',
+      isVerbatimText: true,
       sourceLocator: {
         document: 'Companies Act 1967',
         act: 'CoA1967',
-        section: '201',
-        subsection: '5',
-        sourceNode: `div#${container.elementId || 'pr201-'}`,
-        elementId: container.elementId || 'pr201-',
-        heading: 'Section 201(5)',
-        startOffset: container.startOffset,
-        endOffset: container.endOffset,
+        section: targetSec,
+        subsection: targetSub,
+        sourceNode: `${matchedChildContainer.tagName}#${matchedChildContainer.elementId || `${secContainer.elementId || `pr${targetSec}-`}${targetSub}`}`,
+        elementId: matchedChildContainer.elementId || secContainer.elementId,
+        heading: `Section ${targetSec}(${targetSub})`,
+        startOffset: matchedChildContainer.startOffset,
+        endOffset: matchedChildContainer.endOffset,
         boundary: {
-          startOffset: container.startOffset,
-          endOffset: container.endOffset
+          startOffset: matchedChildContainer.startOffset,
+          endOffset: matchedChildContainer.endOffset
         },
         sourceType: 'HTML',
-        canonicalLocator: 'Companies Act 1967 > Section 201 > Subsection (5)'
+        canonicalLocator: `Companies Act 1967 > Section ${targetSec} > Subsection (${targetSub})`
       },
       extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER'
     };
   }
 
+  // Strategy 3: Check secContainer itself if it directly begins with subsection label
+  const rawOuter = html.slice(secContainer.startOffset, secContainer.endOffset);
+  const cleaned = cleanHtmlText(rawOuter);
+
+  if (cleaned.length > 20 && (cleaned.startsWith(`(${targetSub})`) || new RegExp(`^\\s*\\(${targetSub}\\)\\s+`).test(cleaned))) {
+    return {
+      standardOrActCode: actCode,
+      paragraphOrSection: section,
+      text: cleaned,
+      extractionStatus: 'EXACT',
+      isVerbatimText: true,
+      sourceLocator: {
+        document: 'Companies Act 1967',
+        act: 'CoA1967',
+        section: targetSec,
+        subsection: targetSub,
+        sourceNode: `div#${secContainer.elementId || `pr${targetSec}-`}`,
+        elementId: secContainer.elementId || `pr${targetSec}-`,
+        heading: `Section ${targetSec}(${targetSub})`,
+        startOffset: secContainer.startOffset,
+        endOffset: secContainer.endOffset,
+        boundary: {
+          startOffset: secContainer.startOffset,
+          endOffset: secContainer.endOffset
+        },
+        sourceType: 'HTML',
+        canonicalLocator: `Companies Act 1967 > Section ${targetSec} > Subsection (${targetSub})`
+      },
+      extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER'
+    };
+  }
+
+  // If node begins with different subsection (e.g. (4)) and merely references (5), fail closed!
   return {
     standardOrActCode: actCode,
     paragraphOrSection: section,
     text: '',
     extractionStatus: 'FAILED',
     sourceLocator: {},
-    extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER'
+    extractionMethod: 'SSO_STRUCTURAL_CONTAINER_PARSER',
+    isVerbatimText: false
   };
 }
 
@@ -241,7 +405,8 @@ export function extractIRASProvision(html: string, target: string = 'Section 43'
     };
   }
 
-  const cleaned = cleanHtmlText(container.innerHtml);
+  const rawOuter = html.slice(container.startOffset, container.endOffset);
+  const cleaned = cleanHtmlText(rawOuter);
   if (cleaned.length < 10) {
     return {
       standardOrActCode: 'ITA1947',
@@ -249,7 +414,8 @@ export function extractIRASProvision(html: string, target: string = 'Section 43'
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'IRAS_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'IRAS_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
@@ -258,8 +424,9 @@ export function extractIRASProvision(html: string, target: string = 'Section 43'
     paragraphOrSection: target,
     text: cleaned,
     extractionStatus: 'EXACT',
+    isVerbatimText: true,
     sourceLocator: {
-      document: 'Income Tax Act 1947',
+      document: 'IRAS Corporate Income Tax Guidance',
       act: 'ITA1947',
       section: '43',
       subsection: '1',
@@ -311,7 +478,8 @@ export function extractACRAProvision(html: string, target: string = 'Thirteenth 
     };
   }
 
-  const cleaned = cleanHtmlText(container.innerHtml);
+  const rawOuter = html.slice(container.startOffset, container.endOffset);
+  const cleaned = cleanHtmlText(rawOuter);
   if (cleaned.length < 15) {
     return {
       standardOrActCode: 'CoA1967',
@@ -319,7 +487,8 @@ export function extractACRAProvision(html: string, target: string = 'Thirteenth 
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'ACRA_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'ACRA_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
@@ -328,8 +497,9 @@ export function extractACRAProvision(html: string, target: string = 'Thirteenth 
     paragraphOrSection: target,
     text: cleaned,
     extractionStatus: 'EXACT',
+    isVerbatimText: true,
     sourceLocator: {
-      document: 'Companies Act 1967',
+      document: 'ACRA Small Company Guidance',
       act: 'CoA1967',
       section: 'Thirteenth Schedule',
       subsection: 'Paragraph 2',
@@ -361,7 +531,8 @@ export function extractMOMProvision(html: string, target: string = 'Part IV'): P
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'MOM_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'MOM_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
@@ -375,11 +546,13 @@ export function extractMOMProvision(html: string, target: string = 'Part IV'): P
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'MOM_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'MOM_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
-  const cleaned = cleanHtmlText(container.innerHtml);
+  const rawOuter = html.slice(container.startOffset, container.endOffset);
+  const cleaned = cleanHtmlText(rawOuter);
   if (cleaned.length < 15) {
     return {
       standardOrActCode: 'EA1968',
@@ -387,7 +560,8 @@ export function extractMOMProvision(html: string, target: string = 'Part IV'): P
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'MOM_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'MOM_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
@@ -396,8 +570,9 @@ export function extractMOMProvision(html: string, target: string = 'Part IV'): P
     paragraphOrSection: target,
     text: cleaned,
     extractionStatus: 'EXACT',
+    isVerbatimText: true,
     sourceLocator: {
-      document: 'Employment Act 1968',
+      document: 'MOM Employment Act Guidance',
       act: 'EA1968',
       section: 'Part IV',
       subsection: 'Section 95A',
@@ -429,7 +604,8 @@ export function extractCPFProvision(html: string, target: string = 'First Schedu
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'CPF_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'CPF_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
@@ -444,11 +620,13 @@ export function extractCPFProvision(html: string, target: string = 'First Schedu
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'CPF_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'CPF_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
-  const cleaned = cleanHtmlText(container.innerHtml);
+  const rawOuter = html.slice(container.startOffset, container.endOffset);
+  const cleaned = cleanHtmlText(rawOuter);
   if (cleaned.length < 15) {
     return {
       standardOrActCode: 'CPFA1953',
@@ -456,7 +634,8 @@ export function extractCPFProvision(html: string, target: string = 'First Schedu
       text: '',
       extractionStatus: 'FAILED',
       sourceLocator: {},
-      extractionMethod: 'CPF_STRUCTURAL_CONTAINER_PARSER'
+      extractionMethod: 'CPF_STRUCTURAL_CONTAINER_PARSER',
+      isVerbatimText: false
     };
   }
 
@@ -465,8 +644,9 @@ export function extractCPFProvision(html: string, target: string = 'First Schedu
     paragraphOrSection: target,
     text: cleaned,
     extractionStatus: 'EXACT',
+    isVerbatimText: true,
     sourceLocator: {
-      document: 'Central Provident Fund Act 1953',
+      document: 'CPF Contribution Rate Guidance',
       act: 'CPFA1953',
       section: 'First Schedule',
       subsection: 'Table',
@@ -558,6 +738,7 @@ export function extractFrankfurterProvision(
       paragraphOrSection: 'SPOT_RATES_SGD',
       text,
       extractionStatus: 'EXACT',
+      isVerbatimText: false,
       sourceLocator: {
         document: 'Frankfurter ECB Reference Rates',
         act: 'FX_OBSERVATION',
@@ -754,18 +935,18 @@ export class IRASUpdateAdapter implements IOfficialSourceAdapter {
       authority: 'IRAS',
       authorityName: 'Inland Revenue Authority of Singapore (IRAS)',
       sourcePublisher: 'Inland Revenue Authority of Singapore',
-      legalOrStandardInstrument: 'Income Tax Act 1947',
+      legalOrStandardInstrument: 'IRAS Administrative Tax Guidance',
       principleSummary: 'Corporate income tax headline rate and headline rebate directives',
       domain: 'IRAS_TAX',
       jurisdiction: 'Singapore',
       tags: ['income tax', 'corporate tax', 'rebate'],
-      sourceType: 'AUTHORITATIVE_SOURCE',
+      sourceType: 'OFFICIAL_GUIDANCE',
       officialSourceUrl: targetUrl,
       sourceText: extraction.text,
       isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
-      evidenceTier: 'PRIMARY_SOURCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
       documentHash,
@@ -853,18 +1034,18 @@ export class ACRAUpdateAdapter implements IOfficialSourceAdapter {
       authority: 'ACRA',
       authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
       sourcePublisher: 'Accounting and Corporate Regulatory Authority',
-      legalOrStandardInstrument: 'Companies Act 1967',
+      legalOrStandardInstrument: 'ACRA Practice Direction / Guidance',
       principleSummary: 'Small company audit exemption criteria and annual filing obligations',
       domain: 'ACRA_CORP',
       jurisdiction: 'Singapore',
       tags: ['companies act', 'small company', 'audit exemption'],
-      sourceType: 'AUTHORITATIVE_SOURCE',
+      sourceType: 'OFFICIAL_GUIDANCE',
       officialSourceUrl: targetUrl,
       sourceText: extraction.text,
       isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
-      evidenceTier: 'PRIMARY_SOURCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
       documentHash,
@@ -952,18 +1133,18 @@ export class MOMUpdateAdapter implements IOfficialSourceAdapter {
       authority: 'MOM',
       authorityName: 'Ministry of Manpower (MOM)',
       sourcePublisher: 'Ministry of Manpower',
-      legalOrStandardInstrument: 'Employment Act 1968',
+      legalOrStandardInstrument: 'MOM Employment Practices Guidance',
       principleSummary: 'Statutory employment terms, mandatory itemised payslips and statutory leave',
       domain: 'MOM_EMPLOYMENT',
       jurisdiction: 'Singapore',
       tags: ['employment act', 'payslip', 'statutory leave'],
-      sourceType: 'AUTHORITATIVE_SOURCE',
+      sourceType: 'OFFICIAL_GUIDANCE',
       officialSourceUrl: targetUrl,
       sourceText: extraction.text,
       isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
-      evidenceTier: 'PRIMARY_SOURCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
       documentHash,
@@ -1051,18 +1232,18 @@ export class CPFUpdateAdapter implements IOfficialSourceAdapter {
       authority: 'CPF',
       authorityName: 'Central Provident Fund Board (CPF)',
       sourcePublisher: 'Central Provident Fund Board',
-      legalOrStandardInstrument: 'Central Provident Fund Act 1953',
+      legalOrStandardInstrument: 'CPF Board Contribution Rate Guidance',
       principleSummary: 'Ordinary Wage ceiling and tiered contribution schedules',
       domain: 'CPF_BOARD',
       jurisdiction: 'Singapore',
       tags: ['cpf', 'wage ceiling', 'contributions'],
-      sourceType: 'AUTHORITATIVE_SOURCE',
+      sourceType: 'OFFICIAL_GUIDANCE',
       officialSourceUrl: targetUrl,
       sourceText: extraction.text,
       isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
-      evidenceTier: 'PRIMARY_SOURCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
       documentHash,
@@ -1160,7 +1341,7 @@ export class FrankfurterReferenceAdapter implements IOfficialSourceAdapter {
       sourceType: 'CURATED_SUMMARY',
       officialSourceUrl: targetUrl,
       sourceText: extraction.text,
-      isVerbatimText: true,
+      isVerbatimText: false,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
       evidenceTier: 'CURATED_SUMMARY',

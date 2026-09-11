@@ -1,4 +1,5 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import { cleanHtmlText } from './sourceAdapters';
 
 /**
  * Strict allowlist of authorized Singapore statutory authorities and verified reference APIs.
@@ -250,6 +251,105 @@ export class ExternalSourceValidator {
   }
 
   /**
+   * Validates that candidate sourceText can be deterministically tied back to the recorded source boundary in the raw document.
+   */
+  public validateSourceBoundary(record: AuthoritativeSourceRecord, rawDocument: string): ExternalValidationResult {
+    if (!rawDocument || typeof rawDocument !== 'string' || rawDocument.length === 0) {
+      return {
+        isValid: false,
+        errorCode: 'MALFORMED_DOCUMENT_STRUCTURE',
+        reason: 'Raw document is required to validate source boundary'
+      };
+    }
+
+    if (record.extractionStatus === 'FAILED') {
+      return {
+        isValid: false,
+        errorCode: 'EXTRACTION_FAILED',
+        reason: `Extraction failed: could not locate provision '${record.paragraphOrSection}' in source '${record.standardOrActCode}'`
+      };
+    }
+
+    if (record.extractionStatus === 'PARTIAL') {
+      if (record.isVerbatimText) {
+        return {
+          isValid: false,
+          errorCode: 'INVALID_VERBATIM_CLAIM',
+          reason: 'Partial extraction cannot be declared as isVerbatimText = true'
+        };
+      }
+      return {
+        isValid: false,
+        errorCode: 'PARTIAL_PROVISION',
+        reason: `Partial extraction is not eligible for authoritative verification for '${record.id}'`
+      };
+    }
+
+    const locator = record.sourceLocator;
+    if (!locator) {
+      return {
+        isValid: false,
+        errorCode: 'PROVISION_MAPPING_MISMATCH',
+        reason: 'Missing source locator for source boundary verification'
+      };
+    }
+
+    const startOffset = locator.boundary?.startOffset ?? locator.startOffset;
+    const endOffset = locator.boundary?.endOffset ?? locator.endOffset;
+
+    if (
+      startOffset === undefined ||
+      endOffset === undefined ||
+      typeof startOffset !== 'number' ||
+      typeof endOffset !== 'number' ||
+      startOffset < 0 ||
+      endOffset > rawDocument.length ||
+      startOffset >= endOffset
+    ) {
+      return {
+        isValid: false,
+        errorCode: 'PROVISION_MAPPING_MISMATCH',
+        reason: `Invalid provision boundaries: startOffset=${startOffset}, endOffset=${endOffset}, docLength=${rawDocument.length}`
+      };
+    }
+
+    const rawSlice = rawDocument.slice(startOffset, endOffset);
+
+    // If source format is JSON or authority is REFERENCE_API
+    if (record.authority === 'REFERENCE_API' || locator.sourceType === 'JSON') {
+      try {
+        const parsedSlice = JSON.parse(rawSlice);
+        if (!parsedSlice || typeof parsedSlice !== 'object') {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: 'Source boundary does not contain a valid JSON object'
+          };
+        }
+      } catch {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: 'Source boundary does not parse as valid JSON'
+        };
+      }
+      return { isValid: true };
+    }
+
+    // For HTML/text records: cleanHtmlText of the raw slice must match record.sourceText
+    const reconstructed = cleanHtmlText(rawSlice);
+    if (reconstructed.trim() !== record.sourceText.trim()) {
+      return {
+        isValid: false,
+        errorCode: 'PROVISION_MAPPING_MISMATCH',
+        reason: `Source text mismatch: candidate sourceText does not match content reconstructed from raw document boundary offsets [${startOffset}, ${endOffset}]`
+      };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
    * Validates exact provision extraction, anti-truncation verbatim integrity,
    * and structural section/provision mapping with affirmative canonical Act and section identity.
    */
@@ -411,6 +511,70 @@ export class ExternalSourceValidator {
             reason: 'Invalid provision boundaries: boundary offsets are invalid (endOffset must be strictly greater than startOffset)'
           };
         }
+      }
+    }
+
+    // 4. Guidance vs Primary Source Enforcement
+    const isGuidanceAuthority = ['IRAS', 'ACRA', 'MOM', 'CPF'].includes(doc.authority);
+    const isAgcSource = doc.officialSourceUrl && doc.officialSourceUrl.includes('sso.agc.gov.sg');
+
+    if (isGuidanceAuthority && !isAgcSource) {
+      if (doc.evidenceTier === 'PRIMARY_SOURCE' || doc.sourceType === 'AUTHORITATIVE_SOURCE') {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: `Administrative guidance portal from '${doc.authority}' cannot claim PRIMARY_SOURCE or AUTHORITATIVE_SOURCE statutory status; must be modeled as OFFICIAL_GUIDANCE`
+        };
+      }
+
+      // Verify structural node identifies guidance topic
+      const nodeIdentifier = `${doc.sourceLocator?.sourceNode || ''} ${doc.sourceLocator?.elementId || ''}`.toLowerCase();
+      if (doc.authority === 'IRAS' && !nodeIdentifier.includes('cit-rate') && !nodeIdentifier.includes('cit-rebate')) {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: `IRAS guidance structural node must identify tax rate/rebate topic (e.g. cit-rate), found '${nodeIdentifier}'`
+        };
+      }
+      if (doc.authority === 'ACRA' && !nodeIdentifier.includes('small-company')) {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: `ACRA guidance structural node must identify small-company topic, found '${nodeIdentifier}'`
+        };
+      }
+      if (doc.authority === 'MOM' && !nodeIdentifier.includes('itemised-payslips') && !nodeIdentifier.includes('payslip')) {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: `MOM guidance structural node must identify itemised-payslip topic, found '${nodeIdentifier}'`
+        };
+      }
+      if (doc.authority === 'CPF' && !nodeIdentifier.includes('ow-ceiling')) {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: `CPF guidance structural node must identify ow-ceiling topic, found '${nodeIdentifier}'`
+        };
+      }
+    }
+
+    // 5. Reference API & FX Observation Validation
+    if (doc.authority === 'REFERENCE_API' || doc.standardOrActCode === 'FX_OBSERVATION') {
+      if (doc.isVerbatimText) {
+        return {
+          isValid: false,
+          errorCode: 'INVALID_VERBATIM_CLAIM',
+          reason: 'Reference API observations cannot claim isVerbatimText = true because summary text is generated/curated'
+        };
+      }
+
+      if (!doc.fxObservation || !doc.fxObservation.rates || !doc.fxObservation.base || !doc.fxObservation.date) {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: 'Reference API observation is missing structured fxObservation payload'
+        };
       }
     }
 

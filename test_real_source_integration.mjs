@@ -196,7 +196,7 @@ async function runRealSourceIntegrationTests() {
           sourceStatus: 'NEEDS_REVIEW',
           sourceType: 'CURATED_SUMMARY',
           evidenceTier: 'CURATED_SUMMARY',
-          isVerbatimText: true,
+          isVerbatimText: false,
           lastVerifiedDate: fetchRes.retrievedAt.split('T')[0],
           provenance: 'LIVE_PATCH',
           version: `PKG-LIVE-FX-${extraction.fxObservation.date}`,
@@ -234,7 +234,7 @@ async function runRealSourceIntegrationTests() {
             console.log('  [4A: Reference API] 5. Package staged into candidate pool');
 
             // Step 8: Verification Gate
-            const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId);
+            const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId, fetchRes.content);
             if (verifyRes.isValid) {
               console.log('  [4A: Reference API] 6. Verification gate passed (status -> VERIFIED)');
 
@@ -353,7 +353,7 @@ async function runRealSourceIntegrationTests() {
           console.log('  [4B: Statutory Law] 5. Package staged into candidate pool');
 
           // Step 6: Verify Package
-          const verifyRes = await feedService.verifyUpdatePackage(ssoPkg.packageId);
+          const verifyRes = await feedService.verifyUpdatePackage(ssoPkg.packageId, rawContent);
           if (verifyRes.isValid) {
             console.log('  [4B: Statutory Law] 6. Package verified through multi-tier verification gate');
 

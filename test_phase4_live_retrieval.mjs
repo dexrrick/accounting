@@ -347,12 +347,13 @@ async function runTests() {
   await itAsync('6B. Verified update package activation atomically commits into active registry and version ledger', async () => {
     const feedService = new LiveRegulatoryFeedService();
 
+    const rawIrasDoc = '<div id="cit-rebate">Companies granted a 50% Corporate Income Tax rebate capped at SGD 40,000 for Year of Assessment 2026.</div>';
     const validRecord = {
       id: 'IRAS_CORP_TAX_REBATE_2026',
       authority: 'IRAS',
       authorityName: 'Inland Revenue Authority of Singapore',
       sourcePublisher: 'Inland Revenue Authority of Singapore',
-      legalOrStandardInstrument: 'Income Tax Act 1947',
+      legalOrStandardInstrument: 'IRAS Administrative Tax Guidance',
       documentTitle: 'Income Tax Act 1947',
       standardOrActCode: 'ITA1947',
       paragraphOrSection: 'Section 43(1)',
@@ -363,8 +364,8 @@ async function runTests() {
       jurisdiction: 'Singapore',
       tags: ['corporate tax', 'tax rebate', 'ya 2026'],
       sourceStatus: 'VERIFIED',
-      sourceType: 'AUTHORITATIVE_SOURCE',
-      evidenceTier: 'PRIMARY_SOURCE',
+      sourceType: 'OFFICIAL_GUIDANCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
       isVerbatimText: true,
       validFrom: '2026-01-01',
       validTo: '2026-12-31',
@@ -373,7 +374,11 @@ async function runTests() {
       extractionStatus: 'EXACT',
       sourceLocator: {
         heading: 'Section 43(1)',
-        elementId: 'cit-rebate'
+        elementId: 'cit-rebate',
+        sourceNode: 'div#cit-rebate',
+        startOffset: 0,
+        endOffset: rawIrasDoc.length,
+        boundary: { startOffset: 0, endOffset: rawIrasDoc.length }
       }
     };
 
@@ -398,7 +403,7 @@ async function runTests() {
     await feedService.stageUpdatePackage(pkg);
 
     // 2. Verify
-    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId);
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId, rawIrasDoc);
     assert.strictEqual(verifyRes.isValid, true);
     assert.strictEqual(verifyRes.verifiedRecordsCount, 1);
 
@@ -416,6 +421,7 @@ async function runTests() {
   await itAsync('6C. Atomic package failure: 1 invalid record causes entire package rejection (0 activated)', async () => {
     const feedService = new LiveRegulatoryFeedService();
 
+    const rawGoodHtml = '<div id="pr100-">Valid statutory provision text.</div>';
     const goodRecord = {
       id: 'GOOD_REC_1',
       authority: 'ACRA',
@@ -440,7 +446,11 @@ async function runTests() {
       extractionStatus: 'EXACT',
       sourceLocator: {
         heading: 'Section 100',
-        elementId: 'pr100-'
+        elementId: 'pr100-',
+        sourceNode: 'div#pr100-',
+        startOffset: 0,
+        endOffset: rawGoodHtml.length,
+        boundary: { startOffset: 0, endOffset: rawGoodHtml.length }
       }
     };
 
@@ -478,7 +488,7 @@ async function runTests() {
     pkg.packageHash = feedService.computePackageHash(pkg);
 
     await feedService.stageUpdatePackage(pkg);
-    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId);
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId, rawGoodHtml);
 
     // Atomic validation failure!
     assert.strictEqual(verifyRes.isValid, false);
@@ -536,10 +546,19 @@ async function runTests() {
     UNIFIED_SOURCE_REGISTRY[baseRecord.id] = { ...baseRecord, versionId: 'V1-CPF' };
 
     // Now update with new enacted package
+    const rawCpfDoc = '<table id="first-schedule"><tr><td>Enacted Ordinary Wage ceiling updated to SGD 8,500.</td></tr></table>';
     const updatedRecord = {
       ...baseRecord,
       sourceText: 'Enacted Ordinary Wage ceiling updated to SGD 8,500.',
-      provenance: 'LIVE_PATCH'
+      provenance: 'LIVE_PATCH',
+      sourceLocator: {
+        heading: 'First Schedule',
+        elementId: 'first-schedule',
+        sourceNode: 'table#first-schedule',
+        startOffset: 0,
+        endOffset: rawCpfDoc.length,
+        boundary: { startOffset: 0, endOffset: rawCpfDoc.length }
+      }
     };
 
     const pkg = {
@@ -553,7 +572,7 @@ async function runTests() {
     pkg.packageHash = feedService.computePackageHash(pkg);
 
     await feedService.stageUpdatePackage(pkg);
-    await feedService.verifyUpdatePackage(pkg.packageId);
+    await feedService.verifyUpdatePackage(pkg.packageId, rawCpfDoc);
     await feedService.activateUpdatePackage(pkg.packageId);
 
     assert.ok(UNIFIED_SOURCE_REGISTRY[baseRecord.id].sourceText.includes('8,500'));
@@ -997,6 +1016,12 @@ async function runTests() {
     const versioning = new SourceVersioningManager();
     const feedService = new LiveRegulatoryFeedService(versioning);
 
+    const part1 = '<div id="pr1-">Valid text 1</div>';
+    const part2 = '<div id="pr2-">Valid text 2</div>';
+    const rawAtomicHtml = `<html>${part1}${part2}</html>`;
+    const offset1 = rawAtomicHtml.indexOf(part1);
+    const offset2 = rawAtomicHtml.indexOf(part2);
+
     const rec1 = {
       id: 'REC_ATOMIC_1',
       standardOrActCode: 'CoA1967',
@@ -1014,7 +1039,11 @@ async function runTests() {
       extractionStatus: 'EXACT',
       sourceLocator: {
         heading: 'Section 1',
-        elementId: 'pr1-'
+        elementId: 'pr1-',
+        sourceNode: 'div#pr1-',
+        startOffset: offset1,
+        endOffset: offset1 + part1.length,
+        boundary: { startOffset: offset1, endOffset: offset1 + part1.length }
       }
     };
 
@@ -1035,7 +1064,11 @@ async function runTests() {
       extractionStatus: 'EXACT',
       sourceLocator: {
         heading: 'Section 2',
-        elementId: 'pr2-'
+        elementId: 'pr2-',
+        sourceNode: 'div#pr2-',
+        startOffset: offset2,
+        endOffset: offset2 + part2.length,
+        boundary: { startOffset: offset2, endOffset: offset2 + part2.length }
       }
     };
 
@@ -1059,7 +1092,7 @@ async function runTests() {
 
     // Stage and verify
     await feedService.stageUpdatePackage(pkg);
-    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId);
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId, rawAtomicHtml);
     assert.strictEqual(verifyRes.isValid, true);
 
     // Sabotage rec2 candidate in versioning manager to simulate failure during activation loop
@@ -1231,7 +1264,7 @@ async function runTests() {
     pkg.packageHash = feedService.computePackageHash(pkg);
 
     await feedService.stageUpdatePackage(pkg);
-    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId);
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId, '<html>Unextractable content</html>');
     assert.strictEqual(verifyRes.isValid, false);
     assert.strictEqual(verifyRes.failedRecordId, failedRecord.id);
     assert.ok(verifyRes.rejectionReason.includes('Extraction failed'));
@@ -1532,9 +1565,9 @@ async function runTests() {
             <div class="sub-clause">
               <div class="para-indent">
                 (5) The financial statements shall comply with the requirements of the accounting standards made or formulated by the Accounting Standards Council under Part 3 of the Accounting Standards Act 2007 and give a true and fair view of the financial position and performance of the company.
+                <div class="cross-reference"><small>Ref: S 201(5)</small></div>
               </div>
             </div>
-            <div class="cross-reference"><small>Ref: S 201(5)</small></div>
           </div>
           <div class="prov1" id="pr201A-">Next section text</div>
         </div>
@@ -1756,6 +1789,381 @@ async function runTests() {
     const validator = new ExternalSourceValidator();
     const valRes = validator.validateProvisionMapping(update);
     assert.strictEqual(valRes.isValid, true);
+  });
+
+  console.log('\n[13. PHASE 4.2 FINAL INTEGRITY PASS: EXACT SUBSECTIONS, ADVERSARIAL DECOYS & BOUNDARY VERIFICATION]');
+
+  it('13A. SSO structural subsection extraction isolates exact subsection node with unstripped offsets', () => {
+    const ssoDoc = `
+      <!DOCTYPE html><html><body>
+        <div id="legisContent">
+          <div class="part" id="part-VI">
+            <div class="section" id="sec201">
+              <div class="prov1" id="pr201-5-">
+                <p><span class="num">(5)</span> The directors of every company shall cause to be made out and to be laid before the company at its annual general meeting financial statements that comply with the accounting standards.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body></html>
+    `;
+    const res = extractSSOProvision(ssoDoc, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(res.extractionStatus, 'EXACT');
+    assert.strictEqual(res.isVerbatimText, true);
+    assert.ok(res.text.startsWith('(5)'));
+    assert.strictEqual(res.sourceLocator.section, '201');
+    assert.strictEqual(res.sourceLocator.subsection, '5');
+    assert.ok(res.sourceLocator.boundary.startOffset >= 0);
+    assert.ok(res.sourceLocator.boundary.endOffset > res.sourceLocator.boundary.startOffset);
+
+    // Boundary invariant: cleanHtmlText of exact raw slice must match record text
+    const validator = new ExternalSourceValidator();
+    const boundRes = validator.validateSourceBoundary(
+      { ...res, officialSourceUrl: 'https://sso.agc.gov.sg/Act/CoA1967', sourceText: res.text, authority: 'AGC' },
+      ssoDoc
+    );
+    assert.strictEqual(boundRes.isValid, true);
+  });
+
+  it('13B-1. Adversarial decoy subsection test: (4) decoy before (5) authentic', () => {
+    // Subsection (4) mentions subsection (5), but authentic subsection (5) appears after
+    const decoyBeforeHtml = `
+      <!DOCTYPE html><html><body>
+        <div class="section" id="sec201">
+          <div class="prov1" id="pr201-">
+            <div class="sub-clause" id="pr201-4-">
+              (4) Every director who fails to take all reasonable steps to comply with or to secure compliance with subsection (5) shall be guilty of an offence.
+            </div>
+            <div class="sub-clause" id="pr201-5-">
+              (5) The directors of every company shall cause to be made out financial statements complying with the accounting standards.
+            </div>
+          </div>
+        </div>
+      </body></html>
+    `;
+    const res = extractSSOProvision(decoyBeforeHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(res.extractionStatus, 'EXACT');
+    assert.ok(res.text.includes('cause to be made out financial statements complying with the accounting standards'));
+    assert.strictEqual(res.text.includes('shall be guilty of an offence'), false, 'Must NOT extract subsection (4)');
+    assert.strictEqual(res.sourceLocator.subsection, '5');
+  });
+
+  it('13B-2. Adversarial decoy subsection test: (5) authentic before (4) decoy, and decoy-only failure', () => {
+    // Authentic subsection (5) appears before subsection (4) which references (5)
+    const authenticBeforeHtml = `
+      <!DOCTYPE html><html><body>
+        <div class="section" id="sec201">
+          <div class="prov1" id="pr201-">
+            <div class="sub-clause" id="pr201-5-">
+              (5) The directors of every company shall cause to be made out financial statements complying with the accounting standards.
+            </div>
+            <div class="sub-clause" id="pr201-4-">
+              (4) Every director who fails to take all reasonable steps to comply with or to secure compliance with subsection (5) shall be guilty of an offence.
+            </div>
+          </div>
+        </div>
+      </body></html>
+    `;
+    const res = extractSSOProvision(authenticBeforeHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(res.extractionStatus, 'EXACT');
+    assert.ok(res.text.includes('cause to be made out financial statements complying with the accounting standards'));
+    assert.strictEqual(res.text.includes('shall be guilty of an offence'), false, 'Must NOT extract subsection (4)');
+    assert.strictEqual(res.sourceLocator.subsection, '5');
+
+    // Decoy-only: Only subsection (4) referencing (5) exists, authentic (5) is missing -> must FAIL CLOSED!
+    const decoyOnlyHtml = `
+      <!DOCTYPE html><html><body>
+        <div class="section" id="sec201">
+          <div class="prov1" id="pr201-">
+            <div class="sub-clause" id="pr201-4-">
+              (4) Every director who fails to take all reasonable steps to comply with or to secure compliance with subsection (5) shall be guilty of an offence.
+            </div>
+          </div>
+        </div>
+      </body></html>
+    `;
+    const failRes = extractSSOProvision(decoyOnlyHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(failRes.extractionStatus, 'FAILED');
+    assert.strictEqual(failRes.text, '');
+  });
+
+  await itAsync('13C. Promotion gate boundary verification failure: Missing or tampered raw document blocks candidate from VERIFIED', async () => {
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    const rawHtml = '<div id="pr201-5-">(5) The financial statements shall comply with accounting standards.</div>';
+    const rec = {
+      id: 'REC_GATE_TEST',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/CoA1967',
+      sourceText: '(5) The financial statements shall comply with accounting standards.',
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      authority: 'AGC',
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 201(5)',
+        elementId: 'pr201-5-',
+        sourceNode: 'div#pr201-5-',
+        startOffset: 0,
+        endOffset: rawHtml.length,
+        boundary: { startOffset: 0, endOffset: rawHtml.length }
+      }
+    };
+
+    const pkg = {
+      packageId: 'PKG-GATE-TEST',
+      releaseDate: '2026-09-11',
+      authority: 'AGC',
+      updates: [rec],
+      amendments: [{ recordId: rec.id, title: 'Amendment', changeType: 'TEXT_CHANGE', summary: 'Summary' }],
+      packageHash: ''
+    };
+    pkg.packageHash = feedService.computePackageHash(pkg);
+
+    // 1. Stage the package
+    await feedService.stageUpdatePackage(pkg);
+
+    // Candidate is initially UNVERIFIED in the ledger
+    const candidateId = `${pkg.packageId}-${rec.id}`;
+    let candidate = versioning.getCandidates().find((c) => c.metadata.versionId === candidateId);
+    assert.ok(candidate);
+    assert.strictEqual(candidate.metadata.verificationStatus, 'UNVERIFIED');
+
+    // 2. Failure Path A: Empty / Missing raw document is strictly rejected at API level
+    const emptyVerify = await feedService.verifyUpdatePackage(pkg.packageId, '');
+    assert.strictEqual(emptyVerify.isValid, false);
+    assert.ok(emptyVerify.rejectionReason.includes('Raw document is strictly required'));
+
+    // Invariant: candidate remains UNVERIFIED
+    candidate = versioning.getCandidates().find((c) => c.metadata.versionId === candidateId);
+    assert.strictEqual(candidate.metadata.verificationStatus, 'UNVERIFIED');
+
+    // 3. Failure Path B: Tampered raw document (boundary content does not match sourceText)
+    const tamperedRawDoc = '<div id="pr201-5-">(5) Tampered statutory text that differs from candidate sourceText.         </div>';
+    const tamperedVerify = await feedService.verifyUpdatePackage(pkg.packageId, tamperedRawDoc);
+    assert.strictEqual(tamperedVerify.isValid, false);
+    assert.ok(tamperedVerify.rejectionReason.includes('Source text mismatch'));
+
+    // Invariant: candidate remains UNVERIFIED in ledger
+    candidate = versioning.getCandidates().find((c) => c.metadata.versionId === candidateId);
+    assert.strictEqual(candidate.metadata.verificationStatus, 'UNVERIFIED');
+
+    // Attempting activation MUST fail
+    const actRes = await feedService.activateUpdatePackage(pkg.packageId);
+    assert.strictEqual(actRes.success, false);
+    assert.strictEqual(actRes.activatedRecordsCount, 0);
+  });
+
+  it('13D. Administrative portals modeled as OFFICIAL_GUIDANCE: Rejects PRIMARY_SOURCE statutory claims', () => {
+    const validator = new ExternalSourceValidator();
+
+    // Legitimate IRAS guidance record
+    const irasDoc = '<div id="cit-rate">Corporate tax headline rate is 17%.</div>';
+    const validIras = {
+      id: 'IRAS_GUIDANCE_1',
+      authority: 'IRAS',
+      authorityName: 'Inland Revenue Authority of Singapore',
+      officialSourceUrl: 'https://www.iras.gov.sg/taxes/corporate-tax',
+      standardOrActCode: 'ITA1947',
+      paragraphOrSection: 'Section 43',
+      documentTitle: 'IRAS Corporate Tax Rate Guidance',
+      sourceText: 'Corporate tax headline rate is 17%.',
+      sourceType: 'OFFICIAL_GUIDANCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Corporate Tax Rate',
+        elementId: 'cit-rate',
+        sourceNode: 'div#cit-rate',
+        startOffset: 0,
+        endOffset: irasDoc.length,
+        boundary: { startOffset: 0, endOffset: irasDoc.length }
+      }
+    };
+    const checkValid = validator.validateProvisionMapping(validIras);
+    assert.strictEqual(checkValid.isValid, true);
+
+    // Illegitimate claim: Administrative portal claiming PRIMARY_SOURCE statutory status -> MUST REJECT!
+    const illegitimateStatutoryClaim = {
+      ...validIras,
+      sourceType: 'AUTHORITATIVE_SOURCE',
+      evidenceTier: 'PRIMARY_SOURCE'
+    };
+    const checkBad = validator.validateProvisionMapping(illegitimateStatutoryClaim);
+    assert.strictEqual(checkBad.isValid, false);
+    assert.strictEqual(checkBad.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(checkBad.reason.includes('cannot claim PRIMARY_SOURCE or AUTHORITATIVE_SOURCE statutory status'));
+
+    // Structural node must identify topic (e.g. cit-rate for IRAS)
+    const mismatchedTopicNode = {
+      ...validIras,
+      sourceLocator: {
+        ...validIras.sourceLocator,
+        elementId: 'unrelated-header',
+        sourceNode: 'div#unrelated-header'
+      }
+    };
+    const checkTopic = validator.validateProvisionMapping(mismatchedTopicNode);
+    assert.strictEqual(checkTopic.isValid, false);
+    assert.ok(checkTopic.reason.includes('must identify tax rate/rebate topic'));
+  });
+
+  it('13E. Frankfurter non-verbatim reference data guard: Rejects isVerbatimText: true', () => {
+    const validator = new ExternalSourceValidator();
+
+    const validFxRecord = {
+      id: 'ECB_FX_SPOT_TEST',
+      authority: 'REFERENCE_API',
+      authorityName: 'Frankfurter ECB FX Reference API',
+      officialSourceUrl: 'https://api.frankfurter.dev/v1/latest?base=SGD',
+      standardOrActCode: 'FX_OBSERVATION',
+      paragraphOrSection: 'SPOT_RATES_SGD',
+      documentTitle: 'Frankfurter Official ECB Spot Foreign Exchange Rates (SGD Base)',
+      sourceText: 'European Central Bank Reference Spot Exchange Rates (Base: SGD, Date: 2026-09-11): 1 SGD = 0.76 USD',
+      sourceType: 'CURATED_SUMMARY',
+      evidenceTier: 'CURATED_SUMMARY',
+      isVerbatimText: false, // Invariant: generated summary cannot claim verbatim
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        document: 'Frankfurter ECB Reference Rates',
+        act: 'FX_OBSERVATION',
+        section: 'SPOT_RATES_SGD',
+        sourceNode: 'json.rates',
+        startOffset: 0,
+        endOffset: 100,
+        sourceType: 'JSON'
+      },
+      fxObservation: {
+        sourceAuthority: 'REFERENCE_API',
+        provider: 'FRANKFURTER',
+        date: '2026-09-11',
+        base: 'SGD',
+        rates: { USD: 0.76 }
+      }
+    };
+
+    const validCheck = validator.validateProvisionMapping(validFxRecord);
+    assert.strictEqual(validCheck.isValid, true);
+
+    // Invariant: reference API cannot claim isVerbatimText: true
+    const invalidVerbatimFx = {
+      ...validFxRecord,
+      isVerbatimText: true
+    };
+    const verbatimCheck = validator.validateProvisionMapping(invalidVerbatimFx);
+    assert.strictEqual(verbatimCheck.isValid, false);
+    assert.strictEqual(verbatimCheck.errorCode, 'INVALID_VERBATIM_CLAIM');
+    assert.ok(verbatimCheck.reason.includes('cannot claim isVerbatimText = true'));
+  });
+
+  await itAsync('13F. Full end-to-end promotion pipeline with mandatory rawDocument verification', async () => {
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    // Authentic HTML source
+    const rawDocument = `
+      <!DOCTYPE html><html><body>
+        <div id="legisContent">
+          <div class="part" id="part-VI">
+            <div class="section" id="sec201">
+              <div class="prov1" id="pr201-5-">
+                <p>(5) The financial statements shall comply with the requirements of the accounting standards made or formulated by the Accounting Standards Council under Part 3 of the Accounting Standards Act 2007 and give a true and fair view of the financial position and performance of the company.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body></html>
+    `;
+
+    // 1. Adapter structural extraction
+    const extraction = extractSSOProvision(rawDocument, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(extraction.extractionStatus, 'EXACT');
+    assert.strictEqual(extraction.isVerbatimText, true);
+
+    // 2. Dual hash computation
+    const documentHash = computeSha256(rawDocument);
+    const provisionHash = computeProvisionHash(extraction.standardOrActCode, extraction.paragraphOrSection, extraction.text);
+
+    // 3. Construct update record
+    const updateRecord = {
+      id: 'E2E_PROMOTION_TEST_201_5',
+      standardOrActCode: extraction.standardOrActCode,
+      paragraphOrSection: extraction.paragraphOrSection,
+      documentTitle: 'Companies Act 1967',
+      authority: 'AGC',
+      authorityName: 'Singapore Statutes Online / AGC',
+      sourcePublisher: 'Singapore Statutes Online / AGC',
+      legalOrStandardInstrument: 'Companies Act 1967',
+      principleSummary: 'Accounts compliance with accounting standards',
+      domain: 'ACCOUNTING_SFRS',
+      jurisdiction: 'Singapore',
+      tags: ['companies act', 'financial statements'],
+      sourceType: 'AUTHORITATIVE_SOURCE',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/CoA1967',
+      sourceText: extraction.text,
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      version: 'PKG-E2E-SSO-201-5',
+      documentHash,
+      provisionHash,
+      contentHash: provisionHash,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction.sourceLocator
+    };
+
+    const pkg = {
+      packageId: 'PKG-E2E-SSO-201-5',
+      releaseDate: '2026-09-11',
+      authority: 'AGC',
+      updates: [updateRecord],
+      amendments: [{ recordId: updateRecord.id, title: 'Sec 201(5) Verification', changeType: 'TEXT_CHANGE', summary: 'E2E verified' }],
+      packageHash: ''
+    };
+    pkg.packageHash = feedService.computePackageHash(pkg);
+
+    // 4. Staging
+    const stageRes = await feedService.stageUpdatePackage(pkg, {
+      sourceUrl: 'https://sso.agc.gov.sg/Act/CoA1967',
+      httpStatus: 200
+    });
+    assert.strictEqual(stageRes.success, true);
+
+    // 5. Verification Gate (requires rawDocument)
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId, rawDocument);
+    assert.strictEqual(verifyRes.isValid, true);
+    assert.strictEqual(verifyRes.verifiedRecordsCount, 1);
+
+    // 6. Verify candidate promoted to VERIFIED in ledger
+    const candidateId = `${pkg.packageId}-${updateRecord.id}`;
+    const candidate = versioning.getCandidates().find((c) => c.metadata.versionId === candidateId);
+    assert.ok(candidate);
+    assert.strictEqual(candidate.metadata.verificationStatus, 'VERIFIED');
+    assert.strictEqual(candidate.metadata.provisionHash, provisionHash);
+    assert.strictEqual(candidate.metadata.documentHash, documentHash);
+
+    // 7. Atomic activation into active registry
+    const actRes = await feedService.activateUpdatePackage(pkg.packageId);
+    assert.strictEqual(actRes.success, true);
+    assert.strictEqual(actRes.activatedRecordsCount, 1);
+
+    // 8. Confirm active in UNIFIED_SOURCE_REGISTRY
+    const active = UNIFIED_SOURCE_REGISTRY[updateRecord.id];
+    assert.ok(active);
+    assert.strictEqual(active.sourceStatus, 'VERIFIED');
+    assert.strictEqual(active.sourceText, extraction.text);
+
+    // Cleanup test key
+    delete UNIFIED_SOURCE_REGISTRY[updateRecord.id];
   });
 
   console.log('=============================================================');
