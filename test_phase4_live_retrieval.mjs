@@ -1,8 +1,11 @@
 import assert from 'assert';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   SourceVersioningManager,
   computeSha256,
+  computeProvisionHash,
   defaultSourceVersioningManager
 } from './src/standards/sourceVersioning.ts';
 import {
@@ -11,36 +14,42 @@ import {
   ACRAUpdateAdapter,
   MOMUpdateAdapter,
   CPFUpdateAdapter,
-  FrankfurterReferenceAdapter
+  FrankfurterReferenceAdapter,
+  extractSSOProvision,
+  extractIRASProvision,
+  extractACRAProvision,
+  extractMOMProvision,
+  extractCPFProvision,
+  extractFrankfurterProvision
 } from './src/retrieval/sourceAdapters.ts';
+
+const fixturesDir = path.resolve('tests/fixtures');
+const ssoHtmlFixture = fs.readFileSync(path.join(fixturesDir, 'sso-section-201-5.html'), 'utf-8');
+const irasHtmlFixture = fs.readFileSync(path.join(fixturesDir, 'iras-tax-provision.html'), 'utf-8');
+const acraHtmlFixture = fs.readFileSync(path.join(fixturesDir, 'acra-small-company.html'), 'utf-8');
+const momHtmlFixture = fs.readFileSync(path.join(fixturesDir, 'mom-part-iv.html'), 'utf-8');
+const cpfHtmlFixture = fs.readFileSync(path.join(fixturesDir, 'cpf-ow-ceiling.html'), 'utf-8');
+const frankfurterJsonFixture = fs.readFileSync(path.join(fixturesDir, 'frankfurter-response.json'), 'utf-8');
 import {
   ExternalSourceValidator,
   defaultExternalSourceValidator
 } from './src/retrieval/externalSourceValidator.ts';
 import {
-  SourceCache,
-  defaultSourceCache
+  SourceCache
 } from './src/retrieval/sourceCache.ts';
 import {
-  ControlledWebRetriever,
-  defaultControlledWebRetriever
+  ControlledWebRetriever
 } from './src/retrieval/controlledWebRetriever.ts';
 import {
-  LiveRegulatoryFeedService,
-  defaultLiveRegulatoryFeedService
+  LiveRegulatoryFeedService
 } from './src/retrieval/liveRegulatoryFeed.ts';
 import {
-  CompositeSourceRetriever,
-  defaultCompositeSourceRetriever
+  CompositeSourceRetriever
 } from './src/retrieval/compositeSourceRetriever.ts';
 import {
-  UNIFIED_SOURCE_REGISTRY,
-  buildUnifiedSourceRegistry,
-  getAllAuthoritativeSources
+  UNIFIED_SOURCE_REGISTRY
 } from './src/standards/unifiedSourceModel.ts';
 import { evaluateFastPathEligibility } from './src/services/geminiService.ts';
-import { buildGroundedReasoningContext } from './src/services/groundingContextBuilder.ts';
-import { parseAccountingQuery } from './src/engine/scenarioParser.ts';
 
 console.log('=============================================================');
 console.log('🧪 RUNNING PHASE 4: EXTERNAL / LIVE RETRIEVAL & SOURCE VERSIONING TEST SUITE');
@@ -283,7 +292,6 @@ async function runTests() {
 
   await itAsync('6A. Candidate update staging holds records in candidate pool without mutating active retrieval', async () => {
     const feedService = new LiveRegulatoryFeedService();
-    const manager = new SourceVersioningManager();
 
     const candidateRecord = {
       id: 'LIVE_MOM_AMENDMENT_2026',
@@ -336,7 +344,6 @@ async function runTests() {
 
   await itAsync('6B. Verified update package activation atomically commits into active registry and version ledger', async () => {
     const feedService = new LiveRegulatoryFeedService();
-    const manager = defaultSourceVersioningManager;
 
     const validRecord = {
       id: 'IRAS_CORP_TAX_REBATE_2026',
@@ -360,7 +367,12 @@ async function runTests() {
       validFrom: '2026-01-01',
       validTo: '2026-12-31',
       lastVerifiedDate: '2026-09-11',
-      provenance: 'LIVE_PATCH'
+      provenance: 'LIVE_PATCH',
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 43(1)',
+        elementId: 'cit-rebate'
+      }
     };
 
     const pkg = {
@@ -422,7 +434,12 @@ async function runTests() {
       evidenceTier: 'PRIMARY_SOURCE',
       isVerbatimText: true,
       lastVerifiedDate: '2026-09-11',
-      provenance: 'LIVE_PATCH'
+      provenance: 'LIVE_PATCH',
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 100',
+        elementId: 'pr100-'
+      }
     };
 
     const badRecord = {
@@ -497,10 +514,15 @@ async function runTests() {
       evidenceTier: 'PRIMARY_SOURCE',
       isVerbatimText: true,
       lastVerifiedDate: '2026-09-01',
-      provenance: 'LOCAL_STATIC'
+      provenance: 'LOCAL_STATIC',
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'First Schedule',
+        elementId: 'first-schedule'
+      }
     };
 
-    const v1Meta = versioningManager.registerCandidateVersion(baseRecord, {
+    versioningManager.registerCandidateVersion(baseRecord, {
       versionId: 'V1-CPF',
       contentHash: versioningManager.computeSourceHash(baseRecord),
       canonicalSourceUrl: baseRecord.officialSourceUrl,
@@ -829,19 +851,26 @@ async function runTests() {
   });
 
   await itAsync('10D. Source-specific update discovery adapters produce valid update packages', async () => {
-    const mockRetriever = new ControlledWebRetriever();
     // Inject mock transport for all source portals
     const mockTransport = async (url) => {
+      let body = '';
+      if (url.includes('sso.agc.gov.sg')) body = ssoHtmlFixture;
+      else if (url.includes('iras.gov.sg')) body = irasHtmlFixture;
+      else if (url.includes('acra.gov.sg')) body = acraHtmlFixture;
+      else if (url.includes('mom.gov.sg')) body = momHtmlFixture;
+      else if (url.includes('cpf.gov.sg')) body = cpfHtmlFixture;
+      else if (url.includes('frankfurter.dev')) body = frankfurterJsonFixture;
+
       return {
         ok: true,
         status: 200,
         statusText: 'OK',
         headers: new Map([
-          ['content-type', 'text/html'],
+          ['content-type', url.includes('frankfurter') ? 'application/json' : 'text/html'],
           ['etag', '"rev-2026-v1"'],
           ['last-modified', 'Thu, 01 Jan 2026 00:00:00 GMT']
         ]),
-        text: async () => `Official Mock Content for ${url} - Revision 2026`
+        text: async () => body
       };
     };
 
@@ -898,12 +927,12 @@ async function runTests() {
     const versioning = new SourceVersioningManager();
     const feedService = new LiveRegulatoryFeedService(versioning);
 
-    const mockCustomFetch = async (url) => ({
+    const mockCustomFetch = async (_url) => ({
       ok: true,
       status: 200,
       statusText: 'OK',
       headers: new Map([['content-type', 'text/html']]),
-      text: async () => `Mock Legislative Amendment Content for ${url}`
+      text: async () => ssoHtmlFixture
     });
 
     const mockRetriever = new ControlledWebRetriever(defaultExternalSourceValidator, new SourceCache());
@@ -979,7 +1008,12 @@ async function runTests() {
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       authority: 'ACRA',
-      version: 'PKG-ATOMIC'
+      version: 'PKG-ATOMIC',
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 1',
+        elementId: 'pr1-'
+      }
     };
 
     const rec2 = {
@@ -995,7 +1029,12 @@ async function runTests() {
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       authority: 'ACRA',
-      version: 'PKG-ATOMIC'
+      version: 'PKG-ATOMIC',
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 2',
+        elementId: 'pr2-'
+      }
     };
 
     const pkg = {
@@ -1066,8 +1105,399 @@ async function runTests() {
     assert.strictEqual(registryKeysBefore, registryKeysAfter, 'Active registry keys count must be unchanged');
   });
 
+  console.log('\n[11. PHASE 4.2: EXACT PROVISION EXTRACTION, DUAL HASHING & TRUE VERBATIM INTEGRITY]');
+
+  it('11A (Test 1). Strict anti-truncation: Rejects ellipsis, truncation markers, or missing locators with INVALID_VERBATIM_CLAIM', () => {
+    const validator = new ExternalSourceValidator();
+
+    const truncatedSamples = [
+      'The financial statements shall comply with the requirements... and give a true and fair view.',
+      'The financial statements shall comply with accounting standards… and give a true and fair view.',
+      'The financial statements shall comply with accounting standards [truncated]',
+      'The financial statements shall comply [abridged]',
+      'The financial statements shall comply [content truncated]',
+      'The financial statements shall comply [continued]'
+    ];
+
+    for (const text of truncatedSamples) {
+      const record = {
+        standardOrActCode: 'CoA1967',
+        paragraphOrSection: 'Section 201(5)',
+        documentTitle: 'Companies Act 1967',
+        sourceText: text,
+        isVerbatimText: true,
+        extractionStatus: 'EXACT',
+        sourceLocator: { heading: 'Section 201(5)', elementId: 'pr201-' }
+      };
+      const res = validator.validateProvisionMapping(record);
+      assert.strictEqual(res.isValid, false);
+      assert.strictEqual(res.errorCode, 'INVALID_VERBATIM_CLAIM');
+      assert.ok(res.reason.includes('truncation marker'));
+    }
+
+    // Missing source locator with isVerbatimText: true
+    const noLocatorRecord = {
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'The complete unabridged statutory text of section 201(5).',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT'
+    };
+    const noLocRes = validator.validateProvisionMapping(noLocatorRecord);
+    assert.strictEqual(noLocRes.isValid, false);
+    assert.strictEqual(noLocRes.errorCode, 'INVALID_VERBATIM_CLAIM');
+
+    // Empty sourceText with isVerbatimText: true
+    const emptyTextRecord = {
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: '   ',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: { heading: 'Section 201(5)', elementId: 'pr201-' }
+    };
+    const emptyRes = validator.validateProvisionMapping(emptyTextRecord);
+    assert.strictEqual(emptyRes.isValid, false);
+    assert.strictEqual(emptyRes.errorCode, 'INVALID_VERBATIM_CLAIM');
+  });
+
+  it('11B (Test 2). Partial extraction rejection: Blocks PARTIAL status from authoritative verification', () => {
+    const validator = new ExternalSourceValidator();
+
+    // Partial with isVerbatimText: false
+    const partialRecord = {
+      id: 'REC_PARTIAL_1',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Partial subsection content',
+      isVerbatimText: false,
+      extractionStatus: 'PARTIAL',
+      sourceLocator: { heading: 'Section 201', elementId: 'pr201' }
+    };
+    const res = validator.validateProvisionMapping(partialRecord);
+    assert.strictEqual(res.isValid, false);
+    assert.strictEqual(res.errorCode, 'PARTIAL_PROVISION');
+
+    // Partial attempting isVerbatimText: true
+    const partialVerbatim = {
+      ...partialRecord,
+      isVerbatimText: true
+    };
+    const resV = validator.validateProvisionMapping(partialVerbatim);
+    assert.strictEqual(resV.isValid, false);
+    assert.strictEqual(resV.errorCode, 'INVALID_VERBATIM_CLAIM');
+  });
+
+  await itAsync('11C (Test 3). Failed extraction rejection: FAILED status produces EXTRACTION_FAILED and halts verification', async () => {
+    const validator = new ExternalSourceValidator();
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    const failedRecord = {
+      id: 'REC_FAILED_EXTRACTION',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 999',
+      documentTitle: 'Companies Act 1967',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/COA1967',
+      sourceText: 'Unverified text from unextractable page',
+      isVerbatimText: false,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      authority: 'AGC',
+      extractionStatus: 'FAILED',
+      sourceLocator: {}
+    };
+
+    const directCheck = validator.validateProvisionMapping(failedRecord);
+    assert.strictEqual(directCheck.isValid, false);
+    assert.strictEqual(directCheck.errorCode, 'EXTRACTION_FAILED');
+
+    // Package staging & verification
+    const pkg = {
+      packageId: 'PKG-FAILED-EXTRACTION',
+      releaseDate: '2026-09-11',
+      authority: 'AGC',
+      updates: [failedRecord],
+      amendments: [],
+      packageHash: ''
+    };
+    pkg.packageHash = feedService.computePackageHash(pkg);
+
+    await feedService.stageUpdatePackage(pkg);
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId);
+    assert.strictEqual(verifyRes.isValid, false);
+    assert.strictEqual(verifyRes.failedRecordId, failedRecord.id);
+    assert.ok(verifyRes.rejectionReason.includes('Extraction failed'));
+  });
+
+  it('11D (Test 4). Correct section mapping: Full deterministic extraction passes validation with EXACT status', () => {
+    const validator = new ExternalSourceValidator();
+    const extraction = extractSSOProvision(ssoHtmlFixture, 'CoA1967', 'Section 201(5)');
+
+    assert.strictEqual(extraction.extractionStatus, 'EXACT');
+    assert.strictEqual(extraction.standardOrActCode, 'CoA1967');
+    assert.strictEqual(extraction.paragraphOrSection, 'Section 201(5)');
+    assert.strictEqual(extraction.sourceLocator.heading, 'Section 201(5)');
+    assert.strictEqual(extraction.sourceLocator.elementId, 'pr201-');
+    assert.ok(extraction.sourceLocator.startOffset >= 0);
+    assert.ok(extraction.sourceLocator.endOffset > extraction.sourceLocator.startOffset);
+    assert.ok(extraction.text.includes('comply with the requirements of the accounting standards'));
+
+    const record = {
+      id: 'COA_SEC_201_5',
+      standardOrActCode: extraction.standardOrActCode,
+      paragraphOrSection: extraction.paragraphOrSection,
+      documentTitle: 'Companies Act 1967',
+      sourceText: extraction.text,
+      isVerbatimText: true,
+      extractionStatus: extraction.extractionStatus,
+      sourceLocator: extraction.sourceLocator
+    };
+
+    const res = validator.validateProvisionMapping(record);
+    assert.strictEqual(res.isValid, true);
+  });
+
+  it('11E (Test 5). Incorrect section mapping: Mismatched section number or invalid offsets trigger PROVISION_MAPPING_MISMATCH', () => {
+    const validator = new ExternalSourceValidator();
+
+    // Contradicting claimed section vs locator heading
+    const mismatchRecord = {
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Valid extracted text for financial statements.',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 201(4) Statement of Financial Position',
+        elementId: 'pr201-4',
+        startOffset: 100,
+        endOffset: 250
+      }
+    };
+    const res = validator.validateProvisionMapping(mismatchRecord);
+    assert.strictEqual(res.isValid, false);
+    assert.strictEqual(res.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(res.reason.includes('contradicts locator heading'));
+
+    // Inverted or non-positive boundary offsets (endOffset <= startOffset)
+    const invalidOffsetsRecord = {
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Valid extracted text for financial statements.',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 201(5)',
+        elementId: 'pr201-5',
+        startOffset: 500,
+        endOffset: 200 // Invalid!
+      }
+    };
+    const resOffset = validator.validateProvisionMapping(invalidOffsetsRecord);
+    assert.strictEqual(resOffset.isValid, false);
+    assert.strictEqual(resOffset.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(resOffset.reason.includes('boundary offsets are invalid'));
+  });
+
+  await itAsync('11F (Test 6). Precision update gating: Peripheral document changes modify documentHash but leave provisionHash identical (0 updates emitted)', async () => {
+    const ssoAdapter = new SSOUpdateAdapter();
+    const docHashOriginal = computeSha256(ssoHtmlFixture);
+    const extractionOriginal = extractSSOProvision(ssoHtmlFixture);
+    const provHashOriginal = computeProvisionHash('CoA1967', 'Section 201(5)', extractionOriginal.text);
+
+    // Modify peripheral HTML: footer copyright, cookie consent banner, navigation styling
+    const peripheralModifiedHtml = ssoHtmlFixture
+      .replace('<footer>', '<footer>Notice: Updated Cookie Policy & Navigation System 2027. ')
+      .replace('<div class="header">', '<div class="header" data-build="build-9921">');
+
+    const docHashModified = computeSha256(peripheralModifiedHtml);
+    assert.notStrictEqual(docHashOriginal, docHashModified, 'documentHash MUST change upon peripheral webpage changes');
+
+    // Extract provision from modified HTML
+    const extractionPeripheral = extractSSOProvision(peripheralModifiedHtml);
+    assert.strictEqual(extractionPeripheral.extractionStatus, 'EXACT');
+    const provHashPeripheral = computeProvisionHash('CoA1967', 'Section 201(5)', extractionPeripheral.text);
+
+    // Invariant: provisionHash is 100% invariant to peripheral document changes
+    assert.strictEqual(provHashOriginal, provHashPeripheral, 'provisionHash must remain identical despite peripheral changes');
+
+    // Baseline record with current provisionHash
+    const activeBaselineRecord = {
+      id: 'COA_SEC_201_5_BASELINE',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: extractionOriginal.text,
+      provisionHash: provHashOriginal,
+      contentHash: provHashOriginal,
+      sourceStatus: 'VERIFIED',
+      isVerbatimText: true,
+      authority: 'ACRA'
+    };
+
+    const mockRetriever = {
+      fetchOfficialSource: async () => ({
+        status: 'SUCCESS',
+        content: peripheralModifiedHtml,
+        retrievedAt: new Date().toISOString(),
+        httpStatus: 200
+      })
+    };
+
+    // Query adapter against active baseline
+    const updateResult = await ssoAdapter.checkForUpdates(mockRetriever, [activeBaselineRecord]);
+
+    // Invariant: No spurious update package emitted!
+    assert.strictEqual(updateResult, null, 'Expected null update package when statutory provision is unchanged');
+  });
+
+  await itAsync('11G (Test 7). True provision change: Modifying statutory wording updates provisionHash and triggers valid update package', async () => {
+    const ssoAdapter = new SSOUpdateAdapter();
+    const extractionOriginal = extractSSOProvision(ssoHtmlFixture);
+    const baselineProvHash = computeProvisionHash('CoA1967', 'Section 201(5)', extractionOriginal.text);
+
+    const activeBaselineRecord = {
+      id: 'COA_SEC_201_5_BASELINE',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: extractionOriginal.text,
+      provisionHash: baselineProvHash,
+      contentHash: baselineProvHash,
+      sourceStatus: 'VERIFIED',
+      isVerbatimText: true,
+      authority: 'ACRA'
+    };
+
+    // Make an authentic statutory amendment in Section 201(5)
+    const amendedHtml = ssoHtmlFixture.replace(
+      'Accounting Standards Act 2007',
+      'Accounting and Corporate Standards Act 2027'
+    );
+
+    const amendedExtraction = extractSSOProvision(amendedHtml);
+    assert.strictEqual(amendedExtraction.extractionStatus, 'EXACT');
+    const amendedProvHash = computeProvisionHash('CoA1967', 'Section 201(5)', amendedExtraction.text);
+
+    assert.notStrictEqual(baselineProvHash, amendedProvHash, 'provisionHash MUST change when statutory wording changes');
+
+    const mockRetriever = {
+      fetchOfficialSource: async () => ({
+        status: 'SUCCESS',
+        content: amendedHtml,
+        retrievedAt: new Date().toISOString(),
+        httpStatus: 200
+      })
+    };
+
+    const updatePkg = await ssoAdapter.checkForUpdates(mockRetriever, [activeBaselineRecord]);
+    assert.ok(updatePkg);
+    assert.strictEqual(updatePkg.updates.length, 1);
+    assert.strictEqual(updatePkg.updates[0].provisionHash, amendedProvHash);
+    assert.strictEqual(updatePkg.updates[0].extractionStatus, 'EXACT');
+    assert.ok(updatePkg.updates[0].sourceText.includes('Accounting and Corporate Standards Act 2027'));
+  });
+
+  it('11H (Test 8). No hard-coded fallback: Missing target section produces FAILED status and empty text', () => {
+    const irrelevantHtml = '<!DOCTYPE html><html><body><h1>General Announcement</h1><p>No statutory sections here.</p></body></html>';
+
+    const ssoRes = extractSSOProvision(irrelevantHtml);
+    assert.strictEqual(ssoRes.extractionStatus, 'FAILED');
+    assert.strictEqual(ssoRes.text, '');
+    assert.deepStrictEqual(ssoRes.sourceLocator, {});
+
+    const irasRes = extractIRASProvision(irrelevantHtml);
+    assert.strictEqual(irasRes.extractionStatus, 'FAILED');
+    assert.strictEqual(irasRes.text, '');
+
+    const acraRes = extractACRAProvision(irrelevantHtml);
+    assert.strictEqual(acraRes.extractionStatus, 'FAILED');
+    assert.strictEqual(acraRes.text, '');
+
+    const momRes = extractMOMProvision(irrelevantHtml);
+    assert.strictEqual(momRes.extractionStatus, 'FAILED');
+    assert.strictEqual(momRes.text, '');
+
+    const cpfRes = extractCPFProvision(irrelevantHtml);
+    assert.strictEqual(cpfRes.extractionStatus, 'FAILED');
+    assert.strictEqual(cpfRes.text, '');
+
+    const fxRes = extractFrankfurterProvision('{"error":"Invalid currency pair"}');
+    assert.strictEqual(fxRes.extractionStatus, 'FAILED');
+    assert.strictEqual(fxRes.text, '');
+  });
+
+  it('11I (Test 9). Hash independence: Independent mathematical derivation of documentHash vs provisionHash', () => {
+    const rawDocument = ssoHtmlFixture;
+    const documentHash = computeSha256(rawDocument);
+
+    const extraction = extractSSOProvision(rawDocument);
+    const provisionHash = computeProvisionHash(
+      extraction.standardOrActCode,
+      extraction.paragraphOrSection,
+      extraction.text
+    );
+
+    // Verify independent derivation
+    const manualDocHash = crypto.createHash('sha256').update(rawDocument).digest('hex');
+    assert.strictEqual(documentHash, manualDocHash);
+
+    const canonicalPayload = `${extraction.standardOrActCode}|||${extraction.paragraphOrSection}|||${extraction.text}`;
+    const manualProvHash = crypto.createHash('sha256').update(canonicalPayload).digest('hex');
+    assert.strictEqual(provisionHash, manualProvHash);
+
+    // Verify non-dependence: altering outer document whitespace changes documentHash without altering provisionHash
+    const formattedRawDoc = rawDocument + '\n\n   <!-- trailing comment -->   ';
+    const newDocHash = computeSha256(formattedRawDoc);
+    const newExtraction = extractSSOProvision(formattedRawDoc);
+    const newProvHash = computeProvisionHash(
+      newExtraction.standardOrActCode,
+      newExtraction.paragraphOrSection,
+      newExtraction.text
+    );
+
+    assert.notStrictEqual(documentHash, newDocHash);
+    assert.strictEqual(provisionHash, newProvHash);
+  });
+
+  it('11J (Test 10). Frankfurter source separation: Tagged REFERENCE_API and strictly separated from statutory authority', () => {
+    const validator = new ExternalSourceValidator();
+    const extraction = extractFrankfurterProvision(frankfurterJsonFixture, 'SGD', ['USD', 'EUR']);
+
+    assert.strictEqual(extraction.extractionStatus, 'EXACT');
+    assert.ok(extraction.fxObservation);
+    assert.strictEqual(extraction.fxObservation.sourceAuthority, 'REFERENCE_API');
+    assert.strictEqual(extraction.fxObservation.provider, 'FRANKFURTER');
+    assert.strictEqual(extraction.fxObservation.base, 'SGD');
+    assert.strictEqual(extraction.fxObservation.rates['USD'], 0.7412);
+    assert.strictEqual(extraction.fxObservation.rates['EUR'], 0.6845);
+
+    const fxUrl = 'https://api.frankfurter.dev/v1/latest?base=SGD&symbols=USD,EUR';
+
+    // Invariant: REFERENCE_API cannot satisfy statutory AGC/SSO or IRAS canonical validation
+    const agcCheck = validator.validateCanonicalUrl(fxUrl, 'AGC');
+    assert.strictEqual(agcCheck.isValid, false);
+    assert.strictEqual(agcCheck.errorCode, 'CANONICAL_URL_MISMATCH');
+
+    const irasCheck = validator.validateCanonicalUrl(fxUrl, 'IRAS');
+    assert.strictEqual(irasCheck.isValid, false);
+    assert.strictEqual(irasCheck.errorCode, 'CANONICAL_URL_MISMATCH');
+
+    // Only REFERENCE_API authority accepts frankfurter.dev
+    const refCheck = validator.validateCanonicalUrl(fxUrl, 'REFERENCE_API');
+    assert.strictEqual(refCheck.isValid, true);
+  });
+
   console.log('=============================================================');
-  console.log(`ALL ${totalTests} PHASE 4 TESTS PASSED! (100% GREEN) 🎉`);
+  console.log(`ALL ${passedTests}/${totalTests} PHASE 4 TESTS PASSED! (100% GREEN) 🎉`);
   console.log('=============================================================');
 }
 

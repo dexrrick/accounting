@@ -34,7 +34,11 @@ export type ExternalValidationErrorCode =
   | 'UNSUPPORTED_CONTENT_TYPE'
   | 'MALFORMED_DOCUMENT_STRUCTURE'
   | 'CANONICAL_URL_MISMATCH'
-  | 'PROVENANCE_MISMATCH';
+  | 'PROVENANCE_MISMATCH'
+  | 'INVALID_VERBATIM_CLAIM'
+  | 'PROVISION_MAPPING_MISMATCH'
+  | 'EXTRACTION_FAILED'
+  | 'PARTIAL_PROVISION';
 
 export interface ExternalValidationResult {
   isValid: boolean;
@@ -217,6 +221,100 @@ export class ExternalSourceValidator {
         errorCode: 'PROVENANCE_MISMATCH',
         reason: 'Externally retrieved candidate cannot declare provenance as LOCAL_STATIC'
       };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Validates exact provision extraction, anti-truncation verbatim integrity,
+   * and structural section/provision mapping.
+   */
+  public validateProvisionMapping(doc: AuthoritativeSourceRecord): ExternalValidationResult {
+    // 1. Extraction Status Check
+    if (doc.extractionStatus === 'FAILED') {
+      return {
+        isValid: false,
+        errorCode: 'EXTRACTION_FAILED',
+        reason: `Extraction failed: could not locate provision '${doc.paragraphOrSection}' in source '${doc.standardOrActCode}'`
+      };
+    }
+
+    if (doc.extractionStatus === 'PARTIAL') {
+      if (doc.isVerbatimText) {
+        return {
+          isValid: false,
+          errorCode: 'INVALID_VERBATIM_CLAIM',
+          reason: 'Partial extraction cannot be declared as isVerbatimText = true'
+        };
+      }
+      return {
+        isValid: false,
+        errorCode: 'PARTIAL_PROVISION',
+        reason: `Partial extraction is not eligible for authoritative verification for '${doc.id}'`
+      };
+    }
+
+    // 2. Anti-truncation Verbatim Check
+    if (doc.isVerbatimText) {
+      if (!doc.sourceText || doc.sourceText.trim().length === 0) {
+        return {
+          isValid: false,
+          errorCode: 'INVALID_VERBATIM_CLAIM',
+          reason: 'Verbatim record has empty sourceText'
+        };
+      }
+
+      // Check for truncation markers
+      const truncationMarkers = ['...', '…', '[truncated]', '[abridged]', '[content truncated]', '[continued]'];
+      for (const marker of truncationMarkers) {
+        if (doc.sourceText.includes(marker)) {
+          return {
+            isValid: false,
+            errorCode: 'INVALID_VERBATIM_CLAIM',
+            reason: `Verbatim record contains truncation marker '${marker}'. Verbatim text must be complete and unabridged.`
+          };
+        }
+      }
+
+      // Assert source locator presence
+      if (!doc.sourceLocator || (!doc.sourceLocator.heading && !doc.sourceLocator.elementId)) {
+        return {
+          isValid: false,
+          errorCode: 'INVALID_VERBATIM_CLAIM',
+          reason: 'Verbatim record must have a populated sourceLocator with heading or elementId'
+        };
+      }
+    }
+
+    // 3. Deterministic Source Mapping & Provision Boundaries Check
+    if (doc.sourceLocator) {
+      const sectionNormalized = doc.paragraphOrSection.toLowerCase().replace(/[\s\-_(),.]/g, '');
+      const headingNormalized = (doc.sourceLocator.heading || '').toLowerCase().replace(/[\s\-_(),.]/g, '');
+
+      // Check for explicit contradiction (e.g. claimed section 201(5) but heading indicates 201(4))
+      if (headingNormalized && headingNormalized.includes('section') && sectionNormalized.includes('section')) {
+        const claimedNum = sectionNormalized.match(/\d+/)?.[0];
+        const headingNum = headingNormalized.match(/\d+/)?.[0];
+        if (claimedNum && headingNum && claimedNum !== headingNum) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: `Provision mapping mismatch: claimed section '${doc.paragraphOrSection}' contradicts locator heading '${doc.sourceLocator.heading}'`
+          };
+        }
+      }
+
+      // Check boundary offsets if provided
+      if (doc.sourceLocator.startOffset !== undefined && doc.sourceLocator.endOffset !== undefined) {
+        if (doc.sourceLocator.endOffset <= doc.sourceLocator.startOffset) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: 'Invalid provision boundaries: boundary offsets are invalid (endOffset must be strictly greater than startOffset)'
+          };
+        }
+      }
     }
 
     return { isValid: true };

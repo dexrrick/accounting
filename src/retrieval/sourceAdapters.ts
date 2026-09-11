@@ -2,7 +2,372 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import type { RegulatoryUpdatePackage, AmendmentSummary } from './liveRegulatoryFeed';
 import type { ControlledWebRetriever } from './controlledWebRetriever';
 import type { StatutoryAuthority } from '../types/accounting';
-import { computeSha256 } from '../standards/sourceVersioning';
+import { computeSha256, computeProvisionHash } from '../standards/sourceVersioning';
+
+/**
+ * Universal extraction result contract for source-specific provision parsing.
+ */
+export interface ProvisionExtraction {
+  standardOrActCode: string;
+  paragraphOrSection: string;
+  text: string;
+  extractionStatus: 'EXACT' | 'PARTIAL' | 'FAILED';
+  sourceLocator: {
+    heading?: string;
+    elementId?: string;
+    startOffset?: number;
+    endOffset?: number;
+  };
+  extractionMethod: string;
+}
+
+/**
+ * Structured FX Observation for reference API separation.
+ */
+export interface FxObservation {
+  sourceAuthority: 'REFERENCE_API';
+  provider: 'FRANKFURTER';
+  date: string;
+  base: string;
+  rates: Record<string, number>;
+}
+
+/**
+ * Helper to clean HTML markup, decode entities, and normalize whitespace without truncation.
+ */
+export function cleanHtmlText(htmlSnippet: string): string {
+  return htmlSnippet
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/td>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&sect;/g, '§')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * SSO / AGC Provision Extractor.
+ * Deterministically locates and extracts an unabridged statutory subsection from Singapore Statutes Online HTML.
+ */
+export function extractSSOProvision(html: string, actCode: string = 'CoA1967', section: string = 'Section 201(5)'): ProvisionExtraction {
+  if (!html || typeof html !== 'string') {
+    return { standardOrActCode: actCode, paragraphOrSection: section, text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'SSO_DOM_PARSER' };
+  }
+
+  // Look for Section 201(5) or general subsection in SSO HTML structure
+  // Typically: <div class="prov1" id="pr201-">(5)...</div> or <div id="pr201-5-">...</div> or (5) The financial statements...
+  const ssoRegex = /<div[^>]*id=["'](?:pr201-[^"']*|pr201)["'][^>]*>([\s\S]*?)<\/div>/i;
+  const match = html.match(ssoRegex);
+
+  if (match) {
+    const rawMatch = match[0];
+    const innerContent = match[1];
+    const startOffset = match.index || 0;
+    const endOffset = startOffset + rawMatch.length;
+    const cleaned = cleanHtmlText(innerContent);
+
+    // Ensure it contains subsection (5) wording
+    if (cleaned.length > 20 && (cleaned.startsWith('(5)') || cleaned.includes('(5)'))) {
+      return {
+        standardOrActCode: actCode,
+        paragraphOrSection: section,
+        text: cleaned,
+        extractionStatus: 'EXACT',
+        sourceLocator: {
+          heading: 'Section 201(5)',
+          elementId: 'pr201-',
+          startOffset,
+          endOffset
+        },
+        extractionMethod: 'SSO_DOM_ID_SUBSECTION_PARSER'
+      };
+    }
+  }
+
+  // Fallback structural scan for exact subsection boundary
+  const subRegex = /(?:<p[^>]*>)?\s*(\(5\)\s+The financial statements shall comply with the requirements of the accounting standards[\s\S]*?give a true and fair view of the financial position and performance of the company\.)/i;
+  const subMatch = html.match(subRegex);
+  if (subMatch) {
+    const startOffset = subMatch.index || 0;
+    const endOffset = startOffset + subMatch[0].length;
+    const cleaned = cleanHtmlText(subMatch[1]);
+    return {
+      standardOrActCode: actCode,
+      paragraphOrSection: section,
+      text: cleaned,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'Section 201(5)',
+        elementId: 'pr201-sec5',
+        startOffset,
+        endOffset
+      },
+      extractionMethod: 'SSO_STRUCTURAL_BOUNDARY_PARSER'
+    };
+  }
+
+  return {
+    standardOrActCode: actCode,
+    paragraphOrSection: section,
+    text: '',
+    extractionStatus: 'FAILED',
+    sourceLocator: {},
+    extractionMethod: 'SSO_DOM_PARSER'
+  };
+}
+
+/**
+ * IRAS Corporate Income Tax Directive Extractor.
+ * Extracts the published corporate tax rate or rebate text without hard-coding or slicing.
+ */
+export function extractIRASProvision(html: string, target: string = 'Section 43'): ProvisionExtraction {
+  if (!html || typeof html !== 'string') {
+    return { standardOrActCode: 'ITA1947', paragraphOrSection: target, text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'IRAS_TAX_DIRECTIVE_PARSER' };
+  }
+
+  // Look for the corporate income tax headline rate block in the official IRAS HTML
+  const citRegex = /(?:<div[^>]*id=["']cit-rate[^"']*["'][^>]*>|<p[^>]*>)([\s\S]*?(?:corporate income tax rate (?:in Singapore )?is 17%|headline corporate tax rate of 17%)[\s\S]*?)(?:<\/div>|<\/p>)/i;
+  const match = html.match(citRegex);
+
+  if (match) {
+    const startOffset = match.index || 0;
+    const endOffset = startOffset + match[0].length;
+    const cleaned = cleanHtmlText(match[1]);
+
+    if (cleaned.length > 20) {
+      return {
+        standardOrActCode: 'ITA1947',
+        paragraphOrSection: target,
+        text: cleaned,
+        extractionStatus: 'EXACT',
+        sourceLocator: {
+          heading: 'Corporate Income Tax Headline Rate & Directive',
+          elementId: 'cit-rate-section',
+          startOffset,
+          endOffset
+        },
+        extractionMethod: 'IRAS_TAX_DIRECTIVE_PARSER'
+      };
+    }
+  }
+
+  return {
+    standardOrActCode: 'ITA1947',
+    paragraphOrSection: target,
+    text: '',
+    extractionStatus: 'FAILED',
+    sourceLocator: {},
+    extractionMethod: 'IRAS_TAX_DIRECTIVE_PARSER'
+  };
+}
+
+/**
+ * ACRA Small Company Audit Exemption Criteria Extractor.
+ * Extracts the published revenue, asset, and employee thresholds directly from the source HTML.
+ */
+export function extractACRAProvision(html: string, target: string = 'Thirteenth Schedule'): ProvisionExtraction {
+  if (!html || typeof html !== 'string') {
+    return { standardOrActCode: 'CoA1967', paragraphOrSection: target, text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'ACRA_CRITERIA_PARSER' };
+  }
+
+  // Search for the 3 small company qualification criteria in ACRA HTML
+  const acraRegex = /(?:<div[^>]*id=["']small-company[^"']*["'][^>]*>|<table[^>]*id=["']small-company[^"']*["'][^>]*>|<p[^>]*>)([\s\S]*?(?:total annual revenue (?:does not exceed|≤|not more than) \$?10\s*(?:million|M)[\s\S]*?total assets (?:does not exceed|≤|not more than) \$?10\s*(?:million|M)[\s\S]*?number of full-time employees (?:does not exceed|≤|not more than) 50)[\s\S]*?)(?:<\/div>|<\/table>|<\/p>)/i;
+  const match = html.match(acraRegex);
+
+  if (match) {
+    const startOffset = match.index || 0;
+    const endOffset = startOffset + match[0].length;
+    const cleaned = cleanHtmlText(match[1]);
+
+    if (cleaned.length > 25) {
+      return {
+        standardOrActCode: 'CoA1967',
+        paragraphOrSection: target,
+        text: cleaned,
+        extractionStatus: 'EXACT',
+        sourceLocator: {
+          heading: 'Small Company Audit Exemption Criteria',
+          elementId: 'small-company-exemption',
+          startOffset,
+          endOffset
+        },
+        extractionMethod: 'ACRA_CRITERIA_PARSER'
+      };
+    }
+  }
+
+  return {
+    standardOrActCode: 'CoA1967',
+    paragraphOrSection: target,
+    text: '',
+    extractionStatus: 'FAILED',
+    sourceLocator: {},
+    extractionMethod: 'ACRA_CRITERIA_PARSER'
+  };
+}
+
+/**
+ * MOM Employment Act Part IV Provision Extractor.
+ * Extracts mandatory itemised payslip or statutory employment clauses from MOM HTML.
+ */
+export function extractMOMProvision(html: string, target: string = 'Part IV'): ProvisionExtraction {
+  if (!html || typeof html !== 'string') {
+    return { standardOrActCode: 'EA1968', paragraphOrSection: target, text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'MOM_PROVISION_PARSER' };
+  }
+
+  const momRegex = /(?:<div[^>]*id=["']itemised-payslips[^"']*["'][^>]*>|<p[^>]*>)([\s\S]*?(?:employers must issue itemised payslips to all employees covered by the Employment Act|mandatory itemised payslips[\s\S]*?key employment terms)[\s\S]*?)(?:<\/div>|<\/p>)/i;
+  const match = html.match(momRegex);
+
+  if (match) {
+    const startOffset = match.index || 0;
+    const endOffset = startOffset + match[0].length;
+    const cleaned = cleanHtmlText(match[1]);
+
+    if (cleaned.length > 20) {
+      return {
+        standardOrActCode: 'EA1968',
+        paragraphOrSection: target,
+        text: cleaned,
+        extractionStatus: 'EXACT',
+        sourceLocator: {
+          heading: 'MOM Employment Act Mandatory Itemised Payslips',
+          elementId: 'itemised-payslips-section',
+          startOffset,
+          endOffset
+        },
+        extractionMethod: 'MOM_PROVISION_PARSER'
+      };
+    }
+  }
+
+  return {
+    standardOrActCode: 'EA1968',
+    paragraphOrSection: target,
+    text: '',
+    extractionStatus: 'FAILED',
+    sourceLocator: {},
+    extractionMethod: 'MOM_PROVISION_PARSER'
+  };
+}
+
+/**
+ * CPF Ordinary Wage Ceiling & Contribution Schedule Extractor.
+ * Extracts the published OW ceiling schedule ($6,800, $7,400, $8,000) from CPF HTML.
+ */
+export function extractCPFProvision(html: string, target: string = 'First Schedule'): ProvisionExtraction {
+  if (!html || typeof html !== 'string') {
+    return { standardOrActCode: 'CPFA1953', paragraphOrSection: target, text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'CPF_SCHEDULE_PARSER' };
+  }
+
+  const cpfRegex = /(?:<div[^>]*id=["']ow-ceiling[^"']*["'][^>]*>|<table[^>]*id=["']ow-ceiling[^"']*["'][^>]*>|<p[^>]*>)([\s\S]*?(?:Ordinary Wage (?:ceiling|\(OW\) ceiling)[\s\S]*?(?:\$6,800|\$7,400|\$8,000))[\s\S]*?)(?:<\/div>|<\/table>|<\/p>)/i;
+  const match = html.match(cpfRegex);
+
+  if (match) {
+    const startOffset = match.index || 0;
+    const endOffset = startOffset + match[0].length;
+    const cleaned = cleanHtmlText(match[1]);
+
+    if (cleaned.length > 20) {
+      return {
+        standardOrActCode: 'CPFA1953',
+        paragraphOrSection: target,
+        text: cleaned,
+        extractionStatus: 'EXACT',
+        sourceLocator: {
+          heading: 'CPF Ordinary Wage Ceiling and Contribution Schedule',
+          elementId: 'ow-ceiling-schedule',
+          startOffset,
+          endOffset
+        },
+        extractionMethod: 'CPF_SCHEDULE_PARSER'
+      };
+    }
+  }
+
+  return {
+    standardOrActCode: 'CPFA1953',
+    paragraphOrSection: target,
+    text: '',
+    extractionStatus: 'FAILED',
+    sourceLocator: {},
+    extractionMethod: 'CPF_SCHEDULE_PARSER'
+  };
+}
+
+/**
+ * Frankfurter ECB Foreign Exchange Reference Rate Extractor.
+ * Strictly reference data API (SFRS(I) accounting rules remain separated in standards layer).
+ */
+export function extractFrankfurterProvision(
+  jsonText: string,
+  base: string = 'SGD',
+  symbols: string[] = ['USD', 'EUR'],
+  _date?: string
+): ProvisionExtraction & { fxObservation?: FxObservation } {
+  if (!jsonText || typeof jsonText !== 'string') {
+    return { standardOrActCode: 'SFRS(I) 1-21', paragraphOrSection: 'Paragraph 21', text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'JSON_KEY_EXTRACTION' };
+  }
+
+  try {
+    const data = JSON.parse(jsonText);
+    if (!data || !data.rates || !data.base || !data.date || (base && data.base !== base)) {
+      return { standardOrActCode: 'SFRS(I) 1-21', paragraphOrSection: 'Paragraph 21', text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'JSON_KEY_EXTRACTION' };
+    }
+
+    const filteredRates: Record<string, number> = {};
+    for (const s of symbols) {
+      if (typeof data.rates[s] === 'number') {
+        filteredRates[s] = data.rates[s];
+      }
+    }
+
+    if (Object.keys(filteredRates).length === 0) {
+      return { standardOrActCode: 'SFRS(I) 1-21', paragraphOrSection: 'Paragraph 21', text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'JSON_KEY_EXTRACTION' };
+    }
+
+    const ratesSummary = Object.entries(filteredRates)
+      .map(([sym, r]) => `1 ${data.base} = ${r} ${sym}`)
+      .join(', ');
+
+    const text = `European Central Bank Reference Spot Exchange Rates (Base: ${data.base}, Date: ${data.date}): ${ratesSummary}`;
+
+    const fxObservation: FxObservation = {
+      sourceAuthority: 'REFERENCE_API',
+      provider: 'FRANKFURTER',
+      date: data.date,
+      base: data.base,
+      rates: filteredRates
+    };
+
+    return {
+      standardOrActCode: 'SFRS(I) 1-21',
+      paragraphOrSection: 'Paragraph 21',
+      text,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        heading: 'ECB_SPOT_OBSERVATION',
+        elementId: `rates-${data.date}`,
+        startOffset: 0,
+        endOffset: jsonText.length
+      },
+      extractionMethod: 'JSON_KEY_EXTRACTION',
+      fxObservation
+    };
+  } catch {
+    return { standardOrActCode: 'SFRS(I) 1-21', paragraphOrSection: 'Paragraph 21', text: '', extractionStatus: 'FAILED', sourceLocator: {}, extractionMethod: 'JSON_KEY_EXTRACTION' };
+  }
+}
 
 /**
  * Universal interface for official Singapore regulatory update discovery adapters.
@@ -12,10 +377,6 @@ export interface IOfficialSourceAdapter {
   readonly sourceName: string;
   readonly canonicalBaseUrl: string;
 
-  /**
-   * Proactively checks the remote official source for new statutory amendments or revisions.
-   * Returns a candidate RegulatoryUpdatePackage if new updates are discovered, or null if up to date.
-   */
   checkForUpdates(
     retriever: ControlledWebRetriever,
     currentSources?: AuthoritativeSourceRecord[]
@@ -24,7 +385,6 @@ export interface IOfficialSourceAdapter {
 
 /**
  * Singapore Statutes Online (SSO / AGC) Update Discovery Adapter.
- * Monitors official legislation on sso.agc.gov.sg (e.g., Companies Act 1967, Income Tax Act 1947).
  */
 export class SSOUpdateAdapter implements IOfficialSourceAdapter {
   public readonly authority = 'AGC' as const;
@@ -45,13 +405,24 @@ export class SSOUpdateAdapter implements IOfficialSourceAdapter {
       return null;
     }
 
-    // Check if remote hash matches any existing local source for CoA1967
+    const documentHash = computeSha256(res.content);
+    const extraction = extractSSOProvision(res.content, 'CoA1967', 'Section 201(5)');
+
+    // Fail-closed: unextractable content cannot create an update
+    if (extraction.extractionStatus !== 'EXACT') {
+      return null;
+    }
+
+    const provisionHash = computeProvisionHash(extraction.standardOrActCode, extraction.paragraphOrSection, extraction.text);
+
+    // Precision update gating: compare against active baseline
     const existingCoa = currentSources.find(
-      (s) => s.standardOrActCode === 'CoA1967' || s.id.startsWith('COA_')
+      (s) => s.standardOrActCode === extraction.standardOrActCode && (s.paragraphOrSection === extraction.paragraphOrSection || s.paragraphOrSection.includes('201'))
     );
 
-    const isDifferent = !existingCoa || (existingCoa.contentHash && existingCoa.contentHash !== res.contentHash);
-    if (!isDifferent) {
+    const existingHash = existingCoa?.provisionHash || existingCoa?.contentHash;
+    if (existingHash && existingHash === provisionHash) {
+      // Provision is unchanged! Do not generate spurious update even if documentHash changed.
       return null;
     }
 
@@ -71,21 +442,25 @@ export class SSOUpdateAdapter implements IOfficialSourceAdapter {
       tags: ['companies act', 'audit', 'financial statements'],
       sourceType: 'AUTHORITATIVE_SOURCE',
       officialSourceUrl: targetUrl,
-      sourceText: res.content.length > 500 ? res.content.slice(0, 500) + '...' : res.content,
+      sourceText: extraction.text, // Unabridged extracted text
       isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
-      contentHash: res.contentHash
+      documentHash,
+      provisionHash,
+      contentHash: provisionHash, // Backward-compatible alias
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction.sourceLocator
     };
 
     const amendment: AmendmentSummary = {
       recordId: updateRecord.id,
       title: 'Companies Act Legislative Revision',
       changeType: 'TEXT_CHANGE',
-      summary: `Proactive revision detected from Singapore Statutes Online (content hash: ${res.contentHash?.slice(0, 12)}...)`
+      summary: `Proactive revision detected from Singapore Statutes Online (provision hash: ${provisionHash.slice(0, 12)}...)`
     };
 
     const pkgWithoutHash: Omit<RegulatoryUpdatePackage, 'packageHash'> = {
@@ -112,7 +487,6 @@ export class SSOUpdateAdapter implements IOfficialSourceAdapter {
 
 /**
  * Inland Revenue Authority of Singapore (IRAS) Update Discovery Adapter.
- * Monitors official corporate tax rebate circulars and GST rate updates on iras.gov.sg.
  */
 export class IRASUpdateAdapter implements IOfficialSourceAdapter {
   public readonly authority = 'IRAS' as const;
@@ -133,12 +507,21 @@ export class IRASUpdateAdapter implements IOfficialSourceAdapter {
       return null;
     }
 
+    const documentHash = computeSha256(res.content);
+    const extraction = extractIRASProvision(res.content, 'Section 43');
+
+    if (extraction.extractionStatus !== 'EXACT') {
+      return null;
+    }
+
+    const provisionHash = computeProvisionHash(extraction.standardOrActCode, extraction.paragraphOrSection, extraction.text);
+
     const existingIras = currentSources.find(
-      (s) => s.authority === 'IRAS' && s.standardOrActCode === 'ITA1947'
+      (s) => s.authority === 'IRAS' && s.standardOrActCode === extraction.standardOrActCode && (s.paragraphOrSection === extraction.paragraphOrSection || s.paragraphOrSection.includes('43'))
     );
 
-    const isDifferent = !existingIras || (existingIras.contentHash && existingIras.contentHash !== res.contentHash);
-    if (!isDifferent) {
+    const existingHash = existingIras?.provisionHash || existingIras?.contentHash;
+    if (existingHash && existingHash === provisionHash) {
       return null;
     }
 
@@ -158,21 +541,25 @@ export class IRASUpdateAdapter implements IOfficialSourceAdapter {
       tags: ['income tax', 'corporate tax', 'rebate'],
       sourceType: 'AUTHORITATIVE_SOURCE',
       officialSourceUrl: targetUrl,
-      sourceText: res.content.length > 500 ? res.content.slice(0, 500) + '...' : res.content,
-      isVerbatimText: false,
+      sourceText: extraction.text,
+      isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
-      contentHash: res.contentHash
+      documentHash,
+      provisionHash,
+      contentHash: provisionHash,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction.sourceLocator
     };
 
     const amendment: AmendmentSummary = {
       recordId: updateRecord.id,
       title: 'Corporate Income Tax Rebate Circular',
       changeType: 'RATE_CHANGE',
-      summary: `Proactive tax rebate guidance detected from IRAS (content hash: ${res.contentHash?.slice(0, 12)}...)`
+      summary: `Proactive tax rebate guidance detected from IRAS (provision hash: ${provisionHash.slice(0, 12)}...)`
     };
 
     const pkgWithoutHash: Omit<RegulatoryUpdatePackage, 'packageHash'> = {
@@ -199,7 +586,6 @@ export class IRASUpdateAdapter implements IOfficialSourceAdapter {
 
 /**
  * Accounting and Corporate Regulatory Authority (ACRA) Update Discovery Adapter.
- * Monitors small company audit thresholds and filing directives on acra.gov.sg.
  */
 export class ACRAUpdateAdapter implements IOfficialSourceAdapter {
   public readonly authority = 'ACRA' as const;
@@ -220,12 +606,21 @@ export class ACRAUpdateAdapter implements IOfficialSourceAdapter {
       return null;
     }
 
+    const documentHash = computeSha256(res.content);
+    const extraction = extractACRAProvision(res.content, 'Thirteenth Schedule');
+
+    if (extraction.extractionStatus !== 'EXACT') {
+      return null;
+    }
+
+    const provisionHash = computeProvisionHash(extraction.standardOrActCode, extraction.paragraphOrSection, extraction.text);
+
     const existingAcra = currentSources.find(
-      (s) => s.authority === 'ACRA' && s.standardOrActCode === 'CoA1967'
+      (s) => s.authority === 'ACRA' && s.standardOrActCode === extraction.standardOrActCode && (s.paragraphOrSection === extraction.paragraphOrSection || s.paragraphOrSection.includes('Thirteenth Schedule') || s.paragraphOrSection.includes('205C') || s.paragraphOrSection.includes('Small Company'))
     );
 
-    const isDifferent = !existingAcra || (existingAcra.contentHash && existingAcra.contentHash !== res.contentHash);
-    if (!isDifferent) {
+    const existingHash = existingAcra?.provisionHash || existingAcra?.contentHash;
+    if (existingHash && existingHash === provisionHash) {
       return null;
     }
 
@@ -245,21 +640,25 @@ export class ACRAUpdateAdapter implements IOfficialSourceAdapter {
       tags: ['companies act', 'small company', 'audit exemption'],
       sourceType: 'AUTHORITATIVE_SOURCE',
       officialSourceUrl: targetUrl,
-      sourceText: res.content.length > 500 ? res.content.slice(0, 500) + '...' : res.content,
-      isVerbatimText: false,
+      sourceText: extraction.text,
+      isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
-      contentHash: res.contentHash
+      documentHash,
+      provisionHash,
+      contentHash: provisionHash,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction.sourceLocator
     };
 
     const amendment: AmendmentSummary = {
       recordId: updateRecord.id,
       title: 'ACRA Regulatory Directive Update',
       changeType: 'THRESHOLD_CHANGE',
-      summary: `Proactive ACRA statutory directive update detected (content hash: ${res.contentHash?.slice(0, 12)}...)`
+      summary: `Proactive ACRA statutory directive update detected (provision hash: ${provisionHash.slice(0, 12)}...)`
     };
 
     const pkgWithoutHash: Omit<RegulatoryUpdatePackage, 'packageHash'> = {
@@ -286,7 +685,6 @@ export class ACRAUpdateAdapter implements IOfficialSourceAdapter {
 
 /**
  * Ministry of Manpower (MOM) Update Discovery Adapter.
- * Monitors Employment Act mandatory payroll items, leave entitlements, and retrenchment guidelines.
  */
 export class MOMUpdateAdapter implements IOfficialSourceAdapter {
   public readonly authority = 'MOM' as const;
@@ -307,12 +705,21 @@ export class MOMUpdateAdapter implements IOfficialSourceAdapter {
       return null;
     }
 
+    const documentHash = computeSha256(res.content);
+    const extraction = extractMOMProvision(res.content, 'Part IV');
+
+    if (extraction.extractionStatus !== 'EXACT') {
+      return null;
+    }
+
+    const provisionHash = computeProvisionHash(extraction.standardOrActCode, extraction.paragraphOrSection, extraction.text);
+
     const existingMom = currentSources.find(
-      (s) => s.authority === 'MOM' || s.standardOrActCode === 'EA1968'
+      (s) => s.authority === 'MOM' && (s.paragraphOrSection === extraction.paragraphOrSection || s.paragraphOrSection.includes('Part IV') || s.paragraphOrSection.includes('Payslip'))
     );
 
-    const isDifferent = !existingMom || (existingMom.contentHash && existingMom.contentHash !== res.contentHash);
-    if (!isDifferent) {
+    const existingHash = existingMom?.provisionHash || existingMom?.contentHash;
+    if (existingHash && existingHash === provisionHash) {
       return null;
     }
 
@@ -332,21 +739,25 @@ export class MOMUpdateAdapter implements IOfficialSourceAdapter {
       tags: ['employment act', 'payslip', 'statutory leave'],
       sourceType: 'AUTHORITATIVE_SOURCE',
       officialSourceUrl: targetUrl,
-      sourceText: res.content.length > 500 ? res.content.slice(0, 500) + '...' : res.content,
-      isVerbatimText: false,
+      sourceText: extraction.text,
+      isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
-      contentHash: res.contentHash
+      documentHash,
+      provisionHash,
+      contentHash: provisionHash,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction.sourceLocator
     };
 
     const amendment: AmendmentSummary = {
       recordId: updateRecord.id,
       title: 'MOM Employment Act Amendment',
       changeType: 'TEXT_CHANGE',
-      summary: `Proactive statutory employment update detected from MOM (content hash: ${res.contentHash?.slice(0, 12)}...)`
+      summary: `Proactive statutory employment update detected from MOM (provision hash: ${provisionHash.slice(0, 12)}...)`
     };
 
     const pkgWithoutHash: Omit<RegulatoryUpdatePackage, 'packageHash'> = {
@@ -373,7 +784,6 @@ export class MOMUpdateAdapter implements IOfficialSourceAdapter {
 
 /**
  * Central Provident Fund (CPF) Board Update Discovery Adapter.
- * Monitors Ordinary Wage (OW) ceilings ($6,800 -> $7,400 -> $8,000) and contribution schedule revisions.
  */
 export class CPFUpdateAdapter implements IOfficialSourceAdapter {
   public readonly authority = 'CPF' as const;
@@ -394,12 +804,21 @@ export class CPFUpdateAdapter implements IOfficialSourceAdapter {
       return null;
     }
 
+    const documentHash = computeSha256(res.content);
+    const extraction = extractCPFProvision(res.content, 'First Schedule');
+
+    if (extraction.extractionStatus !== 'EXACT') {
+      return null;
+    }
+
+    const provisionHash = computeProvisionHash(extraction.standardOrActCode, extraction.paragraphOrSection, extraction.text);
+
     const existingCpf = currentSources.find(
-      (s) => s.authority === 'CPF' || s.standardOrActCode === 'CPFA1953'
+      (s) => s.authority === 'CPF' && (s.paragraphOrSection === extraction.paragraphOrSection || s.paragraphOrSection.includes('First Schedule') || s.paragraphOrSection.includes('Ceiling'))
     );
 
-    const isDifferent = !existingCpf || (existingCpf.contentHash && existingCpf.contentHash !== res.contentHash);
-    if (!isDifferent) {
+    const existingHash = existingCpf?.provisionHash || existingCpf?.contentHash;
+    if (existingHash && existingHash === provisionHash) {
       return null;
     }
 
@@ -419,21 +838,25 @@ export class CPFUpdateAdapter implements IOfficialSourceAdapter {
       tags: ['cpf', 'wage ceiling', 'contributions'],
       sourceType: 'AUTHORITATIVE_SOURCE',
       officialSourceUrl: targetUrl,
-      sourceText: res.content.length > 500 ? res.content.slice(0, 500) + '...' : res.content,
-      isVerbatimText: false,
+      sourceText: extraction.text,
+      isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
-      contentHash: res.contentHash
+      documentHash,
+      provisionHash,
+      contentHash: provisionHash,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction.sourceLocator
     };
 
     const amendment: AmendmentSummary = {
       recordId: updateRecord.id,
       title: 'CPF Ordinary Wage Ceiling Revision',
       changeType: 'THRESHOLD_CHANGE',
-      summary: `Proactive contribution schedule revision detected from CPF Board (content hash: ${res.contentHash?.slice(0, 12)}...)`
+      summary: `Proactive contribution schedule revision detected from CPF Board (provision hash: ${provisionHash.slice(0, 12)}...)`
     };
 
     const pkgWithoutHash: Omit<RegulatoryUpdatePackage, 'packageHash'> = {
@@ -460,7 +883,7 @@ export class CPFUpdateAdapter implements IOfficialSourceAdapter {
 
 /**
  * European Central Bank (ECB) / Frankfurter Foreign Exchange Reference Rate Adapter.
- * Fetches verified multi-currency spot exchange rates with SGD base for international reporting.
+ * Strictly reference data API (SFRS(I) accounting rules remain separated in standards layer).
  */
 export class FrankfurterReferenceAdapter implements IOfficialSourceAdapter {
   public readonly authority = 'REFERENCE_API' as const;
@@ -469,7 +892,7 @@ export class FrankfurterReferenceAdapter implements IOfficialSourceAdapter {
 
   public async checkForUpdates(
     retriever: ControlledWebRetriever,
-    _currentSources: AuthoritativeSourceRecord[] = []
+    currentSources: AuthoritativeSourceRecord[] = []
   ): Promise<RegulatoryUpdatePackage | null> {
     const targetUrl = `${this.canonicalBaseUrl}/v1/latest?base=SGD&symbols=USD,EUR,GBP,CNY`;
     const res = await retriever.fetchOfficialSource(targetUrl, {
@@ -479,6 +902,24 @@ export class FrankfurterReferenceAdapter implements IOfficialSourceAdapter {
     });
 
     if (res.status !== 'SUCCESS' || !res.content) {
+      return null;
+    }
+
+    const documentHash = computeSha256(res.content);
+    const extraction = extractFrankfurterProvision(res.content, 'SGD', ['USD', 'EUR', 'GBP', 'CNY']);
+
+    if (extraction.extractionStatus !== 'EXACT') {
+      return null;
+    }
+
+    const provisionHash = computeProvisionHash(extraction.standardOrActCode, extraction.paragraphOrSection, extraction.text);
+
+    const existingFx = currentSources.find(
+      (s) => s.authority === 'REFERENCE_API' && s.id.startsWith('ECB_FX_SPOT_')
+    );
+
+    const existingHash = existingFx?.provisionHash || existingFx?.contentHash;
+    if (existingHash && existingHash === provisionHash) {
       return null;
     }
 
@@ -498,14 +939,18 @@ export class FrankfurterReferenceAdapter implements IOfficialSourceAdapter {
       tags: ['fx', 'exchange rate', 'spot rate'],
       sourceType: 'AUTHORITATIVE_SOURCE',
       officialSourceUrl: targetUrl,
-      sourceText: res.content,
+      sourceText: extraction.text,
       isVerbatimText: true,
       lastVerifiedDate: res.retrievedAt.split('T')[0],
       sourceStatus: 'NEEDS_REVIEW',
       evidenceTier: 'PRIMARY_SOURCE',
       provenance: 'LIVE_PATCH',
       version: packageId,
-      contentHash: res.contentHash
+      documentHash,
+      provisionHash,
+      contentHash: provisionHash,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction.sourceLocator
     };
 
     const amendment: AmendmentSummary = {

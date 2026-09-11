@@ -47,7 +47,20 @@ export interface AuthoritativeSourceRecord {
   historicalPredecessorRecordId?: string;
   // Phase 4 Versioning & Provenance Properties
   version?: string;
+  documentHash?: string; // SHA-256 of complete raw HTTP response payload
+  provisionHash?: string; // Canonical integrity hash: SHA-256 of extracted normalized provision
+  /**
+   * Deprecated compatibility field.
+   * provisionHash is the canonical integrity hash for new records.
+   */
   contentHash?: string; // 64-character hex SHA-256
+  extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED';
+  sourceLocator?: {
+    heading?: string;
+    elementId?: string;
+    startOffset?: number;
+    endOffset?: number;
+  };
   provenance: 'LOCAL_STATIC' | 'LIVE_EXTERNAL' | 'LIVE_PATCH';
   canonicalSourceUrl?: string;
   sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'REFERENCE_API';
@@ -153,6 +166,14 @@ export function buildUnifiedSourceRegistry(
     };
 
     record.contentHash = defaultSourceVersioningManager.computeSourceHash(record);
+    record.provisionHash = record.contentHash;
+    record.extractionStatus = isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'EXACT' : 'PARTIAL';
+    if (isVerbatim) {
+      record.sourceLocator = {
+        heading: rule.sectionOrSchedule,
+        elementId: rule.canonicalUrl.includes('#') ? rule.canonicalUrl.split('#')[1] : undefined
+      };
+    }
     record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
     UNIFIED_SOURCE_REGISTRY[key] = record;
   }
@@ -199,6 +220,8 @@ export function buildUnifiedSourceRegistry(
     };
 
     record.contentHash = defaultSourceVersioningManager.computeSourceHash(record);
+    record.provisionHash = record.contentHash;
+    record.extractionStatus = 'PARTIAL';
     record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
     UNIFIED_SOURCE_REGISTRY[key] = record;
   }

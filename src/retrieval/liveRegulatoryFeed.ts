@@ -257,7 +257,11 @@ export class LiveRegulatoryFeedService {
         sourceUrl: provenanceDetails?.sourceUrl || rec.officialSourceUrl,
         httpStatus: provenanceDetails?.httpStatus || 200,
         etag: provenanceDetails?.etag,
-        lastModified: provenanceDetails?.lastModified
+        lastModified: provenanceDetails?.lastModified,
+        documentHash: rec.documentHash,
+        provisionHash: rec.provisionHash || rec.contentHash,
+        extractionStatus: rec.extractionStatus,
+        sourceLocator: rec.sourceLocator
       };
 
       this.versioningManager.registerCandidateVersion(rec, metadata);
@@ -363,6 +367,19 @@ export class LiveRegulatoryFeedService {
           rejectionReason: `Atomic validation failure on record '${rec.id}': ${provCheck.reason}`
         };
       }
+
+      // Provision mapping & anti-truncation check
+      const mappingCheck = this.validator.validateProvisionMapping(rec);
+      if (!mappingCheck.isValid) {
+        this.rejectedPackages.set(packageId, `Record #${i + 1} (${rec.id}): ${mappingCheck.reason}`);
+        return {
+          isValid: false,
+          packageId,
+          verifiedRecordsCount: 0,
+          failedRecordId: rec.id,
+          rejectionReason: `Atomic validation failure on record '${rec.id}': ${mappingCheck.reason}`
+        };
+      }
     }
 
     // All records passed verification! Promote candidate statuses to VERIFIED
@@ -372,6 +389,10 @@ export class LiveRegulatoryFeedService {
       if (candidateEntry) {
         candidateEntry.metadata.verificationStatus = 'VERIFIED';
         candidateEntry.metadata.verificationMethod = 'OFFICIAL_STATUTORY_PACKAGE_VERIFICATION';
+        candidateEntry.metadata.documentHash = rec.documentHash;
+        candidateEntry.metadata.provisionHash = rec.provisionHash;
+        candidateEntry.metadata.extractionStatus = rec.extractionStatus;
+        candidateEntry.metadata.sourceLocator = rec.sourceLocator;
       }
     }
 

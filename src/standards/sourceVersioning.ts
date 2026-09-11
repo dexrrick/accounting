@@ -29,10 +29,38 @@ export interface SourceVersionMetadata {
   httpStatus?: number;
   etag?: string;
   lastModified?: string;
+  documentHash?: string; // SHA-256 of complete raw HTTP response payload
+  provisionHash?: string; // Canonical integrity hash: SHA-256 of extracted normalized provision
+  extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED';
+  sourceLocator?: {
+    heading?: string;
+    elementId?: string;
+    startOffset?: number;
+    endOffset?: number;
+  };
   // Source-native legislation identity
   legislationCode?: string;
   revisionDate?: string;
   amendmentInstrument?: string;
+}
+
+/**
+ * Computes deterministic SHA-256 hash for an extracted provision.
+ * Canonical representation: standardOrActCode ||| paragraphOrSection ||| normalized extracted text
+ */
+export function computeProvisionHash(
+  standardOrActCode: string,
+  paragraphOrSection: string,
+  text: string
+): string {
+  const normalizedText = text.trim().replace(/\r\n/g, '\n').replace(/\s+/g, ' ');
+  const canonicalPayload = [
+    standardOrActCode.trim(),
+    paragraphOrSection.trim(),
+    normalizedText
+  ].join('|||');
+
+  return computeSha256(canonicalPayload);
 }
 
 export type VersionChange =
