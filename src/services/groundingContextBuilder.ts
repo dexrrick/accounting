@@ -171,7 +171,7 @@ export async function buildGroundedReasoningContext(
   for (const record of retrieved) {
     if (
       record.evidenceTier === 'PRIMARY_SOURCE' &&
-      record.sourceStatus === 'VERIFIED' &&
+      (record.sourceStatus === 'VERIFIED' || record.sourceStatus === 'HISTORICAL') &&
       record.isVerbatimText === true
     ) {
       primaryEvidence.push(record);
@@ -285,7 +285,17 @@ GROUNDED REASONING CONTEXT SUPPLIED TO YOU
   prompt += `\n[4. AUTHORITATIVE PRIMARY SOURCE EVIDENCE (VERBATIM STATUTES)]\n`;
   if (context.primaryEvidence.length > 0) {
     for (const p of context.primaryEvidence) {
-      prompt += `### Primary Source: ${p.documentTitle} (${p.paragraphOrSection})\n`;
+      const freshnessLabel = p.freshnessStatus === 'HISTORICAL_SUPERSEDED'
+        ? '[HISTORICAL / SUPERSEDED PROVISION]'
+        : p.freshnessStatus === 'PENDING_EFFECTIVE'
+        ? '[PENDING EFFECTIVE]'
+        : p.freshnessStatus === 'AUDIT_OVERDUE'
+        ? '[VERIFICATION REVIEW DUE]'
+        : '[CURRENT PROVISION]';
+      prompt += `### Primary Source: ${p.documentTitle} (${p.paragraphOrSection}) ${freshnessLabel}\n`;
+      if (p.validFrom || p.validTo) {
+        prompt += `Temporal Validity: ${p.validFrom || 'Initial'} to ${p.validTo || 'Present (In Force)'}\n`;
+      }
       prompt += `Authority: ${p.authorityName} | Publisher: ${p.sourcePublisher}\n`;
       prompt += `Official URL: ${p.officialSourceUrl}\n`;
       prompt += `Verbatim Statutory Text:\n"${p.sourceText}"\n\n`;
@@ -311,7 +321,17 @@ GROUNDED REASONING CONTEXT SUPPLIED TO YOU
   prompt += `\n[6. CURATED SUMMARIES (SFRS(I) STANDARDS & ACT SUMMARIES - NEEDS REVIEW)]\n`;
   if (context.curatedSummaries.length > 0) {
     for (const c of context.curatedSummaries) {
-      prompt += `### Curated Standard/Statute Summary: ${c.documentTitle} (${c.paragraphOrSection})\n`;
+      const freshnessLabel = c.freshnessStatus === 'HISTORICAL_SUPERSEDED'
+        ? '[HISTORICAL / SUPERSEDED PROVISION]'
+        : c.freshnessStatus === 'PENDING_EFFECTIVE'
+        ? '[PENDING EFFECTIVE]'
+        : c.freshnessStatus === 'AUDIT_OVERDUE'
+        ? '[VERIFICATION REVIEW DUE]'
+        : '[CURRENT PROVISION]';
+      prompt += `### Curated Standard/Statute Summary: ${c.documentTitle} (${c.paragraphOrSection}) ${freshnessLabel}\n`;
+      if (c.validFrom || c.validTo) {
+        prompt += `Temporal Validity: ${c.validFrom || 'Initial'} to ${c.validTo || 'Present (In Force)'}\n`;
+      }
       prompt += `Authority: ${c.authorityName} | Instrument: ${c.legalOrStandardInstrument}\n`;
       prompt += `Official Source Portal: ${c.officialSourceUrl}\n`;
       prompt += `Status: ${c.sourceStatus} (${c.sourceType})\n`;

@@ -36,7 +36,10 @@ export class CitationVerifier {
   }
 
   private normalizeSection(text: string): string {
-    return text.toLowerCase().replace(/[§\s\-_()]/g, '');
+    return text
+      .toLowerCase()
+      .replace(/\b(?:section|sec|paragraph|para|regulation|reg|schedule|sch|clause)\b/gi, '')
+      .replace(/[§\s\-_(),.&]/g, '');
   }
 
   private normalizeUrlForComparison(urlStr: string): string {
@@ -80,12 +83,12 @@ export class CitationVerifier {
 
     // 2. Check if paragraph or section exists in the source record
     const paraClean = this.normalizeSection(rawPara);
-    const matchedRecord = matchedRecords.find((r) => {
+    const sectionCandidates = matchedRecords.filter((r) => {
       const rSecClean = this.normalizeSection(r.paragraphOrSection);
       return rSecClean.includes(paraClean) || paraClean.includes(rSecClean);
     });
 
-    if (!matchedRecord) {
+    if (sectionCandidates.length === 0) {
       return {
         citation,
         status: 'PARAGRAPH_NOT_FOUND',
@@ -95,6 +98,47 @@ export class CitationVerifier {
         reason: `Paragraph/Section '${rawPara}' does not exist in records for '${rawStd}'.`,
         structuralVerificationOnly: true
       };
+    }
+
+    // If multiple records match the same section (e.g. historical vs current rate amendments or CPF ceiling phases),
+    // disambiguate using citation title/text, or default to the active current record.
+    let matchedRecord = sectionCandidates[0];
+    if (sectionCandidates.length > 1) {
+      const citeText = `${citation.title || ''} ${citation.text || ''}`.toLowerCase();
+      let bestScore = -1;
+      let bestCandidate = matchedRecord;
+
+      for (const cand of sectionCandidates) {
+        let matchScore = 0;
+        const candTitle = cand.principleSummary.toLowerCase();
+        const candTokens = candTitle.split(/[\s,.;:!?/()]+/).filter((w) => w.length > 1);
+
+        for (const token of candTokens) {
+          if (citeText.includes(token)) {
+            matchScore += token.match(/\d+/) ? 10 : 2;
+          }
+        }
+
+        for (const tag of cand.tags) {
+          if (citeText.includes(tag.toLowerCase())) {
+            matchScore += 8;
+          }
+        }
+
+        if (matchScore > bestScore) {
+          bestScore = matchScore;
+          bestCandidate = cand;
+        }
+      }
+
+      if (bestScore > 0) {
+        matchedRecord = bestCandidate;
+      } else {
+        const activeRecord = sectionCandidates.find((r) => r.sourceStatus === 'VERIFIED' && (!r.validTo || r.validTo >= '2026-09-11'));
+        if (activeRecord) {
+          matchedRecord = activeRecord;
+        }
+      }
     }
 
     // 3. Authority alignment check (with ASC/ACRA merger compatibility)

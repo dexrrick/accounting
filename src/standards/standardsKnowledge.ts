@@ -9,6 +9,12 @@ export interface StandardRule {
   principle: string;
   application: string;
   sourceAuthority: string;
+  validFrom?: string;
+  validTo?: string;
+  lastVerifiedDate?: string;
+  reviewAuditCycleDays?: number;
+  supersededByRecordId?: string;
+  historicalPredecessorRecordId?: string;
 }
 
 export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
@@ -211,6 +217,71 @@ export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
     principle: 'Deferred tax arises from temporary differences between the accounting carrying amounts of assets/liabilities and their corresponding tax bases under the Income Tax Act. Taxable temporary differences require Deferred Tax Liabilities; deductible temporary differences generate Deferred Tax Assets.',
     application: 'Accelerated tax capital allowances under Section 19A of the Income Tax Act exceed accounting depreciation, producing a taxable temporary difference: Dr. Deferred Tax Expense (P&L) | Cr. Deferred Tax Liability.',
     sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  SFRS_I_1_36_IMPAIRMENT: {
+    code: 'SFRS(I) 1-36 / IAS 36 §9, §18, §59 & §114',
+    sfrsCode: 'SFRS(I) 1-36 §9, §18, §59 & §114',
+    ifrsCode: 'IAS 36 §9, §18, §59 & §114',
+    standardTitle: 'Impairment of Assets - Recoverable Amount & Loss Recognition',
+    paragraph: '§9, §18, §59 & §114',
+    principle: 'An entity shall assess at the end of each reporting period whether there is any indication that an asset may be impaired (§9). If any such indication exists, the entity shall estimate the recoverable amount of the asset, which is the higher of its fair value less costs of disposal and its value in use (§18). If the recoverable amount is less than the carrying amount, an impairment loss shall be recognized immediately in profit or loss (§59). An impairment loss recognized in prior periods for an asset other than goodwill shall be reversed if there has been a change in estimates used to determine the recoverable amount (§114).',
+    application: 'Annual impairment testing of machinery, goodwill, and intangible assets: Dr. Impairment Loss (P&L) | Cr. Accumulated Impairment Loss (contra-asset).',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+  SFRS_I_1_20_GOVERNMENT_GRANTS: {
+    code: 'SFRS(I) 1-20 / IAS 20 §7, §12, §24 & §29',
+    sfrsCode: 'SFRS(I) 1-20 §7, §12, §24 & §29',
+    ifrsCode: 'IAS 20 §7, §12, §24 & §29',
+    standardTitle: 'Accounting for Government Grants and Disclosure of Government Assistance',
+    paragraph: '§7, §12, §24 & §29',
+    principle: 'Government grants shall not be recognized until there is reasonable assurance that the entity will comply with conditions attaching to them and the grants will be received (§7). Grants shall be recognized in profit or loss on a systematic basis over the periods in which the entity recognizes as expenses the related costs which the grants are intended to compensate (§12). Capital grants related to assets may be presented either as deferred income or by deducting the grant in arriving at the carrying amount of the asset (§24). Operating grants (e.g. wage credits, hiring incentives) may be presented as other income or deducted from the related expense (§29).',
+    application: 'Singapore wage subsidies (Jobs Support Scheme / Jobs Growth Incentive): Dr. Cash at Bank | Cr. Other Operating Income (or Cr. Staff Salaries & Wages Expense). Capital equipment grants: Dr. Cash at Bank | Cr. Deferred Capital Grant (Liability).',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+  SFRS_I_1_23_BORROWING_COSTS: {
+    code: 'SFRS(I) 1-23 / IAS 23 §1, §5 & §8',
+    sfrsCode: 'SFRS(I) 1-23 §1, §5 & §8',
+    ifrsCode: 'IAS 23 §1, §5 & §8',
+    standardTitle: 'Borrowing Costs - Mandatory Capitalisation on Qualifying Assets',
+    paragraph: '§1, §5 & §8',
+    principle: 'Borrowing costs that are directly attributable to the acquisition, construction or production of a qualifying asset form part of the cost of that asset (§1, §8). Other borrowing costs are recognized as an expense in the period in which they are incurred. A qualifying asset is an asset that necessarily takes a substantial period of time to get ready for its intended use or sale (§5).',
+    application: 'Construction of commercial property, plant, or specialized IT platforms taking >12 months: Dr. Construction-in-Progress (Asset) | Cr. Bank / Interest Payable. Borrowing costs on routine short-term inventories are expensed immediately.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+  SFRS_I_1_10_EVENTS_AFTER_REPORTING: {
+    code: 'SFRS(I) 1-10 / IAS 10 §3, §8, §10 & §12',
+    sfrsCode: 'SFRS(I) 1-10 §3, §8, §10 & §12',
+    ifrsCode: 'IAS 10 §3, §8, §10 & §12',
+    standardTitle: 'Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends',
+    paragraph: '§3, §8, §10 & §12',
+    principle: 'Events after the reporting period are those events, favourable and unfavourable, that occur between the end of the reporting period and the date when the financial statements are authorised for issue (§3). An entity shall adjust the amounts recognized in its financial statements to reflect adjusting events (evidence of conditions that existed at the end of the reporting period, §8). An entity shall not adjust amounts for non-adjusting events (indicative of conditions that arose after the reporting period, §10). If an entity declares dividends to holders of equity instruments after the reporting period, the entity shall not recognize those dividends as a liability at the end of the reporting period (§12).',
+    application: 'Bankruptcy of a major customer shortly after FYE confirming uncollectibility of year-end trade receivable: Adjusting event requiring retrospective provision adjustment under §8. Dividends declared in March for prior December FYE: Non-adjusting disclosure note only, no liability recorded at 31 Dec (§12).',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+  SFRS_I_1_8_POLICIES_ESTIMATES_ERRORS: {
+    code: 'SFRS(I) 1-8 / IAS 8 §14, §19, §32 & §42',
+    sfrsCode: 'SFRS(I) 1-8 §14, §19, §32 & §42',
+    ifrsCode: 'IAS 8 §14, §19, §32 & §42',
+    standardTitle: 'Accounting Policies, Changes in Accounting Estimates and Errors',
+    paragraph: '§14, §19, §32 & §42',
+    principle: 'An entity shall change an accounting policy only if the change is required by an SFRS(I) or results in more reliable and relevant information (§14). Changes in accounting policy are accounted for retrospectively (§19). The effect of a change in an accounting estimate (e.g. useful life, residual value, bad debt allowance percentage) shall be recognized prospectively by including it in profit or loss in the period of change and future periods (§32). Material prior period errors must be corrected retrospectively in the first set of financial statements authorised for issue after their discovery by restating comparative amounts (§42).',
+    application: 'Revising straight-line depreciation useful life from 5 to 8 years is a prospective estimate change (§32). Uncovering unrecorded prior-year supplier invoices requires retrospective restatement of opening retained earnings (§42).',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
   }
 };
 

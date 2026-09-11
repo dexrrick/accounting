@@ -4,12 +4,17 @@ import {
   UNIFIED_SOURCE_REGISTRY,
   getAllAuthoritativeSources
 } from '../standards/unifiedSourceModel';
+import { defaultTargetDateResolver } from './targetDateResolver';
+import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 
 export interface SourceRetrievalQuery {
   query: string;
   domain?: QueryDomain;
   authorities?: StatutoryAuthority[];
   maxResults?: number;
+  targetDate?: string;
+  includeHistorical?: boolean;
+  referenceDate?: string;
 }
 
 export interface ISourceRetriever {
@@ -48,7 +53,12 @@ export class InMemorySourceRetriever implements ISourceRetriever {
       .toLowerCase()
       .replace(/\s*\((?:acra|mom|iras|cpf|mas|asc|sso|singapore)\)/gi, '')
       .replace(/[\s\-_()]/g, '');
-    const secClean = paragraphOrSection ? paragraphOrSection.toLowerCase().replace(/[§\s\-_()]/g, '') : null;
+    const secClean = paragraphOrSection
+      ? paragraphOrSection
+          .toLowerCase()
+          .replace(/\b(?:section|sec|paragraph|para|regulation|reg|schedule|sch|clause)\b/gi, '')
+          .replace(/[§\s\-_(),.&]/g, '')
+      : null;
 
     return this.sources.filter((s) => {
       const sCodeClean = s.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
@@ -64,7 +74,10 @@ export class InMemorySourceRetriever implements ISourceRetriever {
       if (!codeMatches) return false;
       if (!secClean) return true;
 
-      const sSecClean = s.paragraphOrSection.toLowerCase().replace(/[§\s\-_()]/g, '');
+      const sSecClean = s.paragraphOrSection
+        .toLowerCase()
+        .replace(/\b(?:section|sec|paragraph|para|regulation|reg|schedule|sch|clause)\b/gi, '')
+        .replace(/[§\s\-_(),.&]/g, '');
       return sSecClean.includes(secClean) || secClean.includes(sSecClean);
     });
   }
@@ -73,9 +86,35 @@ export class InMemorySourceRetriever implements ISourceRetriever {
    * Scores and retrieves relevant authoritative sources based on domain, authority, and query text.
    */
   public async retrieveSources(retrievalQuery: SourceRetrievalQuery): Promise<AuthoritativeSourceRecord[]> {
-    const { query, domain, authorities, maxResults = 5 } = retrievalQuery;
+    const {
+      query,
+      domain,
+      authorities,
+      maxResults = 5,
+      targetDate: explicitTargetDate,
+      includeHistorical = false,
+      referenceDate = SourceFreshnessManager.DEFAULT_REFERENCE_DATE
+    } = retrievalQuery;
     const lowerQ = query.toLowerCase();
     const queryTokens = lowerQ.split(/[\s,.;:!?/()]+/).filter((t) => t.length > 2);
+
+    // Resolve target date (either explicit or parsed from query)
+    const resolvedDateInfo = explicitTargetDate
+      ? { targetDate: explicitTargetDate, isHistorical: explicitTargetDate < referenceDate, confidence: 'HIGH' as const }
+      : defaultTargetDateResolver.resolveTargetDate(query, referenceDate);
+
+    const effectiveTargetDate = resolvedDateInfo.targetDate;
+    const isHistoricalTarget = resolvedDateInfo.isHistorical || includeHistorical;
+
+    const mentionsHistorical =
+      isHistoricalTarget ||
+      lowerQ.includes('historical') ||
+      lowerQ.includes('prior to') ||
+      lowerQ.includes('before') ||
+      lowerQ.includes('old rate') ||
+      lowerQ.includes('former') ||
+      lowerQ.includes('previous') ||
+      lowerQ.includes('superseded');
 
     const scored: Array<{ record: AuthoritativeSourceRecord; score: number }> = [];
 
@@ -119,6 +158,39 @@ export class InMemorySourceRetriever implements ISourceRetriever {
       for (const token of queryTokens) {
         if (summaryLower.includes(token)) score += 3;
         if (textLower.includes(token)) score += 2;
+      }
+
+      // 7. Temporal Freshness & Validity Alignment
+      const freshness = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
+
+      if (effectiveTargetDate) {
+        const fromMatch = !record.validFrom || record.validFrom <= effectiveTargetDate;
+        const toMatch = !record.validTo || record.validTo >= effectiveTargetDate;
+        if (fromMatch && toMatch) {
+          // Provision in force during the specified target date
+          score += 25;
+          // When targetDate falls into a historical period, prioritize specifically bounded historical provisions
+          if (record.validTo && record.validTo < referenceDate) {
+            score += 15;
+          }
+        } else {
+          // Outside requested target date window
+          score -= 40;
+        }
+      } else {
+        // Undated query:
+        if (freshness === 'HISTORICAL_SUPERSEDED') {
+          if (mentionsHistorical) {
+            score += 10;
+          } else {
+            // Strong penalty so historical records do NOT displace current in-force provisions
+            score -= 50;
+          }
+        } else if (freshness === 'ACTIVE_CURRENT') {
+          score += 15;
+        } else if (freshness === 'PENDING_EFFECTIVE') {
+          score -= 10;
+        }
       }
 
       if (score > 0) {

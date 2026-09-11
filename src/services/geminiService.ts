@@ -11,6 +11,7 @@ import {
   type GroundedReasoningContext
 } from './groundingContextBuilder';
 import { RequestProfiler } from './telemetry';
+import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 
 export interface GeminiResponse {
   messageText: string;
@@ -97,7 +98,26 @@ export function evaluateFastPathEligibility(
     { topic: 'CPF Wage Ceilings', test: qLower.includes('cpf ceiling') || qLower.includes('ordinary wage') || qLower.includes('aw ceiling'), sectionMatch: 'first schedule' },
     { topic: 'Compulsory GST Registration', test: qLower.includes('gst registration') || qLower.includes('compulsory gst') || (qLower.includes('gst') && qLower.includes('threshold')), sectionMatch: 'first schedule' },
     { topic: 'Section 14 Tax Deductibility', test: qLower.includes('section 14') || qLower.includes('wholly and exclusively'), sectionMatch: '14' },
-    { topic: 'Section 205C Audit Exemption', test: qLower.includes('audit exemption') || qLower.includes('small company'), sectionMatch: '205c' }
+    { topic: 'Section 205C Audit Exemption', test: qLower.includes('audit exemption') || qLower.includes('small company'), sectionMatch: '205c' },
+    // Phase 3 Expanded Statutory Claims:
+    { topic: 'Loss Carry-Back Relief', test: qLower.includes('carry back') || qLower.includes('carry-back'), sectionMatch: '37e' },
+    { topic: 'Loss Carry-Forward Relief', test: qLower.includes('carry forward') || qLower.includes('carry-forward'), sectionMatch: '37' },
+    { topic: 'Safe Harbour Share Disposal', test: qLower.includes('safe harbour') || qLower.includes('safe harbor') || (qLower.includes('disposal') && qLower.includes('shares')), sectionMatch: '13w' },
+    { topic: 'Withholding Tax', test: qLower.includes('withholding tax') || qLower.includes('section 45'), sectionMatch: '45' },
+    { topic: 'Renovation & Refurbishment S14Q', test: qLower.includes('renovation') || qLower.includes('refurbishment') || qLower.includes('14q'), sectionMatch: '14q' },
+    { topic: 'GST De Minimis Rule', test: qLower.includes('de minimis') || (qLower.includes('regulation 28') && qLower.includes('gst')), sectionMatch: '28' },
+    { topic: 'GST Reverse Charge', test: qLower.includes('reverse charge') || (qLower.includes('imported services') && qLower.includes('gst')), sectionMatch: '14' },
+    { topic: 'GST Bad Debt Relief', test: qLower.includes('bad debt relief') || (qLower.includes('bad debt') && qLower.includes('gst')), sectionMatch: '82' },
+    { topic: 'GST Time of Supply', test: qLower.includes('time of supply'), sectionMatch: '11' },
+    { topic: 'Director Conflict Disclosure', test: (qLower.includes('director') && (qLower.includes('conflict') || qLower.includes('interest'))) || qLower.includes('section 156'), sectionMatch: '156' },
+    { topic: 'Company Secretary Mandate', test: qLower.includes('company secretary') || qLower.includes('section 171'), sectionMatch: '171' },
+    { topic: 'Registrable Controllers (RORC)', test: qLower.includes('registrable controllers') || qLower.includes('rorc'), sectionMatch: '142' },
+    { topic: 'Abolition of Par Value', test: qLower.includes('par value') || qLower.includes('nominal value'), sectionMatch: '68' },
+    { topic: 'Capital Reduction Solvency', test: qLower.includes('capital reduction') || qLower.includes('reduction of share capital'), sectionMatch: '78b' },
+    { topic: 'CPF Account Allocation Rates', test: qLower.includes('ordinary account') || qLower.includes('special account') || qLower.includes('medisave') || qLower.includes('allocation rate'), sectionMatch: 'allocation' },
+    { topic: 'MOM Rest Day Pay', test: qLower.includes('rest day'), sectionMatch: '36' },
+    { topic: 'Mandatory Retrenchment Notification', test: qLower.includes('retrenchment notification') || qLower.includes('mandatory retrenchment'), sectionMatch: 'retrenchment' },
+    { topic: 'CDCA Parental Leave Entitlement', test: qLower.includes('paternity leave') || qLower.includes('parental leave') || qLower.includes('cdca'), sectionMatch: 'cdca' }
   ];
 
   const activeClaims = claimRules.filter(c => c.test);
@@ -123,6 +143,18 @@ export function evaluateFastPathEligibility(
     }
     if (!claimEvidence.effectiveDate || claimEvidence.effectiveDate.toLowerCase().includes('unknown')) {
       return { canBypass: false, reason: `Evidence for '${claim.topic}' lacks a verified effective date` };
+    }
+
+    // Temporal freshness validation: AUDIT_OVERDUE or HISTORICAL provisions cannot satisfy current fast path
+    const claimFreshness = claimEvidence.freshnessStatus || defaultSourceFreshnessManager.evaluateSourceFreshness(claimEvidence);
+    if (claimFreshness === 'AUDIT_OVERDUE') {
+      return { canBypass: false, reason: `Evidence for '${claim.topic}' (${claimEvidence.documentTitle}) is overdue for audit verification` };
+    }
+    if (claimFreshness === 'HISTORICAL_SUPERSEDED') {
+      const mentionsHistorical = qLower.includes('historical') || qLower.includes('prior') || qLower.includes('past') || qLower.includes('former') || qLower.includes('superseded');
+      if (!mentionsHistorical) {
+        return { canBypass: false, reason: `Evidence for '${claim.topic}' (${claimEvidence.documentTitle}) is historical/superseded and cannot satisfy current deterministic fast path` };
+      }
     }
   }
 
@@ -160,6 +192,17 @@ export function evaluateFastPathEligibility(
     // Condition 4: The source is current/effective for the relevant period
     if (!matched.effectiveDate || matched.effectiveDate.toLowerCase().includes('unknown')) {
       return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' lacks a verified effective date` };
+    }
+
+    const matchedFreshness = matched.freshnessStatus || defaultSourceFreshnessManager.evaluateSourceFreshness(matched);
+    if (matchedFreshness === 'AUDIT_OVERDUE') {
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is overdue for audit verification` };
+    }
+    if (matchedFreshness === 'HISTORICAL_SUPERSEDED') {
+      const mentionsHistorical = qLower.includes('historical') || qLower.includes('prior') || qLower.includes('past') || qLower.includes('former') || qLower.includes('superseded');
+      if (!mentionsHistorical) {
+        return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is historical/superseded and cannot satisfy current deterministic fast path` };
+      }
     }
   }
 

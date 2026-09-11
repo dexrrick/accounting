@@ -22,7 +22,9 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
   PSA: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
   PAYMENT_SERVICES: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
   MAS: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' },
-  MASA: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' }
+  MASA: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' },
+  CDCA: { ssoCode: 'CDCA2001', title: 'Child Development Co-Savings Act 2001' },
+  CDCA2001: { ssoCode: 'CDCA2001', title: 'Child Development Co-Savings Act 2001' }
 };
 
 /**
