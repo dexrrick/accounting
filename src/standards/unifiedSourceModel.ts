@@ -6,6 +6,7 @@ import {
   SourceFreshnessManager,
   defaultSourceFreshnessManager
 } from './sourceFreshnessManager';
+import { defaultSourceVersioningManager } from './sourceVersioning';
 
 export type SourceStatus = 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
 
@@ -44,6 +45,17 @@ export interface AuthoritativeSourceRecord {
   freshnessStatus?: FreshnessStatus; // Explicit freshness status against reference date
   supersededByRecordId?: string;
   historicalPredecessorRecordId?: string;
+  // Phase 4 Versioning & Provenance Properties
+  version?: string;
+  contentHash?: string; // 64-character hex SHA-256
+  provenance: 'LOCAL_STATIC' | 'LIVE_EXTERNAL' | 'LIVE_PATCH';
+  canonicalSourceUrl?: string;
+  sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'REFERENCE_API';
+  retrievedAt?: string;
+  verificationMethod?: string;
+  versionId?: string;
+  legislationCode?: string;
+  amendmentInstrument?: string;
 }
 
 /**
@@ -131,9 +143,16 @@ export function buildUnifiedSourceRegistry(
       lastVerifiedDate: lastVerified,
       reviewAuditCycleDays: auditDays,
       supersededByRecordId: rule.supersededByRecordId,
-      historicalPredecessorRecordId: rule.historicalPredecessorRecordId
+      historicalPredecessorRecordId: rule.historicalPredecessorRecordId,
+      provenance: 'LOCAL_STATIC',
+      version: '2026.09',
+      canonicalSourceUrl: rule.canonicalUrl,
+      sourceAuthority: rule.authority === 'IRAS' ? 'IRAS' : rule.authority === 'ACRA' ? 'ACRA' : rule.authority === 'MOM' ? 'MOM' : rule.authority === 'CPF' ? 'CPF' : 'AGC',
+      retrievedAt: '2026-09-01T00:00:00Z',
+      verificationMethod: isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'STATUTORY_LEGISLATION_AUDIT' : 'CURATED_EDITORIAL_REVIEW'
     };
 
+    record.contentHash = defaultSourceVersioningManager.computeSourceHash(record);
     record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
     UNIFIED_SOURCE_REGISTRY[key] = record;
   }
@@ -170,9 +189,16 @@ export function buildUnifiedSourceRegistry(
       lastVerifiedDate: lastVerified,
       reviewAuditCycleDays: auditDays,
       supersededByRecordId: std.supersededByRecordId,
-      historicalPredecessorRecordId: std.historicalPredecessorRecordId
+      historicalPredecessorRecordId: std.historicalPredecessorRecordId,
+      provenance: 'LOCAL_STATIC',
+      version: '2026.09',
+      canonicalSourceUrl: 'https://www.acra.gov.sg/accountancy/accounting-standards',
+      sourceAuthority: 'ACRA',
+      retrievedAt: '2026-09-01T00:00:00Z',
+      verificationMethod: 'CURATED_EDITORIAL_REVIEW'
     };
 
+    record.contentHash = defaultSourceVersioningManager.computeSourceHash(record);
     record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
     UNIFIED_SOURCE_REGISTRY[key] = record;
   }

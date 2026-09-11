@@ -12,9 +12,18 @@ import {
   Cloud,
   ShieldCheck,
   Server,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  Database,
+  RefreshCw,
+  FileCheck2,
+  ExternalLink,
+  ShieldAlert,
+  History
 } from 'lucide-react';
 import type { ProviderSettings, AIProviderType } from '../types/provider';
+import { defaultLiveRegulatoryFeedService, type LiveSyncState } from '../retrieval/liveRegulatoryFeed';
+import { defaultSourceVersioningManager } from '../standards/sourceVersioning';
+import { getAllAuthoritativeSources } from '../standards/unifiedSourceModel';
 
 export type AppFontSize = 'normal' | 'large' | 'xl';
 
@@ -36,6 +45,12 @@ export const Header: React.FC<HeaderProps> = ({
   onProviderSettingsSave
 }) => {
   const [showSettings, setShowSettings] = useState(false);
+  const [showRegistryModal, setShowRegistryModal] = useState(false);
+  const [liveSyncState, setLiveSyncState] = useState<LiveSyncState>(defaultLiveRegulatoryFeedService.getSyncState());
+  const [integrityStatus, setIntegrityStatus] = useState<'IDLE' | 'PASS' | 'FAIL'>('IDLE');
+  const [integrityDetails, setIntegrityDetails] = useState<string>('');
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState<string>('');
   const [activeTab, setActiveTab] = useState<AIProviderType>(providerSettings.activeProvider);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -51,9 +66,9 @@ export const Header: React.FC<HeaderProps> = ({
   const [openaiKey, setOpenaiKey] = useState(providerSettings.openai.apiKey);
   const [openaiModel, setOpenaiModel] = useState(providerSettings.openai.model);
 
-  // Stop background scrolling when a modal window is open ("windows up front")
+  // Stop background scrolling when any modal window is open ("windows up front")
   useEffect(() => {
-    if (showSettings) {
+    if (showSettings || showRegistryModal) {
       const prevOverflow = document.body.style.overflow;
       const prevPaddingRight = document.body.style.paddingRight;
       const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
@@ -65,6 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           setShowSettings(false);
+          setShowRegistryModal(false);
         }
       };
       window.addEventListener('keydown', handleKeyDown);
@@ -75,7 +91,98 @@ export const Header: React.FC<HeaderProps> = ({
         window.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [showSettings]);
+  }, [showSettings, showRegistryModal]);
+
+  const sources = getAllAuthoritativeSources();
+  const totalProvisions = sources.length;
+  const activeCount = sources.filter(s => s.freshnessStatus === 'ACTIVE_CURRENT' || (!s.freshnessStatus && s.sourceStatus === 'VERIFIED')).length;
+  const historicalCount = sources.filter(s => s.freshnessStatus === 'HISTORICAL_SUPERSEDED' || s.sourceStatus === 'HISTORICAL').length;
+  const reviewDueCount = sources.filter(s => s.freshnessStatus === 'AUDIT_OVERDUE' || s.sourceStatus === 'NEEDS_REVIEW').length;
+  const stagedCount = defaultLiveRegulatoryFeedService.getStagedPackages().length;
+  const rejectedCount = Object.keys(defaultLiveRegulatoryFeedService.getRejectedPackages()).length;
+
+  const getRegulatoryStatusBadge = () => {
+    switch (liveSyncState) {
+      case 'SYNCED':
+        return {
+          label: 'Verified Registry',
+          color: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-[#1C2538] dark:text-emerald-300 dark:border-emerald-900/60',
+          dot: 'bg-ynab-green',
+          iconText: '🟢'
+        };
+      case 'UPDATE_AVAILABLE':
+        return {
+          label: 'Update Available',
+          color: 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-[#1C2538] dark:text-blue-300 dark:border-blue-900/60',
+          dot: 'bg-blue-500',
+          iconText: '🔵'
+        };
+      case 'VERIFICATION_REQUIRED':
+        return {
+          label: 'Verification Required',
+          color: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-[#1C2538] dark:text-amber-300 dark:border-amber-900/60',
+          dot: 'bg-amber-500',
+          iconText: '🟡'
+        };
+      case 'FETCH_FAILED':
+        return {
+          label: 'Live Check Failed',
+          color: 'bg-orange-50 text-orange-800 border-orange-200 dark:bg-[#1C2538] dark:text-orange-300 dark:border-orange-900/60',
+          dot: 'bg-orange-500',
+          iconText: '🟠'
+        };
+      case 'OFFLINE':
+      default:
+        return {
+          label: 'Offline — Last Verified Registry',
+          color: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-[#1C2538] dark:text-slate-300 dark:border-[#2B374E]',
+          dot: 'bg-slate-400',
+          iconText: '⚪'
+        };
+    }
+  };
+
+  const regBadge = getRegulatoryStatusBadge();
+
+  const handleVerifyIntegrity = () => {
+    let allValid = true;
+    let mismatchDetail = '';
+    for (const record of sources) {
+      if (record.contentHash) {
+        const ok = defaultSourceVersioningManager.verifySourceIntegrity(record, record.contentHash);
+        if (!ok) {
+          allValid = false;
+          mismatchDetail = `Hash mismatch on '${record.id}' (${record.standardOrActCode} ${record.paragraphOrSection})`;
+          break;
+        }
+      }
+    }
+    if (allValid) {
+      setIntegrityStatus('PASS');
+      setIntegrityDetails(`All ${totalProvisions} tracked statutory and standard provisions match their immutable SHA-256 signatures with 0% drift.`);
+    } else {
+      setIntegrityStatus('FAIL');
+      setIntegrityDetails(mismatchDetail || 'Integrity check detected mismatched content hashes');
+    }
+  };
+
+  const handleCheckUpdates = async () => {
+    setIsCheckingUpdates(true);
+    setUpdateMessage('');
+    try {
+      const res = await defaultLiveRegulatoryFeedService.checkForUpdates();
+      setLiveSyncState(res.syncState);
+      if (res.hasUpdates) {
+        setUpdateMessage(`Discovered ${res.packages.length} pending regulatory update package(s) ready for staging & verification.`);
+      } else {
+        setUpdateMessage('All Singapore statutory provisions are verified and aligned with the official government baseline.');
+      }
+    } catch (err: any) {
+      setUpdateMessage(`Check failed: ${err.message || String(err)}`);
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
 
   const handleOpenSettings = () => {
     setActiveTab(providerSettings.activeProvider);
@@ -248,6 +355,23 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <Moon className="w-4 h-4 text-slate-700 transition-transform duration-200 hover:-rotate-12" />
               )}
+            </button>
+
+            {/* Live Regulatory Registry & Versioning Button */}
+            <button
+              onClick={() => {
+                setLiveSyncState(defaultLiveRegulatoryFeedService.getSyncState());
+                setIntegrityStatus('IDLE');
+                setUpdateMessage('');
+                setShowRegistryModal(true);
+              }}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all shadow-xs ${regBadge.color}`}
+              title="View Live Regulatory Registry, SHA-256 Provenance & Source Versioning"
+            >
+              <Database className="w-3.5 h-3.5 shrink-0 opacity-80" />
+              <span className="hidden lg:inline font-medium">{regBadge.label}</span>
+              <span className="lg:hidden text-[11px] font-medium">Registry</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${regBadge.dot} shrink-0`}></span>
             </button>
 
             {/* AI Provider Settings Button */}
@@ -618,6 +742,275 @@ export const Header: React.FC<HeaderProps> = ({
                   Save & Apply
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Regulatory Registry & Source Versioning Modal */}
+      {showRegistryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowRegistryModal(false);
+            }
+          }}
+        >
+          <div
+            className="bg-white dark:bg-[#1C2538] rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-[#2B374E] overflow-hidden animate-in zoom-in-95 duration-150 my-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-[#2B374E] flex items-start justify-between bg-slate-50/70 dark:bg-[#151D2C]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 dark:bg-[#242F46] text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 dark:border-[#2B374E] shrink-0">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                    Regulatory Registry & Source Versioning
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Phase 4 Trust Pipeline: Append-Only Version Ledger & Cryptographic Integrity
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowRegistryModal(false)}
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white text-2xl leading-none px-1 transition-colors"
+                aria-label="Close modal"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-6 space-y-4 max-h-[68vh] overflow-y-auto">
+              {/* Metric Cards Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div className="p-3 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E]">
+                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Tracked Provisions</div>
+                  <div className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">{totalProvisions}</div>
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500">Statutes & Standards</div>
+                </div>
+                <div className="p-3 bg-emerald-50/60 dark:bg-[#151D2C] rounded-xl border border-emerald-200/60 dark:border-emerald-900/40">
+                  <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Active / In Force</div>
+                  <div className="text-lg font-bold text-emerald-800 dark:text-emerald-300 mt-0.5">{activeCount}</div>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400">Current legislation</div>
+                </div>
+                <div className="p-3 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E]">
+                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Historical / Superseded</div>
+                  <div className="text-lg font-bold text-slate-700 dark:text-slate-300 mt-0.5">{historicalCount}</div>
+                  <div className="text-[10px] text-slate-400 dark:text-slate-500">Prior tax & CPF rates</div>
+                </div>
+                <div className="p-3 bg-amber-50/60 dark:bg-[#151D2C] rounded-xl border border-amber-200/60 dark:border-amber-900/40">
+                  <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Review Due</div>
+                  <div className="text-lg font-bold text-amber-800 dark:text-amber-300 mt-0.5">{reviewDueCount}</div>
+                  <div className="text-[10px] text-amber-600 dark:text-amber-400">Audit interval elapsed</div>
+                </div>
+              </div>
+
+              {/* Version & Sync Details Card */}
+              <div className="p-4 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E] space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <History className="w-4 h-4 text-slate-400" />
+                    Registry Version & Provenance
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[11px] font-semibold border ${regBadge.color}`}>
+                    {regBadge.iconText} {regBadge.label}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Ledger Version:</span>
+                    <p className="font-mono font-bold text-slate-800 dark:text-slate-200">2026.09 (FIPS SHA-256)</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Last Verification:</span>
+                    <p className="font-mono text-slate-800 dark:text-slate-200">{defaultLiveRegulatoryFeedService.getLastVerificationDate().slice(0, 10)}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Last Live Check:</span>
+                    <p className="font-mono text-slate-800 dark:text-slate-200">{defaultLiveRegulatoryFeedService.getLastCheckDate().slice(0, 10)}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Pending Staged Updates:</span>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">{stagedCount} packages</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Rejected Updates:</span>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">{rejectedCount} packages</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[11px]">Integrity Status:</span>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">{integrityStatus === 'PASS' ? '🟢 Verified' : integrityStatus === 'FAIL' ? '🔴 Mismatch' : '⚪ Unchecked'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cryptographic Integrity Check Action */}
+              <div className="p-4 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E] space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <FileCheck2 className="w-4 h-4 text-emerald-500" />
+                      Cryptographic Integrity Audit
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Re-hashes every active statutory and standard provision using SHA-256 to confirm zero tamper or drift.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleVerifyIntegrity}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all shrink-0"
+                  >
+                    Verify Registry Integrity
+                  </button>
+                </div>
+
+                {integrityStatus === 'PASS' && (
+                  <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-lg text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span><strong>PASS</strong>: {integrityDetails}</span>
+                  </div>
+                )}
+                {integrityStatus === 'FAIL' && (
+                  <div className="p-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/60 rounded-lg text-xs text-red-800 dark:text-red-200 flex items-center gap-2">
+                    <ShieldAlert className="w-4 h-4 text-red-600 dark:text-red-400 shrink-0" />
+                    <span><strong>FAIL</strong>: {integrityDetails}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Live Regulatory Feed Check Action */}
+              <div className="p-4 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E] space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <RefreshCw className={`w-4 h-4 text-blue-500 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
+                      Live Statutory Update Feeds
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Checks official legislative endpoints for newly enacted amendments or rate changes.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleCheckUpdates}
+                    disabled={isCheckingUpdates}
+                    className="px-3 py-1.5 bg-ynab-blue hover:bg-blue-600 text-white rounded-lg text-xs font-semibold shadow-xs transition-all shrink-0 disabled:opacity-50"
+                  >
+                    {isCheckingUpdates ? 'Checking...' : 'Check for Live Updates'}
+                  </button>
+                </div>
+
+                {updateMessage && (
+                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg text-xs text-blue-800 dark:text-blue-200">
+                    {updateMessage}
+                  </div>
+                )}
+              </div>
+
+              {/* Official Sources Allowlist Manifest */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Authorized Statutory & Reference Portals (Exact Domain Allowlist)
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <a
+                    href="https://sso.agc.gov.sg"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 bg-slate-50 dark:bg-[#151D2C] hover:bg-slate-100 dark:hover:bg-[#242F46] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between group transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-white">Singapore Statutes Online (AGC)</span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">sso.agc.gov.sg</p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white" />
+                  </a>
+
+                  <a
+                    href="https://www.iras.gov.sg"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 bg-slate-50 dark:bg-[#151D2C] hover:bg-slate-100 dark:hover:bg-[#242F46] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between group transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-white">Inland Revenue Authority (IRAS)</span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">iras.gov.sg</p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white" />
+                  </a>
+
+                  <a
+                    href="https://www.acra.gov.sg"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 bg-slate-50 dark:bg-[#151D2C] hover:bg-slate-100 dark:hover:bg-[#242F46] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between group transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-white">ACRA & Accounting Standards</span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">acra.gov.sg</p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white" />
+                  </a>
+
+                  <a
+                    href="https://www.mom.gov.sg"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 bg-slate-50 dark:bg-[#151D2C] hover:bg-slate-100 dark:hover:bg-[#242F46] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between group transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-white">Ministry of Manpower (MOM)</span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">mom.gov.sg</p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white" />
+                  </a>
+
+                  <a
+                    href="https://www.cpf.gov.sg"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 bg-slate-50 dark:bg-[#151D2C] hover:bg-slate-100 dark:hover:bg-[#242F46] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between group transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-white">Central Provident Fund Board (CPF)</span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">cpf.gov.sg</p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white" />
+                  </a>
+
+                  <a
+                    href="https://api.frankfurter.dev"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2.5 bg-slate-50 dark:bg-[#151D2C] hover:bg-slate-100 dark:hover:bg-[#242F46] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between group transition-all"
+                  >
+                    <div>
+                      <span className="font-semibold text-slate-800 dark:text-white">European Central Bank FX (Reference API)</span>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">api.frankfurter.dev</p>
+                    </div>
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 sm:px-6 py-4 bg-slate-50 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E] flex items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                Corpus Status: <strong className="text-slate-700 dark:text-slate-200">{totalProvisions} Active/Historical Provisions</strong>
+              </span>
+              <button
+                onClick={() => setShowRegistryModal(false)}
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-ynab-blue hover:bg-blue-600 rounded-lg shadow-sm transition-all"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

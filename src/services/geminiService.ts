@@ -144,6 +144,9 @@ export function evaluateFastPathEligibility(
     if (!claimEvidence.effectiveDate || claimEvidence.effectiveDate.toLowerCase().includes('unknown')) {
       return { canBypass: false, reason: `Evidence for '${claim.topic}' lacks a verified effective date` };
     }
+    if (claimEvidence.sourceAuthority === 'REFERENCE_API') {
+      return { canBypass: false, reason: `Evidence for '${claim.topic}' is from a reference API, not an approved statutory authority` };
+    }
 
     // Temporal freshness validation: AUDIT_OVERDUE or HISTORICAL provisions cannot satisfy current fast path
     const claimFreshness = claimEvidence.freshnessStatus || defaultSourceFreshnessManager.evaluateSourceFreshness(claimEvidence);
@@ -192,6 +195,9 @@ export function evaluateFastPathEligibility(
     // Condition 4: The source is current/effective for the relevant period
     if (!matched.effectiveDate || matched.effectiveDate.toLowerCase().includes('unknown')) {
       return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' lacks a verified effective date` };
+    }
+    if (matched.sourceAuthority === 'REFERENCE_API') {
+      return { canBypass: false, reason: `Supporting source '${matched.documentTitle}' is from a reference API and cannot satisfy statutory authority requirements` };
     }
 
     const matchedFreshness = matched.freshnessStatus || defaultSourceFreshnessManager.evaluateSourceFreshness(matched);

@@ -1,9 +1,11 @@
-﻿export interface FxRateResult {
+export interface FxRateResult {
   rate: number;
   date: string;
   from: string;
   to: string;
   source: string; // e.g. "Frankfurter API (European Central Bank)"
+  sourceAuthority?: 'REFERENCE_API';
+  sourceClass?: 'REFERENCE_DATA';
 }
 
 const cache: Record<string, FxRateResult> = {};

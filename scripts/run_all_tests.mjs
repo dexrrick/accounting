@@ -6,14 +6,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
 const testSuites = [
-  { name: '1. Phase 3 Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs' },
-  { name: '2. Sidequest Correction Pass', file: 'test_sidequest_correction.mjs' },
-  { name: '3. Sidequest 1.1 Fast-Path Grounding', file: 'test_sidequest_1_1.mjs' },
-  { name: '4. Performance Architecture & Telemetry', file: 'test_performance_architecture.mjs' },
-  { name: '5. Phase 2 Grounded Reasoning & Citations', file: 'test_grounded_reasoning.mjs' },
-  { name: '6. Phase 1 Source-Backed Foundation', file: 'test_source_backed_architecture.mjs' },
-  { name: '7. Singapore Statutory Engine', file: 'test_statutory_engine.mjs' },
-  { name: '8. Universal Accounting Engine & FX', file: 'test_universal.mjs' }
+  { name: '1. Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs' },
+  { name: '2. Phase 3 Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs' },
+  { name: '3. Sidequest Correction Pass', file: 'test_sidequest_correction.mjs' },
+  { name: '4. Sidequest 1.1 Fast-Path Grounding', file: 'test_sidequest_1_1.mjs' },
+  { name: '5. Performance Architecture & Telemetry', file: 'test_performance_architecture.mjs' },
+  { name: '6. Phase 2 Grounded Reasoning & Citations', file: 'test_grounded_reasoning.mjs' },
+  { name: '7. Phase 1 Source-Backed Foundation', file: 'test_source_backed_architecture.mjs' },
+  { name: '8. Singapore Statutory Engine', file: 'test_statutory_engine.mjs' },
+  { name: '9. Universal Accounting Engine & FX', file: 'test_universal.mjs' }
 ];
 
 function runCommand(cmd, args, cwd) {
