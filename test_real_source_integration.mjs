@@ -188,14 +188,14 @@ async function runRealSourceIntegrationTests() {
           authority: 'REFERENCE_API',
           authorityName: 'European Central Bank Reference Rate API',
           sourcePublisher: 'European Central Bank / Frankfurter API',
-          legalOrStandardInstrument: 'SFRS(I) 1-21 Foreign Exchange Reference',
+          legalOrStandardInstrument: 'ECB Foreign Exchange Reference Data',
           principleSummary: 'Daily spot exchange reference rates for SGD currency pairs',
           domain: 'ACCOUNTING_SFRS',
           jurisdiction: 'International / Singapore',
           tags: ['fx', 'exchange rate', 'spot rate'],
           sourceStatus: 'NEEDS_REVIEW',
-          sourceType: 'AUTHORITATIVE_SOURCE',
-          evidenceTier: 'PRIMARY_SOURCE',
+          sourceType: 'CURATED_SUMMARY',
+          evidenceTier: 'CURATED_SUMMARY',
           isVerbatimText: true,
           lastVerifiedDate: fetchRes.retrievedAt.split('T')[0],
           provenance: 'LIVE_PATCH',
@@ -204,7 +204,8 @@ async function runRealSourceIntegrationTests() {
           provisionHash,
           contentHash: provisionHash,
           extractionStatus: 'EXACT',
-          sourceLocator: extraction.sourceLocator
+          sourceLocator: extraction.sourceLocator,
+          fxObservation: extraction.fxObservation
         };
 
         const valRes = defaultExternalSourceValidator.validateProvisionMapping(updateRec);

@@ -32,6 +32,8 @@ const cpfHtmlFixture = fs.readFileSync(path.join(fixturesDir, 'cpf-ow-ceiling.ht
 const frankfurterJsonFixture = fs.readFileSync(path.join(fixturesDir, 'frankfurter-response.json'), 'utf-8');
 import {
   ExternalSourceValidator,
+  CANONICAL_ACT_MAP,
+  getCanonicalActCode,
   defaultExternalSourceValidator
 } from './src/retrieval/externalSourceValidator.ts';
 import {
@@ -1473,6 +1475,10 @@ async function runTests() {
     const extraction = extractFrankfurterProvision(frankfurterJsonFixture, 'SGD', ['USD', 'EUR']);
 
     assert.strictEqual(extraction.extractionStatus, 'EXACT');
+    assert.strictEqual(extraction.standardOrActCode, 'FX_OBSERVATION');
+    assert.strictEqual(extraction.paragraphOrSection, 'SPOT_RATES_SGD');
+    assert.strictEqual(extraction.sourceLocator.sourceType, 'JSON');
+    assert.ok(extraction.sourceLocator.canonicalLocator.includes('Frankfurter > rates > SGD'));
     assert.ok(extraction.fxObservation);
     assert.strictEqual(extraction.fxObservation.sourceAuthority, 'REFERENCE_API');
     assert.strictEqual(extraction.fxObservation.provider, 'FRANKFURTER');
@@ -1494,6 +1500,262 @@ async function runTests() {
     // Only REFERENCE_API authority accepts frankfurter.dev
     const refCheck = validator.validateCanonicalUrl(fxUrl, 'REFERENCE_API');
     assert.strictEqual(refCheck.isValid, true);
+  });
+
+  console.log('\n[12. PHASE 4.2 HARDENING: STRUCTURAL EXTRACTION, LOCATOR IDENTITY & ADVERSARIAL DEFENSE]');
+
+  it('12A (SSO Adversarial). Target phrasing in historical notes or nav fails when structural node missing', () => {
+    // Section 201(5) wording injected into irrelevant nav, footer, or historical note without div#pr201-
+    const adversarialHtml = `
+      <!DOCTYPE html><html><body>
+        <nav><a href="/201">(5) The financial statements shall comply with the requirements of the accounting standards...</a></nav>
+        <div id="historical-notes">
+          <h3>Historical Note</h3>
+          <p>(5) The financial statements shall comply with the requirements of the accounting standards under the repealed Act.</p>
+        </div>
+        <footer>Section 201(5) statutory commentary</footer>
+      </body></html>
+    `;
+    const res = extractSSOProvision(adversarialHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(res.extractionStatus, 'FAILED');
+    assert.strictEqual(res.text, '');
+    assert.deepStrictEqual(res.sourceLocator, {});
+  });
+
+  it('12B (SSO Nested Container). Balanced tag parser correctly preserves outer container boundary across nested <div> tags', () => {
+    // Nested div structure inside the authentic pr201- element
+    const nestedHtml = `
+      <!DOCTYPE html><html><body>
+        <div id="legisContent">
+          <div class="prov1" id="pr201-">
+            <div class="marginal-note"><span>Accounts compliance</span></div>
+            <div class="sub-clause">
+              <div class="para-indent">
+                (5) The financial statements shall comply with the requirements of the accounting standards made or formulated by the Accounting Standards Council under Part 3 of the Accounting Standards Act 2007 and give a true and fair view of the financial position and performance of the company.
+              </div>
+            </div>
+            <div class="cross-reference"><small>Ref: S 201(5)</small></div>
+          </div>
+          <div class="prov1" id="pr201A-">Next section text</div>
+        </div>
+      </body></html>
+    `;
+    const res = extractSSOProvision(nestedHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(res.extractionStatus, 'EXACT');
+    assert.ok(res.text.includes('comply with the requirements of the accounting standards'));
+    assert.ok(res.text.includes('give a true and fair view'));
+    // Crucial check: parser did NOT prematurely stop at the first </div> from marginal-note
+    assert.ok(res.text.includes('Ref: S 201(5)'));
+    assert.strictEqual(res.sourceLocator.elementId, 'pr201-');
+    assert.strictEqual(res.sourceLocator.section, '201');
+    assert.strictEqual(res.sourceLocator.subsection, '5');
+    assert.strictEqual(res.sourceLocator.canonicalLocator, 'Companies Act 1967 > Section 201 > Subsection (5)');
+  });
+
+  it('12C (Truncated Container Fail-Closed). Missing closing tag triggers FAILED status instead of capturing corrupt content', () => {
+    // Unclosed outer div
+    const truncatedHtml = `
+      <!DOCTYPE html><html><body>
+        <div class="prov1" id="pr201-">
+          (5) The financial statements shall comply with the requirements of the accounting standards...
+    `;
+    const res = extractSSOProvision(truncatedHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(res.extractionStatus, 'FAILED');
+    assert.strictEqual(res.text, '');
+  });
+
+  it('12D (Affirmative Section/Subsection Validation). Validator affirmatively verifies extracted section and subsection identity', () => {
+    const validator = new ExternalSourceValidator();
+
+    // Case 1: Locator section 202 does not match claimed Section 201(5)
+    const mismatchedSection = {
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Valid unabridged statutory text',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        document: 'Companies Act 1967',
+        act: 'CoA1967',
+        section: '202', // Mismatched!
+        subsection: '5',
+        sourceNode: 'div#pr202-',
+        boundary: { startOffset: 10, endOffset: 100 }
+      }
+    };
+    const resSec = validator.validateProvisionMapping(mismatchedSection);
+    assert.strictEqual(resSec.isValid, false);
+    assert.strictEqual(resSec.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(resSec.reason.includes('contradicts locator section'));
+
+    // Case 2: Locator subsection 4 does not match claimed Section 201(5)
+    const mismatchedSubsection = {
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Valid unabridged statutory text',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        document: 'Companies Act 1967',
+        act: 'CoA1967',
+        section: '201',
+        subsection: '4', // Mismatched!
+        sourceNode: 'div#pr201-',
+        boundary: { startOffset: 10, endOffset: 100 }
+      }
+    };
+    const resSub = validator.validateProvisionMapping(mismatchedSubsection);
+    assert.strictEqual(resSub.isValid, false);
+    assert.strictEqual(resSub.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(resSub.reason.includes('contradicts locator subsection'));
+
+    // Case 3: Exact match succeeds
+    const exactMatch = {
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Valid unabridged statutory text',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        document: 'Companies Act 1967',
+        act: 'CoA1967',
+        section: '201',
+        subsection: '5',
+        sourceNode: 'div#pr201-',
+        boundary: { startOffset: 10, endOffset: 100 }
+      }
+    };
+    const resOk = validator.validateProvisionMapping(exactMatch);
+    assert.strictEqual(resOk.isValid, true);
+  });
+
+  it('12E (Canonical Act Identity Mapping). Validates canonical identity between statutory titles and short codes', () => {
+    const validator = new ExternalSourceValidator();
+
+    // Direct mapping function assertions
+    assert.strictEqual(getCanonicalActCode('Companies Act 1967'), 'CoA1967');
+    assert.strictEqual(getCanonicalActCode('CoA1967'), 'CoA1967');
+    assert.strictEqual(CANONICAL_ACT_MAP['Income Tax Act 1947'], 'ITA1947');
+    assert.strictEqual(CANONICAL_ACT_MAP['Employment Act 1968'], 'EA1968');
+    assert.strictEqual(CANONICAL_ACT_MAP['Central Provident Fund Act 1953'], 'CPFA1953');
+    assert.strictEqual(CANONICAL_ACT_MAP['FX_OBSERVATION'], 'FX_OBSERVATION');
+
+    // Canonical mapping equivalence: 'Companies Act 1967' and 'CoA1967' map to the same canonical Act
+    const titleWithCodeLocator = {
+      standardOrActCode: 'Companies Act 1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Valid unabridged statutory text',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        act: 'CoA1967',
+        section: '201',
+        subsection: '5',
+        sourceNode: 'div#pr201-',
+        boundary: { startOffset: 10, endOffset: 100 }
+      }
+    };
+    const resOk = validator.validateProvisionMapping(titleWithCodeLocator);
+    assert.strictEqual(resOk.isValid, true);
+
+    // Cross-statute contradiction: Document is Companies Act but locator is Income Tax Act
+    const crossActContradiction = {
+      standardOrActCode: 'Companies Act 1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      sourceText: 'Valid unabridged statutory text',
+      isVerbatimText: true,
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        act: 'ITA1947',
+        section: '43',
+        sourceNode: 'div#cit-rate',
+        boundary: { startOffset: 10, endOffset: 100 }
+      }
+    };
+    const resFail = validator.validateProvisionMapping(crossActContradiction);
+    assert.strictEqual(resFail.isValid, false);
+    assert.strictEqual(resFail.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(resFail.reason.includes('Canonical Act mismatch'));
+  });
+
+  it('12F (Adversarial Decoys Across All Authorities). Decoys in FAQs, press releases, blogs and announcements fail closed', () => {
+    // 1. IRAS decoy: Tax rate text in press release without #cit-rate
+    const irasDecoy = '<div class="press-release"><h1>Archive 2020</h1><p>The corporate income tax rate in Singapore is 17%.</p></div>';
+    assert.strictEqual(extractIRASProvision(irasDecoy).extractionStatus, 'FAILED');
+
+    // 2. ACRA decoy: Audit exemption criteria in blog post without #small-company
+    const acraDecoy = '<aside class="blog"><h2>Opinion</h2><p>total annual revenue does not exceed $10 million; total assets does not exceed $10 million; number of full-time employees does not exceed 50.</p></aside>';
+    assert.strictEqual(extractACRAProvision(acraDecoy).extractionStatus, 'FAILED');
+
+    // 3. MOM decoy: Itemised payslip phrasing in FAQ without #itemised-payslips
+    const momDecoy = '<div id="faq-archive"><h3>Old FAQ</h3><p>employers must issue itemised payslips to all employees covered by the Employment Act.</p></div>';
+    assert.strictEqual(extractMOMProvision(momDecoy).extractionStatus, 'FAILED');
+
+    // 4. CPF decoy: OW ceiling figures in forum comment without #ow-ceiling
+    const cpfDecoy = '<div class="forum-comment"><p>The Ordinary Wage ceiling increases to $6,800 then $7,400 then $8,000.</p></div>';
+    assert.strictEqual(extractCPFProvision(cpfDecoy).extractionStatus, 'FAILED');
+  });
+
+  it('12G (Decoy vs Authentic Target Node Resolution). Parser extracts solely from authentic node when document contains both obsolete note and current node', () => {
+    const mixedHtml = `
+      <!DOCTYPE html><html><body>
+        <div id="historical-archive">
+          <h2>Repealed Provisions</h2>
+          <div class="historical-prov">
+            (5) The financial statements shall comply with repealed 1967 accounting principles and requirements.
+          </div>
+        </div>
+        <div id="main-legislation">
+          <div class="prov1" id="pr201-">
+            (5) The financial statements shall comply with the requirements of the accounting standards made or formulated by the Accounting Standards Council under Part 3 of the Accounting Standards Act 2007 and give a true and fair view of the financial position and performance of the company.
+          </div>
+        </div>
+      </body></html>
+    `;
+    const res = extractSSOProvision(mixedHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(res.extractionStatus, 'EXACT');
+    assert.ok(res.text.includes('Accounting Standards Council under Part 3 of the Accounting Standards Act 2007'));
+    assert.strictEqual(res.text.includes('repealed 1967 accounting principles'), false);
+    assert.strictEqual(res.sourceLocator.elementId, 'pr201-');
+  });
+
+  await itAsync('12H (Decoupled FX_OBSERVATION Pipeline). Frankfurter adapter produces clean FX_OBSERVATION record with structured observation', async () => {
+    const fxAdapter = new FrankfurterReferenceAdapter();
+    const mockRetriever = {
+      fetchOfficialSource: async () => ({
+        status: 'SUCCESS',
+        content: frankfurterJsonFixture,
+        retrievedAt: '2026-09-11T12:00:00Z',
+        httpStatus: 200
+      })
+    };
+
+    const pkg = await fxAdapter.checkForUpdates(mockRetriever, []);
+    assert.ok(pkg);
+    assert.strictEqual(pkg.authority, 'REFERENCE_API');
+    assert.strictEqual(pkg.updates.length, 1);
+
+    const update = pkg.updates[0];
+    assert.strictEqual(update.standardOrActCode, 'FX_OBSERVATION');
+    assert.strictEqual(update.paragraphOrSection, 'SPOT_RATES_SGD');
+    assert.strictEqual(update.legalOrStandardInstrument, 'ECB Foreign Exchange Reference Data');
+    assert.strictEqual(update.sourceType, 'CURATED_SUMMARY');
+    assert.strictEqual(update.evidenceTier, 'CURATED_SUMMARY');
+    assert.strictEqual(update.sourceLocator.sourceType, 'JSON');
+    assert.ok(update.sourceLocator.canonicalLocator.includes('Frankfurter > rates > SGD'));
+    assert.ok(update.fxObservation);
+    assert.strictEqual(update.fxObservation.provider, 'FRANKFURTER');
+    assert.strictEqual(update.fxObservation.base, 'SGD');
+
+    // Provision mapping validator approves the FX_OBSERVATION record
+    const validator = new ExternalSourceValidator();
+    const valRes = validator.validateProvisionMapping(update);
+    assert.strictEqual(valRes.isValid, true);
   });
 
   console.log('=============================================================');

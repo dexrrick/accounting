@@ -47,6 +47,29 @@ export interface ExternalValidationResult {
 }
 
 /**
+ * Deterministic mapping between full legislative titles and statutory short codes.
+ */
+export const CANONICAL_ACT_MAP: Record<string, string> = {
+  'Companies Act 1967': 'CoA1967',
+  'CoA1967': 'CoA1967',
+  'Income Tax Act 1947': 'ITA1947',
+  'ITA1947': 'ITA1947',
+  'Employment Act 1968': 'EA1968',
+  'EA1968': 'EA1968',
+  'Central Provident Fund Act 1953': 'CPFA1953',
+  'CPFA1953': 'CPFA1953',
+  'Goods and Services Tax Act 1993': 'GSTA1993',
+  'GSTA1993': 'GSTA1993',
+  'FX_OBSERVATION': 'FX_OBSERVATION'
+};
+
+export function getCanonicalActCode(actOrCode?: string): string | undefined {
+  if (!actOrCode) return undefined;
+  const trimmed = actOrCode.trim();
+  return CANONICAL_ACT_MAP[trimmed] || trimmed;
+}
+
+/**
  * External Source Validator.
  * Enforces security gates, exact hostname checks, HTTPS/port 443 enforcement,
  * redirect validation, and document structural checks.
@@ -228,7 +251,7 @@ export class ExternalSourceValidator {
 
   /**
    * Validates exact provision extraction, anti-truncation verbatim integrity,
-   * and structural section/provision mapping.
+   * and structural section/provision mapping with affirmative canonical Act and section identity.
    */
   public validateProvisionMapping(doc: AuthoritativeSourceRecord): ExternalValidationResult {
     // 1. Extraction Status Check
@@ -278,21 +301,75 @@ export class ExternalSourceValidator {
       }
 
       // Assert source locator presence
-      if (!doc.sourceLocator || (!doc.sourceLocator.heading && !doc.sourceLocator.elementId)) {
+      if (!doc.sourceLocator || (!doc.sourceLocator.heading && !doc.sourceLocator.elementId && !doc.sourceLocator.sourceNode)) {
         return {
           isValid: false,
           errorCode: 'INVALID_VERBATIM_CLAIM',
-          reason: 'Verbatim record must have a populated sourceLocator with heading or elementId'
+          reason: 'Verbatim record must have a populated sourceLocator with heading, elementId, or sourceNode'
         };
       }
     }
 
-    // 3. Deterministic Source Mapping & Provision Boundaries Check
+    // 3. Deterministic Source Mapping & Affirmative Identity Verification
     if (doc.sourceLocator) {
+      // Affirmative Canonical Act Mapping
+      if (doc.sourceLocator.act) {
+        const docActCanonical = getCanonicalActCode(doc.standardOrActCode);
+        const locActCanonical = getCanonicalActCode(doc.sourceLocator.act);
+        if (docActCanonical && locActCanonical && docActCanonical !== locActCanonical) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: `Canonical Act mismatch: document '${doc.standardOrActCode}' (${docActCanonical}) contradicts locator act '${doc.sourceLocator.act}' (${locActCanonical})`
+          };
+        }
+      }
+
+      // Affirmative Section Check
+      if (doc.sourceLocator.section) {
+        const claimedSecNum = doc.paragraphOrSection.match(/(?:Section|Sec\.?|S\.?)\s*(\d+)/i)?.[1];
+        const locSecNum = doc.sourceLocator.section.match(/\d+/)?.[0];
+        if (claimedSecNum && locSecNum && claimedSecNum !== locSecNum) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: `Provision mapping mismatch: claimed section '${doc.paragraphOrSection}' contradicts locator section '${doc.sourceLocator.section}'`
+          };
+        }
+
+        // Check schedule / part identity if non-numeric
+        const claimedSchedule = doc.paragraphOrSection.match(/((?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth|Eleventh|Twelfth|Thirteenth|Part\s+[IVXLCDM]+)\s*(?:Schedule|Part)?)/i)?.[1];
+        const locSchedule = doc.sourceLocator.section.match(/((?:First|Second|Third|Fourth|Fifth|Sixth|Seventh|Eighth|Ninth|Tenth|Eleventh|Twelfth|Thirteenth|Part\s+[IVXLCDM]+)\s*(?:Schedule|Part)?)/i)?.[1];
+        if (claimedSchedule && locSchedule) {
+          const normClaimed = claimedSchedule.toLowerCase().replace(/\s+/g, '');
+          const normLocator = locSchedule.toLowerCase().replace(/\s+/g, '');
+          if (normClaimed !== normLocator) {
+            return {
+              isValid: false,
+              errorCode: 'PROVISION_MAPPING_MISMATCH',
+              reason: `Provision mapping mismatch: claimed schedule/part '${doc.paragraphOrSection}' contradicts locator section '${doc.sourceLocator.section}'`
+            };
+          }
+        }
+      }
+
+      // Affirmative Subsection Check
+      if (doc.sourceLocator.subsection) {
+        const claimedSub = doc.paragraphOrSection.match(/\((\d+[a-zA-Z]?)\)/)?.[1];
+        const locSub = doc.sourceLocator.subsection.replace(/[()]/g, '').trim();
+        if (claimedSub && locSub && claimedSub !== locSub) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: `Provision mapping mismatch: claimed subsection '(${claimedSub})' contradicts locator subsection '${doc.sourceLocator.subsection}'`
+          };
+        }
+      }
+
+      // Explicit contradiction in heading check
       const sectionNormalized = doc.paragraphOrSection.toLowerCase().replace(/[\s\-_(),.]/g, '');
       const headingNormalized = (doc.sourceLocator.heading || '').toLowerCase().replace(/[\s\-_(),.]/g, '');
 
-      // Check for explicit contradiction (e.g. claimed section 201(5) but heading indicates 201(4))
       if (headingNormalized && headingNormalized.includes('section') && sectionNormalized.includes('section')) {
         const claimedNum = sectionNormalized.match(/\d+/)?.[0];
         const headingNum = headingNormalized.match(/\d+/)?.[0];
@@ -303,11 +380,31 @@ export class ExternalSourceValidator {
             reason: `Provision mapping mismatch: claimed section '${doc.paragraphOrSection}' contradicts locator heading '${doc.sourceLocator.heading}'`
           };
         }
+
+        const claimedSub = doc.paragraphOrSection.match(/\((\d+)\)/)?.[1];
+        const headingSub = (doc.sourceLocator.heading || '').match(/\((\d+)\)/)?.[1];
+        if (claimedSub && headingSub && claimedSub !== headingSub) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: `Provision mapping mismatch: claimed section '${doc.paragraphOrSection}' contradicts locator heading '${doc.sourceLocator.heading}'`
+          };
+        }
       }
 
       // Check boundary offsets if provided
+      if (doc.sourceLocator.boundary) {
+        if (doc.sourceLocator.boundary.endOffset <= doc.sourceLocator.boundary.startOffset || doc.sourceLocator.boundary.startOffset < 0) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: 'Invalid provision boundaries: boundary offsets are invalid (endOffset must be strictly greater than startOffset)'
+          };
+        }
+      }
+
       if (doc.sourceLocator.startOffset !== undefined && doc.sourceLocator.endOffset !== undefined) {
-        if (doc.sourceLocator.endOffset <= doc.sourceLocator.startOffset) {
+        if (doc.sourceLocator.endOffset <= doc.sourceLocator.startOffset || doc.sourceLocator.startOffset < 0) {
           return {
             isValid: false,
             errorCode: 'PROVISION_MAPPING_MISMATCH',

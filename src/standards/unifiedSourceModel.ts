@@ -55,12 +55,7 @@ export interface AuthoritativeSourceRecord {
    */
   contentHash?: string; // 64-character hex SHA-256
   extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED';
-  sourceLocator?: {
-    heading?: string;
-    elementId?: string;
-    startOffset?: number;
-    endOffset?: number;
-  };
+  sourceLocator?: SourceLocator;
   provenance: 'LOCAL_STATIC' | 'LIVE_EXTERNAL' | 'LIVE_PATCH';
   canonicalSourceUrl?: string;
   sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'REFERENCE_API';
@@ -69,6 +64,25 @@ export interface AuthoritativeSourceRecord {
   versionId?: string;
   legislationCode?: string;
   amendmentInstrument?: string;
+  fxObservation?: any;
+}
+
+export interface SourceLocator {
+  heading?: string;
+  elementId?: string;
+  startOffset?: number;
+  endOffset?: number;
+  document?: string;
+  act?: string;
+  section?: string;
+  subsection?: string;
+  sourceNode?: string;
+  boundary?: {
+    startOffset: number;
+    endOffset: number;
+  };
+  sourceType?: 'HTML' | 'JSON';
+  canonicalLocator?: string;
 }
 
 /**

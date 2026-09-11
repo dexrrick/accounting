@@ -1,4 +1,4 @@
-import type { AuthoritativeSourceRecord } from './unifiedSourceModel';
+import type { AuthoritativeSourceRecord, SourceLocator } from './unifiedSourceModel';
 
 export interface SourceVersionMetadata {
   versionId: string;
@@ -32,12 +32,7 @@ export interface SourceVersionMetadata {
   documentHash?: string; // SHA-256 of complete raw HTTP response payload
   provisionHash?: string; // Canonical integrity hash: SHA-256 of extracted normalized provision
   extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED';
-  sourceLocator?: {
-    heading?: string;
-    elementId?: string;
-    startOffset?: number;
-    endOffset?: number;
-  };
+  sourceLocator?: SourceLocator;
   // Source-native legislation identity
   legislationCode?: string;
   revisionDate?: string;
