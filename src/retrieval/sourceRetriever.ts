@@ -18,6 +18,17 @@ export interface SourceRetrievalQuery {
   enableLiveCheck?: boolean;
 }
 
+export interface GroundingEvidence {
+  chunkId: string;
+  parentRecordId: string;
+  text: string;
+  sourceLocator?: import('../standards/unifiedSourceModel').SourceLocator;
+  sourceType: import('../standards/unifiedSourceModel').SourceType;
+  evidenceTier: import('../standards/unifiedSourceModel').EvidenceTier;
+  validFrom?: string;
+  validTo?: string;
+}
+
 export interface ISourceRetriever {
   retrieveSources(query: SourceRetrievalQuery): Promise<AuthoritativeSourceRecord[]>;
   getSourceById(id: string): AuthoritativeSourceRecord | undefined;

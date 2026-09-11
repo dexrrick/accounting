@@ -548,6 +548,16 @@ export class SourceVersioningManager {
   }
 
   /**
+   * Gets the head hash of the ledger for snapshot integrity verification.
+   */
+  public getLedgerHeadHash(): string {
+    const entries = this.getAllLedgerEntries();
+    if (entries.length === 0) return 'genesis-empty-ledger';
+    const last = entries[entries.length - 1];
+    return computeSha256(`${last.versionId}:::${last.recordedAt}:::${last.metadata.provisionHash || last.metadata.contentHash}`);
+  }
+
+  /**
    * Clears ledger and candidate state (for test isolation).
    */
   public reset(): void {

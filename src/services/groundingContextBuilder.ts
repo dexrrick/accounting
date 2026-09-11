@@ -11,7 +11,8 @@ import type {
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
 import { classifyQuestion } from '../classification/questionClassifier';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { defaultSourceRetriever, type ISourceRetriever } from '../retrieval/sourceRetriever';
+import type { ISourceRetriever } from '../retrieval/sourceRetriever';
+import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -147,7 +148,7 @@ export function formulateApplicationRules(
 export async function buildGroundedReasoningContext(
   userInput: string,
   currentScenario?: AccountingScenarioState | null,
-  retriever: ISourceRetriever = defaultSourceRetriever
+  retriever: ISourceRetriever = defaultAdvancedSourceRetriever
 ): Promise<GroundedReasoningContext> {
   // 1. Question Classification
   const classification = classifyQuestion(userInput);

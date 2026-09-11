@@ -1,0 +1,181 @@
+import type { HybridSearchResult } from './hybridRetriever';
+import { RETRIEVAL_CONFIG } from './retrievalConfig';
+import { defaultQueryTopicResolver, type QueryTopic } from './queryTopicResolver';
+
+export interface RerankContext {
+  query: string;
+  targetDate?: string;
+  referenceDate?: string;
+  topics?: QueryTopic[];
+  intent?: string;
+  authorities?: string[];
+  includeHistorical?: boolean;
+}
+
+/**
+ * Deterministic Evidence-Aware Reranker.
+ *
+ * Implements the Exact Stage 2 Formula:
+ * S_base(d) = 0.55 * S_lex(d) + 0.45 * S_sem(d)
+ * S_final(d) = S_base(d) + 0.10 * S_rrf(d) + Delta_tier(d) + Delta_topic(d)
+ *
+ * Invariants:
+ * 1. Evidence Tier: PRIMARY_SOURCE (+0.15) > OFFICIAL_GUIDANCE (+0.05) > CURATED_SUMMARY (0.00).
+ * 2. Multi-topic coverage: Guarantees balanced representation across distinct queried topics.
+ * 3. Deterministic tie-breaking:
+ *    - Score descending
+ *    - Evidence Tier precedence
+ *    - parentRecordId lexicographical ascending
+ *    - startOffset ascending
+ */
+export class DeterministicReranker {
+  /**
+   * Normalizes lexical scores to [0, 1] across candidate set.
+   */
+  private normalizeLexicalScores(candidates: HybridSearchResult[]): Map<string, number> {
+    const map = new Map<string, number>();
+    let maxLex = 0;
+
+    for (const c of candidates) {
+      if (c.lexicalScore && c.lexicalScore > maxLex) {
+        maxLex = c.lexicalScore;
+      }
+    }
+
+    for (const c of candidates) {
+      if (!c.lexicalScore || maxLex <= 0) {
+        map.set(c.chunk.id, 0);
+      } else {
+        map.set(c.chunk.id, Math.round((c.lexicalScore / maxLex) * 1e6) / 1e6);
+      }
+    }
+
+    return map;
+  }
+
+  /**
+   * Reranks hybrid candidates using exact 55/45 + tier + topic scoring.
+   */
+  public rerank(
+    candidates: HybridSearchResult[],
+    context: RerankContext
+  ): HybridSearchResult[] {
+    if (!candidates || candidates.length === 0) return [];
+
+    const normLexMap = this.normalizeLexicalScores(candidates);
+    const resolvedTopics = context.topics || defaultQueryTopicResolver.decomposeQuery(context.query).topics;
+
+    const scoredCandidates: Array<{ item: HybridSearchResult; finalScore: number }> = [];
+
+    for (const item of candidates) {
+      const chunk = item.chunk;
+
+      // 1. S_lex in [0, 1]
+      const sLex = normLexMap.get(chunk.id) || 0;
+
+      // 2. S_sem in [0, 1] (clamped non-negative cosine similarity)
+      const sSem = Math.max(0, item.vectorScore || 0);
+
+      // 3. S_base = 0.55 * S_lex + 0.45 * S_sem
+      const sBase = (RETRIEVAL_CONFIG.lexicalWeight * sLex) + (RETRIEVAL_CONFIG.semanticWeight * sSem);
+
+      // 4. S_rrf term (0.10 * S_rrf)
+      const sRrfTerm = RETRIEVAL_CONFIG.rrfWeight * (item.normalizedRrfScore || 0);
+
+      // 5. Delta_tier
+      let deltaTier = 0;
+      if (chunk.evidenceTier === 'PRIMARY_SOURCE') {
+        deltaTier = RETRIEVAL_CONFIG.tierWeights.PRIMARY_SOURCE;
+      } else if (chunk.evidenceTier === 'OFFICIAL_GUIDANCE') {
+        deltaTier = RETRIEVAL_CONFIG.tierWeights.OFFICIAL_GUIDANCE;
+      } else if (chunk.evidenceTier === 'CURATED_SUMMARY') {
+        deltaTier = RETRIEVAL_CONFIG.tierWeights.CURATED_SUMMARY;
+      } else {
+        deltaTier = RETRIEVAL_CONFIG.tierWeights.APPLICATION_RULE;
+      }
+
+      // 6. Delta_topic: +0.10 per distinct query topic satisfied
+      let deltaTopic = 0;
+      for (const topic of resolvedTopics) {
+        if (defaultQueryTopicResolver.chunkMatchesTopic(chunk.chunkText, topic)) {
+          deltaTopic += RETRIEVAL_CONFIG.topicMatchWeight;
+        }
+      }
+
+      // S_final = S_base + 0.10 * S_rrf + Delta_tier + Delta_topic
+      const finalScore = Math.round((sBase + sRrfTerm + deltaTier + deltaTopic) * 1e6) / 1e6;
+
+      const scoredItem: HybridSearchResult = {
+        ...item,
+        finalScore
+      };
+
+      scoredCandidates.push({ item: scoredItem, finalScore });
+    }
+
+    // Deterministic Sort
+    const tierOrder = (tier: string) => {
+      if (tier === 'PRIMARY_SOURCE') return 3;
+      if (tier === 'OFFICIAL_GUIDANCE') return 2;
+      return 1;
+    };
+
+    scoredCandidates.sort((a, b) => {
+      // 1. Final score descending
+      if (Math.abs(b.finalScore - a.finalScore) > 1e-6) {
+        return b.finalScore - a.finalScore;
+      }
+      // 2. Evidence tier precedence
+      const tierDiff = tierOrder(b.item.chunk.evidenceTier) - tierOrder(a.item.chunk.evidenceTier);
+      if (tierDiff !== 0) return tierDiff;
+
+      // 3. parentRecordId ascending
+      const idDiff = a.item.parentRecord.id.localeCompare(b.item.parentRecord.id);
+      if (idDiff !== 0) return idDiff;
+
+      // 4. startOffset ascending
+      return a.item.chunk.startOffset - b.item.chunk.startOffset;
+    });
+
+    // Multi-Topic Coverage Pass:
+    // If multi-topic query, ensure each identified topic gets at least one top slot
+    const finalSelection: HybridSearchResult[] = [];
+    const remainingSlots = RETRIEVAL_CONFIG.finalTopK;
+
+    if (resolvedTopics.length > 1) {
+      const topicCovered = new Set<string>();
+      const candidateList = [...scoredCandidates];
+
+      // First pass: pick best candidate for each topic
+      for (const topic of resolvedTopics) {
+        const bestForTopic = candidateList.find(
+          (c) =>
+            !finalSelection.some((s) => s.chunk.id === c.item.chunk.id) &&
+            defaultQueryTopicResolver.chunkMatchesTopic(c.item.chunk.chunkText, topic)
+        );
+
+        if (bestForTopic) {
+          finalSelection.push(bestForTopic.item);
+          topicCovered.add(topic.id);
+        }
+      }
+
+      // Second pass: fill remaining slots with highest-scoring candidates
+      for (const c of candidateList) {
+        if (finalSelection.length >= remainingSlots) break;
+        if (!finalSelection.some((s) => s.chunk.id === c.item.chunk.id)) {
+          finalSelection.push(c.item);
+        }
+      }
+    } else {
+      for (const c of scoredCandidates) {
+        if (finalSelection.length >= remainingSlots) break;
+        finalSelection.push(c.item);
+      }
+    }
+
+    return finalSelection;
+  }
+}
+
+export const defaultDeterministicReranker = new DeterministicReranker();

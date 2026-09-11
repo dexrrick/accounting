@@ -6,6 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 
 const testSuites = [
+  { name: '0. Phase 5 Advanced Hybrid Retrieval & Vector Index', file: 'test_phase5_advanced_retrieval.mjs' },
   { name: '1. Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs' },
   { name: '2. Phase 3 Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs' },
   { name: '3. Sidequest Correction Pass', file: 'test_sidequest_correction.mjs' },
