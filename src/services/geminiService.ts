@@ -235,7 +235,7 @@ export async function processAccountingQuery(
 
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
-  const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario);
+  const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario, undefined, providerOrApiKey);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
   // 3. Evaluate Fast-Path Bypass (ONLY for explicit deterministic fixtures)
@@ -736,7 +736,7 @@ export async function callGeminiAPI(
 ): Promise<GeminiResponse> {
   const profiler = existingProfiler || new RequestProfiler(userInput, modelName);
   const tGround0 = Date.now();
-  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
+  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario, undefined, apiKey);
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
   profiler.recordStage('grounding', Date.now() - tGround0);
 

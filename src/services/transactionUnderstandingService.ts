@@ -13,6 +13,10 @@
  * 7. Strictly separates transaction understanding from journal generation.
  */
 
+import type { ProviderSettings } from '../types/provider';
+import { executeStructuredLlmCall } from './aiTransport';
+import { repairAndParseAIJson } from '../utils/jsonRepair';
+
 export interface SemanticCurrency {
   value: string | null;
   source: 'explicit' | 'context_inference' | 'unknown';
@@ -21,6 +25,7 @@ export interface SemanticCurrency {
 }
 
 export interface TransactionUnderstanding {
+  extractionSource?: 'ai' | 'deterministic_fallback';
   reportingEntity: {
     type: 'company' | 'individual' | 'other' | 'unknown';
     description?: string;
@@ -70,11 +75,31 @@ export interface UnderstandingValidationResult {
 /**
  * Validates and normalizes raw transaction understanding objects.
  */
+/**
+ * Validates and normalizes raw transaction understanding objects.
+ * Acts as a strict validation gate before AI output is accepted.
+ */
 export function validateAndNormalizeUnderstanding(
   raw: any,
-  fallbackJurisdiction: string = 'SG'
+  fallbackJurisdiction: string = 'SG',
+  source: 'ai' | 'deterministic_fallback' = 'deterministic_fallback'
 ): UnderstandingValidationResult {
   const errors: string[] = [];
+
+  if (!raw || typeof raw !== 'object') {
+    return {
+      isValid: false,
+      errors: ['Raw understanding payload must be a non-null object'],
+      normalizedUnderstanding: {
+        extractionSource: source,
+        reportingEntity: { type: 'unknown' },
+        currency: { value: null, source: 'unknown', confidence: 0 },
+        factsMissing: ['Invalid or empty understanding payload'],
+        assumptions: [],
+        confidence: 0
+      }
+    };
+  }
 
   const validEntityTypes = ['company', 'individual', 'other', 'unknown'];
   const entityType = raw?.reportingEntity?.type;
@@ -117,6 +142,33 @@ export function validateAndNormalizeUnderstanding(
     errors.push(`Invalid or missing currency.source: '${currSource}'`);
   }
 
+  // Dangerous contradiction invariant checks (no silent correction)
+  if (ownershipContext === 'own_equity') {
+    const inst = (raw?.instrument || '').toLowerCase();
+    const subj = (raw?.subject || '').toLowerCase();
+    if (inst.includes('fvtpl') || inst.includes('fvtoci') || subj.includes('foreign shares') || inst.includes('financial_asset')) {
+      errors.push('Contradictory classification: own_equity cannot be classified as financial asset at FVTPL/FVTOCI (SFRS(I) 1-32 §33).');
+    }
+    if (counterpartyRole === 'customer' || counterpartyRole === 'supplier') {
+      errors.push('Contradictory classification: counterparty for own_equity cannot be customer or supplier.');
+    }
+  }
+
+  if (ownershipContext === 'external_investment') {
+    const inst = (raw?.instrument || '').toLowerCase();
+    if (inst.includes('own_equity') || inst.includes('share_capital')) {
+      errors.push('Contradictory classification: external_investment cannot have own_equity instrument.');
+    }
+  }
+
+  if (raw?.currency?.source === 'explicit' && !raw?.currency?.value) {
+    errors.push('Explicit currency source declared, but currency value is null.');
+  }
+
+  if (typeof raw?.amount === 'number' && raw.amount < 0) {
+    errors.push('Transaction amount cannot be negative.');
+  }
+
   const factsMissing: string[] = Array.isArray(raw?.factsMissing) ? [...raw.factsMissing] : [];
   const assumptions: string[] = Array.isArray(raw?.assumptions) ? [...raw.assumptions] : [];
 
@@ -137,6 +189,7 @@ export function validateAndNormalizeUnderstanding(
     : (errors.length === 0 ? 0.85 : 0.4);
 
   const normalized: TransactionUnderstanding = {
+    extractionSource: source,
     reportingEntity: {
       type: (raw?.reportingEntity?.type || 'unknown'),
       description: raw?.reportingEntity?.description || undefined
@@ -249,7 +302,7 @@ export class DeterministicSemanticExtractor {
       confidence: Math.round(confidence * 100) / 100
     };
 
-    const validation = validateAndNormalizeUnderstanding(rawUnderstanding, jurisdiction);
+    const validation = validateAndNormalizeUnderstanding(rawUnderstanding, jurisdiction, 'deterministic_fallback');
     return validation.normalizedUnderstanding;
   }
 
@@ -559,6 +612,90 @@ export class DeterministicSemanticExtractor {
   }
 }
 
+export const SEMANTIC_EXTRACTION_SYSTEM_PROMPT = `You are an expert economic and accounting transaction classifier for Singapore and international financial reporting.
+Your sole task is to analyze the user's natural-language commercial query and extract structured economic facts.
+You do NOT generate journal entries or debit/credit lines. You ONLY classify the underlying economic facts.
+
+Return ONLY a JSON object conforming strictly to this JSON schema:
+{
+  "reportingEntity": {
+    "type": "company" | "individual" | "other" | "unknown",
+    "description": string
+  },
+  "counterparty": {
+    "role": "shareholder" | "customer" | "supplier" | "employee" | "lender" | "director" | "government" | "investor" | "other" | "unknown",
+    "description": string
+  },
+  "transactionType": string,
+  "subject": string,
+  "instrument": string,
+  "ownershipContext": "own_equity" | "external_investment" | "not_applicable" | "unknown",
+  "paymentStatus": "paid" | "unpaid" | "partially_paid" | "unknown",
+  "amount": number | null,
+  "currency": {
+    "value": string | null,
+    "source": "explicit" | "context_inference" | "unknown",
+    "confidence": number,
+    "rationale": string
+  },
+  "transactionDate": string | null,
+  "jurisdiction": "SG" | string,
+  "factsMissing": string[],
+  "assumptions": string[],
+  "confidence": number
+}
+
+CRITICAL CLASSIFICATION INVARIANTS:
+1. OWN EQUITY VS EXTERNAL INVESTMENT:
+   - When a founder, shareholder, or subscriber is investing capital, taking up shares, or being issued/allotted shares in their OWN company / startup:
+     * reportingEntity.type = "company"
+     * counterparty.role = "shareholder"
+     * ownershipContext = "own_equity" (under SFRS(I) 1-32 §33)
+     * instrument = "own_equity"
+     * NEVER classify this as "external_investment" or a financial asset.
+   - When the reporting entity acquires or invests in shares of a THIRD-PARTY entity (e.g. Apple, Tesla, listed equities, foreign stocks):
+     * ownershipContext = "external_investment"
+2. CUSTOMER ADVANCE / DEFERRED REVENUE:
+   - When a customer or client pays before delivery of goods/services:
+     * counterparty.role = "customer"
+     * transactionType = "customer_advance_payment"
+     * paymentStatus = "paid"
+3. DIRECTOR EXPENSE SETTLEMENT:
+   - When a director, founder, or board member settles or pays a company bill/expense personally:
+     * counterparty.role = "director"
+     * transactionType = "director_expense_settlement"
+4. PAYMENT STATUS:
+   - If unpaid, remaining unpaid, owes, yet to pay, cash hasn't arrived, pending call/settlement:
+     * paymentStatus = "unpaid"
+   - If paid, settled, transferred:
+     * paymentStatus = "paid"
+5. CURRENCY:
+   - In Singapore context (default), if "$" is used without explicit USD/EUR/etc, set currency.value = "SGD", currency.source = "context_inference", currency.confidence = 0.9.
+   - Do NOT assume USD unless explicitly stated ("USD", "US Dollar", "US$").
+   - If no currency symbol or code is provided, set currency.value = null, currency.source = "unknown", and add "Transaction currency is unspecified" to factsMissing.
+6. AMOUNT:
+   - Extract numeric transaction magnitude (e.g. 1 from "$1", 3000 from "3k"). Dates (e.g. 15/12/2026), percentages (9%), terms (30-day), or item counts (5 laptops) are NOT transaction amounts.`;
+
+export class AISemanticExtractor {
+  public async extract(
+    query: string,
+    providerOrApiKey?: ProviderSettings | string,
+    _functionalCurrency: string = 'SGD',
+    _jurisdiction: string = 'SG'
+  ): Promise<any> {
+    const rawJsonText = await executeStructuredLlmCall(
+      `Analyze the following commercial query and extract structured economic facts:\n\nQuery: "${query}"\n\nReturn strictly valid JSON.`,
+      SEMANTIC_EXTRACTION_SYSTEM_PROMPT,
+      providerOrApiKey,
+      { jsonMode: true, temperature: 0.1 }
+    );
+
+    return repairAndParseAIJson(rawJsonText);
+  }
+}
+
+export const defaultAiSemanticExtractor = new AISemanticExtractor();
+
 /**
  * Singleton instance of the deterministic extractor.
  */
@@ -566,13 +703,19 @@ export const defaultSemanticExtractor = new DeterministicSemanticExtractor();
 
 /**
  * Primary Transaction Understanding Service.
- * Supports synchronous local extraction and async AI-enhanced extraction.
+ * Implements AI structured extraction as the primary path,
+ * validated deterministically before retrieval, with a resilient local fallback.
  */
 export class TransactionUnderstandingService {
-  private extractor: DeterministicSemanticExtractor;
+  private deterministicExtractor: DeterministicSemanticExtractor;
+  private aiExtractor: AISemanticExtractor;
 
-  constructor(extractor: DeterministicSemanticExtractor = defaultSemanticExtractor) {
-    this.extractor = extractor;
+  constructor(
+    deterministicExtractor: DeterministicSemanticExtractor = defaultSemanticExtractor,
+    aiExtractor: AISemanticExtractor = defaultAiSemanticExtractor
+  ) {
+    this.deterministicExtractor = deterministicExtractor;
+    this.aiExtractor = aiExtractor;
   }
 
   public understandTransactionSync(
@@ -580,14 +723,38 @@ export class TransactionUnderstandingService {
     functionalCurrency: string = 'SGD',
     jurisdiction: string = 'SG'
   ): TransactionUnderstanding {
-    return this.extractor.extract(query, functionalCurrency, jurisdiction);
+    return this.deterministicExtractor.extract(query, functionalCurrency, jurisdiction);
   }
 
   public async understandTransaction(
     query: string,
     functionalCurrency: string = 'SGD',
-    jurisdiction: string = 'SG'
+    jurisdiction: string = 'SG',
+    providerOrApiKey?: ProviderSettings | string
   ): Promise<TransactionUnderstanding> {
+    const hasProvider = Boolean(
+      (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) ||
+      (typeof providerOrApiKey === 'object' && (
+        (providerOrApiKey.activeProvider === 'gemini' && Boolean(providerOrApiKey.gemini?.apiKey?.trim() && providerOrApiKey.gemini.apiKey.trim().length > 10)) ||
+        (providerOrApiKey.activeProvider === 'azure' && Boolean(providerOrApiKey.azure?.apiKey?.trim() && providerOrApiKey.azure?.endpoint)) ||
+        (providerOrApiKey.activeProvider === 'openai' && Boolean(providerOrApiKey.openai?.apiKey?.trim() && providerOrApiKey.openai.apiKey.trim().length > 10))
+      ))
+    );
+
+    if (hasProvider) {
+      try {
+        const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction);
+        const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai');
+        if (validation.isValid) {
+          return validation.normalizedUnderstanding;
+        }
+        console.warn('[SemanticExtractor] AI extraction failed schema validation gate:', validation.errors);
+      } catch (err: any) {
+        console.warn('[SemanticExtractor] AI extraction call failed, falling back to deterministic extractor:', err?.message || err);
+      }
+    }
+
+    // Deterministic fallback path
     return this.understandTransactionSync(query, functionalCurrency, jurisdiction);
   }
 }

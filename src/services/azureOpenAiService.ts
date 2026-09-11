@@ -135,7 +135,7 @@ export async function callAzureOpenAI(
   const deployment = azureConfig.deploymentName.trim();
   const profiler = new RequestProfiler(userInput, `azure-${deployment}`);
   const tGround0 = Date.now();
-  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
+  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario, undefined, { activeProvider: 'azure', azure: azureConfig } as any);
   const apiVersion = (azureConfig.apiVersion || '2024-08-01-preview').trim();
   const url = `${endpoint}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${encodeURIComponent(apiVersion)}`;
 
@@ -220,7 +220,7 @@ export async function callStandardOpenAI(
   const model = openaiConfig.model || 'gpt-4o';
   const profiler = new RequestProfiler(userInput, `openai-${model}`);
   const tGround0 = Date.now();
-  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario);
+  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario, undefined, { activeProvider: 'openai', openai: openaiConfig } as any);
   const url = 'https://api.openai.com/v1/chat/completions';
   const messages = buildAccountingMessages(userInput, currentScenario, standard, chatHistory, context);
   profiler.recordStage('grounding', Date.now() - tGround0);

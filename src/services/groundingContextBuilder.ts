@@ -10,6 +10,7 @@ import type {
 } from '../types/accounting';
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
 import { classifyQuestion } from '../classification/questionClassifier';
+import type { ProviderSettings } from '../types/provider';
 import { defaultTransactionUnderstandingService, type TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import type { ISourceRetriever } from '../retrieval/sourceRetriever';
@@ -150,10 +151,16 @@ export function formulateApplicationRules(
 export async function buildGroundedReasoningContext(
   userInput: string,
   currentScenario?: AccountingScenarioState | null,
-  retriever: ISourceRetriever = defaultAdvancedSourceRetriever
+  retriever: ISourceRetriever = defaultAdvancedSourceRetriever,
+  providerOrApiKey?: ProviderSettings | string
 ): Promise<GroundedReasoningContext> {
   // 1. Semantic Transaction Understanding & Question Classification
-  const semanticUnderstanding = defaultTransactionUnderstandingService.understandTransactionSync(userInput);
+  const semanticUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
+    userInput,
+    'SGD',
+    'SG',
+    providerOrApiKey
+  );
   const classification = classifyQuestion(userInput);
 
   // 2. Source Retrieval (Supplied with Semantic Context for Reranking)
