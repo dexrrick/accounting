@@ -16,7 +16,9 @@ export type StatutoryAuthority =
   | 'MAS' 
   | 'CUSTOMS' 
   | 'ASC' 
-  | 'SSO';
+  | 'SSO'
+  | 'AGC'
+  | 'REFERENCE_API';
 
 export type QueryDomain = 
   | 'ACCOUNTING_SFRS' 

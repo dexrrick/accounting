@@ -8,6 +8,16 @@ import {
   type VersionChange
 } from '../standards/sourceVersioning';
 import { defaultExternalSourceValidator, ExternalSourceValidator } from './externalSourceValidator';
+import { defaultControlledWebRetriever, ControlledWebRetriever } from './controlledWebRetriever';
+import {
+  type IOfficialSourceAdapter,
+  SSOUpdateAdapter,
+  IRASUpdateAdapter,
+  ACRAUpdateAdapter,
+  MOMUpdateAdapter,
+  CPFUpdateAdapter,
+  FrankfurterReferenceAdapter
+} from './sourceAdapters';
 
 export interface AmendmentSummary {
   recordId: string;
@@ -19,7 +29,7 @@ export interface AmendmentSummary {
 export interface RegulatoryUpdatePackage {
   packageId: string;
   releaseDate: string;
-  authority: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF';
+  authority: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'REFERENCE_API';
   updates: AuthoritativeSourceRecord[];
   amendments: AmendmentSummary[];
   packageHash: string; // SHA-256 of package contents
@@ -103,16 +113,39 @@ export class LiveRegulatoryFeedService {
   // Mock / remote feed queue for update simulation
   private availableFeeds: RegulatoryUpdatePackage[] = [];
 
+  // Official source update discovery adapters
+  private adapters: IOfficialSourceAdapter[];
+  private webRetriever: ControlledWebRetriever;
+
   private lastCheckDate: string = '2026-09-11T00:00:00Z';
   private lastVerificationDate: string = '2026-09-11T00:00:00Z';
   private syncState: LiveSyncState = 'SYNCED';
 
   constructor(
     versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
-    validator: ExternalSourceValidator = defaultExternalSourceValidator
+    validator: ExternalSourceValidator = defaultExternalSourceValidator,
+    webRetriever: ControlledWebRetriever = defaultControlledWebRetriever,
+    adapters: IOfficialSourceAdapter[] = [
+      new SSOUpdateAdapter(),
+      new IRASUpdateAdapter(),
+      new ACRAUpdateAdapter(),
+      new MOMUpdateAdapter(),
+      new CPFUpdateAdapter(),
+      new FrankfurterReferenceAdapter()
+    ]
   ) {
     this.versioningManager = versioningManager;
     this.validator = validator;
+    this.webRetriever = webRetriever;
+    this.adapters = [...adapters];
+  }
+
+  public registerAdapter(adapter: IOfficialSourceAdapter): void {
+    this.adapters.push(adapter);
+  }
+
+  public getAdapters(): IOfficialSourceAdapter[] {
+    return [...this.adapters];
   }
 
   /**
@@ -138,9 +171,9 @@ export class LiveRegulatoryFeedService {
   }
 
   /**
-   * Checks for available regulatory update packages.
+   * Checks for available regulatory update packages using registered official source adapters.
    */
-  public async checkForUpdates(): Promise<UpdateCheckResult> {
+  public async checkForUpdates(customRetriever?: ControlledWebRetriever): Promise<UpdateCheckResult> {
     const checkedAt = new Date().toISOString();
     this.lastCheckDate = checkedAt;
 
@@ -154,11 +187,27 @@ export class LiveRegulatoryFeedService {
       };
     }
 
-    if (this.availableFeeds.length > 0) {
+    const discoveredPackages: RegulatoryUpdatePackage[] = [...this.availableFeeds];
+    const activeRetriever = customRetriever || this.webRetriever;
+    const currentSources = Object.values(UNIFIED_SOURCE_REGISTRY);
+
+    // Execute registered source adapters
+    for (const adapter of this.adapters) {
+      try {
+        const pkg = await adapter.checkForUpdates(activeRetriever, currentSources);
+        if (pkg && !discoveredPackages.some((p) => p.packageId === pkg.packageId)) {
+          discoveredPackages.push(pkg);
+        }
+      } catch {
+        // Individual adapter failure never contaminates or throws
+      }
+    }
+
+    if (discoveredPackages.length > 0) {
       this.syncState = 'UPDATE_AVAILABLE';
       return {
         hasUpdates: true,
-        packages: [...this.availableFeeds],
+        packages: discoveredPackages,
         syncState: 'UPDATE_AVAILABLE',
         checkedAt
       };
@@ -176,8 +225,12 @@ export class LiveRegulatoryFeedService {
   /**
    * Stages a regulatory update package into the candidate holding area.
    * Staging does NOT mutate the active registry or active retrieval.
+   * Preserves full external provenance (sourceUrl, httpStatus, etag, lastModified).
    */
-  public async stageUpdatePackage(pkg: RegulatoryUpdatePackage): Promise<StageResult> {
+  public async stageUpdatePackage(
+    pkg: RegulatoryUpdatePackage,
+    provenanceDetails?: { sourceUrl?: string; httpStatus?: number; etag?: string; lastModified?: string }
+  ): Promise<StageResult> {
     if (!pkg.packageId || !pkg.updates || pkg.updates.length === 0) {
       return { success: false, packageId: pkg.packageId, stagedRecordsCount: 0, error: 'Empty or invalid package' };
     }
@@ -185,9 +238,12 @@ export class LiveRegulatoryFeedService {
     // Register each update as an UNVERIFIED candidate in the versioning manager
     for (const rec of pkg.updates) {
       const versionId = `${pkg.packageId}-${rec.id}`;
+      const contentHash = rec.contentHash || this.versioningManager.computeSourceHash(rec);
+      rec.contentHash = contentHash;
+
       const metadata: SourceVersionMetadata = {
         versionId,
-        contentHash: this.versioningManager.computeSourceHash(rec),
+        contentHash,
         effectiveDate: rec.validFrom || rec.effectiveDate,
         validFrom: rec.validFrom,
         validTo: rec.validTo,
@@ -196,7 +252,12 @@ export class LiveRegulatoryFeedService {
         sourceAuthority: pkg.authority,
         verificationStatus: 'UNVERIFIED',
         retrievedAt: new Date().toISOString(),
-        amendmentSummary: pkg.amendments.find((a) => a.recordId === rec.id)?.summary
+        amendmentSummary: pkg.amendments.find((a) => a.recordId === rec.id)?.summary,
+        // Preserve external provenance
+        sourceUrl: provenanceDetails?.sourceUrl || rec.officialSourceUrl,
+        httpStatus: provenanceDetails?.httpStatus || 200,
+        etag: provenanceDetails?.etag,
+        lastModified: provenanceDetails?.lastModified
       };
 
       this.versioningManager.registerCandidateVersion(rec, metadata);
@@ -326,7 +387,12 @@ export class LiveRegulatoryFeedService {
 
   /**
    * Activates an approved package into the active registry.
-   * Atomic operation: all records are activated together.
+   * True two-phase atomic commit:
+   * 1. Captures a state snapshot of UNIFIED_SOURCE_REGISTRY for all affected records.
+   * 2. Transactionally executes activation in the versioning manager and active registry.
+   * 3. If any record fails activation, rolls back all records activated during this transaction,
+   *    restores UNIFIED_SOURCE_REGISTRY to the exact pre-activation snapshot, records rejection,
+   *    and guarantees that exactly 0 records remain activated.
    */
   public async activateUpdatePackage(packageId: string): Promise<PackageActivationResult> {
     const pkg = this.verifiedPackages.get(packageId);
@@ -339,18 +405,27 @@ export class LiveRegulatoryFeedService {
       };
     }
 
-    let activatedCount = 0;
+    // Phase 1: Snapshot registry state for all affected record IDs
+    const registrySnapshot: Record<string, AuthoritativeSourceRecord> = {};
+    for (const rec of pkg.updates) {
+      if (UNIFIED_SOURCE_REGISTRY[rec.id]) {
+        registrySnapshot[rec.id] = { ...UNIFIED_SOURCE_REGISTRY[rec.id] };
+      }
+    }
+
+    // Phase 2: Transactional activation
+    const activatedVersionIds: string[] = [];
+    let activationError: string | null = null;
+
     for (const rec of pkg.updates) {
       const versionId = `${pkg.packageId}-${rec.id}`;
       const actResult = this.versioningManager.activateVersion(versionId);
       if (!actResult.success) {
-        return {
-          success: false,
-          packageId,
-          activatedRecordsCount: activatedCount,
-          error: `Failed to activate record '${rec.id}': ${actResult.error}`
-        };
+        activationError = `Failed to activate record '${rec.id}': ${actResult.error}`;
+        break;
       }
+
+      activatedVersionIds.push(versionId);
 
       // Update the active in-memory registry
       const activeRecord: AuthoritativeSourceRecord = {
@@ -363,7 +438,32 @@ export class LiveRegulatoryFeedService {
       };
 
       UNIFIED_SOURCE_REGISTRY[rec.id] = activeRecord;
-      activatedCount++;
+    }
+
+    // Phase 3: Rollback on any failure
+    if (activationError) {
+      // Roll back all ledger activations in this transaction
+      for (const vId of activatedVersionIds.reverse()) {
+        this.versioningManager.rollbackVersion(vId);
+      }
+
+      // Restore active registry to pristine snapshot
+      for (const rec of pkg.updates) {
+        if (registrySnapshot[rec.id]) {
+          UNIFIED_SOURCE_REGISTRY[rec.id] = registrySnapshot[rec.id];
+        } else {
+          delete UNIFIED_SOURCE_REGISTRY[rec.id];
+        }
+      }
+
+      this.rejectedPackages.set(packageId, `Atomic activation failure: ${activationError}`);
+
+      return {
+        success: false,
+        packageId,
+        activatedRecordsCount: 0, // Exactly 0 records activated!
+        error: `Atomic activation failed: ${activationError}`
+      };
     }
 
     this.activePackages.set(packageId, pkg);
@@ -377,7 +477,7 @@ export class LiveRegulatoryFeedService {
     return {
       success: true,
       packageId,
-      activatedRecordsCount: activatedCount
+      activatedRecordsCount: pkg.updates.length
     };
   }
 

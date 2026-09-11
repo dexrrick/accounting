@@ -18,6 +18,7 @@ export type ControlledFetchStatus =
 export interface ControlledFetchOptions {
   timeoutMs?: number;
   useCache?: boolean;
+  ttlMs?: number;
   expectedHash?: string;
   customFetch?: (url: string, init?: RequestInit) => Promise<Response>;
 }
@@ -31,6 +32,8 @@ export interface ControlledFetchResult {
   error?: string;
   retrievedAt: string;
   sourceUrl: string;
+  etag?: string;
+  lastModified?: string;
 }
 
 /**
@@ -57,6 +60,7 @@ export class ControlledWebRetriever {
     const {
       timeoutMs = 3000,
       useCache = true,
+      ttlMs,
       expectedHash,
       customFetch = (globalThis.fetch ? globalThis.fetch.bind(globalThis) : undefined)
     } = options;
@@ -77,13 +81,15 @@ export class ControlledWebRetriever {
     }
 
     // 2. Check source cache
+    let cached: CachedSource | null = null;
     if (useCache) {
-      const cached = this.cache.get(url);
+      cached = this.cache.get(url);
       if (cached && cached.rawContent) {
         // If expectedHash is specified, verify cached content integrity
         if (expectedHash && cached.contentHash.toLowerCase() !== expectedHash.toLowerCase()) {
           this.cache.invalidate(url);
-        } else {
+          cached = null;
+        } else if (this.cache.isFresh(url)) {
           return {
             status: 'SUCCESS',
             httpStatus: cached.httpStatus,
@@ -91,7 +97,9 @@ export class ControlledWebRetriever {
             contentHash: cached.contentHash,
             cached: true,
             retrievedAt: cached.retrievedAt,
-            sourceUrl: url
+            sourceUrl: url,
+            etag: cached.etag,
+            lastModified: cached.lastModified
           };
         }
       }
@@ -113,16 +121,38 @@ export class ControlledWebRetriever {
     }, timeoutMs);
 
     try {
+      const headers: Record<string, string> = {
+        'Accept': 'text/plain, application/json, text/html, */*'
+      };
+      if (useCache && cached) {
+        const condHeaders = this.cache.getConditionalHeaders(url);
+        Object.assign(headers, condHeaders);
+      }
+
       const response = await customFetch(url, {
         method: 'GET',
         signal: controller.signal,
         redirect: 'manual', // Intercept redirects for security validation
-        headers: {
-          'Accept': 'text/plain, application/json, text/html, */*'
-        }
+        headers
       });
 
       clearTimeout(timeoutId);
+
+      // Handle 304 Not Modified
+      if (response.status === 304 && cached && cached.rawContent) {
+        this.cache.touch(url, ttlMs);
+        return {
+          status: 'SUCCESS',
+          httpStatus: 304,
+          content: cached.rawContent,
+          contentHash: cached.contentHash,
+          cached: true,
+          retrievedAt,
+          sourceUrl: url,
+          etag: cached.etag,
+          lastModified: cached.lastModified
+        };
+      }
 
       // Handle redirect status codes (301, 302, 303, 307, 308)
       if (response.status >= 300 && response.status < 400) {
@@ -201,19 +231,26 @@ export class ControlledWebRetriever {
         };
       }
 
+      const etag = response.headers?.get('etag') || undefined;
+      const lastModified = response.headers?.get('last-modified') || undefined;
+      const contentType = response.headers?.get('content-type') || undefined;
+
       // Store into cache
       if (useCache) {
+        const defaultUrlTtl = url.includes('frankfurter') ? 3_600_000 : 86_400_000;
+        const effectiveTtl = ttlMs ?? defaultUrlTtl;
         const cachedSource: CachedSource = {
           canonicalUrl: url,
           retrievedAt,
           contentHash: hash,
           rawContent: text,
           httpStatus: response.status,
-          contentType: response.headers?.get('content-type') || undefined,
-          etag: response.headers?.get('etag') || undefined,
-          lastModified: response.headers?.get('last-modified') || undefined
+          contentType,
+          etag,
+          lastModified,
+          ttlMs: effectiveTtl
         };
-        this.cache.set(cachedSource);
+        this.cache.set(cachedSource, effectiveTtl);
       }
 
       return {
@@ -223,7 +260,9 @@ export class ControlledWebRetriever {
         contentHash: hash,
         cached: false,
         retrievedAt,
-        sourceUrl: url
+        sourceUrl: url,
+        etag,
+        lastModified
       };
     } catch (err: any) {
       clearTimeout(timeoutId);

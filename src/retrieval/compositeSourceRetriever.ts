@@ -5,7 +5,12 @@ import {
   InMemorySourceRetriever
 } from './sourceRetriever';
 import { defaultLiveRegulatoryFeedService, LiveRegulatoryFeedService } from './liveRegulatoryFeed';
-import { defaultControlledWebRetriever, ControlledWebRetriever } from './controlledWebRetriever';
+import {
+  defaultControlledWebRetriever,
+  ControlledWebRetriever,
+  type ControlledFetchOptions,
+  type ControlledFetchResult
+} from './controlledWebRetriever';
 import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
 
 /**
@@ -14,9 +19,11 @@ import { defaultSourceVersioningManager, SourceVersioningManager } from '../stan
  *
  * Architecture:
  * 1. Queries local active registry (InMemorySourceRetriever) as the baseline authority.
- * 2. Isolates unapproved candidate versions: candidates in staging cannot contaminate active retrieval results.
- * 3. Once an update package is verified and activated, it is seamlessly queryable.
- * 4. In offline mode or network failure, falls back seamlessly to the approved registry without throwing.
+ * 2. Connects ControlledWebRetriever directly for controlled external fetching with strict domain allowlists.
+ * 3. Proactively runs LiveRegulatoryFeedService discovery when enableLiveCheck is requested.
+ * 4. Isolates unapproved candidate versions: candidates in staging cannot contaminate active retrieval results.
+ * 5. Once an update package is verified and activated, it is seamlessly queryable and outranks superseded baselines.
+ * 6. In offline mode or network failure, falls back seamlessly to the approved registry without throwing.
  */
 export class CompositeSourceRetriever implements ISourceRetriever {
   private localRetriever: InMemorySourceRetriever;
@@ -38,6 +45,25 @@ export class CompositeSourceRetriever implements ISourceRetriever {
 
   public getWebRetriever(): ControlledWebRetriever {
     return this.webRetriever;
+  }
+
+  public getFeedService(): LiveRegulatoryFeedService {
+    return this.feedService;
+  }
+
+  public getVersioningManager(): SourceVersioningManager {
+    return this.versioningManager;
+  }
+
+  /**
+   * Fetches official external source document using controlled web retriever.
+   * Enforces exact-hostname allowlists, HTTPS port 443, timeouts, and cache semantics.
+   */
+  public async fetchExternalSource(
+    url: string,
+    options?: ControlledFetchOptions
+  ): Promise<ControlledFetchResult> {
+    return await this.webRetriever.fetchOfficialSource(url, options);
   }
 
   /**
@@ -63,19 +89,30 @@ export class CompositeSourceRetriever implements ISourceRetriever {
 
   /**
    * Retrieves relevant sources matching the query.
+   * When enableLiveCheck is requested, queries official regulatory adapters for candidate updates.
+   * Staged candidates remain strictly isolated until verified and activated.
    * Preserves Phase 3 temporal scoring and candidate-isolation invariants.
    */
   public async retrieveSources(retrievalQuery: SourceRetrievalQuery): Promise<AuthoritativeSourceRecord[]> {
-    // Retrieve from local active registry (which contains all approved static and activated live-patch sources)
+    // 1. If live check requested, trigger proactive update discovery (non-blocking, non-throwing)
+    if (retrievalQuery.enableLiveCheck) {
+      try {
+        await this.feedService.checkForUpdates(this.webRetriever);
+      } catch {
+        // Failure to check remote feeds must never block retrieval from approved registry
+      }
+    }
+
+    // 2. Retrieve from local active registry (contains all approved static and activated live-patch sources)
     const records = await this.localRetriever.retrieveSources(retrievalQuery);
 
-    // Safeguard: Ensure no unapproved candidate records are returned
+    // 3. Safeguard: Ensure no unapproved candidate records or superseded versions are returned
     const approvedRecords = records.filter((r) => {
       // If record has versionId, check that it is activated in the versioning manager ledger
       if (r.versionId) {
         const activeVersionId = this.versioningManager.getActiveVersionId(r.id);
         if (activeVersionId && activeVersionId !== r.versionId) {
-          // Record has been superseded
+          // Record has been superseded by a newer activated version
           return false;
         }
       }

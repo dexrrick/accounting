@@ -176,17 +176,27 @@ export class ExternalSourceValidator {
         return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `AGC/SSO statutory law must point to sso.agc.gov.sg, found '${host}'` };
       }
     } else if (authority === 'IRAS') {
-      if (!host.endsWith('iras.gov.sg') && host !== 'sso.agc.gov.sg') {
+      if (host !== 'iras.gov.sg' && host !== 'www.iras.gov.sg' && host !== 'sso.agc.gov.sg') {
         return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `IRAS guidance must point to iras.gov.sg or sso.agc.gov.sg, found '${host}'` };
       }
     } else if (authority === 'ACRA') {
-      if (!host.endsWith('acra.gov.sg') && host !== 'sso.agc.gov.sg') {
+      if (host !== 'acra.gov.sg' && host !== 'www.acra.gov.sg' && host !== 'sso.agc.gov.sg') {
         return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `ACRA directives must point to acra.gov.sg or sso.agc.gov.sg, found '${host}'` };
+      }
+    } else if (authority === 'MOM') {
+      if (host !== 'mom.gov.sg' && host !== 'www.mom.gov.sg' && host !== 'sso.agc.gov.sg') {
+        return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `MOM statutory guidance must point to mom.gov.sg or sso.agc.gov.sg, found '${host}'` };
+      }
+    } else if (authority === 'CPF') {
+      if (host !== 'cpf.gov.sg' && host !== 'www.cpf.gov.sg' && host !== 'sso.agc.gov.sg') {
+        return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `CPF statutory guidance must point to cpf.gov.sg or sso.agc.gov.sg, found '${host}'` };
       }
     } else if (authority === 'REFERENCE_API') {
       if (host !== 'api.frankfurter.dev') {
         return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `Reference API must point to api.frankfurter.dev, found '${host}'` };
       }
+    } else {
+      return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `Unrecognized authority '${authority}' for canonical URL validation` };
     }
 
     return { isValid: true };

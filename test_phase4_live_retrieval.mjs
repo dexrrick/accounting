@@ -1,9 +1,18 @@
 import assert from 'assert';
+import crypto from 'node:crypto';
 import {
   SourceVersioningManager,
   computeSha256,
   defaultSourceVersioningManager
 } from './src/standards/sourceVersioning.ts';
+import {
+  SSOUpdateAdapter,
+  IRASUpdateAdapter,
+  ACRAUpdateAdapter,
+  MOMUpdateAdapter,
+  CPFUpdateAdapter,
+  FrankfurterReferenceAdapter
+} from './src/retrieval/sourceAdapters.ts';
 import {
   ExternalSourceValidator,
   defaultExternalSourceValidator
@@ -741,6 +750,320 @@ async function runTests() {
     const evalRes = evaluateFastPathEligibility('tell me about ECB spot rates', mockScenario, fxContext);
     assert.strictEqual(evalRes.canBypass, false);
     assert.ok(evalRes.reason.includes('reference API') || evalRes.reason.includes('REFERENCE_API'));
+  });
+
+  console.log('\n[10. PHASE 4.1 COMPLETION & FIX PASS VALIDATION]');
+
+  it('10A. SHA-256 standard test vectors match Node.js crypto.createHash across diverse data types', () => {
+    const testCases = [
+      '',
+      'hello',
+      'The quick brown fox jumps over the lazy dog',
+      'Singapore Accounting Standards 2026',
+      JSON.stringify({ standard: 'SFRS(I) 1-12', taxRate: 0.17, effectiveDate: '2026-01-01' }),
+      'SG-STATUTE-'.repeat(200)
+    ];
+
+    for (const tc of testCases) {
+      const computed = computeSha256(tc);
+      const standard = crypto.createHash('sha256').update(tc, 'utf8').digest('hex');
+      assert.strictEqual(computed, standard, `Hash mismatch for input '${tc.slice(0, 20)}...'`);
+      assert.strictEqual(computed.length, 64);
+    }
+  });
+
+  it('10B. MOM and CPF canonical URL validation in ExternalSourceValidator', () => {
+    const validator = new ExternalSourceValidator();
+
+    // MOM valid
+    assert.strictEqual(validator.validateCanonicalUrl('https://mom.gov.sg/employment-practices/employment-act', 'MOM').isValid, true);
+    assert.strictEqual(validator.validateCanonicalUrl('https://www.mom.gov.sg/workplace-safety', 'MOM').isValid, true);
+    assert.strictEqual(validator.validateCanonicalUrl('https://sso.agc.gov.sg/Act/EA1968', 'MOM').isValid, true);
+
+    // MOM invalid
+    assert.strictEqual(validator.validateCanonicalUrl('https://iras.gov.sg/employment-act', 'MOM').errorCode, 'CANONICAL_URL_MISMATCH');
+    assert.strictEqual(validator.validateCanonicalUrl('https://cpf.gov.sg/employment-act', 'MOM').errorCode, 'CANONICAL_URL_MISMATCH');
+
+    // CPF valid
+    assert.strictEqual(validator.validateCanonicalUrl('https://cpf.gov.sg/rates', 'CPF').isValid, true);
+    assert.strictEqual(validator.validateCanonicalUrl('https://www.cpf.gov.sg/employer', 'CPF').isValid, true);
+    assert.strictEqual(validator.validateCanonicalUrl('https://sso.agc.gov.sg/Act/CPFA1953', 'CPF').isValid, true);
+
+    // CPF invalid
+    assert.strictEqual(validator.validateCanonicalUrl('https://mom.gov.sg/cpf-rates', 'CPF').errorCode, 'CANONICAL_URL_MISMATCH');
+    assert.strictEqual(validator.validateCanonicalUrl('https://acra.gov.sg/cpf-rates', 'CPF').errorCode, 'CANONICAL_URL_MISMATCH');
+  });
+
+  it('10C. SourceCache TTL freshness, conditional revalidation headers, and expiry pruning', () => {
+    const cache = new SourceCache(100); // 100ms default TTL
+
+    cache.set({
+      canonicalUrl: 'https://sso.agc.gov.sg/Act/COA1967',
+      retrievedAt: new Date().toISOString(),
+      contentHash: 'hash-coa',
+      rawContent: 'Companies Act text',
+      httpStatus: 200,
+      etag: '"v1-etag"',
+      lastModified: 'Wed, 21 Oct 2025 07:28:00 GMT'
+    }, 50); // 50ms custom TTL
+
+    const now = Date.now();
+    // Immediate check
+    assert.strictEqual(cache.isFresh('https://sso.agc.gov.sg/Act/COA1967', now), true);
+    assert.notStrictEqual(cache.getFresh('https://sso.agc.gov.sg/Act/COA1967', now), null);
+
+    // Conditional headers
+    const condHeaders = cache.getConditionalHeaders('https://sso.agc.gov.sg/Act/COA1967');
+    assert.strictEqual(condHeaders['If-None-Match'], '"v1-etag"');
+    assert.strictEqual(condHeaders['If-Modified-Since'], 'Wed, 21 Oct 2025 07:28:00 GMT');
+
+    // Simulate 60ms later (expired)
+    const later = now + 60;
+    assert.strictEqual(cache.isFresh('https://sso.agc.gov.sg/Act/COA1967', later), false);
+    assert.strictEqual(cache.getFresh('https://sso.agc.gov.sg/Act/COA1967', later), null);
+
+    // Pruning
+    const pruned = cache.pruneExpired(later);
+    assert.strictEqual(pruned, 1);
+    assert.strictEqual(cache.size(), 0);
+  });
+
+  await itAsync('10D. Source-specific update discovery adapters produce valid update packages', async () => {
+    const mockRetriever = new ControlledWebRetriever();
+    // Inject mock transport for all source portals
+    const mockTransport = async (url) => {
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: new Map([
+          ['content-type', 'text/html'],
+          ['etag', '"rev-2026-v1"'],
+          ['last-modified', 'Thu, 01 Jan 2026 00:00:00 GMT']
+        ]),
+        text: async () => `Official Mock Content for ${url} - Revision 2026`
+      };
+    };
+
+    const ssoAdapter = new SSOUpdateAdapter();
+    const irasAdapter = new IRASUpdateAdapter();
+    const acraAdapter = new ACRAUpdateAdapter();
+    const momAdapter = new MOMUpdateAdapter();
+    const cpfAdapter = new CPFUpdateAdapter();
+    const fxAdapter = new FrankfurterReferenceAdapter();
+
+    const customWebRetriever = new ControlledWebRetriever(defaultExternalSourceValidator, new SourceCache());
+    const fetchOptions = { customFetch: mockTransport };
+
+    // Test each adapter with custom fetcher
+    const ssoPkg = await ssoAdapter.checkForUpdates({
+      fetchOfficialSource: (u, o) => customWebRetriever.fetchOfficialSource(u, { ...o, ...fetchOptions })
+    });
+    assert.ok(ssoPkg);
+    assert.strictEqual(ssoPkg.authority, 'AGC');
+    assert.ok(ssoPkg.packageHash.length === 64);
+
+    const irasPkg = await irasAdapter.checkForUpdates({
+      fetchOfficialSource: (u, o) => customWebRetriever.fetchOfficialSource(u, { ...o, ...fetchOptions })
+    });
+    assert.ok(irasPkg);
+    assert.strictEqual(irasPkg.authority, 'IRAS');
+
+    const acraPkg = await acraAdapter.checkForUpdates({
+      fetchOfficialSource: (u, o) => customWebRetriever.fetchOfficialSource(u, { ...o, ...fetchOptions })
+    });
+    assert.ok(acraPkg);
+    assert.strictEqual(acraPkg.authority, 'ACRA');
+
+    const momPkg = await momAdapter.checkForUpdates({
+      fetchOfficialSource: (u, o) => customWebRetriever.fetchOfficialSource(u, { ...o, ...fetchOptions })
+    });
+    assert.ok(momPkg);
+    assert.strictEqual(momPkg.authority, 'MOM');
+
+    const cpfPkg = await cpfAdapter.checkForUpdates({
+      fetchOfficialSource: (u, o) => customWebRetriever.fetchOfficialSource(u, { ...o, ...fetchOptions })
+    });
+    assert.ok(cpfPkg);
+    assert.strictEqual(cpfPkg.authority, 'CPF');
+
+    const fxPkg = await fxAdapter.checkForUpdates({
+      fetchOfficialSource: (u, o) => customWebRetriever.fetchOfficialSource(u, { ...o, ...fetchOptions })
+    });
+    assert.ok(fxPkg);
+    assert.strictEqual(fxPkg.authority, 'REFERENCE_API');
+  });
+
+  await itAsync('10E. LiveRegulatoryFeedService.checkForUpdates() queries registered adapters', async () => {
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    const mockCustomFetch = async (url) => ({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Map([['content-type', 'text/html']]),
+      text: async () => `Mock Legislative Amendment Content for ${url}`
+    });
+
+    const mockRetriever = new ControlledWebRetriever(defaultExternalSourceValidator, new SourceCache());
+    const boundRetriever = {
+      fetchOfficialSource: (url, opts) => mockRetriever.fetchOfficialSource(url, { ...opts, customFetch: mockCustomFetch })
+    };
+
+    const checkRes = await feedService.checkForUpdates(boundRetriever);
+    assert.strictEqual(checkRes.hasUpdates, true);
+    assert.strictEqual(checkRes.syncState, 'UPDATE_AVAILABLE');
+    assert.ok(checkRes.packages.length >= 1, 'Expected at least 1 discovered package from adapters');
+  });
+
+  await itAsync('10F. Preserves external provenance details into candidate metadata', async () => {
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    const mockRecord = {
+      id: 'PROVENANCE_TEST_REC',
+      standardOrActCode: 'ITA1947',
+      paragraphOrSection: 'Section 43',
+      documentTitle: 'Income Tax Act',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947',
+      sourceText: 'Tax rate provision',
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      authority: 'AGC',
+      version: 'PKG-PROV-1'
+    };
+
+    const pkg = {
+      packageId: 'PKG-PROV-1',
+      releaseDate: '2026-09-11',
+      authority: 'AGC',
+      updates: [mockRecord],
+      amendments: [{ recordId: mockRecord.id, title: 'Amendment', changeType: 'TEXT_CHANGE', summary: 'Summary' }],
+      packageHash: 'abc'
+    };
+
+    const stageRes = await feedService.stageUpdatePackage(pkg, {
+      sourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947',
+      httpStatus: 200,
+      etag: '"prov-etag-123"',
+      lastModified: 'Wed, 21 Oct 2025 07:28:00 GMT'
+    });
+
+    assert.strictEqual(stageRes.success, true);
+    const candidate = versioning.getCandidates().find((c) => c.metadata.versionId === `${pkg.packageId}-${mockRecord.id}`);
+    assert.ok(candidate);
+    assert.strictEqual(candidate.metadata.etag, '"prov-etag-123"');
+    assert.strictEqual(candidate.metadata.lastModified, 'Wed, 21 Oct 2025 07:28:00 GMT');
+    assert.strictEqual(candidate.metadata.httpStatus, 200);
+    assert.strictEqual(candidate.metadata.sourceUrl, 'https://sso.agc.gov.sg/Act/ITA1947');
+  });
+
+  await itAsync('10G. Truly atomic package activation: Aborts and restores registry snapshot on any error (0 records activated)', async () => {
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    const rec1 = {
+      id: 'REC_ATOMIC_1',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 1',
+      documentTitle: 'Record 1 Title',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/COA1967',
+      sourceText: 'Valid text 1',
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      authority: 'ACRA',
+      version: 'PKG-ATOMIC'
+    };
+
+    const rec2 = {
+      id: 'REC_ATOMIC_2',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 2',
+      documentTitle: 'Record 2 Title',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/COA1967',
+      sourceText: 'Valid text 2',
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      authority: 'ACRA',
+      version: 'PKG-ATOMIC'
+    };
+
+    const pkg = {
+      packageId: 'PKG-ATOMIC',
+      releaseDate: '2026-09-11',
+      authority: 'AGC',
+      updates: [rec1, rec2],
+      amendments: [
+        { recordId: rec1.id, title: 'Rev 1', changeType: 'TEXT_CHANGE', summary: 'Rev 1' },
+        { recordId: rec2.id, title: 'Rev 2', changeType: 'TEXT_CHANGE', summary: 'Rev 2' }
+      ],
+      packageHash: ''
+    };
+    pkg.packageHash = feedService.computePackageHash(pkg);
+
+    // Initial baseline in UNIFIED_SOURCE_REGISTRY
+    const baselineRec1 = { ...rec1, sourceText: 'Original Pristine Baseline 1', version: 'ORIGINAL_BASELINE' };
+    UNIFIED_SOURCE_REGISTRY['REC_ATOMIC_1'] = baselineRec1;
+    delete UNIFIED_SOURCE_REGISTRY['REC_ATOMIC_2'];
+
+    // Stage and verify
+    await feedService.stageUpdatePackage(pkg);
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId);
+    assert.strictEqual(verifyRes.isValid, true);
+
+    // Sabotage rec2 candidate in versioning manager to simulate failure during activation loop
+    const rec2CandidateId = `${pkg.packageId}-${rec2.id}`;
+    // Force versioning manager to fail activation for rec2 by deleting its candidate
+    versioning['candidates'].delete(rec2CandidateId);
+
+    // Attempt activation
+    const actRes = await feedService.activateUpdatePackage(pkg.packageId);
+
+    // Invariant: Activation MUST fail atomically
+    assert.strictEqual(actRes.success, false);
+    assert.strictEqual(actRes.activatedRecordsCount, 0, 'Must activate exactly 0 records upon failure');
+
+    // Invariant: Registry snapshot for REC_ATOMIC_1 must be 100% restored
+    assert.strictEqual(UNIFIED_SOURCE_REGISTRY['REC_ATOMIC_1'].version, 'ORIGINAL_BASELINE');
+    assert.strictEqual(UNIFIED_SOURCE_REGISTRY['REC_ATOMIC_1'].sourceText, 'Original Pristine Baseline 1');
+
+    // Invariant: REC_ATOMIC_2 must NOT be in UNIFIED_SOURCE_REGISTRY
+    assert.strictEqual(UNIFIED_SOURCE_REGISTRY['REC_ATOMIC_2'], undefined);
+
+    // Cleanup test keys
+    delete UNIFIED_SOURCE_REGISTRY['REC_ATOMIC_1'];
+    delete UNIFIED_SOURCE_REGISTRY['REC_ATOMIC_2'];
+  });
+
+  await itAsync('10H. Live fetch failures leave UNIFIED_SOURCE_REGISTRY completely untouched', async () => {
+    const registryKeysBefore = Object.keys(UNIFIED_SOURCE_REGISTRY).length;
+    const failingRetriever = new ControlledWebRetriever();
+
+    const failureResults = await Promise.all([
+      failingRetriever.fetchOfficialSource('https://sso.agc.gov.sg/Act/COA1967', {
+        customFetch: async () => { throw new Error('Simulated Connection Refused / DNS Error'); }
+      }),
+      failingRetriever.fetchOfficialSource('https://unauthorized-domain.com/tax'),
+      failingRetriever.fetchOfficialSource('http://insecure-http.com')
+    ]);
+
+    assert.strictEqual(failureResults[0].status, 'NETWORK_ERROR');
+    assert.strictEqual(failureResults[1].status, 'UNAUTHORIZED_DOMAIN_ACCESS');
+    assert.strictEqual(failureResults[2].status, 'INVALID_URL');
+
+    // Invariant: Registry remains 100% intact
+    const registryKeysAfter = Object.keys(UNIFIED_SOURCE_REGISTRY).length;
+    assert.strictEqual(registryKeysBefore, registryKeysAfter, 'Active registry keys count must be unchanged');
   });
 
   console.log('=============================================================');

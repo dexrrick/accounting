@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "node scripts/run_all_tests.mjs",
-    "test:all": "node scripts/run_all_tests.mjs"
+    "test:all": "node scripts/run_all_tests.mjs",
+    "test:integration": "tsx test_real_source_integration.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.41.0",

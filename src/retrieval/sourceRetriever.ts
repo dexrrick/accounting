@@ -15,6 +15,7 @@ export interface SourceRetrievalQuery {
   targetDate?: string;
   includeHistorical?: boolean;
   referenceDate?: string;
+  enableLiveCheck?: boolean;
 }
 
 export interface ISourceRetriever {
