@@ -9,7 +9,9 @@ import type {
   TargetResolutionResult,
   CandidateScore,
   TargetResolutionCriteria,
-  OwnershipContext
+  OwnershipContext,
+  TransactionNatureType,
+  InstrumentType
 } from '../types/conversationState';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
@@ -384,16 +386,54 @@ export function extractAccountingContext(
     ownershipContext = 'not_applicable';
   }
 
+  const mapScenarioTypeToNature = (scenarioType?: string): TransactionNatureType => {
+    switch (scenarioType) {
+      case 'SHARE_CAPITAL_UNPAID':
+      case 'SHARE_CAPITAL_PAID':
+        return 'equity_issuance_subscription';
+      case 'EQUITY_INVESTMENT_FX':
+        return 'equity_investment_acquisition';
+      case 'COMMERCIAL_LEASE':
+        return 'lease_contract';
+      case 'INTANGIBLE_ASSET_CAP':
+        return 'rd_capitalization';
+      case 'PPE_IAS16':
+        return 'asset_purchase';
+      case 'ASSET_PURCHASE_DISCOUNT':
+        return 'trade_discount_purchase';
+      case 'CUSTOMER_ADVANCE':
+        return 'customer_advance_payment';
+      case 'DIRECTOR_EXPENSE':
+        return 'director_expense_settlement';
+      case 'GENERAL_EXPENSE':
+        return 'expense_payment';
+      default:
+        return 'unclassified_transaction';
+    }
+  };
+
+  const resolvedTxType: TransactionNatureType =
+    currentScenario?.semanticUnderstanding?.transactionType ||
+    mapScenarioTypeToNature(currentScenario?.scenarioType);
+
+  const resolvedInstrument: InstrumentType =
+    currentScenario?.semanticUnderstanding?.instrument ||
+    (ownershipContext === 'own_equity' || ownershipContext === 'own_company_equity'
+      ? 'own_equity'
+      : (ownershipContext === 'external_investment' || ownershipContext === 'external_entity_equity'
+        ? 'financial_asset_equity'
+        : 'unknown'));
+
   return {
     activeEntity: {
       type: 'company',
       description: 'Reporting entity Singapore business'
     },
     underlyingTransaction: currentScenario ? {
-      type: currentScenario.scenarioType,
+      type: resolvedTxType,
       subject: currentScenario.transactionTitle || 'Commercial Transaction',
       ownershipContext,
-      instrument: ownershipContext === 'own_equity' ? 'own_equity' : 'financial_instrument',
+      instrument: resolvedInstrument,
       totalAmount: currentScenario.amount,
       currency: currentScenario.transactionCurrency || currentScenario.functionalCurrency || 'SGD'
     } : undefined,

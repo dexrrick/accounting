@@ -56,9 +56,9 @@ export interface TransactionUnderstanding {
     role: CounterpartyRole;
     description?: string;
   };
-  transactionType?: TransactionNatureType | string;
+  transactionType?: TransactionNatureType;
   subject?: string;
-  instrument?: InstrumentType | string;
+  instrument?: InstrumentType;
   ownershipContext?: OwnershipContext;
   paymentStatus?:
     | 'paid'
@@ -241,6 +241,78 @@ export function validateAndNormalizeUnderstanding(
     timestamp: new Date().toISOString()
   };
 
+  const validTransactionTypes: readonly TransactionNatureType[] = [
+    'equity_issuance_subscription',
+    'share_capital_issuance',
+    'share_subscription',
+    'capital_reduction',
+    'equity_investment_acquisition',
+    'lease_contract',
+    'lease_payment',
+    'lease_liability_accrual',
+    'software_development_expenditure',
+    'rd_capitalization',
+    'asset_acquisition',
+    'asset_purchase',
+    'depreciation_expense',
+    'trade_discount_purchase',
+    'customer_advance_payment',
+    'customer_invoice',
+    'director_expense_settlement',
+    'director_fee_payment',
+    'expense_payment',
+    'inventory_purchase',
+    'payroll_payment',
+    'tax_payment',
+    'tax_provision',
+    'dividend_payment',
+    'debt_settlement',
+    'unclassified_transaction'
+  ];
+
+  let validatedTxType: TransactionNatureType | undefined = undefined;
+  if (raw?.transactionType) {
+    const matched = validTransactionTypes.find(t => t === raw.transactionType);
+    if (matched) {
+      validatedTxType = matched;
+    } else {
+      errors.push(`Invalid transactionType: '${raw.transactionType}'`);
+    }
+  }
+
+  const validInstruments: readonly InstrumentType[] = [
+    'cash_at_bank',
+    'accounts_receivable',
+    'accounts_payable',
+    'own_equity',
+    'equity_instrument',
+    'financial_asset_equity',
+    'financial_asset_at_fvtpl',
+    'marketable_securities',
+    'debt_instrument',
+    'derivative',
+    'fixed_asset',
+    'property_plant_equipment',
+    'intangible_asset',
+    'right_of_use_asset',
+    'lease_liability',
+    'right_of_use_asset_and_lease_liability',
+    'director_current_account',
+    'amount_due_to_director',
+    'contract_liability_deferred_revenue',
+    'unknown'
+  ];
+
+  let validatedInstrument: InstrumentType | undefined = undefined;
+  if (raw?.instrument) {
+    const matched = validInstruments.find(i => i === raw.instrument);
+    if (matched) {
+      validatedInstrument = matched;
+    } else {
+      errors.push(`Invalid instrument: '${raw.instrument}'`);
+    }
+  }
+
   const normalized: TransactionUnderstanding = {
     extractionSource: source,
     provenance,
@@ -252,9 +324,9 @@ export function validateAndNormalizeUnderstanding(
       role: (raw.counterparty.role || 'unknown'),
       description: raw.counterparty.description || undefined
     } : undefined,
-    transactionType: raw?.transactionType || undefined,
+    transactionType: validatedTxType,
     subject: raw?.subject || undefined,
-    instrument: raw?.instrument || undefined,
+    instrument: validatedInstrument,
     ownershipContext: raw?.ownershipContext || 'unknown',
     paymentStatus: raw?.paymentStatus || 'unknown',
     amount: typeof raw?.amount === 'number' ? raw.amount : undefined,
@@ -683,8 +755,8 @@ export class DeterministicSemanticExtractor {
   ): {
     ownershipContext: OwnershipContext;
     subject?: string;
-    instrument?: string;
-    transactionType?: string;
+    instrument?: InstrumentType;
+    transactionType?: TransactionNatureType;
   } {
     // 1. Customer Advance / Deferred Revenue
     const isCustomerAdvance =
@@ -695,7 +767,7 @@ export class DeterministicSemanticExtractor {
       return {
         ownershipContext: 'not_applicable',
         subject: 'advance payment for goods or services',
-        instrument: 'cash / trade receivable',
+        instrument: 'accounts_receivable',
         transactionType: 'customer_advance_payment'
       };
     }
@@ -709,7 +781,7 @@ export class DeterministicSemanticExtractor {
       return {
         ownershipContext: 'not_applicable',
         subject: 'company business expense settled by director',
-        instrument: 'director current account liability',
+        instrument: 'director_current_account',
         transactionType: 'director_expense_settlement'
       };
     }
@@ -786,7 +858,7 @@ export class DeterministicSemanticExtractor {
       return {
         ownershipContext: 'not_applicable',
         subject: 'Software development / R&D expenditure',
-        instrument: 'intangible_asset_or_expense',
+        instrument: 'intangible_asset',
         transactionType: 'software_development_expenditure'
       };
     }
@@ -796,7 +868,7 @@ export class DeterministicSemanticExtractor {
       return {
         ownershipContext: 'not_applicable',
         subject: 'property, plant and equipment acquisition',
-        instrument: 'ppe_asset',
+        instrument: 'property_plant_equipment',
         transactionType: 'asset_acquisition'
       };
     }
@@ -806,7 +878,7 @@ export class DeterministicSemanticExtractor {
       return {
         ownershipContext: 'not_applicable',
         subject: 'inventory or goods purchase with trade discount',
-        instrument: 'trade_payable',
+        instrument: 'accounts_payable',
         transactionType: 'trade_discount_purchase'
       };
     }

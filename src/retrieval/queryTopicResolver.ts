@@ -5,19 +5,12 @@ import type {
   InstrumentType
 } from '../types/conversationState';
 import type { TransactionUnderstanding } from '../services/transactionUnderstandingService';
+import {
+  type TopicSemanticCriteria,
+  CANONICAL_TOPIC_SEMANTIC_CRITERIA
+} from '../standards/semanticAccountingRules';
 
-export interface TopicSemanticCriteria {
-  ownershipContexts?: (OwnershipContext | string)[];
-  transactionTypes?: (TransactionNatureType | string)[];
-  instruments?: (InstrumentType | string)[];
-  counterpartyRoles?: (CounterpartyRole | string)[];
-  /**
-   * Primary-topic pruning filter: If the primary understood transaction type matches one of these,
-   * this topic is suppressed from being falsely expanded by incidental query keywords.
-   * Note: This represents primary-topic query pruning, not absolute real-world impossibility.
-   */
-  blockedByTransactionTypes?: (TransactionNatureType | string)[];
-}
+export type { TopicSemanticCriteria };
 
 export interface QueryTopic {
   id: string;
@@ -31,6 +24,10 @@ export interface QueryTopic {
 export interface ResolvedTopic extends QueryTopic {
   matchSource?: 'semantic_primary' | 'semantic_corroborated' | 'lexical_only';
   primarySignalScore?: number;
+}
+
+export interface DecomposeQueryOptions {
+  allowLexicalExpansion?: boolean;
 }
 
 export interface TopicDecompositionResult {
@@ -47,11 +44,7 @@ export class QueryTopicResolver {
       keywords: ['annual leave', 'leave entitlement', 'vacation days', 'paid leave', 'section 88a'],
       actOrStandard: 'Employment Act 1968',
       sectionMatch: '88a',
-      semanticCriteria: {
-        transactionTypes: ['payroll_payment'],
-        counterpartyRoles: ['employee'],
-        blockedByTransactionTypes: ['lease_payment', 'asset_purchase', 'share_capital_issuance', 'capital_reduction']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.mom_annual_leave
     },
     {
       id: 'mom_sick_leave',
@@ -59,11 +52,7 @@ export class QueryTopicResolver {
       keywords: ['sick leave', 'medical leave', 'hospitalisation leave', 'hospitalization', 'mc', 'section 89'],
       actOrStandard: 'Employment Act 1968',
       sectionMatch: '89',
-      semanticCriteria: {
-        transactionTypes: ['payroll_payment'],
-        counterpartyRoles: ['employee'],
-        blockedByTransactionTypes: ['lease_payment', 'asset_purchase', 'share_capital_issuance', 'capital_reduction']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.mom_sick_leave
     },
     {
       id: 'mom_overtime',
@@ -71,11 +60,7 @@ export class QueryTopicResolver {
       keywords: ['overtime', 'part iv', 'working hours', 'rest day', '1.5 times', 'section 38'],
       actOrStandard: 'Employment Act 1968',
       sectionMatch: '38',
-      semanticCriteria: {
-        transactionTypes: ['payroll_payment'],
-        counterpartyRoles: ['employee'],
-        blockedByTransactionTypes: ['lease_payment', 'asset_purchase', 'share_capital_issuance', 'capital_reduction']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.mom_overtime
     },
     {
       id: 'cpf_wage_ceiling',
@@ -83,11 +68,7 @@ export class QueryTopicResolver {
       keywords: ['cpf ceiling', 'ordinary wage ceiling', 'ow ceiling', 'cpf limit', 'monthly ceiling'],
       actOrStandard: 'Central Provident Fund Act 1953',
       sectionMatch: 'first schedule',
-      semanticCriteria: {
-        transactionTypes: ['payroll_payment', 'director_fee_payment'],
-        counterpartyRoles: ['employee', 'director'],
-        blockedByTransactionTypes: ['lease_payment', 'asset_purchase', 'share_capital_issuance', 'capital_reduction']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cpf_wage_ceiling
     },
     {
       id: 'cpf_contribution_rates',
@@ -95,11 +76,7 @@ export class QueryTopicResolver {
       keywords: ['cpf rate', 'cpf contribution', 'employee contribution', 'employer contribution', 'age 55'],
       actOrStandard: 'Central Provident Fund Act 1953',
       sectionMatch: 'rates',
-      semanticCriteria: {
-        transactionTypes: ['payroll_payment', 'director_fee_payment'],
-        counterpartyRoles: ['employee', 'director'],
-        blockedByTransactionTypes: ['lease_payment', 'asset_purchase', 'share_capital_issuance', 'capital_reduction']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cpf_contribution_rates
     },
     {
       id: 'gst_compulsory_registration',
@@ -121,9 +98,7 @@ export class QueryTopicResolver {
       keywords: ['bad debt relief', 'bad debt', 'insolvent customer', 'regulations 82', 'reg 82'],
       actOrStandard: 'Goods and Services Tax (General) Regulations',
       sectionMatch: '82',
-      semanticCriteria: {
-        counterpartyRoles: ['customer']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.gst_bad_debt_relief
     },
     {
       id: 'cit_section_14',
@@ -131,9 +106,7 @@ export class QueryTopicResolver {
       keywords: ['section 14', 'wholly and exclusively', 'business expense tax deduction', 'deductible expense'],
       actOrStandard: 'Income Tax Act 1947',
       sectionMatch: '14',
-      semanticCriteria: {
-        transactionTypes: ['expense_payment', 'tax_payment', 'tax_provision']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cit_section_14
     },
     {
       id: 'cit_loss_relief',
@@ -141,9 +114,7 @@ export class QueryTopicResolver {
       keywords: ['loss carry forward', 'loss carry back', 'unabsorbed losses', 'section 37', 'section 37e'],
       actOrStandard: 'Income Tax Act 1947',
       sectionMatch: '37',
-      semanticCriteria: {
-        transactionTypes: ['tax_payment', 'tax_provision']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cit_loss_relief
     },
     {
       id: 'acra_small_company',
@@ -172,11 +143,7 @@ export class QueryTopicResolver {
       keywords: ['development cost', 'capitalisation', 'intangible asset', 'research vs development', 'technical feasibility', 'paragraph 57', '§57'],
       actOrStandard: 'SFRS(I) 1-38',
       sectionMatch: '57',
-      semanticCriteria: {
-        transactionTypes: ['rd_capitalization', 'asset_purchase'],
-        instruments: ['intangible_asset'],
-        blockedByTransactionTypes: ['lease_payment', 'payroll_payment', 'dividend_payment']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_intangibles_cap
     },
     {
       id: 'sfrsi_leases',
@@ -184,10 +151,7 @@ export class QueryTopicResolver {
       keywords: ['right of use', 'rou asset', 'lease liability', 'incremental borrowing rate', 'sfrs(i) 16', 'ifrs 16'],
       actOrStandard: 'SFRS(I) 16',
       sectionMatch: '22',
-      semanticCriteria: {
-        transactionTypes: ['lease_payment', 'lease_liability_accrual'],
-        blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'share_capital_issuance', 'capital_reduction']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_leases
     },
     {
       id: 'sfrsi_ppe',
@@ -195,11 +159,7 @@ export class QueryTopicResolver {
       keywords: ['ppe', 'catch up depreciation', 'derecognition', 'trade in machinery', 'carrying amount', 'sfrs(i) 1-16'],
       actOrStandard: 'SFRS(I) 1-16',
       sectionMatch: '55',
-      semanticCriteria: {
-        transactionTypes: ['asset_purchase', 'depreciation_expense'],
-        instruments: ['fixed_asset', 'property_plant_equipment'],
-        blockedByTransactionTypes: ['lease_payment', 'payroll_payment', 'share_capital_issuance']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_ppe
     },
     {
       id: 'acra_share_capital',
@@ -207,12 +167,7 @@ export class QueryTopicResolver {
       keywords: ['share capital', 'allotment', 'no par value', 'unpaid shares', 'section 68', 'section 63', 'own company share'],
       actOrStandard: 'Companies Act 1967',
       sectionMatch: '68',
-      semanticCriteria: {
-        ownershipContexts: ['own_company_equity', 'own_equity'],
-        transactionTypes: ['share_capital_issuance', 'share_subscription', 'capital_reduction'],
-        counterpartyRoles: ['shareholder', 'director_shareholder'],
-        blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'customer_invoice']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.acra_share_capital
     },
     {
       id: 'sfrsi_own_equity',
@@ -220,11 +175,7 @@ export class QueryTopicResolver {
       keywords: ['equity instrument', 'own shares', 'sfrs(i) 1-32', 'ias 32', 'share capital equity'],
       actOrStandard: 'SFRS(I) 1-32',
       sectionMatch: '33',
-      semanticCriteria: {
-        ownershipContexts: ['own_company_equity', 'own_equity'],
-        counterpartyRoles: ['shareholder', 'director_shareholder'],
-        blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'customer_invoice']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_own_equity
     },
     {
       id: 'sfrsi_financial_instruments',
@@ -232,56 +183,61 @@ export class QueryTopicResolver {
       keywords: ['financial asset', 'financial instrument', 'marketable securities', 'shares in other company', 'fvtoci', 'fvtpl', 'amortised cost', 'sfrs(i) 9'],
       actOrStandard: 'SFRS(I) 9',
       sectionMatch: '4.1',
-      semanticCriteria: {
-        ownershipContexts: ['external_entity_equity', 'unrelated_third_party', 'external_investment'],
-        instruments: ['debt_instrument', 'marketable_securities', 'derivative', 'equity_instrument'],
-        blockedByTransactionTypes: ['lease_payment', 'payroll_payment', 'share_capital_issuance']
-      }
+      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_financial_instruments
     }
   ];
 
   /**
    * Decomposes user query into identified statutory and accounting topics.
-   * Semantic criteria act as the PRIMARY topic signal; lexical matching provides supporting evidence.
-   * When semantic context indicates a transaction type, topics blocked by that type are pruned to avoid false topic expansion.
-   * 'unknown' / 'unclassified' attributes are strictly neutral and never produce positive semantic matches.
+   *
+   * Semantic Architecture & Rules:
+   * 1. Semantic criteria act as the PRIMARY topic signal.
+   * 2. 'semantic_corroborated' is defined as lexical evidence consistent with the topic's specific semantic classification.
+   * 3. When a usable semantic context exists, uncorroborated 'lexical_only' matches are prevented from expanding the topic list.
+   * 4. If no semantic topics match, 'lexical_only' activates as a controlled fallback.
+   * 5. 'unknown' attributes are strictly neutral.
    */
   public decomposeQuery(
     query: string,
-    semanticContext?: TransactionUnderstanding | { ownershipContext?: string }
+    semanticContext?: TransactionUnderstanding | { ownershipContext?: string },
+    options?: DecomposeQueryOptions
   ): TopicDecompositionResult {
     if (!query || typeof query !== 'string') {
       return { isMultiTopic: false, topics: [], unresolvedTopics: [] };
     }
 
     const qLower = query.toLowerCase();
-    const matchedTopics: ResolvedTopic[] = [];
 
     // Extract structured semantics if provided, ensuring strict neutrality for 'unknown'
     const sem = semanticContext as (TransactionUnderstanding & { ownershipContext?: string }) | undefined;
     const hasSem = Boolean(sem);
 
-    const semOwnContext = (sem?.ownershipContext && sem.ownershipContext !== 'unknown' && sem.ownershipContext !== 'not_applicable')
-      ? sem.ownershipContext
+    const semOwnContext: OwnershipContext | undefined = (sem?.ownershipContext && sem.ownershipContext !== 'unknown' && sem.ownershipContext !== 'not_applicable')
+      ? (sem.ownershipContext as OwnershipContext)
       : undefined;
 
-    const semTxType = (sem?.transactionType && sem.transactionType !== 'unclassified_transaction' && (sem.transactionType as string) !== 'unknown')
+    const semTxType: TransactionNatureType | undefined = (sem?.transactionType && sem.transactionType !== 'unclassified_transaction' && (sem.transactionType as string) !== 'unknown')
       ? sem.transactionType
       : undefined;
 
-    const semInstrument = (sem?.instrument && (sem.instrument as string) !== 'unknown')
+    const semInstrument: InstrumentType | undefined = (sem?.instrument && (sem.instrument as string) !== 'unknown')
       ? sem.instrument
       : undefined;
 
-    const semCounterpartyRole = (sem?.counterparty?.role && (sem.counterparty.role as string) !== 'unknown' && (sem.counterparty.role as string) !== 'unclassified')
+    const semCounterpartyRole: CounterpartyRole | undefined = (sem?.counterparty?.role && (sem.counterparty.role as string) !== 'unknown' && (sem.counterparty.role as string) !== 'unclassified')
       ? sem.counterparty.role
       : undefined;
+
+    // Usable semantic context: identifiable transaction type or ownership context with >= 0.50 confidence
+    const hasUsableSemanticContext = hasSem && (semTxType !== undefined || semOwnContext !== undefined) && (sem?.confidence ?? 0) >= 0.50;
+
+    const semMatchedTopics: ResolvedTopic[] = [];
+    const lexicalOnlyTopics: ResolvedTopic[] = [];
 
     for (const topic of QueryTopicResolver.CANONICAL_TOPICS) {
       const criteria = topic.semanticCriteria;
 
       // 1. Primary-topic pruning filter
-      // If primary transaction type is known and blocked for this topic, prune it from both semantic and lexical consideration
       if (semTxType && criteria?.blockedByTransactionTypes?.includes(semTxType)) {
         continue;
       }
@@ -308,19 +264,22 @@ export class QueryTopicResolver {
 
       // 4. Topic Resolution & Attribution
       if (hasSemanticMatch && hasLexicalMatch) {
-        matchedTopics.push({
+        // True semantic corroboration: semantic classification matched AND lexical keywords directly corroborate this topic
+        semMatchedTopics.push({
           ...topic,
           matchSource: 'semantic_corroborated',
           primarySignalScore: 1.0
         });
       } else if (hasSemanticMatch) {
-        matchedTopics.push({
+        // Primary semantic topic without explicit topic keywords in query
+        semMatchedTopics.push({
           ...topic,
           matchSource: 'semantic_primary',
           primarySignalScore: sem?.confidence ?? 0.9
         });
       } else if (hasLexicalMatch) {
-        matchedTopics.push({
+        // Lexical keyword hit without semantic backing
+        lexicalOnlyTopics.push({
           ...topic,
           matchSource: 'lexical_only',
           primarySignalScore: 0.5
@@ -328,12 +287,26 @@ export class QueryTopicResolver {
       }
     }
 
+    let matchedTopics: ResolvedTopic[] = [];
+
+    // Controlled Lexical Expansion Logic:
+    // When a usable semantic context exists, suppress lexical_only topics to avoid false expansion from incidental words.
+    // However, if 0 semantic topics matched, activate lexical_only as a controlled fallback so the query is not left empty.
+    if (hasUsableSemanticContext && !options?.allowLexicalExpansion) {
+      if (semMatchedTopics.length > 0) {
+        matchedTopics = semMatchedTopics;
+      } else {
+        matchedTopics = lexicalOnlyTopics;
+      }
+    } else {
+      matchedTopics = [...semMatchedTopics, ...lexicalOnlyTopics];
+    }
+
     const isMultiTopic = matchedTopics.length > 1;
 
     // Detect if query asked about multiple questions via conjunctions (e.g. "and", "as well as", "plus")
     const unresolvedTopics: string[] = [];
     if (qLower.includes(' and ') || qLower.includes(' as well as ') || qLower.includes(' also ')) {
-      // Check if there are unrecognized clauses
       const parts = qLower.split(/\band\b|\bas well as\b|\balso\b/);
       for (const part of parts) {
         const trimmed = part.trim();

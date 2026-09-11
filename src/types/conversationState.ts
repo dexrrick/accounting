@@ -56,6 +56,7 @@ export type InstrumentType =
   | 'own_equity'
   | 'equity_instrument'
   | 'financial_asset_equity'
+  | 'financial_asset_at_fvtpl'
   | 'marketable_securities'
   | 'debt_instrument'
   | 'derivative'
@@ -64,42 +65,36 @@ export type InstrumentType =
   | 'intangible_asset'
   | 'right_of_use_asset'
   | 'lease_liability'
-  | 'cash / trade receivable'
-  | 'director current account liability'
   | 'right_of_use_asset_and_lease_liability'
-  | 'unknown'
-  | 'intangible_asset_or_expense'
-  | 'ppe_asset'
-  | 'trade_payable'
   | 'director_current_account'
-  | 'financial_instrument';
+  | 'amount_due_to_director'
+  | 'contract_liability_deferred_revenue'
+  | 'unknown';
 
 export type AccountingEventType =
   | 'initial_transaction'
   | 'settlement'
   | 'partial_settlement'
-  | 'adjustment'
   | 'reversal'
-  | 'modification'
-  | 'hypothetical_change'
-  | 'clarification'
+  | 'adjustment'
   | 'other';
 
 export interface AccountingEvent {
   id: string;
   transactionId: string;
   targetTransactionId?: string;
-  type: AccountingEventType;
-  description: string;
-  amount?: number;
-  currency?: string | null;
-  affectedAccounts?: string[];
-  sourceTurn?: number;
-  isHypothetical?: boolean;
-  timestamp?: string;
-  eventDate?: string;
-  journalLines?: JournalLine[];
   targetBalanceKey?: string;
+  type?: string;
+  eventType?: AccountingEventType;
+  isHypothetical?: boolean;
+  eventDate: string;
+  amount: number;
+  currency: string;
+  description: string;
+  lines?: JournalLine[];
+  journalLines?: JournalLine[];
+  affectedAccounts?: string[];
+  timestamp?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -152,10 +147,10 @@ export interface ConversationAccountingContext {
     description?: string;
   };
   underlyingTransaction?: {
-    type: TransactionNatureType | string;
+    type: TransactionNatureType;
     subject: string;
     ownershipContext: OwnershipContext;
-    instrument: InstrumentType | string;
+    instrument: InstrumentType;
     totalAmount?: number;
     currency: string;
   };

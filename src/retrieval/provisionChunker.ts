@@ -26,6 +26,7 @@ export interface VerifiedChunk {
   heading?: string;
   section?: string;
   subsection?: string;
+  tags?: string[];
 }
 
 /**

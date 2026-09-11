@@ -693,7 +693,7 @@ export function assembleDeterministicResponse(
       eventDate: grp.eventDate,
       isHypothetical: false
     }));
-    finalAccountingEvents = [...finalActualEvents];
+    finalAccountingEvents = [...(finalActualEvents ?? [])];
   } else if (hasAuthoritativeDeterministicEntries && !committedDirectGroups) {
     committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
   }

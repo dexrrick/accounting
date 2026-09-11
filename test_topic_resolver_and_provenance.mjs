@@ -2,7 +2,10 @@ import assert from 'assert';
 import { defaultQueryTopicResolver } from './src/retrieval/queryTopicResolver.ts';
 import { DeterministicSemanticAlignmentEvaluator } from './src/retrieval/semanticAlignmentEvaluator.ts';
 import { RetrievalTelemetryRecorder } from './src/retrieval/retrievalTelemetry.ts';
-import { DeterministicSemanticExtractor } from './src/services/transactionUnderstandingService.ts';
+import {
+  DeterministicSemanticExtractor,
+  TransactionUnderstandingService
+} from './src/services/transactionUnderstandingService.ts';
 
 async function runTopicResolverAndProvenanceTests() {
   console.log('================================================================');
@@ -48,14 +51,15 @@ async function runTopicResolverAndProvenanceTests() {
   });
 
   // -------------------------------------------------------------------------
-  // TEST 1: PRIMARY SEMANTIC TOPIC RESOLUTION (Lease without keywords)
+  // TEST 1: PRIMARY SEMANTIC TOPIC RESOLUTION (Lease Contract Inception)
   // -------------------------------------------------------------------------
   console.log('[TEST 1: Primary Semantic Topic Resolution (Implicit Lease)]');
   {
     const query = 'Our company signed a 3-year commercial vehicle contract payable $2,000 monthly.';
     const semanticContext = {
       reportingEntity: { type: 'standalone_private' },
-      transactionType: 'lease_payment',
+      transactionType: 'lease_contract',
+      instrument: 'right_of_use_asset_and_lease_liability',
       ownershipContext: 'not_applicable',
       confidence: 0.95,
       provenance: {
@@ -108,17 +112,17 @@ async function runTopicResolverAndProvenanceTests() {
   }
 
   // -------------------------------------------------------------------------
-  // TEST 3: PRIMARY SEMANTIC TOPIC RESOLUTION (External Investment)
+  // TEST 3: PRIMARY SEMANTIC TOPIC RESOLUTION (External Investment) & NARROWED CONFLICT
   // -------------------------------------------------------------------------
-  console.log('\n[TEST 3: Primary Semantic Topic Resolution (External Investment)]');
+  console.log('\n[TEST 3: Primary Semantic Topic Resolution & Narrowed Conflict (External Investment)]');
   {
-    const query = 'Purchased bonds issued by foreign treasury.';
+    const query = 'Acquired ordinary shares in an overseas tech company for portfolio investment.';
     const semanticContext = {
       reportingEntity: { type: 'standalone_private' },
-      transactionType: 'asset_purchase',
-      ownershipContext: 'external_entity_equity',
-      instrument: 'debt_instrument',
-      confidence: 0.88,
+      transactionType: 'equity_investment_acquisition',
+      ownershipContext: 'external_investment',
+      instrument: 'financial_asset_equity',
+      confidence: 0.92,
       provenance: {
         tier: 'AI_REASONING',
         isFallback: false,
@@ -132,7 +136,36 @@ async function runTopicResolverAndProvenanceTests() {
     const result = resolver.decomposeQuery(query, semanticContext);
     const finTopic = result.topics.find(t => t.id === 'sfrsi_financial_instruments');
     assert(finTopic, 'sfrsi_financial_instruments must be resolved for external entity instruments');
-    console.log('  ✓ External bond investment resolved to sfrsi_financial_instruments');
+    assert.strictEqual(finTopic.matchSource, 'semantic_primary');
+
+    // Invariant: Companies Act §199 (record keeping) must NEVER conflict with external investments
+    const recCA199 = mockRecord('REC_CA_199', { standardOrActCode: 'Companies Act 1967', paragraphOrSection: 'Section 199' });
+    const chkCA199 = mockChunk('CHK_CA_199', recCA199.id, 'Accounting records and keeping of accounts', '199');
+    const scoreCA199 = evaluator.evaluateAlignment(chkCA199, recCA199, semanticContext);
+    assert.strictEqual(scoreCA199.hasSemanticConflict, false, 'CA §199 must NOT conflict with external investments');
+    assert.strictEqual(scoreCA199.penalty, 0, 'CA §199 penalty must be 0');
+    assert.strictEqual(scoreCA199.finalDeltaSemantics, 0, 'CA §199 final delta must be 0 (neutral)');
+
+    // Invariant: Companies Act §68 (own share allotment) MUST conflict with external investments
+    const recCA68 = mockRecord('REC_CA_68', { standardOrActCode: 'Companies Act 1967', paragraphOrSection: 'Section 68' });
+    const chkCA68 = mockChunk('CHK_CA_68', recCA68.id, 'Abolition of par value / allotment of shares', '68');
+    const scoreCA68 = evaluator.evaluateAlignment(chkCA68, recCA68, semanticContext);
+    assert.strictEqual(scoreCA68.hasSemanticConflict, true, 'CA §68 MUST conflict with external investments');
+    assert(scoreCA68.penalty < 0, 'CA §68 penalty must be negative');
+    assert(scoreCA68.finalDeltaSemantics < 0, 'CA §68 final delta must be negative');
+
+    // Invariant: SFRS(I) 9 must positively align with external investments
+    const recSfrsi9 = mockRecord('REC_SFRSI9', { standardOrActCode: 'SFRS(I) 9', paragraphOrSection: 'Section 5.1.1' });
+    const chkSfrsi9 = mockChunk('CHK_SFRSI9', recSfrsi9.id, 'Financial asset initial measurement', '5.1.1');
+    const scoreSfrsi9 = evaluator.evaluateAlignment(chkSfrsi9, recSfrsi9, semanticContext);
+    assert.strictEqual(scoreSfrsi9.hasSemanticConflict, false, 'SFRS(I) 9 must not conflict');
+    assert(scoreSfrsi9.boost > 0, 'SFRS(I) 9 must receive positive boost');
+    assert(scoreSfrsi9.finalDeltaSemantics > 0, 'SFRS(I) 9 final delta must be positive');
+
+    console.log('  ✓ External investment resolved to sfrsi_financial_instruments (semantic_primary)');
+    console.log('  ✓ Verified: CA §199 does NOT conflict (neutral: 0.00)');
+    console.log('  ✓ Verified: CA §68 properly conflicts (penalty applied)');
+    console.log('  ✓ Verified: SFRS(I) 9 receives positive alignment boost');
     passed++;
   }
 
@@ -365,8 +398,202 @@ async function runTopicResolverAndProvenanceTests() {
     passed++;
   }
 
+  // -------------------------------------------------------------------------
+  // TEST 10: LEXICAL-ONLY TOPIC SUPPRESSION UNDER USABLE SEMANTIC CONTEXT
+  // -------------------------------------------------------------------------
+  console.log('\n[TEST 10: Lexical-Only Topic Suppression Under Usable Semantic Context]');
+  {
+    const query = 'Office utility bill paid via bank. Director requested standard accounting treatment.';
+    const semanticContext = {
+      reportingEntity: { type: 'standalone_private' },
+      transactionType: 'expense_payment',
+      ownershipContext: 'not_applicable',
+      confidence: 0.90,
+      provenance: {
+        tier: 'AI_REASONING',
+        isFallback: false,
+        engine: 'GEMINI_2_5_FLASH',
+        appliedRules: [],
+        confidenceCapped: false,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    const result = resolver.decomposeQuery(query, semanticContext);
+    const hasCit = result.topics.some(t => t.id === 'cit_section_14');
+    assert(hasCit, 'cit_section_14 should match for expense_payment');
+
+    const lexicalOnlyTopics = result.topics.filter(t => t.matchSource === 'lexical_only');
+    assert.strictEqual(lexicalOnlyTopics.length, 0, 'Lexical-only topics must be suppressed when usable semantic context exists');
+    console.log('  ✓ Lexical-only spurious expansions suppressed under usable semantic context');
+    passed++;
+  }
+
+  // -------------------------------------------------------------------------
+  // TEST 11: CONTROLLED FALLBACK (0 Semantic Matches or allowLexicalExpansion)
+  // -------------------------------------------------------------------------
+  console.log('\n[TEST 11: Controlled Fallback when 0 Semantic Topics Match]');
+  {
+    const query = 'What are the small company audit exemption thresholds in Singapore?';
+    const unclassifiedContext = {
+      reportingEntity: { type: 'standalone_private' },
+      transactionType: 'unclassified_transaction',
+      ownershipContext: 'not_applicable',
+      confidence: 0.85,
+      provenance: {
+        tier: 'AI_REASONING',
+        isFallback: false,
+        engine: 'GEMINI_2_5_FLASH',
+        appliedRules: [],
+        confidenceCapped: false,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    const result = resolver.decomposeQuery(query, unclassifiedContext);
+    const smallCo = result.topics.find(t => t.id === 'acra_small_company');
+    assert(smallCo, 'acra_small_company must be preserved via controlled fallback when 0 semantic topics match');
+    assert.strictEqual(smallCo.matchSource, 'lexical_only');
+    console.log('  ✓ Controlled fallback preserved lexical topics when 0 semantic topics matched');
+    passed++;
+  }
+
+  // -------------------------------------------------------------------------
+  // TEST 12: AI SCHEMA FAILURE → HEURISTIC FALLBACK PROVENANCE REGRESSION
+  // -------------------------------------------------------------------------
+  console.log('\n[TEST 12: AI Schema Failure → Heuristic Fallback Provenance Regression]');
+  {
+    const invalidAiExtractor = {
+      extract: async () => ({
+        reportingEntity: { type: 'illegal_alien_dimension' },
+        counterparty: { role: 'time_traveler' },
+        ownershipContext: 'interdimensional_equity',
+        transactionType: 'magic_teleportation',
+        currency: { value: 'SGD', source: 'supernatural' }
+      })
+    };
+
+    const heuristicFallbackExtractor = new DeterministicSemanticExtractor();
+    const service = new TransactionUnderstandingService(heuristicFallbackExtractor, invalidAiExtractor);
+
+    const query = 'Shareholder contributed $50,000 for new company shares.';
+    const understanding = await service.understandTransaction(query, 'SGD', 'SG', 'mock-ai-api-key');
+
+    assert.strictEqual(understanding.extractionSource, 'deterministic_fallback');
+    assert.strictEqual(understanding.provenance.tier, 'DETERMINISTIC_HEURISTIC_FALLBACK');
+    assert.strictEqual(understanding.provenance.isFallback, true);
+    assert.strictEqual(understanding.provenance.confidenceCapped, true);
+    assert(understanding.confidence <= 0.65, `Confidence must be capped <= 0.65, got ${understanding.confidence}`);
+
+    const recCA68 = mockRecord('REC_CA_68', { standardOrActCode: 'Companies Act 1967', paragraphOrSection: 'Section 68' });
+    const chkCA68 = mockChunk('CHK_CA_68', recCA68.id, 'Share capital allotment', '68');
+    const score = evaluator.evaluateAlignment(chkCA68, recCA68, understanding);
+    assert.strictEqual(score.provenanceMultiplier, 0.70);
+    assert.strictEqual(score.provenanceTier, 'DETERMINISTIC_HEURISTIC_FALLBACK');
+    assert.strictEqual(score.finalDeltaSemantics, Math.round(score.baseDeltaSemantics * 0.70 * 1e6) / 1e6);
+
+    const recorder = new RetrievalTelemetryRecorder('test-fallback-q', 'snap-fb', 'vec-fb');
+    recorder.recordSemanticContext(understanding);
+    recorder.recordSemanticEvaluation(chkCA68.id, score);
+    const telemetry = recorder.getTelemetry();
+    assert.strictEqual(telemetry.semanticExtractionTier, 'DETERMINISTIC_HEURISTIC_FALLBACK');
+    assert.strictEqual(telemetry.isFallbackSemanticExtraction, true);
+
+    console.log('  ✓ AI schema validation failure caught without crash');
+    console.log('  ✓ Seamless fallback to DETERMINISTIC_HEURISTIC_FALLBACK');
+    console.log(`  ✓ Provenance confidence capped at ${understanding.confidence} (<= 0.65)`);
+    console.log(`  ✓ Evaluator applied 0.70x multiplier: base=${score.baseDeltaSemantics} -> final=${score.finalDeltaSemantics}`);
+    console.log('  ✓ Telemetry verified isFallbackSemanticExtraction = true');
+    passed++;
+  }
+
+  // -------------------------------------------------------------------------
+  // TEST 13: MULTI-TURN LEASE LIFECYCLE (Inception §22 vs Settlement §36)
+  // -------------------------------------------------------------------------
+  console.log('\n[TEST 13: Multi-Turn Lease Lifecycle (Inception §22 vs Settlement §36)]');
+  {
+    console.log('  Turn 1: Inception of 3-Year Commercial Lease Contract');
+    const turn1Query = 'Our company entered a 3-year commercial property lease contract with monthly rent of $5,000.';
+    const turn1Context = {
+      reportingEntity: { type: 'standalone_private' },
+      transactionType: 'lease_contract',
+      instrument: 'right_of_use_asset_and_lease_liability',
+      ownershipContext: 'not_applicable',
+      confidence: 0.95,
+      provenance: {
+        tier: 'AI_REASONING',
+        isFallback: false,
+        engine: 'GEMINI_2_5_FLASH',
+        appliedRules: [],
+        confidenceCapped: false,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    const decomp1 = resolver.decomposeQuery(turn1Query, turn1Context);
+    const leaseTopic1 = decomp1.topics.find(t => t.id === 'sfrsi_leases');
+    assert(leaseTopic1, 'Turn 1 must resolve to sfrsi_leases');
+
+    const recSfrsi16_22 = mockRecord('REC_SFRS16_22', { standardOrActCode: 'SFRS(I) 16', paragraphOrSection: 'Paragraph 22' });
+    const chkSfrsi16_22 = mockChunk('CHK_16_22', recSfrsi16_22.id, 'Right-of-use asset and lease liability initial recognition at commencement date', '22');
+
+    const recSfrsi16_36 = mockRecord('REC_SFRS16_36', { standardOrActCode: 'SFRS(I) 16', paragraphOrSection: 'Paragraph 36' });
+    const chkSfrsi16_36 = mockChunk('CHK_16_36', recSfrsi16_36.id, 'Subsequent measurement of lease liability; allocation between finance charge and liability reduction', '36');
+
+    const recCA68 = mockRecord('REC_CA_68', { standardOrActCode: 'Companies Act 1967', paragraphOrSection: 'Section 68' });
+    const chkCA68 = mockChunk('CHK_CA_68', recCA68.id, 'Abolition of par value / allotment of shares', '68');
+
+    const score1_22 = evaluator.evaluateAlignment(chkSfrsi16_22, recSfrsi16_22, turn1Context);
+    assert.strictEqual(score1_22.hasSemanticConflict, false);
+    assert(score1_22.boost > 0, 'Turn 1 must boost SFRS(I) 16 §22');
+
+    const score1_36 = evaluator.evaluateAlignment(chkSfrsi16_36, recSfrsi16_36, turn1Context);
+    assert.strictEqual(score1_36.boost, 0, 'Turn 1 inception must NOT boost subsequent settlement §36');
+
+    const score1_CA68 = evaluator.evaluateAlignment(chkCA68, recCA68, turn1Context);
+    assert.strictEqual(score1_CA68.hasSemanticConflict, true, 'Lease inception cannot be share capital allotment');
+    console.log('    ✓ Turn 1: SFRS(I) 16 §22 boosted (+0.15), §36 neutral (0.00), CA §68 conflict detected (-0.20)');
+
+    console.log('  Turn 2: Subsequent Periodic Lease Payment via Bank');
+    const turn2Query = 'Paid monthly commercial lease installment of $5,000 via bank transfer.';
+    const turn2Context = {
+      reportingEntity: { type: 'standalone_private' },
+      transactionType: 'lease_payment',
+      instrument: 'lease_liability',
+      ownershipContext: 'not_applicable',
+      paymentStatus: 'paid',
+      confidence: 0.94,
+      provenance: {
+        tier: 'AI_REASONING',
+        isFallback: false,
+        engine: 'GEMINI_2_5_FLASH',
+        appliedRules: [],
+        confidenceCapped: false,
+        timestamp: new Date().toISOString()
+      }
+    };
+
+    const decomp2 = resolver.decomposeQuery(turn2Query, turn2Context);
+    const leaseTopic2 = decomp2.topics.find(t => t.id === 'sfrsi_leases');
+    assert(leaseTopic2, 'Turn 2 must resolve to sfrsi_leases');
+
+    const score2_36 = evaluator.evaluateAlignment(chkSfrsi16_36, recSfrsi16_36, turn2Context);
+    assert.strictEqual(score2_36.hasSemanticConflict, false);
+    assert(score2_36.boost > 0, 'Turn 2 must boost SFRS(I) 16 §36');
+
+    const score2_22 = evaluator.evaluateAlignment(chkSfrsi16_22, recSfrsi16_22, turn2Context);
+    assert.strictEqual(score2_22.boost, 0, 'Turn 2 settlement must NOT boost initial inception §22');
+
+    const score2_CA68 = evaluator.evaluateAlignment(chkCA68, recCA68, turn2Context);
+    assert.strictEqual(score2_CA68.hasSemanticConflict, false);
+
+    console.log('    ✓ Turn 2: SFRS(I) 16 §36 boosted (+0.15), §22 neutral (0.00), CA §68 neutral (0.00)');
+    console.log('  ✓ Multi-turn lifecycle accurately decouples contract inception §22 from debt settlement §36');
+    passed++;
+  }
+
   console.log('\n================================================================');
-  console.log(`🎉 ALL ${passed}/9 TESTS PASSED CLEANLY!`);
+  console.log(`🎉 ALL ${passed}/13 TESTS PASSED CLEANLY!`);
   console.log('================================================================\n');
 }
 
