@@ -11,7 +11,7 @@ import {
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { classifyQuestion } from '../classification/questionClassifier';
 import { defaultTransactionUnderstandingService } from '../services/transactionUnderstandingService';
-import { extractAccountingContext, calculateAccountingDelta } from '../services/conversationAccountingState';
+import { extractAccountingContext, calculateAccountingDelta, commitAccountingEvent } from '../services/conversationAccountingState';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -1648,8 +1648,17 @@ export async function parseAccountingQuery(
         const delta = calculateAccountingDelta(convContext, understanding.followUpAnalysis, functionalCurrency);
         if (delta && delta.resultingAccountingEvent) {
           const isHypo = Boolean(delta.isHypothetical);
+          const priorCommittedGroups = (currentScenario.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+            ? [...currentScenario.committedDirectGroups]
+            : (currentScenario.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
+
+          const resultingEvent = delta.resultingAccountingEvent;
+
           const settlementGroup: JournalEntryGroup = {
-            id: `grp-settle-${(currentScenario.directGroups?.length || 0) + 1}`,
+            id: `grp-settle-${priorCommittedGroups.length + 1}`,
+            transactionId: resultingEvent.transactionId,
+            targetTransactionId: resultingEvent.targetTransactionId,
+            isHypothetical: isHypo,
             eventDate: formatSingaporeDate(new Date()),
             title: isHypo ? 'Hypothetical Settlement of Allotment Receivable' : 'Settlement of Allotment Receivable',
             summary: delta.explanation,
@@ -1665,20 +1674,22 @@ export async function parseAccountingQuery(
             authorityStatus: 'DETERMINISTIC'
           };
 
+          const committedDirectGroups = isHypo
+            ? priorCommittedGroups
+            : [...priorCommittedGroups, settlementGroup];
+
+          const projectedGroups = isHypo ? [settlementGroup] : undefined;
+
           const directGroups: JournalEntryGroup[] = [
-            ...(currentScenario.directGroups || []),
+            ...priorCommittedGroups,
             settlementGroup
           ];
 
-          const priorActualEvents = currentScenario.actualEvents && currentScenario.actualEvents.length > 0
-            ? [...currentScenario.actualEvents]
-            : (convContext.actualEvents && convContext.actualEvents.length > 0 ? [...convContext.actualEvents] : []);
-
-          const resultingEvent = delta.resultingAccountingEvent;
+          const priorActualEvents = convContext.actualEvents;
 
           const newActualEvents = isHypo
             ? priorActualEvents
-            : [...priorActualEvents, resultingEvent];
+            : commitAccountingEvent(priorActualEvents, resultingEvent);
 
           const newAccountingEvents = [
             ...(currentScenario.accountingEvents || priorActualEvents),
@@ -1700,6 +1711,8 @@ export async function parseAccountingQuery(
             singaporeTaxTreatmentSummary: 'Allotment of share capital and subsequent settlement of capital receivable have no corporate income tax implications under the Singapore Income Tax Act 1947.',
             amount: delta.amount,
             directGroups,
+            committedDirectGroups,
+            projectedGroups,
             accountingEvents: newAccountingEvents,
             actualEvents: newActualEvents,
             isHypothetical: isHypo,

@@ -300,22 +300,8 @@ export class DeterministicSemanticExtractor {
     const isHypothetical = /\b(what if|suppose|assuming|if)\b/i.test(query);
 
     if (hasPriorContext && !introducesNewSubject && isPaymentOrSettlementAction) {
-      // Find target receivable or payable to settle
-      let targetBalance = conversationContext!.outstandingBalances.find(b => b.nature === 'RECEIVABLE');
-      if (!targetBalance && conversationContext!.recognizedEquityTotal > 0) {
-        targetBalance = {
-          balanceKey: '1150_shareholder_default',
-          accountCode: '1150',
-          accountName: 'Amount Due from Shareholder (Receivable)',
-          category: 'ASSET',
-          nature: 'RECEIVABLE',
-          counterpartyRole: 'shareholder',
-          originalAmount: conversationContext!.recognizedEquityTotal,
-          settledAmount: 0,
-          remainingAmount: conversationContext!.recognizedEquityTotal,
-          currency: conversationContext!.underlyingTransaction?.currency || functionalCurrency
-        };
-      }
+      // Find target receivable or payable to settle from recorded balances
+      const targetBalance = conversationContext!.outstandingBalances.find(b => b.nature === 'RECEIVABLE');
 
       if (targetBalance) {
         // If amount was not specified in the follow-up, inherit full remaining balance

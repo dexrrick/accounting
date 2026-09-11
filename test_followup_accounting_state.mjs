@@ -3,7 +3,10 @@ import { defaultTransactionUnderstandingService } from './src/services/transacti
 import {
   extractAccountingContext,
   validateAccountingStateTransition,
-  resolveSettlementTarget
+  resolveSettlementTarget,
+  deriveAccountingStateFromEvents,
+  calculateAccountingDelta,
+  commitAccountingEvent
 } from './src/services/conversationAccountingState.ts';
 
 console.log('================================================================');
@@ -535,6 +538,9 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   const q1 = "shareholder has invested in own company share capital of SGD 1000 but unpaid what's the double entry";
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
   assert(!r1.scenarioState.isHypothetical, 'T1 must be actual');
+  assert(r1.scenarioState.directGroups?.length === 1, 'T1 directGroups must be 1');
+  const t1EquityCredit = r1.scenarioState.directGroups[0].lines.reduce((s, l) => s + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0);
+  assert(t1EquityCredit === 1000, `T1 Share Capital credit must be 1,000, got ${t1EquityCredit}`);
   const ctx1 = extractAccountingContext(r1.scenarioState);
   assert(ctx1.outstandingBalances[0]?.remainingAmount === 1000, 'T1 actual balance must be 1,000');
 
@@ -542,6 +548,10 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   const q2 = "what if shareholder paid SGD 600 to bank";
   const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
   assert(r2.scenarioState.isHypothetical === true, 'T2 must be hypothetical');
+  assert(r2.scenarioState.committedDirectGroups?.length === 1, 'T2 committedDirectGroups must only contain Turn 1');
+  assert(r2.scenarioState.directGroups?.length === 2, 'T2 directGroups UI projection has 2 groups (Turn 1 committed + Turn 2 projected)');
+  const t2EquityCredit = r2.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
+  assert(t2EquityCredit === 1000, `T2 cumulative Share Capital credit must remain 1,000, got ${t2EquityCredit}`);
   const t2RemParam = r2.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
   assert(t2RemParam?.value.includes('400'), `T2 remaining parameter must indicate 400, got ${t2RemParam?.value}`);
   const ctx2 = extractAccountingContext(r2.scenarioState);
@@ -551,6 +561,10 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   const q3 = "the shareholder paid SGD 400 into company bank account today";
   const r3 = await processAccountingQuery(q3, r2.scenarioState, 'SFRS_I');
   assert(!r3.scenarioState.isHypothetical, 'T3 must be actual');
+  assert(r3.scenarioState.directGroups?.length === 2, `T3 directGroups must have exactly 2 groups (Turn 1 initial and Turn 3 actual settlement, NOT Turn 2 hypothetical!), got ${r3.scenarioState.directGroups?.length}`);
+  assert(r3.scenarioState.committedDirectGroups?.length === 2, `T3 committedDirectGroups must have 2 groups, got ${r3.scenarioState.committedDirectGroups?.length}`);
+  const t3EquityCredit = r3.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
+  assert(t3EquityCredit === 1000, `T3 cumulative Share Capital credit must remain 1,000 throughout, got ${t3EquityCredit}`);
   const t3RemParam = r3.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
   assert(t3RemParam?.value.includes('600'), `T3 remaining balance must be 600 (not 0!), got ${t3RemParam?.value}`);
   const ctx3 = extractAccountingContext(r3.scenarioState);
@@ -560,6 +574,10 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   const q4 = "what if shareholder pays another SGD 200 to bank";
   const r4 = await processAccountingQuery(q4, r3.scenarioState, 'SFRS_I');
   assert(r4.scenarioState.isHypothetical === true, 'T4 must be hypothetical');
+  assert(r4.scenarioState.committedDirectGroups?.length === 2, 'T4 committedDirectGroups must remain 2');
+  assert(r4.scenarioState.directGroups?.length === 3, 'T4 directGroups UI projection has 3 groups (Turn 1 + Turn 3 committed + Turn 4 projected)');
+  const t4EquityCredit = r4.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
+  assert(t4EquityCredit === 1000, `T4 cumulative Share Capital credit must remain 1,000 throughout, got ${t4EquityCredit}`);
   const t4RemParam = r4.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
   assert(t4RemParam?.value.includes('400'), `T4 remaining balance must project 400, got ${t4RemParam?.value}`);
   const ctx4 = extractAccountingContext(r4.scenarioState);
@@ -569,6 +587,264 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   testsPassed++;
 }
 
+// --------------------------------------------------------------------------
+// TEST 14: Authoritative Transaction ID Disambiguation between Two Allotments
+// --------------------------------------------------------------------------
+console.log('--- TEST 14: Authoritative Transaction ID Disambiguation ---');
+{
+  const multiAllotmentContext = {
+    events: [],
+    actualEvents: [],
+    outstandingBalances: [
+      {
+        balanceKey: '1150_shareholder_tx-seed-1',
+        accountCode: '1150',
+        accountName: 'Amount Due from Shareholder (Receivable)',
+        category: 'ASSET',
+        nature: 'RECEIVABLE',
+        counterpartyRole: 'shareholder',
+        transactionId: 'tx-seed-1',
+        originalAmount: 1000,
+        settledAmount: 0,
+        remainingAmount: 1000,
+        currency: 'SGD'
+      },
+      {
+        balanceKey: '1150_shareholder_tx-series-a-1',
+        accountCode: '1150',
+        accountName: 'Amount Due from Shareholder (Receivable)',
+        category: 'ASSET',
+        nature: 'RECEIVABLE',
+        counterpartyRole: 'shareholder',
+        transactionId: 'tx-series-a-1',
+        originalAmount: 5000,
+        settledAmount: 0,
+        remainingAmount: 5000,
+        currency: 'SGD'
+      }
+    ],
+    recognizedEquityTotal: 6000,
+    priorJournals: []
+  };
+
+  // Resolve with explicit transactionId: 'tx-series-a-1'
+  const res = resolveSettlementTarget(multiAllotmentContext, {
+    accountName: 'Amount Due from Shareholder (Receivable)',
+    counterpartyRole: 'shareholder',
+    nature: 'RECEIVABLE',
+    transactionId: 'tx-series-a-1',
+    amount: 5000
+  });
+
+  assert(res.resolutionStatus === 'RESOLVED', `Expected RESOLVED, got ${res.resolutionStatus}`);
+  assert(res.targetBalance?.transactionId === 'tx-series-a-1', 'Must resolve to tx-series-a-1');
+  assert((res.margin ?? 0) >= 30, `Margin must be >= 30 due to transactionId match/mismatch (+15 vs -20), got ${res.margin}`);
+  assert(res.confidence === 1.0, `Confidence must be 1.0, got ${res.confidence}`);
+
+  // Resolve with explicit transactionId: 'tx-seed-1'
+  const seedRes = resolveSettlementTarget(multiAllotmentContext, {
+    accountName: 'Amount Due from Shareholder (Receivable)',
+    counterpartyRole: 'shareholder',
+    nature: 'RECEIVABLE',
+    transactionId: 'tx-seed-1',
+    amount: 1000
+  });
+
+  assert(seedRes.resolutionStatus === 'RESOLVED', `Expected RESOLVED, got ${seedRes.resolutionStatus}`);
+  assert(seedRes.targetBalance?.transactionId === 'tx-seed-1', 'Must resolve to tx-seed-1');
+
+  console.log('✅ Test 14 Passed: Authoritative transaction ID disambiguated between multiple allotments with decisive margin\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST 15: No Phantom Balance Fabrication on Cash-Paid Equity
+// --------------------------------------------------------------------------
+console.log('--- TEST 15: No Phantom Balance Fabrication on Cash-Paid Equity ---');
+{
+  // Turn 1: Shareholder invested $1,000 paid immediately in cash (no receivable exists)
+  const cashEquityScenario = {
+    scenarioType: 'UNIVERSAL',
+    queryIntent: 'TRANSACTION',
+    primaryDomain: 'ACCOUNTING_SFRS',
+    rawQuery: "shareholder paid $1000 into company bank account for share capital",
+    transactionTitle: "Issuance of Share Capital Paid in Cash",
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD',
+    amount: 1000,
+    isComplete: true,
+    directGroups: [
+      {
+        id: 'grp-cash-equity-1',
+        transactionId: 'tx-cash-allot-1',
+        eventDate: '11/09/2026',
+        title: 'Share Capital Allotment Paid in Cash',
+        summary: 'Paid-up share capital received in bank',
+        lines: [
+          { id: 'l1', accountCode: '1010', accountName: 'Cash at Bank (Current Account)', category: 'ASSET', debit: 1000, credit: 0, lineExplanation: 'Cash received' },
+          { id: 'l2', accountCode: '3000', accountName: 'Share Capital (Ordinary Shares)', category: 'EQUITY', debit: 0, credit: 1000, lineExplanation: 'Share Capital' }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [],
+        authorityStatus: 'DETERMINISTIC'
+      }
+    ]
+  };
+
+  const convContext = extractAccountingContext(cashEquityScenario);
+  assert(convContext.outstandingBalances.length === 0, 'No outstanding balances should exist for cash-paid equity');
+  assert(convContext.recognizedEquityTotal === 1000, 'Recognized equity should be 1000');
+
+  // Attempt settlement of non-existent receivable: Must return null, NOT synthesize a fake receivable
+  const delta = calculateAccountingDelta(convContext, {
+    eventType: 'settlement',
+    isFollowUp: true,
+    targetOutstandingAccount: 'Amount Due from Shareholder (Receivable)',
+    settlementAmount: 1000,
+    isHypothetical: false,
+    explanation: 'Settlement test'
+  }, 'SGD');
+
+  assert(delta === null, 'calculateAccountingDelta must return null when no receivable exists (no phantom fabrication)');
+  console.log('✅ Test 15 Passed: Phantom balance fabrication prevented when equity was paid in cash\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST 16: Deterministic Event Replay & Committed History Boundary
+// --------------------------------------------------------------------------
+console.log('--- TEST 16: Deterministic Event Replay & Committed History Boundary ---');
+{
+  const immutableEvents = [
+    {
+      id: 'evt-allot-1',
+      transactionId: 'tx-seed-1',
+      type: 'initial_transaction',
+      description: 'Initial Seed Allotment $10,000 unpaid',
+      amount: 10000,
+      currency: 'SGD',
+      affectedAccounts: ['Amount Due from Shareholder (Receivable)', 'Share Capital (Ordinary Shares)'],
+      journalLines: [
+        { id: 'l1', accountCode: '1150', accountName: 'Amount Due from Shareholder (Receivable)', category: 'ASSET', debit: 10000, credit: 0, lineExplanation: 'Seed receivable' },
+        { id: 'l2', accountCode: '3000', accountName: 'Share Capital (Ordinary Shares)', category: 'EQUITY', debit: 0, credit: 10000, lineExplanation: 'Seed capital' }
+      ],
+      isHypothetical: false
+    },
+    {
+      id: 'evt-allot-2',
+      transactionId: 'tx-series-a-1',
+      type: 'initial_transaction',
+      description: 'Series A Allotment $50,000 unpaid',
+      amount: 50000,
+      currency: 'SGD',
+      affectedAccounts: ['Amount Due from Shareholder (Receivable)', 'Share Capital (Ordinary Shares)'],
+      journalLines: [
+        { id: 'l3', accountCode: '1150', accountName: 'Amount Due from Shareholder (Receivable)', category: 'ASSET', debit: 50000, credit: 0, lineExplanation: 'Series A receivable' },
+        { id: 'l4', accountCode: '3000', accountName: 'Share Capital (Ordinary Shares)', category: 'EQUITY', debit: 0, credit: 50000, lineExplanation: 'Series A capital' }
+      ],
+      isHypothetical: false
+    },
+    {
+      id: 'evt-settle-1',
+      transactionId: 'tx-settle-1',
+      targetTransactionId: 'tx-seed-1',
+      type: 'partial_settlement',
+      description: 'Partial settlement of Seed $4,000',
+      amount: 4000,
+      currency: 'SGD',
+      affectedAccounts: ['Cash at Bank (Current Account)', 'Amount Due from Shareholder (Receivable)'],
+      journalLines: [
+        { id: 'l5', accountCode: '1010', accountName: 'Cash at Bank (Current Account)', category: 'ASSET', debit: 4000, credit: 0, lineExplanation: 'Bank receipt' },
+        { id: 'l6', accountCode: '1150', accountName: 'Amount Due from Shareholder (Receivable)', category: 'ASSET', debit: 0, credit: 4000, lineExplanation: 'Seed settlement' }
+      ],
+      isHypothetical: false
+    },
+    {
+      id: 'evt-settle-2',
+      transactionId: 'tx-settle-2',
+      targetTransactionId: 'tx-series-a-1',
+      type: 'partial_settlement',
+      description: 'Partial settlement of Series A $20,000',
+      amount: 20000,
+      currency: 'SGD',
+      affectedAccounts: ['Cash at Bank (Current Account)', 'Amount Due from Shareholder (Receivable)'],
+      journalLines: [
+        { id: 'l7', accountCode: '1010', accountName: 'Cash at Bank (Current Account)', category: 'ASSET', debit: 20000, credit: 0, lineExplanation: 'Bank receipt' },
+        { id: 'l8', accountCode: '1150', accountName: 'Amount Due from Shareholder (Receivable)', category: 'ASSET', debit: 0, credit: 20000, lineExplanation: 'Series A settlement' }
+      ],
+      isHypothetical: false
+    },
+    {
+      id: 'evt-settle-3',
+      transactionId: 'tx-settle-3',
+      targetTransactionId: 'tx-seed-1',
+      type: 'settlement',
+      description: 'Full final settlement of Seed remaining $6,000',
+      amount: 6000,
+      currency: 'SGD',
+      affectedAccounts: ['Cash at Bank (Current Account)', 'Amount Due from Shareholder (Receivable)'],
+      journalLines: [
+        { id: 'l9', accountCode: '1010', accountName: 'Cash at Bank (Current Account)', category: 'ASSET', debit: 6000, credit: 0, lineExplanation: 'Bank receipt' },
+        { id: 'l10', accountCode: '1150', accountName: 'Amount Due from Shareholder (Receivable)', category: 'ASSET', debit: 0, credit: 6000, lineExplanation: 'Final seed settlement' }
+      ],
+      isHypothetical: false
+    }
+  ];
+
+  // Replay
+  const replayState = deriveAccountingStateFromEvents(immutableEvents, 'SGD');
+  assert(replayState.recognizedEquityTotal === 60000, `Total equity must be 60,000, got ${replayState.recognizedEquityTotal}`);
+  assert(replayState.outstandingBalances.length === 2, `Must have 2 distinct balances, got ${replayState.outstandingBalances.length}`);
+
+  const seedBal = replayState.outstandingBalances.find(b => b.transactionId === 'tx-seed-1');
+  assert(seedBal?.originalAmount === 10000, 'Seed original must be 10,000');
+  assert(seedBal?.settledAmount === 10000, 'Seed settled must be 10,000');
+  assert(seedBal?.remainingAmount === 0, `Seed remaining must be 0, got ${seedBal?.remainingAmount}`);
+
+  const seriesABal = replayState.outstandingBalances.find(b => b.transactionId === 'tx-series-a-1');
+  assert(seriesABal?.originalAmount === 50000, 'Series A original must be 50,000');
+  assert(seriesABal?.settledAmount === 20000, 'Series A settled must be 20,000');
+  assert(seriesABal?.remainingAmount === 30000, `Series A remaining must be 30,000, got ${seriesABal?.remainingAmount}`);
+
+  // Test commitAccountingEvent guards
+  // 1. Reject hypothetical events
+  let caughtHypo = false;
+  try {
+    commitAccountingEvent(immutableEvents, {
+      id: 'evt-hypo-fail',
+      transactionId: 'tx-hypo-fail',
+      type: 'settlement',
+      description: 'Hypothetical attempt',
+      isHypothetical: true
+    });
+  } catch (err) {
+    caughtHypo = true;
+  }
+  assert(caughtHypo, 'commitAccountingEvent must throw when attempting to commit a hypothetical event');
+
+  // 2. Reject duplicate transaction ID
+  let caughtDup = false;
+  try {
+    commitAccountingEvent(immutableEvents, {
+      id: 'evt-dup-fail',
+      transactionId: 'tx-seed-1', // Already committed!
+      type: 'initial_transaction',
+      description: 'Duplicate transaction attempt',
+      isHypothetical: false
+    });
+  } catch (err) {
+    caughtDup = true;
+  }
+  assert(caughtDup, 'commitAccountingEvent must throw when attempting to commit a duplicate transactionId');
+
+  console.log('✅ Test 16 Passed: Deterministic event replay and committed event boundary enforcement verified\n');
+  testsPassed++;
+}
+
 console.log('================================================================');
 console.log(`🎉 ALL ${testsPassed} MULTI-TURN ACCOUNTING STATE TESTS PASSED!`);
 console.log('================================================================\n');
+

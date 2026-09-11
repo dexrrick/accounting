@@ -16,7 +16,8 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import {
   extractAccountingContext,
   calculateAccountingDelta,
-  validateAccountingStateTransition
+  validateAccountingStateTransition,
+  commitAccountingEvent
 } from '../services/conversationAccountingState';
 
 export interface CompactStatutoryDecision {
@@ -174,12 +175,20 @@ export function assembleDeterministicResponse(
     ? (userInputOrScenario as AccountingScenarioState)
     : (typeof currentScenarioOrInput === 'object' && currentScenarioOrInput !== null ? (currentScenarioOrInput as AccountingScenarioState) : null);
 
+  let committedDirectGroups: JournalEntryGroup[] | undefined = currentScenario?.committedDirectGroups;
+  let projectedGroups: JournalEntryGroup[] | undefined = undefined;
+
+  const priorCommittedGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+    ? [...currentScenario.committedDirectGroups]
+    : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
+
   if (hasAuthoritativeDeterministicEntries) {
     // Deterministic engine calculations strictly govern
     directGroups = deterministicScenario!.directGroups!.map(grp => ({
       ...grp,
       authorityStatus: grp.authorityStatus || authorityStatus
     }));
+    committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
   } else if (
     followUp &&
     (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')
@@ -187,10 +196,13 @@ export function assembleDeterministicResponse(
     const convContext = extractAccountingContext(currentScenario);
     const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
     const delta = calculateAccountingDelta(convContext, followUp, curr);
-    if (delta) {
+    if (delta && delta.resultingAccountingEvent) {
       const isHypo = Boolean(delta.isHypothetical);
       const settlementGroup: JournalEntryGroup = {
-        id: `grp-followup-settlement-${(currentScenario?.directGroups?.length || 0) + 1}`,
+        id: `grp-followup-settlement-${priorCommittedGroups.length + 1}`,
+        transactionId: delta.resultingAccountingEvent.transactionId,
+        targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
+        isHypothetical: isHypo,
         eventDate: formatSingaporeDate(new Date()),
         title: isHypo ? 'Hypothetical Settlement of Allotment Receivable' : 'Settlement of Shareholder Allotment Receivable',
         summary: delta.explanation,
@@ -205,10 +217,16 @@ export function assembleDeterministicResponse(
         ],
         authorityStatus: 'AI_PROPOSED'
       };
-      directGroups = [
-        ...(currentScenario?.directGroups || []),
-        settlementGroup
-      ];
+
+      if (isHypo) {
+        committedDirectGroups = priorCommittedGroups;
+        projectedGroups = [settlementGroup];
+        directGroups = [...priorCommittedGroups, settlementGroup];
+      } else {
+        committedDirectGroups = [...priorCommittedGroups, settlementGroup];
+        projectedGroups = undefined;
+        directGroups = committedDirectGroups;
+      }
     }
   } else if (compact.directGroups && compact.directGroups.length > 0) {
     // Pre-computed or raw direct groups
@@ -645,16 +663,19 @@ export function assembleDeterministicResponse(
     if (delta && delta.resultingAccountingEvent) {
       isHypoScenario = Boolean(delta.isHypothetical);
       resolvedAmount = delta.amount;
-      const priorActual = currentScenario?.actualEvents && currentScenario.actualEvents.length > 0
-        ? [...currentScenario.actualEvents]
-        : (convContext.actualEvents && convContext.actualEvents.length > 0 ? [...convContext.actualEvents] : []);
+      const priorActual = convContext.actualEvents;
 
-      finalActualEvents = isHypoScenario ? priorActual : [...priorActual, delta.resultingAccountingEvent];
+      finalActualEvents = isHypoScenario
+        ? priorActual
+        : commitAccountingEvent(priorActual, delta.resultingAccountingEvent);
       finalAccountingEvents = [...(currentScenario?.accountingEvents || priorActual), delta.resultingAccountingEvent];
     }
   } else if (!finalActualEvents && directGroups.length > 0) {
-    finalActualEvents = directGroups.map((grp, idx) => ({
+    committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
+    finalActualEvents = committedDirectGroups.map((grp, idx) => ({
       id: grp.id || `evt-${idx + 1}`,
+      transactionId: grp.transactionId || grp.id || `tx-${idx + 1}`,
+      targetTransactionId: grp.targetTransactionId,
       type: 'initial_transaction',
       description: grp.title,
       amount: grp.totalDebit,
@@ -665,6 +686,8 @@ export function assembleDeterministicResponse(
       isHypothetical: false
     }));
     finalAccountingEvents = [...finalActualEvents];
+  } else if (hasAuthoritativeDeterministicEntries && !committedDirectGroups) {
+    committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
   }
 
   if (resolvedAmount === undefined) {
@@ -702,6 +725,8 @@ export function assembleDeterministicResponse(
     isHypothetical: isHypoScenario,
     keyParameters,
     directGroups,
+    committedDirectGroups,
+    projectedGroups,
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: missingFacts.length > 0 ? missingFacts : undefined,

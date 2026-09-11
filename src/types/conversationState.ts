@@ -13,6 +13,8 @@ export type AccountingEventType =
 
 export interface AccountingEvent {
   id: string;
+  transactionId?: string;
+  targetTransactionId?: string;
   type: AccountingEventType;
   description: string;
   amount?: number;
@@ -42,9 +44,21 @@ export interface OutstandingAccountBalance {
   currency: string;
 }
 
+export interface TargetResolutionCriteria {
+  accountName?: string;
+  counterpartyRole?: string;
+  counterpartyName?: string;
+  transactionId?: string;
+  nature?: 'RECEIVABLE' | 'PAYABLE' | 'DEPOSIT';
+  queryTokens?: string[];
+  currency?: string;
+  amount?: number;
+}
+
 export interface CandidateScore {
   balanceKey: string;
   accountName: string;
+  transactionId?: string;
   score: number;
   rationale: string;
 }

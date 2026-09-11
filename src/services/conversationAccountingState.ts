@@ -6,18 +6,12 @@ import type {
   FollowUpEventAnalysis,
   OutstandingAccountBalance,
   TargetResolutionResult,
-  CandidateScore
+  CandidateScore,
+  TargetResolutionCriteria
 } from '../types/conversationState';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
-export interface TargetResolutionCriteria {
-  accountName?: string;
-  counterpartyRole?: string;
-  nature?: 'RECEIVABLE' | 'PAYABLE' | 'DEPOSIT';
-  queryTokens?: string[];
-  currency?: string;
-  amount?: number;
-}
+export type { TargetResolutionCriteria };
 
 /**
  * Deterministically generates a standardized unique balance key.
@@ -71,7 +65,8 @@ export function deriveAccountingStateFromEvents(
         const role = nameLower.includes('shareholder') ? 'shareholder' :
                      nameLower.includes('director') ? 'director' :
                      nameLower.includes('customer') ? 'customer' : 'other';
-        const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
+        const txId = ev.transactionId || ev.id || 'default';
+        const key = generateBalanceKey(line.accountCode, line.accountName, role, txId);
 
         if (!balancesMap.has(key)) {
           balancesMap.set(key, {
@@ -81,6 +76,7 @@ export function deriveAccountingStateFromEvents(
             category: 'ASSET',
             nature: 'RECEIVABLE',
             counterpartyRole: role,
+            transactionId: txId,
             originalAmount: line.debit,
             settledAmount: 0,
             remainingAmount: line.debit,
@@ -104,7 +100,8 @@ export function deriveAccountingStateFromEvents(
         const role = nameLower.includes('shareholder') ? 'shareholder' :
                      nameLower.includes('director') ? 'director' :
                      nameLower.includes('supplier') ? 'supplier' : 'other';
-        const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
+        const txId = ev.transactionId || ev.id || 'default';
+        const key = generateBalanceKey(line.accountCode, line.accountName, role, txId);
 
         if (!balancesMap.has(key)) {
           balancesMap.set(key, {
@@ -114,6 +111,7 @@ export function deriveAccountingStateFromEvents(
             category: 'LIABILITY',
             nature: 'PAYABLE',
             counterpartyRole: role,
+            transactionId: txId,
             originalAmount: line.credit,
             settledAmount: 0,
             remainingAmount: line.credit,
@@ -135,9 +133,22 @@ export function deriveAccountingStateFromEvents(
     // Process settlements
     if (ev.type === 'settlement' || ev.type === 'partial_settlement') {
       let targetBal: OutstandingAccountBalance | undefined;
+      // Match by explicit targetBalanceKey
       if (ev.targetBalanceKey && balancesMap.has(ev.targetBalanceKey)) {
         targetBal = balancesMap.get(ev.targetBalanceKey);
-      } else {
+      }
+      // Match by authoritative targetTransactionId
+      else if (ev.targetTransactionId) {
+        for (const b of balancesMap.values()) {
+          if (b.transactionId === ev.targetTransactionId) {
+            targetBal = b;
+            break;
+          }
+        }
+      }
+      
+      // Fallback match by matching credit line
+      if (!targetBal) {
         const creditRecLine = lines.find(
           l => l.credit > 0 &&
           (l.accountName.toLowerCase().includes('due from') ||
@@ -196,6 +207,19 @@ export function resolveSettlementTarget(
   for (const b of context.outstandingBalances) {
     let score = 0;
     const rationales: string[] = [];
+
+    // 0. Authoritative Transaction ID match
+    if (criteria.transactionId) {
+      const critTx = criteria.transactionId.toLowerCase().trim();
+      const balTx = (b.transactionId || '').toLowerCase().trim();
+      if (critTx === balTx) {
+        score += 15;
+        rationales.push(`Authoritative transaction ID match [${critTx}] (+15)`);
+      } else if (balTx && balTx !== 'default') {
+        score -= 20;
+        rationales.push(`Conflicting transaction ID [${critTx} vs ${balTx}] (-20)`);
+      }
+    }
 
     // 1. Account Name match
     if (criteria.accountName) {
@@ -264,6 +288,7 @@ export function resolveSettlementTarget(
     candidateScores.push({
       balanceKey: b.balanceKey,
       accountName: b.accountName,
+      transactionId: b.transactionId,
       score,
       rationale: rationales.join('; ')
     });
@@ -330,19 +355,24 @@ export function extractAccountingContext(
   currentScenario?: AccountingScenarioState | null,
   _chatHistory?: any[]
 ): ConversationAccountingContext {
-  const priorJournals: JournalEntryGroup[] = currentScenario?.directGroups ? [...currentScenario.directGroups] : [];
+  // Committed direct groups (excluding any hypothetical projections)
+  const priorJournals: JournalEntryGroup[] = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+    ? [...currentScenario.committedDirectGroups]
+    : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
 
-  // Determine base actual events (source of truth)
+  // Determine base actual events (source of truth - strictly committed history)
   let actualEvents: AccountingEvent[] = [];
   if (currentScenario?.actualEvents && currentScenario.actualEvents.length > 0) {
-    actualEvents = [...currentScenario.actualEvents];
-  } else if (currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
-    actualEvents = currentScenario.directGroups.map((grp, idx) => ({
+    actualEvents = currentScenario.actualEvents.filter(e => !e.isHypothetical);
+  } else if (priorJournals.length > 0) {
+    actualEvents = priorJournals.map((grp, idx) => ({
       id: grp.id || `evt-init-${idx + 1}`,
-      type: 'initial_transaction',
+      transactionId: grp.transactionId || grp.id || `tx-init-${idx + 1}`,
+      targetTransactionId: grp.targetTransactionId,
+      type: (grp.title && grp.title.toLowerCase().includes('settle')) ? 'settlement' : 'initial_transaction',
       description: grp.title || 'Initial transaction',
       amount: grp.totalDebit,
-      currency: currentScenario.transactionCurrency || currentScenario.functionalCurrency || 'SGD',
+      currency: currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD',
       affectedAccounts: grp.lines.map(l => l.accountName),
       journalLines: grp.lines,
       isHypothetical: false,
@@ -358,71 +388,7 @@ export function extractAccountingContext(
   );
 
   const outstandingBalances: OutstandingAccountBalance[] = [...derived.outstandingBalances];
-  let recognizedEquityTotal = derived.recognizedEquityTotal;
-
-  // Fallback scanner if directGroups had entries not captured by actualEvents
-  if (outstandingBalances.length === 0 && currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
-    for (const grp of currentScenario.directGroups) {
-      for (const line of grp.lines) {
-        const nameLower = line.accountName.toLowerCase();
-
-        if (
-          line.category === 'ASSET' &&
-          line.debit > 0 &&
-          (nameLower.includes('due from') ||
-           nameLower.includes('receivable') ||
-           nameLower.includes('debtor') ||
-           nameLower.includes('unpaid'))
-        ) {
-          const role = nameLower.includes('shareholder') ? 'shareholder' :
-                       nameLower.includes('director') ? 'director' :
-                       nameLower.includes('customer') ? 'customer' : 'other';
-          const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
-          outstandingBalances.push({
-            balanceKey: key,
-            accountCode: line.accountCode,
-            accountName: line.accountName,
-            category: 'ASSET',
-            nature: 'RECEIVABLE',
-            counterpartyRole: role,
-            originalAmount: line.debit,
-            settledAmount: 0,
-            remainingAmount: line.debit,
-            currency: currentScenario.transactionCurrency || currentScenario.functionalCurrency || 'SGD'
-          });
-        }
-
-        if (
-          line.category === 'LIABILITY' &&
-          line.credit > 0 &&
-          (nameLower.includes('due to') ||
-           nameLower.includes('payable') ||
-           nameLower.includes('creditor'))
-        ) {
-          const role = nameLower.includes('shareholder') ? 'shareholder' :
-                       nameLower.includes('director') ? 'director' :
-                       nameLower.includes('supplier') ? 'supplier' : 'other';
-          const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
-          outstandingBalances.push({
-            balanceKey: key,
-            accountCode: line.accountCode,
-            accountName: line.accountName,
-            category: 'LIABILITY',
-            nature: 'PAYABLE',
-            counterpartyRole: role,
-            originalAmount: line.credit,
-            settledAmount: 0,
-            remainingAmount: line.credit,
-            currency: currentScenario.transactionCurrency || currentScenario.functionalCurrency || 'SGD'
-          });
-        }
-
-        if (line.category === 'EQUITY' && line.credit > 0 && nameLower.includes('share capital')) {
-          recognizedEquityTotal += line.credit;
-        }
-      }
-    }
-  }
+  const recognizedEquityTotal = derived.recognizedEquityTotal;
 
   // Determine ownership context from prior scenario
   let ownershipContext: 'own_equity' | 'external_investment' | 'not_applicable' | 'unknown' = 'unknown';
@@ -472,6 +438,8 @@ export function extractAccountingContext(
   };
 }
 
+let settlementEventCounter = 0;
+
 /**
  * Calculates the accounting delta caused by a follow-up event on the established state.
  */
@@ -507,26 +475,9 @@ export function calculateAccountingDelta(
     amount: eventAnalysis.settlementAmount
   };
 
-  let resolution = resolveSettlementTarget(context, criteria);
+  const resolution = resolveSettlementTarget(context, criteria);
 
-  // Fallback: If no balances recorded but equity was recognized, synthesize allotment balance
-  if (resolution.resolutionStatus === 'NOT_FOUND' && context.recognizedEquityTotal > 0) {
-    const syntheticBalance: OutstandingAccountBalance = {
-      balanceKey: generateBalanceKey('1150', 'Amount Due from Shareholder (Receivable)', 'shareholder', 'default'),
-      accountCode: '1150',
-      accountName: 'Amount Due from Shareholder (Receivable)',
-      category: 'ASSET',
-      nature: 'RECEIVABLE',
-      counterpartyRole: 'shareholder',
-      originalAmount: context.recognizedEquityTotal,
-      settledAmount: 0,
-      remainingAmount: context.recognizedEquityTotal,
-      currency
-    };
-    context.outstandingBalances.push(syntheticBalance);
-    resolution = resolveSettlementTarget(context, criteria);
-  }
-
+  // Authoritative validation: Target balance must be found legitimately in context
   if (resolution.resolutionStatus !== 'RESOLVED' || !resolution.targetBalance) {
     return null;
   }
@@ -582,8 +533,12 @@ export function calculateAccountingDelta(
     `Note: Share Capital is NOT credited again because it was already recognized upon allotment. ` +
     `Remaining balance on ${targetBalance.accountName}: ${currency} ${resultingBalance.toFixed(2)}.`;
 
+  settlementEventCounter++;
+  const uniqueIdSuffix = `${Date.now()}-${settlementEventCounter}-${Math.random().toString(36).slice(2, 6)}`;
   const resultingAccountingEvent: AccountingEvent = {
-    id: `evt-settle-${Date.now()}`,
+    id: `evt-settle-${uniqueIdSuffix}`,
+    transactionId: `tx-settle-${uniqueIdSuffix}`,
+    targetTransactionId: targetBalance.transactionId,
     type: eventAnalysis.eventType,
     description: explanation,
     amount: settlementAmount,
@@ -670,3 +625,35 @@ export function validateAccountingStateTransition(
     violations
   };
 }
+
+/**
+ * Commits an accounting event to the committed event history.
+ * Enforces:
+ * 1. Events must not be hypothetical.
+ * 2. transactionId is mandatory at the committed boundary.
+ * 3. Enforces uniqueness of transactionId.
+ */
+export function commitAccountingEvent(
+  committedList: AccountingEvent[],
+  newEvent: AccountingEvent
+): AccountingEvent[] {
+  if (newEvent.isHypothetical) {
+    throw new Error(`Cannot commit hypothetical event [${newEvent.id || 'unknown'}] to actual history.`);
+  }
+  const txId = newEvent.transactionId || newEvent.id;
+  if (!txId) {
+    throw new Error(`Committed event must have an authoritative transactionId or id.`);
+  }
+  const eventToCommit: AccountingEvent = {
+    ...newEvent,
+    transactionId: txId,
+    isHypothetical: false
+  };
+  
+  if (committedList.some(e => (e.transactionId || e.id) === txId)) {
+    throw new Error(`Duplicate transactionId: Event with transactionId "${txId}" is already committed.`);
+  }
+
+  return [...committedList, eventToCommit];
+}
+

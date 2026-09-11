@@ -75,6 +75,9 @@ export interface JournalLine {
 
 export interface JournalEntryGroup {
   id: string;
+  transactionId?: string;
+  targetTransactionId?: string;
+  isHypothetical?: boolean;
   eventDate: string;
   title: string;
   summary: string;
@@ -129,8 +132,11 @@ export interface AccountingScenarioState {
   transactionCurrency: string;
   
   // Universal Dynamic Facts & Direct Journal Groups
+  transactionId?: string;
   keyParameters?: TransactionFact[];
   directGroups?: JournalEntryGroup[];
+  committedDirectGroups?: JournalEntryGroup[];
+  projectedGroups?: JournalEntryGroup[];
   authorityStatus?: JournalAuthorityStatus;
 
   // Event-Sourced Accounting State & Multi-Turn History
