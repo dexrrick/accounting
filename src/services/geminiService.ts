@@ -13,6 +13,7 @@ import {
 } from './groundingContextBuilder';
 import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
+import { formatSingaporeDate } from '../utils/dateUtils';
 
 export interface GeminiResponse {
   messageText: string;
@@ -369,13 +370,65 @@ export function renderStructuredOfflineResponse(
         `* **Currency Fact**: ${sem.currency.value || 'Unspecified'} (Source: ${sem.currency.source}, Confidence: ${sem.currency.confidence})\n\n`;
 
       if (sem.ownershipContext === 'own_equity') {
+        const amt = sem.amount || 1;
+        const curr = sem.currency.value || parsed.functionalCurrency || 'SGD';
+        const isUnpaid = sem.paymentStatus === 'unpaid';
+        const debitAccountName = isUnpaid ? 'Amount Due from Shareholder (Receivable)' : 'Cash at Bank (Current Account)';
+        const debitAccountCode = isUnpaid ? '1150' : '1010';
+        const debitLineExplanation = isUnpaid ? 'Allotment receivable under Companies Act §63(1)' : 'Receipt of share capital';
+
         replyText += `**Statutory & Standard Directives**:\n` +
           `* **Singapore Companies Act 1967 §68**: Shares of a Singapore company have no nominal or par value. Share premium is abolished; 100% of consideration is credited to Share Capital under Equity.\n` +
           `* **Singapore Companies Act 1967 §63(1)**: Allotment of shares can be fully paid, partly paid, or unpaid. When shares are unpaid, an enforceable allotment receivable is recognized against the subscriber.\n` +
           `* **SFRS(I) 1-32 §33**: An entity's own equity instruments can NEVER be recognized as a financial asset (no FVTPL/FVTOCI).\n\n` +
-          `**Accounting Classification & Required Entries**:\n` +
-          `* **Credit**: **Share Capital** (Equity)\n` +
-          `* **Debit**: **Amount Due from Shareholder / Unpaid Share Capital** (Current Asset / Receivables)\n\n`;
+          `**Double Entry Journal**:\n` +
+          `* **Debit**: **${debitAccountName}** — **${curr} ${amt.toFixed(2)}** *(${debitLineExplanation})*\n` +
+          `* **Credit**: **Share Capital (Ordinary Shares)** — **${curr} ${amt.toFixed(2)}** *(Credited 100% to share capital under Companies Act §68)*\n\n`;
+
+        parsed = {
+          ...parsed,
+          scenarioType: 'UNIVERSAL',
+          amount: amt,
+          transactionTitle: isUnpaid ? 'Issuance of Unpaid Share Capital' : 'Issuance of Share Capital',
+          directGroups: [
+            {
+              id: 'grp-equity-allotment-1',
+              eventDate: formatSingaporeDate(new Date()),
+              title: isUnpaid ? 'Share Capital Allotment (Unpaid)' : 'Share Capital Issuance (Paid)',
+              summary: `Allotment of ordinary shares ${isUnpaid ? 'unpaid' : 'fully paid'} under Singapore Companies Act §68`,
+              lines: [
+                {
+                  id: 'l-equity-dr',
+                  accountCode: debitAccountCode,
+                  accountName: debitAccountName,
+                  category: 'ASSET',
+                  debit: amt,
+                  credit: 0,
+                  lineExplanation: debitLineExplanation
+                },
+                {
+                  id: 'l-equity-cr',
+                  accountCode: '3000',
+                  accountName: 'Share Capital (Ordinary Shares)',
+                  category: 'EQUITY',
+                  debit: 0,
+                  credit: amt,
+                  lineExplanation: 'Credited 100% to share capital under Companies Act §68 (par value abolished)'
+                }
+              ],
+              totalDebit: amt,
+              totalCredit: amt,
+              isBalanced: true,
+              citations: [],
+              rationalePoints: [
+                'Under Singapore Companies Act 1967 §68, shares have no nominal/par value. 100% of consideration is credited to share capital.',
+                isUnpaid ? 'Under §63(1), shares can be allotted unpaid, creating an enforceable receivable.' : 'Funds received directly into bank account.',
+                'Under SFRS(I) 1-32 §33, own equity instruments are never financial assets.'
+              ],
+              authorityStatus: 'DETERMINISTIC'
+            }
+          ]
+        };
       }
     } else {
       replyText += `The local offline rule engine could not find a predefined pattern for this specific transaction.\n\n`;
@@ -695,30 +748,77 @@ export function renderStructuredOfflineResponse(
   }
 
   // 9. EQUITY SHARES WITH FOREX (IFRS 9 / IAS 21)
-  const buyRate = parsed.purchaseFxRate ?? 1.34;
-  const sellRate = parsed.saleFxRate ?? 1.36;
-  const initialSGD = (parsed.purchaseAmountForeign || 0) * buyRate;
-  const proceedsSGD = (parsed.saleAmountForeign || 0) * sellRate;
-  const stockGainSGD = ((parsed.saleAmountForeign || 0) - (parsed.purchaseAmountForeign || 0)) * sellRate;
-  const fxGainSGD = (parsed.purchaseAmountForeign || 0) * (sellRate - buyRate);
+  if (parsed.scenarioType === 'EQUITY_INVESTMENT_FX') {
+    const buyRate = parsed.purchaseFxRate ?? 1.34;
+    const sellRate = parsed.saleFxRate ?? 1.36;
+    const initialSGD = (parsed.purchaseAmountForeign || 0) * buyRate;
+    const proceedsSGD = (parsed.saleAmountForeign || 0) * sellRate;
+    const stockGainSGD = ((parsed.saleAmountForeign || 0) - (parsed.purchaseAmountForeign || 0)) * sellRate;
+    const fxGainSGD = (parsed.purchaseAmountForeign || 0) * (sellRate - buyRate);
 
-  const replyText = `### Under ${std9} (*Financial Instruments*) & ${std21} (*Foreign Exchange*)\n\n` +
-    `For **${parsed.assetName}** (invested USD ${(parsed.purchaseAmountForeign || 0).toLocaleString()} on ${parsed.purchaseDate}, sold for USD ${parsed.saleAmountForeign?.toLocaleString()} on ${parsed.saleDate}):\n\n` +
-    `**Spot Exchange Rates (Powered by Frankfurter API - European Central Bank)**:\n` +
-    `* Purchase Spot Rate: **${buyRate} SGD/USD**\n` +
-    `* Sale Spot Rate: **${sellRate} SGD/USD**\n\n` +
-    `#### Double Entries (Explicit Realized FX Gain View):\n` +
-    `1. **On Acquisition (${parsed.purchaseDate})**:\n` +
-    `   * **Dr. Financial Asset at FVTPL (${parsed.assetName})**: ${parsed.functionalCurrency} ${initialSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n` +
-    `   * **Cr. Cash / Bank (USD Account)**: ${parsed.functionalCurrency} ${initialSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n\n` +
-    `2. **On Sale / Disposal (${parsed.saleDate})**:\n` +
-    `   * **Dr. Cash / Bank (USD Account)**: ${parsed.functionalCurrency} ${proceedsSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Gross proceeds)*\n` +
-    `   * **Cr. Financial Asset at FVTPL (${parsed.assetName})**: ${parsed.functionalCurrency} ${initialSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Derecognition)*\n` +
-    `   * **Cr. Fair Value Gain on Shares (P&L)**: ${parsed.functionalCurrency} ${stockGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Stock appreciation)*\n` +
-    `   * **Cr. Realized Foreign Exchange Gain (P&L / ${std21})**: ${parsed.functionalCurrency} ${fxGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Currency gain on capital)*`;
+    const replyText = `### Under ${std9} (*Financial Instruments*) & ${std21} (*Foreign Exchange*)\n\n` +
+      `For **${parsed.assetName}** (invested USD ${(parsed.purchaseAmountForeign || 0).toLocaleString()} on ${parsed.purchaseDate}, sold for USD ${parsed.saleAmountForeign?.toLocaleString()} on ${parsed.saleDate}):\n\n` +
+      `**Spot Exchange Rates (Powered by Frankfurter API - European Central Bank)**:\n` +
+      `* Purchase Spot Rate: **${buyRate} SGD/USD**\n` +
+      `* Sale Spot Rate: **${sellRate} SGD/USD**\n\n` +
+      `#### Double Entries (Explicit Realized FX Gain View):\n` +
+      `1. **On Acquisition (${parsed.purchaseDate})**:\n` +
+      `   * **Dr. Financial Asset at FVTPL (${parsed.assetName})**: ${parsed.functionalCurrency} ${initialSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n` +
+      `   * **Cr. Cash / Bank (USD Account)**: ${parsed.functionalCurrency} ${initialSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}\n\n` +
+      `2. **On Sale / Disposal (${parsed.saleDate})**:\n` +
+      `   * **Dr. Cash / Bank (USD Account)**: ${parsed.functionalCurrency} ${proceedsSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Gross proceeds)*\n` +
+      `   * **Cr. Financial Asset at FVTPL (${parsed.assetName})**: ${parsed.functionalCurrency} ${initialSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Derecognition)*\n` +
+      `   * **Cr. Fair Value Gain on Shares (P&L)**: ${parsed.functionalCurrency} ${stockGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Stock appreciation)*\n` +
+      `   * **Cr. Realized Foreign Exchange Gain (P&L / ${std21})**: ${parsed.functionalCurrency} ${fxGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })} *(Currency gain on capital)*`;
+
+    return {
+      messageText: finalizeMessage(replyText, parsed),
+      scenarioState: parsed
+    };
+  }
+
+  // 10. UNIVERSAL / MULTI-TURN SETTLEMENT / DIRECT ENTRIES
+  if (parsed.directGroups && parsed.directGroups.length > 0) {
+    let replyText = `### Accounting Analysis: ${parsed.transactionTitle}\n\n`;
+    if (parsed.accountingTreatmentSummary) {
+      replyText += `#### 1. Accounting Treatment\n${parsed.accountingTreatmentSummary}\n\n---\n\n`;
+    }
+
+    replyText += `#### 2. Double Entry Schedule\n\n`;
+    for (const grp of parsed.directGroups) {
+      replyText += `**${grp.title}** (${grp.eventDate}):\n`;
+      for (const line of grp.lines) {
+        if (line.debit > 0) {
+          replyText += `* **Debit**: **${line.accountName}** — **${parsed.functionalCurrency} ${line.debit.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(${line.lineExplanation})*\n`;
+        } else if (line.credit > 0) {
+          replyText += `* **Credit**: **${line.accountName}** — **${parsed.functionalCurrency} ${line.credit.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(${line.lineExplanation})*\n`;
+        }
+      }
+      if (grp.isBalanced) {
+        replyText += `*Balance Check: Debits (${parsed.functionalCurrency} ${grp.totalDebit.toFixed(2)}) == Credits (${parsed.functionalCurrency} ${grp.totalCredit.toFixed(2)}) ✓ Balanced*\n\n`;
+      }
+    }
+
+    if (parsed.singaporeTaxTreatmentSummary) {
+      replyText += `---\n\n#### 3. Singapore Tax Implications\n${parsed.singaporeTaxTreatmentSummary}\n\n`;
+    }
+
+    replyText += `Check the **Double Entry Journal** tab for complete ledger posting details.`;
+
+    return {
+      messageText: finalizeMessage(replyText, parsed),
+      scenarioState: parsed
+    };
+  }
+
+  // 11. FALLBACK UNCLASSIFIED / UNRECOGNIZED
+  const fallbackText = `### Accounting Inquiry Assessment\n\n` +
+    `**Transaction**: ${parsed.transactionTitle || 'Unclassified Query'}\n\n` +
+    `The offline engine could not match this inquiry to an explicit pre-calculated benchmark fixture. ` +
+    `Connect an AI Provider (Gemini, Azure OpenAI, or OpenAI) in Settings for dynamic reasoning and source citation.`;
 
   return {
-    messageText: finalizeMessage(replyText, parsed),
+    messageText: finalizeMessage(fallbackText, parsed),
     scenarioState: parsed
   };
 }

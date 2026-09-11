@@ -19,6 +19,7 @@ import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
+import { extractAccountingContext } from './conversationAccountingState';
 
 /**
  * Provider-neutral structured reasoning context.
@@ -155,11 +156,13 @@ export async function buildGroundedReasoningContext(
   providerOrApiKey?: ProviderSettings | string
 ): Promise<GroundedReasoningContext> {
   // 1. Semantic Transaction Understanding & Question Classification
+  const conversationContext = extractAccountingContext(currentScenario);
   const semanticUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
     userInput,
-    'SGD',
+    currentScenario?.functionalCurrency || 'SGD',
     'SG',
-    providerOrApiKey
+    providerOrApiKey,
+    conversationContext
   );
   const classification = classifyQuestion(userInput);
 

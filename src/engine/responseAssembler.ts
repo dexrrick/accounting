@@ -13,6 +13,11 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import {
+  extractAccountingContext,
+  calculateAccountingDelta,
+  validateAccountingStateTransition
+} from '../services/conversationAccountingState';
 
 export interface CompactStatutoryDecision {
   directAnswer?: string;
@@ -156,12 +161,44 @@ export function assembleDeterministicResponse(
   // 3. Assemble Direct Groups & Journal Entries
   let directGroups: JournalEntryGroup[] = [];
 
+  const followUp = groundedContext.semanticUnderstanding?.followUpAnalysis;
+  const currentScenario = typeof userInputOrScenario === 'object' && userInputOrScenario !== null
+    ? (userInputOrScenario as AccountingScenarioState)
+    : (typeof currentScenarioOrInput === 'object' && currentScenarioOrInput !== null ? (currentScenarioOrInput as AccountingScenarioState) : null);
+
   if (hasAuthoritativeDeterministicEntries) {
     // Deterministic engine calculations strictly govern
     directGroups = deterministicScenario!.directGroups!.map(grp => ({
       ...grp,
       authorityStatus: grp.authorityStatus || authorityStatus
     }));
+  } else if (
+    followUp &&
+    (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')
+  ) {
+    const convContext = extractAccountingContext(currentScenario);
+    const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
+    const delta = calculateAccountingDelta(convContext, followUp, curr);
+    if (delta) {
+      directGroups = [
+        {
+          id: 'grp-followup-settlement',
+          eventDate: formatSingaporeDate(new Date()),
+          title: 'Settlement of Shareholder Allotment Receivable',
+          summary: delta.explanation,
+          lines: delta.journalLines,
+          totalDebit: delta.amount,
+          totalCredit: delta.amount,
+          isBalanced: true,
+          citations: verifiedCitations,
+          rationalePoints: [
+            'Under SFRS(I) 1-32 §33 and Singapore Companies Act 1967 §68, Share Capital was already credited and recognized upon allotment.',
+            `Receipt of payment via bank transfer extinguishes the outstanding ${followUp.targetOutstandingAccount || 'receivable'} and debits Cash at Bank.`
+          ],
+          authorityStatus: 'AI_PROPOSED'
+        }
+      ];
+    }
   } else if (compact.directGroups && compact.directGroups.length > 0) {
     // Pre-computed or raw direct groups
     directGroups = compact.directGroups.map((grp: any, idx: number) => {
@@ -285,6 +322,24 @@ export function assembleDeterministicResponse(
         ],
         authorityStatus: authorityStatus === 'DETERMINISTIC' ? 'AI_PROPOSED' : authorityStatus
       }];
+    }
+  }
+
+  // Guardrail A & C Enforcement: Ensure follow-up settlements never credit Share Capital again
+  if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {
+    const convContext = extractAccountingContext(currentScenario);
+    for (const grp of directGroups) {
+      const validation = validateAccountingStateTransition(convContext, grp.lines, followUp.eventType);
+      if (!validation.isValid && validation.violations.some(v => v.includes('GUARDRAIL_VIOLATION_DUPLICATE_EQUITY'))) {
+        for (const line of grp.lines) {
+          if (line.credit > 0 && line.accountName.toLowerCase().includes('share capital')) {
+            line.accountCode = '1150';
+            line.accountName = 'Amount Due from Shareholder (Receivable)';
+            line.category = 'ASSET';
+            line.lineExplanation = 'Settlement of allotment receivable (Share Capital previously recognized upon allotment)';
+          }
+        }
+      }
     }
   }
 
@@ -477,11 +532,15 @@ export function assembleDeterministicResponse(
         ? (deterministicScenario?.transactionTitle || 'Financial Reporting Treatment')
         : (compact.transactionNature || compact.transactionTitle || (groundedContext.semanticUnderstanding?.transactionType ? groundedContext.semanticUnderstanding.transactionType.replace(/_/g, ' ').toUpperCase() : 'Financial Reporting Treatment'));
 
+      const defaultTreatment = (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement'))
+        ? 'Under SFRS(I) 1-32 §33 and Singapore Companies Act 1967 §68, ordinary share capital was already recognized upon allotment. Receipt of payment into the company bank account extinguishes the outstanding shareholder receivable. Share Capital is not credited again.'
+        : 'Treatment evaluated under Singapore Financial Reporting Standards.';
+
       messageText = `### SFRS(I) Accounting Assessment: ${assessmentTitle}\n\n` +
         `**Authority Status**: **${authorityStatus === 'DETERMINISTIC' ? '✓ Deterministic Calculations' : authorityStatus === 'CONDITIONAL' ? '⚠️ Conditional (Missing Facts)' : '🤖 AI Proposed'}**\n\n` +
         `---\n\n` +
         `#### 1. Recommended Accounting Treatment (${stdLabel})\n` +
-        `${compact.treatment || deterministicScenario?.accountingTreatmentSummary || 'Treatment evaluated under Singapore Financial Reporting Standards.'}\n\n`;
+        `${compact.treatment || (isRecognizedDeterministicFixture ? deterministicScenario?.accountingTreatmentSummary : defaultTreatment)}\n\n`;
 
       if (compact.reasoning) {
         messageText += `---\n\n#### 2. Professional Technical Reasoning\n${compact.reasoning}\n\n`;

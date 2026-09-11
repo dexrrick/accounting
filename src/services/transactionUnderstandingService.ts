@@ -14,6 +14,7 @@
  */
 
 import type { ProviderSettings } from '../types/provider';
+import type { ConversationAccountingContext, FollowUpEventAnalysis } from '../types/conversationState';
 import { executeStructuredLlmCall } from './aiTransport';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 
@@ -64,6 +65,7 @@ export interface TransactionUnderstanding {
   factsMissing: string[];
   assumptions: string[];
   confidence: number;
+  followUpAnalysis?: FollowUpEventAnalysis;
 }
 
 export interface UnderstandingValidationResult {
@@ -214,7 +216,17 @@ export function validateAndNormalizeUnderstanding(
     jurisdiction: raw?.jurisdiction || fallbackJurisdiction,
     factsMissing: Array.from(new Set(factsMissing)),
     assumptions: Array.from(new Set(assumptions)),
-    confidence
+    confidence,
+    followUpAnalysis: raw?.followUpAnalysis ? {
+      eventType: raw.followUpAnalysis.eventType || 'other',
+      isFollowUp: Boolean(raw.followUpAnalysis.isFollowUp),
+      targetOutstandingAccount: raw.followUpAnalysis.targetOutstandingAccount || undefined,
+      settlementAmount: typeof raw.followUpAnalysis.settlementAmount === 'number' ? raw.followUpAnalysis.settlementAmount : undefined,
+      remainingReceivableOrPayable: typeof raw.followUpAnalysis.remainingReceivableOrPayable === 'number' ? raw.followUpAnalysis.remainingReceivableOrPayable : undefined,
+      settlementAccount: raw.followUpAnalysis.settlementAccount || 'cash_at_bank',
+      isHypothetical: Boolean(raw.followUpAnalysis.isHypothetical),
+      explanation: raw.followUpAnalysis.explanation || ''
+    } : undefined
   };
 
   return {
@@ -231,23 +243,126 @@ export function validateAndNormalizeUnderstanding(
  * decomposition across natural language query variations.
  */
 export class DeterministicSemanticExtractor {
-  public extract(query: string, functionalCurrency: string = 'SGD', jurisdiction: string = 'SG'): TransactionUnderstanding {
+  public extract(
+    query: string,
+    functionalCurrency: string = 'SGD',
+    jurisdiction: string = 'SG',
+    conversationContext?: ConversationAccountingContext
+  ): TransactionUnderstanding {
     const q = query.toLowerCase();
 
     // 1. Currency Extraction (Auditable)
-    const currency = this.extractCurrency(query, q, functionalCurrency, jurisdiction);
+    let currency = this.extractCurrency(query, q, functionalCurrency, jurisdiction);
 
     // 2. Amount Extraction
-    const amount = this.extractAmount(query);
+    let amount = this.extractAmount(query);
 
     // 3. Entity & Counterparty Perspective
-    const { reportingEntity, counterparty } = this.extractEntityPerspective(q);
+    let { reportingEntity, counterparty } = this.extractEntityPerspective(q);
 
     // 4. Ownership Context & Subject
-    const { ownershipContext, subject, instrument, transactionType } = this.extractTransactionNature(q, reportingEntity, counterparty);
+    let { ownershipContext, subject, instrument, transactionType } = this.extractTransactionNature(q, reportingEntity, counterparty);
 
     // 5. Payment Status
-    const paymentStatus = this.extractPaymentStatus(q);
+    let paymentStatus = this.extractPaymentStatus(q);
+
+    // 5.5 Multi-Turn Conversation & Follow-Up Event Resolution
+    let followUpAnalysis: FollowUpEventAnalysis | undefined;
+    const hasPriorContext = Boolean(
+      conversationContext &&
+      (conversationContext.outstandingBalances.length > 0 ||
+       conversationContext.recognizedEquityTotal > 0 ||
+       conversationContext.underlyingTransaction)
+    );
+
+    const introducesNewSubject =
+      q.includes('apple') ||
+      q.includes('aapl') ||
+      q.includes('tesla') ||
+      q.includes('office equipment') ||
+      q.includes('machinery') ||
+      q.includes('rental agreement') ||
+      q.includes('entertainment expenses');
+
+    const isPaymentOrSettlementAction =
+      (q.includes('paid') ||
+       q.includes('pay') ||
+       q.includes('bank') ||
+       q.includes('settle') ||
+       q.includes('settling') ||
+       q.includes('remit') ||
+       q.includes('transfer') ||
+       q.includes('received') ||
+       q.includes('deposit') ||
+       q.includes('did pay') ||
+       q.includes('did paid'));
+
+    const isHypothetical = /\b(what if|suppose|assuming|if)\b/i.test(query);
+
+    if (hasPriorContext && !introducesNewSubject && isPaymentOrSettlementAction) {
+      // Find target receivable or payable to settle
+      let targetBalance = conversationContext!.outstandingBalances.find(b => b.nature === 'RECEIVABLE');
+      if (!targetBalance && conversationContext!.recognizedEquityTotal > 0) {
+        targetBalance = {
+          accountCode: '1150',
+          accountName: 'Amount Due from Shareholder (Receivable)',
+          category: 'ASSET',
+          nature: 'RECEIVABLE',
+          counterpartyRole: 'shareholder',
+          originalAmount: conversationContext!.recognizedEquityTotal,
+          settledAmount: 0,
+          remainingAmount: conversationContext!.recognizedEquityTotal,
+          currency: conversationContext!.underlyingTransaction?.currency || functionalCurrency
+        };
+      }
+
+      if (targetBalance) {
+        // If amount was not specified in the follow-up, inherit full remaining balance
+        if (amount === undefined) {
+          amount = targetBalance.remainingAmount;
+        }
+
+        const isPartial = amount < targetBalance.remainingAmount;
+        const remaining = Math.max(0, Math.round((targetBalance.remainingAmount - amount) * 100) / 100);
+
+        followUpAnalysis = {
+          eventType: isPartial ? 'partial_settlement' : 'settlement',
+          isFollowUp: true,
+          targetOutstandingAccount: targetBalance.accountName,
+          settlementAmount: amount,
+          remainingReceivableOrPayable: remaining,
+          settlementAccount: 'cash_at_bank',
+          isHypothetical,
+          explanation: isPartial
+            ? `Partial settlement of ${targetBalance.accountName} for ${currency.value || targetBalance.currency || functionalCurrency} ${amount}. Remaining balance: ${currency.value || targetBalance.currency || functionalCurrency} ${remaining}.`
+            : `Full settlement of ${targetBalance.accountName} via bank transfer. Share Capital is not credited again.`
+        };
+
+        // Align transaction nature and perspective to settlement
+        paymentStatus = 'paid';
+        instrument = 'cash_at_bank';
+        ownershipContext = conversationContext!.underlyingTransaction?.ownershipContext || 'own_equity';
+        subject = `Settlement of ${targetBalance.accountName}`;
+        transactionType = isPartial ? 'partial_debt_settlement' : 'debt_settlement';
+        reportingEntity = { type: 'company', description: 'Reporting entity is the corporate business' };
+        if (!counterparty || counterparty.role === 'unknown') {
+          counterparty = {
+            role: (targetBalance.counterpartyRole as any) || 'shareholder',
+            description: targetBalance.counterpartyRole === 'shareholder' ? 'Company shareholder' : 'Counterparty'
+          };
+        }
+
+        // Inherit currency if unspecified in query
+        if (currency.source === 'unknown') {
+          currency = {
+            value: targetBalance.currency || functionalCurrency,
+            source: 'context_inference',
+            confidence: 0.95,
+            rationale: 'Inherited from active transaction context'
+          };
+        }
+      }
+    }
 
     // 6. Facts Missing & Assumptions
     const factsMissing: string[] = [];
@@ -299,7 +414,8 @@ export class DeterministicSemanticExtractor {
       jurisdiction,
       factsMissing,
       assumptions,
-      confidence: Math.round(confidence * 100) / 100
+      confidence: Math.round(confidence * 100) / 100,
+      followUpAnalysis
     };
 
     const validation = validateAndNormalizeUnderstanding(rawUnderstanding, jurisdiction, 'deterministic_fallback');
@@ -374,7 +490,14 @@ export class DeterministicSemanticExtractor {
     if (/\bone dollar\b/i.test(query)) return 1;
     if (/\btwo dollars\b/i.test(query)) return 2;
 
-    // 2. Strict monetary formats with currency symbol/code: $1, $ 1, USD 300k, SGD 5,000, 100 SGD, 300k USD
+    // 2. Textual fractions / cents: "50 cents", "twenty cents", "half"
+    const centsMatch = query.match(/\b(\d+)\s*cents?\b/i);
+    if (centsMatch && centsMatch[1]) {
+      return parseFloat(centsMatch[1]) / 100;
+    }
+    if (/\bhalf a dollar\b/i.test(query) || /\b50 cents\b/i.test(query)) return 0.5;
+
+    // 3. Strict monetary formats with currency symbol/code: $1, $ 1, USD 300k, SGD 5,000, 100 SGD, 300k USD
     const currFirstMatch = query.match(/(?:usd|sgd|eur|gbp|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\b/i);
     if (currFirstMatch && currFirstMatch[1]) {
       let val = parseFloat(currFirstMatch[1].replace(/,/g, ''));
@@ -395,7 +518,7 @@ export class DeterministicSemanticExtractor {
       return val;
     }
 
-    // 3. Explicit magnitude abbreviations in commercial context: 3k, 120k (not 30-day or percentages)
+    // 4. Explicit magnitude abbreviations in commercial context: 3k, 120k (not 30-day or percentages)
     const magMatch = query.match(/(?:for|cost|price|amount|paying|paid|invested)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)\b/i);
     if (magMatch && magMatch[1] && magMatch[2]) {
       let val = parseFloat(magMatch[1].replace(/,/g, ''));
@@ -403,6 +526,13 @@ export class DeterministicSemanticExtractor {
       if (unit === 'k' || unit === 'thousand') val *= 1000;
       if (unit === 'm' || unit === 'million') val *= 1000000;
       return val;
+    }
+
+    // 5. Payment verbs with explicit numbers: "paid 1.20", "transferred 500"
+    const payVerbMatch = query.match(/(?:paid|paying|transferred|remitted|settled)\s*(?:(?:usd|sgd|\$)\s*)?([\d,]+(?:\.\d+)?)/i);
+    if (payVerbMatch && payVerbMatch[1]) {
+      const val = parseFloat(payVerbMatch[1].replace(/,/g, ''));
+      if (!isNaN(val) && val > 0) return val;
     }
 
     return undefined;
@@ -642,7 +772,17 @@ Return ONLY a JSON object conforming strictly to this JSON schema:
   "jurisdiction": "SG" | string,
   "factsMissing": string[],
   "assumptions": string[],
-  "confidence": number
+  "confidence": number,
+  "followUpAnalysis": {
+    "eventType": "settlement" | "partial_settlement" | "hypothetical_change" | "new_transaction" | "other",
+    "isFollowUp": boolean,
+    "targetOutstandingAccount": string | null,
+    "settlementAmount": number | null,
+    "remainingReceivableOrPayable": number | null,
+    "settlementAccount": string | null,
+    "isHypothetical": boolean,
+    "explanation": string
+  }
 }
 
 CRITICAL CLASSIFICATION INVARIANTS:
@@ -674,17 +814,43 @@ CRITICAL CLASSIFICATION INVARIANTS:
    - Do NOT assume USD unless explicitly stated ("USD", "US Dollar", "US$").
    - If no currency symbol or code is provided, set currency.value = null, currency.source = "unknown", and add "Transaction currency is unspecified" to factsMissing.
 6. AMOUNT:
-   - Extract numeric transaction magnitude (e.g. 1 from "$1", 3000 from "3k"). Dates (e.g. 15/12/2026), percentages (9%), terms (30-day), or item counts (5 laptops) are NOT transaction amounts.`;
+   - Extract numeric transaction magnitude (e.g. 1 from "$1", 3000 from "3k"). Dates (e.g. 15/12/2026), percentages (9%), terms (30-day), or item counts (5 laptops) are NOT transaction amounts.
+7. MULTI-TURN CONVERSATION & FOLLOW-UP SETTLEMENTS:
+   - When [PRIOR CONVERSATION ACCOUNTING CONTEXT] is provided and user asks about payment/settlement (e.g. "what if the shareholder did paid to company bank account", "what if they paid 50 cents"):
+     * followUpAnalysis.eventType = "settlement" (or "partial_settlement" if amount < outstanding balance)
+     * followUpAnalysis.isFollowUp = true
+     * followUpAnalysis.targetOutstandingAccount = name of the receivable/payable from prior context
+     * followUpAnalysis.settlementAmount = extracted amount or full outstanding balance if not restated
+     * paymentStatus = "paid"
+     * instrument = "cash_at_bank"
+     * ownershipContext = inherit from prior context (e.g. "own_equity")
+     * Do NOT classify this as an external investment or financial asset.`;
 
 export class AISemanticExtractor {
   public async extract(
     query: string,
     providerOrApiKey?: ProviderSettings | string,
     _functionalCurrency: string = 'SGD',
-    _jurisdiction: string = 'SG'
+    _jurisdiction: string = 'SG',
+    conversationContext?: ConversationAccountingContext
   ): Promise<any> {
+    let contextPrompt = '';
+    if (
+      conversationContext &&
+      (conversationContext.outstandingBalances.length > 0 ||
+       conversationContext.recognizedEquityTotal > 0 ||
+       conversationContext.underlyingTransaction)
+    ) {
+      contextPrompt = `\n[PRIOR CONVERSATION ACCOUNTING CONTEXT]:\n` +
+        `- Underlying Transaction: ${conversationContext.underlyingTransaction?.subject || 'Commercial Transaction'} (${conversationContext.underlyingTransaction?.ownershipContext || 'own_equity'})\n` +
+        (conversationContext.outstandingBalances.length > 0
+          ? `- Outstanding Balances:\n` + conversationContext.outstandingBalances.map(b => `  * ${b.accountName}: ${b.currency} ${b.remainingAmount} (${b.nature}, role: ${b.counterpartyRole})`).join('\n') + '\n'
+          : '') +
+        `- Recognized Equity Total: ${conversationContext.recognizedEquityTotal}\n`;
+    }
+
     const rawJsonText = await executeStructuredLlmCall(
-      `Analyze the following commercial query and extract structured economic facts:\n\nQuery: "${query}"\n\nReturn strictly valid JSON.`,
+      `Analyze the following commercial query and extract structured economic facts:\n\nQuery: "${query}"\n${contextPrompt}\nReturn strictly valid JSON conforming to the schema.`,
       SEMANTIC_EXTRACTION_SYSTEM_PROMPT,
       providerOrApiKey,
       { jsonMode: true, temperature: 0.1 }
@@ -721,16 +887,18 @@ export class TransactionUnderstandingService {
   public understandTransactionSync(
     query: string,
     functionalCurrency: string = 'SGD',
-    jurisdiction: string = 'SG'
+    jurisdiction: string = 'SG',
+    conversationContext?: ConversationAccountingContext
   ): TransactionUnderstanding {
-    return this.deterministicExtractor.extract(query, functionalCurrency, jurisdiction);
+    return this.deterministicExtractor.extract(query, functionalCurrency, jurisdiction, conversationContext);
   }
 
   public async understandTransaction(
     query: string,
     functionalCurrency: string = 'SGD',
     jurisdiction: string = 'SG',
-    providerOrApiKey?: ProviderSettings | string
+    providerOrApiKey?: ProviderSettings | string,
+    conversationContext?: ConversationAccountingContext
   ): Promise<TransactionUnderstanding> {
     const hasProvider = Boolean(
       (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) ||
@@ -743,7 +911,7 @@ export class TransactionUnderstandingService {
 
     if (hasProvider) {
       try {
-        const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction);
+        const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction, conversationContext);
         const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai');
         if (validation.isValid) {
           return validation.normalizedUnderstanding;
@@ -755,7 +923,7 @@ export class TransactionUnderstandingService {
     }
 
     // Deterministic fallback path
-    return this.understandTransactionSync(query, functionalCurrency, jurisdiction);
+    return this.understandTransactionSync(query, functionalCurrency, jurisdiction, conversationContext);
   }
 }
 
