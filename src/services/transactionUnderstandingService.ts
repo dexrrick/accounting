@@ -321,16 +321,37 @@ export class DeterministicSemanticExtractor {
     if (/\bone dollar\b/i.test(query)) return 1;
     if (/\btwo dollars\b/i.test(query)) return 2;
 
-    // 2. Formats: $1, USD 300k, SGD 5,000, 3k
-    const match = query.match(/(?:(?:usd|sgd|eur|gbp|\$)\s*)?([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i);
-    if (match && match[1]) {
-      let val = parseFloat(match[1].replace(/,/g, ''));
+    // 2. Strict monetary formats with currency symbol/code: $1, $ 1, USD 300k, SGD 5,000, 100 SGD, 300k USD
+    const currFirstMatch = query.match(/(?:usd|sgd|eur|gbp|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\b/i);
+    if (currFirstMatch && currFirstMatch[1]) {
+      let val = parseFloat(currFirstMatch[1].replace(/,/g, ''));
       if (isNaN(val)) return undefined;
-      const unit = match[2]?.toLowerCase();
+      const unit = currFirstMatch[2]?.toLowerCase();
       if (unit === 'k' || unit === 'thousand') val *= 1000;
       if (unit === 'm' || unit === 'million') val *= 1000000;
       return val;
     }
+
+    const currLastMatch = query.match(/\b([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:usd|sgd|eur|gbp|dollars)\b/i);
+    if (currLastMatch && currLastMatch[1]) {
+      let val = parseFloat(currLastMatch[1].replace(/,/g, ''));
+      if (isNaN(val)) return undefined;
+      const unit = currLastMatch[2]?.toLowerCase();
+      if (unit === 'k' || unit === 'thousand') val *= 1000;
+      if (unit === 'm' || unit === 'million') val *= 1000000;
+      return val;
+    }
+
+    // 3. Explicit magnitude abbreviations in commercial context: 3k, 120k (not 30-day or percentages)
+    const magMatch = query.match(/(?:for|cost|price|amount|paying|paid|invested)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)\b/i);
+    if (magMatch && magMatch[1] && magMatch[2]) {
+      let val = parseFloat(magMatch[1].replace(/,/g, ''));
+      const unit = magMatch[2].toLowerCase();
+      if (unit === 'k' || unit === 'thousand') val *= 1000;
+      if (unit === 'm' || unit === 'million') val *= 1000000;
+      return val;
+    }
+
     return undefined;
   }
 

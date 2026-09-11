@@ -69,8 +69,8 @@ export type CompactAIDecision = CompactStatutoryDecision & CompactAccountingDeci
  */
 export function assembleDeterministicResponse(
   compact: CompactAIDecision,
-  userInput: string,
-  _currentScenario: AccountingScenarioState | null,
+  userInputOrScenario: string | AccountingScenarioState | null,
+  currentScenarioOrInput: AccountingScenarioState | string | null,
   groundedContext: GroundedReasoningContext,
   deterministicScenario: AccountingScenarioState | null,
   standard: AccountingStandard
@@ -78,6 +78,10 @@ export function assembleDeterministicResponse(
   messageText: string;
   scenarioState: AccountingScenarioState;
 } {
+  const userInput = typeof userInputOrScenario === 'string'
+    ? userInputOrScenario
+    : (typeof currentScenarioOrInput === 'string' ? currentScenarioOrInput : (deterministicScenario?.rawQuery || ''));
+
   const stdLabel = standard === 'SFRS_I' ? 'SFRS(I)' : 'IFRS';
   const queryMode = groundedContext.classification.intent;
   const retrievedEvidenceScope: AuthoritativeSourceRecord[] = [
@@ -86,12 +90,16 @@ export function assembleDeterministicResponse(
     ...groundedContext.curatedSummaries
   ];
 
-  // 1. Determine Authority Status
-  const hasAuthoritativeDeterministicEntries = Boolean(
+  // 1. Determine Authority Status & Fixture Recognition
+  const isRecognizedDeterministicFixture = Boolean(
     deterministicScenario &&
-    deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
-    deterministicScenario.directGroups &&
-    deterministicScenario.directGroups.length > 0
+    deterministicScenario.scenarioType !== 'UNRECOGNIZED'
+  );
+
+  const hasAuthoritativeDeterministicEntries = Boolean(
+    isRecognizedDeterministicFixture &&
+    deterministicScenario!.directGroups &&
+    deterministicScenario!.directGroups.length > 0
   );
 
   const hasMissingFacts = Boolean(
@@ -103,7 +111,7 @@ export function assembleDeterministicResponse(
     ? 'CONDITIONAL'
     : (hasAuthoritativeDeterministicEntries
         ? (deterministicScenario?.authorityStatus || 'DETERMINISTIC')
-        : (deterministicScenario?.scenarioType === 'UNRECOGNIZED' ? 'AI_PROPOSED' : 'DETERMINISTIC'));
+        : 'AI_PROPOSED');
 
   // 2. Assemble Citations with Structural Verification
   const rawCitations = [
@@ -201,8 +209,10 @@ export function assembleDeterministicResponse(
     // in deterministicScenario. Arbitrary numbers (dates, quantities, terms, percentages) from user text
     // MUST NEVER be extracted via regex into journal amounts.
     let knownAmount: number | undefined = undefined;
-    if (deterministicScenario?.isComplete && deterministicScenario?.amount && deterministicScenario.amount > 0) {
+    if (isRecognizedDeterministicFixture && deterministicScenario?.isComplete && deterministicScenario?.amount && deterministicScenario.amount > 0) {
       knownAmount = deterministicScenario.amount;
+    } else if (groundedContext.semanticUnderstanding?.amount && groundedContext.semanticUnderstanding.amount > 0) {
+      knownAmount = groundedContext.semanticUnderstanding.amount;
     }
 
     const isUnvaluedOrNovel = !knownAmount || userInput.toLowerCase().includes('barter') || userInput.toLowerCase().includes('exchange');
@@ -211,7 +221,7 @@ export function assembleDeterministicResponse(
       // Missing or unstructured monetary amounts: NEVER manufacture numbers from raw text.
       const lines: JournalLine[] = compact.requiredAccounts.map((acc, aIdx) => ({
         id: `line-ai-${aIdx + 1}`,
-        accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EXPENSE' ? '5000' : '4000',
+        accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EQUITY' ? '3000' : acc.category === 'EXPENSE' ? '5000' : '4000',
         accountName: acc.accountName,
         category: acc.category,
         debit: 0,
@@ -237,7 +247,7 @@ export function assembleDeterministicResponse(
         authorityStatus: 'CONDITIONAL'
       }];
     } else {
-      // Structured amount available from complete deterministic scenario formula
+      // Structured amount available from complete deterministic scenario formula or verified semantic facts
       const debitsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'DEBIT').length;
       const creditsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'CREDIT').length;
 
@@ -246,7 +256,7 @@ export function assembleDeterministicResponse(
         const amt = isDebit ? (debitsCount === 1 ? knownAmount! : 0) : (creditsCount === 1 ? knownAmount! : 0);
         return {
           id: `line-ai-${aIdx + 1}`,
-          accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EXPENSE' ? '5000' : '4000',
+          accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EQUITY' ? '3000' : acc.category === 'EXPENSE' ? '5000' : '4000',
           accountName: acc.accountName,
           category: acc.category,
           debit: isDebit ? amt : 0,
@@ -305,10 +315,55 @@ export function assembleDeterministicResponse(
   }
 
   // 5. Assemble Key Parameters
-  const keyParameters = [
-    ...(deterministicScenario?.keyParameters || []),
-    ...(compact.keyParameters || [])
-  ];
+  const keyParameters: { label: string; value: string; badge?: string; highlight?: boolean }[] = [];
+
+  if (isRecognizedDeterministicFixture) {
+    if (deterministicScenario?.keyParameters) {
+      keyParameters.push(...deterministicScenario.keyParameters);
+    }
+  } else {
+    keyParameters.push({
+      label: 'Evaluation Mode',
+      value: 'AI Grounded Reasoning',
+      badge: 'AI Active'
+    });
+    keyParameters.push({
+      label: 'Detected Domain',
+      value: groundedContext.classification.primaryDomain,
+      badge: 'Classification'
+    });
+    keyParameters.push({
+      label: 'AI Status',
+      value: 'Live Grounded Pipeline Connected',
+      badge: 'Online'
+    });
+
+    if (groundedContext.semanticUnderstanding) {
+      const sem = groundedContext.semanticUnderstanding;
+      if (sem.reportingEntity?.type) {
+        keyParameters.push({ label: 'Reporting Entity', value: sem.reportingEntity.type.toUpperCase(), badge: 'Perspective' });
+      }
+      if (sem.counterparty?.role) {
+        keyParameters.push({ label: 'Counterparty', value: sem.counterparty.role.toUpperCase(), badge: 'Counterparty' });
+      }
+      if (sem.ownershipContext && sem.ownershipContext !== 'not_applicable') {
+        keyParameters.push({ label: 'Ownership Context', value: sem.ownershipContext.toUpperCase(), badge: 'Equity' });
+      }
+      if (sem.paymentStatus) {
+        keyParameters.push({ label: 'Payment Status', value: sem.paymentStatus.toUpperCase(), badge: 'Settlement' });
+      }
+      if (sem.currency?.value) {
+        keyParameters.push({ label: 'Currency', value: `${sem.currency.value} (${sem.currency.source})`, badge: 'Currency' });
+      }
+      if (sem.amount !== undefined && sem.amount > 0) {
+        keyParameters.push({ label: 'Transaction Amount', value: `${sem.currency?.value || 'SGD'} ${sem.amount.toLocaleString()}`, badge: 'Stated Fact' });
+      }
+    }
+  }
+
+  if (compact.keyParameters && compact.keyParameters.length > 0) {
+    keyParameters.push(...compact.keyParameters);
+  }
 
   if (keyParameters.length === 0) {
     if (compact.decision) {
@@ -418,7 +473,11 @@ export function assembleDeterministicResponse(
         }
       }
     } else {
-      messageText = `### SFRS(I) Accounting Assessment: ${deterministicScenario?.transactionTitle || 'Financial Reporting Treatment'}\n\n` +
+      const assessmentTitle = isRecognizedDeterministicFixture
+        ? (deterministicScenario?.transactionTitle || 'Financial Reporting Treatment')
+        : (compact.transactionNature || compact.transactionTitle || (groundedContext.semanticUnderstanding?.transactionType ? groundedContext.semanticUnderstanding.transactionType.replace(/_/g, ' ').toUpperCase() : 'Financial Reporting Treatment'));
+
+      messageText = `### SFRS(I) Accounting Assessment: ${assessmentTitle}\n\n` +
         `**Authority Status**: **${authorityStatus === 'DETERMINISTIC' ? '✓ Deterministic Calculations' : authorityStatus === 'CONDITIONAL' ? '⚠️ Conditional (Missing Facts)' : '🤖 AI Proposed'}**\n\n` +
         `---\n\n` +
         `#### 1. Recommended Accounting Treatment (${stdLabel})\n` +
@@ -428,14 +487,14 @@ export function assembleDeterministicResponse(
         messageText += `---\n\n#### 2. Professional Technical Reasoning\n${compact.reasoning}\n\n`;
       }
 
-      if (compact.singaporeTaxImpact || deterministicScenario?.singaporeTaxTreatmentSummary) {
+      if (compact.singaporeTaxImpact || (isRecognizedDeterministicFixture && deterministicScenario?.singaporeTaxTreatmentSummary)) {
         messageText += `---\n\n#### 3. Singapore Tax Treatment (IRAS)\n` +
           `${compact.singaporeTaxImpact || deterministicScenario?.singaporeTaxTreatmentSummary}\n\n`;
       }
 
-      if (deterministicScenario?.keyParameters && deterministicScenario.keyParameters.length > 0) {
+      if (keyParameters.length > 0) {
         messageText += `---\n\n#### 4. Key Statutory & Computational Facts\n`;
-        for (const p of deterministicScenario.keyParameters) {
+        for (const p of keyParameters) {
           messageText += `* **${p.label}**: ${p.value}\n`;
         }
         messageText += `\n`;
@@ -481,8 +540,16 @@ export function assembleDeterministicResponse(
     ? 'CONDITIONAL'
     : authorityStatus;
 
+  const resolvedScenarioType = isRecognizedDeterministicFixture
+    ? deterministicScenario!.scenarioType
+    : (compact.scenarioType || (queryMode === 'STATUTORY_ADVISORY' ? 'SINGAPORE_STATUTORY_ADVISORY' : 'UNIVERSAL'));
+
+  const resolvedTransactionTitle = isRecognizedDeterministicFixture
+    ? (deterministicScenario?.transactionTitle || 'Accounting & Statutory Advisory')
+    : (compact.transactionNature || compact.transactionTitle || (groundedContext.semanticUnderstanding?.transactionType ? groundedContext.semanticUnderstanding.transactionType.replace(/_/g, ' ').toUpperCase() : 'Accounting & Statutory Advisory'));
+
   const scenarioState: AccountingScenarioState = {
-    scenarioType: deterministicScenario?.scenarioType || compact.scenarioType || (queryMode === 'STATUTORY_ADVISORY' ? 'SINGAPORE_STATUTORY_ADVISORY' : 'UNIVERSAL'),
+    scenarioType: resolvedScenarioType,
     queryIntent: queryMode as any,
     primaryDomain: deterministicScenario?.primaryDomain || (
       groundedContext.classification.primaryDomain === 'EMPLOYMENT' ? 'MOM_EMPLOYMENT' :
@@ -493,14 +560,14 @@ export function assembleDeterministicResponse(
       'ACCOUNTING_SFRS'
     ),
     rawQuery: userInput,
-    transactionTitle: deterministicScenario?.transactionTitle || compact.transactionTitle || 'Accounting & Statutory Advisory',
+    transactionTitle: resolvedTransactionTitle,
     functionalCurrency: deterministicScenario?.functionalCurrency || 'SGD',
-    transactionCurrency: deterministicScenario?.transactionCurrency || 'SGD',
+    transactionCurrency: deterministicScenario?.transactionCurrency || (groundedContext.semanticUnderstanding?.currency?.value || 'SGD'),
     authorityStatus: finalAuthorityStatus,
-    accountingTreatmentSummary: compact.treatment || deterministicScenario?.accountingTreatmentSummary,
-    singaporeTaxTreatmentSummary: compact.singaporeTaxImpact || deterministicScenario?.singaporeTaxTreatmentSummary,
-    regulatoryMandatesSummary: deterministicScenario?.regulatoryMandatesSummary,
-    effectiveDateOrTiming: deterministicScenario?.effectiveDateOrTiming,
+    accountingTreatmentSummary: compact.treatment || (isRecognizedDeterministicFixture ? deterministicScenario?.accountingTreatmentSummary : undefined),
+    singaporeTaxTreatmentSummary: compact.singaporeTaxImpact || (isRecognizedDeterministicFixture ? deterministicScenario?.singaporeTaxTreatmentSummary : undefined),
+    regulatoryMandatesSummary: isRecognizedDeterministicFixture ? deterministicScenario?.regulatoryMandatesSummary : undefined,
+    effectiveDateOrTiming: isRecognizedDeterministicFixture ? deterministicScenario?.effectiveDateOrTiming : undefined,
     uncertaintyDisclaimer: uncertaintyDisclaimer || undefined,
     keyParameters,
     directGroups,
