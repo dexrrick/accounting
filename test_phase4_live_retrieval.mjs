@@ -2166,6 +2166,288 @@ async function runTests() {
     delete UNIFIED_SOURCE_REGISTRY[updateRecord.id];
   });
 
+  it('13G. JSON boundary verification fails if fxObservation rates/base/date mismatch payload even if JSON is valid syntax', () => {
+    const validator = new ExternalSourceValidator();
+    const rawJson = JSON.stringify({
+      date: '2026-09-11',
+      base: 'SGD',
+      rates: { USD: 0.74, EUR: 0.68 }
+    });
+
+    const baseRecord = {
+      id: 'FX_TEST_BOUNDARY',
+      standardOrActCode: 'FX_OBSERVATION',
+      paragraphOrSection: 'SPOT_RATES_SGD',
+      documentTitle: 'Frankfurter ECB Reference Rates',
+      officialSourceUrl: 'https://api.frankfurter.dev/v1/latest?base=SGD',
+      sourceText: 'European Central Bank Reference Spot Exchange Rates (Base: SGD, Date: 2026-09-11): 1 SGD = 0.74 USD, 1 SGD = 0.68 EUR',
+      isVerbatimText: false,
+      authority: 'REFERENCE_API',
+      sourceType: 'REFERENCE_DATA',
+      evidenceTier: 'CURATED_SUMMARY',
+      extractionStatus: 'EXACT',
+      sourceLocator: {
+        sourceType: 'JSON',
+        startOffset: 0,
+        endOffset: rawJson.length,
+        boundary: { startOffset: 0, endOffset: rawJson.length }
+      },
+      fxObservation: {
+        sourceAuthority: 'REFERENCE_API',
+        provider: 'FRANKFURTER',
+        date: '2026-09-11',
+        base: 'SGD',
+        rates: { USD: 0.74, EUR: 0.68 }
+      }
+    };
+
+    // 1. Valid matching fxObservation passes boundary check
+    const validRes = validator.validateSourceBoundary(baseRecord, rawJson);
+    assert.strictEqual(validRes.isValid, true);
+
+    // 2. Date mismatch fails even though JSON syntax is 100% valid
+    const dateMismatchRecord = {
+      ...baseRecord,
+      fxObservation: { ...baseRecord.fxObservation, date: '2026-09-10' }
+    };
+    const dateRes = validator.validateSourceBoundary(dateMismatchRecord, rawJson);
+    assert.strictEqual(dateRes.isValid, false);
+    assert.strictEqual(dateRes.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(dateRes.reason.includes('date mismatch'));
+
+    // 3. Base currency mismatch fails even though JSON syntax is 100% valid
+    const baseMismatchRecord = {
+      ...baseRecord,
+      fxObservation: { ...baseRecord.fxObservation, base: 'USD' }
+    };
+    const baseRes = validator.validateSourceBoundary(baseMismatchRecord, rawJson);
+    assert.strictEqual(baseRes.isValid, false);
+    assert.strictEqual(baseRes.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(baseRes.reason.includes('base mismatch'));
+
+    // 4. Rate mismatch fails even though JSON syntax is 100% valid
+    const rateMismatchRecord = {
+      ...baseRecord,
+      fxObservation: { ...baseRecord.fxObservation, rates: { USD: 0.99, EUR: 0.68 } }
+    };
+    const rateRes = validator.validateSourceBoundary(rateMismatchRecord, rawJson);
+    assert.strictEqual(rateRes.isValid, false);
+    assert.strictEqual(rateRes.errorCode, 'PROVISION_MAPPING_MISMATCH');
+    assert.ok(rateRes.reason.includes("rate mismatch for currency 'USD'"));
+
+    // 5. Missing fxObservation on REFERENCE_API fails boundary check
+    const missingObsRecord = {
+      ...baseRecord,
+      fxObservation: undefined
+    };
+    const missingRes = validator.validateSourceBoundary(missingObsRecord, rawJson);
+    assert.strictEqual(missingRes.isValid, false);
+    assert.ok(missingRes.reason.includes('missing fxObservation payload'));
+  });
+
+  await itAsync('13H. Multi-record package requires record-specific raw documents; missing or misassigned record document fails atomically', async () => {
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    // Two authentic source documents from AGC for distinct sections/provisions
+    const ssoDoc1 = `<!DOCTYPE html><html><body><div id="pr201-5-"><p>(5) The financial statements shall comply with the requirements of the accounting standards made or formulated by the Accounting Standards Council under Part 3 of the Accounting Standards Act 2007 and give a true and fair view of the financial position and performance of the company.</p></div></body></html>`;
+    const ssoDoc2 = `<!DOCTYPE html><html><body><div id="pr202-1-"><p>(1) In the case of a company that is not required to hold an annual general meeting, financial statements shall be sent to all members.</p></div></body></html>`;
+
+    const extraction1 = extractSSOProvision(ssoDoc1, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(extraction1.extractionStatus, 'EXACT');
+    const extraction2 = extractSSOProvision(ssoDoc2, 'CoA1967', 'Section 202(1)');
+    assert.strictEqual(extraction2.extractionStatus, 'EXACT');
+
+    const docHash1 = computeSha256(ssoDoc1);
+    const docHash2 = computeSha256(ssoDoc2);
+    const provHash1 = computeProvisionHash('CoA1967', 'Section 201(5)', extraction1.text);
+    const provHash2 = computeProvisionHash('CoA1967', 'Section 202(1)', extraction2.text);
+
+    const rec1 = {
+      id: 'REC_MULTI_SSO_1',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 201(5)',
+      documentTitle: 'Companies Act 1967',
+      authority: 'AGC',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/COA1967',
+      sourceText: extraction1.text,
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      version: 'PKG-MULTI',
+      documentHash: docHash1,
+      provisionHash: provHash1,
+      contentHash: provHash1,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction1.sourceLocator
+    };
+
+    const rec2 = {
+      id: 'REC_MULTI_SSO_2',
+      standardOrActCode: 'CoA1967',
+      paragraphOrSection: 'Section 202(1)',
+      documentTitle: 'Companies Act 1967',
+      authority: 'AGC',
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/COA1967',
+      sourceText: extraction2.text,
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'PRIMARY_SOURCE',
+      provenance: 'LIVE_PATCH',
+      version: 'PKG-MULTI',
+      documentHash: docHash2,
+      provisionHash: provHash2,
+      contentHash: provHash2,
+      extractionStatus: 'EXACT',
+      sourceLocator: extraction2.sourceLocator
+    };
+
+    const pkg = {
+      packageId: 'PKG-MULTI-DOC-TEST',
+      releaseDate: '2026-09-11',
+      authority: 'AGC',
+      updates: [rec1, rec2],
+      amendments: [
+        { recordId: rec1.id, title: 'SSO 201(5) Update', changeType: 'TEXT_CHANGE', summary: 'SSO 201(5) Update' },
+        { recordId: rec2.id, title: 'SSO 202(1) Update', changeType: 'TEXT_CHANGE', summary: 'SSO 202(1) Update' }
+      ],
+      packageHash: ''
+    };
+    pkg.packageHash = feedService.computePackageHash(pkg);
+
+    await feedService.stageUpdatePackage(pkg);
+
+    // Subtest H1: Passing single raw document for multi-record package with differing document hashes fails
+    const singleDocVerify = await feedService.verifyUpdatePackage(pkg.packageId, ssoDoc1);
+    assert.strictEqual(singleDocVerify.isValid, false);
+    assert.strictEqual(singleDocVerify.failedRecordId, rec2.id);
+    assert.ok(singleDocVerify.rejectionReason.includes('Document hash mismatch'));
+
+    // Subtest H2: Incomplete record mapping (missing rec2) fails atomically
+    const missingKeyVerify = await feedService.verifyUpdatePackage(pkg.packageId, {
+      [rec1.id]: ssoDoc1
+    });
+    assert.strictEqual(missingKeyVerify.isValid, false);
+    assert.strictEqual(missingKeyVerify.failedRecordId, rec2.id);
+    assert.ok(missingKeyVerify.rejectionReason.includes('Missing record-specific raw document'));
+
+    // Subtest H3: Misassigned raw document (ssoDoc1 assigned to rec2) fails atomically
+    const misassignedVerify = await feedService.verifyUpdatePackage(pkg.packageId, {
+      [rec1.id]: ssoDoc1,
+      [rec2.id]: ssoDoc1
+    });
+    assert.strictEqual(misassignedVerify.isValid, false);
+    assert.strictEqual(misassignedVerify.failedRecordId, rec2.id);
+    assert.ok(misassignedVerify.rejectionReason.includes('Document hash mismatch'));
+
+    // Subtest H4: Accurate record-specific documents mapping passes verification for all records
+    const correctVerify = await feedService.verifyUpdatePackage(pkg.packageId, {
+      [rec1.id]: ssoDoc1,
+      [rec2.id]: ssoDoc2
+    });
+    assert.strictEqual(correctVerify.isValid, true);
+    assert.strictEqual(correctVerify.verifiedRecordsCount, 2);
+  });
+
+  await itAsync('13I. sourceType and evidenceTier are preserved through activation; SSO rejects whole-section masquerading as subsection', async () => {
+    const versioning = new SourceVersioningManager();
+    const feedService = new LiveRegulatoryFeedService(versioning);
+
+    // Part 1: Preserve sourceType and evidenceTier intact on activation
+    const irasDoc = irasHtmlFixture;
+    const irasExtraction = extractIRASProvision(irasDoc, 'Section 43');
+    assert.strictEqual(irasExtraction.extractionStatus, 'EXACT');
+
+    const irasRecord = {
+      id: 'REC_PRESERVE_TIER_TEST',
+      standardOrActCode: 'ITA1947',
+      paragraphOrSection: 'Section 43',
+      documentTitle: 'Corporate Income Tax Guidance',
+      authority: 'IRAS',
+      officialSourceUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax',
+      sourceText: irasExtraction.text,
+      isVerbatimText: true,
+      lastVerifiedDate: '2026-09-11',
+      sourceStatus: 'NEEDS_REVIEW',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
+      sourceType: 'OFFICIAL_GUIDANCE',
+      provenance: 'LIVE_PATCH',
+      version: 'PKG-TIER-PRESERVE',
+      documentHash: computeSha256(irasDoc),
+      provisionHash: computeProvisionHash('ITA1947', 'Section 43', irasExtraction.text),
+      contentHash: computeProvisionHash('ITA1947', 'Section 43', irasExtraction.text),
+      extractionStatus: 'EXACT',
+      sourceLocator: irasExtraction.sourceLocator
+    };
+
+    const pkg = {
+      packageId: 'PKG-TIER-PRESERVE',
+      releaseDate: '2026-09-11',
+      authority: 'IRAS',
+      updates: [irasRecord],
+      amendments: [{ recordId: irasRecord.id, title: 'IRAS Update', changeType: 'TEXT_CHANGE', summary: 'Preserve tier test' }],
+      packageHash: ''
+    };
+    pkg.packageHash = feedService.computePackageHash(pkg);
+
+    await feedService.stageUpdatePackage(pkg);
+    const verifyRes = await feedService.verifyUpdatePackage(pkg.packageId, irasDoc);
+    assert.strictEqual(verifyRes.isValid, true);
+
+    const actRes = await feedService.activateUpdatePackage(pkg.packageId);
+    assert.strictEqual(actRes.success, true);
+
+    const activatedRecord = UNIFIED_SOURCE_REGISTRY[irasRecord.id];
+    assert.ok(activatedRecord);
+    // Invariant: evidenceTier must remain OFFICIAL_GUIDANCE, NOT overridden to PRIMARY_SOURCE by isVerbatimText: true
+    assert.strictEqual(activatedRecord.evidenceTier, 'OFFICIAL_GUIDANCE');
+    assert.strictEqual(activatedRecord.sourceType, 'OFFICIAL_GUIDANCE');
+    delete UNIFIED_SOURCE_REGISTRY[irasRecord.id];
+
+    // Part 2: SSO rejects whole section attempting to masquerade as an exact subsection
+    // Case 2A: Section wrapper containing multiple other subsections fails closed
+    const wholeSectionHtml = `
+      <!DOCTYPE html><html><body>
+        <div class="section" id="sec201">
+          <div class="prov1" id="pr201-1-"><p>(1) The directors shall keep records...</p></div>
+          <div class="prov1" id="pr201-2-"><p>(2) The records shall be kept at the registered office...</p></div>
+          <div class="prov1" id="pr201-3-"><p>(3) Penalties for default...</p></div>
+        </div>
+      </body></html>
+    `;
+    const failMissingSub = extractSSOProvision(wholeSectionHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(failMissingSub.extractionStatus, 'FAILED');
+    assert.strictEqual(failMissingSub.text, '');
+
+    // Case 2B: Multi-subsection container with target subsection plus subsequent subsections lumped together fails closed
+    const lumpedMultiSubHtml = `
+      <!DOCTYPE html><html><body>
+        <div class="prov1" id="pr201-">
+          (5) The financial statements shall comply with accounting standards.
+          (6) The directors shall state whether accounts give true and fair view.
+        </div>
+      </body></html>
+    `;
+    const failLumped = extractSSOProvision(lumpedMultiSubHtml, 'CoA1967', 'Section 201(5)');
+    assert.strictEqual(failLumped.extractionStatus, 'FAILED');
+    assert.strictEqual(failLumped.text, '');
+
+    // Case 2C: Whole-section wrapper starting with (1) but containing multiple subsections cannot masquerade as subsection (1)
+    const sectionWrapperHtml = `
+      <!DOCTYPE html><html><body>
+        <div class="section" id="sec201">
+          (1) The directors of every company shall keep proper accounts. (2) Accounts must be audited.
+        </div>
+      </body></html>
+    `;
+    const failSectionWrapper = extractSSOProvision(sectionWrapperHtml, 'CoA1967', 'Section 201(1)');
+    assert.strictEqual(failSectionWrapper.extractionStatus, 'FAILED');
+    assert.strictEqual(failSectionWrapper.text, '');
+  });
+
   console.log('=============================================================');
   console.log(`ALL ${passedTests}/${totalTests} PHASE 4 TESTS PASSED! (100% GREEN) 🎉`);
   console.log('=============================================================');

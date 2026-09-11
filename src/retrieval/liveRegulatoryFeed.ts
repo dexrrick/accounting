@@ -279,12 +279,27 @@ export class LiveRegulatoryFeedService {
 
   /**
    * Verifies an entire update package.
-   * Security invariant: rawDocument is mandatory. A candidate record must never reach VERIFIED
+   * Security invariant: rawDocuments is mandatory. A candidate record must never reach VERIFIED
    * without proving that candidate sourceText matches content reconstructed from raw document boundary.
-   * Atomic rule: If even 1 record fails validation or structural check, the entire package is REJECTED.
+   * Atomic rule: If even 1 record fails validation, structural check, or raw boundary verification, the entire package is REJECTED.
+   * rawDocuments can be passed as a record-specific mapping (Record<string, string> keyed by recordId)
+   * or a single string (if all records in the package share the identical document).
    */
-  public async verifyUpdatePackage(packageId: string, rawDocument: string): Promise<PackageVerificationResult> {
-    if (!rawDocument || typeof rawDocument !== 'string' || rawDocument.trim().length === 0) {
+  public async verifyUpdatePackage(
+    packageId: string,
+    rawDocuments: Record<string, string> | string
+  ): Promise<PackageVerificationResult> {
+    if (!rawDocuments || (typeof rawDocuments !== 'string' && typeof rawDocuments !== 'object')) {
+      this.rejectedPackages.set(packageId, 'Raw document is required for package verification');
+      return {
+        isValid: false,
+        packageId,
+        verifiedRecordsCount: 0,
+        rejectionReason: 'Raw document is strictly required to verify update package and validate source boundary'
+      };
+    }
+
+    if (typeof rawDocuments === 'string' && rawDocuments.trim().length === 0) {
       this.rejectedPackages.set(packageId, 'Raw document is required for package verification');
       return {
         isValid: false,
@@ -327,6 +342,40 @@ export class LiveRegulatoryFeedService {
     // 2. Validate every record atomically
     for (let i = 0; i < pkg.updates.length; i++) {
       const rec = pkg.updates[i];
+
+      // Retrieve record-specific raw document
+      let rawDoc: string | undefined;
+      if (typeof rawDocuments === 'string') {
+        rawDoc = rawDocuments;
+      } else {
+        rawDoc = rawDocuments[rec.id];
+      }
+
+      if (!rawDoc || typeof rawDoc !== 'string' || rawDoc.trim().length === 0) {
+        this.rejectedPackages.set(packageId, `Record #${i + 1} (${rec.id}): Missing record-specific raw document`);
+        return {
+          isValid: false,
+          packageId,
+          verifiedRecordsCount: 0,
+          failedRecordId: rec.id,
+          rejectionReason: `Atomic validation failure on record '${rec.id}': Missing record-specific raw document`
+        };
+      }
+
+      // Verify record-specific document hash if record defines documentHash
+      if (rec.documentHash) {
+        const actualDocHash = computeSha256(rawDoc);
+        if (actualDocHash.toLowerCase() !== rec.documentHash.toLowerCase()) {
+          this.rejectedPackages.set(packageId, `Record #${i + 1} (${rec.id}): Document hash mismatch`);
+          return {
+            isValid: false,
+            packageId,
+            verifiedRecordsCount: 0,
+            failedRecordId: rec.id,
+            rejectionReason: `Atomic validation failure on record '${rec.id}': Document hash mismatch for record-specific raw document (expected '${rec.documentHash}', got '${actualDocHash}')`
+          };
+        }
+      }
 
       // Structure check
       const structCheck = this.validator.validateDocumentStructure(rec);
@@ -381,7 +430,7 @@ export class LiveRegulatoryFeedService {
       }
 
       // Source boundary verification (ties candidate sourceText back to raw document offsets)
-      const boundaryCheck = this.validator.validateSourceBoundary(rec, rawDocument);
+      const boundaryCheck = this.validator.validateSourceBoundary(rec, rawDoc);
       if (!boundaryCheck.isValid) {
         this.rejectedPackages.set(packageId, `Record #${i + 1} (${rec.id}): ${boundaryCheck.reason}`);
         return {
@@ -432,13 +481,11 @@ export class LiveRegulatoryFeedService {
   }
 
   /**
-   * Activates an approved package into the active registry.
-   * True two-phase atomic commit:
-   * 1. Captures a state snapshot of UNIFIED_SOURCE_REGISTRY for all affected records.
-   * 2. Transactionally executes activation in the versioning manager and active registry.
-   * 3. If any record fails activation, rolls back all records activated during this transaction,
-   *    restores UNIFIED_SOURCE_REGISTRY to the exact pre-activation snapshot, records rejection,
-   *    and guarantees that exactly 0 records remain activated.
+   * Activates a verified update package into the active UNIFIED_SOURCE_REGISTRY.
+   * ACID Transaction Guarantee: All updates are activated atomically.
+   * If any record activation fails in the ledger, all previously activated records
+   * in this transaction are automatically rolled back, and the active registry is restored
+   * to its exact pre-activation snapshot.
    */
   public async activateUpdatePackage(packageId: string): Promise<PackageActivationResult> {
     const pkg = this.verifiedPackages.get(packageId);
@@ -473,14 +520,15 @@ export class LiveRegulatoryFeedService {
 
       activatedVersionIds.push(versionId);
 
-      // Update the active in-memory registry
+      // Update the active in-memory registry: preserve sourceType and evidenceTier intact
       const activeRecord: AuthoritativeSourceRecord = {
         ...rec,
         versionId,
         version: pkg.packageId,
         provenance: 'LIVE_PATCH',
         sourceStatus: 'VERIFIED',
-        evidenceTier: rec.isVerbatimText ? 'PRIMARY_SOURCE' : 'CURATED_SUMMARY'
+        sourceType: rec.sourceType,
+        evidenceTier: rec.evidenceTier
       };
 
       UNIFIED_SOURCE_REGISTRY[rec.id] = activeRecord;

@@ -317,8 +317,9 @@ export class ExternalSourceValidator {
 
     // If source format is JSON or authority is REFERENCE_API
     if (record.authority === 'REFERENCE_API' || locator.sourceType === 'JSON') {
+      let parsedSlice: any;
       try {
-        const parsedSlice = JSON.parse(rawSlice);
+        parsedSlice = JSON.parse(rawSlice);
         if (!parsedSlice || typeof parsedSlice !== 'object') {
           return {
             isValid: false,
@@ -333,6 +334,50 @@ export class ExternalSourceValidator {
           reason: 'Source boundary does not parse as valid JSON'
         };
       }
+
+      // JSON payload must deterministically correspond to fxObservation
+      if (record.fxObservation) {
+        const obs = record.fxObservation;
+        if (obs.date && parsedSlice.date !== obs.date) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: `JSON boundary payload date mismatch: expected '${obs.date}', got '${parsedSlice.date}'`
+          };
+        }
+        if (obs.base && parsedSlice.base !== obs.base) {
+          return {
+            isValid: false,
+            errorCode: 'PROVISION_MAPPING_MISMATCH',
+            reason: `JSON boundary payload base mismatch: expected '${obs.base}', got '${parsedSlice.base}'`
+          };
+        }
+        if (obs.rates && typeof obs.rates === 'object') {
+          if (!parsedSlice.rates || typeof parsedSlice.rates !== 'object') {
+            return {
+              isValid: false,
+              errorCode: 'PROVISION_MAPPING_MISMATCH',
+              reason: 'JSON boundary payload is missing rates object required by fxObservation'
+            };
+          }
+          for (const [sym, rate] of Object.entries(obs.rates)) {
+            if (parsedSlice.rates[sym] !== rate) {
+              return {
+                isValid: false,
+                errorCode: 'PROVISION_MAPPING_MISMATCH',
+                reason: `JSON boundary payload rate mismatch for currency '${sym}': expected ${rate}, got ${parsedSlice.rates[sym]}`
+              };
+            }
+          }
+        }
+      } else if (record.authority === 'REFERENCE_API') {
+        return {
+          isValid: false,
+          errorCode: 'PROVISION_MAPPING_MISMATCH',
+          reason: 'Reference API record is missing fxObservation payload for boundary verification'
+        };
+      }
+
       return { isValid: true };
     }
 

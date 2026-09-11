@@ -329,11 +329,17 @@ export function extractSSOProvision(
     };
   }
 
-  // Strategy 3: Check secContainer itself if it directly begins with subsection label
+  // Strictly constrained Strategy 3:
+  // Invariant: A whole section container must NEVER masquerade as an exact subsection.
+  // If secContainer itself is a discrete provision node (not a section wrapper), begins with (${targetSub}),
+  // and does NOT contain other subsections (e.g. (6), (1), etc.), accept as discrete provision node.
+  const isSectionWrapper = !secContainer.elementId || secContainer.elementId.toLowerCase().startsWith(`sec${targetSec}`);
   const rawOuter = html.slice(secContainer.startOffset, secContainer.endOffset);
   const cleaned = cleanHtmlText(rawOuter);
+  const startsWithTarget = cleaned.startsWith(`(${targetSub})`) || new RegExp(`^\\s*\\(${targetSub}\\)\\s+`).test(cleaned);
+  const containsOtherSubsections = new RegExp(`\\((?!${targetSub}\\b)\\d+[a-zA-Z]?\\)`).test(cleaned);
 
-  if (cleaned.length > 20 && (cleaned.startsWith(`(${targetSub})`) || new RegExp(`^\\s*\\(${targetSub}\\)\\s+`).test(cleaned))) {
+  if (!isSectionWrapper && startsWithTarget && !containsOtherSubsections && cleaned.length > 20) {
     return {
       standardOrActCode: actCode,
       paragraphOrSection: section,
@@ -361,7 +367,7 @@ export function extractSSOProvision(
     };
   }
 
-  // If node begins with different subsection (e.g. (4)) and merely references (5), fail closed!
+  // If no discrete subsection container or child container matching the requested subsection is found, fail closed!
   return {
     standardOrActCode: actCode,
     paragraphOrSection: section,
