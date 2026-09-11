@@ -82,8 +82,124 @@ export interface UnderstandingValidationResult {
 }
 
 /**
- * Validates and normalizes raw transaction understanding objects.
+ * Canonical Transaction Nature Types list.
  */
+export const VALID_CANONICAL_TRANSACTION_TYPES: readonly TransactionNatureType[] = [
+  'share_capital_issuance',
+  'capital_reduction',
+  'equity_investment_acquisition',
+  'lease_contract',
+  'lease_payment',
+  'rd_capitalization',
+  'asset_purchase',
+  'depreciation_expense',
+  'trade_discount_purchase',
+  'customer_advance_payment',
+  'customer_invoice',
+  'director_expense_settlement',
+  'director_fee_payment',
+  'expense_payment',
+  'inventory_purchase',
+  'payroll_payment',
+  'tax_payment',
+  'tax_provision',
+  'dividend_payment',
+  'debt_settlement',
+  'unclassified_transaction'
+] as const;
+
+/**
+ * Canonical Balance Sheet Instruments list.
+ */
+export const VALID_CANONICAL_INSTRUMENTS: readonly InstrumentType[] = [
+  'cash_at_bank',
+  'accounts_receivable',
+  'accounts_payable',
+  'own_equity',
+  'financial_asset_equity',
+  'financial_asset_at_fvtpl',
+  'marketable_securities',
+  'debt_instrument',
+  'derivative',
+  'property_plant_equipment',
+  'intangible_asset',
+  'right_of_use_asset',
+  'lease_liability',
+  'director_current_account',
+  'contract_liability_deferred_revenue',
+  'unknown'
+] as const;
+
+/**
+ * Normalizes legacy ownership context aliases to canonical members at the boundary.
+ */
+export function normalizeOwnershipContext(raw?: string): OwnershipContext {
+  if (!raw) return 'unknown';
+  const clean = raw.trim().toLowerCase();
+  if (clean === 'own_equity' || clean === 'own_company_equity') {
+    return 'own_equity';
+  }
+  if (clean === 'external_investment' || clean === 'external_entity_equity') {
+    return 'external_investment';
+  }
+  if (clean === 'not_applicable') {
+    return 'not_applicable';
+  }
+  return 'unknown';
+}
+
+/**
+ * Normalizes legacy transaction nature aliases to canonical members at the boundary.
+ */
+export function normalizeTransactionNature(raw?: string): TransactionNatureType | undefined {
+  if (!raw) return undefined;
+  const clean = raw.trim().toLowerCase();
+
+  // Legacy alias boundary normalization
+  if (clean === 'equity_issuance_subscription' || clean === 'share_subscription') {
+    return 'share_capital_issuance';
+  }
+  if (clean === 'software_development_expenditure') {
+    return 'rd_capitalization';
+  }
+  if (clean === 'asset_acquisition') {
+    return 'asset_purchase';
+  }
+  if (clean === 'lease_liability_accrual') {
+    return 'lease_contract';
+  }
+
+  // Canonical match
+  const matched = VALID_CANONICAL_TRANSACTION_TYPES.find(t => t === clean);
+  return matched;
+}
+
+/**
+ * Normalizes legacy instrument aliases to canonical members at the boundary.
+ */
+export function normalizeInstrument(raw?: string): InstrumentType | undefined {
+  if (!raw) return undefined;
+  const clean = raw.trim().toLowerCase();
+
+  // Legacy alias boundary normalization
+  if (clean === 'equity_instrument') {
+    return 'own_equity';
+  }
+  if (clean === 'fixed_asset') {
+    return 'property_plant_equipment';
+  }
+  if (clean === 'amount_due_to_director') {
+    return 'director_current_account';
+  }
+  if (clean === 'right_of_use_asset_and_lease_liability') {
+    return 'right_of_use_asset';
+  }
+
+  // Canonical match
+  const matched = VALID_CANONICAL_INSTRUMENTS.find(i => i === clean);
+  return matched;
+}
+
 /**
  * Validates and normalizes raw transaction understanding objects.
  * Acts as a strict validation gate before AI output is accepted.
@@ -143,10 +259,22 @@ export function validateAndNormalizeUnderstanding(
     errors.push(`Invalid counterparty.role: '${counterpartyRole}'`);
   }
 
-  const validOwnership = ['own_equity', 'external_investment', 'not_applicable', 'unknown'];
-  const ownershipContext = raw?.ownershipContext;
-  if (ownershipContext && !validOwnership.includes(ownershipContext)) {
-    errors.push(`Invalid ownershipContext: '${ownershipContext}'`);
+  const rawOwnership = raw?.ownershipContext;
+  let normalizedOwnership: OwnershipContext = 'unknown';
+  if (rawOwnership) {
+    const validKnownOwnership = [
+      'own_equity',
+      'external_investment',
+      'not_applicable',
+      'unknown',
+      'own_company_equity',
+      'external_entity_equity'
+    ];
+    if (!validKnownOwnership.includes(rawOwnership)) {
+      errors.push(`Invalid ownershipContext: '${rawOwnership}'`);
+    } else {
+      normalizedOwnership = normalizeOwnershipContext(rawOwnership);
+    }
   }
 
   const validPaymentStatus = ['paid', 'unpaid', 'partially_paid', 'unknown'];
@@ -162,7 +290,7 @@ export function validateAndNormalizeUnderstanding(
   }
 
   // Dangerous contradiction invariant checks (no silent correction)
-  if (ownershipContext === 'own_equity') {
+  if (normalizedOwnership === 'own_equity') {
     const inst = (raw?.instrument || '').toLowerCase();
     const subj = (raw?.subject || '').toLowerCase();
     if (inst.includes('fvtpl') || inst.includes('fvtoci') || subj.includes('foreign shares') || inst.includes('financial_asset')) {
@@ -173,7 +301,7 @@ export function validateAndNormalizeUnderstanding(
     }
   }
 
-  if (ownershipContext === 'external_investment') {
+  if (normalizedOwnership === 'external_investment') {
     const inst = (raw?.instrument || '').toLowerCase();
     if (inst.includes('own_equity') || inst.includes('share_capital')) {
       errors.push('Contradictory classification: external_investment cannot have own_equity instrument.');
@@ -241,73 +369,21 @@ export function validateAndNormalizeUnderstanding(
     timestamp: new Date().toISOString()
   };
 
-  const validTransactionTypes: readonly TransactionNatureType[] = [
-    'equity_issuance_subscription',
-    'share_capital_issuance',
-    'share_subscription',
-    'capital_reduction',
-    'equity_investment_acquisition',
-    'lease_contract',
-    'lease_payment',
-    'lease_liability_accrual',
-    'software_development_expenditure',
-    'rd_capitalization',
-    'asset_acquisition',
-    'asset_purchase',
-    'depreciation_expense',
-    'trade_discount_purchase',
-    'customer_advance_payment',
-    'customer_invoice',
-    'director_expense_settlement',
-    'director_fee_payment',
-    'expense_payment',
-    'inventory_purchase',
-    'payroll_payment',
-    'tax_payment',
-    'tax_provision',
-    'dividend_payment',
-    'debt_settlement',
-    'unclassified_transaction'
-  ];
-
   let validatedTxType: TransactionNatureType | undefined = undefined;
   if (raw?.transactionType) {
-    const matched = validTransactionTypes.find(t => t === raw.transactionType);
-    if (matched) {
-      validatedTxType = matched;
+    const normalizedTx = normalizeTransactionNature(raw.transactionType);
+    if (normalizedTx) {
+      validatedTxType = normalizedTx;
     } else {
       errors.push(`Invalid transactionType: '${raw.transactionType}'`);
     }
   }
 
-  const validInstruments: readonly InstrumentType[] = [
-    'cash_at_bank',
-    'accounts_receivable',
-    'accounts_payable',
-    'own_equity',
-    'equity_instrument',
-    'financial_asset_equity',
-    'financial_asset_at_fvtpl',
-    'marketable_securities',
-    'debt_instrument',
-    'derivative',
-    'fixed_asset',
-    'property_plant_equipment',
-    'intangible_asset',
-    'right_of_use_asset',
-    'lease_liability',
-    'right_of_use_asset_and_lease_liability',
-    'director_current_account',
-    'amount_due_to_director',
-    'contract_liability_deferred_revenue',
-    'unknown'
-  ];
-
   let validatedInstrument: InstrumentType | undefined = undefined;
   if (raw?.instrument) {
-    const matched = validInstruments.find(i => i === raw.instrument);
-    if (matched) {
-      validatedInstrument = matched;
+    const normalizedInst = normalizeInstrument(raw.instrument);
+    if (normalizedInst) {
+      validatedInstrument = normalizedInst;
     } else {
       errors.push(`Invalid instrument: '${raw.instrument}'`);
     }
@@ -327,7 +403,7 @@ export function validateAndNormalizeUnderstanding(
     transactionType: validatedTxType,
     subject: raw?.subject || undefined,
     instrument: validatedInstrument,
-    ownershipContext: raw?.ownershipContext || 'unknown',
+    ownershipContext: normalizedOwnership,
     paymentStatus: raw?.paymentStatus || 'unknown',
     amount: typeof raw?.amount === 'number' ? raw.amount : undefined,
     currency: {
@@ -829,7 +905,7 @@ export class DeterministicSemanticExtractor {
         ownershipContext: 'own_equity',
         subject: 'ordinary share capital of reporting entity',
         instrument: 'own_equity',
-        transactionType: 'equity_issuance_subscription'
+        transactionType: 'share_capital_issuance'
       };
     }
 
@@ -838,7 +914,7 @@ export class DeterministicSemanticExtractor {
       return {
         ownershipContext: 'not_applicable',
         subject: 'commercial property lease',
-        instrument: 'right_of_use_asset_and_lease_liability',
+        instrument: 'right_of_use_asset',
         transactionType: 'lease_contract'
       };
     }
@@ -859,7 +935,7 @@ export class DeterministicSemanticExtractor {
         ownershipContext: 'not_applicable',
         subject: 'Software development / R&D expenditure',
         instrument: 'intangible_asset',
-        transactionType: 'software_development_expenditure'
+        transactionType: 'rd_capitalization'
       };
     }
 
@@ -869,7 +945,7 @@ export class DeterministicSemanticExtractor {
         ownershipContext: 'not_applicable',
         subject: 'property, plant and equipment acquisition',
         instrument: 'property_plant_equipment',
-        transactionType: 'asset_acquisition'
+        transactionType: 'asset_purchase'
       };
     }
 

@@ -199,7 +199,7 @@ export class QueryTopicResolver {
    */
   public decomposeQuery(
     query: string,
-    semanticContext?: TransactionUnderstanding | { ownershipContext?: string },
+    semanticContext?: TransactionUnderstanding,
     options?: DecomposeQueryOptions
   ): TopicDecompositionResult {
     if (!query || typeof query !== 'string') {
@@ -209,22 +209,22 @@ export class QueryTopicResolver {
     const qLower = query.toLowerCase();
 
     // Extract structured semantics if provided, ensuring strict neutrality for 'unknown'
-    const sem = semanticContext as (TransactionUnderstanding & { ownershipContext?: string }) | undefined;
+    const sem = semanticContext;
     const hasSem = Boolean(sem);
 
     const semOwnContext: OwnershipContext | undefined = (sem?.ownershipContext && sem.ownershipContext !== 'unknown' && sem.ownershipContext !== 'not_applicable')
-      ? (sem.ownershipContext as OwnershipContext)
+      ? sem.ownershipContext
       : undefined;
 
-    const semTxType: TransactionNatureType | undefined = (sem?.transactionType && sem.transactionType !== 'unclassified_transaction' && (sem.transactionType as string) !== 'unknown')
+    const semTxType: TransactionNatureType | undefined = (sem?.transactionType && sem.transactionType !== 'unclassified_transaction')
       ? sem.transactionType
       : undefined;
 
-    const semInstrument: InstrumentType | undefined = (sem?.instrument && (sem.instrument as string) !== 'unknown')
+    const semInstrument: InstrumentType | undefined = (sem?.instrument && sem.instrument !== 'unknown')
       ? sem.instrument
       : undefined;
 
-    const semCounterpartyRole: CounterpartyRole | undefined = (sem?.counterparty?.role && (sem.counterparty.role as string) !== 'unknown' && (sem.counterparty.role as string) !== 'unclassified')
+    const semCounterpartyRole: CounterpartyRole | undefined = (sem?.counterparty?.role && sem.counterparty.role !== 'unknown')
       ? sem.counterparty.role
       : undefined;
 

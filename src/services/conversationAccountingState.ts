@@ -99,7 +99,8 @@ export function deriveAccountingStateFromEvents(
         line.credit > 0 &&
         (nameLower.includes('due to') ||
          nameLower.includes('payable') ||
-         nameLower.includes('creditor'))
+         nameLower.includes('creditor') ||
+         nameLower.includes('liability'))
       ) {
         const role = nameLower.includes('shareholder') ? 'shareholder' :
                      nameLower.includes('director') ? 'director' :
@@ -390,7 +391,7 @@ export function extractAccountingContext(
     switch (scenarioType) {
       case 'SHARE_CAPITAL_UNPAID':
       case 'SHARE_CAPITAL_PAID':
-        return 'equity_issuance_subscription';
+        return 'share_capital_issuance';
       case 'EQUITY_INVESTMENT_FX':
         return 'equity_investment_acquisition';
       case 'COMMERCIAL_LEASE':
@@ -418,9 +419,9 @@ export function extractAccountingContext(
 
   const resolvedInstrument: InstrumentType =
     currentScenario?.semanticUnderstanding?.instrument ||
-    (ownershipContext === 'own_equity' || ownershipContext === 'own_company_equity'
+    (ownershipContext === 'own_equity'
       ? 'own_equity'
-      : (ownershipContext === 'external_investment' || ownershipContext === 'external_entity_equity'
+      : (ownershipContext === 'external_investment'
         ? 'financial_asset_equity'
         : 'unknown'));
 

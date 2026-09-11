@@ -67,7 +67,7 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'Own Share Capital Ownership Context',
     dimension: 'ownership',
     description: 'Ownership context is reporting entity own ordinary share capital',
-    ownershipContexts: ['own_equity', 'own_company_equity'],
+    ownershipContexts: ['own_equity'],
     blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'customer_invoice', 'lease_contract', 'lease_payment'],
     positiveAlignments: [
       {
@@ -113,7 +113,7 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'External Entity Investment Ownership Context',
     dimension: 'ownership',
     description: 'Acquisition or holding of securities/instruments issued by external entities',
-    ownershipContexts: ['external_investment', 'external_entity_equity'],
+    ownershipContexts: ['external_investment'],
     blockedByTransactionTypes: ['lease_contract', 'lease_payment', 'payroll_payment', 'share_capital_issuance'],
     positiveAlignments: [
       {
@@ -157,7 +157,7 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'Share Capital Issuance Transaction',
     dimension: 'transactionType',
     description: 'Issuance or subscription of reporting entity share capital',
-    transactionTypes: ['share_capital_issuance', 'equity_issuance_subscription', 'share_subscription', 'capital_reduction'],
+    transactionTypes: ['share_capital_issuance', 'capital_reduction'],
     positiveAlignments: [
       {
         actOrStandard: 'Companies Act 1967',
@@ -173,7 +173,7 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'SFRS(I) 16 Commercial Lease Capitalisation',
     dimension: 'transactionType',
     description: 'Inception and initial recognition of right-of-use asset and lease liability under SFRS(I) 16 §22',
-    transactionTypes: ['lease_contract', 'lease_liability_accrual'],
+    transactionTypes: ['lease_contract'],
     blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'share_capital_issuance', 'capital_reduction', 'payroll_payment'],
     positiveAlignments: [
       {
@@ -226,7 +226,7 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'SFRS(I) 1-38 Development Cost Capitalisation',
     dimension: 'transactionType',
     description: 'Capitalisation of qualifying internal development costs meeting 6 cumulative criteria',
-    transactionTypes: ['rd_capitalization', 'software_development_expenditure'],
+    transactionTypes: ['rd_capitalization'],
     blockedByTransactionTypes: ['lease_contract', 'lease_payment', 'payroll_payment', 'dividend_payment'],
     positiveAlignments: [
       {
@@ -316,13 +316,13 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'PPE / Fixed Asset Instrument',
     dimension: 'instrument',
     description: 'PPE and fixed asset measurement under SFRS(I) 1-16',
-    instruments: ['fixed_asset', 'property_plant_equipment'],
+    instruments: ['property_plant_equipment'],
     positiveAlignments: [
       {
         actOrStandard: 'SFRS(I) 1-16',
         sections: ['16', '55'],
         boost: RETRIEVAL_CONFIG.semanticAlignmentBoost,
-        description: 'instrument:fixed_asset:SFRS(I) 1-16'
+        description: 'instrument:property_plant_equipment:SFRS(I) 1-16'
       }
     ],
     conflicts: []
@@ -486,33 +486,33 @@ export const CANONICAL_TOPIC_SEMANTIC_CRITERIA: Record<string, TopicSemanticCrit
     transactionTypes: ['tax_payment', 'tax_provision']
   },
   sfrsi_intangibles_cap: {
-    transactionTypes: ['rd_capitalization', 'software_development_expenditure'],
+    transactionTypes: ['rd_capitalization'],
     instruments: ['intangible_asset'],
     blockedByTransactionTypes: ['lease_contract', 'lease_payment', 'payroll_payment', 'dividend_payment']
   },
   sfrsi_leases: {
-    transactionTypes: ['lease_contract', 'lease_liability_accrual'],
-    instruments: ['right_of_use_asset', 'lease_liability', 'right_of_use_asset_and_lease_liability'],
+    transactionTypes: ['lease_contract'],
+    instruments: ['right_of_use_asset', 'lease_liability'],
     blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'share_capital_issuance', 'capital_reduction']
   },
   sfrsi_ppe: {
     transactionTypes: ['asset_purchase', 'trade_discount_purchase', 'depreciation_expense'],
-    instruments: ['property_plant_equipment', 'fixed_asset'],
+    instruments: ['property_plant_equipment'],
     blockedByTransactionTypes: ['lease_contract', 'payroll_payment', 'share_capital_issuance']
   },
   acra_share_capital: {
-    ownershipContexts: ['own_company_equity', 'own_equity'],
-    transactionTypes: ['share_capital_issuance', 'equity_issuance_subscription', 'share_subscription', 'capital_reduction'],
+    ownershipContexts: ['own_equity'],
+    transactionTypes: ['share_capital_issuance', 'capital_reduction'],
     counterpartyRoles: ['shareholder', 'director_shareholder'],
     blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'customer_invoice', 'lease_contract']
   },
   sfrsi_own_equity: {
-    ownershipContexts: ['own_company_equity', 'own_equity'],
+    ownershipContexts: ['own_equity'],
     counterpartyRoles: ['shareholder', 'director_shareholder'],
     blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'customer_invoice', 'lease_contract']
   },
   sfrsi_financial_instruments: {
-    ownershipContexts: ['external_entity_equity', 'external_investment'],
+    ownershipContexts: ['external_investment'],
     transactionTypes: ['equity_investment_acquisition'],
     instruments: ['financial_asset_equity', 'debt_instrument', 'marketable_securities', 'derivative'],
     blockedByTransactionTypes: ['lease_contract', 'lease_payment', 'payroll_payment', 'share_capital_issuance']

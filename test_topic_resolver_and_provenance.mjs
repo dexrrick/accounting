@@ -4,8 +4,14 @@ import { DeterministicSemanticAlignmentEvaluator } from './src/retrieval/semanti
 import { RetrievalTelemetryRecorder } from './src/retrieval/retrievalTelemetry.ts';
 import {
   DeterministicSemanticExtractor,
-  TransactionUnderstandingService
+  TransactionUnderstandingService,
+  validateAndNormalizeUnderstanding
 } from './src/services/transactionUnderstandingService.ts';
+import {
+  commitAccountingEvent,
+  deriveAccountingStateFromEvents,
+  validateAccountingStateTransition
+} from './src/services/conversationAccountingState.ts';
 
 async function runTopicResolverAndProvenanceTests() {
   console.log('================================================================');
@@ -59,7 +65,7 @@ async function runTopicResolverAndProvenanceTests() {
     const semanticContext = {
       reportingEntity: { type: 'standalone_private' },
       transactionType: 'lease_contract',
-      instrument: 'right_of_use_asset_and_lease_liability',
+      instrument: 'right_of_use_asset',
       ownershipContext: 'not_applicable',
       confidence: 0.95,
       provenance: {
@@ -254,7 +260,7 @@ async function runTopicResolverAndProvenanceTests() {
     const aiContext = {
       reportingEntity: { type: 'standalone_private' },
       transactionType: 'share_capital_issuance',
-      ownershipContext: 'own_company_equity',
+      ownershipContext: 'own_equity',
       counterparty: { role: 'shareholder' },
       confidence: 0.95,
       provenance: {
@@ -326,7 +332,7 @@ async function runTopicResolverAndProvenanceTests() {
     const conflictContext = {
       reportingEntity: { type: 'standalone_private' },
       transactionType: 'share_capital_issuance',
-      ownershipContext: 'own_company_equity',
+      ownershipContext: 'own_equity',
       confidence: 0.95,
       provenance: {
         tier: 'AI_REASONING',
@@ -508,31 +514,32 @@ async function runTopicResolverAndProvenanceTests() {
   }
 
   // -------------------------------------------------------------------------
-  // TEST 13: MULTI-TURN LEASE LIFECYCLE (Inception §22 vs Settlement §36)
+  // TEST 13: GENUINE SQ3 -> SQ2 -> PHASE 5 MULTI-TURN LEASE INTEGRATION TEST
   // -------------------------------------------------------------------------
-  console.log('\n[TEST 13: Multi-Turn Lease Lifecycle (Inception §22 vs Settlement §36)]');
+  console.log('\n[TEST 13: Genuine SQ3 -> SQ2 -> Phase 5 Multi-Turn Lease Integration Test]');
   {
-    console.log('  Turn 1: Inception of 3-Year Commercial Lease Contract');
+    console.log('  --- Turn 1: Commercial Lease Inception ($180,000 Total Commitment) ---');
     const turn1Query = 'Our company entered a 3-year commercial property lease contract with monthly rent of $5,000.';
-    const turn1Context = {
-      reportingEntity: { type: 'standalone_private' },
-      transactionType: 'lease_contract',
-      instrument: 'right_of_use_asset_and_lease_liability',
-      ownershipContext: 'not_applicable',
-      confidence: 0.95,
-      provenance: {
-        tier: 'AI_REASONING',
-        isFallback: false,
-        engine: 'GEMINI_2_5_FLASH',
-        appliedRules: [],
-        confidenceCapped: false,
-        timestamp: new Date().toISOString()
-      }
-    };
 
+    // SQ2: Understand Inception
+    const rawTurn1 = {
+      reportingEntity: { type: 'company', description: 'Singapore operating entity' },
+      transactionType: 'lease_contract',
+      instrument: 'right_of_use_asset',
+      ownershipContext: 'not_applicable',
+      amount: 180000,
+      currency: { value: 'SGD', source: 'explicit', confidence: 1.0 },
+      confidence: 0.95
+    };
+    const normTurn1 = validateAndNormalizeUnderstanding(rawTurn1, 'SG', 'ai');
+    assert(normTurn1.isValid, `Turn 1 understanding must be valid: ${normTurn1.errors.join(', ')}`);
+    const turn1Context = normTurn1.normalizedUnderstanding;
+
+    // Phase 5: Topic Resolution & Provision Alignment
     const decomp1 = resolver.decomposeQuery(turn1Query, turn1Context);
     const leaseTopic1 = decomp1.topics.find(t => t.id === 'sfrsi_leases');
     assert(leaseTopic1, 'Turn 1 must resolve to sfrsi_leases');
+    assert.strictEqual(leaseTopic1.matchSource, 'semantic_primary');
 
     const recSfrsi16_22 = mockRecord('REC_SFRS16_22', { standardOrActCode: 'SFRS(I) 16', paragraphOrSection: 'Paragraph 22' });
     const chkSfrsi16_22 = mockChunk('CHK_16_22', recSfrsi16_22.id, 'Right-of-use asset and lease liability initial recognition at commencement date', '22');
@@ -552,27 +559,68 @@ async function runTopicResolverAndProvenanceTests() {
 
     const score1_CA68 = evaluator.evaluateAlignment(chkCA68, recCA68, turn1Context);
     assert.strictEqual(score1_CA68.hasSemanticConflict, true, 'Lease inception cannot be share capital allotment');
-    console.log('    ✓ Turn 1: SFRS(I) 16 §22 boosted (+0.15), §36 neutral (0.00), CA §68 conflict detected (-0.20)');
 
-    console.log('  Turn 2: Subsequent Periodic Lease Payment via Bank');
-    const turn2Query = 'Paid monthly commercial lease installment of $5,000 via bank transfer.';
-    const turn2Context = {
-      reportingEntity: { type: 'standalone_private' },
+    // SQ3: Commit Inception Event & Derive State
+    const event1 = {
+      id: 'evt-lease-inc-01',
+      transactionId: 'tx-lease-101',
+      eventType: 'initial_transaction',
+      type: 'initial_transaction',
+      eventDate: '2026-03-01',
+      amount: 180000,
+      currency: 'SGD',
+      description: 'Initial recognition of 3-year commercial property lease',
+      journalLines: [
+        { accountCode: '1700', accountName: 'Right-of-Use Asset', category: 'ASSET', debit: 180000, credit: 0 },
+        { accountCode: '2600', accountName: 'Lease Liability', category: 'LIABILITY', debit: 0, credit: 180000 }
+      ]
+    };
+
+    let committedEvents = commitAccountingEvent([], event1);
+    let stateTurn1 = deriveAccountingStateFromEvents(committedEvents);
+
+    const leaseLiabilityBal1 = stateTurn1.outstandingBalances.find(b => b.transactionId === 'tx-lease-101');
+    assert(leaseLiabilityBal1, 'Must find lease liability balance after Turn 1');
+    assert.strictEqual(leaseLiabilityBal1.originalAmount, 180000);
+    assert.strictEqual(leaseLiabilityBal1.remainingAmount, 180000);
+    assert.strictEqual(leaseLiabilityBal1.settledAmount, 0);
+    console.log('    ✓ Turn 1 SQ3 State: Outstanding Lease Liability recognised: $180,000');
+    console.log('    ✓ Turn 1 Phase 5: SFRS(I) 16 §22 boosted (+0.15), §36 neutral (0.00), CA §68 conflict (-0.20)');
+
+    console.log('  --- Turn 2: Subsequent Monthly Lease Payment ($5,000) ---');
+    const turn2Query = 'Paid monthly commercial lease installment of $5,000 via bank transfer for tx-lease-101.';
+
+    // SQ2: Semantic Understanding with prior conversation context
+    const rawTurn2 = {
+      reportingEntity: { type: 'company', description: 'Singapore operating entity' },
+      counterparty: { role: 'other' },
       transactionType: 'lease_payment',
       instrument: 'lease_liability',
       ownershipContext: 'not_applicable',
       paymentStatus: 'paid',
+      amount: 5000,
+      currency: { value: 'SGD', source: 'explicit', confidence: 1.0 },
       confidence: 0.94,
-      provenance: {
-        tier: 'AI_REASONING',
-        isFallback: false,
-        engine: 'GEMINI_2_5_FLASH',
-        appliedRules: [],
-        confidenceCapped: false,
-        timestamp: new Date().toISOString()
+      followUpAnalysis: {
+        eventType: 'settlement',
+        isFollowUp: true,
+        targetOutstandingAccount: leaseLiabilityBal1.accountName,
+        settlementAmount: 5000,
+        settlementAccount: 'cash_at_bank',
+        isHypothetical: false,
+        explanation: 'Monthly lease installment payment'
       }
     };
+    const normTurn2 = validateAndNormalizeUnderstanding(rawTurn2, 'SG', 'ai', {
+      outstandingBalances: stateTurn1.outstandingBalances,
+      recognizedEquityTotal: stateTurn1.recognizedEquityTotal,
+      activeEntity: { type: 'company' },
+      events: committedEvents
+    });
+    assert(normTurn2.isValid, `Turn 2 understanding must be valid: ${normTurn2.errors.join(', ')}`);
+    const turn2Context = normTurn2.normalizedUnderstanding;
 
+    // Phase 5: Topic Resolution & Provision Alignment on Turn 2
     const decomp2 = resolver.decomposeQuery(turn2Query, turn2Context);
     const leaseTopic2 = decomp2.topics.find(t => t.id === 'sfrsi_leases');
     assert(leaseTopic2, 'Turn 2 must resolve to sfrsi_leases');
@@ -587,13 +635,122 @@ async function runTopicResolverAndProvenanceTests() {
     const score2_CA68 = evaluator.evaluateAlignment(chkCA68, recCA68, turn2Context);
     assert.strictEqual(score2_CA68.hasSemanticConflict, false);
 
-    console.log('    ✓ Turn 2: SFRS(I) 16 §36 boosted (+0.15), §22 neutral (0.00), CA §68 neutral (0.00)');
-    console.log('  ✓ Multi-turn lifecycle accurately decouples contract inception §22 from debt settlement §36');
+    // SQ3: Validate Transition & Commit Settlement Event
+    const proposedSettlementLines = [
+      { accountCode: '2600', accountName: 'Lease Liability', category: 'LIABILITY', debit: 5000, credit: 0 },
+      { accountCode: '1000', accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5000 }
+    ];
+
+    const transitionCheck = validateAccountingStateTransition({
+      outstandingBalances: stateTurn1.outstandingBalances,
+      recognizedEquityTotal: stateTurn1.recognizedEquityTotal,
+      activeEntity: { type: 'company' },
+      events: committedEvents
+    }, proposedSettlementLines, 'settlement');
+    assert(transitionCheck.isValid, `Transition must be valid: ${transitionCheck.violations.join(', ')}`);
+
+    const event2 = {
+      id: 'evt-lease-set-01',
+      transactionId: 'tx-settle-101',
+      targetTransactionId: 'tx-lease-101',
+      targetBalanceKey: leaseLiabilityBal1.balanceKey,
+      eventType: 'settlement',
+      type: 'settlement',
+      eventDate: '2026-03-31',
+      amount: 5000,
+      currency: 'SGD',
+      description: 'Monthly lease installment payment #1',
+      journalLines: proposedSettlementLines
+    };
+
+    committedEvents = commitAccountingEvent(committedEvents, event2);
+    let stateTurn2 = deriveAccountingStateFromEvents(committedEvents);
+
+    const leaseLiabilityBal2 = stateTurn2.outstandingBalances.find(b => b.transactionId === 'tx-lease-101');
+    assert(leaseLiabilityBal2, 'Must find lease liability balance after Turn 2');
+    assert.strictEqual(leaseLiabilityBal2.originalAmount, 180000);
+    assert.strictEqual(leaseLiabilityBal2.settledAmount, 5000);
+    assert.strictEqual(leaseLiabilityBal2.remainingAmount, 175000, 'Remaining liability must reduce to $175,000');
+    console.log('    ✓ Turn 2 SQ3 State: Outstanding liability reduced from $180,000 -> $175,000 (settled: $5,000)');
+    console.log('    ✓ Turn 2 Phase 5: SFRS(I) 16 §36 boosted (+0.15), §22 neutral (0.00), CA §68 neutral (0.00)');
+
+    console.log('  --- Deterministic Event Replay Equivalence ---');
+    const replayState = deriveAccountingStateFromEvents([event1, event2]);
+    assert.deepStrictEqual(stateTurn2, replayState, 'Incremental final state must strictly match replay(all events)');
+    console.log('    ✓ Invariant verified: deriveAccountingStateFromEvents([evt1, evt2]) === incremental_state');
+    passed++;
+  }
+
+  // -------------------------------------------------------------------------
+  // TEST 14: COMPILE-TIME / FIXTURE GUARD TEST (Invalid Semantic Strings Rejection)
+  // -------------------------------------------------------------------------
+  console.log('\n[TEST 14: Compile-Time / Fixture Guard Test (Rejection of Invalid Semantic Strings)]');
+  {
+    // 1. Invalid ownership string is rejected by validateAndNormalizeUnderstanding
+    const invalidOwnershipRaw = {
+      reportingEntity: { type: 'company' },
+      ownershipContext: 'fraudulent_or_unregistered_equity',
+      transactionType: 'share_capital_issuance',
+      currency: { source: 'unknown' }
+    };
+    const res1 = validateAndNormalizeUnderstanding(invalidOwnershipRaw);
+    assert.strictEqual(res1.isValid, false, 'Invalid ownershipContext must be rejected');
+    assert(res1.errors.some(e => e.includes("Invalid ownershipContext: 'fraudulent_or_unregistered_equity'")));
+    console.log('  ✓ Invalid ownershipContext rejected at validation gate');
+
+    // 2. Invalid transactionType is rejected
+    const invalidTxRaw = {
+      reportingEntity: { type: 'company' },
+      ownershipContext: 'own_equity',
+      transactionType: 'made_up_crypto_mining_token_sale',
+      currency: { source: 'unknown' }
+    };
+    const res2 = validateAndNormalizeUnderstanding(invalidTxRaw);
+    assert.strictEqual(res2.isValid, false, 'Invalid transactionType must be rejected');
+    assert(res2.errors.some(e => e.includes("Invalid transactionType: 'made_up_crypto_mining_token_sale'")));
+    console.log('  ✓ Invalid transactionType rejected at validation gate');
+
+    // 3. Invalid instrument is rejected
+    const invalidInstRaw = {
+      reportingEntity: { type: 'company' },
+      ownershipContext: 'own_equity',
+      transactionType: 'share_capital_issuance',
+      instrument: 'space_elevator_debenture',
+      currency: { source: 'unknown' }
+    };
+    const res3 = validateAndNormalizeUnderstanding(invalidInstRaw);
+    assert.strictEqual(res3.isValid, false, 'Invalid instrument must be rejected');
+    assert(res3.errors.some(e => e.includes("Invalid instrument: 'space_elevator_debenture'")));
+    console.log('  ✓ Invalid instrument rejected at validation gate');
+
+    // 4. Boundary normalization correctly normalizes legacy aliases into pure canonical members
+    const legacyRaw = {
+      reportingEntity: { type: 'company' },
+      ownershipContext: 'own_company_equity',
+      transactionType: 'equity_issuance_subscription',
+      instrument: 'fixed_asset',
+      counterparty: { role: 'shareholder' },
+      currency: { source: 'context_inference', value: 'SGD', confidence: 0.9 }
+    };
+    const res4 = validateAndNormalizeUnderstanding(legacyRaw);
+    assert.strictEqual(res4.isValid, true, `Legacy aliases must be normalized cleanly: ${res4.errors.join(', ')}`);
+    assert.strictEqual(res4.normalizedUnderstanding.ownershipContext, 'own_equity');
+    assert.strictEqual(res4.normalizedUnderstanding.transactionType, 'share_capital_issuance');
+    assert.strictEqual(res4.normalizedUnderstanding.instrument, 'property_plant_equipment');
+    console.log('  ✓ Boundary normalizer mapped: own_company_equity -> own_equity, equity_issuance_subscription -> share_capital_issuance, fixed_asset -> property_plant_equipment');
+
+    // 5. QueryTopicResolver accepts canonical TransactionUnderstanding with strict type fidelity
+    const decomp = resolver.decomposeQuery('General business question', res4.normalizedUnderstanding);
+    assert(decomp.topics.length > 0);
+    const acraTopic = decomp.topics.find(t => t.id === 'acra_share_capital');
+    assert(acraTopic, 'acra_share_capital must match for normalized share_capital_issuance');
+    assert.strictEqual(acraTopic.matchSource, 'semantic_primary');
+    console.log('  ✓ QueryTopicResolver processes normalized TransactionUnderstanding with strict type fidelity');
     passed++;
   }
 
   console.log('\n================================================================');
-  console.log(`🎉 ALL ${passed}/13 TESTS PASSED CLEANLY!`);
+  console.log(`🎉 ALL ${passed}/14 TESTS PASSED CLEANLY!`);
   console.log('================================================================\n');
 }
 
