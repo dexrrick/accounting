@@ -133,6 +133,12 @@ export interface AccountingScenarioState {
   directGroups?: JournalEntryGroup[];
   authorityStatus?: JournalAuthorityStatus;
 
+  // Event-Sourced Accounting State & Multi-Turn History
+  accountingEvents?: import('./conversationState').AccountingEvent[];
+  actualEvents?: import('./conversationState').AccountingEvent[];
+  cumulativeBalances?: import('./conversationState').OutstandingAccountBalance[];
+  isHypothetical?: boolean;
+
   // Explicit Assumptions (Needed because facts are missing)
   assumptions?: ExplicitAssumption[];
   missingFacts?: string[];

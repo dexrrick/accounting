@@ -118,6 +118,14 @@ export function assembleDeterministicResponse(
         ? (deterministicScenario?.authorityStatus || 'DETERMINISTIC')
         : 'AI_PROPOSED');
 
+  const resolvedScenarioType = isRecognizedDeterministicFixture
+    ? deterministicScenario!.scenarioType
+    : (compact.scenarioType || (queryMode === 'STATUTORY_ADVISORY' ? 'SINGAPORE_STATUTORY_ADVISORY' : 'UNIVERSAL'));
+
+  const resolvedTransactionTitle = isRecognizedDeterministicFixture
+    ? (deterministicScenario?.transactionTitle || 'Accounting & Statutory Advisory')
+    : (compact.transactionNature || compact.transactionTitle || (groundedContext.semanticUnderstanding?.transactionType ? groundedContext.semanticUnderstanding.transactionType.replace(/_/g, ' ').toUpperCase() : 'Accounting & Statutory Advisory'));
+
   // 2. Assemble Citations with Structural Verification
   const rawCitations = [
     ...(compact.citations || []),
@@ -180,23 +188,26 @@ export function assembleDeterministicResponse(
     const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
     const delta = calculateAccountingDelta(convContext, followUp, curr);
     if (delta) {
+      const isHypo = Boolean(delta.isHypothetical);
+      const settlementGroup: JournalEntryGroup = {
+        id: `grp-followup-settlement-${(currentScenario?.directGroups?.length || 0) + 1}`,
+        eventDate: formatSingaporeDate(new Date()),
+        title: isHypo ? 'Hypothetical Settlement of Allotment Receivable' : 'Settlement of Shareholder Allotment Receivable',
+        summary: delta.explanation,
+        lines: delta.journalLines,
+        totalDebit: delta.amount,
+        totalCredit: delta.amount,
+        isBalanced: true,
+        citations: verifiedCitations,
+        rationalePoints: [
+          'Under SFRS(I) 1-32 §33 and Singapore Companies Act 1967 §68, Share Capital was already credited and recognized upon allotment.',
+          `Receipt of payment via bank transfer extinguishes the outstanding ${followUp.targetOutstandingAccount || 'receivable'} and debits Cash at Bank.`
+        ],
+        authorityStatus: 'AI_PROPOSED'
+      };
       directGroups = [
-        {
-          id: 'grp-followup-settlement',
-          eventDate: formatSingaporeDate(new Date()),
-          title: 'Settlement of Shareholder Allotment Receivable',
-          summary: delta.explanation,
-          lines: delta.journalLines,
-          totalDebit: delta.amount,
-          totalCredit: delta.amount,
-          isBalanced: true,
-          citations: verifiedCitations,
-          rationalePoints: [
-            'Under SFRS(I) 1-32 §33 and Singapore Companies Act 1967 §68, Share Capital was already credited and recognized upon allotment.',
-            `Receipt of payment via bank transfer extinguishes the outstanding ${followUp.targetOutstandingAccount || 'receivable'} and debits Cash at Bank.`
-          ],
-          authorityStatus: 'AI_PROPOSED'
-        }
+        ...(currentScenario?.directGroups || []),
+        settlementGroup
       ];
     }
   } else if (compact.directGroups && compact.directGroups.length > 0) {
@@ -414,6 +425,29 @@ export function assembleDeterministicResponse(
         keyParameters.push({ label: 'Transaction Amount', value: `${sem.currency?.value || 'SGD'} ${sem.amount.toLocaleString()}`, badge: 'Stated Fact' });
       }
     }
+
+    if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {
+      const convContext = extractAccountingContext(currentScenario);
+      const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
+      const delta = calculateAccountingDelta(convContext, followUp, curr);
+      if (delta) {
+        keyParameters.push({
+          label: 'Settlement Amount',
+          value: `${delta.currency} ${delta.amount.toFixed(2)}`,
+          badge: delta.isHypothetical ? 'Hypothetical' : 'Settlement'
+        });
+        keyParameters.push({
+          label: 'Settled Account',
+          value: delta.balanceUpdates[0]?.accountName || 'Amount Due from Shareholder',
+          badge: 'Receivable'
+        });
+        keyParameters.push({
+          label: 'Remaining Balance',
+          value: `${delta.currency} ${(delta.balanceUpdates[0]?.resultingBalance ?? 0).toFixed(2)}`,
+          badge: 'Balance'
+        });
+      }
+    }
   }
 
   if (compact.keyParameters && compact.keyParameters.length > 0) {
@@ -502,8 +536,11 @@ export function assembleDeterministicResponse(
       }
 
       if (directGroups.length > 0) {
-        const grp = directGroups[0];
-        messageText += `\n---\n\n### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
+        const grp = directGroups[directGroups.length - 1];
+        const entryHeader = directGroups.length > 1
+          ? `### Double Entry Journal: ${grp.title} (${grp.eventDate}) — [Entry ${directGroups.length} of ${directGroups.length}]\n\n`
+          : `### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
+        messageText += `\n---\n\n${entryHeader}`;
 
         const isPendingValuation = !grp.isBalanced || grp.authorityStatus === 'CONDITIONAL' || grp.lines.every(l => l.debit === 0 && l.credit === 0);
         if (isPendingValuation) {
@@ -528,27 +565,21 @@ export function assembleDeterministicResponse(
         }
       }
     } else {
-      const assessmentTitle = isRecognizedDeterministicFixture
-        ? (deterministicScenario?.transactionTitle || 'Financial Reporting Treatment')
-        : (compact.transactionNature || compact.transactionTitle || (groundedContext.semanticUnderstanding?.transactionType ? groundedContext.semanticUnderstanding.transactionType.replace(/_/g, ' ').toUpperCase() : 'Financial Reporting Treatment'));
+      messageText = `### ${stdLabel} Accounting Assessment: ${resolvedTransactionTitle}\n\n`;
+      messageText += `**Authority Status**: **${authorityStatus === 'DETERMINISTIC' ? '✓ Deterministic Engine' : authorityStatus === 'CONDITIONAL' ? '⚠️ Conditional Proposal' : '🤖 AI Grounded Proposal'}**\n\n`;
 
-      const defaultTreatment = (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement'))
-        ? 'Under SFRS(I) 1-32 §33 and Singapore Companies Act 1967 §68, ordinary share capital was already recognized upon allotment. Receipt of payment into the company bank account extinguishes the outstanding shareholder receivable. Share Capital is not credited again.'
-        : 'Treatment evaluated under Singapore Financial Reporting Standards.';
-
-      messageText = `### SFRS(I) Accounting Assessment: ${assessmentTitle}\n\n` +
-        `**Authority Status**: **${authorityStatus === 'DETERMINISTIC' ? '✓ Deterministic Calculations' : authorityStatus === 'CONDITIONAL' ? '⚠️ Conditional (Missing Facts)' : '🤖 AI Proposed'}**\n\n` +
-        `---\n\n` +
-        `#### 1. Recommended Accounting Treatment (${stdLabel})\n` +
-        `${compact.treatment || (isRecognizedDeterministicFixture ? deterministicScenario?.accountingTreatmentSummary : defaultTreatment)}\n\n`;
-
-      if (compact.reasoning) {
-        messageText += `---\n\n#### 2. Professional Technical Reasoning\n${compact.reasoning}\n\n`;
+      if (compact.directAnswer) {
+        messageText += `#### 1. Core Principle & Treatment Directive\n${compact.directAnswer}\n\n`;
+      } else if (compact.treatment) {
+        messageText += `#### 1. Accounting Treatment Principle\n${compact.treatment}\n\n`;
       }
 
-      if (compact.singaporeTaxImpact || (isRecognizedDeterministicFixture && deterministicScenario?.singaporeTaxTreatmentSummary)) {
-        messageText += `---\n\n#### 3. Singapore Tax Treatment (IRAS)\n` +
-          `${compact.singaporeTaxImpact || deterministicScenario?.singaporeTaxTreatmentSummary}\n\n`;
+      if (compact.reasoning) {
+        messageText += `#### 2. Technical Rationale & Analysis\n${compact.reasoning}\n\n`;
+      }
+
+      if (compact.singaporeTaxImpact) {
+        messageText += `#### 3. Singapore Statutory & Tax Implications\n${compact.singaporeTaxImpact}\n\n`;
       }
 
       if (keyParameters.length > 0) {
@@ -560,8 +591,11 @@ export function assembleDeterministicResponse(
       }
 
       if (directGroups.length > 0) {
-        const grp = directGroups[0];
-        messageText += `---\n\n### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
+        const grp = directGroups[directGroups.length - 1];
+        const entryHeader = directGroups.length > 1
+          ? `### Double Entry Journal: ${grp.title} (${grp.eventDate}) — [Entry ${directGroups.length} of ${directGroups.length}]\n\n`
+          : `### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
+        messageText += `---\n\n${entryHeader}`;
 
         const isPendingValuation = !grp.isBalanced || grp.authorityStatus === 'CONDITIONAL' || grp.lines.every(l => l.debit === 0 && l.credit === 0);
         if (isPendingValuation) {
@@ -599,13 +633,47 @@ export function assembleDeterministicResponse(
     ? 'CONDITIONAL'
     : authorityStatus;
 
-  const resolvedScenarioType = isRecognizedDeterministicFixture
-    ? deterministicScenario!.scenarioType
-    : (compact.scenarioType || (queryMode === 'STATUTORY_ADVISORY' ? 'SINGAPORE_STATUTORY_ADVISORY' : 'UNIVERSAL'));
+  let finalActualEvents = currentScenario?.actualEvents;
+  let finalAccountingEvents = currentScenario?.accountingEvents;
+  let isHypoScenario = Boolean(currentScenario?.isHypothetical);
+  let resolvedAmount: number | undefined = undefined;
 
-  const resolvedTransactionTitle = isRecognizedDeterministicFixture
-    ? (deterministicScenario?.transactionTitle || 'Accounting & Statutory Advisory')
-    : (compact.transactionNature || compact.transactionTitle || (groundedContext.semanticUnderstanding?.transactionType ? groundedContext.semanticUnderstanding.transactionType.replace(/_/g, ' ').toUpperCase() : 'Accounting & Statutory Advisory'));
+  if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {
+    const convContext = extractAccountingContext(currentScenario);
+    const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
+    const delta = calculateAccountingDelta(convContext, followUp, curr);
+    if (delta && delta.resultingAccountingEvent) {
+      isHypoScenario = Boolean(delta.isHypothetical);
+      resolvedAmount = delta.amount;
+      const priorActual = currentScenario?.actualEvents && currentScenario.actualEvents.length > 0
+        ? [...currentScenario.actualEvents]
+        : (convContext.actualEvents && convContext.actualEvents.length > 0 ? [...convContext.actualEvents] : []);
+
+      finalActualEvents = isHypoScenario ? priorActual : [...priorActual, delta.resultingAccountingEvent];
+      finalAccountingEvents = [...(currentScenario?.accountingEvents || priorActual), delta.resultingAccountingEvent];
+    }
+  } else if (!finalActualEvents && directGroups.length > 0) {
+    finalActualEvents = directGroups.map((grp, idx) => ({
+      id: grp.id || `evt-${idx + 1}`,
+      type: 'initial_transaction',
+      description: grp.title,
+      amount: grp.totalDebit,
+      currency: deterministicScenario?.transactionCurrency || 'SGD',
+      affectedAccounts: grp.lines.map(l => l.accountName),
+      journalLines: grp.lines,
+      eventDate: grp.eventDate,
+      isHypothetical: false
+    }));
+    finalAccountingEvents = [...finalActualEvents];
+  }
+
+  if (resolvedAmount === undefined) {
+    if (deterministicScenario?.amount && deterministicScenario.amount > 0) {
+      resolvedAmount = deterministicScenario.amount;
+    } else if (groundedContext.semanticUnderstanding?.amount && groundedContext.semanticUnderstanding.amount > 0) {
+      resolvedAmount = groundedContext.semanticUnderstanding.amount;
+    }
+  }
 
   const scenarioState: AccountingScenarioState = {
     scenarioType: resolvedScenarioType,
@@ -628,6 +696,10 @@ export function assembleDeterministicResponse(
     regulatoryMandatesSummary: isRecognizedDeterministicFixture ? deterministicScenario?.regulatoryMandatesSummary : undefined,
     effectiveDateOrTiming: isRecognizedDeterministicFixture ? deterministicScenario?.effectiveDateOrTiming : undefined,
     uncertaintyDisclaimer: uncertaintyDisclaimer || undefined,
+    amount: resolvedAmount,
+    accountingEvents: finalAccountingEvents,
+    actualEvents: finalActualEvents,
+    isHypothetical: isHypoScenario,
     keyParameters,
     directGroups,
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,

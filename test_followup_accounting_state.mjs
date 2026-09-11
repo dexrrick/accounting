@@ -2,7 +2,8 @@ import { processAccountingQuery } from './src/services/geminiService.ts';
 import { defaultTransactionUnderstandingService } from './src/services/transactionUnderstandingService.ts';
 import {
   extractAccountingContext,
-  validateAccountingStateTransition
+  validateAccountingStateTransition,
+  resolveSettlementTarget
 } from './src/services/conversationAccountingState.ts';
 
 console.log('================================================================');
@@ -37,8 +38,8 @@ console.log('--- TEST 1: Full Settlement ($1 Unpaid -> Bank Payment) ---');
   const q2 = "what if the shareholder did paid to company bank account what will be the journal entry";
   const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
 
-  assert(r2.scenarioState.directGroups && r2.scenarioState.directGroups.length === 1, 'T2 must have 1 journal entry group');
-  const grp2 = r2.scenarioState.directGroups[0];
+  assert(r2.scenarioState.directGroups && r2.scenarioState.directGroups.length === 2, 'T2 must have 2 cumulative journal entry groups');
+  const grp2 = r2.scenarioState.directGroups[r2.scenarioState.directGroups.length - 1];
   
   const bankLine = grp2.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
   const receivableLine = grp2.lines.find(l => (l.accountName.toLowerCase().includes('due from') || l.accountName.toLowerCase().includes('receivable')) && l.credit > 0);
@@ -93,7 +94,8 @@ console.log('--- TEST 2: Partial Settlement ("50 cents") ---');
   const q2 = "what if they paid 50 cents to the bank account";
   const r2 = await processAccountingQuery(q2, r1Scenario, 'SFRS_I');
 
-  const grp2 = r2.scenarioState.directGroups?.[0];
+  assert(r2.scenarioState.directGroups && r2.scenarioState.directGroups.length === 2, 'T2 must have 2 cumulative journal entry groups');
+  const grp2 = r2.scenarioState.directGroups[r2.scenarioState.directGroups.length - 1];
   assert(Boolean(grp2), 'T2 must produce a journal group');
   const bankLine = grp2.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
   const receivableLine = grp2.lines.find(l => l.accountName.toLowerCase().includes('due from') && l.credit > 0);
@@ -143,7 +145,8 @@ console.log('--- TEST 3: Inherit Amount Without Repeating in Follow-Up ---');
   const q2 = "subsequently the subscriber remitted the funds into our bank account";
   const r2 = await processAccountingQuery(q2, r1Scenario, 'SFRS_I');
 
-  const grp2 = r2.scenarioState.directGroups?.[0];
+  assert(r2.scenarioState.directGroups && r2.scenarioState.directGroups.length === 2, 'T2 must have 2 cumulative journal entry groups');
+  const grp2 = r2.scenarioState.directGroups[r2.scenarioState.directGroups.length - 1];
   assert(Boolean(grp2), 'T2 must produce entry');
   const bankLine = grp2.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
   const recLine = grp2.lines.find(l => l.accountName.toLowerCase().includes('due from') && l.credit > 0);
@@ -185,7 +188,7 @@ console.log('--- TEST 4: Natural Language Settlement Paraphrases ---');
 
   for (const p of paraphrases) {
     const res = await processAccountingQuery(p, r1Scenario, 'SFRS_I');
-    const grp = res.scenarioState.directGroups?.[0];
+    const grp = res.scenarioState.directGroups?.[res.scenarioState.directGroups.length - 1];
     const bank = grp?.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
     const rec = grp?.lines.find(l => l.accountName.toLowerCase().includes('due from') && l.credit > 0);
     assert(Boolean(bank && rec), `Paraphrase '${p}' must resolve to Dr Bank / Cr Shareholder Receivable`);
@@ -374,6 +377,195 @@ console.log('--- TEST 9: Context Reset on New Unrelated Transaction ---');
   const equipLine = r2New.scenarioState.directGroups?.[0]?.lines.find(l => l.accountCode === '1500');
   assert(equipLine && equipLine.debit === 18000, 'Must record office equipment purchase, not share capital settlement');
   console.log('✅ Test 9 Passed: New unrelated transaction cleanly resets context to asset purchase\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST 10: 3-Turn Partial Settlement ($1,000 Allotment -> $400 Partial -> $600 Settle)
+// --------------------------------------------------------------------------
+console.log('--- TEST 10: 3-Turn Partial Settlement ---');
+{
+  const q1 = "shareholder has invested in own company share capital of SGD 1000 but unpaid what's the double entry";
+  const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
+
+  assert(r1.scenarioState.directGroups && r1.scenarioState.directGroups.length === 1, 'T1 must have 1 group');
+  assert(r1.scenarioState.amount === 1000, 'T1 amount must be 1000');
+
+  // Turn 2: actual partial payment of $400 into company bank account
+  const q2 = "the shareholder paid SGD 400 into company bank account";
+  const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
+
+  assert(r2.scenarioState.directGroups && r2.scenarioState.directGroups.length === 2, 'T2 must have 2 cumulative groups');
+  const grp2 = r2.scenarioState.directGroups[1];
+  const bank2 = grp2.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
+  const rec2 = grp2.lines.find(l => (l.accountName.toLowerCase().includes('due from') || l.accountName.toLowerCase().includes('receivable')) && l.credit > 0);
+  assert(bank2?.debit === 400, `T2 bank debit must be 400, got ${bank2?.debit}`);
+  assert(rec2?.credit === 400, `T2 receivable credit must be 400, got ${rec2?.credit}`);
+
+  // Turn 3: "subsequently shareholder settled the remaining balance via bank transfer"
+  const q3 = "subsequently shareholder settled the remaining balance via bank transfer";
+  const r3 = await processAccountingQuery(q3, r2.scenarioState, 'SFRS_I');
+
+  assert(r3.scenarioState.directGroups && r3.scenarioState.directGroups.length === 3, `T3 must have 3 cumulative groups, got ${r3.scenarioState.directGroups?.length}`);
+  const grp3 = r3.scenarioState.directGroups[2];
+  const bank3 = grp3.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
+  const rec3 = grp3.lines.find(l => (l.accountName.toLowerCase().includes('due from') || l.accountName.toLowerCase().includes('receivable')) && l.credit > 0);
+  assert(bank3?.debit === 600, `T3 bank debit must be remaining 600, got ${bank3?.debit}`);
+  assert(rec3?.credit === 600, `T3 receivable credit must be remaining 600, got ${rec3?.credit}`);
+
+  console.log('✅ Test 10 Passed: 3-turn partial settlement correctly tracked and settled remaining balance\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST 11: Strict Invariant: Share Capital Remains Exactly $1,000 Across Lifecycle
+// --------------------------------------------------------------------------
+console.log('--- TEST 11: Share Capital Invariant Throughout 3-Turn Lifecycle ---');
+{
+  const q1 = "shareholder has invested in own company share capital of SGD 1000 but unpaid what's the double entry";
+  const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
+  const r2 = await processAccountingQuery("the shareholder paid SGD 400 into company bank account", r1.scenarioState, 'SFRS_I');
+  const r3 = await processAccountingQuery("subsequently shareholder settled the remaining balance via bank transfer", r2.scenarioState, 'SFRS_I');
+
+  // Verify across all turns
+  for (const [idx, res] of [r1, r2, r3].entries()) {
+    const turnNum = idx + 1;
+    const allLines = (res.scenarioState.directGroups || []).flatMap(g => g.lines);
+    const shareCapitalCredits = allLines
+      .filter(l => l.accountName.toLowerCase().includes('share capital') && l.credit > 0)
+      .reduce((s, l) => s + l.credit, 0);
+
+    assert(shareCapitalCredits === 1000, `Turn ${turnNum}: Cumulative Share Capital credited must be exactly 1,000, got ${shareCapitalCredits}`);
+
+    // In Turn 2 and Turn 3, the latest journal entry must NOT credit Share Capital
+    if (turnNum > 1) {
+      const latestGrp = res.scenarioState.directGroups[res.scenarioState.directGroups.length - 1];
+      const hasEquityCredit = latestGrp.lines.some(l => l.accountName.toLowerCase().includes('share capital') && l.credit > 0);
+      assert(!hasEquityCredit, `Turn ${turnNum}: Settlement entry must NEVER credit Share Capital`);
+    }
+
+    const ctx = extractAccountingContext(res.scenarioState);
+    assert(ctx.recognizedEquityTotal === 1000, `Turn ${turnNum}: Recognized equity in context must be 1,000, got ${ctx.recognizedEquityTotal}`);
+  }
+
+  console.log('✅ Test 11 Passed: Share Capital recognized exactly once ($1,000) and invariant held across all turns\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST 12: Multi-Factor Target Resolution (Confidence, Margin & Ambiguity)
+// --------------------------------------------------------------------------
+console.log('--- TEST 12: Multi-Factor Target Resolution ---');
+{
+  const multiBalanceContext = {
+    activeEntity: { type: 'company' },
+    recognizedEquityTotal: 1000,
+    outstandingBalances: [
+      {
+        balanceKey: '1150_shareholder_default',
+        accountCode: '1150',
+        accountName: 'Amount Due from Shareholder (Receivable)',
+        category: 'ASSET',
+        nature: 'RECEIVABLE',
+        counterpartyRole: 'shareholder',
+        originalAmount: 1000,
+        settledAmount: 0,
+        remainingAmount: 1000,
+        currency: 'SGD'
+      },
+      {
+        balanceKey: '1120_customer_default',
+        accountCode: '1120',
+        accountName: 'Trade Debtors - Customer ACME Corp',
+        category: 'ASSET',
+        nature: 'RECEIVABLE',
+        counterpartyRole: 'customer',
+        originalAmount: 1000,
+        settledAmount: 0,
+        remainingAmount: 1000,
+        currency: 'SGD'
+      }
+    ],
+    events: [],
+    actualEvents: [],
+    priorJournals: []
+  };
+
+  // Case A: Ambiguous query ("they paid into company bank account") -> Ties on generic RECEIVABLE
+  const ambiguousRes = resolveSettlementTarget(multiBalanceContext, {
+    nature: 'RECEIVABLE',
+    queryTokens: ['bank', 'paid'],
+    amount: 1000
+  });
+  assert(ambiguousRes.resolutionStatus === 'AMBIGUOUS', `Expected AMBIGUOUS, got ${ambiguousRes.resolutionStatus}`);
+  assert((ambiguousRes.margin ?? 0) < 2.0, `Margin must be < 2.0 for ambiguous tie, got ${ambiguousRes.margin}`);
+
+  // Case B: Disambiguated by counterparty role ("shareholder paid into bank")
+  const shareholderRes = resolveSettlementTarget(multiBalanceContext, {
+    counterpartyRole: 'shareholder',
+    nature: 'RECEIVABLE',
+    queryTokens: ['shareholder', 'bank'],
+    amount: 1000
+  });
+  assert(shareholderRes.resolutionStatus === 'RESOLVED', `Expected RESOLVED, got ${shareholderRes.resolutionStatus}`);
+  assert(shareholderRes.targetBalance?.counterpartyRole === 'shareholder', 'Must resolve to shareholder');
+  assert((shareholderRes.margin ?? 0) >= 2.0, `Margin must be >= 2.0, got ${shareholderRes.margin}`);
+  assert(shareholderRes.confidence > 0.5, `Confidence must be high, got ${shareholderRes.confidence}`);
+
+  // Case C: Disambiguated by account name / customer ("customer ACME paid")
+  const customerRes = resolveSettlementTarget(multiBalanceContext, {
+    accountName: 'Trade Debtors',
+    counterpartyRole: 'customer',
+    nature: 'RECEIVABLE',
+    queryTokens: ['customer', 'acme']
+  });
+  assert(customerRes.resolutionStatus === 'RESOLVED', `Expected RESOLVED, got ${customerRes.resolutionStatus}`);
+  assert(customerRes.targetBalance?.counterpartyRole === 'customer', 'Must resolve to customer');
+
+  console.log('✅ Test 12 Passed: Multi-factor resolution successfully distinguished targets and rejected ambiguity\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical
+// --------------------------------------------------------------------------
+console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---');
+{
+  // Turn 1: Initial allotment $1,000 unpaid (actual)
+  const q1 = "shareholder has invested in own company share capital of SGD 1000 but unpaid what's the double entry";
+  const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
+  assert(!r1.scenarioState.isHypothetical, 'T1 must be actual');
+  const ctx1 = extractAccountingContext(r1.scenarioState);
+  assert(ctx1.outstandingBalances[0]?.remainingAmount === 1000, 'T1 actual balance must be 1,000');
+
+  // Turn 2: "what if shareholder paid SGD 600 to bank" (hypothetical)
+  const q2 = "what if shareholder paid SGD 600 to bank";
+  const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
+  assert(r2.scenarioState.isHypothetical === true, 'T2 must be hypothetical');
+  const t2RemParam = r2.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
+  assert(t2RemParam?.value.includes('400'), `T2 remaining parameter must indicate 400, got ${t2RemParam?.value}`);
+  const ctx2 = extractAccountingContext(r2.scenarioState);
+  assert(ctx2.outstandingBalances[0]?.remainingAmount === 1000, `T2 actual baseline balance must remain unmutated at 1,000, got ${ctx2.outstandingBalances[0]?.remainingAmount}`);
+
+  // Turn 3: "the shareholder paid $400 into company bank account today" (actual)
+  const q3 = "the shareholder paid SGD 400 into company bank account today";
+  const r3 = await processAccountingQuery(q3, r2.scenarioState, 'SFRS_I');
+  assert(!r3.scenarioState.isHypothetical, 'T3 must be actual');
+  const t3RemParam = r3.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
+  assert(t3RemParam?.value.includes('600'), `T3 remaining balance must be 600 (not 0!), got ${t3RemParam?.value}`);
+  const ctx3 = extractAccountingContext(r3.scenarioState);
+  assert(ctx3.outstandingBalances[0]?.remainingAmount === 600, `T3 actual baseline balance must now be 600, got ${ctx3.outstandingBalances[0]?.remainingAmount}`);
+
+  // Turn 4: "what if shareholder pays another $200" (hypothetical)
+  const q4 = "what if shareholder pays another SGD 200 to bank";
+  const r4 = await processAccountingQuery(q4, r3.scenarioState, 'SFRS_I');
+  assert(r4.scenarioState.isHypothetical === true, 'T4 must be hypothetical');
+  const t4RemParam = r4.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
+  assert(t4RemParam?.value.includes('400'), `T4 remaining balance must project 400, got ${t4RemParam?.value}`);
+  const ctx4 = extractAccountingContext(r4.scenarioState);
+  assert(ctx4.outstandingBalances[0]?.remainingAmount === 600, `T4 actual balance must remain 600, got ${ctx4.outstandingBalances[0]?.remainingAmount}`);
+
+  console.log('✅ Test 13 Passed: Hypothetical -> Actual -> Hypothetical cycle verified without state corruption\n');
   testsPassed++;
 }
 

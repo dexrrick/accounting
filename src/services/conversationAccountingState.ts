@@ -4,8 +4,324 @@ import type {
   AccountingDelta,
   ConversationAccountingContext,
   FollowUpEventAnalysis,
-  OutstandingAccountBalance
+  OutstandingAccountBalance,
+  TargetResolutionResult,
+  CandidateScore
 } from '../types/conversationState';
+import { formatSingaporeDate } from '../utils/dateUtils';
+
+export interface TargetResolutionCriteria {
+  accountName?: string;
+  counterpartyRole?: string;
+  nature?: 'RECEIVABLE' | 'PAYABLE' | 'DEPOSIT';
+  queryTokens?: string[];
+  currency?: string;
+  amount?: number;
+}
+
+/**
+ * Deterministically generates a standardized unique balance key.
+ * Format: `${accountCode || normalize(accountName)}_${counterpartyRole || 'none'}_${transactionId || 'default'}`
+ */
+export function generateBalanceKey(
+  accountCode?: string,
+  accountName?: string,
+  counterpartyRole?: string,
+  transactionId?: string
+): string {
+  const codeOrName = (accountCode && accountCode.trim())
+    ? accountCode.trim().toLowerCase()
+    : (accountName || 'unknown').trim().toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const role = (counterpartyRole && counterpartyRole.trim()) ? counterpartyRole.trim().toLowerCase() : 'none';
+  const tx = (transactionId && transactionId.trim()) ? transactionId.trim().toLowerCase() : 'default';
+  return `${codeOrName}_${role}_${tx}`;
+}
+
+/**
+ * Replays an immutable sequence of accounting events to derive deterministic account balances
+ * and cumulative recognized equity.
+ */
+export function deriveAccountingStateFromEvents(
+  events: AccountingEvent[],
+  functionalCurrency: string = 'SGD'
+): {
+  outstandingBalances: OutstandingAccountBalance[];
+  recognizedEquityTotal: number;
+} {
+  const balancesMap = new Map<string, OutstandingAccountBalance>();
+  let recognizedEquityTotal = 0;
+
+  for (const ev of events) {
+    const lines = ev.journalLines || [];
+    const eventCurrency = ev.currency || functionalCurrency;
+
+    // Process journal lines for initial transactions and recognitions
+    for (const line of lines) {
+      const nameLower = line.accountName.toLowerCase();
+
+      // 1. Detect Outstanding Receivables (Asset debit)
+      if (
+        line.category === 'ASSET' &&
+        line.debit > 0 &&
+        (nameLower.includes('due from') ||
+         nameLower.includes('receivable') ||
+         nameLower.includes('debtor') ||
+         nameLower.includes('unpaid'))
+      ) {
+        const role = nameLower.includes('shareholder') ? 'shareholder' :
+                     nameLower.includes('director') ? 'director' :
+                     nameLower.includes('customer') ? 'customer' : 'other';
+        const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
+
+        if (!balancesMap.has(key)) {
+          balancesMap.set(key, {
+            balanceKey: key,
+            accountCode: line.accountCode,
+            accountName: line.accountName,
+            category: 'ASSET',
+            nature: 'RECEIVABLE',
+            counterpartyRole: role,
+            originalAmount: line.debit,
+            settledAmount: 0,
+            remainingAmount: line.debit,
+            currency: eventCurrency
+          });
+        } else {
+          const existing = balancesMap.get(key)!;
+          existing.originalAmount += line.debit;
+          existing.remainingAmount += line.debit;
+        }
+      }
+
+      // 2. Detect Outstanding Payables (Liability credit)
+      if (
+        line.category === 'LIABILITY' &&
+        line.credit > 0 &&
+        (nameLower.includes('due to') ||
+         nameLower.includes('payable') ||
+         nameLower.includes('creditor'))
+      ) {
+        const role = nameLower.includes('shareholder') ? 'shareholder' :
+                     nameLower.includes('director') ? 'director' :
+                     nameLower.includes('supplier') ? 'supplier' : 'other';
+        const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
+
+        if (!balancesMap.has(key)) {
+          balancesMap.set(key, {
+            balanceKey: key,
+            accountCode: line.accountCode,
+            accountName: line.accountName,
+            category: 'LIABILITY',
+            nature: 'PAYABLE',
+            counterpartyRole: role,
+            originalAmount: line.credit,
+            settledAmount: 0,
+            remainingAmount: line.credit,
+            currency: eventCurrency
+          });
+        } else {
+          const existing = balancesMap.get(key)!;
+          existing.originalAmount += line.credit;
+          existing.remainingAmount += line.credit;
+        }
+      }
+
+      // 3. Track Recognized Equity (Credit to Share Capital)
+      if (line.category === 'EQUITY' && line.credit > 0 && nameLower.includes('share capital')) {
+        recognizedEquityTotal += line.credit;
+      }
+    }
+
+    // Process settlements
+    if (ev.type === 'settlement' || ev.type === 'partial_settlement') {
+      let targetBal: OutstandingAccountBalance | undefined;
+      if (ev.targetBalanceKey && balancesMap.has(ev.targetBalanceKey)) {
+        targetBal = balancesMap.get(ev.targetBalanceKey);
+      } else {
+        const creditRecLine = lines.find(
+          l => l.credit > 0 &&
+          (l.accountName.toLowerCase().includes('due from') ||
+           l.accountName.toLowerCase().includes('receivable') ||
+           l.accountName.toLowerCase().includes('debtor'))
+        );
+        if (creditRecLine) {
+          for (const b of balancesMap.values()) {
+            if (
+              (b.accountCode && b.accountCode === creditRecLine.accountCode) ||
+              b.accountName.toLowerCase() === creditRecLine.accountName.toLowerCase() ||
+              b.accountName.toLowerCase().includes(creditRecLine.accountName.toLowerCase())
+            ) {
+              targetBal = b;
+              break;
+            }
+          }
+        }
+      }
+
+      if (targetBal) {
+        const settleAmt = ev.amount ?? 0;
+        const effectiveReduction = Math.min(targetBal.remainingAmount, settleAmt);
+        targetBal.settledAmount += effectiveReduction;
+        targetBal.remainingAmount = Math.max(0, Math.round((targetBal.remainingAmount - effectiveReduction) * 100) / 100);
+      }
+    }
+  }
+
+  return {
+    outstandingBalances: Array.from(balancesMap.values()),
+    recognizedEquityTotal: Math.round(recognizedEquityTotal * 100) / 100
+  };
+}
+
+/**
+ * Resolves the target outstanding account balance using multi-factor scoring
+ * and explicit ambiguity detection.
+ */
+export function resolveSettlementTarget(
+  context: ConversationAccountingContext,
+  criteria: TargetResolutionCriteria
+): TargetResolutionResult {
+  if (!context.outstandingBalances || context.outstandingBalances.length === 0) {
+    return {
+      resolutionStatus: 'NOT_FOUND',
+      confidence: 0,
+      margin: 0,
+      candidateScores: [],
+      reason: 'No outstanding balances recorded in context'
+    };
+  }
+
+  const candidateScores: CandidateScore[] = [];
+
+  for (const b of context.outstandingBalances) {
+    let score = 0;
+    const rationales: string[] = [];
+
+    // 1. Account Name match
+    if (criteria.accountName) {
+      const critName = criteria.accountName.toLowerCase().trim();
+      const balName = b.accountName.toLowerCase().trim();
+      if (critName === balName) {
+        score += 10;
+        rationales.push('Exact account name match (+10)');
+      } else if (balName.includes(critName) || critName.includes(balName)) {
+        score += 6;
+        rationales.push('Partial account name match (+6)');
+      }
+    }
+
+    // 2. Counterparty Role match
+    if (criteria.counterpartyRole) {
+      const critRole = criteria.counterpartyRole.toLowerCase().trim();
+      const balRole = (b.counterpartyRole || '').toLowerCase().trim();
+      if (critRole === balRole) {
+        score += 8;
+        rationales.push(`Counterparty role match [${critRole}] (+8)`);
+      } else if (balRole && critRole && balRole !== 'none' && critRole !== 'none') {
+        score -= 8;
+        rationales.push(`Conflicting counterparty role [${critRole} vs ${balRole}] (-8)`);
+      }
+    }
+
+    // 3. Nature match (RECEIVABLE vs PAYABLE)
+    if (criteria.nature) {
+      if (criteria.nature === b.nature) {
+        score += 5;
+        rationales.push(`Account nature match [${b.nature}] (+5)`);
+      } else {
+        score -= 10;
+        rationales.push(`Opposite account nature [${criteria.nature} vs ${b.nature}] (-10)`);
+      }
+    }
+
+    // 4. Query tokens hints
+    if (criteria.queryTokens && criteria.queryTokens.length > 0) {
+      for (const token of criteria.queryTokens) {
+        const t = token.toLowerCase();
+        if (b.accountName.toLowerCase().includes(t)) {
+          score += 3;
+          rationales.push(`Account name contains query token "${t}" (+3)`);
+        }
+        if (b.counterpartyRole && b.counterpartyRole.toLowerCase().includes(t)) {
+          score += 4;
+          rationales.push(`Counterparty role matches query token "${t}" (+4)`);
+        }
+      }
+    }
+
+    // 5. Viability: Remaining balance > 0
+    if (b.remainingAmount > 0) {
+      score += 2;
+      rationales.push('Account has positive outstanding balance (+2)');
+    }
+
+    // 6. Amount match (exact amount match to remaining balance)
+    if (criteria.amount && criteria.amount > 0 && Math.abs(b.remainingAmount - criteria.amount) < 0.01) {
+      score += 3;
+      rationales.push(`Settlement amount matches exact outstanding balance (${criteria.amount}) (+3)`);
+    }
+
+    candidateScores.push({
+      balanceKey: b.balanceKey,
+      accountName: b.accountName,
+      score,
+      rationale: rationales.join('; ')
+    });
+  }
+
+  // Sort descending by score
+  candidateScores.sort((a, b) => b.score - a.score);
+
+  const topCandidateScore = candidateScores[0];
+  if (!topCandidateScore || topCandidateScore.score <= 0) {
+    return {
+      resolutionStatus: 'NOT_FOUND',
+      confidence: 0,
+      margin: 0,
+      candidateScores,
+      reason: 'No candidate balance matched with a positive score'
+    };
+  }
+
+  const topBalance = context.outstandingBalances.find(b => b.balanceKey === topCandidateScore.balanceKey);
+
+  // If single candidate
+  if (candidateScores.length === 1) {
+    const confidence = Math.min(1.0, topCandidateScore.score / 15);
+    return {
+      targetBalance: topBalance,
+      resolutionStatus: confidence >= 0.25 ? 'RESOLVED' : 'NOT_FOUND',
+      confidence: Math.round(confidence * 100) / 100,
+      margin: topCandidateScore.score,
+      candidateScores,
+      reason: `Single candidate matched with score ${topCandidateScore.score}`
+    };
+  }
+
+  // If multiple candidates
+  const secondCandidateScore = candidateScores[1];
+  const margin = Math.round((topCandidateScore.score - secondCandidateScore.score) * 100) / 100;
+  const confidence = Math.min(1.0, Math.max(0, topCandidateScore.score / 20));
+
+  if (margin < 2.0) {
+    return {
+      resolutionStatus: 'AMBIGUOUS',
+      confidence: Math.round(confidence * 100) / 100,
+      margin,
+      candidateScores,
+      reason: `Ambiguous match: top candidate (${topCandidateScore.accountName}, score ${topCandidateScore.score}) and second candidate (${secondCandidateScore.accountName}, score ${secondCandidateScore.score}) have margin of ${margin} (< 2.0)`
+    };
+  }
+
+  return {
+    targetBalance: topBalance,
+    resolutionStatus: 'RESOLVED',
+    confidence: Math.round(confidence * 100) / 100,
+    margin,
+    candidateScores,
+    reason: `Resolved decisively with margin ${margin}`
+  };
+}
 
 /**
  * Derives structured conversation accounting context from the active scenario state and history.
@@ -14,17 +330,42 @@ export function extractAccountingContext(
   currentScenario?: AccountingScenarioState | null,
   _chatHistory?: any[]
 ): ConversationAccountingContext {
-  const outstandingBalances: OutstandingAccountBalance[] = [];
-  const events: AccountingEvent[] = [];
-  let recognizedEquityTotal = 0;
   const priorJournals: JournalEntryGroup[] = currentScenario?.directGroups ? [...currentScenario.directGroups] : [];
 
-  if (currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
+  // Determine base actual events (source of truth)
+  let actualEvents: AccountingEvent[] = [];
+  if (currentScenario?.actualEvents && currentScenario.actualEvents.length > 0) {
+    actualEvents = [...currentScenario.actualEvents];
+  } else if (currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
+    actualEvents = currentScenario.directGroups.map((grp, idx) => ({
+      id: grp.id || `evt-init-${idx + 1}`,
+      type: 'initial_transaction',
+      description: grp.title || 'Initial transaction',
+      amount: grp.totalDebit,
+      currency: currentScenario.transactionCurrency || currentScenario.functionalCurrency || 'SGD',
+      affectedAccounts: grp.lines.map(l => l.accountName),
+      journalLines: grp.lines,
+      isHypothetical: false,
+      timestamp: grp.eventDate,
+      eventDate: grp.eventDate
+    }));
+  }
+
+  // Replay actual events to derive deterministic balances and equity
+  const derived = deriveAccountingStateFromEvents(
+    actualEvents,
+    currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD'
+  );
+
+  const outstandingBalances: OutstandingAccountBalance[] = [...derived.outstandingBalances];
+  let recognizedEquityTotal = derived.recognizedEquityTotal;
+
+  // Fallback scanner if directGroups had entries not captured by actualEvents
+  if (outstandingBalances.length === 0 && currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
     for (const grp of currentScenario.directGroups) {
       for (const line of grp.lines) {
         const nameLower = line.accountName.toLowerCase();
 
-        // 1. Detect Outstanding Receivables (Asset with positive debit)
         if (
           line.category === 'ASSET' &&
           line.debit > 0 &&
@@ -36,8 +377,9 @@ export function extractAccountingContext(
           const role = nameLower.includes('shareholder') ? 'shareholder' :
                        nameLower.includes('director') ? 'director' :
                        nameLower.includes('customer') ? 'customer' : 'other';
-
+          const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
           outstandingBalances.push({
+            balanceKey: key,
             accountCode: line.accountCode,
             accountName: line.accountName,
             category: 'ASSET',
@@ -50,7 +392,6 @@ export function extractAccountingContext(
           });
         }
 
-        // 2. Detect Outstanding Payables (Liability with positive credit)
         if (
           line.category === 'LIABILITY' &&
           line.credit > 0 &&
@@ -61,8 +402,9 @@ export function extractAccountingContext(
           const role = nameLower.includes('shareholder') ? 'shareholder' :
                        nameLower.includes('director') ? 'director' :
                        nameLower.includes('supplier') ? 'supplier' : 'other';
-
+          const key = generateBalanceKey(line.accountCode, line.accountName, role, 'default');
           outstandingBalances.push({
+            balanceKey: key,
             accountCode: line.accountCode,
             accountName: line.accountName,
             category: 'LIABILITY',
@@ -75,21 +417,10 @@ export function extractAccountingContext(
           });
         }
 
-        // 3. Track Recognized Equity
         if (line.category === 'EQUITY' && line.credit > 0 && nameLower.includes('share capital')) {
           recognizedEquityTotal += line.credit;
         }
       }
-
-      events.push({
-        id: grp.id,
-        type: 'initial_transaction',
-        description: grp.title,
-        amount: grp.totalDebit,
-        currency: currentScenario.transactionCurrency || 'SGD',
-        affectedAccounts: grp.lines.map(l => l.accountName),
-        timestamp: grp.eventDate
-      });
     }
   }
 
@@ -132,10 +463,12 @@ export function extractAccountingContext(
       totalAmount: currentScenario.amount,
       currency: currentScenario.transactionCurrency || currentScenario.functionalCurrency || 'SGD'
     } : undefined,
-    events,
+    events: currentScenario?.accountingEvents || actualEvents,
+    actualEvents,
     outstandingBalances,
     recognizedEquityTotal,
-    priorJournals
+    priorJournals,
+    isHypothetical: Boolean(currentScenario?.isHypothetical)
   };
 }
 
@@ -151,40 +484,54 @@ export function calculateAccountingDelta(
     return null;
   }
 
-  // Find target outstanding balance to settle
-  let targetBalance: OutstandingAccountBalance | undefined;
-  if (eventAnalysis.targetOutstandingAccount) {
-    targetBalance = context.outstandingBalances.find(b =>
-      b.accountName.toLowerCase().includes(eventAnalysis.targetOutstandingAccount!.toLowerCase())
-    );
+  const queryTokens: string[] = [];
+  const targetAcc = (eventAnalysis.targetOutstandingAccount || '').toLowerCase();
+  const expl = (eventAnalysis.explanation || '').toLowerCase();
+
+  if (targetAcc.includes('shareholder') || expl.includes('shareholder')) queryTokens.push('shareholder');
+  if (targetAcc.includes('director') || expl.includes('director')) queryTokens.push('director');
+  if (targetAcc.includes('customer') || expl.includes('customer')) queryTokens.push('customer');
+  if (targetAcc.includes('supplier') || expl.includes('supplier')) queryTokens.push('supplier');
+
+  const counterpartyRole = queryTokens.includes('shareholder') ? 'shareholder' :
+                           queryTokens.includes('director') ? 'director' :
+                           queryTokens.includes('customer') ? 'customer' :
+                           queryTokens.includes('supplier') ? 'supplier' : undefined;
+
+  const criteria: TargetResolutionCriteria = {
+    accountName: eventAnalysis.targetOutstandingAccount,
+    counterpartyRole,
+    nature: 'RECEIVABLE',
+    queryTokens,
+    currency,
+    amount: eventAnalysis.settlementAmount
+  };
+
+  let resolution = resolveSettlementTarget(context, criteria);
+
+  // Fallback: If no balances recorded but equity was recognized, synthesize allotment balance
+  if (resolution.resolutionStatus === 'NOT_FOUND' && context.recognizedEquityTotal > 0) {
+    const syntheticBalance: OutstandingAccountBalance = {
+      balanceKey: generateBalanceKey('1150', 'Amount Due from Shareholder (Receivable)', 'shareholder', 'default'),
+      accountCode: '1150',
+      accountName: 'Amount Due from Shareholder (Receivable)',
+      category: 'ASSET',
+      nature: 'RECEIVABLE',
+      counterpartyRole: 'shareholder',
+      originalAmount: context.recognizedEquityTotal,
+      settledAmount: 0,
+      remainingAmount: context.recognizedEquityTotal,
+      currency
+    };
+    context.outstandingBalances.push(syntheticBalance);
+    resolution = resolveSettlementTarget(context, criteria);
   }
 
-  // Default to first receivable if settling shareholder/customer
-  if (!targetBalance) {
-    targetBalance = context.outstandingBalances.find(b => b.nature === 'RECEIVABLE');
-  }
-
-  if (!targetBalance) {
-    // If no explicit outstanding item was recorded in balances, check if equity was recognized
-    if (context.recognizedEquityTotal > 0) {
-      targetBalance = {
-        accountCode: '1150',
-        accountName: 'Amount Due from Shareholder (Receivable)',
-        category: 'ASSET',
-        nature: 'RECEIVABLE',
-        counterpartyRole: 'shareholder',
-        originalAmount: context.recognizedEquityTotal,
-        settledAmount: 0,
-        remainingAmount: context.recognizedEquityTotal,
-        currency
-      };
-    }
-  }
-
-  if (!targetBalance) {
+  if (resolution.resolutionStatus !== 'RESOLVED' || !resolution.targetBalance) {
     return null;
   }
 
+  const targetBalance = resolution.targetBalance;
   const settlementAmount = Math.round(
     (eventAnalysis.settlementAmount !== undefined && eventAnalysis.settlementAmount > 0
       ? eventAnalysis.settlementAmount
@@ -217,7 +564,6 @@ export function calculateAccountingDelta(
     }
   ];
 
-  // If overpayment occurred, credit excess to other payables / advance
   if (isOverpayment) {
     const excess = Math.round((settlementAmount - previousBalance) * 100) / 100;
     lines.push({
@@ -231,17 +577,36 @@ export function calculateAccountingDelta(
     });
   }
 
-  const explanation = `Subsequent settlement of outstanding ${targetBalance.accountName} via bank transfer. ` +
+  const prefix = eventAnalysis.isHypothetical ? 'Hypothetical' : 'Subsequent';
+  const explanation = `${prefix} settlement of outstanding ${targetBalance.accountName} via bank transfer. ` +
     `Note: Share Capital is NOT credited again because it was already recognized upon allotment. ` +
     `Remaining balance on ${targetBalance.accountName}: ${currency} ${resultingBalance.toFixed(2)}.`;
+
+  const resultingAccountingEvent: AccountingEvent = {
+    id: `evt-settle-${Date.now()}`,
+    type: eventAnalysis.eventType,
+    description: explanation,
+    amount: settlementAmount,
+    currency,
+    affectedAccounts: lines.map(l => l.accountName),
+    isHypothetical: Boolean(eventAnalysis.isHypothetical),
+    targetBalanceKey: targetBalance.balanceKey,
+    journalLines: lines,
+    timestamp: new Date().toISOString(),
+    eventDate: formatSingaporeDate(new Date())
+  };
 
   return {
     eventType: eventAnalysis.eventType,
     journalLines: lines,
     amount: settlementAmount,
     currency,
+    isHypothetical: Boolean(eventAnalysis.isHypothetical),
+    targetBalanceKey: targetBalance.balanceKey,
+    resultingAccountingEvent,
     balanceUpdates: [
       {
+        balanceKey: targetBalance.balanceKey,
         accountName: targetBalance.accountName,
         previousBalance,
         delta: -effectiveSettledOnReceivable,

@@ -304,6 +304,7 @@ export class DeterministicSemanticExtractor {
       let targetBalance = conversationContext!.outstandingBalances.find(b => b.nature === 'RECEIVABLE');
       if (!targetBalance && conversationContext!.recognizedEquityTotal > 0) {
         targetBalance = {
+          balanceKey: '1150_shareholder_default',
           accountCode: '1150',
           accountName: 'Amount Due from Shareholder (Receivable)',
           category: 'ASSET',

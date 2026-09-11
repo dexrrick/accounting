@@ -1646,41 +1646,67 @@ export async function parseAccountingQuery(
          understanding.followUpAnalysis.eventType === 'partial_settlement')
       ) {
         const delta = calculateAccountingDelta(convContext, understanding.followUpAnalysis, functionalCurrency);
-        if (delta) {
+        if (delta && delta.resultingAccountingEvent) {
+          const isHypo = Boolean(delta.isHypothetical);
+          const settlementGroup: JournalEntryGroup = {
+            id: `grp-settle-${(currentScenario.directGroups?.length || 0) + 1}`,
+            eventDate: formatSingaporeDate(new Date()),
+            title: isHypo ? 'Hypothetical Settlement of Allotment Receivable' : 'Settlement of Allotment Receivable',
+            summary: delta.explanation,
+            lines: delta.journalLines,
+            totalDebit: delta.amount,
+            totalCredit: delta.amount,
+            isBalanced: true,
+            citations: [],
+            rationalePoints: [
+              'Under SFRS(I) 1-32 §33 and Companies Act 1967 §68, Share Capital was already recognized upon allotment.',
+              'Settlement via bank transfer derecognizes the receivable and debits Cash at Bank.'
+            ],
+            authorityStatus: 'DETERMINISTIC'
+          };
+
+          const directGroups: JournalEntryGroup[] = [
+            ...(currentScenario.directGroups || []),
+            settlementGroup
+          ];
+
+          const priorActualEvents = currentScenario.actualEvents && currentScenario.actualEvents.length > 0
+            ? [...currentScenario.actualEvents]
+            : (convContext.actualEvents && convContext.actualEvents.length > 0 ? [...convContext.actualEvents] : []);
+
+          const resultingEvent = delta.resultingAccountingEvent;
+
+          const newActualEvents = isHypo
+            ? priorActualEvents
+            : [...priorActualEvents, resultingEvent];
+
+          const newAccountingEvents = [
+            ...(currentScenario.accountingEvents || priorActualEvents),
+            resultingEvent
+          ];
+
+          const remainingAmount = delta.balanceUpdates[0]?.resultingBalance ?? 0;
+
           return {
-            scenarioType: 'UNIVERSAL',
+            scenarioType: currentScenario.scenarioType || 'UNIVERSAL',
             authorityStatus: 'DETERMINISTIC',
             queryIntent: 'TRANSACTION',
             primaryDomain: 'ACCOUNTING_SFRS',
             rawQuery: query,
-            transactionTitle: 'Settlement of Shareholder Allotment Receivable',
+            transactionTitle: currentScenario.transactionTitle || 'Share Capital Allotment & Settlement',
             functionalCurrency,
             transactionCurrency: delta.currency,
             accountingTreatmentSummary: delta.explanation,
             singaporeTaxTreatmentSummary: 'Allotment of share capital and subsequent settlement of capital receivable have no corporate income tax implications under the Singapore Income Tax Act 1947.',
             amount: delta.amount,
-            directGroups: [
-              {
-                id: 'grp-settle-1',
-                eventDate: formatSingaporeDate(new Date()),
-                title: 'Settlement of Allotment Receivable',
-                summary: delta.explanation,
-                lines: delta.journalLines,
-                totalDebit: delta.amount,
-                totalCredit: delta.amount,
-                isBalanced: true,
-                citations: [],
-                rationalePoints: [
-                  'Under SFRS(I) 1-32 §33 and Companies Act 1967 §68, Share Capital was already recognized upon allotment.',
-                  'Settlement via bank transfer derecognizes the receivable and debits Cash at Bank.'
-                ],
-                authorityStatus: 'DETERMINISTIC'
-              }
-            ],
+            directGroups,
+            accountingEvents: newAccountingEvents,
+            actualEvents: newActualEvents,
+            isHypothetical: isHypo,
             keyParameters: [
-              { label: 'Settlement Amount', value: `${delta.currency} ${delta.amount.toFixed(2)}`, badge: 'Settlement' },
-              { label: 'Settled Account', value: understanding.followUpAnalysis.targetOutstandingAccount || 'Amount Due from Shareholder', badge: 'Receivable' },
-              { label: 'Remaining Balance', value: `${delta.currency} ${(understanding.followUpAnalysis.remainingReceivableOrPayable ?? 0).toFixed(2)}`, badge: 'Balance' }
+              { label: 'Settlement Amount', value: `${delta.currency} ${delta.amount.toFixed(2)}`, badge: isHypo ? 'Hypothetical' : 'Settlement' },
+              { label: 'Settled Account', value: delta.balanceUpdates[0]?.accountName || 'Amount Due from Shareholder', badge: 'Receivable' },
+              { label: 'Remaining Balance', value: `${delta.currency} ${remainingAmount.toFixed(2)}`, badge: 'Balance' }
             ],
             isComplete: true,
             missingFields: []

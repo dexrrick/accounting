@@ -21,20 +21,41 @@ export interface AccountingEvent {
   sourceTurn?: number;
   isHypothetical?: boolean;
   timestamp?: string;
+  eventDate?: string;
+  journalLines?: JournalLine[];
+  targetBalanceKey?: string;
   metadata?: Record<string, unknown>;
 }
 
 export interface OutstandingAccountBalance {
+  balanceKey: string;
   accountCode?: string;
   accountName: string;
   category: 'ASSET' | 'LIABILITY' | 'EQUITY';
   nature: 'RECEIVABLE' | 'PAYABLE' | 'DEPOSIT';
   counterpartyRole?: string;
   counterpartyName?: string;
+  transactionId?: string;
   originalAmount: number;
   settledAmount: number;
   remainingAmount: number;
   currency: string;
+}
+
+export interface CandidateScore {
+  balanceKey: string;
+  accountName: string;
+  score: number;
+  rationale: string;
+}
+
+export interface TargetResolutionResult {
+  targetBalance?: OutstandingAccountBalance;
+  resolutionStatus: 'RESOLVED' | 'AMBIGUOUS' | 'NOT_FOUND';
+  confidence: number;
+  margin?: number;
+  candidateScores?: CandidateScore[];
+  reason?: string;
 }
 
 export interface ConversationAccountingContext {
@@ -51,15 +72,18 @@ export interface ConversationAccountingContext {
     currency: string;
   };
   events: AccountingEvent[];
+  actualEvents: AccountingEvent[];
   outstandingBalances: OutstandingAccountBalance[];
   recognizedEquityTotal: number;
   priorJournals: JournalEntryGroup[];
+  isHypothetical?: boolean;
 }
 
 export interface FollowUpEventAnalysis {
   eventType: AccountingEventType;
   isFollowUp: boolean;
   targetOutstandingAccount?: string;
+  targetBalanceKey?: string;
   settlementAmount?: number;
   remainingReceivableOrPayable?: number;
   settlementAccount?: string;
@@ -73,10 +97,14 @@ export interface AccountingDelta {
   amount: number;
   currency: string;
   balanceUpdates: Array<{
+    balanceKey?: string;
     accountName: string;
     previousBalance: number;
     delta: number;
     resultingBalance: number;
   }>;
+  isHypothetical?: boolean;
+  targetBalanceKey?: string;
+  resultingAccountingEvent?: AccountingEvent;
   explanation: string;
 }
