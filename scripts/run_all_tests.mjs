@@ -22,6 +22,7 @@ const testSuites = [
   { name: 'Phase 5 Advanced Hybrid Retrieval & Vector Index', file: 'test_phase5_advanced_retrieval.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Labelled Retrieval Quality Evaluation', file: 'test_retrieval_quality_evaluation.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Provider Boundary Safety', file: 'test_provider_boundary_safety.mjs', layer: 'provider-resilience', tier: 'smoke' },
+  { name: 'Official Source Failure Safety', file: 'test_official_source_failure_safety.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs', layer: 'regulatory-updates', tier: 'full' },
   { name: 'Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Sidequest Correction Pass', file: 'test_sidequest_correction.mjs', layer: 'accounting-invariants', tier: 'full' },

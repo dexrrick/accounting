@@ -38,6 +38,8 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   const authorityName = isSfrs 
     ? 'Accounting Standards Council (ASC) Singapore & IASB' 
     : 'International Accounting Standards Board (IASB)';
+  const evidenceIncomplete = citations.length === 0 || Boolean(uncertaintyDisclaimer);
+  const hasProjection = effectiveDateOrTiming?.toLowerCase().includes('projection') || false;
 
   return (
     <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden space-y-6 transition-colors duration-200">
@@ -73,6 +75,30 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
           <span>Singapore Statutes Online</span>
           <ExternalLink className="w-3 h-3 text-slate-400" />
         </a>
+      </div>
+
+      {/* Decision-status legend: users should never infer certainty from presentation alone. */}
+      <div className="px-5 -mb-2 flex flex-wrap gap-2">
+        {!evidenceIncomplete && (
+          <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
+            ✓ Evidence Grounded
+          </span>
+        )}
+        {assumptions.length > 0 && (
+          <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+            ⚠ Assumptions Require Confirmation
+          </span>
+        )}
+        {hasProjection && (
+          <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800">
+            ◇ Illustrative Projection
+          </span>
+        )}
+        {evidenceIncomplete && (
+          <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800">
+            ! Evidence Incomplete — Review Required
+          </span>
+        )}
       </div>
 
       {/* Effective Timing Banner */}
