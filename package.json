@@ -3,13 +3,18 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node scripts/run_all_tests.mjs",
-    "test:all": "node scripts/run_all_tests.mjs",
+    "preflight": "node scripts/preflight.mjs",
+    "test": "npm run preflight && node scripts/run_all_tests.mjs --tier=full",
+    "test:all": "npm run preflight && node scripts/run_all_tests.mjs --tier=full",
+    "test:smoke": "npm run preflight && node scripts/run_all_tests.mjs --tier=smoke",
     "test:integration": "tsx test_real_source_integration.mjs"
   },
   "dependencies": {
