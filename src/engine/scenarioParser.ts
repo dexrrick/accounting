@@ -351,20 +351,33 @@ export async function parseAccountingQuery(
 
   const isPayrollSalaryQuery =
     (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
-    (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf')));
+    (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
+    // A correction such as "I mean 10,000 a month" inherits the payroll
+    // context rather than being routed to the statutory-advisory fallback.
+    (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+      hasSalaryFigure &&
+      /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query));
 
   if (isPayrollSalaryQuery) {
-    let baseSalary = 3200;
+    let baseSalary = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
+      ? (currentScenario.amount || 3200)
+      : 3200;
     const salaryMatch =
-      query.match(/(?:earning|earns|salary\s*(?:of|is|:)?|wages?\s*(?:of|is|:)?|pay\s*(?:of|is|:)?)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i) ||
-      query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
-      query.match(/([\d,]+(?:\.\d+)?)\s*(?:a\s*month|\/month|monthly|per\s*month)/i);
+      query.match(/(?:earning|earns|salary\s*(?:of|is|:)?|wages?\s*(?:of|is|:)?|pay\s*(?:of|is|:)?)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i) ||
+      query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
+      query.match(/([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)/i);
     if (salaryMatch && salaryMatch[1]) {
-      const parsedSalary = parseFloat(salaryMatch[1].replace(/,/g, ''));
+      let parsedSalary = parseFloat(salaryMatch[1].replace(/,/g, ''));
+      const magnitude = salaryMatch[2]?.toLowerCase();
+      if (magnitude === 'k' || magnitude === 'thousand') parsedSalary *= 1000;
+      if (magnitude === 'm' || magnitude === 'million') parsedSalary *= 1000000;
       if (parsedSalary > 0) baseSalary = parsedSalary;
     }
 
     let employeeAge = 32;
+    const priorAge = currentScenario?.keyParameters
+      ?.find(p => p.label === 'Employee Status')?.value.match(/Age\s+(\d{1,2})/i);
+    if (priorAge?.[1]) employeeAge = parseInt(priorAge[1], 10);
     const ageMatch = query.match(/(\d{1,2})\s*(?:years\s*old|yo|y\/o|yrs\s*old)/i) ||
       query.match(/(?:age|aged)\s*[:=]?\s*(\d{1,2})/i);
     if (ageMatch) {
@@ -458,8 +471,9 @@ export async function parseAccountingQuery(
       employeeRate = 0.20;
       employerRate = 0.17;
     } else if (employeeAge <= 60) {
-      employeeRate = 0.17;
-      employerRate = 0.155;
+      // 2026 CPF Board full-rate table: above 55 to 60 = employee 18%, employer 16%.
+      employeeRate = 0.18;
+      employerRate = 0.16;
     } else if (employeeAge <= 65) {
       employeeRate = 0.115;
       employerRate = 0.12;
@@ -536,11 +550,29 @@ export async function parseAccountingQuery(
         debit: 0,
         credit: netSalary,
         lineExplanation: `Net take-home salary payable to employee after deducting employee CPF share ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} - $${employeeCpf.toFixed(2)}).`
+      },
+      {
+        id: 'line-payroll-sdl-expense',
+        accountCode: '5030',
+        accountName: 'Skills Development Levy (Operating Expense)',
+        category: 'EXPENSE',
+        debit: sdl,
+        credit: 0,
+        lineExplanation: `Employer Skills Development Levy accrued at 0.25% of monthly wages, subject to the statutory minimum and maximum.`
+      },
+      {
+        id: 'line-payroll-sdl-payable',
+        accountCode: '2055',
+        accountName: 'Skills Development Levy Payable',
+        category: 'LIABILITY',
+        debit: 0,
+        credit: sdl,
+        lineExplanation: `SDL payable with the monthly CPF submission.`
       }
     ];
 
-    const totalDebit = Math.round((grossSalary + employerCpf) * 100) / 100;
-    const totalCredit = Math.round((totalCpf + netSalary) * 100) / 100;
+    const totalDebit = Math.round((grossSalary + employerCpf + sdl) * 100) / 100;
+    const totalCredit = Math.round((totalCpf + netSalary + sdl) * 100) / 100;
 
     const citations = [
       convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC22_PRORATED_SALARY),
