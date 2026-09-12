@@ -294,7 +294,7 @@ export async function processAccountingQuery(
   // asking a model to guess between unpaid cash consideration and consideration
   // in kind, and do not allow prose to bypass the required clarification.
   const materialClarification = deterministicScenario.missingFields?.find(
-    field => field.fieldKey === 'considerationType'
+    field => field.fieldKey === 'considerationType' || field.fieldKey === 'settlementTarget' || field.fieldKey === 'amount' || field.fieldKey === 'paymentStatus'
   );
   if (materialClarification && (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
     profiler.recordFirstVisibleResponse();
@@ -457,6 +457,12 @@ export function renderStructuredOfflineResponse(
     return state;
   };
 
+  // A recognized share subscription enters committed history on its first
+  // turn, regardless of which renderer branch formats the explanation.
+  if (parsed.scenarioType === 'SHARE_CAPITAL_UNPAID' || parsed.scenarioType === 'SHARE_CAPITAL_PAID') {
+    parsed = ensureEventSourcedState(parsed);
+  }
+
   // 1. UNRECOGNIZED / FREE-FORM QUERY (OFFLINE MODE)
   if (parsed.scenarioType === 'UNRECOGNIZED') {
     const errorPrefix = apiErrorMessage
@@ -476,7 +482,26 @@ export function renderStructuredOfflineResponse(
         `* **Currency Fact**: ${sem.currency.value || 'Unspecified'} (Source: ${sem.currency.source}, Confidence: ${sem.currency.confidence})\n\n`;
 
       if (sem.ownershipContext === 'own_equity') {
-        const amt = sem.amount || 1;
+        const amt = sem.amount;
+        if (!amt || amt <= 0 || (sem.paymentStatus !== 'paid' && sem.paymentStatus !== 'unpaid')) {
+          const prompt = !amt || amt <= 0
+            ? 'What is the share subscription amount?'
+            : 'Was the share subscription paid, unpaid, or partly paid? If partly paid, please provide the amount received.';
+          return {
+            messageText: `${replyText}### Clarification Required\n\n${prompt}`,
+            scenarioState: {
+              ...parsed,
+              directGroups: [],
+              isComplete: false,
+              missingFields: [{
+                fieldKey: !amt || amt <= 0 ? 'amount' : 'paymentStatus',
+                fieldName: !amt || amt <= 0 ? 'Share subscription amount' : 'Share subscription payment status',
+                prompt,
+                whyNeeded: 'Share Capital and the corresponding debit require established consideration facts.'
+              }]
+            }
+          };
+        }
         const curr = sem.currency.value || parsed.functionalCurrency || 'SGD';
         const isUnpaid = sem.paymentStatus === 'unpaid';
         const debitAccountName = isUnpaid ? 'Amount Due from Shareholder (Receivable)' : 'Cash at Bank (Current Account)';
@@ -825,8 +850,14 @@ export function renderStructuredOfflineResponse(
 
   // 7. GENERAL EXPENSES (Entertainment, Travel, Utilities, Salaries, etc.)
   if (parsed.scenarioType === 'GENERAL_EXPENSE') {
-    const amt = parsed.amount || 3000;
-    const exp = parsed.expenseAccountName || 'Entertainment & Hospitality Expenses';
+    if (!parsed.isComplete || !parsed.amount || parsed.amount <= 0 || !parsed.expenseAccountName) {
+      return {
+        messageText: '### Clarification Required\n\nPlease provide the expense type and actual payment amount before I prepare a journal.',
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+    const amt = parsed.amount;
+    const exp = parsed.expenseAccountName;
     const pay = parsed.paymentMethodAccountName || 'Cash at Bank';
 
     const replyText = `### Under ${std1} (*Presentation of Financial Statements - Accrual Basis*)\n\n` +

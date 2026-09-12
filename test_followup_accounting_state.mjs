@@ -46,7 +46,7 @@ console.log('--- TEST 1: Full Settlement ($1 Unpaid -> Bank Payment) ---');
   
   const bankLine = grp2.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
   const receivableLine = grp2.lines.find(l => (l.accountName.toLowerCase().includes('due from') || l.accountName.toLowerCase().includes('receivable')) && l.credit > 0);
-  const equityLine = grp2.lines.find(l => l.accountName.toLowerCase().includes('share capital') && l.credit > 0);
+  const equityLine = grp2.lines.find(l => l.category === 'EQUITY' && l.accountCode === '3000' && l.credit > 0);
 
   assert(Boolean(bankLine), 'T2 must debit Cash at Bank');
   assert(bankLine.debit === 1, `Bank debit must be 1.00, got ${bankLine?.debit}`);
@@ -195,7 +195,7 @@ console.log('--- TEST 4: Natural Language Settlement Paraphrases ---');
     const bank = grp?.lines.find(l => l.accountName.toLowerCase().includes('bank') && l.debit > 0);
     const rec = grp?.lines.find(l => l.accountName.toLowerCase().includes('due from') && l.credit > 0);
     assert(Boolean(bank && rec), `Paraphrase '${p}' must resolve to Dr Bank / Cr Shareholder Receivable`);
-    assert(!grp.lines.some(l => l.accountName.toLowerCase().includes('share capital') && l.credit > 0), 'Share capital must not be credited');
+    assert(!grp.lines.some(l => l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') && l.credit > 0), 'Share capital must not be credited');
   }
   console.log('✅ Test 4 Passed: All conversational settlement paraphrases correctly resolved\n');
   testsPassed++;
@@ -435,7 +435,7 @@ console.log('--- TEST 11: Share Capital Invariant Throughout 3-Turn Lifecycle --
     const turnNum = idx + 1;
     const allLines = (res.scenarioState.directGroups || []).flatMap(g => g.lines);
     const shareCapitalCredits = allLines
-      .filter(l => l.accountName.toLowerCase().includes('share capital') && l.credit > 0)
+      .filter(l => l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') && l.credit > 0)
       .reduce((s, l) => s + l.credit, 0);
 
     assert(shareCapitalCredits === 1000, `Turn ${turnNum}: Cumulative Share Capital credited must be exactly 1,000, got ${shareCapitalCredits}`);
@@ -443,7 +443,7 @@ console.log('--- TEST 11: Share Capital Invariant Throughout 3-Turn Lifecycle --
     // In Turn 2 and Turn 3, the latest journal entry must NOT credit Share Capital
     if (turnNum > 1) {
       const latestGrp = res.scenarioState.directGroups[res.scenarioState.directGroups.length - 1];
-      const hasEquityCredit = latestGrp.lines.some(l => l.accountName.toLowerCase().includes('share capital') && l.credit > 0);
+      const hasEquityCredit = latestGrp.lines.some(l => l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') && l.credit > 0);
       assert(!hasEquityCredit, `Turn ${turnNum}: Settlement entry must NEVER credit Share Capital`);
     }
 
@@ -539,7 +539,7 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
   assert(!r1.scenarioState.isHypothetical, 'T1 must be actual');
   assert(r1.scenarioState.directGroups?.length === 1, 'T1 directGroups must be 1');
-  const t1EquityCredit = r1.scenarioState.directGroups[0].lines.reduce((s, l) => s + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0);
+  const t1EquityCredit = r1.scenarioState.directGroups[0].lines.reduce((s, l) => s + (l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0);
   assert(t1EquityCredit === 1000, `T1 Share Capital credit must be 1,000, got ${t1EquityCredit}`);
   const ctx1 = extractAccountingContext(r1.scenarioState);
   assert(ctx1.outstandingBalances[0]?.remainingAmount === 1000, 'T1 actual balance must be 1,000');
@@ -550,7 +550,7 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   assert(r2.scenarioState.isHypothetical === true, 'T2 must be hypothetical');
   assert(r2.scenarioState.committedDirectGroups?.length === 1, 'T2 committedDirectGroups must only contain Turn 1');
   assert(r2.scenarioState.directGroups?.length === 2, 'T2 directGroups UI projection has 2 groups (Turn 1 committed + Turn 2 projected)');
-  const t2EquityCredit = r2.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
+  const t2EquityCredit = r2.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
   assert(t2EquityCredit === 1000, `T2 cumulative Share Capital credit must remain 1,000, got ${t2EquityCredit}`);
   const t2RemParam = r2.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
   assert(t2RemParam?.value.includes('400'), `T2 remaining parameter must indicate 400, got ${t2RemParam?.value}`);
@@ -563,7 +563,7 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   assert(!r3.scenarioState.isHypothetical, 'T3 must be actual');
   assert(r3.scenarioState.directGroups?.length === 2, `T3 directGroups must have exactly 2 groups (Turn 1 initial and Turn 3 actual settlement, NOT Turn 2 hypothetical!), got ${r3.scenarioState.directGroups?.length}`);
   assert(r3.scenarioState.committedDirectGroups?.length === 2, `T3 committedDirectGroups must have 2 groups, got ${r3.scenarioState.committedDirectGroups?.length}`);
-  const t3EquityCredit = r3.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
+  const t3EquityCredit = r3.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
   assert(t3EquityCredit === 1000, `T3 cumulative Share Capital credit must remain 1,000 throughout, got ${t3EquityCredit}`);
   const t3RemParam = r3.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
   assert(t3RemParam?.value.includes('600'), `T3 remaining balance must be 600 (not 0!), got ${t3RemParam?.value}`);
@@ -576,7 +576,7 @@ console.log('--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
   assert(r4.scenarioState.isHypothetical === true, 'T4 must be hypothetical');
   assert(r4.scenarioState.committedDirectGroups?.length === 2, 'T4 committedDirectGroups must remain 2');
   assert(r4.scenarioState.directGroups?.length === 3, 'T4 directGroups UI projection has 3 groups (Turn 1 + Turn 3 committed + Turn 4 projected)');
-  const t4EquityCredit = r4.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
+  const t4EquityCredit = r4.scenarioState.directGroups.reduce((s, g) => s + g.lines.reduce((sub, l) => sub + (l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0);
   assert(t4EquityCredit === 1000, `T4 cumulative Share Capital credit must remain 1,000 throughout, got ${t4EquityCredit}`);
   const t4RemParam = r4.scenarioState.keyParameters?.find(p => p.label === 'Remaining Balance');
   assert(t4RemParam?.value.includes('400'), `T4 remaining balance must project 400, got ${t4RemParam?.value}`);
@@ -928,7 +928,7 @@ console.log('--- TEST 17: True End-to-End Multi-Turn Replay Equivalence (4-Turn 
 
   // INVARIANT 1: Share Capital is recognized EXACTLY once ($1,000) across all 4 journals
   const totalShareCapitalCredit = r4.scenarioState.directGroups.reduce((acc, g) =>
-    acc + g.lines.reduce((sub, l) => sub + (l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0
+    acc + g.lines.reduce((sub, l) => sub + (l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital') ? l.credit : 0), 0), 0
   );
   assert(totalShareCapitalCredit === 1000, `Cumulative Share Capital credit must remain exactly 1,000, got ${totalShareCapitalCredit}`);
 
@@ -975,4 +975,3 @@ console.log('--- TEST 17: True End-to-End Multi-Turn Replay Equivalence (4-Turn 
 console.log('================================================================');
 console.log(`🎉 ALL ${testsPassed} MULTI-TURN ACCOUNTING STATE TESTS PASSED!`);
 console.log('================================================================\n');
-

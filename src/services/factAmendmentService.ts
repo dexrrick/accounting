@@ -21,7 +21,7 @@ export interface FollowUpResolution {
 const CORRECTION_MARKER = /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead|not\s+\S+\s+but)\b/i;
 
 function parseAmount(query: string): number | undefined {
-  const match = query.match(/(?:sgd|usd|eur|gbp|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i);
+  const match = query.match(/(?:sgd|usd|eur|gbp|\$)?\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand)\b)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i);
   if (!match?.[1]) return undefined;
   let amount = Number(match[1].replace(/,/g, ''));
   const magnitude = match[2]?.toLowerCase();

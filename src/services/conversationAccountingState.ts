@@ -191,6 +191,9 @@ export function resolveSettlementTarget(
   const candidateScores: CandidateScore[] = [];
 
   for (const b of context.outstandingBalances) {
+    if (criteria.transactionId && b.transactionId?.toLowerCase().trim() !== criteria.transactionId.toLowerCase().trim()) continue;
+    if (criteria.currency && b.currency.toUpperCase() !== criteria.currency.toUpperCase()) continue;
+    if (b.remainingAmount <= 0) continue;
     let score = 0;
     const rationales: string[] = [];
 
@@ -477,7 +480,7 @@ export function extractAccountingContext(
     priorUnderlying?.quantity;
 
   const underlyingTransaction: UnderlyingTransactionState | undefined = currentScenario ? {
-    transactionId: currentScenario.transactionId || priorUnderlying?.transactionId || 'tx-1',
+    transactionId: currentScenario.transactionId || priorUnderlying?.transactionId || priorJournals[0]?.transactionId,
     type: resolvedTxType,
     subject: currentScenario.transactionTitle || priorUnderlying?.subject || 'Commercial Transaction',
     ownershipContext,
@@ -549,11 +552,19 @@ export function calculateAccountingDelta(
       return null;
     }
 
-    const initialCostSGD = Math.round(((tx.totalAmount || 0) * (tx.acquisitionFxRate || 1)) * 100) / 100;
-    const proceedsSGD = tx.disposalAmount ? Math.round((tx.disposalAmount * (tx.disposalFxRate || 1)) * 100) / 100 : 0;
+    if (!tx.transactionId || !tx.currency || !tx.functionalCurrency ||
+        !Number.isFinite(tx.totalAmount) || !tx.totalAmount || tx.totalAmount <= 0 ||
+        !Number.isFinite(tx.acquisitionFxRate) || !tx.acquisitionFxRate || tx.acquisitionFxRate <= 0 ||
+        (tx.disposalAmount !== undefined && tx.disposalAmount > 0 &&
+          (!Number.isFinite(tx.disposalFxRate) || !tx.disposalFxRate || tx.disposalFxRate <= 0))) {
+      return null;
+    }
+
+    const initialCostSGD = Math.round(tx.totalAmount * tx.acquisitionFxRate * 100) / 100;
+    const proceedsSGD = tx.disposalAmount ? Math.round(tx.disposalAmount * tx.disposalFxRate! * 100) / 100 : 0;
     const totalOciGain = proceedsSGD ? Math.round((proceedsSGD - initialCostSGD) * 100) / 100 : 0;
     const assetTitle = tx.assetName || 'Equity Investments';
-    const txCurr = tx.currency || 'USD';
+    const txCurr = tx.currency;
 
     const lines: JournalLine[] = [];
     if (targetBasis === 'FVOCI') {
@@ -624,9 +635,9 @@ export function calculateAccountingDelta(
         );
       }
     } else if (targetBasis === 'FVTPL') {
-      const stockGainSGD = tx.disposalAmount ? Math.round(((tx.disposalAmount - (tx.totalAmount || 0)) * (tx.disposalFxRate || 1)) * 100) / 100 : 0;
+      const stockGainSGD = tx.disposalAmount ? Math.round((tx.disposalAmount - tx.totalAmount) * tx.disposalFxRate! * 100) / 100 : 0;
       const fxGainSGD = (tx.disposalAmount && tx.acquisitionFxRate && tx.disposalFxRate)
-        ? Math.round(((tx.totalAmount || 0) * (tx.disposalFxRate - tx.acquisitionFxRate)) * 100) / 100
+        ? Math.round(tx.totalAmount * (tx.disposalFxRate - tx.acquisitionFxRate) * 100) / 100
         : 0;
 
       lines.push(
@@ -714,7 +725,7 @@ export function calculateAccountingDelta(
       targetBalanceKey: undefined,
       resultingAccountingEvent: {
         id: `evt-hypo-${Date.now()}`,
-        transactionId: tx.transactionId || 'tx-1',
+        transactionId: tx.transactionId,
         targetTransactionId: tx.transactionId,
         type: 'hypothetical_branch',
         description: `Hypothetical ${targetBasis} measurement projection`,
@@ -751,6 +762,7 @@ export function calculateAccountingDelta(
     accountName: eventAnalysis.targetOutstandingAccount,
     counterpartyRole,
     nature: eventAnalysis.targetCriteria?.nature || 'RECEIVABLE',
+    transactionId: eventAnalysis.targetTransactionId || eventAnalysis.targetCriteria?.transactionId,
     queryTokens,
     currency,
     amount: eventAnalysis.settlementAmount
@@ -771,10 +783,12 @@ export function calculateAccountingDelta(
   ) / 100;
 
   const previousBalance = targetBalance.remainingAmount;
-  const isOverpayment = settlementAmount > previousBalance;
+  // The excess could be an advance, prepayment, or payment error. Do not
+  // choose its account without an authoritative fact from the user.
+  if (settlementAmount > previousBalance) return null;
   const isPartial = settlementAmount < previousBalance;
   const resolvedEventType: AccountingEventType = isPartial ? 'partial_settlement' : 'settlement';
-  const effectiveSettledOnReceivable = isOverpayment ? previousBalance : settlementAmount;
+  const effectiveSettledOnReceivable = settlementAmount;
   const resultingBalance = Math.max(0, Math.round((previousBalance - settlementAmount) * 100) / 100);
 
   const isReceivable = targetBalance.nature === 'RECEIVABLE' || targetBalance.category === 'ASSET';
@@ -818,22 +832,11 @@ export function calculateAccountingDelta(
     }
   ];
 
-  if (isOverpayment) {
-    const excess = Math.round((settlementAmount - previousBalance) * 100) / 100;
-    lines.push({
-      id: 'l-settle-excess',
-      accountCode: '2050',
-      accountName: 'Other Payables / Shareholder Advance',
-      category: 'LIABILITY',
-      debit: 0,
-      credit: excess,
-      lineExplanation: `Excess funds received beyond outstanding receivable (${currency} ${excess.toFixed(2)}) held as payable`
-    });
-  }
-
   const prefix = eventAnalysis.isHypothetical ? 'Hypothetical' : 'Subsequent';
   const explanation = `${prefix} settlement of outstanding ${targetBalance.accountName} via bank transfer. ` +
-    `Note: Share Capital is NOT credited again because it was already recognized upon allotment. ` +
+    (targetBalance.counterpartyRole === 'shareholder' && targetBalance.nature === 'RECEIVABLE'
+      ? 'Share Capital is not credited again because it was recognized on allotment. '
+      : '') +
     `Remaining balance on ${targetBalance.accountName}: ${currency} ${resultingBalance.toFixed(2)}.`;
 
   settlementEventCounter++;
@@ -890,7 +893,7 @@ export function validateAccountingStateTransition(
   // Share Capital must NOT be credited again!
   if (eventType === 'settlement' || eventType === 'partial_settlement') {
     const creditsShareCapital = proposedLines.some(
-      l => l.credit > 0 && l.accountName.toLowerCase().includes('share capital')
+      l => l.credit > 0 && l.category === 'EQUITY' && l.accountName.toLowerCase().includes('share capital')
     );
     if (creditsShareCapital && context.recognizedEquityTotal > 0) {
       violations.push(
@@ -971,4 +974,3 @@ export function commitAccountingEvent(
 
   return [...committedList, eventToCommit];
 }
-

@@ -77,9 +77,9 @@ export function calculateDoubleEntries(
   // =========================================================================
   // SCENARIO 1: GENERAL OPERATING EXPENSES (Entertainment, Travel, Utilities, etc.)
   // =========================================================================
-  if (scenario.scenarioType === 'GENERAL_EXPENSE' || (scenario.amount && scenario.amount > 0 && !scenario.purchaseAmountForeign && !scenario.leasePaymentMonthly)) {
-    const amt = scenario.amount || 3000;
-    const expenseTitle = scenario.expenseAccountName || 'Entertainment & Hospitality Expenses';
+  if (scenario.scenarioType === 'GENERAL_EXPENSE' && scenario.isComplete && scenario.amount !== undefined && scenario.amount > 0 && scenario.expenseAccountName) {
+    const amt = scenario.amount;
+    const expenseTitle = scenario.expenseAccountName;
     const paymentAccount = scenario.paymentMethodAccountName || 'Cash at Bank (Current Account)';
 
     const lines: JournalLine[] = [

@@ -194,30 +194,31 @@ export function assembleDeterministicResponse(
   const priorCommittedGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
     ? [...currentScenario.committedDirectGroups]
     : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
+  const settlementCurrency = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
+  const settlementDelta = isSettlementFollowUp
+    ? calculateAccountingDelta(extractAccountingContext(currentScenario), followUp!, settlementCurrency)
+    : null;
 
   // Never let a model fill a settlement gap with a generic journal.  A
   // settlement is permissible only when the committed state contains one
   // resolvable outstanding balance.  This check deliberately happens before
   // accepting either deterministic fallback groups or AI-supplied groups.
-  if (isSettlementFollowUp && !hasAuthoritativeDeterministicEntries) {
-    const convContext = extractAccountingContext(currentScenario);
-    const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
-    const settlementDelta = calculateAccountingDelta(convContext, followUp!, curr);
+  if (isSettlementFollowUp) {
     if (!settlementDelta?.resultingAccountingEvent) {
       const baseState = currentScenario || deterministicScenario;
-      const clarification = 'I cannot post a settlement journal because this conversation has no uniquely identified outstanding receivable or payable to settle. Please provide or confirm the original allotment, invoice, loan, or other transaction first.';
+      const clarification = 'I cannot post a settlement journal because the payment does not match one outstanding balance, or it exceeds that balance. Please identify the original transaction, confirm the settlement amount, and explain any excess.';
       return {
         messageText: `### Clarification Required\n\n${clarification}`,
         scenarioState: {
           ...(baseState || {
             scenarioType: 'UNRECOGNIZED',
             transactionTitle: 'Settlement Requires an Outstanding Balance',
-            functionalCurrency: curr,
-            transactionCurrency: curr
+            functionalCurrency: settlementCurrency,
+            transactionCurrency: settlementCurrency
           }),
           rawQuery: userInput,
           authorityStatus: 'CONDITIONAL',
-          directGroups: priorCommittedGroups,
+          directGroups: [],
           committedDirectGroups: priorCommittedGroups,
           projectedGroups: undefined,
           isComplete: false,
@@ -243,28 +244,25 @@ export function assembleDeterministicResponse(
     followUp &&
     (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')
   ) {
-    const convContext = extractAccountingContext(currentScenario);
-    const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
-    const delta = calculateAccountingDelta(convContext, followUp, curr);
+    const delta = settlementDelta;
     if (delta && delta.resultingAccountingEvent) {
       const isHypo = Boolean(delta.isHypothetical);
+      const totalDebit = Math.round(delta.journalLines.reduce((sum, line) => sum + line.debit, 0) * 100) / 100;
+      const totalCredit = Math.round(delta.journalLines.reduce((sum, line) => sum + line.credit, 0) * 100) / 100;
       const settlementGroup: JournalEntryGroup = {
         id: `grp-followup-settlement-${priorCommittedGroups.length + 1}`,
         transactionId: delta.resultingAccountingEvent.transactionId,
         targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
         isHypothetical: isHypo,
         eventDate: formatSingaporeDate(new Date()),
-        title: isHypo ? 'Hypothetical Settlement of Allotment Receivable' : 'Settlement of Shareholder Allotment Receivable',
+        title: `${isHypo ? 'Hypothetical ' : ''}Settlement of ${delta.balanceUpdates[0].accountName}`,
         summary: delta.explanation,
         lines: delta.journalLines,
-        totalDebit: delta.amount,
-        totalCredit: delta.amount,
-        isBalanced: true,
+        totalDebit,
+        totalCredit,
+        isBalanced: totalDebit > 0 && Math.abs(totalDebit - totalCredit) < 0.01,
         citations: verifiedCitations,
-        rationalePoints: [
-          'Under SFRS(I) 1-32 §33 and Singapore Companies Act 1967 §68, Share Capital was already credited and recognized upon allotment.',
-          `Receipt of payment via bank transfer extinguishes the outstanding ${followUp.targetOutstandingAccount || 'receivable'} and debits Cash at Bank.`
-        ],
+        rationalePoints: [delta.explanation],
         authorityStatus: 'AI_PROPOSED'
       };
 
@@ -430,7 +428,7 @@ export function assembleDeterministicResponse(
       const validation = validateAccountingStateTransition(convContext, grp.lines, followUp.eventType);
       if (!validation.isValid && validation.violations.some(v => v.includes('GUARDRAIL_VIOLATION_DUPLICATE_EQUITY'))) {
         for (const line of grp.lines) {
-          if (line.credit > 0 && line.accountName.toLowerCase().includes('share capital')) {
+          if (line.credit > 0 && line.category === 'EQUITY' && line.accountName.toLowerCase().includes('share capital')) {
             line.accountCode = '1150';
             line.accountName = 'Amount Due from Shareholder (Receivable)';
             line.category = 'ASSET';
@@ -522,9 +520,7 @@ export function assembleDeterministicResponse(
     }
 
     if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {
-      const convContext = extractAccountingContext(currentScenario);
-      const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
-      const delta = calculateAccountingDelta(convContext, followUp, curr);
+      const delta = settlementDelta;
       if (delta) {
         keyParameters.push({
           label: 'Settlement Amount',
@@ -735,8 +731,7 @@ export function assembleDeterministicResponse(
 
   if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {
     const convContext = extractAccountingContext(currentScenario);
-    const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
-    const delta = calculateAccountingDelta(convContext, followUp, curr);
+    const delta = settlementDelta;
     if (delta && delta.resultingAccountingEvent) {
       isHypoScenario = Boolean(delta.isHypothetical);
       resolvedAmount = delta.amount;

@@ -157,6 +157,59 @@ export async function parseAccountingQuery(
   query: string,
   currentScenario?: AccountingScenarioState | null
 ): Promise<AccountingScenarioState> {
+  // Resolve an answer to the prior consideration question against the facts
+  // already supplied. A short answer need not repeat the entire allotment.
+  if (currentScenario?.missingFields?.some(field => field.fieldKey === 'considerationType')) {
+    const saysUnpaid = /\b(no\s+(?:monetary|cash)\s+payment|unpaid|not\s+paid|nothing\s+(?:has\s+been\s+)?paid)\b/i.test(query);
+    const saysInKind = /\b(non[ -]?cash|in[ -]?kind|equipment|asset|property)\b/i.test(query);
+    if (saysUnpaid !== saysInKind) {
+      const clarifiedPhrase = saysUnpaid ? 'no monetary payment has been made' : 'non-cash consideration was delivered';
+      const originalQuery = currentScenario.rawQuery.replace(/\bnon\s+monetary\s+payment(?:\s+has\s+been\s+made)?\b/i, clarifiedPhrase);
+      return parseAccountingQuery(originalQuery, null);
+    }
+    return {
+      ...currentScenario,
+      directGroups: [],
+      isComplete: false
+    };
+  }
+  if (currentScenario?.scenarioType.startsWith('SHARE_CAPITAL') &&
+      currentScenario.missingFields?.some(field => field.fieldKey === 'amount')) {
+    const amountMatch = query.match(/(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand)\b)?/i);
+    if (amountMatch?.[1]) {
+      let amount = Number(amountMatch[1].replace(/,/g, ''));
+      const magnitude = amountMatch[2]?.toLowerCase();
+      if (magnitude === 'k' || magnitude === 'thousand') amount *= 1000;
+      if (magnitude === 'm' || magnitude === 'million') amount *= 1000000;
+      if (Number.isFinite(amount) && amount > 0) {
+        return parseAccountingQuery(`${currentScenario.rawQuery} SGD ${amount}`, null);
+      }
+    }
+    return { ...currentScenario, directGroups: [], isComplete: false };
+  }
+  if (currentScenario?.scenarioType.startsWith('SHARE_CAPITAL') &&
+      currentScenario.missingFields?.some(field => field.fieldKey === 'paymentStatus')) {
+    const unpaid = /\b(unpaid|not\s+paid|no\s+(?:cash|monetary)\s+payment)\b/i.test(query);
+    const paid = /\b(paid|received|transferred)\b/i.test(query) && !unpaid;
+    if (unpaid !== paid) {
+      return parseAccountingQuery(`${currentScenario.rawQuery} ${unpaid ? 'unpaid' : 'paid by bank'}`, null);
+    }
+    return { ...currentScenario, directGroups: [], isComplete: false };
+  }
+  if (currentScenario?.scenarioType === 'GENERAL_EXPENSE' &&
+      currentScenario.missingFields?.some(field => field.fieldKey === 'amount')) {
+    const amountMatch = query.match(/(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand)\b)?/i);
+    if (amountMatch?.[1]) {
+      let amount = Number(amountMatch[1].replace(/,/g, ''));
+      const magnitude = amountMatch[2]?.toLowerCase();
+      if (magnitude === 'k' || magnitude === 'thousand') amount *= 1000;
+      if (magnitude === 'm' || magnitude === 'million') amount *= 1000000;
+      if (Number.isFinite(amount) && amount > 0) {
+        return parseAccountingQuery(`${currentScenario.rawQuery} SGD ${amount}`, null);
+      }
+    }
+    return { ...currentScenario, directGroups: [], isComplete: false };
+  }
   const amendmentResolution = resolveFactAmendment(query, currentScenario);
   if (currentScenario && amendmentResolution.intent === 'FACT_AMENDMENT' && amendmentResolution.clarificationNeeded) {
     return {
@@ -728,7 +781,10 @@ export async function parseAccountingQuery(
         }]
       };
     }
-    const isPaid = !explicitlyNoMonetaryPayment && (isInKind || /\b(paid|payment has been made|settled|delivered)\b/i.test(q));
+    const explicitlyUnpaid = explicitlyNoMonetaryPayment || /\b(unpaid|not\s+paid|payment\s+pending)\b/i.test(q);
+    const explicitlyPaid = isInKind || /\b(paid|payment has been made|settled|delivered)\b/i.test(q);
+    const paymentKnown = explicitlyUnpaid || explicitlyPaid;
+    const isPaid = !explicitlyUnpaid && explicitlyPaid;
     const hasAmount = Boolean(contributionAmount && contributionAmount > 0);
     const amount = contributionAmount || 0;
     const debitAccount = isPaid
@@ -761,9 +817,9 @@ export async function parseAccountingQuery(
       statutoryAdvisory: [convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ACRA_SEC68_NO_PAR_VALUE_SHARES)],
       keyParameters: [
         { label: 'Consideration', value: hasAmount ? `${functionalCurrency} ${amount.toLocaleString()}` : 'Pending valuation', badge: hasAmount ? 'Stated Fact' : 'Missing Fact' },
-        { label: 'Consideration Type', value: isInKind ? 'Non-cash / in-kind' : (isPaid ? 'Cash' : 'Unpaid subscription'), badge: 'Classification' }
+        { label: 'Consideration Type', value: isInKind ? 'Non-cash / in-kind' : (!paymentKnown ? 'Payment status unknown' : (isPaid ? 'Cash' : 'Unpaid subscription')), badge: paymentKnown ? 'Classification' : 'Missing Fact' }
       ],
-      directGroups: [{
+      directGroups: hasAmount && paymentKnown ? [{
         id: 'grp-share-capital-subscription',
         transactionId,
         eventDate: formatSingaporeDate(new Date()),
@@ -782,9 +838,17 @@ export async function parseAccountingQuery(
           'The reporting entity’s own shares are equity, not a financial asset.',
           isInKind ? 'Confirm the nature and fair value of the contributed non-cash asset before posting the final asset account.' : 'The debit reflects the consideration received or receivable from the shareholder.'
         ]
-      }],
-      isComplete: hasAmount && !isInKind,
-      missingFields: isInKind ? [{ fieldKey: 'nonCashAssetDescription', fieldName: 'Non-cash asset identification and valuation', prompt: 'What non-cash asset was contributed, and what is its supportable fair value?', whyNeeded: 'The debit account and measurement must reflect the actual asset received.' }] : []
+      }] : [],
+      isComplete: hasAmount && paymentKnown && !isInKind,
+      missingFields: !hasAmount ? [{
+        fieldKey: 'amount', fieldName: 'Share subscription amount',
+        prompt: 'What amount of share capital was subscribed?',
+        whyNeeded: 'The subscription amount is required for both sides of the journal.'
+      }] : !paymentKnown ? [{
+        fieldKey: 'paymentStatus', fieldName: 'Share subscription payment status',
+        prompt: 'Was the share subscription paid into the company bank, or is it still unpaid?',
+        whyNeeded: 'Cash received and an outstanding shareholder receivable require different debit accounts.'
+      }] : isInKind ? [{ fieldKey: 'nonCashAssetDescription', fieldName: 'Non-cash asset identification and valuation', prompt: 'What non-cash asset was contributed, and what is its supportable fair value?', whyNeeded: 'The debit account and measurement must reflect the actual asset received.' }] : []
     };
   }
 
@@ -1640,7 +1704,7 @@ export async function parseAccountingQuery(
 
   if (isGeneralExpense) {
     // Extract amount: e.g. "3k", "3,000", "$3000", "sgd 3k"
-    let expenseAmount = 3000;
+    let expenseAmount: number | undefined;
     const amtMatch = query.match(/(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i);
     if (amtMatch && amtMatch[1]) {
       let rawVal = parseFloat(amtMatch[1].replace(/,/g, ''));
@@ -1678,7 +1742,9 @@ export async function parseAccountingQuery(
       transactionTitle: `Payment of ${expenseTitle}`,
       functionalCurrency,
       transactionCurrency: functionalCurrency,
-      accountingTreatmentSummary: `Under SFRS(I) 1-1 §28 accrual basis, ${expenseTitle} of ${functionalCurrency} ${expenseAmount.toLocaleString()} is recognized as an operating expense in profit or loss when economic benefits are consumed, matched with a credit to ${paymentMethod}.`,
+      accountingTreatmentSummary: expenseAmount
+        ? `Under SFRS(I) 1-1 §28 accrual basis, ${expenseTitle} of ${functionalCurrency} ${expenseAmount.toLocaleString()} is recognized as an operating expense in profit or loss when economic benefits are consumed, matched with a credit to ${paymentMethod}.`
+        : `The payment amount is required before a journal for ${expenseTitle} can be calculated.`,
       singaporeTaxTreatmentSummary: `Deductible under Section 14(1) of the Income Tax Act 1947 if wholly and exclusively incurred in the production of business income. Non-business, personal, or fine expenses are prohibited under Section 15 and must be added back in Form C-S.`,
       regulatoryMandatesSummary: 'Receipts and supporting documents must be maintained for 5 years under Section 199 of the Companies Act 1967.',
       effectiveDateOrTiming: 'Current Year of Assessment (YA).',
@@ -1687,8 +1753,13 @@ export async function parseAccountingQuery(
       amount: expenseAmount,
       assetName: expenseTitle,
       purchaseDate: new Date().toISOString().slice(0, 10),
-      isComplete: true,
-      missingFields: []
+      isComplete: expenseAmount !== undefined,
+      missingFields: expenseAmount === undefined ? [{
+        fieldKey: 'amount',
+        fieldName: 'Expense payment amount',
+        prompt: `What amount was paid for ${expenseTitle}?`,
+        whyNeeded: 'The debit and credit amounts cannot be calculated without the actual payment amount.'
+      }] : []
     };
   }
 
@@ -1821,17 +1892,14 @@ export async function parseAccountingQuery(
             targetTransactionId: resultingEvent.targetTransactionId,
             isHypothetical: isHypo,
             eventDate: formatSingaporeDate(new Date()),
-            title: isHypo ? 'Hypothetical Settlement of Allotment Receivable' : 'Settlement of Allotment Receivable',
+            title: `${isHypo ? 'Hypothetical ' : ''}Settlement of ${delta.balanceUpdates[0].accountName}`,
             summary: delta.explanation,
             lines: delta.journalLines,
-            totalDebit: delta.amount,
-            totalCredit: delta.amount,
-            isBalanced: true,
+            totalDebit: Math.round(delta.journalLines.reduce((sum, line) => sum + line.debit, 0) * 100) / 100,
+            totalCredit: Math.round(delta.journalLines.reduce((sum, line) => sum + line.credit, 0) * 100) / 100,
+            isBalanced: Math.abs(delta.journalLines.reduce((sum, line) => sum + line.debit - line.credit, 0)) < 0.01,
             citations: [],
-            rationalePoints: [
-              'Under SFRS(I) 1-32 §33 and Companies Act 1967 §68, Share Capital was already recognized upon allotment.',
-              'Settlement via bank transfer derecognizes the receivable and debits Cash at Bank.'
-            ],
+            rationalePoints: [delta.explanation],
             authorityStatus: 'DETERMINISTIC'
           };
 
@@ -1869,7 +1937,7 @@ export async function parseAccountingQuery(
             functionalCurrency,
             transactionCurrency: delta.currency,
             accountingTreatmentSummary: delta.explanation,
-            singaporeTaxTreatmentSummary: 'Allotment of share capital and subsequent settlement of capital receivable have no corporate income tax implications under the Singapore Income Tax Act 1947.',
+            singaporeTaxTreatmentSummary: currentScenario.singaporeTaxTreatmentSummary,
             amount: delta.amount,
             directGroups,
             committedDirectGroups,
@@ -1879,13 +1947,27 @@ export async function parseAccountingQuery(
             isHypothetical: isHypo,
             keyParameters: [
               { label: 'Settlement Amount', value: `${delta.currency} ${delta.amount.toFixed(2)}`, badge: isHypo ? 'Hypothetical' : 'Settlement' },
-              { label: 'Settled Account', value: delta.balanceUpdates[0]?.accountName || 'Amount Due from Shareholder', badge: 'Receivable' },
+              { label: 'Settled Account', value: delta.balanceUpdates[0].accountName, badge: 'Balance' },
               { label: 'Remaining Balance', value: `${delta.currency} ${remainingAmount.toFixed(2)}`, badge: 'Balance' }
             ],
             isComplete: true,
             missingFields: []
           };
         }
+        return {
+          ...currentScenario,
+          rawQuery: query,
+          authorityStatus: 'CONDITIONAL',
+          directGroups: [],
+          projectedGroups: undefined,
+          isComplete: false,
+          missingFields: [{
+            fieldKey: 'settlementTarget',
+            fieldName: 'Settlement target or excess amount',
+            prompt: 'I could not match this payment to one outstanding balance, or the payment exceeds that balance. Please identify the original transaction and confirm the settlement amount and treatment of any excess.',
+            whyNeeded: 'A settlement must reduce an identified balance by a supportable amount.'
+          }]
+        };
       } else if (
         understanding.followUpAnalysis &&
         (understanding.followUpAnalysis.eventType === 'hypothetical_branch' ||
