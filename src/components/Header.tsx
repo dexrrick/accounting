@@ -21,7 +21,7 @@ import {
   History
 } from 'lucide-react';
 import type { ProviderSettings, AIProviderType } from '../types/provider';
-import { defaultLiveRegulatoryFeedService, type LiveSyncState } from '../retrieval/liveRegulatoryFeed';
+import { defaultLiveRegulatoryFeedService, type LiveSyncState, type RegulatoryUpdatePackage } from '../retrieval/liveRegulatoryFeed';
 import { defaultSourceVersioningManager } from '../standards/sourceVersioning';
 import { getAllAuthoritativeSources } from '../standards/unifiedSourceModel';
 
@@ -51,6 +51,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [integrityDetails, setIntegrityDetails] = useState<string>('');
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<string>('');
+  const [updatePackages, setUpdatePackages] = useState<RegulatoryUpdatePackage[]>([]);
+  const [updateAction, setUpdateAction] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AIProviderType>(providerSettings.activeProvider);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -173,8 +175,10 @@ export const Header: React.FC<HeaderProps> = ({
       const res = await defaultLiveRegulatoryFeedService.checkForUpdates();
       setLiveSyncState(res.syncState);
       if (res.hasUpdates) {
+        setUpdatePackages(res.packages);
         setUpdateMessage(`Discovered ${res.packages.length} pending regulatory update package(s) ready for staging & verification.`);
       } else {
+        setUpdatePackages([]);
         setUpdateMessage('All Singapore statutory provisions are verified and aligned with the official government baseline.');
       }
     } catch (err: any) {
@@ -182,6 +186,44 @@ export const Header: React.FC<HeaderProps> = ({
     } finally {
       setIsCheckingUpdates(false);
     }
+  };
+
+  const handleStagePackage = async (pkg: RegulatoryUpdatePackage) => {
+    setUpdateAction(pkg.packageId);
+    const result = await defaultLiveRegulatoryFeedService.stageUpdatePackage(pkg);
+    setLiveSyncState(defaultLiveRegulatoryFeedService.getSyncState());
+    setUpdateMessage(result.success
+      ? `Staged ${result.stagedRecordsCount} record(s) from ${pkg.packageId}. Review the official source, then verify.`
+      : `Unable to stage ${pkg.packageId}: ${result.error}`);
+    setUpdateAction(null);
+  };
+
+  const handleVerifyPackage = async (pkg: RegulatoryUpdatePackage) => {
+    setUpdateAction(pkg.packageId);
+    const result = await defaultLiveRegulatoryFeedService.retrieveAndVerifyStagedPackage(pkg.packageId);
+    setLiveSyncState(defaultLiveRegulatoryFeedService.getSyncState());
+    setUpdateMessage(result.isValid
+      ? `Verified ${result.verifiedRecordsCount} record(s) from ${pkg.packageId}. It is ready to activate.`
+      : `Verification failed for ${pkg.packageId}: ${result.rejectionReason}`);
+    setUpdateAction(null);
+  };
+
+  const handleActivatePackage = async (pkg: RegulatoryUpdatePackage) => {
+    setUpdateAction(pkg.packageId);
+    const result = await defaultLiveRegulatoryFeedService.activateUpdatePackage(pkg.packageId);
+    setLiveSyncState(defaultLiveRegulatoryFeedService.getSyncState());
+    if (result.success) setUpdatePackages(items => items.filter(item => item.packageId !== pkg.packageId));
+    setUpdateMessage(result.success
+      ? `Activated ${result.activatedRecordsCount} verified record(s) from ${pkg.packageId}.`
+      : `Unable to activate ${pkg.packageId}: ${result.error}`);
+    setUpdateAction(null);
+  };
+
+  const handleRejectPackage = (pkg: RegulatoryUpdatePackage) => {
+    defaultLiveRegulatoryFeedService.rejectUpdatePackage(pkg.packageId);
+    setUpdatePackages(items => items.filter(item => item.packageId !== pkg.packageId));
+    setLiveSyncState(defaultLiveRegulatoryFeedService.getSyncState());
+    setUpdateMessage(`Rejected ${pkg.packageId}. The active registry was not changed.`);
   };
 
   const handleOpenSettings = () => {
@@ -909,6 +951,45 @@ export const Header: React.FC<HeaderProps> = ({
                 {updateMessage && (
                   <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 rounded-lg text-xs text-blue-800 dark:text-blue-200">
                     {updateMessage}
+                  </div>
+                )}
+
+                {updatePackages.length > 0 && (
+                  <div className="space-y-2" aria-label="Discovered regulatory update packages">
+                    {updatePackages.map((pkg) => {
+                      const isStaged = defaultLiveRegulatoryFeedService.getStagedPackages().some(item => item.packageId === pkg.packageId);
+                      const isVerified = defaultLiveRegulatoryFeedService.getVerifiedPackages().some(item => item.packageId === pkg.packageId);
+                      const isWorking = updateAction === pkg.packageId;
+                      return (
+                        <div key={pkg.packageId} className="p-3 bg-white dark:bg-[#1C2538] border border-slate-200 dark:border-[#2B374E] rounded-lg space-y-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-xs text-slate-800 dark:text-slate-100">{pkg.packageId}</p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400">{pkg.authority} · released {pkg.releaseDate} · {pkg.updates.length} record{pkg.updates.length === 1 ? '' : 's'}</p>
+                            </div>
+                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${isVerified ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : isStaged ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-blue-700 bg-blue-50 border-blue-200'}`}>
+                              {isVerified ? 'Verified' : isStaged ? 'Staged' : 'Discovered'}
+                            </span>
+                          </div>
+                          <ul className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1">
+                            {pkg.amendments.map(amendment => <li key={amendment.recordId}>• {amendment.title}: {amendment.summary}</li>)}
+                          </ul>
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            {pkg.updates.map(record => (
+                              <a key={record.id} href={record.officialSourceUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-blue-600 dark:text-blue-300 hover:underline inline-flex items-center gap-1">
+                                Open official source <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {!isStaged && !isVerified && <button onClick={() => handleStagePackage(pkg)} disabled={isWorking} className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-[11px] font-semibold">Stage for review</button>}
+                            {isStaged && !isVerified && <button onClick={() => handleVerifyPackage(pkg)} disabled={isWorking} className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded text-[11px] font-semibold">Verify official document</button>}
+                            {isVerified && <button onClick={() => handleActivatePackage(pkg)} disabled={isWorking} className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded text-[11px] font-semibold">Activate verified update</button>}
+                            <button onClick={() => handleRejectPackage(pkg)} disabled={isWorking} className="px-2.5 py-1 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded text-[11px] font-semibold">Reject</button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

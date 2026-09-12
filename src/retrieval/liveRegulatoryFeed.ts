@@ -481,6 +481,56 @@ export class LiveRegulatoryFeedService {
   }
 
   /**
+   * Re-fetches each staged record from its allowlisted official URL and verifies
+   * the raw documents before they can be activated.  Keeping this here (rather
+   * than in the UI) ensures every caller gets the same provenance safeguards.
+   */
+  public async retrieveAndVerifyStagedPackage(packageId: string): Promise<PackageVerificationResult> {
+    const pkg = this.stagedPackages.get(packageId);
+    if (!pkg) {
+      return {
+        isValid: false,
+        packageId,
+        verifiedRecordsCount: 0,
+        rejectionReason: `Staged package '${packageId}' not found`
+      };
+    }
+
+    const rawDocuments: Record<string, string> = {};
+    for (const rec of pkg.updates) {
+      const result = await this.webRetriever.fetchOfficialSource(rec.officialSourceUrl, {
+        timeoutMs: 5000,
+        useCache: false,
+        expectedHash: rec.documentHash
+      });
+      if (result.status !== 'SUCCESS' || !result.content) {
+        return {
+          isValid: false,
+          packageId,
+          verifiedRecordsCount: 0,
+          failedRecordId: rec.id,
+          rejectionReason: `Could not retrieve an unchanged official document for '${rec.id}': ${result.error || result.status}`
+        };
+      }
+      rawDocuments[rec.id] = result.content;
+    }
+
+    return this.verifyUpdatePackage(packageId, rawDocuments);
+  }
+
+  /** Rejects a candidate without changing the active registry. */
+  public rejectUpdatePackage(packageId: string, reason = 'Rejected during human review'): boolean {
+    const exists = this.stagedPackages.has(packageId) || this.availableFeeds.some((pkg) => pkg.packageId === packageId);
+    if (!exists) return false;
+    this.stagedPackages.delete(packageId);
+    this.verifiedPackages.delete(packageId);
+    this.availableFeeds = this.availableFeeds.filter((pkg) => pkg.packageId !== packageId);
+    this.rejectedPackages.set(packageId, reason);
+    this.syncState = this.availableFeeds.length > 0 ? 'UPDATE_AVAILABLE' : 'SYNCED';
+    return true;
+  }
+
+  /**
    * Activates a verified update package into the active UNIFIED_SOURCE_REGISTRY.
    * ACID Transaction Guarantee: All updates are activated atomically.
    * If any record activation fails in the ledger, all previously activated records
