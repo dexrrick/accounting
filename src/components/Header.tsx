@@ -95,6 +95,21 @@ export const Header: React.FC<HeaderProps> = ({
     }
   }, [showSettings, showRegistryModal]);
 
+  useEffect(() => {
+    const handleScheduledUpdate = (event: Event) => {
+      const result = (event as CustomEvent<{ hasUpdates: boolean; packages: RegulatoryUpdatePackage[]; syncState: LiveSyncState; error?: string }>).detail;
+      setLiveSyncState(result.syncState);
+      if (result.hasUpdates) {
+        setUpdatePackages(result.packages);
+        setUpdateMessage(`Scheduled check found ${result.packages.length} update package(s) requiring review.`);
+      } else if (result.syncState === 'FETCH_FAILED') {
+        setUpdateMessage(`Scheduled official-source check failed: ${result.error || 'review connection and retry manually.'}`);
+      }
+    };
+    window.addEventListener('regulatory-update-actionable', handleScheduledUpdate);
+    return () => window.removeEventListener('regulatory-update-actionable', handleScheduledUpdate);
+  }, []);
+
   const sources = getAllAuthoritativeSources();
   const totalProvisions = sources.length;
   const activeCount = sources.filter(s => s.freshnessStatus === 'ACTIVE_CURRENT' || (!s.freshnessStatus && s.sourceStatus === 'VERIFIED')).length;

@@ -12,14 +12,24 @@ function writeLastChecks(checks: Partial<Record<Authority, number>>): void {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(checks)); } catch { /* storage unavailable */ }
 }
 
+export function getDueAuthorities(lastChecks: Partial<Record<Authority, number>>, now = Date.now()): Authority[] {
+  return [
+    ...DAILY.filter(authority => now - (lastChecks[authority] || 0) >= 86_400_000),
+    ...WEEKLY.filter(authority => now - (lastChecks[authority] || 0) >= 604_800_000)
+  ];
+}
+
 /** Runs only due official checks while the app is open; candidates still require review and activation. */
 export async function runDueRegulatoryChecks(now = Date.now()): Promise<Authority[]> {
   if (typeof window === 'undefined') return [];
   const lastChecks = readLastChecks();
-  const due = [...DAILY.filter(a => now - (lastChecks[a] || 0) >= 86_400_000), ...WEEKLY.filter(a => now - (lastChecks[a] || 0) >= 604_800_000)];
+  const due = getDueAuthorities(lastChecks, now);
   if (due.length === 0) return [];
-  await defaultLiveRegulatoryFeedService.checkForUpdates(undefined, { authorities: due });
+  const result = await defaultLiveRegulatoryFeedService.checkForUpdates(undefined, { authorities: due });
   for (const authority of due) lastChecks[authority] = now;
   writeLastChecks(lastChecks);
+  if (result.hasUpdates || result.syncState === 'FETCH_FAILED') {
+    window.dispatchEvent(new CustomEvent('regulatory-update-actionable', { detail: result }));
+  }
   return due;
 }
