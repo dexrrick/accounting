@@ -856,7 +856,9 @@ export async function parseAccountingQuery(
       };
     }
     const explicitlyUnpaid = explicitlyNoMonetaryPayment || /\b(unpaid|not\s+paid|payment\s+pending)\b/i.test(q);
-    const explicitlyPaid = isInKind || /\b(paid|payment has been made|settled|delivered)\b/i.test(q);
+    // An explicit cash contribution establishes that consideration has been paid;
+    // do not misclassify it as an unpaid subscription merely because “paid” is absent.
+    const explicitlyPaid = isInKind || /\b(cash|paid|payment has been made|settled|delivered)\b/i.test(q);
     const paymentKnown = explicitlyUnpaid || explicitlyPaid;
     const isPaid = !explicitlyUnpaid && explicitlyPaid;
     const hasAmount = Boolean(contributionAmount && contributionAmount > 0);
@@ -1754,6 +1756,35 @@ export async function parseAccountingQuery(
       ],
       isComplete: true,
       missingFields: []
+    };
+  }
+
+  // =========================================================================
+  // SCENARIO A0: REVENUE RECOGNITION ADVISORY (SFRS(I) 15)
+  // =========================================================================
+  if (/\b(revenue recognition|performance obligation|contract (asset|liability)|recognise revenue)\b/i.test(query)) {
+    return {
+      scenarioType: 'STATUTORY_ADVISORY',
+      authorityStatus: 'CONDITIONAL',
+      queryIntent: 'STATUTORY_ADVISORY',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: 'SFRS(I) 15 Revenue Recognition Assessment',
+      functionalCurrency,
+      transactionCurrency: functionalCurrency,
+      accountingTreatmentSummary: 'Identify the contract and distinct performance obligations, determine and allocate the transaction price, then recognise revenue when or as each performance obligation is satisfied.',
+      singaporeTaxTreatmentSummary: 'Financial-reporting timing does not itself determine Singapore income-tax treatment. Review the applicable tax rules and the contract facts separately.',
+      effectiveDateOrTiming: 'Revenue timing depends on transfer of control and the specific contract terms.',
+      uncertaintyDisclaimer: 'Review the contract, variable consideration, payment terms, and whether control transfers over time or at a point in time before posting a journal.',
+      directGroups: [],
+      projectedGroups: [],
+      isComplete: false,
+      missingFields: [{
+        fieldKey: 'revenueContractTerms',
+        fieldName: 'Contract and performance-obligation terms',
+        prompt: 'What is promised to the customer, when does control transfer, and what is the transaction price?',
+        whyNeeded: 'Revenue cannot be measured or timed safely without the contract facts.'
+      }]
     };
   }
 
