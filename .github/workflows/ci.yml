@@ -32,6 +32,9 @@ jobs:
         run: npm run lint
 
       - name: Production Build (TypeScript & Vite)
+        env:
+          # Prefer a GitHub Actions repository variable. A secret also works for existing setups.
+          VITE_FEEDBACK_ENDPOINT: ${{ vars.VITE_FEEDBACK_ENDPOINT || secrets.VITE_FEEDBACK_ENDPOINT }}
         run: npm run build
 
       - name: Execute Complete Regression Test Suite

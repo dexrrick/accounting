@@ -93,6 +93,8 @@ VITE_FEEDBACK_ENDPOINT=https://your-feedback-endpoint.example/submit
 
 The email recipient belongs in that endpoint's secure configuration, not in frontend code. The form also has **Copy report** so a user can preserve the diagnostic payload if delivery is unavailable.
 
+Vite substitutes `VITE_*` values when it builds the browser bundle; adding a GitHub variable does not alter an already-deployed site. For GitHub Actions builds, set the repository variable `VITE_FEEDBACK_ENDPOINT` (or a secret with that name); the included CI workflow passes it to Vite. If the site is deployed through Vercel, Netlify, Cloudflare Pages, or another host connected to GitHub, add the same build-time variable in that host's project settings and redeploy.
+
 ---
 
 ## 📁 Project Structure
