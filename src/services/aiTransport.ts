@@ -9,6 +9,13 @@
 
 import type { ProviderSettings } from '../types/provider';
 
+export const MAX_STRUCTURED_LLM_INPUT_CHARS = 100_000;
+
+/** Never expose upstream response bodies: they may echo credentials or submitted content. */
+export function toSafeProviderError(provider: string, status: number): Error {
+  return new Error(`${provider} request failed with HTTP ${status}. The provider response was withheld for security.`);
+}
+
 export interface StructuredLlmOptions {
   jsonMode?: boolean;
   model?: string;
@@ -42,6 +49,9 @@ export async function executeStructuredLlmCall(
   providerOrApiKey?: ProviderSettings | string,
   options: StructuredLlmOptions = {}
 ): Promise<string> {
+  if (prompt.length + systemInstruction.length > MAX_STRUCTURED_LLM_INPUT_CHARS) {
+    throw new Error(`AI request exceeds the ${MAX_STRUCTURED_LLM_INPUT_CHARS.toLocaleString()} character safety limit.`);
+  }
   const timeoutMs = options.timeoutMs ?? 45000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -95,7 +105,7 @@ export async function executeStructuredLlmCall(
         });
 
         if (!res.ok) {
-          throw new Error(`Azure OpenAI HTTP ${res.status}: ${await res.text()}`);
+          throw toSafeProviderError('Azure OpenAI', res.status);
         }
         const data = await res.json();
         const text = data?.choices?.[0]?.message?.content;
@@ -131,7 +141,7 @@ export async function executeStructuredLlmCall(
         });
 
         if (!res.ok) {
-          throw new Error(`OpenAI HTTP ${res.status}: ${await res.text()}`);
+          throw toSafeProviderError('OpenAI', res.status);
         }
         const data = await res.json();
         const text = data?.choices?.[0]?.message?.content;
@@ -181,7 +191,7 @@ async function callGeminiDirect(
   });
 
   if (!res.ok) {
-    throw new Error(`Gemini API HTTP ${res.status}: ${await res.text()}`);
+    throw toSafeProviderError('Gemini API', res.status);
   }
 
   const data = await res.json();
