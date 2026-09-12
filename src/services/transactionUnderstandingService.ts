@@ -1262,6 +1262,8 @@ CRITICAL CLASSIFICATION INVARIANTS:
      * paymentStatus = "unpaid"
    - If paid, settled, transferred:
      * paymentStatus = "paid"
+   - The words "his", "her", "owner", a currency amount, or "payment" alone are NOT payroll evidence. Classify payroll_payment only when the query establishes an employee/wage/remuneration relationship (for example salary, wages, payroll, CPF, or employee).
+   - For own-equity contributions using equipment, inventory, intellectual property, or other non-cash/in-kind consideration, retain ownershipContext = "own_equity", paymentStatus = "paid" when consideration was delivered, and add the asset description/fair-value support to factsMissing when absent.
 5. CURRENCY:
    - In Singapore context (default), if "$" is used without explicit USD/EUR/etc, set currency.value = "SGD", currency.source = "context_inference", currency.confidence = 0.9.
    - Do NOT assume USD unless explicitly stated ("USD", "US Dollar", "US$").

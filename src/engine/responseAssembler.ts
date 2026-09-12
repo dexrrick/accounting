@@ -20,6 +20,7 @@ import {
   commitAccountingEvent
 } from '../services/conversationAccountingState';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
+import { hasSemanticRoutingConflict } from '../services/semanticScenarioResolver';
 
 export interface CompactStatutoryDecision {
   directAnswer?: string;
@@ -108,11 +109,13 @@ export function assembleDeterministicResponse(
     groundedContext.semanticUnderstanding?.followUpAnalysis?.isHypothetical
   );
 
+  const semanticRoutingConflict = hasSemanticRoutingConflict(deterministicScenario, groundedContext.semanticUnderstanding);
   const hasAuthoritativeDeterministicEntries = Boolean(
     isRecognizedDeterministicFixture &&
     deterministicScenario!.directGroups &&
     deterministicScenario!.directGroups.length > 0 &&
-    !isHypotheticalQuery
+    !isHypotheticalQuery &&
+    !semanticRoutingConflict
   );
 
   const hasMissingFacts = Boolean(
