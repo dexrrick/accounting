@@ -15,6 +15,7 @@ import {
 import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { resolveFactAmendment } from './factAmendmentService';
 
 export interface GeminiResponse {
   messageText: string;
@@ -228,6 +229,20 @@ export async function processAccountingQuery(
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   let apiErrorMessage: string | null = null;
+  const amendmentResolution = resolveFactAmendment(userInput, currentScenario);
+  const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
+    if (!amendmentResolution.amendments?.length) return response;
+    return {
+      ...response,
+      scenarioState: {
+        ...response.scenarioState,
+        factAmendments: [
+          ...(currentScenario?.factAmendments || []),
+          ...amendmentResolution.amendments
+        ]
+      }
+    };
+  };
 
   // 1. Check if query matches an explicit deterministic test fixture
   const isFixture = isDeterministicFixture(userInput);
@@ -248,7 +263,7 @@ export async function processAccountingQuery(
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
 
-      return renderStructuredOfflineResponse(deterministicScenario, standard, null, groundedContext);
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard, null, groundedContext));
     }
   }
 
@@ -258,7 +273,7 @@ export async function processAccountingQuery(
       const active = providerOrApiKey.activeProvider;
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext, deterministicScenario);
+          return attachAmendmentProvenance(await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext, deterministicScenario));
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -266,7 +281,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'gemini' && providerOrApiKey.gemini?.apiKey && providerOrApiKey.gemini.apiKey.trim().length > 10) {
         try {
-          return await callGeminiAPI(
+          return attachAmendmentProvenance(await callGeminiAPI(
             userInput,
             currentScenario,
             standard,
@@ -276,7 +291,7 @@ export async function processAccountingQuery(
             groundedContext,
             deterministicScenario,
             profiler
-          );
+          ));
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Gemini API Error';
@@ -284,7 +299,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'openai' && providerOrApiKey.openai?.apiKey && providerOrApiKey.openai.apiKey.trim().length > 10) {
         try {
-          return await callStandardOpenAI(
+          return attachAmendmentProvenance(await callStandardOpenAI(
             userInput,
             currentScenario,
             standard,
@@ -292,7 +307,7 @@ export async function processAccountingQuery(
             chatHistory,
             groundedContext,
             deterministicScenario
-          );
+          ));
         } catch (err: any) {
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'OpenAI API Error';
@@ -301,7 +316,7 @@ export async function processAccountingQuery(
       }
     } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       try {
-        return await callGeminiAPI(
+        return attachAmendmentProvenance(await callGeminiAPI(
           userInput,
           currentScenario,
           standard,
@@ -311,7 +326,7 @@ export async function processAccountingQuery(
           groundedContext,
           deterministicScenario,
           profiler
-        );
+        ));
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
@@ -323,7 +338,7 @@ export async function processAccountingQuery(
   // 5. Fallback structured offline response rendered from deterministic state
   profiler.recordFallback();
   profiler.recordFirstVisibleResponse();
-  const fallbackResponse = renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage, groundedContext);
+  const fallbackResponse = attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage, groundedContext));
   profiler.logSummary();
   return fallbackResponse;
 }

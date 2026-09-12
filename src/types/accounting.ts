@@ -144,6 +144,7 @@ export interface AccountingScenarioState {
   directGroups?: JournalEntryGroup[];
   committedDirectGroups?: JournalEntryGroup[];
   projectedGroups?: JournalEntryGroup[];
+  factAmendments?: import('../services/factAmendmentService').FactAmendment[];
   authorityStatus?: JournalAuthorityStatus;
 
   // Event-Sourced Accounting State & Multi-Turn History

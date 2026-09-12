@@ -13,6 +13,7 @@ import { classifyQuestion } from '../classification/questionClassifier';
 import { defaultTransactionUnderstandingService } from '../services/transactionUnderstandingService';
 import { extractAccountingContext, calculateAccountingDelta, commitAccountingEvent } from '../services/conversationAccountingState';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
+import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -156,6 +157,26 @@ export async function parseAccountingQuery(
   query: string,
   currentScenario?: AccountingScenarioState | null
 ): Promise<AccountingScenarioState> {
+  const amendmentResolution = resolveFactAmendment(query, currentScenario);
+  if (currentScenario && amendmentResolution.intent === 'FACT_AMENDMENT' && amendmentResolution.clarificationNeeded) {
+    return {
+      ...currentScenario,
+      rawQuery: query,
+      directGroups: [],
+      projectedGroups: undefined,
+      isComplete: false,
+      missingFields: [{
+        fieldKey: 'amendmentTarget',
+        fieldName: 'Corrected accounting fact',
+        prompt: amendmentResolution.clarificationNeeded,
+        whyNeeded: 'A correction cannot be applied until its target fact is identified unambiguously.'
+      }]
+    };
+  }
+  if (currentScenario && amendmentResolution.amendments?.length) {
+    currentScenario = applyFactAmendments(currentScenario, amendmentResolution.amendments);
+    query = buildAmendedQuery(currentScenario, amendmentResolution.amendments);
+  }
   const q = query.toLowerCase();
 
   // 1. Functional Currency detection
