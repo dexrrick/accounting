@@ -1,6 +1,6 @@
 import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption } from '../types/accounting';
 import React from 'react';
-import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText, Calendar, AlertTriangle, Building, Landmark, Info } from 'lucide-react';
+import { ShieldCheck, ExternalLink, Scale, FileText, Calendar, AlertTriangle, Building, Landmark, Info } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import type { OfficialAnswerLink } from '../utils/chatPresentation';
@@ -34,10 +34,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   effectiveDateOrTiming,
   uncertaintyDisclaimer
 }) => {
-  const isSfrs = standard === 'SFRS_I';
-  const authorityName = isSfrs 
-    ? 'Accounting Standards Council (ASC) Singapore & IASB' 
-    : 'International Accounting Standards Board (IASB)';
   const evidenceIncomplete = citations.length === 0 || Boolean(uncertaintyDisclaimer);
   const hasProjection = effectiveDateOrTiming?.toLowerCase().includes('projection') || false;
   const showTaxTreatment = Boolean(singaporeTaxTreatmentSummary);
@@ -429,37 +425,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
             </p>
           </div>
         )}
-
-        {/* Technical In-Depth "Why" Deep Dive */}
-        <div className="p-4 bg-slate-50/80 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-3 shadow-xs">
-          <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 font-semibold text-xs font-sans">
-            <BookCheck className="w-4 h-4 text-slate-400" />
-            <span>Statutory Grounding & Axioms (Why these rules apply)</span>
-          </div>
-
-          <div className="space-y-2 text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
-            <div className="flex items-start gap-2">
-              <Check className="w-3.5 h-3.5 text-ynab-green shrink-0 mt-0.5" />
-              <div>
-                <strong>Statutory Precedence:</strong> In Singapore, corporate reporting follows {authorityName} pursuant to Section 201 of the Companies Act 1967. Tax computations must reconcile accounting profit to taxable profit under the Income Tax Act 1947.
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Check className="w-3.5 h-3.5 text-ynab-green shrink-0 mt-0.5" />
-              <div>
-                <strong>Tax Depreciation vs. Capital Allowances:</strong> Accounting depreciation is an internal estimate and is always added back in tax computation. Tax deductions for fixed assets are governed exclusively by Section 19/19A Capital Allowances.
-              </div>
-            </div>
-
-            <div className="flex items-start gap-2">
-              <Check className="w-3.5 h-3.5 text-ynab-green shrink-0 mt-0.5" />
-              <div>
-                <strong>GST Recovery Divergence:</strong> Being a legitimate business expense under accounting standards does not guarantee GST claimability. Blocked categories under Regulation 26 (e.g. passenger cars, club memberships) must be recognized as non-claimable input GST.
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Supporting notices are available when needed without interrupting the primary analysis. */}
         {assumptions.length > 0 && (
