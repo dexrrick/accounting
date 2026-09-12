@@ -73,6 +73,25 @@ console.log('--- TEST A: Full End-to-End User Turn 1 -> Turn 2 (FVOCI Follow-Up)
   assert(!r2.messageText.includes('⚠️ **Pending Valuation**'), 'Message must not contain Pending Valuation balance check');
   assert(!r2.messageText.includes('Amounts pending: Transaction amounts/fair values were not specified'), 'Message must not state amounts pending');
 
+  // Natural corrections to the displayed classification must be treated as
+  // a request for a projected journal, not as a numeric fact amendment.
+  const r2Casual = await processAccountingQuery(
+    'double entry shows FVTPL not FVOCI which is not what I want',
+    r1.scenarioState,
+    'SFRS_I'
+  );
+  assert(r2Casual.scenarioState.projectedMeasurementBasis === 'FVOCI', 'Casual FVOCI correction must request an FVOCI projection');
+  assert(r2Casual.scenarioState.directGroups?.every(group => group.lines.every(line => !line.accountName.toLowerCase().includes('fvtpl'))),
+    'Casual FVOCI correction must not retain FVTPL journal accounts');
+
+  const r2Instead = await processAccountingQuery(
+    'if the investment is FVOCI instead of FVTPL, what will be the double entry?',
+    r1.scenarioState,
+    'SFRS_I'
+  );
+  assert(r2Instead.scenarioState.projectedMeasurementBasis === 'FVOCI', '"FVOCI instead of FVTPL" must request an FVOCI projection');
+  assert(r2Instead.scenarioState.directGroups?.length === 2, 'FVOCI projection must rebuild both acquisition and disposal journals');
+
   console.log('✅ Test A Passed: Full Turn 1 -> Turn 2 FVOCI preserves amounts and maintains separate actual/projected bases\n');
   testsPassed++;
 }
@@ -526,4 +545,3 @@ console.log('--- TEST L: Explicit Balance Assertion (validateJournalBalance) Acr
 console.log('================================================================');
 console.log(`🎉 ALL ${testsPassed} FVOCI FOLLOW-UP TESTS PASSED SUCCESSFULLY! (Failed: ${testsFailed})`);
 console.log('================================================================');
-

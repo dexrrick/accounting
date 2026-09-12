@@ -222,7 +222,17 @@ export async function parseAccountingQuery(
     }
     return { ...currentScenario, directGroups: [], isComplete: false };
   }
-  const amendmentResolution = resolveFactAmendment(query, currentScenario);
+  // "FVOCI instead of FVTPL" is a measurement-basis projection, not a
+  // correction to a numeric fact.  Handle this before the generic
+  // correction parser, where "instead" would otherwise request a missing
+  // replacement amount and prevent the journal from being rebuilt.
+  const isMeasurementBasisFollowUp = Boolean(
+    currentScenario &&
+    /\b(fvoci|fvtpl|fair value through other comprehensive income|fair value through profit or loss)\b/i.test(query)
+  );
+  const amendmentResolution = isMeasurementBasisFollowUp
+    ? { intent: 'QUESTION' as const }
+    : resolveFactAmendment(query, currentScenario);
   if (currentScenario && amendmentResolution.intent === 'FACT_AMENDMENT' && amendmentResolution.clarificationNeeded) {
     return {
       ...currentScenario,
