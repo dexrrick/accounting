@@ -12,6 +12,7 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { classifyQuestion } from '../classification/questionClassifier';
 import { defaultTransactionUnderstandingService } from '../services/transactionUnderstandingService';
 import { extractAccountingContext, calculateAccountingDelta, commitAccountingEvent } from '../services/conversationAccountingState';
+import { buildAccountingMeasurementProjection } from './projectionBuilder';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -1731,88 +1732,37 @@ export async function parseAccountingQuery(
          understanding.followUpAnalysis.eventType === 'reclassification' ||
          understanding.followUpAnalysis.eventType === 'policy_election')
       ) {
-        const delta = calculateAccountingDelta(convContext, understanding.followUpAnalysis, functionalCurrency);
-        if (delta && delta.resultingAccountingEvent) {
-          const targetBasis = understanding.followUpAnalysis.targetMeasurementBasis || 'FVOCI';
-          const isFvoci = targetBasis === 'FVOCI';
+        const targetBasis = understanding.followUpAnalysis.targetMeasurementBasis || 'UNKNOWN';
+        const proj = buildAccountingMeasurementProjection({
+          committedContext: convContext,
+          followUpAnalysis: understanding.followUpAnalysis,
+          requestedBasis: targetBasis
+        });
+
+        if (proj.success) {
           const priorCommittedGroups = (currentScenario.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
             ? [...currentScenario.committedDirectGroups]
             : (currentScenario.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
 
-          const acqLines = delta.journalLines.filter(l => l.id.includes('-buy-'));
-          const sellLines = delta.journalLines.filter(l => l.id.includes('-sell-'));
-
-          const groups: JournalEntryGroup[] = [];
-          if (acqLines.length > 0) {
-            const drTotal = Math.round(acqLines.reduce((s, l) => s + l.debit, 0) * 100) / 100;
-            const crTotal = Math.round(acqLines.reduce((s, l) => s + l.credit, 0) * 100) / 100;
-            groups.push({
-              id: `grp-hypo-acq-${priorCommittedGroups.length + 1}`,
-              transactionId: delta.resultingAccountingEvent.transactionId,
-              targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
-              isHypothetical: true,
-              eventDate: formatSingaporeDate(convContext.underlyingTransaction?.transactionDate || new Date()),
-              title: `Hypothetical Initial Acquisition (${targetBasis})`,
-              summary: `Initial recognition of equity investment under ${targetBasis}`,
-              lines: acqLines,
-              totalDebit: drTotal,
-              totalCredit: crTotal,
-              isBalanced: Math.abs(drTotal - crTotal) < 0.01,
-              citations: [],
-              rationalePoints: [
-                `Under SFRS(I) 9 §5.1.1: Financial assets at ${targetBasis} are initially recognized at fair value plus transaction costs.`,
-                `Initial acquisition translated at transaction spot exchange rate.`
-              ],
-              authorityStatus: 'DETERMINISTIC'
-            });
-          }
-
-          if (sellLines.length > 0) {
-            const drTotal = Math.round(sellLines.reduce((s, l) => s + l.debit, 0) * 100) / 100;
-            const crTotal = Math.round(sellLines.reduce((s, l) => s + l.credit, 0) * 100) / 100;
-            groups.push({
-              id: `grp-hypo-disp-${priorCommittedGroups.length + 2}`,
-              transactionId: delta.resultingAccountingEvent.transactionId,
-              targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
-              isHypothetical: true,
-              eventDate: formatSingaporeDate(convContext.underlyingTransaction?.disposalDate || new Date()),
-              title: `Hypothetical Disposal & Derecognition (${targetBasis})`,
-              summary: `Disposal of equity investment under ${targetBasis}`,
-              lines: sellLines,
-              totalDebit: drTotal,
-              totalCredit: crTotal,
-              isBalanced: Math.abs(drTotal - crTotal) < 0.01,
-              citations: [],
-              rationalePoints: isFvoci ? [
-                `Under SFRS(I) 9 §5.7.5 and SFRS(I) 1-21 §30: For equity investments designated at FVOCI, all fair value changes and exchange differences are recognized in OCI within Fair Value Reserve.`,
-                `Zero P&L recycling: Cumulative gains/losses recognized in OCI are NOT recycled to profit or loss upon disposal.`,
-                `Optional Presentation Transfer: The accumulated reserve may be transferred directly within equity to Retained Earnings (not required for derecognition).`
-              ] : [
-                `Under SFRS(I) 9 & SFRS(I) 1-21: Investment at FVTPL recognizes fair value stock gain and realized foreign exchange gain in profit or loss upon derecognition.`
-              ],
-              authorityStatus: 'DETERMINISTIC'
-            });
-          }
-
           const actualMeasurementBasis = currentScenario.actualMeasurementBasis ||
             convContext.underlyingTransaction?.actualMeasurementBasis ||
-            'FVTPL';
+            'UNKNOWN';
 
           return {
             scenarioType: currentScenario.scenarioType || 'EQUITY_INVESTMENT_FX',
-            authorityStatus: 'DETERMINISTIC',
+            authorityStatus: proj.authorityStatus,
             queryIntent: 'TRANSACTION',
             primaryDomain: 'ACCOUNTING_SFRS',
             rawQuery: query,
             transactionTitle: currentScenario.transactionTitle ? `${currentScenario.transactionTitle} (${targetBasis} Projection)` : `Equity Investment (${targetBasis} Projection)`,
             functionalCurrency,
-            transactionCurrency: delta.currency,
-            accountingTreatmentSummary: delta.explanation,
+            transactionCurrency: convContext.underlyingTransaction?.currency || functionalCurrency,
+            accountingTreatmentSummary: proj.explanation,
             singaporeTaxTreatmentSummary: currentScenario.singaporeTaxTreatmentSummary || 'Capital gains on foreign shares held as capital investments are not taxable in Singapore.',
-            amount: delta.amount,
-            directGroups: groups,
+            amount: convContext.underlyingTransaction?.totalAmount || currentScenario.amount,
+            directGroups: proj.projectedGroups,
             committedDirectGroups: priorCommittedGroups,
-            projectedGroups: groups,
+            projectedGroups: proj.projectedGroups,
             actualEvents: convContext.actualEvents,
             accountingEvents: currentScenario.accountingEvents || convContext.actualEvents,
             isHypothetical: true,
@@ -1823,7 +1773,7 @@ export async function parseAccountingQuery(
             keyParameters: [
               { label: 'Evaluation Basis', value: `${targetBasis} (Hypothetical Projection)`, badge: 'Projection', highlight: true },
               { label: 'Actual Basis', value: actualMeasurementBasis, badge: 'Committed' },
-              { label: 'P&L Recycling Mandate', value: isFvoci ? 'Zero P&L Recycling (SFRS(I) 9 §B5.7.1)' : 'Recognized in P&L', badge: 'Mandate' }
+              { label: 'P&L Recycling Mandate', value: targetBasis === 'FVOCI' ? 'Zero P&L Recycling (SFRS(I) 9 §B5.7.1)' : 'Recognized in P&L', badge: 'Mandate' }
             ],
             isComplete: true,
             missingFields: []

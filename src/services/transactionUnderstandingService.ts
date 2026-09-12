@@ -201,6 +201,9 @@ export function normalizeInstrument(raw?: string): InstrumentType | undefined {
   if (clean === 'right_of_use_asset_and_lease_liability') {
     return 'right_of_use_asset';
   }
+  if (clean === 'bank_loan' || clean === 'loan') {
+    return 'debt_instrument';
+  }
 
   // Canonical match
   const matched = VALID_CANONICAL_INSTRUMENTS.find(i => i === clean);
@@ -545,23 +548,33 @@ export class DeterministicSemanticExtractor {
     const isHypothetical = /\b(what if|suppose|assuming|if)\b/i.test(query);
 
     if (hasPriorContext && !introducesNewSubject && isPaymentOrSettlementAction) {
-      // Pure criteria extraction from query (NO first-receivable selection!)
-      const targetRole = q.includes('shareholder') ? 'shareholder' :
-                         q.includes('director') ? 'director' :
-                         q.includes('customer') ? 'customer' :
-                         q.includes('supplier') ? 'supplier' : undefined;
+      const isLoanRepayment = q.includes('repaid') || q.includes('repay') || ((q.includes('loan') || q.includes('debt')) && (q.includes('principal') || q.includes('bank')));
+      const hasReceivable = conversationContext?.outstandingBalances?.some(b => b.nature === 'RECEIVABLE') ?? false;
+      const hasPayable = conversationContext?.outstandingBalances?.some(b => b.nature === 'PAYABLE' || b.category === 'LIABILITY') ?? false;
 
-      const isReceivingPayment = q.includes('paid to company') ||
+      const isReceivingPayment = !isLoanRepayment && (
+                                 q.includes('paid to') ||
                                  q.includes('paid into') ||
                                  q.includes('received') ||
                                  q.includes('deposit') ||
                                  q.includes('shareholder did pay') ||
                                  q.includes('shareholder paid') ||
                                  q.includes('customer paid') ||
+                                 q.includes('client paid') ||
+                                 (q.includes('client') && q.includes('paid')) ||
+                                 (q.includes('customer') && q.includes('paid')) ||
                                  q.includes('did pay') ||
-                                 q.includes('did paid');
+                                 q.includes('did paid') ||
+                                 (hasReceivable && !hasPayable));
 
-      const targetNature: 'RECEIVABLE' | 'PAYABLE' = isReceivingPayment ? 'RECEIVABLE' : 'PAYABLE';
+      const targetRole = q.includes('shareholder') ? 'shareholder' :
+                         q.includes('director') ? 'director' :
+                         (q.includes('customer') || q.includes('client')) ? 'customer' :
+                         (q.includes('supplier') || q.includes('vendor')) ? 'supplier' :
+                         (q.includes('lender') || q.includes('loan') || isLoanRepayment) ? 'lender' :
+                         conversationContext?.outstandingBalances?.[0]?.counterpartyRole;
+
+      const targetNature: 'RECEIVABLE' | 'PAYABLE' = (isReceivingPayment && !isLoanRepayment) ? 'RECEIVABLE' : 'PAYABLE';
 
       const txMatch = query.match(/\b(tx-[a-zA-Z0-9_-]+)\b/i);
       const targetTransactionId = txMatch ? txMatch[1] : undefined;
@@ -640,7 +653,7 @@ export class DeterministicSemanticExtractor {
         (/\b(fvoci|fair value through other comprehensive income)\b/i.test(query)) ? 'FVOCI' :
         (/\b(fvtpl|fair value through profit or loss)\b/i.test(query)) ? 'FVTPL' :
         (/\b(amortised cost|amortized cost)\b/i.test(query)) ? 'AMORTISED_COST' :
-        (measurementBasis || 'FVOCI');
+        (measurementBasis || 'UNKNOWN');
 
       followUpAnalysis = {
         eventType: 'hypothetical_branch',
@@ -675,6 +688,38 @@ export class DeterministicSemanticExtractor {
         subject = priorTx.subject;
       }
       measurementBasis = targetBasis;
+    } else if (!followUpAnalysis && isHypothetical && hasPriorContext && !introducesNewSubject && conversationContext?.underlyingTransaction) {
+      const priorTx = conversationContext.underlyingTransaction;
+      followUpAnalysis = {
+        eventType: 'hypothetical_branch',
+        isFollowUp: true,
+        isHypothetical: true,
+        explanation: 'Hypothetical parameter variation for existing transaction'
+      };
+
+      if (amount === undefined && priorTx.totalAmount !== undefined) {
+        amount = priorTx.totalAmount;
+      }
+      if (currency.source === 'unknown') {
+        currency = {
+          value: priorTx.currency || functionalCurrency,
+          source: 'context_inference',
+          confidence: 0.95,
+          rationale: 'Inherited from active transaction context'
+        };
+      }
+      if (ownershipContext === 'unknown' && priorTx.ownershipContext) {
+        ownershipContext = priorTx.ownershipContext;
+      }
+      if (instrument === 'unknown' && priorTx.instrument) {
+        instrument = priorTx.instrument;
+      }
+      if (!transactionType || transactionType === 'unclassified_transaction') {
+        transactionType = priorTx.type;
+      }
+      if (!subject && priorTx.subject) {
+        subject = priorTx.subject;
+      }
     }
 
     // 6. Facts Missing & Assumptions
@@ -1020,7 +1065,15 @@ export class DeterministicSemanticExtractor {
     }
 
     // 5. Commercial Lease (IFRS 16)
-    if (q.includes('rental agreement') || q.includes('lease agreement') || q.includes('leased')) {
+    if (
+      q.includes('rental agreement') ||
+      q.includes('lease agreement') ||
+      q.includes('leased') ||
+      q.includes('office lease') ||
+      q.includes('property lease') ||
+      q.includes('tenancy agreement') ||
+      (q.includes('lease') && (q.includes('rent') || q.includes('month') || q.includes('year')))
+    ) {
       return {
         ownershipContext: 'not_applicable',
         subject: 'commercial property lease',
@@ -1066,6 +1119,26 @@ export class DeterministicSemanticExtractor {
         subject: 'inventory or goods purchase with trade discount',
         instrument: 'accounts_payable',
         transactionType: 'trade_discount_purchase'
+      };
+    }
+
+    // 10. Customer Invoice / Sales on Credit
+    if ((q.includes('invoice') || q.includes('on credit') || q.includes('consulting') || q.includes('sales')) && (q.includes('customer') || q.includes('client'))) {
+      return {
+        ownershipContext: 'not_applicable',
+        subject: 'trade sales on credit to customer',
+        instrument: 'accounts_receivable',
+        transactionType: 'customer_invoice'
+      };
+    }
+
+    // 11. Bank Loan / Debt Borrowing
+    if (q.includes('bank loan') || q.includes('loan principal') || (q.includes('loan') && (q.includes('borrow') || q.includes('bank') || q.includes('repaid')))) {
+      return {
+        ownershipContext: 'not_applicable',
+        subject: 'bank loan borrowing',
+        instrument: 'debt_instrument',
+        transactionType: 'debt_settlement'
       };
     }
 
@@ -1227,7 +1300,7 @@ export class AISemanticExtractor {
     ) {
       contextPrompt = `\n[PRIOR CONVERSATION ACCOUNTING CONTEXT]:\n` +
         (conversationContext.underlyingTransaction
-          ? `- Underlying Transaction: ${conversationContext.underlyingTransaction.subject} (Type: ${conversationContext.underlyingTransaction.type}, Ownership: ${conversationContext.underlyingTransaction.ownershipContext}, Amount: ${conversationContext.underlyingTransaction.currency} ${conversationContext.underlyingTransaction.totalAmount}, Actual Basis: ${conversationContext.underlyingTransaction.actualMeasurementBasis || 'FVTPL'})\n`
+          ? `- Underlying Transaction: ${conversationContext.underlyingTransaction.subject} (Type: ${conversationContext.underlyingTransaction.type}, Ownership: ${conversationContext.underlyingTransaction.ownershipContext}, Amount: ${conversationContext.underlyingTransaction.currency} ${conversationContext.underlyingTransaction.totalAmount}, Actual Basis: ${conversationContext.underlyingTransaction.actualMeasurementBasis || 'UNKNOWN'})\n`
           : '') +
         (conversationContext.outstandingBalances.length > 0
           ? `- Outstanding Balances:\n` + conversationContext.outstandingBalances.map(b => `  * ${b.accountName}: ${b.currency} ${b.remainingAmount} (${b.nature}, role: ${b.counterpartyRole})`).join('\n') + '\n'

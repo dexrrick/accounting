@@ -16,6 +16,7 @@ import type {
   UnderlyingTransactionState
 } from '../types/conversationState';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { isMeasurementBasisApplicable } from '../engine/projectionBuilder';
 
 export type { TargetResolutionCriteria, EquityMeasurementBasis, UnderlyingTransactionState };
 
@@ -397,6 +398,7 @@ export function extractAccountingContext(
       case 'EQUITY_INVESTMENT_FX':
         return 'equity_investment_acquisition';
       case 'COMMERCIAL_LEASE':
+      case 'LEASE_IFRS16':
         return 'lease_contract';
       case 'INTANGIBLE_ASSET_CAP':
         return 'rd_capitalization';
@@ -416,8 +418,9 @@ export function extractAccountingContext(
   };
 
   const resolvedTxType: TransactionNatureType =
-    currentScenario?.semanticUnderstanding?.transactionType ||
-    mapScenarioTypeToNature(currentScenario?.scenarioType);
+    (currentScenario?.semanticUnderstanding?.transactionType && currentScenario.semanticUnderstanding.transactionType !== 'unclassified_transaction')
+      ? currentScenario.semanticUnderstanding.transactionType
+      : mapScenarioTypeToNature(currentScenario?.scenarioType);
 
   const resolvedInstrument: InstrumentType =
     currentScenario?.semanticUnderstanding?.instrument ||
@@ -433,7 +436,7 @@ export function extractAccountingContext(
     currentScenario?.actualMeasurementBasis ||
     priorUnderlying?.actualMeasurementBasis ||
     (currentScenario?.classification as EquityMeasurementBasis) ||
-    (resolvedTxType === 'equity_investment_acquisition' ? 'FVTPL' : 'UNKNOWN');
+    'UNKNOWN';
 
   const projectedMeasurementBasis: EquityMeasurementBasis | undefined =
     currentScenario?.projectedMeasurementBasis ||
@@ -539,7 +542,12 @@ export function calculateAccountingDelta(
   ) {
     const targetBasis = eventAnalysis.targetMeasurementBasis;
     const tx = context.underlyingTransaction;
-    if (!tx || !targetBasis) return null;
+    if (!tx || !targetBasis || targetBasis === 'UNKNOWN') return null;
+
+    const applicability = isMeasurementBasisApplicable(tx, targetBasis);
+    if (!applicability.isApplicable) {
+      return null;
+    }
 
     const initialCostSGD = Math.round(((tx.totalAmount || 0) * (tx.acquisitionFxRate || 1)) * 100) / 100;
     const proceedsSGD = tx.disposalAmount ? Math.round((tx.disposalAmount * (tx.disposalFxRate || 1)) * 100) / 100 : 0;
@@ -730,16 +738,19 @@ export function calculateAccountingDelta(
   if (targetAcc.includes('director') || expl.includes('director')) queryTokens.push('director');
   if (targetAcc.includes('customer') || expl.includes('customer')) queryTokens.push('customer');
   if (targetAcc.includes('supplier') || expl.includes('supplier')) queryTokens.push('supplier');
+  if (targetAcc.includes('lender') || expl.includes('lender') || expl.includes('loan') || expl.includes('debt')) queryTokens.push('lender');
 
-  const counterpartyRole = queryTokens.includes('shareholder') ? 'shareholder' :
-                           queryTokens.includes('director') ? 'director' :
-                           queryTokens.includes('customer') ? 'customer' :
-                           queryTokens.includes('supplier') ? 'supplier' : undefined;
+  const counterpartyRole = eventAnalysis.targetCriteria?.counterpartyRole ||
+                           (queryTokens.includes('shareholder') ? 'shareholder' :
+                            queryTokens.includes('director') ? 'director' :
+                            queryTokens.includes('customer') ? 'customer' :
+                            queryTokens.includes('supplier') ? 'supplier' :
+                            queryTokens.includes('lender') ? 'lender' : undefined);
 
   const criteria: TargetResolutionCriteria = {
     accountName: eventAnalysis.targetOutstandingAccount,
     counterpartyRole,
-    nature: 'RECEIVABLE',
+    nature: eventAnalysis.targetCriteria?.nature || 'RECEIVABLE',
     queryTokens,
     currency,
     amount: eventAnalysis.settlementAmount
@@ -766,7 +777,8 @@ export function calculateAccountingDelta(
   const effectiveSettledOnReceivable = isOverpayment ? previousBalance : settlementAmount;
   const resultingBalance = Math.max(0, Math.round((previousBalance - settlementAmount) * 100) / 100);
 
-  const lines: JournalLine[] = [
+  const isReceivable = targetBalance.nature === 'RECEIVABLE' || targetBalance.category === 'ASSET';
+  const lines: JournalLine[] = isReceivable ? [
     {
       id: 'l-settle-bank',
       accountCode: '1010',
@@ -784,6 +796,25 @@ export function calculateAccountingDelta(
       debit: 0,
       credit: effectiveSettledOnReceivable,
       lineExplanation: `Settlement and derecognition of outstanding ${targetBalance.accountName}`
+    }
+  ] : [
+    {
+      id: 'l-settle-payable',
+      accountCode: targetBalance.accountCode || '2100',
+      accountName: targetBalance.accountName,
+      category: targetBalance.category,
+      debit: effectiveSettledOnReceivable,
+      credit: 0,
+      lineExplanation: `Settlement and derecognition of outstanding ${targetBalance.accountName}`
+    },
+    {
+      id: 'l-settle-bank',
+      accountCode: '1010',
+      accountName: 'Cash at Bank (Current Account)',
+      category: 'ASSET',
+      debit: 0,
+      credit: settlementAmount,
+      lineExplanation: `Disbursement of settlement funds from company bank account (${currency} ${settlementAmount.toFixed(2)})`
     }
   ];
 

@@ -1,0 +1,500 @@
+import type {
+  JournalEntryGroup,
+  JournalAuthorityStatus
+} from '../types/accounting';
+import type {
+  ConversationAccountingContext,
+  UnderlyingTransactionState,
+  EquityMeasurementBasis,
+  AccountingEvent,
+  OutstandingAccountBalance,
+  FollowUpEventAnalysis
+} from '../types/conversationState';
+import { formatSingaporeDate } from '../utils/dateUtils';
+
+/**
+ * Result structure returned by buildAccountingMeasurementProjection.
+ */
+export interface ProjectionResult {
+  success: boolean;
+  isHypothetical: true;
+  projectedGroups: JournalEntryGroup[];
+  projectedEvents: AccountingEvent[];
+  balanceUpdates?: OutstandingAccountBalance[];
+  explanation: string;
+  authorityStatus: JournalAuthorityStatus;
+  diagnosticNotice?: string;
+}
+
+/**
+ * Validates whether a journal entry group strictly balances (Total Debits == Total Credits).
+ * Never permits imbalanced journals to be presented as balanced deterministic entries.
+ */
+export function validateJournalBalance(group: JournalEntryGroup): {
+  isBalanced: boolean;
+  imbalance: number;
+  totalDebit: number;
+  totalCredit: number;
+} {
+  const totalDebit = Math.round(group.lines.reduce((s, l) => s + (l.debit || 0), 0) * 100) / 100;
+  const totalCredit = Math.round(group.lines.reduce((s, l) => s + (l.credit || 0), 0) * 100) / 100;
+  const imbalance = Math.round(Math.abs(totalDebit - totalCredit) * 100) / 100;
+  const isBalanced = totalDebit > 0 && imbalance < 0.01;
+
+  return {
+    isBalanced,
+    imbalance,
+    totalDebit,
+    totalCredit
+  };
+}
+
+/**
+ * Validates whether a requested measurement basis is legally/structurally applicable
+ * to the underlying transaction nature and ownership context.
+ *
+ * Invariant: Financial asset measurement bases (FVTPL, FVOCI, AMORTISED_COST, COST)
+ * apply ONLY to external financial instruments. They are strictly prohibited on:
+ * - Own equity issuance (SFRS(I) 1-32 §33)
+ * - Commercial leases (SFRS(I) 16)
+ * - Operating expenses (SFRS(I) 1-1)
+ */
+export function isMeasurementBasisApplicable(
+  tx: UnderlyingTransactionState,
+  basis: EquityMeasurementBasis
+): { isApplicable: boolean; reason?: string } {
+  if (basis === 'UNKNOWN') {
+    return {
+      isApplicable: false,
+      reason: 'Requested measurement basis is UNKNOWN or unspecified.'
+    };
+  }
+
+  // 1. Own equity instruments cannot be measured at FVTPL/FVOCI/AMORTISED_COST (SFRS(I) 1-32 §33)
+  if (tx.ownershipContext === 'own_equity' || tx.type === 'share_capital_issuance' || tx.type === 'capital_reduction') {
+    return {
+      isApplicable: false,
+      reason: `Under SFRS(I) 1-32 §33, an entity's own equity instruments can NEVER be classified or measured as financial assets (${basis}).`
+    };
+  }
+
+  // 2. Leases follow SFRS(I) 16 Right-of-Use Asset & Lease Liability model
+  if (tx.type === 'lease_contract' || tx.type === 'lease_payment') {
+    return {
+      isApplicable: false,
+      reason: `Commercial leases are governed by the SFRS(I) 16 ROU asset & amortised liability model, not ${basis}.`
+    };
+  }
+
+  // 3. Operating expenses follow SFRS(I) 1-1 accrual
+  if (tx.type === 'expense_payment' || tx.type === 'director_expense_settlement' || tx.type === 'payroll_payment') {
+    return {
+      isApplicable: false,
+      reason: `General operating expenses are recognized in P&L under SFRS(I) 1-1 and do not possess an investment measurement basis (${basis}).`
+    };
+  }
+
+  // 4. External financial investments (shares, debt, securities)
+  if (
+    tx.ownershipContext === 'external_investment' ||
+    tx.type === 'equity_investment_acquisition' ||
+    tx.instrument === 'financial_asset_equity' ||
+    tx.instrument === 'financial_asset_at_fvtpl' ||
+    tx.instrument === 'marketable_securities' ||
+    tx.instrument === 'debt_instrument'
+  ) {
+    if (basis === 'FVTPL' || basis === 'FVOCI' || basis === 'AMORTISED_COST' || basis === 'COST') {
+      return { isApplicable: true };
+    }
+  }
+
+  return {
+    isApplicable: false,
+    reason: `Measurement basis '${basis}' is not supported for transaction type '${tx.type}' and instrument '${tx.instrument}'.`
+  };
+}
+
+/**
+ * Canonical Measurement Projection Builder.
+ * Reuses all authoritative transaction facts from committed history and produces a
+ * complete, balanced hypothetical projection without mutating committed state.
+ */
+export function buildAccountingMeasurementProjection(params: {
+  committedContext: ConversationAccountingContext;
+  followUpAnalysis?: FollowUpEventAnalysis;
+  requestedBasis?: EquityMeasurementBasis;
+  overrideParams?: Record<string, any>;
+}): ProjectionResult {
+  const { committedContext, followUpAnalysis } = params;
+  const tx = committedContext.underlyingTransaction;
+
+  // Invariant 1: If no underlying transaction exists in committed context, cannot project
+  if (!tx) {
+    return {
+      success: false,
+      isHypothetical: true,
+      projectedGroups: [],
+      projectedEvents: [],
+      explanation: 'No underlying committed transaction found to project from.',
+      authorityStatus: 'CONDITIONAL',
+      diagnosticNotice: 'Amounts pending: Underlying transaction facts not established.'
+    };
+  }
+
+  const targetBasis = params.requestedBasis || followUpAnalysis?.targetMeasurementBasis;
+
+  // Invariant 2: Never silently default missing classification
+  if (!targetBasis || targetBasis === 'UNKNOWN') {
+    return {
+      success: false,
+      isHypothetical: true,
+      projectedGroups: [],
+      projectedEvents: [],
+      explanation: 'No valid target measurement basis specified for projection.',
+      authorityStatus: 'CONDITIONAL',
+      diagnosticNotice: 'Classification pending: Requested measurement basis is UNKNOWN.'
+    };
+  }
+
+  // Invariant 3: Transaction-specific measurement validation
+  const applicability = isMeasurementBasisApplicable(tx, targetBasis);
+  if (!applicability.isApplicable) {
+    return {
+      success: false,
+      isHypothetical: true,
+      projectedGroups: [],
+      projectedEvents: [],
+      explanation: applicability.reason || `Measurement basis ${targetBasis} is not applicable.`,
+      authorityStatus: 'CONDITIONAL',
+      diagnosticNotice: applicability.reason
+    };
+  }
+
+  // Reuse Authoritative Transaction Facts
+  const txId = tx.transactionId || 'tx-1';
+  const assetTitle = tx.assetName || 'Equity Investments';
+  const txCurr = tx.currency || 'USD';
+  const funcCurr = tx.functionalCurrency || 'SGD';
+  const buyFx = tx.acquisitionFxRate || 1;
+  const sellFx = tx.disposalFxRate || 1;
+  const totalAmt = tx.totalAmount || 0;
+  const dispAmt = tx.disposalAmount || 0;
+
+  const initialCostSGD = Math.round(totalAmt * buyFx * 100) / 100;
+  const proceedsSGD = dispAmt > 0 ? Math.round(dispAmt * sellFx * 100) / 100 : 0;
+
+  const priorCommittedGroups = (committedContext.priorJournals && committedContext.priorJournals.length > 0)
+    ? committedContext.priorJournals.filter(g => !g.isHypothetical)
+    : [];
+
+  const groups: JournalEntryGroup[] = [];
+
+  // =========================================================================
+  // BRANCH 1: FVOCI (Fair Value Through Other Comprehensive Income)
+  // =========================================================================
+  if (targetBasis === 'FVOCI') {
+    // 1. Initial Acquisition Group
+    const acqLines = [
+      {
+        id: 'l-fvoci-buy-asset',
+        accountCode: '1220',
+        accountName: `Financial Asset at FVOCI (${assetTitle})`,
+        category: 'ASSET' as const,
+        debit: initialCostSGD,
+        credit: 0,
+        foreignCurrency: txCurr,
+        foreignDebit: totalAmt,
+        exchangeRate: buyFx,
+        lineExplanation: `Initial recognition of equity investment designated at FVOCI under SFRS(I) 9 §5.1.1`
+      },
+      {
+        id: 'l-fvoci-buy-bank',
+        accountCode: '1010',
+        accountName: `Cash at Bank (${txCurr} Account)`,
+        category: 'ASSET' as const,
+        debit: 0,
+        credit: initialCostSGD,
+        foreignCurrency: txCurr,
+        foreignCredit: totalAmt,
+        exchangeRate: buyFx,
+        lineExplanation: `Outflow of cash for equity share acquisition translated at transaction spot rate`
+      }
+    ];
+
+    const acqGroup: JournalEntryGroup = {
+      id: `grp-proj-acq-${priorCommittedGroups.length + 1}`,
+      transactionId: txId,
+      targetTransactionId: txId,
+      isHypothetical: true,
+      eventDate: formatSingaporeDate(tx.transactionDate || new Date()),
+      title: `Hypothetical Initial Acquisition (FVOCI)`,
+      summary: `Initial recognition of equity investment under FVOCI`,
+      lines: acqLines,
+      totalDebit: initialCostSGD,
+      totalCredit: initialCostSGD,
+      isBalanced: true,
+      citations: [],
+      rationalePoints: [
+        `Under SFRS(I) 9 §5.1.1: Financial assets designated at FVOCI are initially recognized at fair value plus transaction costs.`,
+        `Initial acquisition translated at transaction spot exchange rate (${buyFx} ${funcCurr}/${txCurr}).`
+      ],
+      authorityStatus: 'DETERMINISTIC'
+    };
+
+    const acqBal = validateJournalBalance(acqGroup);
+    acqGroup.isBalanced = acqBal.isBalanced;
+    groups.push(acqGroup);
+
+    // 2. Disposal Group (if disposal occurred)
+    if (proceedsSGD > 0) {
+      const totalOciGain = Math.round((proceedsSGD - initialCostSGD) * 100) / 100;
+      const isOciGain = totalOciGain >= 0;
+
+      const sellLines = [
+        {
+          id: 'l-fvoci-sell-bank',
+          accountCode: '1010',
+          accountName: `Cash at Bank (${txCurr} Account)`,
+          category: 'ASSET' as const,
+          debit: proceedsSGD,
+          credit: 0,
+          foreignCurrency: txCurr,
+          foreignDebit: dispAmt,
+          exchangeRate: sellFx,
+          lineExplanation: `Gross disposal proceeds translated at disposal spot rate (${sellFx} ${funcCurr}/${txCurr})`
+        },
+        {
+          id: 'l-fvoci-sell-asset',
+          accountCode: '1220',
+          accountName: `Financial Asset at FVOCI (${assetTitle})`,
+          category: 'ASSET' as const,
+          debit: 0,
+          credit: initialCostSGD,
+          foreignCurrency: txCurr,
+          foreignCredit: totalAmt,
+          exchangeRate: buyFx,
+          lineExplanation: `Derecognition of original carrying cost at acquisition spot rate`
+        },
+        {
+          id: 'l-fvoci-sell-reserve',
+          accountCode: '3120',
+          accountName: 'Fair Value Reserve - FVOCI (Equity / OCI)',
+          category: 'EQUITY' as const,
+          debit: isOciGain ? 0 : Math.abs(totalOciGain),
+          credit: isOciGain ? totalOciGain : 0,
+          lineExplanation: `Cumulative fair value and foreign exchange difference recognized in OCI under SFRS(I) 9 §5.7.5 & SFRS(I) 1-21 §30 (P&L recycling = 0)`
+        }
+      ];
+
+      const dispGroup: JournalEntryGroup = {
+        id: `grp-proj-disp-${priorCommittedGroups.length + 2}`,
+        transactionId: txId,
+        targetTransactionId: txId,
+        isHypothetical: true,
+        eventDate: formatSingaporeDate(tx.disposalDate || new Date()),
+        title: `Hypothetical Disposal & Derecognition (FVOCI)`,
+        summary: `Disposal of equity investment under FVOCI`,
+        lines: sellLines,
+        totalDebit: proceedsSGD,
+        totalCredit: proceedsSGD,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [
+          `Under SFRS(I) 9 §5.7.5 and SFRS(I) 1-21 §30: For equity investments designated at FVOCI, all fair value changes and exchange differences are recognized in OCI within Fair Value Reserve.`,
+          `Zero P&L recycling: Cumulative gains/losses recognized in OCI are NOT recycled to profit or loss upon disposal.`,
+          `Optional Presentation Transfer: The accumulated reserve may be transferred directly within equity to Retained Earnings (not required for derecognition under SFRS(I) 9 §B5.7.1).`
+        ],
+        authorityStatus: 'DETERMINISTIC'
+      };
+
+      const dispBal = validateJournalBalance(dispGroup);
+      dispGroup.isBalanced = dispBal.isBalanced;
+      groups.push(dispGroup);
+    }
+  }
+
+  // =========================================================================
+  // BRANCH 2: FVTPL (Fair Value Through Profit or Loss)
+  // =========================================================================
+  else if (targetBasis === 'FVTPL') {
+    // 1. Initial Acquisition Group
+    const acqLines = [
+      {
+        id: 'l-fvtpl-buy-asset',
+        accountCode: '1210',
+        accountName: `Financial Asset at FVTPL (${assetTitle})`,
+        category: 'ASSET' as const,
+        debit: initialCostSGD,
+        credit: 0,
+        foreignCurrency: txCurr,
+        foreignDebit: totalAmt,
+        exchangeRate: buyFx,
+        lineExplanation: `Initial fair value recognition under SFRS(I) 9 §5.1.1`
+      },
+      {
+        id: 'l-fvtpl-buy-bank',
+        accountCode: '1010',
+        accountName: `Cash at Bank (${txCurr} Account)`,
+        category: 'ASSET' as const,
+        debit: 0,
+        credit: initialCostSGD,
+        foreignCurrency: txCurr,
+        foreignCredit: totalAmt,
+        exchangeRate: buyFx,
+        lineExplanation: `Outflow of cash for equity share acquisition translated at transaction spot rate`
+      }
+    ];
+
+    const acqGroup: JournalEntryGroup = {
+      id: `grp-proj-acq-${priorCommittedGroups.length + 1}`,
+      transactionId: txId,
+      targetTransactionId: txId,
+      isHypothetical: true,
+      eventDate: formatSingaporeDate(tx.transactionDate || new Date()),
+      title: `Hypothetical Initial Acquisition (FVTPL)`,
+      summary: `Initial recognition of equity investment under FVTPL`,
+      lines: acqLines,
+      totalDebit: initialCostSGD,
+      totalCredit: initialCostSGD,
+      isBalanced: true,
+      citations: [],
+      rationalePoints: [
+        `Under SFRS(I) 9 §5.1.1: Financial assets at FVTPL are initially recognized at fair value.`,
+        `Initial acquisition translated at spot exchange rate (${buyFx} ${funcCurr}/${txCurr}).`
+      ],
+      authorityStatus: 'DETERMINISTIC'
+    };
+
+    const acqBal = validateJournalBalance(acqGroup);
+    acqGroup.isBalanced = acqBal.isBalanced;
+    groups.push(acqGroup);
+
+    // 2. Disposal Group
+    if (proceedsSGD > 0) {
+      const stockGainSGD = Math.round((dispAmt - totalAmt) * sellFx * 100) / 100;
+      const fxGainSGD = Math.round(totalAmt * (sellFx - buyFx) * 100) / 100;
+
+      const sellLines = [
+        {
+          id: 'l-fvtpl-sell-bank',
+          accountCode: '1010',
+          accountName: `Cash at Bank (${txCurr} Account)`,
+          category: 'ASSET' as const,
+          debit: proceedsSGD,
+          credit: 0,
+          foreignCurrency: txCurr,
+          foreignDebit: dispAmt,
+          exchangeRate: sellFx,
+          lineExplanation: `Gross disposal proceeds translated at disposal spot rate (${sellFx} ${funcCurr}/${txCurr})`
+        },
+        {
+          id: 'l-fvtpl-sell-asset',
+          accountCode: '1210',
+          accountName: `Financial Asset at FVTPL (${assetTitle})`,
+          category: 'ASSET' as const,
+          debit: 0,
+          credit: initialCostSGD,
+          foreignCurrency: txCurr,
+          foreignCredit: totalAmt,
+          exchangeRate: buyFx,
+          lineExplanation: `Derecognition of carrying cost at acquisition spot rate`
+        },
+        {
+          id: 'l-fvtpl-sell-stockgain',
+          accountCode: '4510',
+          accountName: `Fair Value Gain on Shares (${assetTitle}) [P&L]`,
+          category: 'REVENUE' as const,
+          debit: 0,
+          credit: stockGainSGD,
+          lineExplanation: `Stock appreciation gain recognized in P&L`
+        },
+        {
+          id: 'l-fvtpl-sell-fxgain',
+          accountCode: '4600',
+          accountName: 'Realized Foreign Exchange Gain (USD/SGD) [P&L / SFRS(I) 1-21]',
+          category: 'REVENUE' as const,
+          debit: 0,
+          credit: fxGainSGD,
+          lineExplanation: `Realized foreign currency translation gain recognized in P&L`
+        }
+      ];
+
+      const dispGroup: JournalEntryGroup = {
+        id: `grp-proj-disp-${priorCommittedGroups.length + 2}`,
+        transactionId: txId,
+        targetTransactionId: txId,
+        isHypothetical: true,
+        eventDate: formatSingaporeDate(tx.disposalDate || new Date()),
+        title: `Hypothetical Disposal & Derecognition (FVTPL)`,
+        summary: `Disposal of equity investment under FVTPL`,
+        lines: sellLines,
+        totalDebit: proceedsSGD,
+        totalCredit: proceedsSGD,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [
+          `Under SFRS(I) 9 & SFRS(I) 1-21: Investment at FVTPL recognizes stock appreciation and foreign exchange difference in profit or loss upon derecognition.`
+        ],
+        authorityStatus: 'DETERMINISTIC'
+      };
+
+      const dispBal = validateJournalBalance(dispGroup);
+      dispGroup.isBalanced = dispBal.isBalanced;
+      groups.push(dispGroup);
+    }
+  }
+
+  // =========================================================================
+  // UNSUPPORTED OR UNRECOGNIZED BASIS
+  // =========================================================================
+  else {
+    return {
+      success: false,
+      isHypothetical: true,
+      projectedGroups: [],
+      projectedEvents: [],
+      explanation: `Measurement basis '${targetBasis}' is not supported for projection generation.`,
+      authorityStatus: 'CONDITIONAL',
+      diagnosticNotice: `Unsupported measurement combination for ${tx.type}.`
+    };
+  }
+
+  // Validate every generated group before presentation
+  for (const grp of groups) {
+    const bal = validateJournalBalance(grp);
+    if (!bal.isBalanced) {
+      return {
+        success: false,
+        isHypothetical: true,
+        projectedGroups: [],
+        projectedEvents: [],
+        explanation: `Generated projection failed balance check: Debits (${bal.totalDebit}) != Credits (${bal.totalCredit}).`,
+        authorityStatus: 'CONDITIONAL',
+        diagnosticNotice: `Imbalance detected (${bal.imbalance}). Journal presentation suppressed.`
+      };
+    }
+  }
+
+  const projectedEvents: AccountingEvent[] = groups.map((g, idx) => ({
+    id: `evt-proj-${idx + 1}-${Date.now()}`,
+    transactionId: txId,
+    targetTransactionId: txId,
+    type: 'hypothetical_branch',
+    description: g.title,
+    amount: g.totalDebit,
+    currency: funcCurr,
+    affectedAccounts: g.lines.map(l => l.accountName),
+    journalLines: g.lines,
+    eventDate: g.eventDate,
+    isHypothetical: true
+  }));
+
+  return {
+    success: true,
+    isHypothetical: true,
+    projectedGroups: groups,
+    projectedEvents,
+    explanation: `Hypothetical accounting treatment under ${targetBasis}. Original transaction facts preserved.`,
+    authorityStatus: 'DETERMINISTIC'
+  };
+}

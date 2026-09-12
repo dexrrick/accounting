@@ -4,6 +4,11 @@ import {
   extractAccountingContext,
   calculateAccountingDelta
 } from './src/services/conversationAccountingState.ts';
+import {
+  validateJournalBalance,
+  buildAccountingMeasurementProjection
+} from './src/engine/projectionBuilder.ts';
+import { calculateDoubleEntries } from './src/engine/accountingEngine.ts';
 
 console.log('================================================================');
 console.log('🧪 RUNNING FVOCI FOLLOW-UP STATE PRESERVATION & JOURNAL CONSISTENCY SUITE');
@@ -213,6 +218,7 @@ console.log('--- TEST F: Guardrail: Own Equity Cannot Be FVTPL / FVOCI ---');
   // Following up with "what if this is FVOCI" on own share capital
   const q2 = "what if this share capital is FVOCI";
   const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
+  assert(r2.scenarioState !== undefined, 'Turn 2 scenarioState must be defined');
 
   // Semantic understanding must reject FVOCI on own equity (SFRS(I) 1-32 §33)
   const understanding = defaultTransactionUnderstandingService.understandTransactionSync(
@@ -231,8 +237,293 @@ console.log('--- TEST F: Guardrail: Own Equity Cannot Be FVTPL / FVOCI ---');
 }
 
 // --------------------------------------------------------------------------
+// TEST G: Subsequent Actual Turn After Hypothetical Branch
+// --------------------------------------------------------------------------
+console.log('--- TEST G: Subsequent Actual Turn After Hypothetical Branch ---');
+{
+  // Turn 1: Actual Allotment of $10,000 unpaid
+  const q1 = "shareholder has invested in own company share capital of SGD 10000 but unpaid what's the double entry";
+  const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
+  assert(!r1.scenarioState.isHypothetical, 'Turn 1 must be actual');
+  const t1ActualEvents = r1.scenarioState.actualEvents?.length || 1;
+
+  // Turn 2: Hypothetical follow-up
+  const q2 = "what if shareholder paid SGD 4000 to bank";
+  const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
+  assert(r2.scenarioState.isHypothetical === true, 'Turn 2 must be hypothetical');
+
+  // Turn 3: Actual payment of $5,000
+  const q3 = "the shareholder paid SGD 5000 into company bank account today";
+  const r3 = await processAccountingQuery(q3, r2.scenarioState, 'SFRS_I');
+  assert(!r3.scenarioState.isHypothetical, 'Turn 3 must be an actual settlement event');
+
+  // Invariant: Turn 2's hypothetical event did NOT enter actualEvents
+  assert(r3.scenarioState.actualEvents.length === t1ActualEvents + 1,
+    `actualEvents must contain exactly Turn 1 + Turn 3 (${t1ActualEvents + 1}), got ${r3.scenarioState.actualEvents.length}`);
+
+  for (const evt of r3.scenarioState.actualEvents) {
+    assert(!evt.isHypothetical, `Actual event ${evt.id} must not be marked hypothetical`);
+  }
+
+  // Invariant: Committed groups must only contain Turn 1 allotment + Turn 3 settlement
+  assert(r3.scenarioState.committedDirectGroups.length === 2,
+    `Committed groups must have 2 actual groups, got ${r3.scenarioState.committedDirectGroups.length}`);
+
+  console.log('✅ Test G Passed: Hypothetical branch does not pollute committed history upon subsequent actual turn\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST H: Generic Lease: Lease Contract & ROU Asset Preserved in Follow-Up
+// --------------------------------------------------------------------------
+console.log('--- TEST H: Generic Lease Contract & ROU Asset Preservation ---');
+{
+  const q1 = "A company entered into a 3-year office lease paying SGD 3,000 monthly";
+  const u1 = defaultTransactionUnderstandingService.understandTransactionSync(q1, 'SGD', 'SG');
+  assert(u1.transactionType === 'lease_contract', `u1 transactionType must be lease_contract, got ${u1.transactionType}`);
+  assert(u1.instrument === 'right_of_use_asset', `u1 instrument must be right_of_use_asset, got ${u1.instrument}`);
+  assert(u1.amount === 3000, `u1 amount must be 3000, got ${u1.amount}`);
+
+  const ctx = {
+    underlyingTransaction: {
+      transactionId: 'tx-lease-1',
+      type: u1.transactionType,
+      subject: '3-Year Commercial Office Lease',
+      ownershipContext: u1.ownershipContext,
+      instrument: u1.instrument,
+      totalAmount: 3000,
+      currency: 'SGD',
+      functionalCurrency: 'SGD'
+    },
+    actualEvents: [],
+    outstandingBalances: [],
+    recognizedEquityTotal: 0,
+    priorJournals: []
+  };
+
+  const q2 = "what if the monthly rent was SGD 3,500 instead";
+  const u2 = defaultTransactionUnderstandingService.understandTransactionSync(q2, 'SGD', 'SG', ctx);
+  assert(u2.transactionType === 'lease_contract', `u2 must inherit lease_contract, got ${u2.transactionType}`);
+  assert(u2.amount === 3500, `u2 must extract new amount 3500, got ${u2.amount}`);
+  assert(u2.followUpAnalysis?.isHypothetical === true, 'u2 followUpAnalysis must be flagged hypothetical');
+
+  // Verify journal balancing under SFRS(I) 16
+  const leaseScenario1 = {
+    scenarioType: 'LEASE_IFRS16',
+    leaseTermYears: 3,
+    leaseTermMonths: 36,
+    leasePaymentMonthly: 3000,
+    leaseDiscountRateAnnual: 5.0,
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD'
+  };
+  const entries1 = calculateDoubleEntries(leaseScenario1, 'SFRS_I');
+  for (const grp of entries1.groups) {
+    const val = validateJournalBalance(grp);
+    assert(val.isBalanced, `Lease group ${grp.title} must be balanced`);
+  }
+
+  const leaseScenario2 = {
+    scenarioType: 'LEASE_IFRS16',
+    leaseTermYears: 3,
+    leaseTermMonths: 36,
+    leasePaymentMonthly: 3500,
+    leaseDiscountRateAnnual: 5.0,
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD'
+  };
+  const entries2 = calculateDoubleEntries(leaseScenario2, 'SFRS_I');
+  for (const grp of entries2.groups) {
+    const val = validateJournalBalance(grp);
+    assert(val.isBalanced, `Lease hypothetical group ${grp.title} must be balanced`);
+  }
+
+  console.log('✅ Test H Passed: Generic lease contract facts and balanced journal entries preserved\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST I: Generic Receivable: Trade Receivable & Settlement Tracking
+// --------------------------------------------------------------------------
+console.log('--- TEST I: Generic Receivable & Settlement Tracking ---');
+{
+  const q1 = "Company provided consulting services of SGD 10,000 on credit to Client ABC";
+  const u1 = defaultTransactionUnderstandingService.understandTransactionSync(q1, 'SGD', 'SG');
+  assert(u1.transactionType === 'customer_invoice', `u1 must be customer_invoice, got ${u1.transactionType}`);
+  assert(u1.instrument === 'accounts_receivable', `u1 instrument must be accounts_receivable, got ${u1.instrument}`);
+  assert(u1.amount === 10000, `u1 amount must be 10000, got ${u1.amount}`);
+
+  const ctx = {
+    underlyingTransaction: {
+      transactionId: 'tx-inv-101',
+      type: u1.transactionType,
+      subject: 'Consulting Services to Client ABC',
+      ownershipContext: u1.ownershipContext,
+      instrument: u1.instrument,
+      totalAmount: 10000,
+      currency: 'SGD',
+      functionalCurrency: 'SGD'
+    },
+    actualEvents: [],
+    outstandingBalances: [{
+      balanceKey: '1100_customer_tx-inv-101',
+      accountCode: '1100',
+      accountName: 'Accounts Receivable (Client ABC)',
+      currency: 'SGD',
+      initialAmount: 10000,
+      settledAmount: 0,
+      remainingAmount: 10000,
+      counterpartyRole: 'customer',
+      nature: 'ASSET',
+      transactionId: 'tx-inv-101'
+    }],
+    recognizedEquityTotal: 0,
+    priorJournals: []
+  };
+
+  const q2 = "Client ABC paid SGD 6,000 by bank transfer";
+  const u2 = defaultTransactionUnderstandingService.understandTransactionSync(q2, 'SGD', 'SG', ctx);
+  assert(u2.followUpAnalysis?.eventType === 'partial_settlement' || u2.followUpAnalysis?.eventType === 'settlement',
+    `u2 must be recognized as settlement event, got ${u2.followUpAnalysis?.eventType}`);
+  assert(u2.followUpAnalysis?.settlementAmount === 6000, `Settlement amount must be 6000, got ${u2.followUpAnalysis?.settlementAmount}`);
+
+  const delta = calculateAccountingDelta(ctx, u2.followUpAnalysis, 'SGD');
+  assert(Boolean(delta), 'calculateAccountingDelta must succeed for customer settlement');
+  assert(delta.balanceUpdates[0]?.resultingBalance === 4000, `Remaining receivable must be 4000, got ${delta.balanceUpdates[0]?.resultingBalance}`);
+
+  console.log('✅ Test I Passed: Generic trade receivable tracking and partial settlement verified\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST J: Generic Debt: Bank Loan & Principal Repayment Tracking
+// --------------------------------------------------------------------------
+console.log('--- TEST J: Generic Debt & Principal Repayment Tracking ---');
+{
+  const q1 = "Company took a bank loan of SGD 100,000";
+  const u1 = defaultTransactionUnderstandingService.understandTransactionSync(q1, 'SGD', 'SG');
+  assert(u1.transactionType === 'debt_settlement', `u1 must be debt_settlement, got ${u1.transactionType}`);
+  assert(u1.instrument === 'debt_instrument', `u1 instrument must be debt_instrument, got ${u1.instrument}`);
+  assert(u1.amount === 100000, `u1 amount must be 100000, got ${u1.amount}`);
+
+  const ctx = {
+    underlyingTransaction: {
+      transactionId: 'tx-loan-201',
+      type: u1.transactionType,
+      subject: 'Bank Loan Borrowing',
+      ownershipContext: u1.ownershipContext,
+      instrument: u1.instrument,
+      totalAmount: 100000,
+      currency: 'SGD',
+      functionalCurrency: 'SGD'
+    },
+    actualEvents: [],
+    outstandingBalances: [{
+      balanceKey: '2100_lender_tx-loan-201',
+      accountCode: '2100',
+      accountName: 'Bank Loan (Borrowing)',
+      currency: 'SGD',
+      initialAmount: 100000,
+      settledAmount: 0,
+      remainingAmount: 100000,
+      counterpartyRole: 'lender',
+      nature: 'LIABILITY',
+      transactionId: 'tx-loan-201'
+    }],
+    recognizedEquityTotal: 0,
+    priorJournals: []
+  };
+
+  const q2 = "Company repaid SGD 30,000 loan principal by bank transfer";
+  const u2 = defaultTransactionUnderstandingService.understandTransactionSync(q2, 'SGD', 'SG', ctx);
+  assert(u2.followUpAnalysis?.eventType === 'partial_settlement' || u2.followUpAnalysis?.eventType === 'settlement',
+    `u2 must be recognized as settlement, got ${u2.followUpAnalysis?.eventType}`);
+  assert(u2.followUpAnalysis?.settlementAmount === 30000, `Settlement amount must be 30000, got ${u2.followUpAnalysis?.settlementAmount}`);
+
+  const delta = calculateAccountingDelta(ctx, u2.followUpAnalysis, 'SGD');
+  assert(Boolean(delta), 'calculateAccountingDelta must succeed for loan repayment');
+  assert(delta.balanceUpdates[0]?.resultingBalance === 70000, `Remaining debt must be 70000, got ${delta.balanceUpdates[0]?.resultingBalance}`);
+
+  console.log('✅ Test J Passed: Generic bank debt tracking and principal repayment verified\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST K: Controlled Diagnostic Notice on Unsupported/Unknown Basis
+// --------------------------------------------------------------------------
+console.log('--- TEST K: Controlled Diagnostic Notice on Unsupported/Unknown Basis ---');
+{
+  const ownEquityCtx = {
+    underlyingTransaction: {
+      transactionId: 'tx-oe-1',
+      type: 'share_capital_issuance',
+      subject: 'Own share capital allotment',
+      ownershipContext: 'own_equity',
+      instrument: 'own_equity',
+      totalAmount: 1000,
+      currency: 'SGD',
+      functionalCurrency: 'SGD'
+    },
+    actualEvents: [],
+    outstandingBalances: [],
+    recognizedEquityTotal: 1000,
+    priorJournals: []
+  };
+
+  // 1. Prohibits FVOCI on own equity (SFRS(I) 1-32 §33)
+  const resFvoci = buildAccountingMeasurementProjection({
+    committedContext: ownEquityCtx,
+    requestedBasis: 'FVOCI'
+  });
+  assert(!resFvoci.success, 'buildAccountingMeasurementProjection must fail for FVOCI on own equity');
+  assert(Boolean(resFvoci.diagnosticNotice), 'Must provide diagnostic notice');
+  assert(resFvoci.diagnosticNotice.includes('SFRS(I) 1-32 §33'), `Diagnostic must cite SFRS(I) 1-32 §33, got: ${resFvoci.diagnosticNotice}`);
+
+  // 2. Prohibits UNKNOWN basis
+  const resUnknown = buildAccountingMeasurementProjection({
+    committedContext: ownEquityCtx,
+    requestedBasis: 'UNKNOWN'
+  });
+  assert(!resUnknown.success, 'buildAccountingMeasurementProjection must fail for UNKNOWN basis');
+  assert(resUnknown.diagnosticNotice.includes('UNKNOWN'), `Diagnostic must state basis is UNKNOWN, got: ${resUnknown.diagnosticNotice}`);
+
+  console.log('✅ Test K Passed: Controlled diagnostic notice on unsupported/unknown measurement basis verified\n');
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
+// TEST L: Explicit Balance Assertion Across All Direct Groups
+// --------------------------------------------------------------------------
+console.log('--- TEST L: Explicit Balance Assertion (validateJournalBalance) Across All Groups ---');
+{
+  const q1 = "A company primary currency is SGD, it invested USD300k into 300 apple shares at 1.3004 on 13/11/2025, subsequently sold for USD400k at 1.2889 on 15/12/2025. What are the entries?";
+  const r1 = await processAccountingQuery(q1, null, 'SFRS_I');
+
+  const q2 = "what if the investment is FVOCI show me the double entry";
+  const r2 = await processAccountingQuery(q2, r1.scenarioState, 'SFRS_I');
+
+  const allGroups = [
+    ...(r1.scenarioState.directGroups || []),
+    ...(r2.scenarioState.directGroups || []),
+    ...(r2.scenarioState.committedDirectGroups || []),
+    ...(r2.scenarioState.projectedGroups || [])
+  ];
+
+  assert(allGroups.length > 0, 'Must have generated groups to validate');
+  for (const grp of allGroups) {
+    const val = validateJournalBalance(grp);
+    assert(val.isBalanced, `Group ${grp.title} must be balanced: debits=${val.totalDebit}, credits=${val.totalCredit}`);
+    assert(Math.abs(val.imbalance) < 0.01, `Group ${grp.title} imbalance must be 0, got ${val.imbalance}`);
+  }
+
+  console.log(`✅ Test L Passed: All ${allGroups.length} generated groups strictly balanced via validateJournalBalance\n`);
+  testsPassed++;
+}
+
+// --------------------------------------------------------------------------
 // SUMMARY
 // --------------------------------------------------------------------------
 console.log('================================================================');
 console.log(`🎉 ALL ${testsPassed} FVOCI FOLLOW-UP TESTS PASSED SUCCESSFULLY! (Failed: ${testsFailed})`);
 console.log('================================================================');
+
