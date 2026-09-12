@@ -114,12 +114,43 @@ export type InstrumentType =
   | 'contract_liability_deferred_revenue'
   | 'unknown';
 
+export type EquityMeasurementBasis =
+  | 'FVTPL'
+  | 'FVOCI'
+  | 'AMORTISED_COST'
+  | 'COST'
+  | 'UNKNOWN';
+
+export interface UnderlyingTransactionState {
+  transactionId?: string;
+  type: TransactionNatureType;
+  subject: string;
+  ownershipContext: OwnershipContext;
+  instrument: InstrumentType;
+  totalAmount?: number;
+  currency: string;
+  functionalCurrency?: string;
+  transactionDate?: string;
+  disposalDate?: string;
+  disposalAmount?: number;
+  acquisitionFxRate?: number;
+  disposalFxRate?: number;
+  actualMeasurementBasis?: EquityMeasurementBasis;
+  projectedMeasurementBasis?: EquityMeasurementBasis;
+  assetName?: string;
+  quantity?: number;
+  counterpartyRole?: CounterpartyRole;
+}
+
 export type AccountingEventType =
   | 'initial_transaction'
   | 'settlement'
   | 'partial_settlement'
   | 'reversal'
   | 'adjustment'
+  | 'reclassification'
+  | 'policy_election'
+  | 'hypothetical_branch'
   | 'other';
 
 export interface AccountingEvent {
@@ -189,14 +220,9 @@ export interface ConversationAccountingContext {
     type: 'company' | 'individual' | 'other' | 'unknown';
     description?: string;
   };
-  underlyingTransaction?: {
-    type: TransactionNatureType;
-    subject: string;
-    ownershipContext: OwnershipContext;
-    instrument: InstrumentType;
-    totalAmount?: number;
-    currency: string;
-  };
+  underlyingTransaction?: UnderlyingTransactionState;
+  actualMeasurementBasis?: EquityMeasurementBasis;
+  projectedMeasurementBasis?: EquityMeasurementBasis;
   events: AccountingEvent[];
   actualEvents: AccountingEvent[];
   outstandingBalances: OutstandingAccountBalance[];
@@ -212,6 +238,7 @@ export interface FollowUpEventAnalysis {
   targetOutstandingAccount?: string;
   targetBalanceKey?: string;
   targetTransactionId?: string;
+  targetMeasurementBasis?: EquityMeasurementBasis;
   settlementAmount?: number;
   remainingReceivableOrPayable?: number;
   settlementAccount?: string;

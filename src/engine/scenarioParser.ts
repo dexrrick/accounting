@@ -1725,6 +1725,110 @@ export async function parseAccountingQuery(
             missingFields: []
           };
         }
+      } else if (
+        understanding.followUpAnalysis &&
+        (understanding.followUpAnalysis.eventType === 'hypothetical_branch' ||
+         understanding.followUpAnalysis.eventType === 'reclassification' ||
+         understanding.followUpAnalysis.eventType === 'policy_election')
+      ) {
+        const delta = calculateAccountingDelta(convContext, understanding.followUpAnalysis, functionalCurrency);
+        if (delta && delta.resultingAccountingEvent) {
+          const targetBasis = understanding.followUpAnalysis.targetMeasurementBasis || 'FVOCI';
+          const isFvoci = targetBasis === 'FVOCI';
+          const priorCommittedGroups = (currentScenario.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+            ? [...currentScenario.committedDirectGroups]
+            : (currentScenario.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
+
+          const acqLines = delta.journalLines.filter(l => l.id.includes('-buy-'));
+          const sellLines = delta.journalLines.filter(l => l.id.includes('-sell-'));
+
+          const groups: JournalEntryGroup[] = [];
+          if (acqLines.length > 0) {
+            const drTotal = Math.round(acqLines.reduce((s, l) => s + l.debit, 0) * 100) / 100;
+            const crTotal = Math.round(acqLines.reduce((s, l) => s + l.credit, 0) * 100) / 100;
+            groups.push({
+              id: `grp-hypo-acq-${priorCommittedGroups.length + 1}`,
+              transactionId: delta.resultingAccountingEvent.transactionId,
+              targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
+              isHypothetical: true,
+              eventDate: formatSingaporeDate(convContext.underlyingTransaction?.transactionDate || new Date()),
+              title: `Hypothetical Initial Acquisition (${targetBasis})`,
+              summary: `Initial recognition of equity investment under ${targetBasis}`,
+              lines: acqLines,
+              totalDebit: drTotal,
+              totalCredit: crTotal,
+              isBalanced: Math.abs(drTotal - crTotal) < 0.01,
+              citations: [],
+              rationalePoints: [
+                `Under SFRS(I) 9 §5.1.1: Financial assets at ${targetBasis} are initially recognized at fair value plus transaction costs.`,
+                `Initial acquisition translated at transaction spot exchange rate.`
+              ],
+              authorityStatus: 'DETERMINISTIC'
+            });
+          }
+
+          if (sellLines.length > 0) {
+            const drTotal = Math.round(sellLines.reduce((s, l) => s + l.debit, 0) * 100) / 100;
+            const crTotal = Math.round(sellLines.reduce((s, l) => s + l.credit, 0) * 100) / 100;
+            groups.push({
+              id: `grp-hypo-disp-${priorCommittedGroups.length + 2}`,
+              transactionId: delta.resultingAccountingEvent.transactionId,
+              targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
+              isHypothetical: true,
+              eventDate: formatSingaporeDate(convContext.underlyingTransaction?.disposalDate || new Date()),
+              title: `Hypothetical Disposal & Derecognition (${targetBasis})`,
+              summary: `Disposal of equity investment under ${targetBasis}`,
+              lines: sellLines,
+              totalDebit: drTotal,
+              totalCredit: crTotal,
+              isBalanced: Math.abs(drTotal - crTotal) < 0.01,
+              citations: [],
+              rationalePoints: isFvoci ? [
+                `Under SFRS(I) 9 §5.7.5 and SFRS(I) 1-21 §30: For equity investments designated at FVOCI, all fair value changes and exchange differences are recognized in OCI within Fair Value Reserve.`,
+                `Zero P&L recycling: Cumulative gains/losses recognized in OCI are NOT recycled to profit or loss upon disposal.`,
+                `Optional Presentation Transfer: The accumulated reserve may be transferred directly within equity to Retained Earnings (not required for derecognition).`
+              ] : [
+                `Under SFRS(I) 9 & SFRS(I) 1-21: Investment at FVTPL recognizes fair value stock gain and realized foreign exchange gain in profit or loss upon derecognition.`
+              ],
+              authorityStatus: 'DETERMINISTIC'
+            });
+          }
+
+          const actualMeasurementBasis = currentScenario.actualMeasurementBasis ||
+            convContext.underlyingTransaction?.actualMeasurementBasis ||
+            'FVTPL';
+
+          return {
+            scenarioType: currentScenario.scenarioType || 'EQUITY_INVESTMENT_FX',
+            authorityStatus: 'DETERMINISTIC',
+            queryIntent: 'TRANSACTION',
+            primaryDomain: 'ACCOUNTING_SFRS',
+            rawQuery: query,
+            transactionTitle: currentScenario.transactionTitle ? `${currentScenario.transactionTitle} (${targetBasis} Projection)` : `Equity Investment (${targetBasis} Projection)`,
+            functionalCurrency,
+            transactionCurrency: delta.currency,
+            accountingTreatmentSummary: delta.explanation,
+            singaporeTaxTreatmentSummary: currentScenario.singaporeTaxTreatmentSummary || 'Capital gains on foreign shares held as capital investments are not taxable in Singapore.',
+            amount: delta.amount,
+            directGroups: groups,
+            committedDirectGroups: priorCommittedGroups,
+            projectedGroups: groups,
+            actualEvents: convContext.actualEvents,
+            accountingEvents: currentScenario.accountingEvents || convContext.actualEvents,
+            isHypothetical: true,
+            actualMeasurementBasis,
+            projectedMeasurementBasis: targetBasis,
+            underlyingTransaction: convContext.underlyingTransaction,
+            classification: targetBasis as any,
+            keyParameters: [
+              { label: 'Evaluation Basis', value: `${targetBasis} (Hypothetical Projection)`, badge: 'Projection', highlight: true },
+              { label: 'Actual Basis', value: actualMeasurementBasis, badge: 'Committed' },
+              { label: 'P&L Recycling Mandate', value: isFvoci ? 'Zero P&L Recycling (SFRS(I) 9 §B5.7.1)' : 'Recognized in P&L', badge: 'Mandate' }
+            ],
+            isComplete: true,
+            missingFields: []
+          };
+        }
       }
     }
     const classification = classifyQuestion(query);
@@ -2027,6 +2131,26 @@ export async function parseAccountingQuery(
     saleAmountForeign,
     saleFxRate,
     classification: 'FVTPL',
+    actualMeasurementBasis: 'FVTPL',
+    ownershipContext: 'external_investment',
+    underlyingTransaction: {
+      transactionId: 'tx-apple-shares-1',
+      type: 'equity_investment_acquisition',
+      subject: `Investment & Sale of ${assetName} (USD/SGD)`,
+      ownershipContext: 'external_investment',
+      instrument: 'financial_asset_equity',
+      actualMeasurementBasis: 'FVTPL',
+      totalAmount: purchaseAmountForeign,
+      currency: transactionCurrency,
+      functionalCurrency,
+      transactionDate: purchaseDate,
+      disposalDate: saleDate,
+      disposalAmount: saleAmountForeign,
+      acquisitionFxRate: purchaseFxRate,
+      disposalFxRate: saleFxRate,
+      assetName,
+      quantity
+    },
     bifurcateFxGain: true,
     fxSource,
     directGroups,

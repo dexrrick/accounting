@@ -102,10 +102,16 @@ export function assembleDeterministicResponse(
     deterministicScenario.scenarioType !== 'UNRECOGNIZED'
   );
 
+  const isHypotheticalQuery = Boolean(
+    groundedContext.semanticUnderstanding?.isHypothetical ||
+    groundedContext.semanticUnderstanding?.followUpAnalysis?.isHypothetical
+  );
+
   const hasAuthoritativeDeterministicEntries = Boolean(
     isRecognizedDeterministicFixture &&
     deterministicScenario!.directGroups &&
-    deterministicScenario!.directGroups.length > 0
+    deterministicScenario!.directGroups.length > 0 &&
+    !isHypotheticalQuery
   );
 
   const hasMissingFacts = Boolean(
@@ -227,6 +233,78 @@ export function assembleDeterministicResponse(
         projectedGroups = undefined;
         directGroups = committedDirectGroups;
       }
+    }
+  } else if (
+    followUp &&
+    (followUp.eventType === 'hypothetical_branch' ||
+     followUp.eventType === 'reclassification' ||
+     followUp.eventType === 'policy_election')
+  ) {
+    const convContext = extractAccountingContext(currentScenario);
+    const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
+    const delta = calculateAccountingDelta(convContext, followUp, curr);
+    if (delta && delta.resultingAccountingEvent) {
+      const targetBasis = followUp.targetMeasurementBasis || 'FVOCI';
+      const isFvoci = targetBasis === 'FVOCI';
+
+      const acqLines = delta.journalLines.filter(l => l.id.includes('-buy-'));
+      const sellLines = delta.journalLines.filter(l => l.id.includes('-sell-'));
+
+      const groups: JournalEntryGroup[] = [];
+      if (acqLines.length > 0) {
+        const drTotal = Math.round(acqLines.reduce((s, l) => s + l.debit, 0) * 100) / 100;
+        const crTotal = Math.round(acqLines.reduce((s, l) => s + l.credit, 0) * 100) / 100;
+        groups.push({
+          id: `grp-hypo-acq-${priorCommittedGroups.length + 1}`,
+          transactionId: delta.resultingAccountingEvent.transactionId,
+          targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
+          isHypothetical: true,
+          eventDate: formatSingaporeDate(convContext.underlyingTransaction?.transactionDate || new Date()),
+          title: `Hypothetical Initial Acquisition (${targetBasis})`,
+          summary: `Initial recognition of equity investment under ${targetBasis}`,
+          lines: acqLines,
+          totalDebit: drTotal,
+          totalCredit: crTotal,
+          isBalanced: Math.abs(drTotal - crTotal) < 0.01,
+          citations: verifiedCitations,
+          rationalePoints: [
+            `Under SFRS(I) 9 §5.1.1: Financial assets at ${targetBasis} are initially recognized at fair value plus transaction costs.`,
+            `Initial acquisition translated at transaction spot exchange rate.`
+          ],
+          authorityStatus: 'DETERMINISTIC'
+        });
+      }
+
+      if (sellLines.length > 0) {
+        const drTotal = Math.round(sellLines.reduce((s, l) => s + l.debit, 0) * 100) / 100;
+        const crTotal = Math.round(sellLines.reduce((s, l) => s + l.credit, 0) * 100) / 100;
+        groups.push({
+          id: `grp-hypo-disp-${priorCommittedGroups.length + 2}`,
+          transactionId: delta.resultingAccountingEvent.transactionId,
+          targetTransactionId: delta.resultingAccountingEvent.targetTransactionId,
+          isHypothetical: true,
+          eventDate: formatSingaporeDate(convContext.underlyingTransaction?.disposalDate || new Date()),
+          title: `Hypothetical Disposal & Derecognition (${targetBasis})`,
+          summary: `Disposal of equity investment under ${targetBasis}`,
+          lines: sellLines,
+          totalDebit: drTotal,
+          totalCredit: crTotal,
+          isBalanced: Math.abs(drTotal - crTotal) < 0.01,
+          citations: verifiedCitations,
+          rationalePoints: isFvoci ? [
+            `Under SFRS(I) 9 §5.7.5 and SFRS(I) 1-21 §30: For equity investments designated at FVOCI, all fair value changes and exchange differences are recognized in OCI within Fair Value Reserve.`,
+            `Zero P&L recycling: Cumulative gains/losses recognized in OCI are NOT recycled to profit or loss upon disposal.`,
+            `Optional Presentation Transfer: The accumulated reserve may be transferred directly within equity to Retained Earnings (not required for derecognition).`
+          ] : [
+            `Under SFRS(I) 9 & SFRS(I) 1-21: Investment at FVTPL recognizes fair value stock gain and realized foreign exchange gain in profit or loss upon derecognition.`
+          ],
+          authorityStatus: 'DETERMINISTIC'
+        });
+      }
+
+      committedDirectGroups = priorCommittedGroups;
+      projectedGroups = groups;
+      directGroups = groups.length > 0 ? groups : priorCommittedGroups;
     }
   } else if (compact.directGroups && compact.directGroups.length > 0) {
     // Pre-computed or raw direct groups
@@ -706,6 +784,44 @@ export function assembleDeterministicResponse(
     }
   }
 
+  // 9. Journal Generation Consistency Guard
+  // Invariant: If active projected or evaluated measurement basis is FVOCI:
+  // - MUST NOT contain any FVTPL accounts (e.g. Fair Value Gain [P&L], Realized FX Gain [P&L])
+  // - P&L recycling must be zero
+  const activeBasis = followUp?.targetMeasurementBasis ||
+    groundedContext.semanticUnderstanding?.projectedMeasurementBasis ||
+    groundedContext.semanticUnderstanding?.actualMeasurementBasis ||
+    currentScenario?.actualMeasurementBasis;
+
+  if (activeBasis === 'FVOCI') {
+    for (const grp of directGroups) {
+      for (const line of grp.lines) {
+        const accLower = line.accountName.toLowerCase();
+        if (accLower.includes('fvtpl') || accLower.includes('fair value gain (profit or loss)') || accLower.includes('fair value gain [p&l]')) {
+          throw new Error(`[JOURNAL_CONSISTENCY_VIOLATION] Journal for FVOCI contains FVTPL account: ${line.accountName}`);
+        }
+        if (accLower.includes('realized foreign exchange gain') && accLower.includes('p&l')) {
+          throw new Error(`[JOURNAL_CONSISTENCY_VIOLATION] Journal for FVOCI contains P&L FX gain account: ${line.accountName}`);
+        }
+      }
+    }
+  }
+
+  const convContextForState = extractAccountingContext(currentScenario);
+  const resolvedActualBasis = currentScenario?.actualMeasurementBasis ||
+    deterministicScenario?.actualMeasurementBasis ||
+    convContextForState.underlyingTransaction?.actualMeasurementBasis ||
+    (currentScenario?.classification as any) ||
+    'FVTPL';
+
+  const resolvedProjectedBasis = followUp?.targetMeasurementBasis ||
+    groundedContext.semanticUnderstanding?.projectedMeasurementBasis ||
+    currentScenario?.projectedMeasurementBasis;
+
+  const resolvedUnderlyingTx = currentScenario?.underlyingTransaction ||
+    deterministicScenario?.underlyingTransaction ||
+    convContextForState.underlyingTransaction;
+
   const scenarioState: AccountingScenarioState = {
     scenarioType: resolvedScenarioType,
     queryIntent: queryMode as any,
@@ -740,6 +856,10 @@ export function assembleDeterministicResponse(
     missingFacts: missingFacts.length > 0 ? missingFacts : undefined,
     ownershipContext: deterministicScenario?.ownershipContext || groundedContext.semanticUnderstanding?.ownershipContext || currentScenario?.ownershipContext,
     semanticUnderstanding: groundedContext.semanticUnderstanding || currentScenario?.semanticUnderstanding,
+    actualMeasurementBasis: resolvedActualBasis,
+    projectedMeasurementBasis: resolvedProjectedBasis,
+    underlyingTransaction: resolvedUnderlyingTx,
+    classification: (resolvedProjectedBasis || resolvedActualBasis || 'FVTPL') as any,
     isComplete: !hasPendingValuation && missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };

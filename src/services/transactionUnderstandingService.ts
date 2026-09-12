@@ -21,7 +21,9 @@ import type {
   OwnershipContext,
   CounterpartyRole,
   TransactionNatureType,
-  InstrumentType
+  InstrumentType,
+  EquityMeasurementBasis,
+  UnderlyingTransactionState
 } from '../types/conversationState';
 import { executeStructuredLlmCall } from './aiTransport';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
@@ -73,6 +75,11 @@ export interface TransactionUnderstanding {
   assumptions: string[];
   confidence: number;
   followUpAnalysis?: FollowUpEventAnalysis;
+  actualMeasurementBasis?: EquityMeasurementBasis;
+  projectedMeasurementBasis?: EquityMeasurementBasis;
+  measurementBasis?: EquityMeasurementBasis;
+  isHypothetical?: boolean;
+  underlyingTransaction?: UnderlyingTransactionState;
 }
 
 export interface UnderstandingValidationResult {
@@ -316,6 +323,31 @@ export function validateAndNormalizeUnderstanding(
     errors.push('Transaction amount cannot be negative.');
   }
 
+  // Measurement basis validation and normalization
+  const rawBasis = raw?.measurementBasis || raw?.followUpAnalysis?.targetMeasurementBasis;
+  let validatedBasis: EquityMeasurementBasis | undefined = undefined;
+  if (rawBasis) {
+    const validBases = ['FVTPL', 'FVOCI', 'AMORTISED_COST', 'COST', 'UNKNOWN'];
+    const upper = String(rawBasis).toUpperCase();
+    if (validBases.includes(upper)) {
+      validatedBasis = upper as EquityMeasurementBasis;
+    } else {
+      errors.push(`Invalid measurementBasis: '${rawBasis}'`);
+    }
+  }
+
+  // Dangerous contradiction check: own_equity cannot have FVTPL or FVOCI measurement basis (SFRS(I) 1-32 §33)
+  if (normalizedOwnership === 'own_equity' && (validatedBasis === 'FVTPL' || validatedBasis === 'FVOCI')) {
+    errors.push('Contradictory classification: own_equity cannot have FVTPL or FVOCI measurement basis (SFRS(I) 1-32 §33).');
+  }
+
+  const isHypo = Boolean(raw?.isHypothetical || raw?.followUpAnalysis?.isHypothetical);
+  const actualBasis = conversationContext?.actualMeasurementBasis ||
+    conversationContext?.underlyingTransaction?.actualMeasurementBasis ||
+    (!isHypo && validatedBasis ? validatedBasis : undefined);
+
+  const projectedBasis = isHypo ? (validatedBasis || conversationContext?.projectedMeasurementBasis) : undefined;
+
   // Follow-up invariant: follow-up claims require active prior context
   if (raw?.followUpAnalysis?.isFollowUp && conversationContext !== undefined) {
     const hasPriorState = Boolean(
@@ -417,14 +449,22 @@ export function validateAndNormalizeUnderstanding(
     factsMissing: Array.from(new Set(factsMissing)),
     assumptions: Array.from(new Set(assumptions)),
     confidence,
+    actualMeasurementBasis: actualBasis,
+    projectedMeasurementBasis: projectedBasis,
+    measurementBasis: validatedBasis || actualBasis,
+    isHypothetical: isHypo,
+    underlyingTransaction: conversationContext?.underlyingTransaction,
     followUpAnalysis: raw?.followUpAnalysis ? {
       eventType: raw.followUpAnalysis.eventType || 'other',
       isFollowUp: Boolean(raw.followUpAnalysis.isFollowUp),
+      targetCriteria: raw.followUpAnalysis.targetCriteria,
+      targetTransactionId: raw.followUpAnalysis.targetTransactionId,
+      targetMeasurementBasis: raw.followUpAnalysis.targetMeasurementBasis || validatedBasis,
       targetOutstandingAccount: raw.followUpAnalysis.targetOutstandingAccount || undefined,
       settlementAmount: typeof raw.followUpAnalysis.settlementAmount === 'number' ? raw.followUpAnalysis.settlementAmount : undefined,
       remainingReceivableOrPayable: typeof raw.followUpAnalysis.remainingReceivableOrPayable === 'number' ? raw.followUpAnalysis.remainingReceivableOrPayable : undefined,
       settlementAccount: raw.followUpAnalysis.settlementAccount || 'cash_at_bank',
-      isHypothetical: Boolean(raw.followUpAnalysis.isHypothetical),
+      isHypothetical: isHypo,
       explanation: raw.followUpAnalysis.explanation || ''
     } : undefined
   };
@@ -572,6 +612,71 @@ export class DeterministicSemanticExtractor {
       }
     }
 
+    // Measurement basis extraction from query
+    let measurementBasis: EquityMeasurementBasis | undefined = undefined;
+    if (/\b(fvoci|fair value through other comprehensive income)\b/i.test(query)) {
+      measurementBasis = 'FVOCI';
+    } else if (/\b(fvtpl|fair value through profit or loss)\b/i.test(query)) {
+      measurementBasis = 'FVTPL';
+    } else if (/\b(amortised cost|amortized cost)\b/i.test(query)) {
+      measurementBasis = 'AMORTISED_COST';
+    } else if (conversationContext?.underlyingTransaction?.actualMeasurementBasis) {
+      measurementBasis = conversationContext.underlyingTransaction.actualMeasurementBasis;
+    }
+
+    const isMeasurementFollowUp = Boolean(
+      hasPriorContext &&
+      !introducesNewSubject &&
+      !isPaymentOrSettlementAction &&
+      (
+        /\b(fvoci|fvtpl|amortised cost|amortized cost)\b/i.test(query) ||
+        (isHypothetical && (q.includes('classification') || q.includes('treatment') || q.includes('measurement') || q.includes('double entry') || q.includes('journal')))
+      )
+    );
+
+    if (isMeasurementFollowUp && conversationContext?.underlyingTransaction) {
+      const priorTx = conversationContext.underlyingTransaction;
+      const targetBasis: EquityMeasurementBasis =
+        (/\b(fvoci|fair value through other comprehensive income)\b/i.test(query)) ? 'FVOCI' :
+        (/\b(fvtpl|fair value through profit or loss)\b/i.test(query)) ? 'FVTPL' :
+        (/\b(amortised cost|amortized cost)\b/i.test(query)) ? 'AMORTISED_COST' :
+        (measurementBasis || 'FVOCI');
+
+      followUpAnalysis = {
+        eventType: 'hypothetical_branch',
+        isFollowUp: true,
+        targetMeasurementBasis: targetBasis,
+        isHypothetical: true,
+        explanation: `Hypothetical ${targetBasis} measurement basis for existing transaction`
+      };
+
+      // Inherit immutable quantitative transaction facts from prior underlying transaction
+      if (amount === undefined && priorTx.totalAmount !== undefined) {
+        amount = priorTx.totalAmount;
+      }
+      if (currency.source === 'unknown') {
+        currency = {
+          value: priorTx.currency || functionalCurrency,
+          source: 'context_inference',
+          confidence: 0.95,
+          rationale: 'Inherited from active transaction context'
+        };
+      }
+      if (ownershipContext === 'unknown' && priorTx.ownershipContext) {
+        ownershipContext = priorTx.ownershipContext;
+      }
+      if (instrument === 'unknown' && priorTx.instrument) {
+        instrument = priorTx.instrument;
+      }
+      if (!transactionType || transactionType === 'unclassified_transaction') {
+        transactionType = priorTx.type;
+      }
+      if (!subject && priorTx.subject) {
+        subject = priorTx.subject;
+      }
+      measurementBasis = targetBasis;
+    }
+
     // 6. Facts Missing & Assumptions
     const factsMissing: string[] = [];
     const assumptions: string[] = [];
@@ -646,6 +751,11 @@ export class DeterministicSemanticExtractor {
       factsMissing,
       assumptions,
       confidence,
+      actualMeasurementBasis: conversationContext?.actualMeasurementBasis || conversationContext?.underlyingTransaction?.actualMeasurementBasis,
+      projectedMeasurementBasis: isHypothetical ? (measurementBasis || conversationContext?.projectedMeasurementBasis) : undefined,
+      measurementBasis: measurementBasis || conversationContext?.actualMeasurementBasis,
+      isHypothetical,
+      underlyingTransaction: conversationContext?.underlyingTransaction,
       followUpAnalysis
     };
 
@@ -1035,9 +1145,12 @@ Return ONLY a JSON object conforming strictly to this JSON schema:
   "factsMissing": string[],
   "assumptions": string[],
   "confidence": number,
+  "measurementBasis": "FVTPL" | "FVOCI" | "AMORTISED_COST" | "COST" | "UNKNOWN" | null,
+  "isHypothetical": boolean,
   "followUpAnalysis": {
-    "eventType": "settlement" | "partial_settlement" | "hypothetical_change" | "new_transaction" | "other",
+    "eventType": "settlement" | "partial_settlement" | "hypothetical_branch" | "reclassification" | "new_transaction" | "other",
     "isFollowUp": boolean,
+    "targetMeasurementBasis": "FVTPL" | "FVOCI" | "AMORTISED_COST" | "COST" | "UNKNOWN" | null,
     "targetOutstandingAccount": string | null,
     "settlementAmount": number | null,
     "remainingReceivableOrPayable": number | null,
@@ -1086,7 +1199,16 @@ CRITICAL CLASSIFICATION INVARIANTS:
      * paymentStatus = "paid"
      * instrument = "cash_at_bank"
      * ownershipContext = inherit from prior context (e.g. "own_equity")
-     * Do NOT classify this as an external investment or financial asset.`;
+     * Do NOT classify this as an external investment or financial asset.
+8. MEASUREMENT BASIS & HYPOTHETICAL ACCOUNTING POLICY:
+   - When user asks about accounting policy, classification, or what-if alternative (e.g. "what if the investment is FVOCI show me the double entry", "what if instead FVTPL"):
+     * measurementBasis = "FVOCI" (or "FVTPL", "AMORTISED_COST")
+     * isHypothetical = true
+     * followUpAnalysis.eventType = "hypothetical_branch"
+     * followUpAnalysis.isFollowUp = true
+     * followUpAnalysis.isHypothetical = true
+     * followUpAnalysis.targetMeasurementBasis = "FVOCI" (or corresponding basis)
+     * Inherit immutable transaction facts (amount, currency, counterparty, ownership) from [PRIOR CONVERSATION ACCOUNTING CONTEXT]!`;
 
 export class AISemanticExtractor {
   public async extract(
@@ -1104,7 +1226,9 @@ export class AISemanticExtractor {
        conversationContext.underlyingTransaction)
     ) {
       contextPrompt = `\n[PRIOR CONVERSATION ACCOUNTING CONTEXT]:\n` +
-        `- Underlying Transaction: ${conversationContext.underlyingTransaction?.subject || 'Commercial Transaction'} (${conversationContext.underlyingTransaction?.ownershipContext || 'own_equity'})\n` +
+        (conversationContext.underlyingTransaction
+          ? `- Underlying Transaction: ${conversationContext.underlyingTransaction.subject} (Type: ${conversationContext.underlyingTransaction.type}, Ownership: ${conversationContext.underlyingTransaction.ownershipContext}, Amount: ${conversationContext.underlyingTransaction.currency} ${conversationContext.underlyingTransaction.totalAmount}, Actual Basis: ${conversationContext.underlyingTransaction.actualMeasurementBasis || 'FVTPL'})\n`
+          : '') +
         (conversationContext.outstandingBalances.length > 0
           ? `- Outstanding Balances:\n` + conversationContext.outstandingBalances.map(b => `  * ${b.accountName}: ${b.currency} ${b.remainingAmount} (${b.nature}, role: ${b.counterpartyRole})`).join('\n') + '\n'
           : '') +

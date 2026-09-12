@@ -1,11 +1,19 @@
-﻿/**
+/**
  * Singapore Date and Time Sequence Utilities (DD/MM/YYYY)
  */
 
 export function formatSingaporeDate(dateInput: string | Date | undefined | null): string {
   if (!dateInput) return '';
 
-  const str = typeof dateInput === 'string' ? dateInput.trim() : dateInput.toISOString();
+  let str: string;
+  if (typeof dateInput === 'string') {
+    str = dateInput.trim();
+  } else if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return '';
+    str = dateInput.toISOString();
+  } else {
+    str = String(dateInput);
+  }
 
   // If already in DD/MM/YYYY
   if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {

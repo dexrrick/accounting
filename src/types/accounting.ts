@@ -157,6 +157,9 @@ export interface AccountingScenarioState {
   ownershipContext?: import('./conversationState').OwnershipContext;
   counterpartyRole?: import('./conversationState').CounterpartyRole;
   transactionNature?: string;
+  actualMeasurementBasis?: import('./conversationState').EquityMeasurementBasis;
+  projectedMeasurementBasis?: import('./conversationState').EquityMeasurementBasis;
+  underlyingTransaction?: import('./conversationState').UnderlyingTransactionState;
 
   // Explicit Assumptions (Needed because facts are missing)
   assumptions?: ExplicitAssumption[];

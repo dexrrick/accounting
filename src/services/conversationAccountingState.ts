@@ -11,11 +11,13 @@ import type {
   TargetResolutionCriteria,
   OwnershipContext,
   TransactionNatureType,
-  InstrumentType
+  InstrumentType,
+  EquityMeasurementBasis,
+  UnderlyingTransactionState
 } from '../types/conversationState';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
-export type { TargetResolutionCriteria };
+export type { TargetResolutionCriteria, EquityMeasurementBasis, UnderlyingTransactionState };
 
 /**
  * Deterministically generates a standardized unique balance key.
@@ -425,19 +427,81 @@ export function extractAccountingContext(
         ? 'financial_asset_equity'
         : 'unknown'));
 
+  const priorUnderlying = currentScenario?.underlyingTransaction;
+
+  const actualMeasurementBasis: EquityMeasurementBasis =
+    currentScenario?.actualMeasurementBasis ||
+    priorUnderlying?.actualMeasurementBasis ||
+    (currentScenario?.classification as EquityMeasurementBasis) ||
+    (resolvedTxType === 'equity_investment_acquisition' ? 'FVTPL' : 'UNKNOWN');
+
+  const projectedMeasurementBasis: EquityMeasurementBasis | undefined =
+    currentScenario?.projectedMeasurementBasis ||
+    priorUnderlying?.projectedMeasurementBasis;
+
+  const totalAmount = currentScenario?.amount ??
+    priorUnderlying?.totalAmount ??
+    currentScenario?.purchaseAmountForeign;
+
+  const currency = currentScenario?.transactionCurrency ||
+    priorUnderlying?.currency ||
+    currentScenario?.functionalCurrency ||
+    'SGD';
+
+  const functionalCurrency = currentScenario?.functionalCurrency ||
+    priorUnderlying?.functionalCurrency ||
+    'SGD';
+
+  const transactionDate = currentScenario?.purchaseDate ||
+    priorUnderlying?.transactionDate;
+
+  const disposalDate = currentScenario?.saleDate ||
+    priorUnderlying?.disposalDate;
+
+  const disposalAmount = currentScenario?.saleAmountForeign ??
+    priorUnderlying?.disposalAmount;
+
+  const acquisitionFxRate = currentScenario?.purchaseFxRate ??
+    priorUnderlying?.acquisitionFxRate;
+
+  const disposalFxRate = currentScenario?.saleFxRate ??
+    priorUnderlying?.disposalFxRate;
+
+  const assetName = currentScenario?.assetName ||
+    priorUnderlying?.assetName;
+
+  const quantity = currentScenario?.quantity ??
+    priorUnderlying?.quantity;
+
+  const underlyingTransaction: UnderlyingTransactionState | undefined = currentScenario ? {
+    transactionId: currentScenario.transactionId || priorUnderlying?.transactionId || 'tx-1',
+    type: resolvedTxType,
+    subject: currentScenario.transactionTitle || priorUnderlying?.subject || 'Commercial Transaction',
+    ownershipContext,
+    instrument: resolvedInstrument,
+    totalAmount,
+    currency,
+    functionalCurrency,
+    transactionDate,
+    disposalDate,
+    disposalAmount,
+    acquisitionFxRate,
+    disposalFxRate,
+    actualMeasurementBasis,
+    projectedMeasurementBasis,
+    assetName,
+    quantity,
+    counterpartyRole: currentScenario.counterpartyRole || priorUnderlying?.counterpartyRole
+  } : undefined;
+
   return {
     activeEntity: {
       type: 'company',
       description: 'Reporting entity Singapore business'
     },
-    underlyingTransaction: currentScenario ? {
-      type: resolvedTxType,
-      subject: currentScenario.transactionTitle || 'Commercial Transaction',
-      ownershipContext,
-      instrument: resolvedInstrument,
-      totalAmount: currentScenario.amount,
-      currency: currentScenario.transactionCurrency || currentScenario.functionalCurrency || 'SGD'
-    } : undefined,
+    underlyingTransaction,
+    actualMeasurementBasis,
+    projectedMeasurementBasis,
     events: currentScenario?.accountingEvents || actualEvents,
     actualEvents,
     outstandingBalances,
@@ -457,9 +521,206 @@ export function calculateAccountingDelta(
   eventAnalysis: FollowUpEventAnalysis,
   currency: string = 'SGD'
 ): AccountingDelta | null {
-  if (eventAnalysis.eventType !== 'settlement' && eventAnalysis.eventType !== 'partial_settlement') {
+  if (
+    eventAnalysis.eventType !== 'settlement' &&
+    eventAnalysis.eventType !== 'partial_settlement' &&
+    eventAnalysis.eventType !== 'hypothetical_branch' &&
+    eventAnalysis.eventType !== 'reclassification' &&
+    eventAnalysis.eventType !== 'policy_election'
+  ) {
     return null;
   }
+
+  // 1. Handle Generic Measurement Basis Projections & Reclassifications
+  if (
+    eventAnalysis.eventType === 'hypothetical_branch' ||
+    eventAnalysis.eventType === 'reclassification' ||
+    eventAnalysis.eventType === 'policy_election'
+  ) {
+    const targetBasis = eventAnalysis.targetMeasurementBasis;
+    const tx = context.underlyingTransaction;
+    if (!tx || !targetBasis) return null;
+
+    const initialCostSGD = Math.round(((tx.totalAmount || 0) * (tx.acquisitionFxRate || 1)) * 100) / 100;
+    const proceedsSGD = tx.disposalAmount ? Math.round((tx.disposalAmount * (tx.disposalFxRate || 1)) * 100) / 100 : 0;
+    const totalOciGain = proceedsSGD ? Math.round((proceedsSGD - initialCostSGD) * 100) / 100 : 0;
+    const assetTitle = tx.assetName || 'Equity Investments';
+    const txCurr = tx.currency || 'USD';
+
+    const lines: JournalLine[] = [];
+    if (targetBasis === 'FVOCI') {
+      // Group 1: Initial Acquisition
+      lines.push(
+        {
+          id: 'l-fvoci-buy-asset',
+          accountCode: '1220',
+          accountName: `Financial Asset at FVOCI (${assetTitle})`,
+          category: 'ASSET',
+          debit: initialCostSGD,
+          credit: 0,
+          foreignCurrency: txCurr,
+          foreignDebit: tx.totalAmount,
+          exchangeRate: tx.acquisitionFxRate,
+          lineExplanation: `Initial recognition of equity investment designated at FVOCI under SFRS(I) 9 §5.1.1`
+        },
+        {
+          id: 'l-fvoci-buy-bank',
+          accountCode: '1010',
+          accountName: `Cash at Bank (${txCurr} Account)`,
+          category: 'ASSET',
+          debit: 0,
+          credit: initialCostSGD,
+          foreignCurrency: txCurr,
+          foreignCredit: tx.totalAmount,
+          exchangeRate: tx.acquisitionFxRate,
+          lineExplanation: `Outflow of cash for equity share acquisition translated at transaction spot rate`
+        }
+      );
+
+      // Group 2: Disposal
+      if (proceedsSGD > 0) {
+        lines.push(
+          {
+            id: 'l-fvoci-sell-bank',
+            accountCode: '1010',
+            accountName: `Cash at Bank (${txCurr} Account)`,
+            category: 'ASSET',
+            debit: proceedsSGD,
+            credit: 0,
+            foreignCurrency: txCurr,
+            foreignDebit: tx.disposalAmount,
+            exchangeRate: tx.disposalFxRate,
+            lineExplanation: `Gross disposal proceeds translated at disposal spot rate`
+          },
+          {
+            id: 'l-fvoci-sell-asset',
+            accountCode: '1220',
+            accountName: `Financial Asset at FVOCI (${assetTitle})`,
+            category: 'ASSET',
+            debit: 0,
+            credit: initialCostSGD,
+            foreignCurrency: txCurr,
+            foreignCredit: tx.totalAmount,
+            exchangeRate: tx.acquisitionFxRate,
+            lineExplanation: `Derecognition of original carrying cost at acquisition spot rate`
+          },
+          {
+            id: 'l-fvoci-sell-reserve',
+            accountCode: '3120',
+            accountName: 'Fair Value Reserve - FVOCI (Equity / OCI)',
+            category: 'EQUITY',
+            debit: 0,
+            credit: totalOciGain,
+            lineExplanation: `Cumulative fair value and foreign exchange gain recognized in OCI under SFRS(I) 9 §5.7.5 & SFRS(I) 1-21 §30 (P&L recycling = 0)`
+          }
+        );
+      }
+    } else if (targetBasis === 'FVTPL') {
+      const stockGainSGD = tx.disposalAmount ? Math.round(((tx.disposalAmount - (tx.totalAmount || 0)) * (tx.disposalFxRate || 1)) * 100) / 100 : 0;
+      const fxGainSGD = (tx.disposalAmount && tx.acquisitionFxRate && tx.disposalFxRate)
+        ? Math.round(((tx.totalAmount || 0) * (tx.disposalFxRate - tx.acquisitionFxRate)) * 100) / 100
+        : 0;
+
+      lines.push(
+        {
+          id: 'l-fvtpl-buy-asset',
+          accountCode: '1210',
+          accountName: `Financial Asset at FVTPL (${assetTitle})`,
+          category: 'ASSET',
+          debit: initialCostSGD,
+          credit: 0,
+          foreignCurrency: txCurr,
+          foreignDebit: tx.totalAmount,
+          exchangeRate: tx.acquisitionFxRate,
+          lineExplanation: `Initial fair value recognition under SFRS(I) 9 §5.1.1`
+        },
+        {
+          id: 'l-fvtpl-buy-bank',
+          accountCode: '1010',
+          accountName: `Cash at Bank (${txCurr} Account)`,
+          category: 'ASSET',
+          debit: 0,
+          credit: initialCostSGD,
+          foreignCurrency: txCurr,
+          foreignCredit: tx.totalAmount,
+          exchangeRate: tx.acquisitionFxRate,
+          lineExplanation: `Outflow of cash for equity share acquisition translated at transaction spot rate`
+        }
+      );
+
+      if (proceedsSGD > 0) {
+        lines.push(
+          {
+            id: 'l-fvtpl-sell-bank',
+            accountCode: '1010',
+            accountName: `Cash at Bank (${txCurr} Account)`,
+            category: 'ASSET',
+            debit: proceedsSGD,
+            credit: 0,
+            foreignCurrency: txCurr,
+            foreignDebit: tx.disposalAmount,
+            exchangeRate: tx.disposalFxRate,
+            lineExplanation: `Gross disposal proceeds translated at disposal spot rate`
+          },
+          {
+            id: 'l-fvtpl-sell-asset',
+            accountCode: '1210',
+            accountName: `Financial Asset at FVTPL (${assetTitle})`,
+            category: 'ASSET',
+            debit: 0,
+            credit: initialCostSGD,
+            foreignCurrency: txCurr,
+            foreignCredit: tx.totalAmount,
+            exchangeRate: tx.acquisitionFxRate,
+            lineExplanation: `Derecognition of carrying cost at acquisition spot rate`
+          },
+          {
+            id: 'l-fvtpl-sell-stockgain',
+            accountCode: '4510',
+            accountName: `Fair Value Gain on Shares (${assetTitle}) [P&L]`,
+            category: 'REVENUE',
+            debit: 0,
+            credit: stockGainSGD,
+            lineExplanation: `Stock appreciation gain recognized in P&L`
+          },
+          {
+            id: 'l-fvtpl-sell-fxgain',
+            accountCode: '4600',
+            accountName: 'Realized Foreign Exchange Gain (USD/SGD) [P&L / SFRS(I) 1-21]',
+            category: 'REVENUE',
+            debit: 0,
+            credit: fxGainSGD,
+            lineExplanation: `Realized foreign currency translation gain recognized in P&L`
+          }
+        );
+      }
+    }
+
+    return {
+      eventType: eventAnalysis.eventType,
+      journalLines: lines,
+      amount: proceedsSGD || initialCostSGD,
+      currency: tx.functionalCurrency || currency,
+      balanceUpdates: [],
+      isHypothetical: true,
+      targetBalanceKey: undefined,
+      resultingAccountingEvent: {
+        id: `evt-hypo-${Date.now()}`,
+        transactionId: tx.transactionId || 'tx-1',
+        targetTransactionId: tx.transactionId,
+        type: 'hypothetical_branch',
+        description: `Hypothetical ${targetBasis} measurement projection`,
+        amount: proceedsSGD || initialCostSGD,
+        currency: tx.functionalCurrency || currency,
+        journalLines: lines,
+        eventDate: formatSingaporeDate(new Date()),
+        isHypothetical: true
+      },
+      explanation: `Hypothetical accounting treatment under ${targetBasis}. Original transaction facts preserved.`
+    };
+  }
+
+  // 2. Handle Settlement Events
 
   const queryTokens: string[] = [];
   const targetAcc = (eventAnalysis.targetOutstandingAccount || '').toLowerCase();
