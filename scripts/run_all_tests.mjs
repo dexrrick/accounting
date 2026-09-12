@@ -20,6 +20,7 @@ const testSuites = [
   { name: 'Semantic Routing Priority', file: 'test_semantic_routing_priority.mjs', layer: 'input-understanding', tier: 'full' },
   { name: 'Share Capital Consideration & Settlement', file: 'test_share_capital_payment_followup.mjs', layer: 'conversation-state', tier: 'full' },
   { name: 'Phase 5 Advanced Hybrid Retrieval & Vector Index', file: 'test_phase5_advanced_retrieval.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Labelled Retrieval Quality Evaluation', file: 'test_retrieval_quality_evaluation.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs', layer: 'regulatory-updates', tier: 'full' },
   { name: 'Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Sidequest Correction Pass', file: 'test_sidequest_correction.mjs', layer: 'accounting-invariants', tier: 'full' },

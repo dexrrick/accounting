@@ -79,6 +79,14 @@ export interface PackageRollbackResult {
   error?: string;
 }
 
+export interface RegulatoryReviewAuditEvent {
+  packageId: string;
+  action: 'STAGED' | 'VERIFIED' | 'REJECTED' | 'ACTIVATED' | 'ROLLED_BACK' | 'REVIEW_RECORDED';
+  occurredAt: string;
+  actor: string;
+  reason?: string;
+}
+
 /**
  * Official government and regulatory endpoints registry.
  */
@@ -109,6 +117,7 @@ export class LiveRegulatoryFeedService {
   private activePackages: Map<string, RegulatoryUpdatePackage> = new Map();
   // Rejected packages: packageId -> reason
   private rejectedPackages: Map<string, string> = new Map();
+  private reviewAuditEvents: RegulatoryReviewAuditEvent[] = [];
 
   // Mock / remote feed queue for update simulation
   private availableFeeds: RegulatoryUpdatePackage[] = [];
@@ -142,6 +151,18 @@ export class LiveRegulatoryFeedService {
 
   public registerAdapter(adapter: IOfficialSourceAdapter): void {
     this.adapters.push(adapter);
+  }
+
+  private recordAuditEvent(packageId: string, action: RegulatoryReviewAuditEvent['action'], actor: string, reason?: string): void {
+    this.reviewAuditEvents.push({ packageId, action, actor, reason, occurredAt: new Date().toISOString() });
+  }
+
+  /** Records an accountable human review decision without changing package state. */
+  public recordReviewDecision(packageId: string, reviewer: string, reason: string): boolean {
+    const exists = this.stagedPackages.has(packageId) || this.verifiedPackages.has(packageId) || this.activePackages.has(packageId);
+    if (!exists || !reviewer.trim() || !reason.trim()) return false;
+    this.recordAuditEvent(packageId, 'REVIEW_RECORDED', reviewer.trim(), reason.trim());
+    return true;
   }
 
   public getAdapters(): IOfficialSourceAdapter[] {
@@ -269,6 +290,7 @@ export class LiveRegulatoryFeedService {
 
     this.stagedPackages.set(pkg.packageId, pkg);
     this.syncState = 'VERIFICATION_REQUIRED';
+    this.recordAuditEvent(pkg.packageId, 'STAGED', 'system', 'Package isolated pending verification');
 
     return {
       success: true,
@@ -472,6 +494,7 @@ export class LiveRegulatoryFeedService {
 
     this.verifiedPackages.set(packageId, pkg);
     this.lastVerificationDate = new Date().toISOString();
+    this.recordAuditEvent(packageId, 'VERIFIED', 'system', 'All records passed atomic source, provenance, and boundary checks');
 
     return {
       isValid: true,
@@ -526,6 +549,7 @@ export class LiveRegulatoryFeedService {
     this.verifiedPackages.delete(packageId);
     this.availableFeeds = this.availableFeeds.filter((pkg) => pkg.packageId !== packageId);
     this.rejectedPackages.set(packageId, reason);
+    this.recordAuditEvent(packageId, 'REJECTED', 'reviewer', reason);
     this.syncState = this.availableFeeds.length > 0 ? 'UPDATE_AVAILABLE' : 'SYNCED';
     return true;
   }
@@ -617,6 +641,7 @@ export class LiveRegulatoryFeedService {
     // Remove from available feeds if present
     this.availableFeeds = this.availableFeeds.filter((f) => f.packageId !== packageId);
     this.syncState = 'SYNCED';
+    this.recordAuditEvent(packageId, 'ACTIVATED', 'system', 'Verified package activated atomically');
 
     return {
       success: true,
@@ -655,6 +680,7 @@ export class LiveRegulatoryFeedService {
     }
 
     this.activePackages.delete(packageId);
+    this.recordAuditEvent(packageId, 'ROLLED_BACK', 'system', 'Active package rolled back to predecessor versions');
     return {
       success: true,
       packageId,
@@ -698,6 +724,12 @@ export class LiveRegulatoryFeedService {
     return res;
   }
 
+  public getReviewAuditEvents(packageId?: string): RegulatoryReviewAuditEvent[] {
+    return this.reviewAuditEvents
+      .filter(event => !packageId || event.packageId === packageId)
+      .map(event => ({ ...event }));
+  }
+
   /**
    * Resets feed state (for test isolation)
    */
@@ -706,6 +738,7 @@ export class LiveRegulatoryFeedService {
     this.verifiedPackages.clear();
     this.activePackages.clear();
     this.rejectedPackages.clear();
+    this.reviewAuditEvents = [];
     this.availableFeeds = [];
     this.syncState = 'SYNCED';
   }
