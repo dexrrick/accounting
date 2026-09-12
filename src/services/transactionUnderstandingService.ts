@@ -920,7 +920,21 @@ export class DeterministicSemanticExtractor {
       return val;
     }
 
-    // 5. Payment verbs with explicit numbers: "paid 1.20", "transferred 500"
+    // 5. Standalone abbreviated amounts: "additional capital, 100k".
+    // Users commonly put the amount at the end of a sentence without a
+    // currency or a linking word such as "for". The magnitude suffix makes
+    // this unambiguous enough to accept while avoiding dates and percentages.
+    const standaloneMagnitudeMatch = query.match(/\b([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)\b/i);
+    if (standaloneMagnitudeMatch && standaloneMagnitudeMatch[1] && standaloneMagnitudeMatch[2]) {
+      let val = parseFloat(standaloneMagnitudeMatch[1].replace(/,/g, ''));
+      if (isNaN(val)) return undefined;
+      const unit = standaloneMagnitudeMatch[2].toLowerCase();
+      if (unit === 'k' || unit === 'thousand') val *= 1000;
+      if (unit === 'm' || unit === 'million') val *= 1000000;
+      return val;
+    }
+
+    // 6. Payment verbs with explicit numbers: "paid 1.20", "transferred 500"
     const payVerbMatch = query.match(/(?:paid|paying|transferred|remitted|settled)\s*(?:(?:usd|sgd|\$)\s*)?([\d,]+(?:\.\d+)?)/i);
     if (payVerbMatch && payVerbMatch[1]) {
       const val = parseFloat(payVerbMatch[1].replace(/,/g, ''));

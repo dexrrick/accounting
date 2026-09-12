@@ -136,6 +136,14 @@ async function runTests() {
   console.log('✓ 2B. Deterministic fallback records extractionSource === "deterministic_fallback"');
   passed++;
 
+  // 2C. Amount suffix at end of a sentence must populate the journal amount.
+  const abbreviatedCapitalAmount = defaultTransactionUnderstandingService.understandTransactionSync(
+    'shareholder add in additional capital to the company, 100k what is the double entry'
+  );
+  assert.strictEqual(abbreviatedCapitalAmount.amount, 100000, 'Standalone 100k must be extracted as 100,000');
+  console.log('✓ 2C. Standalone abbreviated capital amount is extracted');
+  passed++;
+
   // -------------------------------------------------------------------------
   // 3. SERVICE RESILIENCE & FALLBACK WHEN AI FAILS
   // -------------------------------------------------------------------------

@@ -92,47 +92,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
         </div>
       )}
 
-      {/* Explicit Accounting Assumptions Notice */}
-      {assumptions && assumptions.length > 0 && (
-        <div className="mx-5 p-3.5 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl space-y-2">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
-              Explicit Accounting Assumptions (Missing Facts Identified)
-            </span>
-          </div>
-          <p className="text-[11px] text-amber-800 dark:text-amber-200/90 leading-relaxed">
-            The following parameters were assumed because specific transaction facts were omitted. Accounting conclusions depend on verifying these assumptions:
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            {assumptions.map((a) => (
-              <div
-                key={a.id}
-                className="p-2.5 rounded-lg bg-white/80 dark:bg-[#1C2538] border border-amber-200/70 dark:border-amber-900/40 text-[11px] space-y-1"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-slate-900 dark:text-white capitalize">{a.field}</span>
-                  <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium border ${
-                    a.materiality === 'HIGH'
-                      ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
-                      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300'
-                  }`}>
-                    {a.materiality} Materiality
-                  </span>
-                </div>
-                <div className="text-slate-700 dark:text-slate-300">
-                  <span className="text-slate-500 dark:text-slate-400">Assumed Value: </span>
-                  <strong className="font-mono">{String(a.assumedValue)}</strong>
-                </div>
-                <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight">
-                  {a.basisOrRationale}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Dual Authority Comparison: Financial Reporting (SFRS(I)) vs Singapore Tax Treatment (IRAS) */}
       {(accountingTreatmentSummary || singaporeTaxTreatmentSummary) && (
         <div className="px-5 space-y-3">
@@ -189,17 +148,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
           <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-[#1C2538] p-3 rounded-lg border border-slate-200 dark:border-[#2B374E]">
             {regulatoryMandatesSummary}
           </p>
-        </div>
-      )}
-
-      {/* Uncertainty Disclaimer & Caveats */}
-      {uncertaintyDisclaimer && (
-        <div className="mx-5 p-3.5 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 rounded-xl flex items-start gap-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
-            <strong className="font-semibold block mb-0.5">Professional Advisory Caveat:</strong>
-            {uncertaintyDisclaimer}
-          </div>
         </div>
       )}
 
@@ -481,6 +429,56 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Supporting notices are available when needed without interrupting the primary analysis. */}
+        {assumptions.length > 0 && (
+          <details className="group rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/90 dark:bg-amber-950/40">
+            <summary className="cursor-pointer list-none p-3.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <span>Explicit Accounting Assumptions (Missing Facts Identified)</span>
+              <span className="ml-auto normal-case font-medium text-amber-700 dark:text-amber-300/80 group-open:hidden">Show details</span>
+              <span className="ml-auto normal-case font-medium text-amber-700 dark:text-amber-300/80 hidden group-open:inline">Hide details</span>
+            </summary>
+            <div className="px-3.5 pb-3.5 space-y-2 border-t border-amber-200/70 dark:border-amber-900/40">
+              <p className="pt-3 text-[11px] text-amber-800 dark:text-amber-200/90 leading-relaxed">
+                The following parameters were assumed because specific transaction facts were omitted. Accounting conclusions depend on verifying these assumptions:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {assumptions.map((a) => (
+                  <div key={a.id} className="p-2.5 rounded-lg bg-white/80 dark:bg-[#1C2538] border border-amber-200/70 dark:border-amber-900/40 text-[11px] space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-900 dark:text-white capitalize">{a.field}</span>
+                      <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium border ${a.materiality === 'HIGH'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300'
+                        : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300'}`}>
+                        {a.materiality} Materiality
+                      </span>
+                    </div>
+                    <div className="text-slate-700 dark:text-slate-300">
+                      <span className="text-slate-500 dark:text-slate-400">Assumed Value: </span>
+                      <strong className="font-mono">{String(a.assumedValue)}</strong>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight">{a.basisOrRationale}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </details>
+        )}
+
+        {uncertaintyDisclaimer && (
+          <details className="group rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/90 dark:bg-amber-950/40">
+            <summary className="cursor-pointer list-none p-3.5 flex items-center gap-2 text-xs font-semibold text-amber-900 dark:text-amber-200">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>Professional Advisory Caveat</span>
+              <span className="ml-auto text-[10px] font-medium text-amber-700 dark:text-amber-300/80 group-open:hidden">Show details</span>
+              <span className="ml-auto text-[10px] font-medium text-amber-700 dark:text-amber-300/80 hidden group-open:inline">Hide details</span>
+            </summary>
+            <p className="px-3.5 pb-3.5 pt-3 border-t border-amber-200/70 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+              {uncertaintyDisclaimer}
+            </p>
+          </details>
+        )}
       </div>
     </div>
   );
