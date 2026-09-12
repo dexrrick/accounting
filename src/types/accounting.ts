@@ -211,5 +211,6 @@ export interface ChatMessage {
   text: string;
   fullText?: string;
   clarificationPrompt?: MissingFieldInfo[];
+  relationPrompt?: boolean;
   scenarioSnapshot?: AccountingScenarioState;
 }

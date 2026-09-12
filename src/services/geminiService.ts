@@ -256,7 +256,7 @@ export async function processAccountingQuery(
   // reclassified as a new transaction and sent to a model.  Preserve the last
   // committed journal exactly; if none exists, say so rather than inventing
   // one from generic expense defaults.
-  const isJournalDisplayRequest = /^\s*(?:where(?:\s+is|\s*'s)\s+(?:your\s+|the\s+)?(?:double\s+entry|journal)|(?:show|repeat|display)\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal))\s*\?*\s*$/i.test(userInput);
+  const isJournalDisplayRequest = /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(userInput);
   if (isJournalDisplayRequest) {
     const committedGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
       ? currentScenario.committedDirectGroups

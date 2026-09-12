@@ -229,6 +229,42 @@ export async function parseAccountingQuery(
     }
     return { ...currentScenario, directGroups: [], isComplete: false };
   }
+  // A short amount reply belongs to the director-fine clarification that
+  // prompted it.  Do not discard the scenario and hand "2000" to the
+  // generic/AI router as an unrelated query.
+  if (currentScenario?.scenarioType === 'DIRECTOR_PERSONAL_FINE' &&
+      currentScenario.missingFields?.some(field => field.fieldKey === 'amount')) {
+    const amountMatch = query.match(/(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand)\b)?/i);
+    if (amountMatch?.[1]) {
+      let amount = Number(amountMatch[1].replace(/,/g, ''));
+      const magnitude = amountMatch[2]?.toLowerCase();
+      if (magnitude === 'k' || magnitude === 'thousand') amount *= 1000;
+      if (magnitude === 'm' || magnitude === 'million') amount *= 1000000;
+      if (Number.isFinite(amount) && amount > 0) {
+        return parseAccountingQuery(`${currentScenario.rawQuery} SGD ${amount}`, null);
+      }
+    }
+    return { ...currentScenario, directGroups: [], isComplete: false };
+  }
+  // When a user restates the same director-fine facts with a recovery
+  // intention, retain the established amount and journal.  The follow-up is
+  // an explanation of the same payment, not a new unmeasured transaction.
+  if (currentScenario?.scenarioType === 'DIRECTOR_PERSONAL_FINE' &&
+      currentScenario.isComplete &&
+      (currentScenario.directGroups?.length || currentScenario.committedDirectGroups?.length) &&
+      /\b(fine|penalt(?:y|ies)|traffic offence)\b/i.test(query) && /\bdirector\b/i.test(query)) {
+    const committed = currentScenario.committedDirectGroups?.length
+      ? currentScenario.committedDirectGroups
+      : currentScenario.directGroups?.filter(group => !group.isHypothetical);
+    return {
+      ...currentScenario,
+      rawQuery: query,
+      directGroups: committed,
+      committedDirectGroups: committed,
+      isComplete: true,
+      missingFields: []
+    };
+  }
   // "FVOCI instead of FVTPL" is a measurement-basis projection, not a
   // correction to a numeric fact.  Handle this before the generic
   // correction parser, where "instead" would otherwise request a missing

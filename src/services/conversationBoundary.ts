@@ -1,6 +1,38 @@
 import type { AccountingScenarioState } from '../types/accounting';
 import type { ConversationAccountingContext } from '../types/conversationState';
 
+export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
+
+/**
+ * A deliberately conservative UI safeguard. Most messages are routed
+ * automatically; only a substantial transaction-like message that has no
+ * reliable continuation or new-scenario signal asks the user to decide.
+ */
+export function assessConversationRelation(
+  query: string,
+  currentScenario?: AccountingScenarioState | null
+): ConversationRelation {
+  if (!currentScenario) return 'NEW';
+  if (startsNewAccountingScenario(query, currentScenario)) return 'NEW';
+
+  const q = query.toLowerCase().trim();
+  const wordCount = q.split(/\s+/).filter(Boolean).length;
+  const isShortFactReply = wordCount <= 4 || /^(?:sgd|usd|eur|s\$|\$)?\s*[\d,]+(?:\.\d+)?\s*(?:k|m|million|thousand)?$/i.test(q);
+  const continuationSignal = /\b(what if|instead|then|also|same|previous|above|that|this|it|they|settle|settlement|recover|double entry|journal entry|show|repeat|clarif)/i.test(q);
+  const explicitNewSignal = /\b(new question|unrelated|separate (?:question|transaction)|different (?:question|transaction))\b/i.test(q);
+
+  if (explicitNewSignal) return 'NEW';
+  if (currentScenario.missingFields?.length || isShortFactReply || continuationSignal) return 'RELATED';
+
+  // Only ask where a complete existing scenario is followed by another
+  // sufficiently detailed accounting-looking narrative. General questions
+  // and short replies remain automatic to avoid unnecessary interruptions.
+  const transactionLike = /\b(paid|pay|received|invoice|expense|fine|salary|wage|supplier|customer|director|shareholder|loan|lease|asset|equipment|bank|cash|gst|cpf)\b/i.test(q);
+  return currentScenario.isComplete && transactionLike && wordCount >= 5
+    ? 'AMBIGUOUS'
+    : 'RELATED';
+}
+
 /** Determines whether a message is a self-contained transaction, not a follow-up. */
 export function startsNewAccountingScenario(
   query: string,
@@ -11,7 +43,10 @@ export function startsNewAccountingScenario(
 
   const q = query.toLowerCase();
   const startsNewTransaction = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/.test(q);
-  const hasTransactionDetail = /(?:\b(?:sgd|usd|eur|s\$|\$)\s*[\d,]+|\b\d+(?:\.\d+)?\s*(?:k|million|years?|months?|%))\b/.test(q);
+  // "$2,000" begins with a non-word character, so it cannot have a word
+  // boundary immediately before it. Keep currency codes word-bounded while
+  // accepting the standalone dollar symbol as an amount marker.
+  const hasTransactionDetail = /(?:\b(?:sgd|usd|eur|s\$)\s*[\d,]+|\$\s*[\d,]+|\b\d+(?:\.\d+)?\s*(?:k|million|years?|months?|%))\b/.test(q);
   const hasNewSubject = /\b(new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?)|machine|machinery|equipment|vehicle|lease|share capital|payroll|salary|customer|supplier)\b/.test(q);
 
   // A company-paid fine or private/director cost is a new transaction even

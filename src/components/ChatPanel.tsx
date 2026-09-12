@@ -7,14 +7,18 @@ interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
   onSelectSuggestion: (fieldKey: string, value: number | string) => void;
+  onResolveRelation: (isRelated: boolean) => void;
   isLoading: boolean;
+  isAwaitingRelation: boolean;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   onSendMessage,
   onSelectSuggestion,
-  isLoading
+  onResolveRelation,
+  isLoading,
+  isAwaitingRelation
 }) => {
   const [inputText, setInputText] = useState('');
   const [showSuggestions, setShowSuggestions] = useState<boolean>(() => {
@@ -69,7 +73,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || isLoading) return;
+    if (!inputText.trim() || isLoading || isAwaitingRelation) return;
     onSendMessage(inputText.trim());
     setInputText('');
   };
@@ -133,6 +137,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               }`}
             >
               <div className="whitespace-pre-line font-normal">{msg.text}</div>
+
+              {msg.relationPrompt && (
+                <div className="mt-3 pt-3 border-t border-slate-200 dark:border-[#2B374E]">
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => onResolveRelation(true)}
+                      className="px-3 py-1.5 rounded-lg bg-ynab-blue hover:bg-blue-600 text-white text-[11px] font-semibold transition-colors">
+                      Yes, related
+                    </button>
+                    <button type="button" onClick={() => onResolveRelation(false)}
+                      className="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 dark:bg-[#1C2538] dark:hover:bg-[#2D3B58] text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-[#2B374E] text-[11px] font-semibold transition-colors">
+                      No, brand-new question
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Clarification prompt cards if info missing */}
               {msg.clarificationPrompt && msg.clarificationPrompt.length > 0 && (
@@ -309,9 +328,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           />
           <button
             type="submit"
-            disabled={!inputText.trim() || isLoading}
+            disabled={!inputText.trim() || isLoading || isAwaitingRelation}
             className={`absolute right-2 p-2 rounded-lg transition-all ${
-              inputText.trim() && !isLoading
+              inputText.trim() && !isLoading && !isAwaitingRelation
                 ? 'bg-ynab-blue text-white hover:bg-blue-600 shadow-sm'
                 : 'bg-slate-200 dark:bg-[#242F46] text-slate-400 dark:text-slate-500 cursor-not-allowed'
             }`}
@@ -321,7 +340,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </button>
         </div>
         <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-slate-400 dark:text-slate-500">
-          <span className="hidden sm:inline">Press Enter to send, Shift+Enter for newline</span>
+          <span className="hidden sm:inline">{isAwaitingRelation ? 'Choose how to treat the pending question' : 'Press Enter to send, Shift+Enter for newline'}</span>
           <span className="sm:hidden">Tap send icon to calculate</span>
           <span className="truncate">Frankfurter ECB FX</span>
         </div>

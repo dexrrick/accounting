@@ -17,6 +17,7 @@ import { getSingaporeTimestamp } from './utils/dateUtils';
 import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
+import { assessConversationRelation } from './services/conversationBoundary';
 
 export const App: React.FC = () => {
   // SFRS follows IFRS - unified standard framework
@@ -70,6 +71,7 @@ export const App: React.FC = () => {
   const [scenario, setScenario] = useState<AccountingScenarioState | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingRelation, setPendingRelation] = useState<{ text: string; userMessage: ChatMessage } | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -80,21 +82,12 @@ export const App: React.FC = () => {
     }
   ]);
 
-  const handleSendMessage = async (text: string) => {
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      timestamp: getSingaporeTimestamp(),
-      text
-    };
-
-    setMessages((prev) => [...prev, userMsg]);
+  const processMessage = async (text: string, activeScenario: AccountingScenarioState | null, userMsg: ChatMessage) => {
     setIsLoading(true);
-
     try {
       const response = await processAccountingQuery(
         text,
-        scenario,
+        activeScenario,
         standard,
         providerSettings,
         providerSettings.gemini.model,
@@ -107,42 +100,51 @@ export const App: React.FC = () => {
       };
       setScenario(answerState);
 
-      // Auto-switch tabs based on query intent
       if (
         answerState.queryIntent === 'STATUTORY_ADVISORY' ||
         (!answerState.directGroups?.some((g) => g.lines.length > 0) &&
           ((answerState.statutoryAdvisory && answerState.statutoryAdvisory.length > 0) ||
-            answerState.accountingTreatmentSummary ||
-            answerState.singaporeTaxTreatmentSummary ||
-            answerState.regulatoryMandatesSummary))
-      ) {
-        setActiveTab('compliance');
-      } else if (answerState.directGroups?.some((g) => g.lines.length > 0)) {
-        setActiveTab('entries');
-      }
+            answerState.accountingTreatmentSummary || answerState.singaporeTaxTreatmentSummary || answerState.regulatoryMandatesSummary))
+      ) setActiveTab('compliance');
+      else if (answerState.directGroups?.some((g) => g.lines.length > 0)) setActiveTab('entries');
 
-      const assistantMsg: ChatMessage = {
-        id: `asst-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: getSingaporeTimestamp(),
-        text: createChatPreview(response.messageText, answerState, response.clarifications),
-        fullText: response.messageText,
-        scenarioSnapshot: answerState,
-        clarificationPrompt: response.clarifications
-      };
-
-      setMessages((prev) => [...prev, assistantMsg]);
+      setMessages((prev) => [...prev, {
+        id: `asst-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(),
+        text: createChatPreview(response.messageText, answerState, response.clarifications), fullText: response.messageText,
+        scenarioSnapshot: answerState, clarificationPrompt: response.clarifications
+      }]);
     } catch (err: any) {
-      const errorMsg: ChatMessage = {
-        id: `err-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: getSingaporeTimestamp(),
-        text: `⚠️ **Processing Error**: ${err?.message || 'Unable to process query'}`
-      };
-      setMessages((prev) => [...prev, errorMsg]);
+      setMessages((prev) => [...prev, { id: `err-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), text: `⚠️ **Processing Error**: ${err?.message || 'Unable to process query'}` }]);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSendMessage = async (text: string) => {
+    const userMsg: ChatMessage = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      timestamp: getSingaporeTimestamp(),
+      text
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    if (assessConversationRelation(text, scenario) === 'AMBIGUOUS') {
+      setPendingRelation({ text, userMessage: userMsg });
+      setMessages((prev) => [...prev, {
+        id: `relation-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), relationPrompt: true,
+        text: 'Is this related to the previous transaction? I can continue its accounting treatment, or start a separate analysis.'
+      }]);
+      return;
+    }
+    await processMessage(text, scenario, userMsg);
+  };
+
+  const handleResolveRelation = (isRelated: boolean) => {
+    if (!pendingRelation || isLoading) return;
+    const pending = pendingRelation;
+    setPendingRelation(null);
+    void processMessage(pending.text, isRelated ? scenario : null, pending.userMessage);
   };
 
   const handleSelectSuggestion = (fieldKey: string, value: number | string) => {
@@ -185,7 +187,9 @@ export const App: React.FC = () => {
               messages={messages}
               onSendMessage={handleSendMessage}
               onSelectSuggestion={handleSelectSuggestion}
+              onResolveRelation={handleResolveRelation}
               isLoading={isLoading}
+              isAwaitingRelation={Boolean(pendingRelation)}
             />
           </div>
 
