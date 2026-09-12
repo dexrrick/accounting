@@ -16,6 +16,7 @@ import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { getSingaporeTimestamp } from './utils/dateUtils';
 import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
+import { FeedbackDialog } from './components/FeedbackDialog';
 
 export const App: React.FC = () => {
   // SFRS follows IFRS - unified standard framework
@@ -279,9 +280,12 @@ export const App: React.FC = () => {
 
       {/* Footer */}
       <footer className="bg-white/80 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E] py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row gap-3 justify-between items-center">
         <p>
           Universal Accounting & Singapore Statutory Engine • Grounded in IRAS, ACRA, CPF Board, MOM, MAS & Singapore Statutes • ECB Spot rates via Frankfurter API
         </p>
+        <FeedbackDialog messages={messages} scenario={scenario} providerSettings={providerSettings} theme={theme} fontSize={fontSize} />
+        </div>
       </footer>
     </div>
   );

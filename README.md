@@ -81,6 +81,18 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
    npx tsx test_universal.mjs
    ```
 
+### Feedback delivery
+
+The footer's **Send feedback** form compiles the user's description, the last 12 chat messages, a safe scenario summary, browser/app details, and the latest request telemetry. It deliberately excludes API keys.
+
+To deliver reports, deploy a secure endpoint (for example, a serverless function or Formspree endpoint) that accepts a JSON `POST` and emails it to your support inbox. Set its URL at build time:
+
+```bash
+VITE_FEEDBACK_ENDPOINT=https://your-feedback-endpoint.example/submit
+```
+
+The email recipient belongs in that endpoint's secure configuration, not in frontend code. The form also has **Copy report** so a user can preserve the diagnostic payload if delivery is unavailable.
+
 ---
 
 ## 📁 Project Structure
@@ -126,4 +138,3 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 
 ## 📄 License
 MIT License. Developed for enterprise accounting compliance and automated financial reporting.
-
