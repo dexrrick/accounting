@@ -12,6 +12,7 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { classifyQuestion } from '../classification/questionClassifier';
 import { defaultTransactionUnderstandingService } from '../services/transactionUnderstandingService';
 import { extractAccountingContext, calculateAccountingDelta, commitAccountingEvent } from '../services/conversationAccountingState';
+import { startsNewAccountingScenario } from '../services/conversationBoundary';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
 import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
@@ -158,6 +159,11 @@ export async function parseAccountingQuery(
   query: string,
   currentScenario?: AccountingScenarioState | null
 ): Promise<AccountingScenarioState> {
+  // Apply the boundary before any scenario-specific follow-up or missing-field
+  // resolution, so a new narrative cannot satisfy an old workflow by accident.
+  if (currentScenario && startsNewAccountingScenario(query, currentScenario)) {
+    return parseAccountingQuery(query, null);
+  }
   if (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
       currentScenario.missingFields?.some(field => field.fieldKey === 'resignationDate')) {
     const suppliedDate = query.match(/\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/)?.[0];

@@ -16,6 +16,7 @@ import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
+import { startsNewAccountingScenario } from './conversationBoundary';
 
 export interface GeminiResponse {
   messageText: string;
@@ -229,7 +230,14 @@ export async function processAccountingQuery(
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   let apiErrorMessage: string | null = null;
-  const amendmentResolution = resolveFactAmendment(userInput, currentScenario);
+  // Keep prior state only where the incoming message is compatible with it.
+  // The parser has the same boundary as a defence in depth measure; applying
+  // it here also prevents grounding and provider prompts from seeing stale
+  // balances on a complete new transaction.
+  const activeScenario = startsNewAccountingScenario(userInput, currentScenario)
+    ? null
+    : currentScenario;
+  const amendmentResolution = resolveFactAmendment(userInput, activeScenario);
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
     if (!amendmentResolution.amendments?.length) return response;
     return {
@@ -237,7 +245,7 @@ export async function processAccountingQuery(
       scenarioState: {
         ...response.scenarioState,
         factAmendments: [
-          ...(currentScenario?.factAmendments || []),
+          ...(activeScenario?.factAmendments || []),
           ...amendmentResolution.amendments
         ]
       }
@@ -287,7 +295,7 @@ export async function processAccountingQuery(
   // 1. Check if query matches an explicit deterministic test fixture
   const isFixture = isDeterministicFixture(userInput);
   const tDet0 = Date.now();
-  const deterministicScenario = await parseAccountingQuery(userInput, currentScenario);
+  const deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
   // A recognized but incomplete calculation is a pending conversation, not
@@ -310,7 +318,7 @@ export async function processAccountingQuery(
   // A resignation or proration modifies the established payroll facts. The
   // deterministic payroll calculation takes precedence over a provider's
   // generic follow-up label (which may otherwise mistake "payroll" for pay).
-  if (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+  if (activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
       deterministicScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
       deterministicScenario.isComplete &&
       /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
@@ -322,7 +330,7 @@ export async function processAccountingQuery(
 
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
-  const groundedContext = await buildGroundedReasoningContext(userInput, currentScenario, undefined, providerOrApiKey);
+  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
   // 3. Evaluate Fast-Path Bypass (ONLY for explicit deterministic fixtures)
@@ -343,7 +351,7 @@ export async function processAccountingQuery(
       const active = providerOrApiKey.activeProvider;
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return attachAmendmentProvenance(await callAzureOpenAI(userInput, currentScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext, deterministicScenario));
+          return attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext, deterministicScenario));
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -353,7 +361,7 @@ export async function processAccountingQuery(
         try {
           return attachAmendmentProvenance(await callGeminiAPI(
             userInput,
-            currentScenario,
+            activeScenario,
             standard,
             providerOrApiKey.gemini.apiKey.trim(),
             providerOrApiKey.gemini.model || modelName,
@@ -371,7 +379,7 @@ export async function processAccountingQuery(
         try {
           return attachAmendmentProvenance(await callStandardOpenAI(
             userInput,
-            currentScenario,
+            activeScenario,
             standard,
             providerOrApiKey.openai,
             chatHistory,
@@ -388,7 +396,7 @@ export async function processAccountingQuery(
       try {
         return attachAmendmentProvenance(await callGeminiAPI(
           userInput,
-          currentScenario,
+          activeScenario,
           standard,
           providerOrApiKey.trim(),
           modelName,

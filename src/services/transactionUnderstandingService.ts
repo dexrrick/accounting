@@ -25,6 +25,7 @@ import type {
   EquityMeasurementBasis,
   UnderlyingTransactionState
 } from '../types/conversationState';
+import { startsNewAccountingScenario } from './conversationBoundary';
 import { executeStructuredLlmCall } from './aiTransport';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 
@@ -529,6 +530,7 @@ export class DeterministicSemanticExtractor {
        conversationContext.recognizedEquityTotal > 0 ||
        conversationContext.underlyingTransaction)
     );
+    const startsNewScenario = startsNewAccountingScenario(query, undefined, conversationContext);
 
     // Require a whole payment-action word. "Payroll" and "repayment
     // calculation" are subjects, not evidence that cash changed hands.
@@ -553,7 +555,7 @@ export class DeterministicSemanticExtractor {
 
     const isHypothetical = /\b(what if|suppose|assuming|if)\b/i.test(query);
 
-    if (hasPriorContext && !introducesNewSubject && isPaymentOrSettlementAction) {
+    if (hasPriorContext && !startsNewScenario && !introducesNewSubject && isPaymentOrSettlementAction) {
       const isLoanRepayment = q.includes('repaid') || q.includes('repay') || ((q.includes('loan') || q.includes('debt')) && (q.includes('principal') || q.includes('bank')));
       const hasReceivable = conversationContext?.outstandingBalances?.some(b => b.nature === 'RECEIVABLE') ?? false;
       const hasPayable = conversationContext?.outstandingBalances?.some(b => b.nature === 'PAYABLE' || b.category === 'LIABILITY') ?? false;
