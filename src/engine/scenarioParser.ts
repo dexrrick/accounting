@@ -14,6 +14,7 @@ import { defaultTransactionUnderstandingService } from '../services/transactionU
 import { extractAccountingContext, calculateAccountingDelta, commitAccountingEvent } from '../services/conversationAccountingState';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
+import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -1776,6 +1777,7 @@ export async function parseAccountingQuery(
      (q.includes('pay for') && !q.includes('rental') && !q.includes('lease') && !q.includes('shares')));
 
   if (isGeneralExpense) {
+    const taxAssessment = assessCorporateTaxTreatment(query);
     // Extract amount: e.g. "3k", "3,000", "$3000", "sgd 3k"
     let expenseAmount: number | undefined;
     const amtMatch = query.match(/(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|thousand)?/i);
@@ -1808,7 +1810,7 @@ export async function parseAccountingQuery(
 
     return {
       scenarioType: 'GENERAL_EXPENSE',
-      authorityStatus: 'DETERMINISTIC',
+      authorityStatus: 'CONDITIONAL',
       queryIntent: 'TRANSACTION',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
@@ -1818,9 +1820,10 @@ export async function parseAccountingQuery(
       accountingTreatmentSummary: expenseAmount
         ? `Under SFRS(I) 1-1 §28 accrual basis, ${expenseTitle} of ${functionalCurrency} ${expenseAmount.toLocaleString()} is recognized as an operating expense in profit or loss when economic benefits are consumed, matched with a credit to ${paymentMethod}.`
         : `The payment amount is required before a journal for ${expenseTitle} can be calculated.`,
-      singaporeTaxTreatmentSummary: `Deductible under Section 14(1) of the Income Tax Act 1947 if wholly and exclusively incurred in the production of business income. Non-business, personal, or fine expenses are prohibited under Section 15 and must be added back in Form C-S.`,
+      singaporeTaxTreatmentSummary: taxAssessment.summary,
       regulatoryMandatesSummary: 'Receipts and supporting documents must be maintained for 5 years under Section 199 of the Companies Act 1967.',
       effectiveDateOrTiming: 'Current Year of Assessment (YA).',
+      uncertaintyDisclaimer: taxAssessment.reviewNotice,
       expenseAccountName: expenseTitle,
       paymentMethodAccountName: paymentMethod,
       amount: expenseAmount,
