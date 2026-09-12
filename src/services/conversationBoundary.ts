@@ -14,6 +14,13 @@ export function startsNewAccountingScenario(
   const hasTransactionDetail = /(?:\b(?:sgd|usd|eur|s\$|\$)\s*[\d,]+|\b\d+(?:\.\d+)?\s*(?:k|million|years?|months?|%))\b/.test(q);
   const hasNewSubject = /\b(new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?)|machine|machinery|equipment|vehicle|lease|share capital|payroll|salary|customer|supplier)\b/.test(q);
 
+  // A company-paid fine or private/director cost is a new transaction even
+  // when its narrative uses “paid”; it must never be attached to an earlier
+  // payable merely because both messages describe cash outflows.
+  const isIndependentPersonalCost = /\b(fine|penalt(?:y|ies)|traffic offence|personal expense|private expense)\b/.test(q) &&
+    /\b(director|shareholder|owner|company)\b/.test(q) && hasTransactionDetail;
+  if (isIndependentPersonalCost) return true;
+
   // A complete narrative supersedes the active workflow even when both
   // transactions are in the same accounting domain.
   if (startsNewTransaction && hasTransactionDetail && hasNewSubject) return true;

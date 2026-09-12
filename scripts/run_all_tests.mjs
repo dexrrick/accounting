@@ -27,6 +27,7 @@ const testSuites = [
   { name: 'Corporate Tax Treatment Pack', file: 'test_corporate_tax_treatment.mjs', layer: 'corporate-tax', tier: 'smoke' },
   { name: 'Phase 7 Remaining Topic Packs', file: 'test_phase7_remaining_packs.mjs', layer: 'coverage-governance', tier: 'full' },
   { name: 'Regulatory Update Scheduler', file: 'test_regulatory_update_scheduler.mjs', layer: 'regulatory-updates', tier: 'smoke' },
+  { name: 'Personal Fine Conversation Boundary', file: 'test_conversation_boundary_personal_fine.mjs', layer: 'conversation-state', tier: 'smoke' },
   { name: 'Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs', layer: 'regulatory-updates', tier: 'full' },
   { name: 'Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Sidequest Correction Pass', file: 'test_sidequest_correction.mjs', layer: 'accounting-invariants', tier: 'full' },

@@ -1794,6 +1794,27 @@ export async function parseAccountingQuery(
     };
   }
 
+  // A company payment of a director's personal fine is not a company expense.
+  if (/\b(fine|penalt(?:y|ies)|traffic offence)\b/i.test(q) && /\bdirector\b/i.test(q)) {
+    const match = query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    let amount = match?.[1] ? Number(match[1].replace(/,/g, '')) : undefined;
+    if (match?.[2]?.toLowerCase() === 'k' || match?.[2]?.toLowerCase() === 'thousand') amount = (amount || 0) * 1000;
+    if (match?.[2]?.toLowerCase() === 'm' || match?.[2]?.toLowerCase() === 'million') amount = (amount || 0) * 1000000;
+    const complete = Boolean(amount && amount > 0);
+    return {
+      scenarioType: 'DIRECTOR_PERSONAL_FINE', authorityStatus: complete ? 'DETERMINISTIC' : 'CONDITIONAL', queryIntent: 'HYBRID', primaryDomain: 'IRAS_TAX', rawQuery: query,
+      transactionTitle: 'Company Payment of Director Personal Fine', functionalCurrency, transactionCurrency: functionalCurrency, amount,
+      accountingTreatmentSummary: 'Record a receivable from the director, not a company operating expense, because the company settled the director’s personal obligation.',
+      singaporeTaxTreatmentSummary: 'The payment is non-deductible and must not be claimed as a Section 14 business expense; it is a personal penalty requiring an add-back if booked through profit or loss.',
+      uncertaintyDisclaimer: 'Confirm whether the company will recover the amount from the director. If it will not, obtain advice on the appropriate governance and tax treatment.',
+      directGroups: complete ? [{ id: 'grp-director-fine', eventDate: formatSingaporeDate(new Date()), title: 'Director Personal Fine Paid by Company', summary: `Director receivable of ${functionalCurrency} ${amount!.toLocaleString()}`, totalDebit: amount!, totalCredit: amount!, isBalanced: true, authorityStatus: 'DETERMINISTIC', citations: [convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_PROHIBITED_DEDUCTIONS)], rationalePoints: ['A personal fine is not incurred for the company’s business; recovery from the director is recorded as a receivable.'], lines: [
+        { id: 'dr-director', accountCode: '1155', accountName: 'Amount Due from Director', category: 'ASSET', debit: amount!, credit: 0, lineExplanation: 'Company payment creates a receivable from the director.' },
+        { id: 'cr-bank', accountCode: '1010', accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: amount!, lineExplanation: 'Payment of the director’s personal fine.' }
+      ] }] : [],
+      isComplete: complete, missingFields: complete ? [] : [{ fieldKey: 'amount', fieldName: 'Fine amount', prompt: 'What amount did the company pay?', whyNeeded: 'The director receivable and bank payment cannot be measured without the amount.' }]
+    };
+  }
+
   // =========================================================================
   // SCENARIO A: GENERAL OPERATING EXPENSES (Entertainment, Travel, Bills, etc.)
   // =========================================================================
