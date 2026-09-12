@@ -35,17 +35,36 @@ export function validateJournalBalance(group: JournalEntryGroup): {
   imbalance: number;
   totalDebit: number;
   totalCredit: number;
+  declaredTotalsMatch: boolean;
+  declaredBalanceFlagMatches: boolean;
 } {
   const totalDebit = Math.round(group.lines.reduce((s, l) => s + (l.debit || 0), 0) * 100) / 100;
   const totalCredit = Math.round(group.lines.reduce((s, l) => s + (l.credit || 0), 0) * 100) / 100;
   const imbalance = Math.round(Math.abs(totalDebit - totalCredit) * 100) / 100;
-  const isBalanced = totalDebit > 0 && imbalance < 0.01;
+  const calculatedIsBalanced = totalDebit > 0 && imbalance < 0.01;
+  const declaredTotalsMatch = group.totalDebit === totalDebit && group.totalCredit === totalCredit;
+  const declaredBalanceFlagMatches = group.isBalanced === calculatedIsBalanced;
+  const isBalanced = calculatedIsBalanced && declaredTotalsMatch && declaredBalanceFlagMatches;
 
   return {
     isBalanced,
     imbalance,
     totalDebit,
-    totalCredit
+    totalCredit,
+    declaredTotalsMatch,
+    declaredBalanceFlagMatches
+  };
+}
+
+/** Derives presentation totals and balance status from journal lines. */
+export function finalizeJournalGroup(group: JournalEntryGroup): JournalEntryGroup {
+  const totalDebit = Math.round(group.lines.reduce((sum, line) => sum + line.debit, 0) * 100) / 100;
+  const totalCredit = Math.round(group.lines.reduce((sum, line) => sum + line.credit, 0) * 100) / 100;
+  return {
+    ...group,
+    totalDebit,
+    totalCredit,
+    isBalanced: totalDebit > 0 && Math.abs(totalDebit - totalCredit) < 0.01
   };
 }
 
@@ -96,12 +115,10 @@ export function isMeasurementBasisApplicable(
 
   // 4. External financial investments (shares, debt, securities)
   if (
-    tx.ownershipContext === 'external_investment' ||
-    tx.type === 'equity_investment_acquisition' ||
-    tx.instrument === 'financial_asset_equity' ||
-    tx.instrument === 'financial_asset_at_fvtpl' ||
-    tx.instrument === 'marketable_securities' ||
-    tx.instrument === 'debt_instrument'
+    tx.ownershipContext === 'external_investment' &&
+    (tx.instrument === 'financial_asset_equity' ||
+      tx.instrument === 'marketable_securities' ||
+      tx.instrument === 'debt_instrument')
   ) {
     if (basis === 'FVTPL' || basis === 'FVOCI' || basis === 'AMORTISED_COST' || basis === 'COST') {
       return { isApplicable: true };
@@ -115,9 +132,12 @@ export function isMeasurementBasisApplicable(
 }
 
 /**
- * Canonical Measurement Projection Builder.
- * Reuses all authoritative transaction facts from committed history and produces a
- * complete, balanced hypothetical projection without mutating committed state.
+ * Canonical financial-instrument measurement projection builder.
+ *
+ * Its intentionally narrow contract is an alternative FVTPL/FVOCI measurement
+ * projection for a committed external investment. Settlement, lease variation,
+ * receivable/payable and debt state transitions are handled by their dedicated
+ * state-transition path; this builder rejects them instead of inventing facts.
  */
 export function buildAccountingMeasurementProjection(params: {
   committedContext: ConversationAccountingContext;
@@ -170,18 +190,48 @@ export function buildAccountingMeasurementProjection(params: {
     };
   }
 
-  // Reuse Authoritative Transaction Facts
-  const txId = tx.transactionId || 'tx-1';
+  // Reuse authoritative transaction facts. Never manufacture identifiers,
+  // currencies, rates or amounts merely to make a journal render.
+  const requiredFacts: Array<[string, unknown]> = [
+    ['transactionId', tx.transactionId],
+    ['currency', tx.currency],
+    ['functionalCurrency', tx.functionalCurrency],
+    ['acquisitionFxRate', tx.acquisitionFxRate],
+    ['totalAmount', tx.totalAmount]
+  ];
+  if (tx.disposalAmount !== undefined && tx.disposalAmount !== null && tx.disposalAmount > 0) {
+    requiredFacts.push(['disposalFxRate', tx.disposalFxRate]);
+  }
+  const missingFacts = requiredFacts
+    .filter(([name, value]) =>
+      value === undefined || value === null || value === '' ||
+      ((name === 'acquisitionFxRate' || name === 'disposalFxRate' || name === 'totalAmount') &&
+        (typeof value !== 'number' || !Number.isFinite(value) || value <= 0))
+    )
+    .map(([name]) => name);
+  if (missingFacts.length > 0) {
+    return {
+      success: false,
+      isHypothetical: true,
+      projectedGroups: [],
+      projectedEvents: [],
+      explanation: 'Projection cannot be prepared because committed transaction facts are incomplete.',
+      authorityStatus: 'CONDITIONAL',
+      diagnosticNotice: `Authoritative facts pending: ${missingFacts.join(', ')}.`
+    };
+  }
+
+  const txId = tx.transactionId!;
   const assetTitle = tx.assetName || 'Equity Investments';
-  const txCurr = tx.currency || 'USD';
-  const funcCurr = tx.functionalCurrency || 'SGD';
-  const buyFx = tx.acquisitionFxRate || 1;
-  const sellFx = tx.disposalFxRate || 1;
-  const totalAmt = tx.totalAmount || 0;
-  const dispAmt = tx.disposalAmount || 0;
+  const txCurr = tx.currency;
+  const funcCurr = tx.functionalCurrency!;
+  const buyFx = tx.acquisitionFxRate!;
+  const sellFx = tx.disposalFxRate;
+  const totalAmt = tx.totalAmount!;
+  const dispAmt = tx.disposalAmount;
 
   const initialCostSGD = Math.round(totalAmt * buyFx * 100) / 100;
-  const proceedsSGD = dispAmt > 0 ? Math.round(dispAmt * sellFx * 100) / 100 : 0;
+  const proceedsSGD = dispAmt && sellFx ? Math.round(dispAmt * sellFx * 100) / 100 : 0;
 
   const priorCommittedGroups = (committedContext.priorJournals && committedContext.priorJournals.length > 0)
     ? committedContext.priorJournals.filter(g => !g.isHypothetical)
@@ -241,9 +291,7 @@ export function buildAccountingMeasurementProjection(params: {
       authorityStatus: 'DETERMINISTIC'
     };
 
-    const acqBal = validateJournalBalance(acqGroup);
-    acqGroup.isBalanced = acqBal.isBalanced;
-    groups.push(acqGroup);
+    groups.push(finalizeJournalGroup(acqGroup));
 
     // 2. Disposal Group (if disposal occurred)
     if (proceedsSGD > 0) {
@@ -313,9 +361,7 @@ export function buildAccountingMeasurementProjection(params: {
         authorityStatus: 'DETERMINISTIC'
       };
 
-      const dispBal = validateJournalBalance(dispGroup);
-      dispGroup.isBalanced = dispBal.isBalanced;
-      groups.push(dispGroup);
+      groups.push(finalizeJournalGroup(dispGroup));
     }
   }
 
@@ -371,14 +417,12 @@ export function buildAccountingMeasurementProjection(params: {
       authorityStatus: 'DETERMINISTIC'
     };
 
-    const acqBal = validateJournalBalance(acqGroup);
-    acqGroup.isBalanced = acqBal.isBalanced;
-    groups.push(acqGroup);
+    groups.push(finalizeJournalGroup(acqGroup));
 
     // 2. Disposal Group
     if (proceedsSGD > 0) {
-      const stockGainSGD = Math.round((dispAmt - totalAmt) * sellFx * 100) / 100;
-      const fxGainSGD = Math.round(totalAmt * (sellFx - buyFx) * 100) / 100;
+      const stockGainSGD = Math.round((dispAmt! - totalAmt) * sellFx! * 100) / 100;
+      const fxGainSGD = Math.round(totalAmt * (sellFx! - buyFx) * 100) / 100;
 
       const sellLines = [
         {
@@ -444,9 +488,7 @@ export function buildAccountingMeasurementProjection(params: {
         authorityStatus: 'DETERMINISTIC'
       };
 
-      const dispBal = validateJournalBalance(dispGroup);
-      dispGroup.isBalanced = dispBal.isBalanced;
-      groups.push(dispGroup);
+      groups.push(finalizeJournalGroup(dispGroup));
     }
   }
 
@@ -474,7 +516,7 @@ export function buildAccountingMeasurementProjection(params: {
         isHypothetical: true,
         projectedGroups: [],
         projectedEvents: [],
-        explanation: `Generated projection failed balance check: Debits (${bal.totalDebit}) != Credits (${bal.totalCredit}).`,
+        explanation: `Generated projection failed journal invariant: lines, declared totals or balance flag disagree (debits ${bal.totalDebit}, credits ${bal.totalCredit}).`,
         authorityStatus: 'CONDITIONAL',
         diagnosticNotice: `Imbalance detected (${bal.imbalance}). Journal presentation suppressed.`
       };

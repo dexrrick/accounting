@@ -20,7 +20,6 @@ export type OwnershipContext =
 
 export type CounterpartyRole =
   | 'shareholder'
-  | 'director_shareholder'
   | 'customer'
   | 'supplier'
   | 'employee'
@@ -102,7 +101,6 @@ export type InstrumentType =
   | 'accounts_payable'
   | 'own_equity'
   | 'financial_asset_equity'
-  | 'financial_asset_at_fvtpl'
   | 'marketable_securities'
   | 'debt_instrument'
   | 'derivative'

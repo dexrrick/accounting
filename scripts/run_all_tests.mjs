@@ -11,6 +11,7 @@ const testSuites = [
   { name: '0C. Side Quest 3 Multi-Turn Accounting State & Follow-Ups', file: 'test_followup_accounting_state.mjs' },
   { name: '0D. Side Quest 2 → Phase 5 Integration & Semantics', file: 'test_sidequest2_phase5_integration.mjs' },
   { name: '0E. Topic Resolver Semantics & Provenance Separation', file: 'test_topic_resolver_and_provenance.mjs' },
+  { name: '0F. Projection Builder No-Fabrication Invariants', file: 'test_projection_builder_invariants.mjs' },
   { name: '1. Phase 5 Advanced Hybrid Retrieval & Vector Index', file: 'test_phase5_advanced_retrieval.mjs' },
   { name: '2. Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs' },
   { name: '3. Phase 3 Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs' },

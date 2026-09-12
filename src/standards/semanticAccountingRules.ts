@@ -332,7 +332,7 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'Financial Asset / Debt Instrument',
     dimension: 'instrument',
     description: 'Financial asset classification and measurement under SFRS(I) 9',
-    instruments: ['debt_instrument', 'marketable_securities', 'derivative', 'financial_asset_equity', 'financial_asset_at_fvtpl'],
+    instruments: ['debt_instrument', 'marketable_securities', 'derivative', 'financial_asset_equity'],
     positiveAlignments: [
       {
         actOrStandard: 'SFRS(I) 9',
@@ -351,7 +351,7 @@ export const SEMANTIC_ACCOUNTING_RULES: SemanticAccountingRule[] = [
     name: 'Shareholder Counterparty Role',
     dimension: 'counterpartyRole',
     description: 'Counterparty is existing or prospective shareholder',
-    counterpartyRoles: ['shareholder', 'director_shareholder'],
+    counterpartyRoles: ['shareholder', 'director'],
     positiveAlignments: [
       {
         actOrStandard: 'Companies Act 1967',
@@ -503,12 +503,12 @@ export const CANONICAL_TOPIC_SEMANTIC_CRITERIA: Record<string, TopicSemanticCrit
   acra_share_capital: {
     ownershipContexts: ['own_equity'],
     transactionTypes: ['share_capital_issuance', 'capital_reduction'],
-    counterpartyRoles: ['shareholder', 'director_shareholder'],
+    counterpartyRoles: ['shareholder', 'director'],
     blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'customer_invoice', 'lease_contract']
   },
   sfrsi_own_equity: {
     ownershipContexts: ['own_equity'],
-    counterpartyRoles: ['shareholder', 'director_shareholder'],
+    counterpartyRoles: ['shareholder', 'director'],
     blockedByTransactionTypes: ['expense_payment', 'inventory_purchase', 'customer_invoice', 'lease_contract']
   },
   sfrsi_financial_instruments: {

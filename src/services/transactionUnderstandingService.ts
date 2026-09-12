@@ -124,7 +124,6 @@ export const VALID_CANONICAL_INSTRUMENTS: readonly InstrumentType[] = [
   'accounts_payable',
   'own_equity',
   'financial_asset_equity',
-  'financial_asset_at_fvtpl',
   'marketable_securities',
   'debt_instrument',
   'derivative',
@@ -204,6 +203,10 @@ export function normalizeInstrument(raw?: string): InstrumentType | undefined {
   if (clean === 'bank_loan' || clean === 'loan') {
     return 'debt_instrument';
   }
+  // Measurement is a property of an instrument, not a separate instrument type.
+  if (clean === 'financial_asset_at_fvtpl') {
+    return 'financial_asset_equity';
+  }
 
   // Canonical match
   const matched = VALID_CANONICAL_INSTRUMENTS.find(i => i === clean);
@@ -264,7 +267,9 @@ export function validateAndNormalizeUnderstanding(
     'other',
     'unknown'
   ];
-  const counterpartyRole = raw?.counterparty?.role;
+  const counterpartyRole = raw?.counterparty?.role === 'director_shareholder'
+    ? 'shareholder'
+    : raw?.counterparty?.role;
   if (counterpartyRole && !validRoles.includes(counterpartyRole)) {
     errors.push(`Invalid counterparty.role: '${counterpartyRole}'`);
   }
@@ -432,7 +437,7 @@ export function validateAndNormalizeUnderstanding(
       description: raw?.reportingEntity?.description || undefined
     },
     counterparty: raw?.counterparty ? {
-      role: (raw.counterparty.role || 'unknown'),
+      role: (counterpartyRole || 'unknown'),
       description: raw.counterparty.description || undefined
     } : undefined,
     transactionType: validatedTxType,
