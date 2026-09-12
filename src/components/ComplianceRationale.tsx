@@ -24,7 +24,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   citations,
   advisories = [],
   officialAnswerLinks = [],
-  standard,
   classification = 'FVTPL',
   primaryDomain,
   assumptions = [],

@@ -128,7 +128,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <div
               className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed ${
                 msg.sender === 'user'
-                  ? 'bg-ynab-blue text-white rounded-br-none shadow-sm'
+                  ? 'bg-blue-50 dark:bg-blue-950/40 text-slate-800 dark:text-blue-100 border border-blue-200 dark:border-blue-900/60 rounded-br-none shadow-sm'
                   : 'bg-slate-100 dark:bg-[#242F46] text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-200 dark:border-[#2B374E] shadow-xs'
               }`}
             >
