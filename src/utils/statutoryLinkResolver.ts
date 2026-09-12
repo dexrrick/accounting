@@ -27,6 +27,12 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
   CDCA2001: { ssoCode: 'CDCA2001', title: 'Child Development Co-Savings Act 2001' }
 };
 
+// ASC publishes SFRS(I) as an official annual collection rather than exposing
+// a stable public URL for each individual standard. This is the closest
+// official source for an SFRS(I) citation; it is intentionally not ACRA's
+// general accounting-standards landing page.
+export const SFRSI_2025_COLLECTION_URL = 'https://asc.acra.gov.sg/singapore-financial-reporting-standards-international/archives/effective-for-annual-reporting-period-beginning-on-1-january-2025';
+
 /**
  * Generates an official Singapore Statutes Online (SSO) canonical permalink.
  * Format on sso.agc.gov.sg is https://sso.agc.gov.sg/Act/{ActCode}#pr{SectionNumber}-
@@ -89,12 +95,9 @@ export function getSafeOfficialUrl(
     return url.replace('/Act/CA1967', '/Act/CoA1967');
   }
 
-  // 2. If it's already a valid Singapore Statutes Online (SSO) URL, return it directly
-  if (url.startsWith('https://sso.agc.gov.sg/Act/')) {
-    return url;
-  }
-
-  // 3. If statute or act name is specified, resolve to authoritative SSO permalink
+  // 2. Resolve the cited instrument first. This deliberately takes precedence
+  // over a generic agency or SSO URL, so the user lands on the cited Act and
+  // section rather than a directory.
   const act = (statuteOrAct || '').toLowerCase();
   const sec = sectionOrSchedule || '';
 
@@ -119,10 +122,21 @@ export function getSafeOfficialUrl(
   if (act.includes('payment services') || act.includes('psa')) {
     return buildSsoUrl('PSA2019', sec);
   }
+  if (/(?:sfrs\(i\)|sfrs|ifrs|ias)\s*(?:\d|1-)/i.test(statuteOrAct || '')) {
+    return SFRSI_2025_COLLECTION_URL;
+  }
 
-  // 4. Check if rawUrl is a verified domain
+  // 3. Preserve a supplied, source-specific SSO link.
+  if (url.startsWith('https://sso.agc.gov.sg/Act/')) {
+    return url;
+  }
+
+  // 4. Check whether the raw URL is a source page, rather than a generic
+  // agency directory. Generic directories are withheld below.
   if (url.includes('asc.gov.sg')) {
-    return 'https://www.acra.gov.sg/accountancy/accounting-standards';
+    return url.includes('/singapore-financial-reporting-standards-international/')
+      ? url
+      : SFRSI_2025_COLLECTION_URL;
   }
 
   if (
@@ -133,20 +147,28 @@ export function getSafeOfficialUrl(
     url.startsWith('https://www.mas.gov.sg') ||
     url.startsWith('https://www.ifrs.org')
   ) {
+    try {
+      const parsedUrl = new URL(url);
+      // An agency root is not a source for a specific conclusion.
+      if (parsedUrl.pathname === '/' || /^\/irashome\/?$/i.test(parsedUrl.pathname)) return '';
+    } catch {
+      return '';
+    }
     return url;
   }
 
-  // 5. Authority fallback
+  // 5. Authority-only fallbacks may be an agency home page, not evidence for a
+  // particular proposition. Show a section of the governing Act where that is
+  // unambiguous; otherwise return no link instead of a misleading directory.
   const auth = (authority || '').toUpperCase();
-  if (auth === 'IRAS') return 'https://sso.agc.gov.sg/Act/ITA1947';
-  if (auth === 'ACRA') return 'https://sso.agc.gov.sg/Act/CoA1967';
-  if (auth === 'CPF') return 'https://www.cpf.gov.sg';
-  if (auth === 'MOM') return 'https://sso.agc.gov.sg/Act/EA1968';
-  if (auth === 'MAS') return 'https://sso.agc.gov.sg/Act/MASA1970';
-  if (auth === 'ASC') return 'https://www.acra.gov.sg/accountancy/accounting-standards';
+  if (auth === 'CPF' && /\d/.test(sec)) return buildSsoUrl('CPFA1953', sec);
+  if (auth === 'MOM' && /\d/.test(sec)) return buildSsoUrl('EA1968', sec);
+  if (auth === 'MAS' && /\d/.test(sec)) return buildSsoUrl('MASA1970', sec);
+  if (auth === 'ASC') return SFRSI_2025_COLLECTION_URL;
 
-  // 6. Default canonical SSO root
-  return url || 'https://sso.agc.gov.sg';
+  // A source may be absent, but an official-looking generic link must not be
+  // presented as support for a specific accounting or compliance conclusion.
+  return '';
 }
 
 /**

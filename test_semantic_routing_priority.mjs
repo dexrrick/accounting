@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { hasSemanticRoutingConflict, resolveSemanticScenario } from './src/services/semanticScenarioResolver.ts';
 import { classifyQuestion } from './src/classification/questionClassifier.ts';
-import { buildSsoUrl } from './src/utils/statutoryLinkResolver.ts';
+import { buildSsoUrl, getSafeOfficialUrl, SFRSI_2025_COLLECTION_URL } from './src/utils/statutoryLinkResolver.ts';
 
 console.log('=== RUNNING SEMANTIC ROUTING PRIORITY SUITE ===\n');
 
@@ -24,5 +24,9 @@ assert.equal(reportingQuestion.primaryDomain, 'ACCOUNTING');
 assert.equal(reportingQuestion.taxAnalysisRequired, false);
 assert.ok(reportingQuestion.authorities.includes('ACRA'));
 assert.equal(buildSsoUrl('unrecognised instrument'), 'https://sso.agc.gov.sg', 'unknown legislation must not default to the Income Tax Act');
+assert.equal(getSafeOfficialUrl('https://sso.agc.gov.sg', 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), 'https://sso.agc.gov.sg/Act/ITA1947#pr14-');
+assert.equal(getSafeOfficialUrl('', 'Central Provident Fund Act 1953', 'Section 7', 'CPF'), 'https://sso.agc.gov.sg/Act/CPFA1953#pr7-');
+assert.equal(getSafeOfficialUrl('', 'SFRS(I) 1-1 Presentation of Financial Statements', 'Paragraph 41', 'ASC'), SFRSI_2025_COLLECTION_URL);
+assert.equal(getSafeOfficialUrl('https://www.iras.gov.sg', 'Singapore Statutory Directives', 'General', 'IRAS'), '', 'generic agency pages must not be passed off as a source');
 
 console.log('✓ validated AI semantics override conflicting keyword routing; reporting reclassification routes to accounting; unknown legislation does not become tax law.');

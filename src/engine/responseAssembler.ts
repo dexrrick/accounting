@@ -486,8 +486,8 @@ export function assembleDeterministicResponse(
       summary: compact.directAnswer || 'Statutory directives under Singapore law',
       keyRules: compact.keyRules || [],
       officialUrl: primaryAuth === 'ASC'
-        ? 'https://www.acra.gov.sg/accountancy/accounting-standards'
-        : 'https://sso.agc.gov.sg',
+        ? 'https://asc.acra.gov.sg/singapore-financial-reporting-standards-international/archives/effective-for-annual-reporting-period-beginning-on-1-january-2025'
+        : '',
       isTaxDeductible: undefined,
       isGstClaimable: undefined
     });
