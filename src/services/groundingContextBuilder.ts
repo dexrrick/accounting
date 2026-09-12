@@ -571,7 +571,16 @@ export function postProcessAIResponse(
      (!parsed.messageText && (!parsed.directGroups || parsed.directGroups.length === 0)))
   );
 
-  if (isCompactPayload) {
+  // A settlement is a state transition, not an invitation for the model to
+  // propose a fresh journal.  In particular, an AI payload may use the right
+  // title while supplying unrelated lines (for example an entertainment
+  // expense).  Route *all* settlement payload shapes through the deterministic
+  // assembler, which resolves the target against committed balances first.
+  const isSettlementFollowUp =
+    groundedContext.semanticUnderstanding?.followUpAnalysis?.eventType === 'settlement' ||
+    groundedContext.semanticUnderstanding?.followUpAnalysis?.eventType === 'partial_settlement';
+
+  if (isCompactPayload || isSettlementFollowUp) {
     return assembleDeterministicResponse(
       parsed,
       userInput,

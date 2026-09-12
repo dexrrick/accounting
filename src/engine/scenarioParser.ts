@@ -697,8 +697,38 @@ export async function parseAccountingQuery(
       if (magnitude === 'k' || magnitude === 'thousand') contributionAmount *= 1000;
       if (magnitude === 'm' || magnitude === 'million') contributionAmount *= 1000000;
     }
-    const isInKind = /\b(non[ -]?monetary|non[ -]?cash|in[ -]?kind)\b/i.test(q);
-    const isPaid = isInKind || /\b(paid|payment has been made|settled|delivered)\b/i.test(q);
+    const explicitlyNoMonetaryPayment = /\bno\s+monetary\s+payment\b/i.test(q);
+    const ambiguousNonMonetaryPayment = /\bnon\s+monetary\s+payment\b/i.test(q);
+    // "Non-cash" and "in kind" clearly identify consideration in kind. The
+    // unhyphenated phrase "non monetary payment" is frequently a typo for
+    // "no monetary payment" and must be clarified, never silently classified.
+    const isInKind = /\b(non[ -]?cash|in[ -]?kind)\b/i.test(q);
+    if (ambiguousNonMonetaryPayment && !explicitlyNoMonetaryPayment && !isInKind) {
+      return {
+        scenarioType: 'SHARE_CAPITAL_UNPAID',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'ACCOUNTING_SFRS',
+        rawQuery: query,
+        transactionTitle: 'Share Capital Contribution — Consideration Clarification Required',
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        amount: contributionAmount,
+        ownershipContext: 'own_equity',
+        transactionNature: 'share_capital_issuance',
+        accountingTreatmentSummary: 'Please clarify whether the shareholder made no monetary payment (an unpaid subscription) or transferred non-cash consideration in kind. These require different debit accounts.',
+        directGroups: [],
+        keyParameters: [{ label: 'Consideration Status', value: 'Ambiguous: “non monetary payment”', badge: 'Clarification Required', highlight: true }],
+        isComplete: false,
+        missingFields: [{
+          fieldKey: 'considerationType',
+          fieldName: 'Share issue consideration',
+          prompt: 'Did you mean “no monetary payment has been made” (unpaid share subscription), or was non-cash consideration such as equipment transferred to the company?',
+          whyNeeded: 'An unpaid subscription is recorded as a receivable; non-cash consideration is recorded as the specific asset received.'
+        }]
+      };
+    }
+    const isPaid = !explicitlyNoMonetaryPayment && (isInKind || /\b(paid|payment has been made|settled|delivered)\b/i.test(q));
     const hasAmount = Boolean(contributionAmount && contributionAmount > 0);
     const amount = contributionAmount || 0;
     const debitAccount = isPaid
@@ -710,6 +740,7 @@ export async function parseAccountingQuery(
           : 'Cash consideration received for the share issue.')
       : 'Share subscription receivable pending payment by the shareholder.';
     const title = isInKind ? 'Issue of Share Capital for Non-Cash Consideration' : 'Share Capital Subscription';
+    const transactionId = `tx-share-capital-${Date.now()}`;
 
     return {
       scenarioType: isPaid ? 'SHARE_CAPITAL_PAID' : 'SHARE_CAPITAL_UNPAID',
@@ -720,6 +751,7 @@ export async function parseAccountingQuery(
       transactionTitle: title,
       functionalCurrency,
       transactionCurrency: functionalCurrency,
+      transactionId,
       amount: contributionAmount,
       ownershipContext: 'own_equity',
       transactionNature: 'share_capital_issuance',
@@ -733,6 +765,7 @@ export async function parseAccountingQuery(
       ],
       directGroups: [{
         id: 'grp-share-capital-subscription',
+        transactionId,
         eventDate: formatSingaporeDate(new Date()),
         title,
         summary: hasAmount ? `Recognition of ${functionalCurrency} ${amount.toLocaleString()} share capital.` : 'Share capital recognition pending valuation of consideration.',

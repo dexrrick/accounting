@@ -181,6 +181,9 @@ export function assembleDeterministicResponse(
   let directGroups: JournalEntryGroup[] = [];
 
   const followUp = groundedContext.semanticUnderstanding?.followUpAnalysis;
+  const isSettlementFollowUp = Boolean(
+    followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')
+  );
   const currentScenario = typeof userInputOrScenario === 'object' && userInputOrScenario !== null
     ? (userInputOrScenario as AccountingScenarioState)
     : (typeof currentScenarioOrInput === 'object' && currentScenarioOrInput !== null ? (currentScenarioOrInput as AccountingScenarioState) : null);
@@ -192,7 +195,44 @@ export function assembleDeterministicResponse(
     ? [...currentScenario.committedDirectGroups]
     : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
 
-  if (hasAuthoritativeDeterministicEntries) {
+  // Never let a model fill a settlement gap with a generic journal.  A
+  // settlement is permissible only when the committed state contains one
+  // resolvable outstanding balance.  This check deliberately happens before
+  // accepting either deterministic fallback groups or AI-supplied groups.
+  if (isSettlementFollowUp && !hasAuthoritativeDeterministicEntries) {
+    const convContext = extractAccountingContext(currentScenario);
+    const curr = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
+    const settlementDelta = calculateAccountingDelta(convContext, followUp!, curr);
+    if (!settlementDelta?.resultingAccountingEvent) {
+      const baseState = currentScenario || deterministicScenario;
+      const clarification = 'I cannot post a settlement journal because this conversation has no uniquely identified outstanding receivable or payable to settle. Please provide or confirm the original allotment, invoice, loan, or other transaction first.';
+      return {
+        messageText: `### Clarification Required\n\n${clarification}`,
+        scenarioState: {
+          ...(baseState || {
+            scenarioType: 'UNRECOGNIZED',
+            transactionTitle: 'Settlement Requires an Outstanding Balance',
+            functionalCurrency: curr,
+            transactionCurrency: curr
+          }),
+          rawQuery: userInput,
+          authorityStatus: 'CONDITIONAL',
+          directGroups: priorCommittedGroups,
+          committedDirectGroups: priorCommittedGroups,
+          projectedGroups: undefined,
+          isComplete: false,
+          missingFields: [{
+            fieldKey: 'settlementTarget',
+            fieldName: 'Outstanding balance being settled',
+            prompt: clarification,
+            whyNeeded: 'A settlement journal must derecognize a specific balance from committed accounting history.'
+          }]
+        }
+      };
+    }
+  }
+
+  if (hasAuthoritativeDeterministicEntries && !isSettlementFollowUp) {
     // Deterministic engine calculations strictly govern
     directGroups = deterministicScenario!.directGroups!.map(grp => ({
       ...grp,

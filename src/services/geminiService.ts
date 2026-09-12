@@ -244,11 +244,68 @@ export async function processAccountingQuery(
     };
   };
 
+  // A request to reveal or repeat the already-calculated journal must not be
+  // reclassified as a new transaction and sent to a model.  Preserve the last
+  // committed journal exactly; if none exists, say so rather than inventing
+  // one from generic expense defaults.
+  const isJournalDisplayRequest = /^\s*(?:where(?:\s+is|\s*'s)\s+(?:your\s+|the\s+)?(?:double\s+entry|journal)|(?:show|repeat|display)\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal))\s*\?*\s*$/i.test(userInput);
+  if (isJournalDisplayRequest) {
+    const committedGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+      ? currentScenario.committedDirectGroups
+      : (currentScenario?.directGroups || []).filter(group => !group.isHypothetical);
+    const lastGroup = committedGroups[committedGroups.length - 1];
+    profiler.recordFirstVisibleResponse();
+    profiler.setTokenCounts(0, 0, 0);
+    profiler.logSummary();
+
+    if (currentScenario && lastGroup) {
+      return attachAmendmentProvenance({
+        messageText: `### Double Entry Journal\n\nThe most recent committed journal is **${lastGroup.title}** (${lastGroup.eventDate}). It is shown in the Double Entry Journal tab.`,
+        scenarioState: {
+          ...currentScenario,
+          directGroups: committedGroups,
+          committedDirectGroups: committedGroups
+        }
+      });
+    }
+
+    return attachAmendmentProvenance({
+      messageText: '### No Double Entry Available Yet\n\nThere is no confirmed journal in this conversation to repeat. I need the original transaction facts or a clarification before a journal can be calculated.',
+      scenarioState: currentScenario || {
+        scenarioType: 'UNRECOGNIZED',
+        rawQuery: userInput,
+        transactionTitle: 'Journal Not Yet Calculated',
+        functionalCurrency: 'SGD',
+        transactionCurrency: 'SGD',
+        directGroups: [],
+        isComplete: false,
+        missingFields: []
+      }
+    });
+  }
+
   // 1. Check if query matches an explicit deterministic test fixture
   const isFixture = isDeterministicFixture(userInput);
   const tDet0 = Date.now();
   const deterministicScenario = await parseAccountingQuery(userInput, currentScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
+
+  // Material ambiguity is a deterministic stop condition. Do not spend tokens
+  // asking a model to guess between unpaid cash consideration and consideration
+  // in kind, and do not allow prose to bypass the required clarification.
+  const materialClarification = deterministicScenario.missingFields?.find(
+    field => field.fieldKey === 'considerationType'
+  );
+  if (materialClarification && (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
+    profiler.recordFirstVisibleResponse();
+    profiler.setTokenCounts(0, 0, 0);
+    profiler.logSummary();
+    return attachAmendmentProvenance({
+      messageText: `### Clarification Required\n\n${materialClarification.prompt}`,
+      scenarioState: deterministicScenario,
+      clarifications: [materialClarification]
+    });
+  }
 
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
