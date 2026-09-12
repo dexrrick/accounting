@@ -51,7 +51,7 @@ export async function executeStructuredLlmCall(
     if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       const apiKey = providerOrApiKey.trim();
       const model = options.model || 'gemini-3.5-flash-lite';
-      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature);
+      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false);
     }
 
     // 2. Structured ProviderSettings
@@ -64,7 +64,7 @@ export async function executeStructuredLlmCall(
           throw new Error('Gemini API key is not configured or too short.');
         }
         const model = options.model || providerOrApiKey.gemini?.model || 'gemini-3.5-flash-lite';
-        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature);
+        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false);
       }
 
       if (active === 'azure') {
@@ -152,7 +152,8 @@ async function callGeminiDirect(
   prompt: string,
   systemInstruction: string,
   signal: AbortSignal,
-  temperature: number = 0.1
+  temperature: number = 0.1,
+  jsonMode: boolean = true
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -163,10 +164,7 @@ async function callGeminiDirect(
         parts: [{ text: prompt }]
       }
     ],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      temperature
-    }
+    generationConfig: { ...(jsonMode ? { responseMimeType: 'application/json' } : {}), temperature }
   };
 
   if (systemInstruction) {

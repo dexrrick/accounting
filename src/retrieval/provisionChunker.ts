@@ -74,7 +74,8 @@ export class ProvisionChunker {
     let match: RegExpExecArray | null;
     while ((match = subsectionRegex.exec(text)) !== null) {
       // Offset of the actual subsection text start
-      const matchIndex = match.index + (match[0].startsWith('\n') ? match[0].indexOf(match[1] || match[2] || match[3]) - 1 : 0);
+      const leadingWhitespaceLen = match[0].match(/^\s*/)?.[0].length || 0;
+      const matchIndex = match.index + leadingWhitespaceLen;
       const label = match[1] ? `(${match[1]})` : (match[2] ? match[2] : `§${match[3]}`);
       matches.push({ index: Math.max(0, matchIndex), label });
     }

@@ -603,7 +603,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2B374E] rounded-lg text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-ynab-blue"
                     />
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Located in Azure Portal under <em>Keys and Endpoint</em> (Key 1 or Key 2). Stored securely in <code className="font-mono">localStorage</code>.
+                      Located in Azure Portal under <em>Keys and Endpoint</em> (Key 1 or Key 2). Stored in browser <code className="font-mono">localStorage</code>; do not use production master keys on shared workstations.
                     </p>
                   </div>
                 </div>
@@ -624,7 +624,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-[#111827] border border-slate-300 dark:border-[#2B374E] rounded-lg text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-ynab-blue"
                     />
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      Obtain from Google AI Studio. Stored strictly in browser <code className="font-mono">localStorage</code>.
+                      Obtain from Google AI Studio. Stored in browser <code className="font-mono">localStorage</code>; same-origin scripts can access it, so do not use production master keys on shared workstations.
                     </p>
                   </div>
 

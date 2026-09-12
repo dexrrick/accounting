@@ -21,6 +21,8 @@ export interface ControlledFetchOptions {
   ttlMs?: number;
   expectedHash?: string;
   customFetch?: (url: string, init?: RequestInit) => Promise<Response>;
+  redirectCount?: number;
+  maxRedirects?: number;
 }
 
 export interface ControlledFetchResult {
@@ -192,7 +194,12 @@ export class ControlledWebRetriever {
         }
 
         // Follow authorized redirect
-        return await this.fetchOfficialSource(targetUrl, { ...options, useCache: false });
+        const redirectCount = options.redirectCount ?? 0;
+        const maxRedirects = options.maxRedirects ?? 5;
+        if (redirectCount >= maxRedirects) {
+          return { status: 'REDIRECT_REJECTED', httpStatus: response.status, error: `Maximum redirect limit (${maxRedirects}) exceeded`, retrievedAt, sourceUrl: url };
+        }
+        return await this.fetchOfficialSource(targetUrl, { ...options, useCache: false, redirectCount: redirectCount + 1 });
       }
 
       if (!response.ok) {

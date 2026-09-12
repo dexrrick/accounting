@@ -1084,10 +1084,10 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
 
   try {
     // Attempt streaming with Server-Sent Events (?alt=sse) to measure genuine Time to First Visible Response (TTFVR)
-    const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse&key=${apiKey}`;
+    const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
     const streamRes = await fetch(streamUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(requestBody),
       signal: controller.signal
     });
@@ -1137,10 +1137,10 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
 
     // Fallback to standard generateContent if streaming is unavailable
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify(requestBody),
         signal: controller.signal
       });

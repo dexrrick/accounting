@@ -35,6 +35,13 @@ export async function getExchangeRate(
   // Format date if provided: YYYY-MM-DD
   let queryDate = date;
   if (queryDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(queryDate)) {
+      throw new Error(`[INVALID_FX_DATE] Invalid historical exchange rate date: '${queryDate}'. Use YYYY-MM-DD.`);
+    }
+    const [year, month, day] = queryDate.split('-').map(Number);
+    if (month < 1 || month > 12 || day < 1 || day > new Date(year, month, 0).getDate()) {
+      throw new Error(`[INVALID_FX_DATE] Invalid historical exchange rate date: '${queryDate}'. Use a valid calendar date.`);
+    }
     // If the date is in the future, Frankfurter will return latest available
     const parsedDate = new Date(queryDate);
     const now = new Date();

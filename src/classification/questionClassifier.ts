@@ -36,7 +36,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('capitaliz') ||
     q.includes('sfrs') ||
     q.includes('ifrs') ||
-    q.includes('ias') ||
+    /\bias\s*\d*\b/i.test(q) ||
     q.includes('intangible asset') ||
     q.includes('depreciat') ||
     q.includes('amorti') ||
@@ -46,7 +46,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('double entr') ||
     q.includes('bookkeeping') ||
     q.includes('accrual') ||
-    q.includes('lease') ||
+    /\bleases?\b/i.test(q) ||
     q.includes('rou asset') ||
     q.includes('fvtpl') ||
     q.includes('fvtoci') ||
@@ -65,17 +65,17 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('section 15') ||
     q.includes('section 19a') ||
     q.includes('capital allowance') ||
-    q.includes('sute') ||
+    /\bsute\b/i.test(q) ||
     q.includes('partial tax exempt') ||
     q.includes('form c') ||
-    q.includes('eis') ||
+    /\beis\b/i.test(q) ||
     q.includes('enterprise innovation') ||
     q.includes('add-back') ||
     q.includes('tax treatment') ||
     q.includes('withholding tax');
 
   const hasGst =
-    q.includes('gst') ||
+    /\bgst\b/i.test(q) ||
     q.includes('goods and services tax') ||
     q.includes('input tax') ||
     q.includes('output tax') ||
@@ -93,12 +93,12 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('section 205c') ||
     q.includes('section 201') ||
     q.includes('annual return') ||
-    q.includes('agm') ||
+    /\bagm\b/i.test(q) ||
     q.includes('director') ||
     q.includes('share capital');
 
   const hasPayroll =
-    q.includes('cpf') ||
+    /\bcpf\b/i.test(q) ||
     q.includes('central provident fund') ||
     q.includes('ordinary wage') ||
     q.includes('ow ceiling') ||
@@ -109,7 +109,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('employee contribution');
 
   const hasEmployment =
-    q.includes('mom') ||
+    /\bmom\b/i.test(q) ||
     q.includes('ministry of manpower') ||
     q.includes('employment act') ||
     q.includes('annual leave') ||

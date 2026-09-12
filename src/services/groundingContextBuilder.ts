@@ -627,8 +627,8 @@ export function postProcessAIResponse(
     }));
   } else {
     // Validate and compute totals on AI-supplied directGroups
-    directGroups = (parsed.directGroups || []).map((grp: any, gIdx: number) => {
-      const lines = (grp.lines || []).map((l: any, lIdx: number) => ({
+    directGroups = (Array.isArray(parsed.directGroups) ? parsed.directGroups : []).map((grp: any, gIdx: number) => {
+      const lines = (Array.isArray(grp?.lines) ? grp.lines : []).map((l: any, lIdx: number) => ({
         id: l.id || `line-${gIdx}-${lIdx}`,
         accountCode: l.accountCode || '1000',
         accountName: l.accountName || 'Account',

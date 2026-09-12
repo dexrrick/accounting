@@ -371,7 +371,7 @@ export function validateAndNormalizeUnderstanding(
   const factsMissing: string[] = Array.isArray(raw?.factsMissing) ? [...raw.factsMissing] : [];
   const assumptions: string[] = Array.isArray(raw?.assumptions) ? [...raw.assumptions] : [];
 
-  if (raw?.reportingEntity?.type === 'unknown') {
+  if (!raw?.reportingEntity?.type || raw.reportingEntity.type === 'unknown') {
     factsMissing.push('Reporting entity perspective is unspecified');
   }
 

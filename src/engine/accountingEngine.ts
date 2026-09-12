@@ -127,12 +127,16 @@ export function calculateDoubleEntries(
   // SCENARIO 2: LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
   // =========================================================================
   else if (scenario.scenarioType === 'LEASE_IFRS16') {
-    const termYears = scenario.leaseTermYears || 3;
-    const termMonths = scenario.leaseTermMonths || termYears * 12;
-    const monthlyRent = scenario.leasePaymentMonthly || 3000;
+    const termYears = scenario.leaseTermYears ?? 3;
+    const termMonths = scenario.leaseTermMonths ?? termYears * 12;
+    const monthlyRent = scenario.leasePaymentMonthly ?? 3000;
     const annualRate = (scenario.leaseDiscountRateAnnual ?? 5.0) / 100;
     const monthlyRate = annualRate / 12;
     const commDate = scenario.leaseCommencementDate || '2026-01-01';
+
+    if (termYears <= 0 || termMonths <= 0) {
+      return { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: func } };
+    }
 
     let pvLiability = 0;
     if (monthlyRate > 0) {

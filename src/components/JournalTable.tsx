@@ -138,7 +138,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#2B374E]/60 font-sans">
-                {group.lines.map((line) => {
+                {(group.lines || []).map((line) => {
                   const isCredit = line.credit > 0;
                   return (
                     <tr

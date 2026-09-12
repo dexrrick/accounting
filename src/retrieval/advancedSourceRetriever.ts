@@ -157,7 +157,8 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
         // Higher chunk score if chunk contains specific keywords from query
         let chunkScore = baseRecScore;
         const qLower = retrievalQuery.query.toLowerCase();
-        if (qLower.includes(chunk.chunkText.substring(0, 30).toLowerCase())) {
+        const tokens = qLower.split(/[\s,.;:!?/()]+/).filter(token => token.length >= 3);
+        if (chunk.chunkText.toLowerCase().includes(qLower) || tokens.some(token => chunk.chunkText.toLowerCase().includes(token))) {
           chunkScore += 20;
         }
         lexicalMatches.push({

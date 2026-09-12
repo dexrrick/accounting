@@ -49,7 +49,7 @@ export class AccountingGuardrailValidator {
     // Guardrail A: Own-Equity Guardrail (SFRS(I) 1-32 §33)
     if (understanding.ownershipContext === 'own_equity') {
       for (const line of allLines) {
-        const accLower = line.accountName.toLowerCase();
+        const accLower = (line.accountName || '').toLowerCase();
         if (
           accLower.includes('fvtpl') ||
           accLower.includes('fvtoci') ||

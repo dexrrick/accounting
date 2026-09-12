@@ -381,6 +381,7 @@ export function assembleDeterministicResponse(
       }];
     } else {
       // Structured amount available from complete deterministic scenario formula or verified semantic facts
+      const displayCurrency = deterministicScenario?.functionalCurrency ?? groundedContext.semanticUnderstanding?.currency?.value ?? 'SGD';
       const debitsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'DEBIT').length;
       const creditsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'CREDIT').length;
 
@@ -394,7 +395,9 @@ export function assembleDeterministicResponse(
           category: acc.category,
           debit: isDebit ? amt : 0,
           credit: !isDebit ? amt : 0,
-          lineExplanation: acc.rationale || `Recognition of ${acc.accountName}`
+          lineExplanation: amt > 0
+            ? (acc.rationale || `Recognition of ${acc.accountName}`)
+            : `${acc.accountName}: Amount pending individual allocation breakdown (aggregate ${displayCurrency} ${knownAmount!.toLocaleString()})`
         };
       });
 
@@ -420,6 +423,9 @@ export function assembleDeterministicResponse(
       }];
     }
   }
+
+  // Treat malformed provider payloads as incomplete data, never as a render-time exception.
+  directGroups = directGroups.map(grp => ({ ...grp, lines: Array.isArray(grp.lines) ? grp.lines : [] }));
 
   // Guardrail A & C Enforcement: Ensure follow-up settlements never credit Share Capital again
   if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {

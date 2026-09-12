@@ -516,6 +516,17 @@ export async function parseAccountingQuery(
       lastMonth = 9; // default September
     }
 
+    // A supplied calendar date must be valid.  Never silently reassign an
+    // invalid resignation date to a different payroll period.
+    if (lastYear !== null && lastDay !== null && (lastMonth < 1 || lastMonth > 12 || lastDay < 1 || lastDay > new Date(lastYear, lastMonth, 0).getDate())) {
+      return {
+        scenarioType: 'PAYROLL_CPF_SALARY', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION', primaryDomain: 'CPF_BOARD',
+        rawQuery: query, transactionTitle: 'Payroll Calculation (Invalid Resignation Date)', functionalCurrency, transactionCurrency: functionalCurrency,
+        amount: baseSalary, isComplete: false, directGroups: [],
+        missingFields: [{ fieldKey: 'resignationDate', fieldName: 'Valid Resignation Date', prompt: 'Please provide a valid resignation date (DD/MM/YYYY).', whyNeeded: 'Accurate payroll proration requires a valid calendar date.' }]
+      };
+    }
+
     const totalDaysInMonth = new Date(lastYear, lastMonth, 0).getDate();
 
     const getWorkingDays = (y: number, m: number, start: number, end: number): number => {
