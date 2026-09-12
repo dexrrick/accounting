@@ -1,4 +1,5 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import type { StatutoryAuthority } from '../types/accounting';
 import { UNIFIED_SOURCE_REGISTRY } from '../standards/unifiedSourceModel';
 import {
   defaultSourceVersioningManager,
@@ -48,6 +49,10 @@ export interface UpdateCheckResult {
   syncState: LiveSyncState;
   checkedAt: string;
   error?: string;
+}
+
+export interface UpdateCheckOptions {
+  authorities?: StatutoryAuthority[];
 }
 
 export interface StageResult {
@@ -194,7 +199,7 @@ export class LiveRegulatoryFeedService {
   /**
    * Checks for available regulatory update packages using registered official source adapters.
    */
-  public async checkForUpdates(customRetriever?: ControlledWebRetriever): Promise<UpdateCheckResult> {
+  public async checkForUpdates(customRetriever?: ControlledWebRetriever, options: UpdateCheckOptions = {}): Promise<UpdateCheckResult> {
     const checkedAt = new Date().toISOString();
     this.lastCheckDate = checkedAt;
 
@@ -214,6 +219,7 @@ export class LiveRegulatoryFeedService {
 
     // Execute registered source adapters
     for (const adapter of this.adapters) {
+      if (options.authorities && !options.authorities.includes(adapter.authority)) continue;
       try {
         const pkg = await adapter.checkForUpdates(activeRetriever, currentSources);
         if (pkg && !discoveredPackages.some((p) => p.packageId === pkg.packageId)) {

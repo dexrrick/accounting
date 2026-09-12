@@ -15,6 +15,7 @@ import { loadProviderSettings, saveProviderSettings, type ProviderSettings } fro
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { getSingaporeTimestamp } from './utils/dateUtils';
 import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPresentation';
+import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 
 export const App: React.FC = () => {
   // SFRS follows IFRS - unified standard framework
@@ -30,6 +31,12 @@ export const App: React.FC = () => {
     document.documentElement.classList.add(`font-${fontSize}`);
     localStorage.setItem('app_font_size', fontSize);
   }, [fontSize]);
+
+  useEffect(() => {
+    void runDueRegulatoryChecks();
+    const timer = window.setInterval(() => void runDueRegulatoryChecks(), 60 * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Theme Management (Light mode default with YNAB styling, seamless Dark mode toggle)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
