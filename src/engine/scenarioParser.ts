@@ -1521,9 +1521,6 @@ export async function parseAccountingQuery(
       amount: expenseAmount,
       assetName: expenseTitle,
       purchaseDate: new Date().toISOString().slice(0, 10),
-      purchaseAmountForeign: 0,
-      classification: 'FVTPL',
-      bifurcateFxGain: true,
       isComplete: true,
       missingFields: []
     };
@@ -1591,9 +1588,6 @@ export async function parseAccountingQuery(
       effectiveDateOrTiming: 'SFRS(I) 16 standard active.',
       assetName: `Leased Property (${termYears}-Year Agreement)`,
       purchaseDate: '2026-01-01',
-      purchaseAmountForeign: monthlyRent * termMonths,
-      classification: 'FVTPL',
-      bifurcateFxGain: true,
       leaseTermYears: termYears,
       leaseTermMonths: termMonths,
       leasePaymentMonthly: monthlyRent,

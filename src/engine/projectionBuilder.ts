@@ -247,6 +247,12 @@ export function buildAccountingMeasurementProjection(params: {
 
     // 2. Disposal Group (if disposal occurred)
     if (proceedsSGD > 0) {
+      // Architectural Scope Note: Under SFRS(I) 9 §5.7.5, equity investments designated at FVOCI
+      // are remeasured at fair value through OCI at each intermediate reporting period end.
+      // In this direct two-event scenario (initial recognition -> derecognition without intermediate
+      // reporting dates), cumulative OCI gain equals disposal proceeds minus initial carrying cost.
+      // When intermediate remeasurement events exist in committed history, the disposal entry derecognizes
+      // the asset at its latest carrying amount, with any residual derecognition delta taken to OCI.
       const totalOciGain = Math.round((proceedsSGD - initialCostSGD) * 100) / 100;
       const isOciGain = totalOciGain >= 0;
 

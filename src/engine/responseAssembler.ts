@@ -760,7 +760,7 @@ export function assembleDeterministicResponse(
     deterministicScenario?.actualMeasurementBasis ||
     convContextForState.underlyingTransaction?.actualMeasurementBasis ||
     (currentScenario?.classification as any) ||
-    'FVTPL';
+    'UNKNOWN';
 
   const resolvedProjectedBasis = followUp?.targetMeasurementBasis ||
     groundedContext.semanticUnderstanding?.projectedMeasurementBasis ||
@@ -807,7 +807,7 @@ export function assembleDeterministicResponse(
     actualMeasurementBasis: resolvedActualBasis,
     projectedMeasurementBasis: resolvedProjectedBasis,
     underlyingTransaction: resolvedUnderlyingTx,
-    classification: (resolvedProjectedBasis || resolvedActualBasis || 'FVTPL') as any,
+    classification: (resolvedProjectedBasis || resolvedActualBasis) as any,
     isComplete: !hasPendingValuation && missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };

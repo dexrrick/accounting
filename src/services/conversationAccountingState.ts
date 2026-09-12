@@ -841,7 +841,7 @@ export function calculateAccountingDelta(
   const resultingAccountingEvent: AccountingEvent = {
     id: `evt-settle-${uniqueIdSuffix}`,
     transactionId: `tx-settle-${uniqueIdSuffix}`,
-    targetTransactionId: targetBalance.transactionId,
+    targetTransactionId: targetBalance.transactionId || context.underlyingTransaction?.transactionId,
     type: resolvedEventType,
     description: explanation,
     amount: settlementAmount,
