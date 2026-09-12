@@ -33,7 +33,7 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
  */
 export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
   const normCode = actCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  let ssoCode = 'ITA1947';
+  let ssoCode: string | undefined;
 
   if (actCode.toLowerCase().includes('coa') || actCode.toLowerCase().includes('companies') || actCode === 'CA' || actCode === 'CA1967') {
     ssoCode = 'CoA1967';
@@ -45,6 +45,8 @@ export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
       }
     }
   }
+
+  if (!ssoCode) return 'https://sso.agc.gov.sg';
 
   if (!sectionNumber) {
     return `https://sso.agc.gov.sg/Act/${ssoCode}`;

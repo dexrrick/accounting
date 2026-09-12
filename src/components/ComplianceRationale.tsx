@@ -40,6 +40,10 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
     : 'International Accounting Standards Board (IASB)';
   const evidenceIncomplete = citations.length === 0 || Boolean(uncertaintyDisclaimer);
   const hasProjection = effectiveDateOrTiming?.toLowerCase().includes('projection') || false;
+  const showTaxTreatment = Boolean(singaporeTaxTreatmentSummary);
+  const directivesLabel = primaryDomain === 'ACCOUNTING_SFRS'
+    ? 'Singapore Financial Reporting Directives'
+    : 'Singapore Statutory & Tax Directives';
 
   return (
     <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden space-y-6 transition-colors duration-200">
@@ -126,7 +130,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
             <span>Financial Reporting vs Singapore Tax Bifurcation</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className={`grid grid-cols-1 ${showTaxTreatment ? 'md:grid-cols-2' : ''} gap-4`}>
             {/* Column 1: Financial Reporting Treatment */}
             <div className="p-4 bg-indigo-50/50 dark:bg-[#1A2234] border border-indigo-200/80 dark:border-indigo-900/50 rounded-xl space-y-2.5 shadow-xs">
               <div className="flex items-center justify-between">
@@ -144,8 +148,8 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               </p>
             </div>
 
-            {/* Column 2: Singapore Tax Treatment */}
-            <div className="p-4 bg-emerald-50/50 dark:bg-[#162724] border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl space-y-2.5 shadow-xs">
+            {/* Only display a tax analysis when the answer contains a tax analysis. */}
+            {showTaxTreatment && <div className="p-4 bg-emerald-50/50 dark:bg-[#162724] border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl space-y-2.5 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
@@ -157,9 +161,10 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               </div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">Tax Deductibility, Capital Allowances & GST</h4>
               <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white/90 dark:bg-[#151D2C] p-3 rounded-lg border border-emerald-100 dark:border-emerald-950">
-                {singaporeTaxTreatmentSummary || 'Expenses must satisfy Section 14(1) wholly and exclusively test. Capital items are subject to S19/19A allowances or S15 disallowance.'}
+                {singaporeTaxTreatmentSummary}
               </p>
             </div>
+            }
           </div>
         </div>
       )}
@@ -182,7 +187,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
         <div className="px-5 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
             <Scale className="w-4 h-4 text-slate-400" />
-            <span>Singapore Statutory & Tax Directives</span>
+            <span>{directivesLabel}</span>
           </div>
 
           <div className="grid grid-cols-1 gap-3">

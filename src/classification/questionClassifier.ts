@@ -53,7 +53,16 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('financial asset') ||
     q.includes('trade discount') ||
     q.includes('balance sheet') ||
-    q.includes('p&l');
+    q.includes('p&l') ||
+    q.includes('financial statement') ||
+    q.includes('financial statements') ||
+    q.includes('statement of profit') ||
+    q.includes('statement of comprehensive income') ||
+    q.includes('restatement') ||
+    q.includes('restate') ||
+    q.includes('reclassif') ||
+    q.includes('presentation of income') ||
+    q.includes('revenue presentation');
 
   const hasTax =
     q.includes('tax deduct') ||

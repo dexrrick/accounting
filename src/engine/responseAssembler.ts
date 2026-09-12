@@ -446,26 +446,48 @@ export function assembleDeterministicResponse(
   }
 
   // 4. Assemble Statutory Advisories
-  const statutoryAdvisory: StatutoryAdvisoryInfo[] = [
+  const isAccountingOnly = groundedContext.classification.primaryDomain === 'ACCOUNTING' &&
+    !groundedContext.classification.taxAnalysisRequired;
+  const suppliedAdvisories: StatutoryAdvisoryInfo[] = [
     ...(deterministicScenario?.statutoryAdvisory || []),
     ...(compact.statutoryAdvisory || [])
   ];
 
+  // A generic provider advisory must never attach tax legislation to a pure
+  // financial-reporting question. This also protects the source footer, which
+  // is derived from these advisory records.
+  const statutoryAdvisory: StatutoryAdvisoryInfo[] = isAccountingOnly
+    ? suppliedAdvisories.filter((advisory) =>
+        advisory.authority !== 'IRAS' && !/income tax|tax deduct|capital allowance/i.test(advisory.statuteOrAct || '')
+      )
+    : suppliedAdvisories;
+
   if (statutoryAdvisory.length === 0 && (compact.keyRules || compact.directAnswer)) {
     const domain = groundedContext.classification.primaryDomain;
-    const primaryAuth = (domain === 'EMPLOYMENT' ? 'MOM'
+    const primaryAuth = (domain === 'ACCOUNTING' ? 'ASC'
+      : domain === 'EMPLOYMENT' ? 'MOM'
       : domain === 'PAYROLL' ? 'CPF'
       : domain === 'CORPORATE_REGULATORY' ? 'ACRA'
-      : 'IRAS') as any;
+      : domain === 'TAX' || domain === 'GST' ? 'IRAS'
+      : 'SSO') as any;
+
+    const statuteOrAct = primaryAuth === 'ASC' ? 'SFRS(I) 1-1 Presentation of Financial Statements'
+      : primaryAuth === 'MOM' ? 'Employment Act 1968'
+      : primaryAuth === 'CPF' ? 'Central Provident Fund Act 1953'
+      : primaryAuth === 'ACRA' ? 'Companies Act 1967'
+      : primaryAuth === 'IRAS' ? 'Income Tax Act 1947'
+      : 'Singapore Statutes Online';
 
     statutoryAdvisory.push({
       authority: primaryAuth,
-      statuteOrAct: primaryAuth === 'MOM' ? 'Employment Act 1968' : primaryAuth === 'CPF' ? 'Central Provident Fund Act 1953' : primaryAuth === 'ACRA' ? 'Companies Act 1967' : 'Income Tax Act 1947',
-      sectionOrSchedule: 'Statutory Directives',
+      statuteOrAct,
+      sectionOrSchedule: primaryAuth === 'ASC' ? 'Presentation and reclassification guidance' : 'Statutory Directives',
       topic: domain,
       summary: compact.directAnswer || 'Statutory directives under Singapore law',
       keyRules: compact.keyRules || [],
-      officialUrl: 'https://sso.agc.gov.sg',
+      officialUrl: primaryAuth === 'ASC'
+        ? 'https://www.acra.gov.sg/accountancy/accounting-standards'
+        : 'https://sso.agc.gov.sg',
       isTaxDeductible: undefined,
       isGstClaimable: undefined
     });
