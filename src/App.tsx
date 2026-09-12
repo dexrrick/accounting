@@ -278,7 +278,7 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      <div className="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-30 drop-shadow-lg">
+      <div className="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-30">
         <FeedbackDialog messages={messages} scenario={scenario} providerSettings={providerSettings} theme={theme} fontSize={fontSize} />
       </div>
 
