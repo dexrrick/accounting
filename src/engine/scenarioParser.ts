@@ -364,7 +364,12 @@ export async function parseAccountingQuery(
     /(?:sgd|\$)\s*\d+[\d,]*(?:\.\d+)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i.test(q) ||
     /\d+[\d,]*(?:\.\d+)?\s*(?:a\s*month|\/month|monthly|per\s*month)/i.test(q);
 
-  const hasPayrollPersonnel = /\b(staff|employee|worker|person|he|she|his|her)\b/i.test(q);
+  // Pronouns occur in many commercial transactions (for example, "his own
+  // company"). They are payroll evidence only when paired with payroll terms.
+  const hasNamedPayrollPersonnel = /\b(staff|employee|worker|person)\b/i.test(q);
+  const hasPronounInPayrollContext = /\b(he|she|his|her)\b/i.test(q) &&
+    /\b(earning|earns|salary|wages?|payroll|cpf)\b/i.test(q);
+  const hasPayrollPersonnel = hasNamedPayrollPersonnel || hasPronounInPayrollContext;
 
   const hasPayrollCalcIntent =
     (q.includes('calculat') || q.includes('compute') || q.includes('what is his') || q.includes('what is her') || q.includes('how much') || q.includes('entry') || q.includes('journal')) &&
@@ -672,6 +677,81 @@ export async function parseAccountingQuery(
       ],
       isComplete: true,
       missingFields: []
+    };
+  }
+
+  // =========================================================================
+  // SCENARIO -1.25: OWN-EQUITY CONTRIBUTION IN CASH OR IN KIND
+  // =========================================================================
+  const isOwnEquityContribution =
+    /\b(owner|shareholder|founder)\b/i.test(q) &&
+    /\b(own company|his company|her company|share capital)\b/i.test(q) &&
+    /\b(invested|contributed|subscribed|injected)\b/i.test(q);
+
+  if (isOwnEquityContribution) {
+    const amountMatch = query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i);
+    let contributionAmount: number | undefined;
+    if (amountMatch?.[1]) {
+      contributionAmount = Number(amountMatch[1].replace(/,/g, ''));
+      const magnitude = amountMatch[2]?.toLowerCase();
+      if (magnitude === 'k' || magnitude === 'thousand') contributionAmount *= 1000;
+      if (magnitude === 'm' || magnitude === 'million') contributionAmount *= 1000000;
+    }
+    const isInKind = /\b(non[ -]?monetary|non[ -]?cash|in[ -]?kind)\b/i.test(q);
+    const isPaid = isInKind || /\b(paid|payment has been made|settled|delivered)\b/i.test(q);
+    const hasAmount = Boolean(contributionAmount && contributionAmount > 0);
+    const amount = contributionAmount || 0;
+    const debitAccount = isPaid
+      ? (isInKind ? 'Non-Cash Asset Received for Share Issue (Pending Asset Identification)' : 'Cash at Bank')
+      : 'Amount Due from Shareholder (Share Capital Subscription Receivable)';
+    const debitExplanation = isPaid
+      ? (isInKind
+          ? 'Recognition of the stated fair value of non-cash consideration received for the share issue. Identify and classify the asset before posting.'
+          : 'Cash consideration received for the share issue.')
+      : 'Share subscription receivable pending payment by the shareholder.';
+    const title = isInKind ? 'Issue of Share Capital for Non-Cash Consideration' : 'Share Capital Subscription';
+
+    return {
+      scenarioType: isPaid ? 'SHARE_CAPITAL_PAID' : 'SHARE_CAPITAL_UNPAID',
+      authorityStatus: isInKind ? 'CONDITIONAL' : 'DETERMINISTIC',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: title,
+      functionalCurrency,
+      transactionCurrency: functionalCurrency,
+      amount: contributionAmount,
+      ownershipContext: 'own_equity',
+      transactionNature: 'share_capital_issuance',
+      accountingTreatmentSummary: isInKind
+        ? 'Credit Share Capital for the stated fair value of consideration received. The debit must be the identified non-cash asset, not Cash at Bank; asset classification remains pending.'
+        : 'Credit Share Capital on issue and debit cash received or the subscription receivable, as applicable.',
+      statutoryAdvisory: [convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ACRA_SEC68_NO_PAR_VALUE_SHARES)],
+      keyParameters: [
+        { label: 'Consideration', value: hasAmount ? `${functionalCurrency} ${amount.toLocaleString()}` : 'Pending valuation', badge: hasAmount ? 'Stated Fact' : 'Missing Fact' },
+        { label: 'Consideration Type', value: isInKind ? 'Non-cash / in-kind' : (isPaid ? 'Cash' : 'Unpaid subscription'), badge: 'Classification' }
+      ],
+      directGroups: [{
+        id: 'grp-share-capital-subscription',
+        eventDate: formatSingaporeDate(new Date()),
+        title,
+        summary: hasAmount ? `Recognition of ${functionalCurrency} ${amount.toLocaleString()} share capital.` : 'Share capital recognition pending valuation of consideration.',
+        lines: [
+          { id: 'line-share-contribution', accountCode: isPaid ? '1700' : '1150', accountName: debitAccount, category: 'ASSET', debit: amount, credit: 0, lineExplanation: debitExplanation },
+          { id: 'line-share-capital', accountCode: '3000', accountName: 'Share Capital', category: 'EQUITY', debit: 0, credit: amount, lineExplanation: 'Recognition of issued share capital; no separate share premium account applies under Singapore no-par-value rules.' }
+        ],
+        totalDebit: amount,
+        totalCredit: amount,
+        isBalanced: hasAmount,
+        citations: [convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ACRA_SEC68_NO_PAR_VALUE_SHARES)],
+        authorityStatus: isInKind ? 'CONDITIONAL' : 'DETERMINISTIC',
+        rationalePoints: [
+          'The reporting entity’s own shares are equity, not a financial asset.',
+          isInKind ? 'Confirm the nature and fair value of the contributed non-cash asset before posting the final asset account.' : 'The debit reflects the consideration received or receivable from the shareholder.'
+        ]
+      }],
+      isComplete: hasAmount && !isInKind,
+      missingFields: isInKind ? [{ fieldKey: 'nonCashAssetDescription', fieldName: 'Non-cash asset identification and valuation', prompt: 'What non-cash asset was contributed, and what is its supportable fair value?', whyNeeded: 'The debit account and measurement must reflect the actual asset received.' }] : []
     };
   }
 

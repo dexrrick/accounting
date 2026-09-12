@@ -14,6 +14,7 @@ const testSuites = [
   { name: '0F. Projection Builder No-Fabrication Invariants', file: 'test_projection_builder_invariants.mjs' },
   { name: '0G. Payroll Amount Correction & CPF Journal', file: 'test_payroll_followup_correction.mjs' },
   { name: '0H. Generic Fact Amendment Resolution', file: 'test_fact_amendment_service.mjs' },
+  { name: '0I. Own-Equity versus Payroll Routing', file: 'test_own_equity_routing.mjs' },
   { name: '1. Phase 5 Advanced Hybrid Retrieval & Vector Index', file: 'test_phase5_advanced_retrieval.mjs' },
   { name: '2. Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs' },
   { name: '3. Phase 3 Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs' },
