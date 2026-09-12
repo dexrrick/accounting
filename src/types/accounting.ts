@@ -170,6 +170,7 @@ export interface AccountingScenarioState {
   queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
   primaryDomain?: QueryDomain;
   statutoryAdvisory?: StatutoryAdvisoryInfo[];
+  officialAnswerLinks?: import('../utils/chatPresentation').OfficialAnswerLink[];
 
   // Explicit Accounting vs Tax Separation & Regulatory Summaries
   accountingTreatmentSummary?: string;
@@ -208,6 +209,7 @@ export interface ChatMessage {
   sender: 'user' | 'assistant' | 'system';
   timestamp: string;
   text: string;
+  fullText?: string;
   clarificationPrompt?: MissingFieldInfo[];
   scenarioSnapshot?: AccountingScenarioState;
 }

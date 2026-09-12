@@ -1,11 +1,14 @@
 import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption } from '../types/accounting';
+import React from 'react';
 import { ShieldCheck, ExternalLink, BookCheck, Check, Scale, FileText, Calendar, AlertTriangle, Building, Landmark, Info } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
+import type { OfficialAnswerLink } from '../utils/chatPresentation';
 
 interface ComplianceRationaleProps {
   citations: StandardCitation[];
   advisories?: StatutoryAdvisoryInfo[];
+  officialAnswerLinks?: OfficialAnswerLink[];
   standard: AccountingStandard;
   classification?: 'FVTPL' | 'FVTOCI';
   primaryDomain?: QueryDomain;
@@ -20,6 +23,7 @@ interface ComplianceRationaleProps {
 export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   citations,
   advisories = [],
+  officialAnswerLinks = [],
   standard,
   classification = 'FVTPL',
   primaryDomain,
@@ -294,6 +298,24 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {/* Citations Grid */}
       <div className="p-5 pt-0 space-y-4 text-xs">
+        {officialAnswerLinks.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              <ExternalLink className="w-4 h-4" /> Official links supplied with this answer
+            </div>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              An official destination alone does not verify every claim. Review the citation status below where available.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {officialAnswerLinks.map(link => (
+                <a key={link.url} href={link.url} target="_blank" rel="noreferrer"
+                  className="text-[11px] text-ynab-blue dark:text-blue-400 hover:underline border border-slate-200 dark:border-[#2B374E] rounded-lg px-2.5 py-1.5">
+                  {link.title} ↗
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
         {citations.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">

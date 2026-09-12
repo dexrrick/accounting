@@ -157,6 +157,18 @@ export async function parseAccountingQuery(
   query: string,
   currentScenario?: AccountingScenarioState | null
 ): Promise<AccountingScenarioState> {
+  if (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+      currentScenario.missingFields?.some(field => field.fieldKey === 'resignationDate')) {
+    const suppliedDate = query.match(/\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/)?.[0];
+    if (suppliedDate) {
+      const previousDate = /\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/;
+      const completedQuery = previousDate.test(currentScenario.rawQuery)
+        ? currentScenario.rawQuery.replace(previousDate, suppliedDate)
+        : `${currentScenario.rawQuery} ${suppliedDate}`;
+      return parseAccountingQuery(completedQuery, { ...currentScenario, missingFields: [] });
+    }
+    return { ...currentScenario, directGroups: [], isComplete: false };
+  }
   // Resolve an answer to the prior consideration question against the facts
   // already supplied. A short answer need not repeat the entire allotment.
   if (currentScenario?.missingFields?.some(field => field.fieldKey === 'considerationType')) {
@@ -435,12 +447,16 @@ export async function parseAccountingQuery(
     // context rather than being routed to the statutory-advisory fallback.
     (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
       hasSalaryFigure &&
-      /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query));
+      /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query)) ||
+    (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+      /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query));
 
   if (isPayrollSalaryQuery) {
-    let baseSalary = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
-      ? (currentScenario.amount || 3200)
-      : 3200;
+    const priorBasicSalary = currentScenario?.keyParameters
+      ?.find(p => p.label === 'Basic Monthly Salary')?.value.match(/[\d,]+(?:\.\d+)?/);
+    let baseSalary = priorBasicSalary?.[0]
+      ? Number(priorBasicSalary[0].replace(/,/g, ''))
+      : (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? (currentScenario.amount || 3200) : 3200);
     const salaryMatch =
       query.match(/(?:earning|earns|salary\s*(?:of|is|:)?|wages?\s*(?:of|is|:)?|pay\s*(?:of|is|:)?)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i) ||
       query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
@@ -495,6 +511,22 @@ export async function parseAccountingQuery(
       }
     }
 
+    if (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+        /\b(resign(?:ed|ation)?|last\s+day)\b/i.test(query) && !lastDay) {
+      return {
+        ...currentScenario, rawQuery: query, directGroups: [], projectedGroups: undefined,
+        committedDirectGroups: currentScenario.committedDirectGroups?.length
+          ? currentScenario.committedDirectGroups
+          : (currentScenario.directGroups || []).filter(group => !group.isHypothetical),
+        isComplete: false, authorityStatus: 'CONDITIONAL',
+        missingFields: [{
+          fieldKey: 'resignationDate', fieldName: 'Employee resignation date',
+          prompt: 'What was the employee’s last day of employment (DD/MM/YYYY)?',
+          whyNeeded: 'The payroll period and working days cannot be calculated without the last day.'
+        }]
+      };
+    }
+
     if (!lastMonth) {
       const monthMap: Record<string, number> = {
         january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
@@ -520,9 +552,13 @@ export async function parseAccountingQuery(
     // invalid resignation date to a different payroll period.
     if (lastYear !== null && lastDay !== null && (lastMonth < 1 || lastMonth > 12 || lastDay < 1 || lastDay > new Date(lastYear, lastMonth, 0).getDate())) {
       return {
+        ...(currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? currentScenario : {}),
         scenarioType: 'PAYROLL_CPF_SALARY', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION', primaryDomain: 'CPF_BOARD',
         rawQuery: query, transactionTitle: 'Payroll Calculation (Invalid Resignation Date)', functionalCurrency, transactionCurrency: functionalCurrency,
-        amount: baseSalary, isComplete: false, directGroups: [],
+        amount: baseSalary, isComplete: false, directGroups: [], projectedGroups: undefined,
+        committedDirectGroups: currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
+          ? (currentScenario.committedDirectGroups?.length ? currentScenario.committedDirectGroups : (currentScenario.directGroups || []).filter(group => !group.isHypothetical))
+          : undefined,
         missingFields: [{ fieldKey: 'resignationDate', fieldName: 'Valid Resignation Date', prompt: 'Please provide a valid resignation date (DD/MM/YYYY).', whyNeeded: 'Accurate payroll proration requires a valid calendar date.' }]
       };
     }
@@ -700,7 +736,7 @@ export async function parseAccountingQuery(
       ? `Prorated salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} for ${workingDaysWorked}/${totalWorkingDays} working days worked in ${monthName} ${lastYear} under MOM Employment Act §22, with CPF contributions (Employee: SGD ${employeeCpf}, Employer: SGD ${employerCpf}).`
       : `Monthly salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} with CPF contributions (Employee: SGD ${employeeCpf}, Employer: SGD ${employerCpf}) for ${monthName} ${lastYear}.`;
 
-    return {
+    const payrollState: AccountingScenarioState = {
       scenarioType: 'PAYROLL_CPF_SALARY',
       authorityStatus: 'DETERMINISTIC',
       queryIntent: 'TRANSACTION',
@@ -742,6 +778,22 @@ export async function parseAccountingQuery(
       isComplete: true,
       missingFields: []
     };
+    const isHypotheticalPayroll = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+      /\b(what if|suppose|assuming|hypothetical)\b/i.test(query);
+    if (isHypotheticalPayroll && currentScenario) {
+      const committed = currentScenario.committedDirectGroups?.length
+        ? currentScenario.committedDirectGroups
+        : (currentScenario.directGroups || []).filter(group => !group.isHypothetical);
+      const projected = (payrollState.directGroups || []).map(group => ({
+        ...group, id: `grp-payroll-projection-${Date.now()}`, isHypothetical: true
+      }));
+      return {
+        ...payrollState, isHypothetical: true, directGroups: [...committed, ...projected],
+        committedDirectGroups: committed, projectedGroups: projected,
+        actualEvents: currentScenario.actualEvents, accountingEvents: currentScenario.accountingEvents
+      };
+    }
+    return payrollState;
   }
 
   // =========================================================================

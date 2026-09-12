@@ -13,6 +13,7 @@ const testSuites = [
   { name: '0E. Topic Resolver Semantics & Provenance Separation', file: 'test_topic_resolver_and_provenance.mjs' },
   { name: '0F. Projection Builder No-Fabrication Invariants', file: 'test_projection_builder_invariants.mjs' },
   { name: '0G. Payroll Amount Correction & CPF Journal', file: 'test_payroll_followup_correction.mjs' },
+  { name: '0G2. Conversational Payroll and Chat Presentation', file: 'test_conversational_payroll_and_chat.mjs' },
   { name: '0H. Generic Fact Amendment Resolution', file: 'test_fact_amendment_service.mjs' },
   { name: '0I. Own-Equity versus Payroll Routing', file: 'test_own_equity_routing.mjs' },
   { name: '0J. Semantic Routing Priority', file: 'test_semantic_routing_priority.mjs' },

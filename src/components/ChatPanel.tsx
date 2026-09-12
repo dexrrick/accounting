@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MissingFieldInfo } from '../types/accounting';
-import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff } from 'lucide-react';
+import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff } from 'lucide-react';
 import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 
 interface ChatPanelProps {
@@ -23,6 +23,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   });
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const messageThreadRef = useRef<HTMLDivElement>(null);
+  const stickToLatestRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+
+  const jumpToLatest = () => {
+    const thread = messageThreadRef.current;
+    if (!thread) return;
+    thread.scrollTo({ top: thread.scrollHeight, behavior: 'smooth' });
+    stickToLatestRef.current = true;
+    setShowJumpToLatest(false);
+  };
+
+  useEffect(() => {
+    const thread = messageThreadRef.current;
+    if (!thread) return;
+    if (stickToLatestRef.current || messages.at(-1)?.sender === 'user') {
+      thread.scrollTop = thread.scrollHeight;
+      stickToLatestRef.current = true;
+      setShowJumpToLatest(false);
+    }
+  }, [messages, isLoading]);
 
   const toggleSuggestions = () => {
     setShowSuggestions((prev) => {
@@ -84,7 +105,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
 
       {/* Messages Thread */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
+      <div ref={messageThreadRef}
+        onScroll={() => {
+          const thread = messageThreadRef.current;
+          if (!thread) return;
+          const nearBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 80;
+          stickToLatestRef.current = nearBottom;
+          setShowJumpToLatest(!nearBottom);
+        }}
+        className="flex-1 min-h-0 p-4 overflow-y-auto space-y-4">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -165,6 +194,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <span className="text-[11px] font-medium ml-1">Analyzing statutory citations under IRAS, ACRA & SFRS...</span>
             </div>
           </div>
+        )}
+        {showJumpToLatest && (
+          <button type="button" onClick={jumpToLatest}
+            className="sticky bottom-0 ml-auto flex items-center gap-1.5 rounded-full bg-ynab-blue text-white px-3 py-1.5 text-[11px] shadow-lg"
+            aria-label="Jump to latest message">
+            <ArrowDown className="w-3.5 h-3.5" /> Jump to latest
+          </button>
         )}
       </div>
 

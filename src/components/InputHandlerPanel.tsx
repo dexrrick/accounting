@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { AccountingScenarioState } from '../types/accounting';
-import { Sliders, RefreshCw, Layers, Sparkles, Scale } from 'lucide-react';
+import { RefreshCw, Layers, Sparkles, Scale, ChevronDown } from 'lucide-react';
 
 interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
@@ -12,18 +12,9 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
   scenario,
   onResetToDefaults
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   if (!scenario) {
-    return (
-      <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] p-6 shadow-xl flex flex-col items-center justify-center text-center text-slate-500 min-h-[160px] transition-colors duration-200">
-        <Sliders className="w-9 h-9 mb-2.5 text-slate-400 dark:text-slate-500 stroke-1" />
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-sans">
-          Universal Transaction Parameters & Facts
-        </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mt-1">
-          Ask any accounting question in the chat. The AI extracts key transaction facts and generates exact double entries automatically.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   // Build facts list dynamically
@@ -99,8 +90,14 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-[#151D2C] border border-emerald-200 dark:border-emerald-900/60 px-2.5 py-1 rounded-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-ynab-green"></span>
-              Facts Synchronized
+              {scenario.missingFields?.length ? `${scenario.missingFields.length} detail${scenario.missingFields.length === 1 ? '' : 's'} needed` : 'Facts Synchronized'}
             </span>
+            <button type="button" onClick={() => setIsExpanded(value => !value)}
+              aria-expanded={isExpanded} aria-controls="transaction-facts-content"
+              className="flex items-center gap-1 text-[11px] font-semibold text-ynab-blue dark:text-blue-400 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#242F46]">
+              {isExpanded ? 'Hide facts' : 'Show facts'}
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
             <button
               onClick={onResetToDefaults}
               className="text-slate-400 hover:text-slate-800 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#242F46] transition-colors"
@@ -113,7 +110,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
       </div>
 
       {/* Dynamic Key Facts Grid - Standardized Shapes & Fully Displayed Words */}
-      <div className="p-4 space-y-3">
+      {isExpanded && <div id="transaction-facts-content" className="p-4 space-y-3">
         {facts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {facts.map((fact, idx) => (
@@ -171,7 +168,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
             </div>
           </div>
         ) : null}
-      </div>
+      </div>}
     </div>
   );
 };

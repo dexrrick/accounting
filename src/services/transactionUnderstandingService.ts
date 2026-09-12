@@ -221,7 +221,8 @@ export function validateAndNormalizeUnderstanding(
   raw: any,
   fallbackJurisdiction: string = 'SG',
   source: 'ai' | 'deterministic_fallback' = 'deterministic_fallback',
-  conversationContext?: ConversationAccountingContext
+  conversationContext?: ConversationAccountingContext,
+  userQuery?: string
 ): UnderstandingValidationResult {
   const errors: string[] = [];
 
@@ -365,6 +366,12 @@ export function validateAndNormalizeUnderstanding(
     );
     if (!hasPriorState) {
       errors.push('Invalid follow-up claim: followUpAnalysis.isFollowUp is true but conversationContext has no outstanding balances, equity, or underlying transaction.');
+    }
+  }
+  if (userQuery && ['settlement', 'partial_settlement'].includes(raw?.followUpAnalysis?.eventType)) {
+    const hasPaymentAction = /\b(paid|pay(?:s|ing)?|payment|settle|settled|settlement|settling|remit|remitted|transfer|transferred|received|deposit|deposited|repaid|repay)\b/i.test(userQuery);
+    if (!hasPaymentAction) {
+      errors.push('Invalid settlement route: no payment action is stated in the user query.');
     }
   }
 
@@ -523,18 +530,12 @@ export class DeterministicSemanticExtractor {
        conversationContext.underlyingTransaction)
     );
 
+    // Require a whole payment-action word. "Payroll" and "repayment
+    // calculation" are subjects, not evidence that cash changed hands.
     const isPaymentOrSettlementAction =
-      (q.includes('paid') ||
-       q.includes('pay') ||
-       q.includes('bank') ||
-       q.includes('settle') ||
-       q.includes('settling') ||
-       q.includes('remit') ||
-       q.includes('transfer') ||
-       q.includes('received') ||
-       q.includes('deposit') ||
-       q.includes('did pay') ||
-       q.includes('did paid'));
+      /\b(paid|pay(?:s|ing)?|payment|settle|settled|settlement|settling|remit|remitted|transfer|transferred|received|deposit|deposited|repaid|repay)\b/i.test(query) &&
+      !(/\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day)\b/i.test(query) &&
+        !/\b(paid|payment|settle|settled|settlement|transfer|transferred|received|deposit|deposited)\b/i.test(query));
 
     // Check if query explicitly introduces a new transaction subject distinct from underlying transaction
     const introducesNewSubject = Boolean(
@@ -809,7 +810,7 @@ export class DeterministicSemanticExtractor {
       followUpAnalysis
     };
 
-    const validation = validateAndNormalizeUnderstanding(rawUnderstanding, jurisdiction, 'deterministic_fallback', conversationContext);
+    const validation = validateAndNormalizeUnderstanding(rawUnderstanding, jurisdiction, 'deterministic_fallback', conversationContext, query);
     return validation.normalizedUnderstanding;
   }
 
@@ -1271,6 +1272,7 @@ CRITICAL CLASSIFICATION INVARIANTS:
 6. AMOUNT:
    - Extract numeric transaction magnitude (e.g. 1 from "$1", 3000 from "3k"). Dates (e.g. 15/12/2026), percentages (9%), terms (30-day), or item counts (5 laptops) are NOT transaction amounts.
 7. MULTI-TURN CONVERSATION & FOLLOW-UP SETTLEMENTS:
+   - A change to an employee's resignation date, work period, salary, or CPF calculation is a payroll recalculation, NOT a settlement. The word "payroll" does not establish that money was paid. Preserve prior employee facts and mark "what if" changes as hypothetical.
    - When [PRIOR CONVERSATION ACCOUNTING CONTEXT] is provided and user asks about payment/settlement (e.g. "what if the shareholder did paid to company bank account", "what if they paid 50 cents"):
      * followUpAnalysis.eventType = "settlement" (or "partial_settlement" if amount < outstanding balance)
      * followUpAnalysis.isFollowUp = true
@@ -1388,7 +1390,7 @@ export class TransactionUnderstandingService {
     if (hasProvider) {
       try {
         const rawAi = await this.aiExtractor.extract(query, providerOrApiKey, functionalCurrency, jurisdiction, conversationContext);
-        const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai', conversationContext);
+        const validation = validateAndNormalizeUnderstanding(rawAi, jurisdiction, 'ai', conversationContext, query);
         if (validation.isValid) {
           return validation.normalizedUnderstanding;
         }

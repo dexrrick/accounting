@@ -290,13 +290,13 @@ export async function processAccountingQuery(
   const deterministicScenario = await parseAccountingQuery(userInput, currentScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
-  // Material ambiguity is a deterministic stop condition. Do not spend tokens
-  // asking a model to guess between unpaid cash consideration and consideration
-  // in kind, and do not allow prose to bypass the required clarification.
-  const materialClarification = deterministicScenario.missingFields?.find(
-    field => field.fieldKey === 'considerationType' || field.fieldKey === 'settlementTarget' || field.fieldKey === 'amount' || field.fieldKey === 'paymentStatus'
-  );
-  if (materialClarification && (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
+  // A recognized but incomplete calculation is a pending conversation, not
+  // permission for a provider to invent a value. This is field-agnostic: new
+  // scenarios can supply their own missingFields without editing this gate.
+  const materialClarification = deterministicScenario.missingFields?.[0];
+  if (deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+      !deterministicScenario.isComplete && materialClarification &&
+      (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
     profiler.logSummary();
@@ -305,6 +305,19 @@ export async function processAccountingQuery(
       scenarioState: deterministicScenario,
       clarifications: [materialClarification]
     });
+  }
+
+  // A resignation or proration modifies the established payroll facts. The
+  // deterministic payroll calculation takes precedence over a provider's
+  // generic follow-up label (which may otherwise mistake "payroll" for pay).
+  if (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+      deterministicScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
+      deterministicScenario.isComplete &&
+      /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
+    profiler.recordFirstVisibleResponse();
+    profiler.setTokenCounts(0, 0, 0);
+    profiler.logSummary();
+    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
   }
 
   // 2. Build grounded context to evaluate evidence provenance and classification
@@ -425,6 +438,7 @@ export function renderStructuredOfflineResponse(
   };
 
   const ensureEventSourcedState = (state: AccountingScenarioState): AccountingScenarioState => {
+    if (state.isHypothetical) return state;
     if (state.directGroups && state.directGroups.length > 0 && (!state.actualEvents || state.actualEvents.length === 0)) {
       const committed = (state.committedDirectGroups && state.committedDirectGroups.length > 0)
         ? state.committedDirectGroups
@@ -665,7 +679,7 @@ export function renderStructuredOfflineResponse(
 
   // 3.5. PAYROLL, PRORATED SALARY & STATUTORY CPF (MOM EA §22 & CPF ACT §7)
   if (parsed.scenarioType === 'PAYROLL_CPF_SALARY' && parsed.directGroups) {
-    const grp = parsed.directGroups[0];
+    const grp = parsed.projectedGroups?.[0] || parsed.directGroups[0];
     const grossLine = grp.lines.find(l => l.accountCode === '5010');
     const employerCpfLine = grp.lines.find(l => l.accountCode === '5020');
     const cpfPayableLine = grp.lines.find(l => l.accountCode === '2050');

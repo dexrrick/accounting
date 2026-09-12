@@ -14,6 +14,7 @@ import { processAccountingQuery } from './services/geminiService';
 import { loadProviderSettings, saveProviderSettings, type ProviderSettings } from './types/provider';
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { getSingaporeTimestamp } from './utils/dateUtils';
+import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPresentation';
 
 export const App: React.FC = () => {
   // SFRS follows IFRS - unified standard framework
@@ -67,7 +68,7 @@ export const App: React.FC = () => {
       id: 'welcome-msg',
       sender: 'assistant',
       timestamp: getSingaporeTimestamp(),
-      text: `Hello! I am your authoritative **Singapore Accounting, Tax & Regulatory Research Assistant**.\n\nI provide correct, traceable guidance for Singapore accounting professionals grounded in official legislation and accounting standards:\n* **SFRS(I) & Financial Reporting**: Capitalisation criteria (SFRS(I) 1-38 §57), revenue recognition (SFRS(I) 15), provisions, leases, and balanced double entries.\n* **IRAS Corporate Tax & GST**: Section 14 deductibility vs Section 15 disallowance, Enterprise Innovation Scheme (EIS 400%), Capital Allowances (S19/19A), and 9% GST registration ($1M) / blocked input tax (Reg 26).\n* **ACRA Compliance**: Small company audit exemption criteria (Companies Act §205C 2-of-3 criteria), AGM and annual return statutory timelines.\n* **CPF Board & MOM**: 2026 CPF Ordinary Wage monthly ceiling ($8,000 cap), tiered age rates, and Employment Act statutory leave & overtime rules.\n* **Dual View Grounding**: Systematic bifurcation of Financial Reporting Treatment from Singapore Tax Treatment with verified statutory citations.`
+      text: 'Hello! Ask me about a transaction, payroll, tax, or compliance question. I can work through follow-ups with you and show the journal and sources alongside our chat.'
     }
   ]);
 
@@ -92,19 +93,23 @@ export const App: React.FC = () => {
         [...messages, userMsg]
       );
 
-      setScenario(response.scenarioState);
+      const answerState: AccountingScenarioState = {
+        ...response.scenarioState,
+        officialAnswerLinks: extractOfficialAnswerLinks(response.messageText)
+      };
+      setScenario(answerState);
 
       // Auto-switch tabs based on query intent
       if (
-        response.scenarioState?.queryIntent === 'STATUTORY_ADVISORY' ||
-        (!response.scenarioState?.directGroups?.some((g) => g.lines.length > 0) &&
-          ((response.scenarioState?.statutoryAdvisory && response.scenarioState.statutoryAdvisory.length > 0) ||
-            response.scenarioState?.accountingTreatmentSummary ||
-            response.scenarioState?.singaporeTaxTreatmentSummary ||
-            response.scenarioState?.regulatoryMandatesSummary))
+        answerState.queryIntent === 'STATUTORY_ADVISORY' ||
+        (!answerState.directGroups?.some((g) => g.lines.length > 0) &&
+          ((answerState.statutoryAdvisory && answerState.statutoryAdvisory.length > 0) ||
+            answerState.accountingTreatmentSummary ||
+            answerState.singaporeTaxTreatmentSummary ||
+            answerState.regulatoryMandatesSummary))
       ) {
         setActiveTab('compliance');
-      } else if (response.scenarioState?.directGroups?.some((g) => g.lines.length > 0)) {
+      } else if (answerState.directGroups?.some((g) => g.lines.length > 0)) {
         setActiveTab('entries');
       }
 
@@ -112,8 +117,9 @@ export const App: React.FC = () => {
         id: `asst-${Date.now()}`,
         sender: 'assistant',
         timestamp: getSingaporeTimestamp(),
-        text: response.messageText,
-        scenarioSnapshot: response.scenarioState,
+        text: createChatPreview(response.messageText, answerState, response.clarifications),
+        fullText: response.messageText,
+        scenarioSnapshot: answerState,
         clarificationPrompt: response.clarifications
       };
 
@@ -133,29 +139,8 @@ export const App: React.FC = () => {
 
   const handleSelectSuggestion = (fieldKey: string, value: number | string) => {
     if (!scenario) return;
-
-    const updated = { ...scenario, [fieldKey]: value };
-    updated.missingFields = updated.missingFields.filter((f) => f.fieldKey !== fieldKey);
-    updated.isComplete = updated.missingFields.length === 0;
-
-    setScenario(updated);
-
-    const userFollowUp: ChatMessage = {
-      id: `user-reply-${Date.now()}`,
-      sender: 'user',
-      timestamp: getSingaporeTimestamp(),
-      text: `Set ${fieldKey} to ${value}`
-    };
-
-    const confirmMsg: ChatMessage = {
-      id: `asst-confirm-${Date.now()}`,
-      sender: 'assistant',
-      timestamp: getSingaporeTimestamp(),
-      text: `Recorded **${value}** for ${fieldKey}. Double entries recalculated in real time.`,
-      scenarioSnapshot: updated
-    };
-
-    setMessages((prev) => [...prev, userFollowUp, confirmMsg]);
+    void fieldKey;
+    void handleSendMessage(String(value));
   };
 
   const handleScenarioChange = (updated: AccountingScenarioState) => {
@@ -267,6 +252,7 @@ export const App: React.FC = () => {
                       });
                     })()}
                     advisories={scenario.statutoryAdvisory}
+                    officialAnswerLinks={scenario.officialAnswerLinks}
                     standard={standard}
                     classification={scenario.classification}
                     primaryDomain={scenario.primaryDomain}
