@@ -34,6 +34,48 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
 export const SFRSI_2025_COLLECTION_URL = 'https://asc.acra.gov.sg/singapore-financial-reporting-standards-international/archives/effective-for-annual-reporting-period-beginning-on-1-january-2025';
 
 /**
+ * Official agency guidance is preferable to legislation where it addresses the
+ * precise topic. Each endpoint below is an active, first-party government page
+ * verified on 12 September 2026. If no match is available, callers fall back
+ * to the exact Singapore Statutes Online Act/section.
+ */
+function resolveTopicSpecificOfficialSource(act: string, section: string): string | undefined {
+  const context = `${act} ${section}`.toLowerCase();
+
+  if (act.includes('income tax')) {
+    if (/14n|renovation|refurbishment/.test(context)) {
+      return 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-%28m-r%29';
+    }
+    if (/section\s*14|\b14\(1\)|business expense|deductib/.test(context)) {
+      return 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses';
+    }
+  }
+
+  if (act.includes('goods and services') || act.includes('gst')) {
+    if (/registration|first schedule|threshold|turnover/.test(context)) {
+      return 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/gst-registration-deregistration/do-i-need-to-register-for-gst';
+    }
+  }
+
+  if (act.includes('provident fund') || act.includes('cpf')) {
+    if (/rate|contribution|wage|ceiling/.test(context)) {
+      return 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay';
+    }
+  }
+
+  if (act.includes('employment act') || act.includes('mom')) {
+    if (/88a|annual leave|vacation/.test(context)) {
+      return 'https://www.mom.gov.sg/employment-practices/leave/annual-leave';
+    }
+    if (/89|sick leave|hospitalisation/.test(context)) {
+      return 'https://www.mom.gov.sg/employment-practices/leave/sick-leave';
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Generates an official Singapore Statutes Online (SSO) canonical permalink.
  * Format on sso.agc.gov.sg is https://sso.agc.gov.sg/Act/{ActCode}#pr{SectionNumber}-
  */
@@ -100,6 +142,9 @@ export function getSafeOfficialUrl(
   // section rather than a directory.
   const act = (statuteOrAct || '').toLowerCase();
   const sec = sectionOrSchedule || '';
+
+  const topicSpecificSource = resolveTopicSpecificOfficialSource(act, sec);
+  if (topicSpecificSource) return topicSpecificSource;
 
   if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
     return buildSsoUrl('ITA1947', sec);

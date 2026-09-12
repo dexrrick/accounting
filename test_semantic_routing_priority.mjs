@@ -24,8 +24,11 @@ assert.equal(reportingQuestion.primaryDomain, 'ACCOUNTING');
 assert.equal(reportingQuestion.taxAnalysisRequired, false);
 assert.ok(reportingQuestion.authorities.includes('ACRA'));
 assert.equal(buildSsoUrl('unrecognised instrument'), 'https://sso.agc.gov.sg', 'unknown legislation must not default to the Income Tax Act');
-assert.equal(getSafeOfficialUrl('https://sso.agc.gov.sg', 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), 'https://sso.agc.gov.sg/Act/ITA1947#pr14-');
+assert.equal(getSafeOfficialUrl('https://sso.agc.gov.sg', 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses');
 assert.equal(getSafeOfficialUrl('', 'Central Provident Fund Act 1953', 'Section 7', 'CPF'), 'https://sso.agc.gov.sg/Act/CPFA1953#pr7-');
+assert.equal(getSafeOfficialUrl('', 'Central Provident Fund Act 1953', 'Contribution rates', 'CPF'), 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay');
+assert.equal(getSafeOfficialUrl('', 'Employment Act 1968', 'Section 88A annual leave', 'MOM'), 'https://www.mom.gov.sg/employment-practices/leave/annual-leave');
+assert.equal(getSafeOfficialUrl('', 'Goods and Services Tax Act 1993', 'GST registration threshold', 'IRAS'), 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/gst-registration-deregistration/do-i-need-to-register-for-gst');
 assert.equal(getSafeOfficialUrl('', 'SFRS(I) 1-1 Presentation of Financial Statements', 'Paragraph 41', 'ASC'), SFRSI_2025_COLLECTION_URL);
 assert.equal(getSafeOfficialUrl('https://www.iras.gov.sg', 'Singapore Statutory Directives', 'General', 'IRAS'), '', 'generic agency pages must not be passed off as a source');
 
