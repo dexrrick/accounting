@@ -845,6 +845,7 @@ export function assembleDeterministicResponse(
       groundedContext.classification.primaryDomain === 'CORPORATE_REGULATORY' ? 'ACRA_CORP' :
       groundedContext.classification.primaryDomain === 'TAX' ? 'IRAS_TAX' :
       groundedContext.classification.primaryDomain === 'GST' ? 'IRAS_GST' :
+      groundedContext.classification.authorities.includes('MAS') ? 'MAS_FUNDS' :
       'ACCOUNTING_SFRS'
     ),
     rawQuery: userInput,

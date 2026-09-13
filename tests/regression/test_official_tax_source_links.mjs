@@ -25,4 +25,12 @@ const irasPathWithParentheses = 'https://www.iras.gov.sg/taxes/goods-services-ta
 const sanitizedIrasLink = sanitizeStatutoryLinks(`[IRAS input-tax guidance](${irasPathWithParentheses})`);
 assert.match(sanitizedIrasLink, /goods-services-tax-%28gst%29\/claiming-gst-%28input-tax%29/);
 assert.doesNotMatch(sanitizedIrasLink, /\]\(https:\/\/www\.iras\.gov\.sg\/taxes\/goods-services-tax-\(gst\)\)/);
+
+const masSfoFaq = 'https://ask.gov.sg/mas/questions/clx8ktis900dbryozeeumiiux?from=relatedquestions';
+assert.equal(getSafeOfficialUrl(masSfoFaq, 'MAS SFO FAQ', '', 'MAS'), masSfoFaq);
+const faqResponse = appendStatutorySourceFooter('The SFO FAQ applies.', {
+  statutoryAdvisory: [{ authority: 'MAS', statuteOrAct: 'MAS SFO FAQ', sectionOrSchedule: 'Licensing exemption', topic: 'SFO', officialUrl: masSfoFaq }]
+});
+assert.match(faqResponse, new RegExp(masSfoFaq.replace(/[.?]/g, '\\$&')));
+assert.match(faqResponse, /Official agency FAQ via Ask\.gov\.sg — guidance/);
 console.log('PASS | Source records consistently provide canonical provisions and optional official guidance');

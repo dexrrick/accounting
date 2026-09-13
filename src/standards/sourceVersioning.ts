@@ -17,6 +17,8 @@ export interface SourceVersionMetadata {
     | 'ACRA'
     | 'MOM'
     | 'CPF'
+    | 'MAS'
+    | 'ASK_GOV_SG'
     | 'REFERENCE_API';
   verificationStatus:
     | 'UNVERIFIED'

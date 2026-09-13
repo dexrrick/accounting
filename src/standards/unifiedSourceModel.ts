@@ -58,7 +58,7 @@ export interface AuthoritativeSourceRecord {
   sourceLocator?: SourceLocator;
   provenance: 'LOCAL_STATIC' | 'LIVE_EXTERNAL' | 'LIVE_PATCH';
   canonicalSourceUrl?: string;
-  sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'REFERENCE_API';
+  sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'MAS' | 'ASK_GOV_SG' | 'REFERENCE_API';
   retrievedAt?: string;
   verificationMethod?: string;
   versionId?: string;
@@ -100,6 +100,8 @@ function mapStatuteCategoryToDomain(category: string): QueryDomain {
       return 'MOM_EMPLOYMENT';
     case 'CPF_PAYROLL':
       return 'CPF_BOARD';
+    case 'MAS_FINANCE':
+      return 'MAS_FUNDS';
     default:
       return 'GENERAL';
   }
@@ -174,7 +176,7 @@ export function buildUnifiedSourceRegistry(
       provenance: 'LOCAL_STATIC',
       version: '2026.09',
       canonicalSourceUrl: rule.canonicalUrl,
-      sourceAuthority: rule.authority === 'IRAS' ? 'IRAS' : rule.authority === 'ACRA' ? 'ACRA' : rule.authority === 'MOM' ? 'MOM' : rule.authority === 'CPF' ? 'CPF' : 'AGC',
+      sourceAuthority: rule.canonicalUrl.includes('ask.gov.sg') ? 'ASK_GOV_SG' : rule.authority === 'IRAS' ? 'IRAS' : rule.authority === 'ACRA' ? 'ACRA' : rule.authority === 'MOM' ? 'MOM' : rule.authority === 'CPF' ? 'CPF' : rule.authority === 'MAS' ? 'MAS' : 'AGC',
       retrievedAt: '2026-09-01T00:00:00Z',
       verificationMethod: isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'STATUTORY_LEGISLATION_AUDIT' : 'CURATED_EDITORIAL_REVIEW'
     };

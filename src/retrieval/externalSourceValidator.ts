@@ -13,7 +13,12 @@ export const ALLOWED_REGULATORY_HOSTNAMES = new Set([
   'mom.gov.sg',
   'www.mom.gov.sg',
   'cpf.gov.sg',
-  'www.cpf.gov.sg'
+  'www.cpf.gov.sg',
+  'mas.gov.sg',
+  'www.mas.gov.sg',
+  // Ask.gov.sg publishes first-party FAQs for MAS, IRAS, CPF and other
+  // Singapore agencies. It is guidance, not a substitute for legislation.
+  'ask.gov.sg'
 ]);
 
 export const ALLOWED_REFERENCE_HOSTNAMES = new Set([

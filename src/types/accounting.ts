@@ -34,6 +34,7 @@ export type QueryDomain =
   | 'ACRA_CORP' 
   | 'MOM_EMPLOYMENT' 
   | 'CPF_BOARD' 
+  | 'MAS_FUNDS'
   | 'MULTI_AUTHORITY' 
   | 'GENERAL';
 

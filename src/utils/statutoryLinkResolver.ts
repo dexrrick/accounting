@@ -1,5 +1,6 @@
 import { SINGAPORE_STATUTORY_REPOSITORY, querySingaporeStatutes } from '../standards/singaporeStatutesKnowledge';
 import type { StatutoryAuthority } from '../types/accounting';
+import { isAskGovSingaporeUrl } from '../standards/approvedSourceRegistry';
 
 /**
  * Mapping of Singapore Legislation Shortcodes to SSO Act Identifiers
@@ -112,6 +113,11 @@ export function getSafeOfficialUrl(
   authority?: string
 ): string {
   const url = (rawUrl || '').trim();
+
+  // An Ask.gov.sg FAQ is an official agency guidance source. Preserve its
+  // exact FAQ URL: replacing it with an Act page would hide the source the
+  // answer actually relied upon.
+  if (isAskGovSingaporeUrl(url)) return url;
 
   // 1. Intercept known dead deep-links on IRAS and MAS
   if (url.includes('tax-rates-and-tax-exemption-schemes')) {
@@ -308,6 +314,7 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
       !lowerUrl.startsWith('https://www.cpf.gov.sg') &&
       !lowerUrl.startsWith('https://www.mom.gov.sg') &&
       !lowerUrl.startsWith('https://www.mas.gov.sg') &&
+      !lowerUrl.startsWith('https://ask.gov.sg') &&
       !lowerUrl.startsWith('https://www.ifrs.org')
     ) {
       // Re-anchor unknown domain URLs to canonical sources
@@ -411,7 +418,7 @@ export function appendStatutorySourceFooter(
     return sanitizeStatutoryLinks(messageText);
   }
 
-  const links: { title: string; url: string; authority?: string }[] = [];
+  const links: { title: string; url: string; authority?: string; isAskGov?: boolean }[] = [];
 
   // 1. Extract from statutory advisory
   if (scenarioState?.statutoryAdvisory && scenarioState.statutoryAdvisory.length > 0) {
@@ -421,7 +428,8 @@ export function appendStatutorySourceFooter(
         links.push({
           title: `${adv.statuteOrAct} — ${adv.sectionOrSchedule}`,
           url: safeUrl,
-          authority: adv.authority
+          authority: adv.authority,
+          isAskGov: isAskGovSingaporeUrl(safeUrl)
         });
       }
     }
@@ -436,7 +444,8 @@ export function appendStatutorySourceFooter(
           links.push({
             title: `${cite.standard} ${cite.paragraph || ''}`.trim(),
             url: safeUrl,
-            authority: cite.authority
+            authority: cite.authority,
+            isAskGov: isAskGovSingaporeUrl(safeUrl)
           });
         }
       }
@@ -444,7 +453,7 @@ export function appendStatutorySourceFooter(
   }
 
   const addContextualLink = (title: string, url: string, authority: string) => {
-    if (!links.some((link) => link.url === url)) links.push({ title, url, authority });
+    if (!links.some((link) => link.url === url)) links.push({ title, url, authority, isAskGov: isAskGovSingaporeUrl(url) });
   };
 
   // The response assembler and a provider may sometimes supply only a broad
@@ -507,10 +516,10 @@ export function appendStatutorySourceFooter(
   }
 
   const sourceItems = links
-    .map((l) => `* 🔗 [**${l.title}**](${l.url}) ${l.authority ? `*(${l.authority} / Verified Official Source)*` : ''}`)
+    .map((l) => `* 🔗 [**${l.title}**](${l.url}) ${l.isAskGov ? '*(Official agency FAQ via Ask.gov.sg — guidance)*' : l.authority ? `*(${l.authority} / Verified Official Source)*` : ''}`)
     .join('\n');
 
-  const footerBlock = `\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n${sourceItems}\n*(Click any link to verify directly on official Singapore government legislation or regulatory directory)*`;
+  const footerBlock = `\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n${sourceItems}\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*`;
 
   return sanitizeStatutoryLinks(messageText + footerBlock);
 }

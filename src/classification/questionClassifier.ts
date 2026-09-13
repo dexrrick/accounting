@@ -130,6 +130,18 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('rest day') ||
     q.includes('retrenchment');
 
+  const hasMasFunds =
+    /\bmas\b/i.test(q) ||
+    q.includes('family office') ||
+    q.includes('single family office') ||
+    /\bvcc\b/i.test(q) ||
+    q.includes('variable capital company') ||
+    q.includes('fund manager') ||
+    q.includes('fund management company') ||
+    q.includes('fund admin') ||
+    q.includes('fund administrator') ||
+    q.includes('13o') || q.includes('13u') || q.includes('cms licence');
+
   const hasPayrollCalculation =
     (q.includes('salary') || q.includes('earning') || q.includes('earns') || q.includes('payroll') || q.includes('wages') || q.includes('wage')) &&
     (q.includes('cpf') || q.includes('last day') || q.includes('resignation') || q.includes('prorat') || q.includes('staff') || q.includes('employee')) &&
@@ -142,6 +154,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   if (hasCorporate && !authorities.includes('ACRA')) authorities.push('ACRA');
   if (hasPayroll || hasPayrollCalculation) authorities.push('CPF');
   if (hasEmployment || hasPayrollCalculation) authorities.push('MOM');
+  if (hasMasFunds) authorities.push('MAS');
 
   const multiAuthority = authorities.length > 1;
 
@@ -161,6 +174,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     primaryDomain = 'PAYROLL';
   } else if (hasEmployment) {
     primaryDomain = 'EMPLOYMENT';
+  } else if (hasMasFunds) {
+    primaryDomain = 'CORPORATE_REGULATORY';
   }
 
   // 4. Time-Sensitive Current Information Check

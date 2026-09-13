@@ -1,4 +1,18 @@
 import type { SingaporeStatuteRule } from './types';export const ACRA_STATUTE_RULES: Record<string, SingaporeStatuteRule> = {  // -------------------------------------------------------------
+  ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE: {
+    id: 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE', authority: 'ACRA', authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    sourcePublisher: 'Accounting and Corporate Regulatory Authority', legalOrStandardInstrument: 'Variable Capital Companies Act 2018',
+    actTitle: 'Variable Capital Companies Act 2018', actCode: 'VCCA2018', sectionOrSchedule: 'VCC structure, officer appointments and annual compliance',
+    ruleTitle: 'VCC and Umbrella VCC Governance, Segregation and Filing Requirements', category: 'ACRA_COMPLIANCE',
+    principle: 'A VCC is an investment-fund corporate structure that may be a single fund or an umbrella with sub-funds; an umbrella’s sub-funds have segregated assets and liabilities and separate annual reporting requirements.',
+    application: 'Use when selecting a Singapore fund vehicle or designing the ledger, reporting and compliance scope for an umbrella VCC and each sub-fund.',
+    practicalRules: ['Identify whether the structure is a single VCC or an umbrella VCC and retain sub-fund-level accounting records.', 'Ensure the VCC has the required director, company secretary, fund manager and auditor before operating.', 'Track AGM, annual-return, register-maintenance and change-notification deadlines separately from the fund manager’s MAS obligations.'],
+    canonicalUrl: 'https://www.acra.gov.sg/register/variable-capital-company/key-features-eligibility-requirements/',
+    supplementaryOfficialSources: [{ title: 'ACRA VCC management and compliance overview', url: 'https://www.acra.gov.sg/manage/variable-capital-companies/overview/', authority: 'ACRA' }],
+    tags: ['vcc', 'variable capital company', 'umbrella vcc', 'sub-fund', 'fund vehicle', 'fund manager', 'annual return'],
+    sourceStatus: 'NEEDS_REVIEW', sourceType: 'CURATED_SUMMARY', evidenceTier: 'CURATED_SUMMARY', isVerbatimText: false,
+    lastVerifiedDate: '2026-09-13', reviewAuditCycleDays: 90
+  },
   ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION: {
     id: 'ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION',
     authority: 'ACRA',
