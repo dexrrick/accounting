@@ -456,15 +456,17 @@ export function appendStatutorySourceFooter(
     if (!links.some((link) => link.url === url)) links.push({ title, url, authority, isAskGov: isAskGovSingaporeUrl(url) });
   };
 
-  // The response assembler and a provider may sometimes supply only a broad
-  // Act or agency advisory. Independently resolve up to three relevant rules
-  // from the statutory registry so every supported topic gets its own exact,
-  // first-party source—not just capital-allowance questions.
-  const matchedRules = querySingaporeStatutes(messageText).slice(0, 3);
-  for (const rule of matchedRules) {
-    addContextualLink(`${rule.actTitle} — ${rule.sectionOrSchedule}`, rule.canonicalUrl, rule.authority);
-    for (const source of rule.supplementaryOfficialSources || []) {
-      addContextualLink(source.title, source.url, source.authority);
+  // Infer sources from the free-form answer only when no actual advisory or
+  // citation source was supplied. Otherwise an LLM's incidental wording
+  // (for example, "tax" or "Section 14") can add unrelated legislation to a
+  // MAS/VCC response and falsely imply it supports the conclusion.
+  if (links.length === 0) {
+    const matchedRules = querySingaporeStatutes(messageText).slice(0, 3);
+    for (const rule of matchedRules) {
+      addContextualLink(`${rule.actTitle} — ${rule.sectionOrSchedule}`, rule.canonicalUrl, rule.authority);
+      for (const source of rule.supplementaryOfficialSources || []) {
+        addContextualLink(source.title, source.url, source.authority);
+      }
     }
   }
 

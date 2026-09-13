@@ -33,4 +33,5 @@ const faqResponse = appendStatutorySourceFooter('The SFO FAQ applies.', {
 });
 assert.match(faqResponse, new RegExp(masSfoFaq.replace(/[.?]/g, '\\$&')));
 assert.match(faqResponse, /Official agency FAQ via Ask\.gov\.sg — guidance/);
+assert.doesNotMatch(faqResponse, /Companies Act 1967/);
 console.log('PASS | Source records consistently provide canonical provisions and optional official guidance');

@@ -5,6 +5,7 @@ export type CanonicalDomain =
   | 'CORPORATE_REGULATORY'
   | 'EMPLOYMENT'
   | 'PAYROLL'
+  | 'MAS_FUNDS'
   | 'MIXED'
   | 'GENERAL';
 
@@ -168,14 +169,14 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     primaryDomain = 'TAX';
   } else if (hasGst) {
     primaryDomain = 'GST';
+  } else if (hasMasFunds) {
+    primaryDomain = 'MAS_FUNDS';
   } else if (hasCorporate) {
     primaryDomain = 'CORPORATE_REGULATORY';
   } else if (hasPayroll) {
     primaryDomain = 'PAYROLL';
   } else if (hasEmployment) {
     primaryDomain = 'EMPLOYMENT';
-  } else if (hasMasFunds) {
-    primaryDomain = 'CORPORATE_REGULATORY';
   }
 
   // 4. Time-Sensitive Current Information Check

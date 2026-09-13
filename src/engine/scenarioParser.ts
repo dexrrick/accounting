@@ -1194,6 +1194,7 @@ export async function parseAccountingQuery(
       else if (primaryRule.category === 'MOM_LABOUR') primaryDomain = 'MOM_EMPLOYMENT';
       else if (primaryRule.category === 'TAX_GST') primaryDomain = 'IRAS_GST';
       else if (primaryRule.category === 'TAX_INCOME') primaryDomain = 'IRAS_TAX';
+      else if (primaryRule.category === 'MAS_FINANCE') primaryDomain = 'MAS_FUNDS';
 
       let acctSummary = 'Financial statements must be prepared under the accrual basis compliant with SFRS(I) pursuant to Section 201 of the Companies Act 1967.';
       let taxSummary = relevantRules.map(r => `${r.actTitle} (${r.sectionOrSchedule}): ${r.principle}`).join('; ');
@@ -2295,6 +2296,7 @@ export async function parseAccountingQuery(
       CORPORATE_REGULATORY: 'ACRA_CORP',
       EMPLOYMENT: 'MOM_EMPLOYMENT',
       PAYROLL: 'CPF_BOARD',
+      MAS_FUNDS: 'MAS_FUNDS',
       MIXED: 'MULTI_AUTHORITY',
       GENERAL: 'GENERAL'
     };

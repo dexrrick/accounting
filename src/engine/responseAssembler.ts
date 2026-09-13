@@ -467,6 +467,7 @@ export function assembleDeterministicResponse(
     const primaryAuth = (domain === 'ACCOUNTING' ? 'ASC'
       : domain === 'EMPLOYMENT' ? 'MOM'
       : domain === 'PAYROLL' ? 'CPF'
+      : domain === 'MAS_FUNDS' ? 'MAS'
       : domain === 'CORPORATE_REGULATORY' ? 'ACRA'
       : domain === 'TAX' || domain === 'GST' ? 'IRAS'
       : 'SSO') as any;
@@ -474,6 +475,7 @@ export function assembleDeterministicResponse(
     const statuteOrAct = primaryAuth === 'ASC' ? 'SFRS(I) 1-1 Presentation of Financial Statements'
       : primaryAuth === 'MOM' ? 'Employment Act 1968'
       : primaryAuth === 'CPF' ? 'Central Provident Fund Act 1953'
+      : primaryAuth === 'MAS' ? 'MAS Funds, Family Office and VCC Framework'
       : primaryAuth === 'ACRA' ? 'Companies Act 1967'
       : primaryAuth === 'IRAS' ? 'Income Tax Act 1947'
       : 'Singapore Statutes Online';
@@ -481,12 +483,14 @@ export function assembleDeterministicResponse(
     statutoryAdvisory.push({
       authority: primaryAuth,
       statuteOrAct,
-      sectionOrSchedule: primaryAuth === 'ASC' ? 'Presentation and reclassification guidance' : 'Statutory Directives',
+      sectionOrSchedule: primaryAuth === 'ASC' ? 'Presentation and reclassification guidance' : primaryAuth === 'MAS' ? 'MAS fund-management, SFO and VCC guidance' : 'Statutory Directives',
       topic: domain,
       summary: compact.directAnswer || 'Statutory directives under Singapore law',
       keyRules: compact.keyRules || [],
       officialUrl: primaryAuth === 'ASC'
         ? 'https://asc.acra.gov.sg/singapore-financial-reporting-standards-international/archives/effective-for-annual-reporting-period-beginning-on-1-january-2025'
+        : primaryAuth === 'MAS'
+          ? 'https://www.mas.gov.sg/regulation/capital-markets'
         : '',
       isTaxDeductible: undefined,
       isGstClaimable: undefined
@@ -842,6 +846,7 @@ export function assembleDeterministicResponse(
     primaryDomain: deterministicScenario?.primaryDomain || (
       groundedContext.classification.primaryDomain === 'EMPLOYMENT' ? 'MOM_EMPLOYMENT' :
       groundedContext.classification.primaryDomain === 'PAYROLL' ? 'CPF_BOARD' :
+      groundedContext.classification.primaryDomain === 'MAS_FUNDS' ? 'MAS_FUNDS' :
       groundedContext.classification.primaryDomain === 'CORPORATE_REGULATORY' ? 'ACRA_CORP' :
       groundedContext.classification.primaryDomain === 'TAX' ? 'IRAS_TAX' :
       groundedContext.classification.primaryDomain === 'GST' ? 'IRAS_GST' :

@@ -55,6 +55,8 @@ function mapCanonicalDomainToQueryDomain(domain: string): QueryDomain {
       return 'MOM_EMPLOYMENT';
     case 'PAYROLL':
       return 'CPF_BOARD';
+    case 'MAS_FUNDS':
+      return 'MAS_FUNDS';
     default:
       return 'GENERAL';
   }
@@ -757,7 +759,7 @@ export function postProcessAIResponse(
   const scenarioState: AccountingScenarioState = {
     scenarioType: parsed.scenarioType || deterministicScenario?.scenarioType || currentScenario?.scenarioType || 'UNIVERSAL',
     queryIntent: parsed.queryIntent || (statutoryAdvisory.length > 0 ? 'STATUTORY_ADVISORY' : currentScenario?.queryIntent || 'TRANSACTION'),
-    primaryDomain: parsed.primaryDomain || deterministicScenario?.primaryDomain || currentScenario?.primaryDomain || (statutoryAdvisory.length > 0 ? (statutoryAdvisory[0].authority === 'ACRA' ? 'ACRA_CORP' : statutoryAdvisory[0].authority === 'CPF' ? 'CPF_BOARD' : statutoryAdvisory[0].authority === 'MOM' ? 'MOM_EMPLOYMENT' : 'IRAS_TAX') : 'ACCOUNTING_SFRS'),
+    primaryDomain: parsed.primaryDomain || deterministicScenario?.primaryDomain || currentScenario?.primaryDomain || (statutoryAdvisory.length > 0 ? (statutoryAdvisory[0].authority === 'ACRA' ? 'ACRA_CORP' : statutoryAdvisory[0].authority === 'CPF' ? 'CPF_BOARD' : statutoryAdvisory[0].authority === 'MOM' ? 'MOM_EMPLOYMENT' : statutoryAdvisory[0].authority === 'MAS' ? 'MAS_FUNDS' : 'IRAS_TAX') : 'ACCOUNTING_SFRS'),
     rawQuery: userInput,
     transactionTitle: finalTitle,
     functionalCurrency: parsed.functionalCurrency || deterministicScenario?.functionalCurrency || currentScenario?.functionalCurrency || 'SGD',
