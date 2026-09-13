@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { appendStatutorySourceFooter, buildSsoUrl, getSafeOfficialUrl } from './src/utils/statutoryLinkResolver.ts';
+import { appendStatutorySourceFooter, buildSsoUrl, canonicalizeSsoUrl, getSafeOfficialUrl } from './src/utils/statutoryLinkResolver.ts';
 import { SINGAPORE_STATUTORY_REPOSITORY } from './src/standards/singaporeStatutesKnowledge.ts';
 
 const section14 = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14_GENERAL_DEDUCTION;
@@ -8,6 +8,7 @@ const capitalAllowanceGuide = capitalAllowances.supplementaryOfficialSources?.[0
 
 assert.equal(buildSsoUrl('ITA1947', 'Section 14(1)'), section14.canonicalUrl);
 assert.equal(getSafeOfficialUrl(section14.canonicalUrl, 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), section14.canonicalUrl);
+assert.equal(canonicalizeSsoUrl('https://sso.agc.gov.sg/SL/GSTA1993-RG1#pr28-'), 'https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-');
 
 const response = appendStatutorySourceFooter(
   'A computer server is capital expenditure, not a direct Section 14(1) deduction. Review capital allowances for qualifying plant and machinery.',

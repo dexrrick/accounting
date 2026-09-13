@@ -80,6 +80,27 @@ export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
     : `https://sso.agc.gov.sg/Act/${ssoCode}`;
 }
 
+/** Resolve any legacy SSO fragment through the verified registry equivalent. */
+export function canonicalizeSsoUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== 'sso.agc.gov.sg') return url;
+    const anchor = parsed.hash;
+    if (!/^#(?:pr|Sc)/i.test(anchor)) return url;
+    const matchingRule = Object.values(SINGAPORE_STATUTORY_REPOSITORY).find((rule) => {
+      try {
+        const canonical = new URL(rule.canonicalUrl);
+        return canonical.hostname === parsed.hostname && canonical.pathname === parsed.pathname && canonical.hash.toLowerCase() === anchor.toLowerCase();
+      } catch {
+        return false;
+      }
+    });
+    return matchingRule?.canonicalUrl || url;
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Safely resolves any official URL (whether from static knowledge or dynamic AI response)
  * into a guaranteed 200 OK link. Replaces dead deep-links with canonical SSO permalinks.
@@ -116,8 +137,8 @@ export function getSafeOfficialUrl(
 
   // Preserve a supplied section-specific SSO source. Agency guidance can be
   // added separately; it must not replace the cited legislation.
-  if (url.startsWith('https://sso.agc.gov.sg/Act/')) {
-    return url;
+  if (url.startsWith('https://sso.agc.gov.sg/Act/') || url.startsWith('https://sso.agc.gov.sg/SL/')) {
+    return canonicalizeSsoUrl(url);
   }
 
   if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
@@ -262,7 +283,7 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
     const lowerAnchor = anchorText.toLowerCase();
 
     // Intercept known dead deep-links and mistyped act codes
-    let cleanUrl = url;
+    let cleanUrl = canonicalizeSsoUrl(url);
     if (cleanUrl.toLowerCase().includes('/act/ca1967')) {
       cleanUrl = cleanUrl.replace(/\/act\/ca1967/gi, '/Act/CoA1967');
     } else if (lowerUrl.includes('tax-rates-and-tax-exemption-schemes')) {
