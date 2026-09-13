@@ -294,10 +294,12 @@ export const App: React.FC = () => {
           </div>
         </div>
       </main>
-      <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pb-12"><ShareTransferCalculator /></div>
+      {outputPreference.shareStructure && (
+        <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pb-12"><ShareTransferCalculator scenario={scenario} /></div>
+      )}
 
       <div className="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-30">
-        <FeedbackDialog messages={messages} scenario={scenario} providerSettings={providerSettings} theme={theme} fontSize={fontSize} />
+        <FeedbackDialog messages={messages} scenario={scenario} providerSettings={providerSettings} theme={theme} fontSize={fontSize} outputPreference={outputPreference} />
       </div>
 
       {/* Footer */}

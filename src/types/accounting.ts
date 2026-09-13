@@ -125,6 +125,12 @@ export interface TransactionFact {
   highlight?: boolean;
 }
 
+export interface ShareTransferAnalysis {
+  eventSummary: string;
+  rows: Array<{ company: string; holder: string; beforeShares: number; afterShares: number; beforePercent: number; afterPercent: number }>;
+  notes: string[];
+}
+
 export interface ExplicitAssumption {
   id: string;
   field: string;
@@ -174,6 +180,7 @@ export interface AccountingScenarioState {
   primaryDomain?: QueryDomain;
   statutoryAdvisory?: StatutoryAdvisoryInfo[];
   officialAnswerLinks?: import('../utils/chatPresentation').OfficialAnswerLink[];
+  shareTransferAnalysis?: ShareTransferAnalysis;
 
   // Explicit Accounting vs Tax Separation & Regulatory Summaries
   accountingTreatmentSummary?: string;

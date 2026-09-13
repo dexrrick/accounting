@@ -3,6 +3,7 @@ import { Bug, CheckCircle2, Copy, Send, X } from 'lucide-react';
 import type { AccountingScenarioState, ChatMessage } from '../types/accounting';
 import type { ProviderSettings } from '../types/provider';
 import { compileFeedbackReport, submitFeedbackReport } from '../services/feedback';
+import type { OutputPreference } from '../services/geminiService';
 
 interface FeedbackDialogProps {
   messages: ChatMessage[];
@@ -10,6 +11,7 @@ interface FeedbackDialogProps {
   providerSettings: ProviderSettings;
   theme: 'light' | 'dark';
   fontSize: string;
+  outputPreference: OutputPreference;
 }
 
 export const FeedbackDialog: React.FC<FeedbackDialogProps> = (props) => {

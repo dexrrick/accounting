@@ -1,5 +1,6 @@
 import type { AccountingScenarioState, ChatMessage } from '../types/accounting';
 import type { ProviderSettings } from '../types/provider';
+import type { OutputPreference } from './geminiService';
 
 export interface FeedbackReport {
   description: string;
@@ -7,7 +8,7 @@ export interface FeedbackReport {
   createdAt: string;
   pageUrl: string;
   userAgent: string;
-  app: { theme: 'light' | 'dark'; fontSize: string; activeProvider: string; model: string };
+  app: { theme: 'light' | 'dark'; fontSize: string; activeProvider: string; model: string; shareStructureEnabled: boolean };
   conversation: Array<{ sender: string; timestamp: string; text: string }>;
   scenario?: Record<string, unknown>;
   telemetry?: unknown;
@@ -29,7 +30,8 @@ const redactScenario = (scenario: AccountingScenarioState | null): Record<string
     })),
     statutoryAdvisory: scenario.statutoryAdvisory?.map(({ authority, statuteOrAct, sectionOrSchedule, topic }) => ({
       authority, statuteOrAct, sectionOrSchedule, topic
-    }))
+    })),
+    shareTransferAnalysis: scenario.shareTransferAnalysis
   };
 };
 
@@ -41,6 +43,7 @@ export const compileFeedbackReport = (input: {
   providerSettings: ProviderSettings;
   theme: 'light' | 'dark';
   fontSize: string;
+  outputPreference: OutputPreference;
 }): FeedbackReport => {
   const active = input.providerSettings.activeProvider;
   const model = active === 'offline'
@@ -55,7 +58,7 @@ export const compileFeedbackReport = (input: {
     pageUrl: window.location.href,
     userAgent: navigator.userAgent,
     // Provider names/models are useful for diagnosis. API keys are deliberately never included.
-    app: { theme: input.theme, fontSize: input.fontSize, activeProvider: active, model },
+    app: { theme: input.theme, fontSize: input.fontSize, activeProvider: active, model, shareStructureEnabled: Boolean(input.outputPreference.shareStructure) },
     conversation: input.messages.slice(-12).map(({ sender, timestamp, text, fullText }) => ({
       sender,
       timestamp,
