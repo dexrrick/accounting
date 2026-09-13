@@ -37,7 +37,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 
 ## 🛠️ Technology Stack
 
-* **Frontend Framework**: [React 18](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+* **Frontend Framework**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
 * **Build Tool**: [Vite](https://vitejs.dev/)
 * **Styling**: [Tailwind CSS](https://tailwindcss.com/) (Modern Dark Enterprise Palette)
 * **Icons**: [Lucide React](https://lucide.dev/)
@@ -49,7 +49,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 ## 🚀 Getting Started
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/) (version 18+ recommended)
+* [Node.js 22.x](https://nodejs.org/) — required; the exact major version is declared in [`.nvmrc`](.nvmrc) and `package.json`.
 * npm (bundled with Node.js)
 
 ### Installation
@@ -62,7 +62,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 
 2. **Install dependencies**:
    ```bash
-   npm install
+   npm ci
    ```
 
 3. **Start the development server**:
@@ -76,9 +76,14 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
    npm run build
    ```
 
-5. **Run automated engine verification test suite**:
+5. **Run the fast regression suite**:
    ```bash
-   npx tsx tests/regression/test_universal.mjs
+   npm run test:smoke
+   ```
+
+   To run the complete regression suite, use:
+   ```bash
+   npm test
    ```
 
 ### Feedback delivery
@@ -114,8 +119,9 @@ Vite substitutes `VITE_*` values when it builds the browser bundle; adding a Git
 │   ├── services/               # External Services & APIs
 │   │   ├── geminiService.ts    # Google Gemini API connector & response parser
 │   │   └── frankfurterService.ts # Live ECB spot forex rate fetcher
-│   ├── standards/              # Statutory Knowledgebase
-│   │   └── standardsKnowledge.ts # Official ASC Singapore & IASB citations
+│   ├── standards/              # Statutory knowledgebase and source governance
+│   │   ├── statutes/           # Rule packs split by authority (IRAS, GST, ACRA, CPF, MOM, MAS)
+│   │   └── singaporeStatutesKnowledge.ts # Stable statutory registry and lookup API
 │   ├── utils/                  # Utilities
 │   │   └── dateUtils.ts        # Singapore DD/MM/YYYY date formatting utilities
 │   ├── types/                  # TypeScript Data Contracts
@@ -124,6 +130,10 @@ Vite substitutes `VITE_*` values when it builds the browser bundle; adding a Git
 │   ├── index.css               # Tailwind directives & responsive font scales
 │   └── main.tsx                # React DOM bootstrap
 ├── package.json
+├── tests/
+│   ├── regression/             # Offline regression suites
+│   ├── integration/            # Opt-in live external-source checks
+│   └── fixtures/               # Stored source and retrieval fixtures
 ├── tailwind.config.js
 ├── tsconfig.json
 └── vite.config.ts
