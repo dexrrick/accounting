@@ -15,7 +15,7 @@
     "test": "npm run preflight && node scripts/run_all_tests.mjs --tier=full",
     "test:all": "npm run preflight && node scripts/run_all_tests.mjs --tier=full",
     "test:smoke": "npm run preflight && node scripts/run_all_tests.mjs --tier=smoke",
-    "test:integration": "tsx test_real_source_integration.mjs"
+    "test:integration": "tsx tests/integration/test_real_source_integration.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.41.0",

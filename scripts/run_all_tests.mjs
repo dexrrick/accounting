@@ -87,7 +87,7 @@ async function main() {
     console.log(`----------------------------------------------------------------`);
 
     const suiteStart = Date.now();
-    const passed = await runCommand(process.execPath, [tsxCli, suite.file], projectRoot);
+    const passed = await runCommand(process.execPath, [tsxCli, path.join('tests', 'regression', suite.file)], projectRoot);
     const duration = ((Date.now() - suiteStart) / 1000).toFixed(2);
 
     results.push({

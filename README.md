@@ -78,7 +78,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 
 5. **Run automated engine verification test suite**:
    ```bash
-   npx tsx test_universal.mjs
+   npx tsx tests/regression/test_universal.mjs
    ```
 
 ### Feedback delivery
