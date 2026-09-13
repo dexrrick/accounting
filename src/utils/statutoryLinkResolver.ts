@@ -17,14 +17,17 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
   GSTA: { ssoCode: 'GSTA1993', title: 'Goods and Services Tax Act 1993' },
   CPF: { ssoCode: 'CPFA1953', title: 'Central Provident Fund Act 1953' },
   CPFA: { ssoCode: 'CPFA1953', title: 'Central Provident Fund Act 1953' },
-  EA: { ssoCode: 'EA1968', title: 'Employment Act 1968' },
-  EMPLOYMENT_ACT: { ssoCode: 'EA1968', title: 'Employment Act 1968' },
+  EA: { ssoCode: 'EmA1968', title: 'Employment Act 1968' },
+  EMA: { ssoCode: 'EmA1968', title: 'Employment Act 1968' },
+  EMA1968: { ssoCode: 'EmA1968', title: 'Employment Act 1968' },
+  EMPLOYMENT_ACT: { ssoCode: 'EmA1968', title: 'Employment Act 1968' },
   PSA: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
   PAYMENT_SERVICES: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
   MAS: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' },
   MASA: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' },
-  CDCA: { ssoCode: 'CDCA2001', title: 'Child Development Co-Savings Act 2001' },
-  CDCA2001: { ssoCode: 'CDCA2001', title: 'Child Development Co-Savings Act 2001' }
+  CDCA: { ssoCode: 'CDCSA2001', title: 'Child Development Co-Savings Act 2001' },
+  CDCSA: { ssoCode: 'CDCSA2001', title: 'Child Development Co-Savings Act 2001' },
+  CDCA2001: { ssoCode: 'CDCSA2001', title: 'Child Development Co-Savings Act 2001' }
 };
 
 // ASC publishes SFRS(I) as an official annual collection rather than exposing
@@ -66,7 +69,9 @@ export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
   // consistently and accommodates SSO provision-id URLs where necessary.
   const registeredRule = Object.values(SINGAPORE_STATUTORY_REPOSITORY).find((rule) => {
     const ruleSection = rule.sectionOrSchedule.match(/(\d+[A-Za-z]*)/)?.[1];
-    return rule.actCode.toUpperCase() === ssoCode.toUpperCase() && ruleSection === secClean;
+    const ruleCode = rule.actCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const ruleSsoCode = Object.entries(ACT_CODE_TO_SSO).find(([key]) => ruleCode.includes(key))?.[1].ssoCode || rule.actCode;
+    return ruleSsoCode.toUpperCase() === ssoCode.toUpperCase() && ruleSection === secClean;
   });
   if (registeredRule) return registeredRule.canonicalUrl;
 
@@ -89,10 +94,10 @@ export function getSafeOfficialUrl(
 
   // 1. Intercept known dead deep-links on IRAS and MAS
   if (url.includes('tax-rates-and-tax-exemption-schemes')) {
-    return 'https://sso.agc.gov.sg/Act/ITA1947#pr43-';
+    return SINGAPORE_STATUTORY_REPOSITORY.ITA_SUTE_PTE_TAX_EXEMPTION.canonicalUrl;
   }
   if (url.includes('filing-your-corporate-income-tax-return')) {
-    return 'https://sso.agc.gov.sg/Act/ITA1947#pr62-';
+    return SINGAPORE_STATUTORY_REPOSITORY.IRAS_FORM_CS_LITE_CRITERIA.canonicalUrl;
   }
   if (url.includes('monetary-authority-of-singapore-act')) {
     return 'https://sso.agc.gov.sg/Act/MASA1970';
@@ -128,7 +133,7 @@ export function getSafeOfficialUrl(
     return buildSsoUrl('CPFA1953', sec);
   }
   if (act.includes('employment act') || act.includes('ea1968') || act.includes('mom')) {
-    return buildSsoUrl('EA1968', sec);
+    return buildSsoUrl('EmA1968', sec);
   }
   if (act.includes('monetary authority') || act.includes('mas') || act.includes('exchange control')) {
     return 'https://sso.agc.gov.sg/Act/MASA1970';
@@ -171,7 +176,7 @@ export function getSafeOfficialUrl(
   // unambiguous; otherwise return no link instead of a misleading directory.
   const auth = (authority || '').toUpperCase();
   if (auth === 'CPF' && /\d/.test(sec)) return buildSsoUrl('CPFA1953', sec);
-  if (auth === 'MOM' && /\d/.test(sec)) return buildSsoUrl('EA1968', sec);
+  if (auth === 'MOM' && /\d/.test(sec)) return buildSsoUrl('EmA1968', sec);
   if (auth === 'MAS' && /\d/.test(sec)) return buildSsoUrl('MASA1970', sec);
   if (auth === 'ASC') return SFRSI_2025_COLLECTION_URL;
 
@@ -261,9 +266,9 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
     if (cleanUrl.toLowerCase().includes('/act/ca1967')) {
       cleanUrl = cleanUrl.replace(/\/act\/ca1967/gi, '/Act/CoA1967');
     } else if (lowerUrl.includes('tax-rates-and-tax-exemption-schemes')) {
-      cleanUrl = 'https://sso.agc.gov.sg/Act/ITA1947#pr43-';
+      cleanUrl = SINGAPORE_STATUTORY_REPOSITORY.ITA_SUTE_PTE_TAX_EXEMPTION.canonicalUrl;
     } else if (lowerUrl.includes('filing-your-corporate-income-tax-return')) {
-      cleanUrl = 'https://sso.agc.gov.sg/Act/ITA1947#pr62-';
+      cleanUrl = SINGAPORE_STATUTORY_REPOSITORY.IRAS_FORM_CS_LITE_CRITERIA.canonicalUrl;
     } else if (lowerUrl.includes('monetary-authority-of-singapore-act')) {
       cleanUrl = 'https://sso.agc.gov.sg/Act/MASA1970';
     } else if (lowerUrl.includes('asc.gov.sg')) {
@@ -304,19 +309,19 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
   // 2. Replace unlinked statutory patterns in remaining plain text
   sanitized = sanitized.replace(
     /(?:Companies Act\s*(?:1967)?\s*(?:Section|§)\s*205C(?:\s*(?:&|and)\s*Thirteenth\s*Schedule)?)/gi,
-    () => addLink('Companies Act 1967 Section 205C & Thirteenth Schedule', 'https://sso.agc.gov.sg/Act/CoA1967#pr205C-')
+    () => addLink('Companies Act 1967 Section 205C & Thirteenth Schedule', buildSsoUrl('CoA1967', '205C'))
   );
   sanitized = sanitized.replace(
     /(?:Companies Act\s*(?:1967)?\s*(?:Section|§)\s*199(?:\(1\))?)/gi,
-    () => addLink('Companies Act 1967 Section 199', 'https://sso.agc.gov.sg/Act/CoA1967#pr199-')
+    () => addLink('Companies Act 1967 Section 199', buildSsoUrl('CoA1967', '199'))
   );
   sanitized = sanitized.replace(
     /(?:Companies Act\s*(?:1967)?\s*(?:Section|§)\s*145(?:\(1\))?)/gi,
-    () => addLink('Companies Act 1967 Section 145', 'https://sso.agc.gov.sg/Act/CoA1967#pr145-')
+    () => addLink('Companies Act 1967 Section 145', buildSsoUrl('CoA1967', '145'))
   );
   sanitized = sanitized.replace(
     /(?:Companies Act\s*(?:1967)?\s*(?:Section|§)\s*(?:175|197))/gi,
-    () => addLink('Companies Act 1967 Section 175 & 197', 'https://sso.agc.gov.sg/Act/CoA1967#pr197-')
+    () => addLink('Companies Act 1967 Section 175 & 197', buildSsoUrl('CoA1967', '197'))
   );
   sanitized = sanitized.replace(
     /(?:Companies Act\s*(?:1967)?)(?!\w)/gi,
@@ -324,7 +329,7 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
   );
   sanitized = sanitized.replace(
     /(?:Income Tax Act\s*(?:1947)?\s*(?:Section|§)\s*15\(1\)\(k\))/gi,
-    () => addLink('Income Tax Act 1947 Section 15(1)(k)', 'https://sso.agc.gov.sg/Act/ITA1947#pr15-')
+    () => addLink('Income Tax Act 1947 Section 15(1)(k)', buildSsoUrl('ITA1947', '15'))
   );
   sanitized = sanitized.replace(
     /(?:Income Tax Act\s*(?:1947)?\s*(?:Section|§)\s*14(?:\(1\))?)/gi,
@@ -332,19 +337,19 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
   );
   sanitized = sanitized.replace(
     /(?:Income Tax Act\s*(?:1947)?\s*(?:Section|§)\s*19A)/gi,
-    () => addLink('Income Tax Act 1947 Section 19A', 'https://sso.agc.gov.sg/Act/ITA1947#pr19A-')
+    () => addLink('Income Tax Act 1947 Section 19A', buildSsoUrl('ITA1947', '19A'))
   );
   sanitized = sanitized.replace(
     /(?:GST Act\s*(?:1993)?\s*(?:Section|§)\s*21(?:\(3\))?)/gi,
-    () => addLink('Goods and Services Tax Act 1993 Section 21(3)', 'https://sso.agc.gov.sg/Act/GSTA1993#pr21-')
+    () => addLink('Goods and Services Tax Act 1993 Section 21(3)', buildSsoUrl('GSTA1993', '21'))
   );
   sanitized = sanitized.replace(
     /(?:CPF Act\s*(?:1953)?\s*(?:Section|§)\s*(\d+[A-Za-z]?))/gi,
-    (_, sec) => addLink(`Central Provident Fund Act 1953 Section ${sec}`, `https://sso.agc.gov.sg/Act/CPFA1953#pr${sec}-`)
+    (_, sec) => addLink(`Central Provident Fund Act 1953 Section ${sec}`, buildSsoUrl('CPFA1953', sec))
   );
   sanitized = sanitized.replace(
     /(?:Employment Act\s*(?:1968)?\s*(?:Section|§)\s*(\d+[A-Za-z]?))/gi,
-    (_, sec) => addLink(`Employment Act 1968 Section ${sec}`, `https://sso.agc.gov.sg/Act/EA1968#pr${sec}-`)
+    (_, sec) => addLink(`Employment Act 1968 Section ${sec}`, buildSsoUrl('EmA1968', sec))
   );
   sanitized = sanitized.replace(
     /(?:CPF Act\s*(?:1953)?)(?!\w)/gi,
@@ -352,7 +357,7 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
   );
   sanitized = sanitized.replace(
     /(?:Employment Act\s*(?:1968)?)(?!\w)/gi,
-    () => addLink('Employment Act 1968', 'https://sso.agc.gov.sg/Act/EA1968')
+    () => addLink('Employment Act 1968', 'https://sso.agc.gov.sg/Act/EmA1968')
   );
 
   // 3. Restore all original/cleaned markdown links
@@ -439,7 +444,7 @@ export function appendStatutorySourceFooter(
     if (lower.includes('companies act') || lower.includes('205c') || lower.includes('audit')) {
       links.push({
         title: 'Companies Act 1967 (Section 205C)',
-        url: 'https://sso.agc.gov.sg/Act/CoA1967#pr205C-',
+        url: buildSsoUrl('CoA1967', '205C'),
         authority: 'ACRA'
       });
     }

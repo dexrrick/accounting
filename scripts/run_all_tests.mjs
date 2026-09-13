@@ -31,6 +31,7 @@ const testSuites = [
   { name: 'Personal Fine Clarification & Journal Follow-Ups', file: 'test_director_personal_fine_followup.mjs', layer: 'conversation-state', tier: 'smoke' },
   { name: 'Conversation Relation Failsafe', file: 'test_conversation_relation_failsafe.mjs', layer: 'conversation-state', tier: 'smoke' },
   { name: 'Official Tax Source Links', file: 'test_official_tax_source_links.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Business Equipment Acquisition', file: 'test_business_equipment_acquisition.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs', layer: 'regulatory-updates', tier: 'full' },
   { name: 'Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Sidequest Correction Pass', file: 'test_sidequest_correction.mjs', layer: 'accounting-invariants', tier: 'full' },

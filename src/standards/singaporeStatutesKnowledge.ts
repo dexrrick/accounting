@@ -85,7 +85,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Income tax paid or payable is non-deductible.',
       'Capital expenditure must be added back in tax computation (capital allowances claimed separately).'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr15-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-',
     tags: ['non-deductible', 'prohibited expenses', 'fines', 'section 15', 'add-back']
   },
 
@@ -105,7 +105,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Commercial goods vehicles (G-plate, Y-plate vans, lorries, trucks) ARE 100% eligible for Section 19A Capital Allowances and running expenses are deductible.',
       'Strict add-back of car depreciation and operating expenses is mandatory in Form C-S Tax Computation.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr15-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-',
     tags: ['car expenses', 'passenger car', 'motor car', 's-plate', 'car depreciation', 'section 15(1)(k)']
   },
 
@@ -126,7 +126,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Section 19A(2): 1-year (100%) accelerated write-off for computers, software, and qualifying automation equipment.',
       'Low-Value Assets: Assets costing $\\le\\$5,000$ each can be fully written off in 1 year, subject to an aggregate limit of $\\$30,000$ per YA.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr19A-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P16-#pr19A-',
     supplementaryOfficialSources: [{
       title: 'IRAS Capital Allowances',
       url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances',
@@ -152,7 +152,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Partial Tax Exemption (PTE) for all other companies:\n  - 75% exemption on the first SGD 10,000\n  - 50% exemption on the next SGD 190,000\n  - Maximum tax exemption of SGD 102,500.',
       'SUTE Qualifying Conditions: Incorporated in Singapore, tax resident in Singapore, max 20 individual shareholders (or at least 1 individual holding $\\ge 10\\%$ of ordinary shares).'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr43-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P111-#pr43-',
     tags: ['tax rate', 'sute', 'pte', 'corporate tax', 'tax exemption', '17%']
   },
 
@@ -173,7 +173,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Form C: For companies with annual revenue $>\$5,000,000$ or claiming complex incentives, foreign tax credits, or group relief. Mandatory to attach audited/unaudited accounts and tax computations.',
       'Filing Deadline: 30 November of the Year of Assessment (YA) via myTax Portal.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr62-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P116-#pr62-',
     tags: ['form c-s', 'form c-s lite', 'form c', 'tax filing deadline', 'annual revenue 5m']
   },
 
@@ -197,7 +197,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Order of Deduction: Unabsorbed capital allowances from prior years are deducted before unabsorbed trade losses.',
       'Shareholding Waiver: Minister or Comptroller may waive SST if substantial change was not for tax benefit.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr37-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P19-#pr37-',
     tags: ['loss carry forward', 'section 37', 'tax losses', 'substantial shareholding', 'sst 50%', 'unabsorbed losses'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -229,7 +229,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Substantial Shareholding & Same Business Test: Entity must satisfy 50% shareholder continuity and same business test (for capital allowances).',
       'Election Deadline: Must be formally elected when e-filing Form C / Form C-S for the loss year.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr37E-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P19-#pr37E-',
     tags: ['loss carry back', 'section 37e', '100000 cap', 'tax refund', 'carry back relief'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -261,7 +261,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Ordinary Shares: Applies to ordinary shares (shares that carry voting, dividend, and surplus asset rights without fixed preference).',
       'Exclusions: Does not apply to unlisted property-holding companies whose main business is holding immovable property in Singapore.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr13W-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P14-#pr13W-',
     tags: ['section 13w', 'safe harbour', 'share disposal', 'capital gain exemption', '20 percent 24 months'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -293,7 +293,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Date of Payment: Deemed paid when credited to payee account, reinvested, accumulated, capitalized, or made available.',
       'Late Payment Penalty: 5% initial late payment penalty plus additional 1% per month up to maximum 15%.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr45-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P112-#pr45-',
     tags: ['withholding tax', 'section 45', 'interest withholding', 'non-resident interest', '15% final tax'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -325,7 +325,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Filing Deadline: 15th of the second month after the date of payment via myTax Portal.',
       'Software Exemption: Commercial off-the-shelf software licenses without copyright acquisition enjoy administrative concession from withholding tax under IRAS e-Tax Guide.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr45A-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P112-#pr45A-',
     tags: ['section 45a', 'royalties withholding', 'technical service fees', 'management fees', 'withholding non-resident'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -357,7 +357,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Qualifying Items: General lighting, floor tiles, false ceilings, fixed partitions, wall coverings, doors, plumbing, electrical installations.',
       'Non-Qualifying Items: Structural changes, designer fees, fine art/paintings, motor vehicle showrooms, and assets eligible for Section 19/19A capital allowances.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14Q-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr14Q-',
     tags: ['renovation deduction', 'section 14q', 'r&r deduction', '300000 cap', 'renovation 3 years'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -390,7 +390,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Voluntary Registration: Businesses below SGD 1M turnover may voluntarily register, but must remain registered for at least 2 years and maintain GIRO for payment/refunds.',
       'GST Rate: Standard rate is 9% (effective 1 January 2024).'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#Sc1-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P112-#Sc1-',
     tags: ['gst registration', 'turnover 1m', 'compulsory gst', 'prospective', 'retrospective'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -437,7 +437,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'International Services (Section 21(3)): Software, consulting, and management services provided under contract to overseas clients, directly benefiting an overseas person outside Singapore, qualify for 0% GST.',
       'Input Tax Benefit: Even though output tax is 0%, the business can claim 100% of input GST paid on qualifying business purchases.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr21-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P15-#pr21-',
     tags: ['zero rated', '0% gst', 'export of services', 'section 21(3)', 'international services']
   },
 
@@ -461,7 +461,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Failure of Test: If either threshold is breached, the entity is in partial exemption and must apportion input tax using the standard turnover formula.',
       'Annual Review: An annual longer-period input tax adjustment is mandatory at the end of each tax year.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/SL/GSTA1993-RG1#pr28-',
+    canonicalUrl: 'https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-',
     tags: ['de minimis rule', 'regulation 28', 'partial exemption', 'exempt supplies 40000', 'input tax recovery 5%'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -493,7 +493,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Tax Mechanism: Account for 9% output tax in Box 1; claim allowable input tax in Box 7 in the same GST return.',
       'Distantly Taxable Goods (LVG): Goods located outside Singapore with a value at or below the SGD 400 import threshold delivered to Singapore.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr14-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P13-#pr14-',
     tags: ['reverse charge', 'section 14', 'imported services', 'seventh schedule', 'b2b imported services'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -525,7 +525,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Reasonable Recovery Efforts: Entity must have made commercial recovery efforts (reminders, legal demand letters).',
       'Subsequent Recovery: If debtor subsequently pays all or part of the bad debt, output tax must be repaid to IRAS in Box 1 in that subsequent period.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/SL/GSTA1993-RG1#pr82-',
+    canonicalUrl: 'https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P112-#pr82-',
     tags: ['bad debt relief', 'regulations 82 90', 'output tax refund', '12 months bad debt', 'bad debt write off'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -557,7 +557,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Continuous Supplies of Services: Time of supply is the earlier of invoice issuance or payment receipt.',
       'Deposit / Prepayments: GST must be accounted for on deposits or prepayments in the period the cash is received.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr11-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P13-#pr11-',
     tags: ['time of supply', 'section 11', 'tax point', 'invoice date', 'payment date', 'earliest date'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -588,7 +588,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Validity Period: In force until 31 December 2022.',
       'Superseded: Replaced by 8% GST on 1 January 2023 under Section 16 statutory amendment.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr16-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P13-#pr16-',
     tags: ['7% gst', 'gst rate', 'tax rate', 'rate of tax', 'historical gst', 'gst rate 7', 'gst prior to 2023', 'standard rate'],
     sourceStatus: 'HISTORICAL',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -621,7 +621,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Transitional Rules: Under GST transitional provisions, services spanning across 2023/2024 were prorated or determined by invoice/payment tax points.',
       'Superseded: Replaced by 9% GST on 1 January 2024.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr16-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P13-#pr16-',
     tags: ['8% gst', 'gst rate', 'tax rate', 'rate of tax', '2023 gst', 'historical 8%', 'gst rate 8% 2023', 'standard rate'],
     sourceStatus: 'HISTORICAL',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -655,7 +655,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Input GST Claim: Claimable on qualifying business purchases under Section 19.',
       'Output GST: Collected on domestic taxable supplies and remitted to IRAS via quarterly Form F5.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr16-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P13-#pr16-',
     tags: ['9% gst', 'gst rate', 'tax rate', 'rate of tax', 'current gst rate', 'gst 9 percent', 'standard rate gst', 'standard rate'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -689,7 +689,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.',
       'Group Requirement: If the company is part of a corporate group, the entire group must qualify as a "small group" on a consolidated basis to enjoy the audit exemption.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr205C-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-',
     tags: ['audit exemption', 'small company', 'section 205c', 'revenue 10m', 'assets 10m', 'employees 50']
   },
 
@@ -711,7 +711,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Listed Companies: AGM within 4 months after FYE; Annual Return within 5 months after FYE.',
       'Late Lodgment Penalties: Minimum SGD 300 tier-escalating composition fine imposed by ACRA for late filing.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr197-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr197-',
     tags: ['agm deadline', 'annual return', 'bizfile', 'fye 6 months', 'fye 7 months', 'section 175', 'section 197']
   },
 
@@ -731,7 +731,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Location: Must be kept at the registered office or such other place in Singapore as the directors think fit.',
       'Electronic Storage: Electronic invoices and digital cloud archives are accepted provided they can be readily converted into readable form on demand.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr199-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr199-',
     tags: ['record retention', '5 years', 'accounting books', 'receipts', 'section 199']
   },
 
@@ -751,7 +751,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Natural Person: Must be a natural person aged at least 18 years old and not disqualified under Section 148, 149, or 154 (e.g. not an undischarged bankrupt).',
       'Corporate Secretary (Section 171): Must appoint a resident company secretary within 6 months of incorporation. A sole director cannot act as company secretary.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr145-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr145-',
     tags: ['resident director', 'section 145', 'company secretary', 'incorporation requirements']
   },
 
@@ -775,7 +775,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Offices & Property: Must also declare any office held or property possessed which creates conflicting duties/interests with company directorship.',
       'Criminal Sanction: Non-compliance is an offence under Section 156(15) rendering the defaulting director liable to a fine or imprisonment.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr156-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr156-',
     tags: ['director interest', 'section 156', 'conflict of interest', 'related party disclosure', 'board declaration'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -807,7 +807,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Sole Director Restriction: A sole director of a company is prohibited from simultaneously acting as company secretary.',
       'Public Companies: In a public company, secretary must hold requisite professional qualifications (e.g. qualified under CSIS, CA Singapore, advocate and solicitor, or 3 of last 5 years as secretary).'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr171-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr171-',
     tags: ['company secretary', 'section 171', 'resident secretary', 'sole director restriction', '6 months vacancy'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -839,7 +839,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Register of Registrable Controllers (Part 11A / Section 386AF): Private register identifying ultimate beneficial owners with >25% shareholding or voting power.',
       '30-Day Setup: RORC must be established within 30 days of incorporation and lodged with ACRA central register.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr386AF-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P111A-#pr386AF-',
     tags: ['rorc', 'register of controllers', 'statutory registers', 'section 142', 'part 11a', 'beneficial ownership 25%'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -871,7 +871,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Issue at Any Price: Directors may issue shares at any price determined by the board, subject to shareholders\' approval under Section 161.',
       'Classes of Shares: Companies can issue different classes of shares (ordinary, preferred, redeemable) with customized voting and dividend rights.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr68-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P14-#pr68-',
     tags: ['no par value', 'section 68', 'share capital', 'abolition of share premium', 'share issuance'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -903,7 +903,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Publicity Notice (Section 78B(1)(b)): Notice of resolution must be published within 8 days; 6-week creditor objection period applies.',
       'Effective Date: Capital reduction takes effect upon lodgment of completion documents with the Registrar on BizFile+.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr78B-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P14-#pr78B-',
     tags: ['capital reduction', 'section 78b', 'solvency statement', 'court-free reduction', 'special resolution'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -989,7 +989,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Voluntary CPF / Excess Contributions: Any employer CPF contribution exceeding the statutory ceiling is non-deductible for the employer and is taxable income in the hands of the employee.',
       'Self-Employed / Working Directors: Working directors who are employees of the company receive tax-deductible employer CPF under Section 14(1)(e).'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr14-',
     tags: ['cpf tax deduction', 'section 14(1)(e)', 'employer cpf', 'voluntary cpf']
   },
 
@@ -1013,7 +1013,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Ordinary Wage (OW) Ceiling: SGD 8,000 per month effective 1 January 2026.',
       'Tax Deductibility: Mandatory employer CPF is 100% tax-deductible under Section 14(1)(e) of the Income Tax Act 1947.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953#pr7-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-',
     tags: ['cpf act section 7', 'first schedule', 'cpf rounding', 'employee cpf 20%', 'employer cpf 17%', 'cpf calculation', 'cents discarded'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1049,7 +1049,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Age > 65 to 70: Total CPF 16.5% allocated as OA: 1%, SA/RA: 5%, MA: 10.5%.',
       'Age > 70: Total CPF 12.5% allocated as OA: 1%, SA/RA: 1%, MA: 10.5%.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953#pr13-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr13-',
     tags: ['cpf account allocation', 'ordinary account', 'special account', 'medisave account', 'oa sa ma ratio', 'section 13'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1081,7 +1081,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Max Employer CPF (17%): SGD 1,156 (Total: SGD 2,516).',
       'Superseded: Replaced by $7,400 on 1 January 2025.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953#Sc1-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-',
     tags: ['cpf ceiling', 'ordinary wage ceiling', 'wage ceiling', 'cpf ceiling 2024', '6800 ceiling', 'historical cpf 2024', 'ow ceiling 6800'],
     sourceStatus: 'HISTORICAL',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1115,7 +1115,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Max Employer CPF (17%): SGD 1,258 (Total: SGD 2,738).',
       'Superseded: Replaced by $8,000 on 1 January 2026.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953#Sc1-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-',
     tags: ['cpf ceiling', 'ordinary wage ceiling', 'wage ceiling', 'cpf ceiling 2025', '7400 ceiling', 'historical cpf 2025', 'ow ceiling 7400'],
     sourceStatus: 'HISTORICAL',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1150,7 +1150,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Termination of Service by Employer: All outstanding salary and accumulated benefits must be paid on the last day of employment, or within 3 working days if notice cannot be served.',
       'Itemised Pay Slips: Mandatory under Section 96 of the Employment Act to provide itemised pay slips with every salary payment.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr21-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P13-#pr21-',
     tags: ['salary deadline', '7 days', 'overtime payment deadline', 'itemised payslip', 'section 21'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1178,7 +1178,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Total Working Days: Number of days on which employee was required to work in that month (excludes rest days / non-working Saturdays/Sundays).',
       'Payment Deadline: On employee resignation with notice, full salary and benefits must be paid on the employee\'s last day of employment (Section 21(2)).'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr22-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P13-#pr22-',
     tags: ['prorated salary', 'incomplete month', 'section 22', 'last day', 'resignation salary', 'mom formula', 'salary proration'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1252,7 +1252,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Pro-rating: Employees who have served at least 3 months in a calendar year are entitled to pro-rated annual leave in that year.',
       'Forfeiture / Encashment: Statutory annual leave cannot be unlawfully forfeited if statutory qualification criteria are met.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr88A-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-',
     tags: ['annual leave', 'section 88a', 'leave entitlement', '7 days', '14 days', 'statutory annual leave'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1280,7 +1280,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Paid Hospitalisation Leave (Section 89): Up to 60 days per calendar year (inclusive of the 14 days of outpatient sick leave).',
       'Medical Certification: Medical certificates must be issued by a registered medical practitioner or company-appointed doctor.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr89-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr89-',
     tags: ['sick leave', 'outpatient sick leave', 'hospitalisation leave', 'section 89', 'medical leave', '14 days'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1309,7 +1309,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Maximum Overtime Cap: An employee cannot work more than 72 hours of overtime in a calendar month, except with an MOM overtime exemption.',
       'Payment Deadline: Under Section 21, overtime payment must be disbursed within 14 days after the end of the salary period.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr38-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P14-#pr38-',
     tags: ['overtime', 'overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '72 hours'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1338,7 +1338,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Paid Hospitalisation Leave (Section 89): Up to 60 days per calendar year (which includes the 14 days of outpatient sick leave).',
       'Public Holidays (Section 88): 11 statutory gazetted public holidays per year. If required to work on a public holiday, an employee is entitled to an extra day of basic salary or a day off in lieu.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr89-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr89-',
     tags: ['annual leave', 'sick leave', 'hospitalisation leave', 'leave entitlement', 'public holiday', 'section 89', 'employment act leave'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1367,7 +1367,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Maximum Overtime Cap: An employee cannot work more than 72 hours of overtime in a calendar month, except with an MOM overtime exemption.',
       'Payment Deadline: Under Section 21, overtime payment must be disbursed within 14 days after the end of the salary period.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr38-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P14-#pr38-',
     tags: ['overtime', 'overtime rate', '1.5x', 'part iv', 'overtime pay', 'working hours', 'section 38', '44 hours'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1399,7 +1399,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Employee\'s Request: Work <= half normal shift: 0.5 day\'s basic pay; Work > half normal shift: 1.0 day\'s basic pay.',
       'Part IV Coverage: Applies to workmen earning <= SGD 4,500 and non-workmen earning <= SGD 2,600.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/EA1968#pr37-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P14-#pr37-',
     tags: ['rest day pay', 'section 36', 'section 37', 'sunday work', 'rest day computation', '1 day pay', '2 days pay'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1463,7 +1463,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Childcare Leave: 6 days per parent per year for children under 7 years (first 3 days employer-funded, next 3 days government-funded).',
       'Service Requirement: Employee must have served the employer for at least 3 continuous months prior to child\'s birth.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/CDCA2001#pr9-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CDCSA2001?ProvIds=P13-#pr9-',
     tags: ['maternity leave 16 weeks', 'paternity leave 4 weeks', 'childcare leave 6 days', 'cdca 2001', 'parental leave', 'government paid'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -1527,7 +1527,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Cash Conversion Option: Qualifying businesses can opt to convert up to SGD 100,000 of total qualifying expenditure across all activities into a non-taxable cash payout at a 20% conversion rate (max SGD 20,000).',
       'Accounting vs Tax Divergence: For financial reporting under SFRS(I) 1-38, development costs meeting all 6 criteria are capitalized as an intangible asset and amortized over time. For tax purposes, qualifying R&D expenses claim the enhanced 400% deduction in the YA incurred.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14C-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr14C-',
     tags: ['eis', 'enterprise innovation scheme', '400% deduction', 'r&d tax deduction', 'section 14c', 'intangibles tax']
   }
 };

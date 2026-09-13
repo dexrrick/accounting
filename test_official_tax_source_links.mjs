@@ -18,5 +18,5 @@ assert.ok(capitalAllowanceGuide);
 assert.match(response, new RegExp(capitalAllowanceGuide.replace(/[.?]/g, '\\$&')));
 
 const leaveResponse = appendStatutorySourceFooter('What is the annual leave entitlement under Section 88A of the Employment Act?', {});
-assert.match(leaveResponse, /https:\/\/sso\.agc\.gov\.sg\/Act\/EA1968#pr88A-/);
+assert.match(leaveResponse, /https:\/\/sso\.agc\.gov\.sg\/Act\/EmA1968\?ProvIds=P110-#pr88A-/);
 console.log('PASS | Source records consistently provide canonical provisions and optional official guidance');

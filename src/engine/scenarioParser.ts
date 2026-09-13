@@ -1830,6 +1830,37 @@ export async function parseAccountingQuery(
     };
   }
 
+  // A straightforward business equipment acquisition should never be routed
+  // to an unrelated GST advisory. When payment is unstated, present the
+  // invoice/payable entry and label that assumption clearly; a later payment
+  // can be recorded as its own settlement event.
+  const isBusinessEquipmentAcquisition =
+    /\b(equipment|computer server|server|computer|machinery|plant)\b/i.test(query) &&
+    /\b(incurred|purchased|bought|acquired|purchase)\b/i.test(query);
+  if (isBusinessEquipmentAcquisition) {
+    const match = query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand))?/i);
+    let amount = match?.[1] ? Number(match[1].replace(/,/g, '')) : undefined;
+    const unit = match?.[2]?.toLowerCase();
+    if (unit === 'k' || unit === 'thousand') amount = (amount || 0) * 1000;
+    if (unit === 'm' || unit === 'million') amount = (amount || 0) * 1000000;
+    const paidImmediately = /\b(paid|cash|bank transfer|paid by bank)\b/i.test(query);
+    const complete = Boolean(amount && amount > 0);
+    const creditAccount = paidImmediately ? 'Cash at Bank' : 'Trade Payables';
+    return {
+      scenarioType: 'BUSINESS_EQUIPMENT_ACQUISITION', authorityStatus: complete ? 'CONDITIONAL' : 'CONDITIONAL', queryIntent: 'HYBRID', primaryDomain: 'IRAS_TAX', rawQuery: query,
+      transactionTitle: 'Business Equipment Acquisition', functionalCurrency, transactionCurrency: functionalCurrency, amount,
+      accountingTreatmentSummary: `Recognise the equipment as property, plant and equipment at cost. ${paidImmediately ? 'The stated payment is credited to bank.' : 'As payment timing was not stated, this entry assumes the supplier invoice remains payable.'}`,
+      singaporeTaxTreatmentSummary: 'The acquisition is capital expenditure, not an immediate Section 14 revenue-expense deduction. Review eligibility for capital allowances under Sections 19 and 19A instead of claiming accounting depreciation.',
+      uncertaintyDisclaimer: 'Confirm whether the quoted amount is GST-exclusive, whether the supplier is GST-registered, and whether the equipment has been paid. Input GST and capital-allowance eligibility depend on those facts.',
+      assumptions: paidImmediately ? [] : [{ id: 'equipment-payment-status', field: 'payment timing', assumedValue: 'Unpaid supplier invoice', basisOrRationale: 'The query says the cost was incurred but does not state that it was paid.', materiality: 'HIGH', userClarificationPrompt: 'Was the equipment paid immediately, or is it still payable to the supplier?' }],
+      directGroups: complete ? [{ id: 'grp-business-equipment', eventDate: formatSingaporeDate(new Date()), title: 'Business Equipment Acquisition', summary: `Capitalise equipment of ${functionalCurrency} ${amount!.toLocaleString()}`, totalDebit: amount!, totalCredit: amount!, isBalanced: true, authorityStatus: 'CONDITIONAL', citations: [convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_PROHIBITED_DEDUCTIONS), convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC19_19A_CAPITAL_ALLOWANCES)], rationalePoints: ['Equipment with enduring business use is capitalised under SFRS(I); tax relief is considered through capital allowances rather than a direct expense deduction.'], lines: [
+        { id: 'dr-equipment', accountCode: '1500', accountName: 'Property, Plant and Equipment — Equipment', category: 'ASSET', debit: amount!, credit: 0, lineExplanation: 'Capitalise the business equipment at cost.' },
+        { id: paidImmediately ? 'cr-bank' : 'cr-payable', accountCode: paidImmediately ? '1010' : '2000', accountName: creditAccount, category: paidImmediately ? 'ASSET' : 'LIABILITY', debit: 0, credit: amount!, lineExplanation: paidImmediately ? 'Immediate payment for the equipment.' : 'Supplier invoice assumed unpaid pending confirmation.' }
+      ] }] : [],
+      isComplete: complete, missingFields: complete ? [] : [{ fieldKey: 'amount', fieldName: 'Equipment cost', prompt: 'What is the equipment cost?', whyNeeded: 'The acquisition journal cannot be measured without the cost.' }]
+    };
+  }
+
   // A company payment of a director's personal fine is not a company expense.
   if (/\b(fine|penalt(?:y|ies)|traffic offence)\b/i.test(q) && /\bdirector\b/i.test(q)) {
     const match = query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
