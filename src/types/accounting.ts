@@ -78,6 +78,8 @@ export interface JournalLine {
   foreignCredit?: number;
   exchangeRate?: number;
   lineExplanation: string;
+  assumptionId?: string;
+  assumptionMateriality?: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
 export interface JournalEntryGroup {

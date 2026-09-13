@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { JournalEntryGroup, AccountingStandard } from '../types/accounting';
+import type { JournalEntryGroup, AccountingStandard, ExplicitAssumption } from '../types/accounting';
 import { AlertOctagon, Calendar, BookOpen, Info, AlertTriangle, CheckCircle2, Cpu } from 'lucide-react';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
@@ -7,12 +7,14 @@ interface JournalTableProps {
   groups: JournalEntryGroup[];
   standard: AccountingStandard;
   functionalCurrency: string;
+  assumptions?: ExplicitAssumption[];
 }
 
 export const JournalTable: React.FC<JournalTableProps> = ({
   groups,
   standard,
-  functionalCurrency
+  functionalCurrency,
+  assumptions = []
 }) => {
   const [showMobileNotes, setShowMobileNotes] = useState(false);
 
@@ -24,6 +26,9 @@ export const JournalTable: React.FC<JournalTableProps> = ({
     <div className="space-y-6">
       {groups.map((group, gIdx) => {
         const status = group.authorityStatus || 'DETERMINISTIC';
+        const highMaterialityAssumptions = assumptions.filter((assumption) =>
+          assumption.materiality === 'HIGH' && group.lines.some((line) => line.assumptionId === assumption.id)
+        );
         return (
         <div
           key={group.id}
@@ -140,6 +145,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
               <tbody className="divide-y divide-slate-100 dark:divide-[#2B374E]/60 font-sans">
                 {(group.lines || []).map((line) => {
                   const isCredit = line.credit > 0;
+                  const isAssumed = Boolean(line.assumptionId);
                   return (
                     <tr
                       key={line.id}
@@ -152,7 +158,8 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                         <div className={`${isCredit ? 'pl-2 sm:pl-6' : 'pl-0'}`}>
                           <div className="font-bold text-slate-900 dark:text-white text-xs sm:text-sm flex flex-wrap items-center gap-1 sm:gap-2">
                             {isCredit && <span className="text-slate-400 font-normal text-[11px] sm:text-xs">To:</span>}
-                            <span className="break-words leading-tight">{line.accountName}</span>
+                            <span className={`break-words leading-tight ${isAssumed ? 'text-rose-600 dark:text-rose-400' : ''}`}>{line.accountName}</span>
+                            {isAssumed && <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 font-semibold uppercase rounded-md border bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800">Assumed</span>}
                             <span
                               className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 font-mono uppercase rounded-md border font-medium ${
                                 line.category === 'ASSET'
@@ -219,6 +226,21 @@ export const JournalTable: React.FC<JournalTableProps> = ({
               </tbody>
             </table>
           </div>
+
+          {highMaterialityAssumptions.length > 0 && (
+            <div className="p-3 sm:p-4 border-t border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/20">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+                <AlertTriangle className="w-3.5 h-3.5" /> High-materiality assumptions used in this journal
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {highMaterialityAssumptions.map((assumption) => (
+                  <div key={assumption.id} className="text-xs text-rose-900 dark:text-rose-100">
+                    <span className="font-semibold">{assumption.field}:</span> assumed {String(assumption.assumedValue)}. <span className="text-rose-700 dark:text-rose-300">{assumption.basisOrRationale}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Rationale & Standard References Accordion Summary */}
           <div className="p-4 bg-slate-50/60 dark:bg-[#151D2C]/60 border-t border-slate-200 dark:border-[#2B374E]">

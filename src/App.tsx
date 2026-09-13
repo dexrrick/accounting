@@ -256,6 +256,7 @@ export const App: React.FC = () => {
                     groups={computed.groups}
                     standard={standard}
                     functionalCurrency={scenario.functionalCurrency}
+                    assumptions={scenario.assumptions}
                   />
                 )}
 

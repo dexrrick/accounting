@@ -39,7 +39,7 @@ export function createChatPreview(
     const detail = payrollGross
       ? `the prorated gross salary is ${payrollGross}. The CPF and SDL breakdown and balanced journal are in the tabs.`
       : `I prepared the balanced ${group.title.toLowerCase()} journal (${amount} on each side).`;
-    return `${prefix}${detail}${scenario.isHypothetical ? ' The original transaction remains unchanged.' : ''} See Double Entry Journal and Statutory Citations & Directives for details and sources.`;
+    return `${prefix}${detail}${scenario.isHypothetical ? ' The original transaction remains unchanged.' : ''}`;
   }
 
   const clean = messageText
@@ -49,5 +49,5 @@ export function createChatPreview(
     .find(line => line && !/^(?:#|---|\*|[-•]|>|🏛️)/.test(line) && !/^\*\*/.test(line)) ||
     scenario.accountingTreatmentSummary || 'I need more information to give a supportable answer.';
   const concise = clean.length > 350 ? `${clean.slice(0, 347).trimEnd()}…` : clean;
-  return `${concise} See Statutory Citations & Directives for supporting details and sources.`;
+  return concise;
 }
