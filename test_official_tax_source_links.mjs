@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { appendStatutorySourceFooter, buildSsoUrl, canonicalizeSsoUrl, getSafeOfficialUrl } from './src/utils/statutoryLinkResolver.ts';
+import { appendStatutorySourceFooter, buildSsoUrl, canonicalizeSsoUrl, getSafeOfficialUrl, sanitizeStatutoryLinks } from './src/utils/statutoryLinkResolver.ts';
 import { SINGAPORE_STATUTORY_REPOSITORY } from './src/standards/singaporeStatutesKnowledge.ts';
 
 const section14 = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14_GENERAL_DEDUCTION;
@@ -20,4 +20,9 @@ assert.match(response, new RegExp(capitalAllowanceGuide.replace(/[.?]/g, '\\$&')
 
 const leaveResponse = appendStatutorySourceFooter('What is the annual leave entitlement under Section 88A of the Employment Act?', {});
 assert.match(leaveResponse, /https:\/\/sso\.agc\.gov\.sg\/Act\/EmA1968\?ProvIds=P110-#pr88A-/);
+
+const irasPathWithParentheses = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax';
+const sanitizedIrasLink = sanitizeStatutoryLinks(`[IRAS input-tax guidance](${irasPathWithParentheses})`);
+assert.match(sanitizedIrasLink, /goods-services-tax-%28gst%29\/claiming-gst-%28input-tax%29/);
+assert.doesNotMatch(sanitizedIrasLink, /\]\(https:\/\/www\.iras\.gov\.sg\/taxes\/goods-services-tax-\(gst\)\)/);
 console.log('PASS | Source records consistently provide canonical provisions and optional official guidance');

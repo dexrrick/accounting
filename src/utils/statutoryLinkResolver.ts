@@ -276,9 +276,16 @@ export function getAuthorityBadgeInfo(authority?: StatutoryAuthority | string): 
 export function sanitizeStatutoryLinks(markdownText: string): string {
   if (!markdownText) return '';
 
+  // Parentheses are valid URL-path characters and are used by IRAS (for
+  // example, `/goods-services-tax-(gst)/`). Percent-encode them only when a
+  // URL is emitted inside Markdown so they cannot terminate its `(...)`
+  // destination early. The decoded destination remains the same official URL.
+  const toMarkdownSafeUrl = (url: string): string =>
+    url.replace(/\(/g, '%28').replace(/\)/g, '%29');
+
   // 1. Isolate all existing markdown links so text replacements never corrupt their anchors or urls
   const linkPlaceholders: string[] = [];
-  let sanitized = markdownText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, (_match, anchorText, url) => {
+  let sanitized = markdownText.replace(/\[([^\]]+)\]\((https?:\/\/\S+)\)/g, (_match, anchorText, url) => {
     const lowerUrl = url.toLowerCase();
     const lowerAnchor = anchorText.toLowerCase();
 
@@ -317,13 +324,13 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
     }
 
     const placeholder = `___MD_LINK_${linkPlaceholders.length}___`;
-    linkPlaceholders.push(`[${anchorText}](${cleanUrl})`);
+    linkPlaceholders.push(`[${anchorText}](${toMarkdownSafeUrl(cleanUrl)})`);
     return placeholder;
   });
 
   const addLink = (anchor: string, linkUrl: string): string => {
     const placeholder = `___MD_LINK_${linkPlaceholders.length}___`;
-    linkPlaceholders.push(`[${anchor}](${linkUrl})`);
+    linkPlaceholders.push(`[${anchor}](${toMarkdownSafeUrl(linkUrl)})`);
     return placeholder;
   };
 

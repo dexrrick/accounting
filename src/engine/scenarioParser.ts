@@ -155,6 +155,62 @@ export function isDeterministicFixture(query: string): boolean {
   );
 }
 
+/**
+ * A question about whether a registration threshold is measured using accounting
+ * revenue or taxable turnover is a GST-registration question in its own right.
+ * It is deliberately detected before broad statutory retrieval: words such as
+ * "threshold" and "turnover" also occur in other GST rules (for example the
+ * reverse-charge de-minimis rules), but do not change the subject here.
+ */
+function isGstRegistrationMeasurementBasisQuestion(
+  query: string,
+  currentScenario?: AccountingScenarioState | null
+): boolean {
+  const q = query.toLowerCase();
+  const asksMeasurementBasis =
+    /\b(accounting\s+revenue|taxable\s+turnover)\b/.test(q) &&
+    /\b(threshold|apply|basis|measure|calculated?)\b/.test(q);
+  if (asksMeasurementBasis) return true;
+
+  const followsGstRegistration = Boolean(
+    currentScenario?.statutoryAdvisory?.some(advisory =>
+      /compulsory\s+gst\s+registration|gst\s+registration\s+threshold|first\s+schedule/i.test(
+        `${advisory.topic} ${advisory.sectionOrSchedule}`
+      )
+    )
+  );
+  return followsGstRegistration &&
+    /\b(revenue|turnover|threshold|taxable supplies)\b/.test(q);
+}
+
+function buildGstRegistrationMeasurementBasisScenario(query: string): AccountingScenarioState {
+  const rule = SINGAPORE_STATUTORY_REPOSITORY.GST_REGISTRATION_COMPULSORY_THRESHOLD;
+  return {
+    scenarioType: 'SINGAPORE_STATUTORY_ADVISORY',
+    authorityStatus: 'DETERMINISTIC',
+    queryIntent: 'STATUTORY_ADVISORY',
+    primaryDomain: 'IRAS_GST',
+    rawQuery: query,
+    transactionTitle: 'GST Registration Threshold — Taxable Turnover Basis',
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD',
+    accountingTreatmentSummary: 'Use taxable turnover for the GST-registration tests, rather than accounting revenue as a standalone financial-statement line item. Accounting revenue can be a starting point, but it must be assessed and adjusted for the GST treatment of the underlying supplies.',
+    singaporeTaxTreatmentSummary: 'For compulsory GST registration, the First Schedule tests the value of taxable supplies made in the relevant calendar year or expected in the next 12 months. Determine whether each revenue stream is a taxable supply before including it in the threshold calculation.',
+    regulatoryMandatesSummary: 'Monitor the retrospective and prospective taxable-turnover tests and apply for GST registration within the statutory timeframe if either test is met.',
+    effectiveDateOrTiming: 'Retrospective: taxable turnover for the calendar year. Prospective: expected taxable turnover over the next 12 months.',
+    uncertaintyDisclaimer: 'The GST classification of individual income streams can affect the calculation. Confirm treatment of exempt, out-of-scope, and other non-taxable items before relying on an accounting-revenue total.',
+    statutoryAdvisory: [convertToAdvisory(rule)],
+    keyParameters: [
+      { label: 'Threshold measurement', value: 'Taxable turnover / taxable supplies', badge: 'GST Registration', highlight: true },
+      { label: 'Accounting revenue', value: 'Starting point only; assess each revenue stream for GST treatment', badge: 'Requires classification' },
+      { label: 'Governing provision', value: 'GST Act 1993 — First Schedule', badge: 'IRAS / SSO' }
+    ],
+    directGroups: [],
+    isComplete: true,
+    missingFields: []
+  };
+}
+
 export async function parseAccountingQuery(
   query: string,
   currentScenario?: AccountingScenarioState | null
@@ -163,6 +219,10 @@ export async function parseAccountingQuery(
   // resolution, so a new narrative cannot satisfy an old workflow by accident.
   if (currentScenario && startsNewAccountingScenario(query, currentScenario)) {
     return parseAccountingQuery(query, null);
+  }
+
+  if (isGstRegistrationMeasurementBasisQuestion(query, currentScenario)) {
+    return buildGstRegistrationMeasurementBasisScenario(query);
   }
   if (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
       currentScenario.missingFields?.some(field => field.fieldKey === 'resignationDate')) {
