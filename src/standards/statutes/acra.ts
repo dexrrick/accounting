@@ -1,0 +1,247 @@
+import type { SingaporeStatuteRule } from './types';export const ACRA_STATUTE_RULES: Record<string, SingaporeStatuteRule> = {  // -------------------------------------------------------------
+  ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION: {
+    id: 'ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 205C & Thirteenth Schedule',
+    ruleTitle: 'Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'A company qualifies as a "small company" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.',
+    application: 'SMEs that meet the 2-out-of-3 test only need to prepare unaudited financial statements compliant with SFRS.',
+    practicalRules: [
+      'Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.',
+      'Criterion 2: Total gross assets $\\le$ SGD 10,000,000.',
+      'Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.',
+      'Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.',
+      'Group Requirement: If the company is part of a corporate group, the entire group must qualify as a "small group" on a consolidated basis to enjoy the audit exemption.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-',
+    tags: ['audit exemption', 'small company', 'section 205c', 'revenue 10m', 'assets 10m', 'employees 50']
+  },
+
+  ACRA_SEC175_197_AGM_ANNUAL_RETURN_TIMELINES: {
+    id: 'ACRA_SEC175_197_AGM_ANNUAL_RETURN_TIMELINES',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 175, 175A & Section 197',
+    ruleTitle: 'Annual General Meeting (AGM) and Annual Return (AR) Statutory Filing Deadlines',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Private companies must hold an AGM (unless dispensed with) within 6 months after the Financial Year End (FYE), and lodge their Annual Return (AR) via BizFile+ within 7 months after FYE.',
+    application: 'For a company with FYE 31 December 2025: AGM by 30 June 2026; Annual Return lodged with ACRA by 31 July 2026.',
+    practicalRules: [
+      'Private Company AGM: Must be held within 6 months after FYE (Section 175).',
+      'Dispensation of AGM: Private companies can dispense with holding an AGM if all members agree or if financial statements are sent to members within 5 months of FYE (Section 175A).',
+      'Annual Return (AR) Lodgment: Must be filed on BizFile+ within 7 months after FYE (Section 197).',
+      'Listed Companies: AGM within 4 months after FYE; Annual Return within 5 months after FYE.',
+      'Late Lodgment Penalties: Minimum SGD 300 tier-escalating composition fine imposed by ACRA for late filing.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr197-',
+    tags: ['agm deadline', 'annual return', 'bizfile', 'fye 6 months', 'fye 7 months', 'section 175', 'section 197']
+  },
+
+  ACRA_SEC199_RECORD_RETENTION: {
+    id: 'ACRA_SEC199_RECORD_RETENTION',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 199(1)',
+    ruleTitle: 'Mandatory 5-Year Accounting Records & Vouchers Retention',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Every company shall cause to be kept such accounting and other records as will sufficiently explain the transactions and financial position of the company. Records must be retained for at least 5 years.',
+    application: 'All bank statements, supplier invoices, sales receipts, and journal entries must be kept for 5 years from the end of the financial year.',
+    practicalRules: [
+      'Retention Period: Minimum 5 years from the end of the financial year in which the transaction occurred.',
+      'Location: Must be kept at the registered office or such other place in Singapore as the directors think fit.',
+      'Electronic Storage: Electronic invoices and digital cloud archives are accepted provided they can be readily converted into readable form on demand.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr199-',
+    tags: ['record retention', '5 years', 'accounting books', 'receipts', 'section 199']
+  },
+
+  ACRA_SEC145_RESIDENT_DIRECTOR: {
+    id: 'ACRA_SEC145_RESIDENT_DIRECTOR',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 145(1)',
+    ruleTitle: 'Requirement for at Least One Ordinarily Resident Director in Singapore',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Every company must have at least one director who is ordinarily resident in Singapore.',
+    application: 'Foreign business owners incorporating a Singapore private limited company must appoint at least one local Singapore resident director.',
+    practicalRules: [
+      'Eligible Resident Directors: Singapore Citizen, Singapore Permanent Resident (PR), or an EntrePass / Employment Pass (EP) holder holding a Letter of Consent (LOC) from MOM.',
+      'Natural Person: Must be a natural person aged at least 18 years old and not disqualified under Section 148, 149, or 154 (e.g. not an undischarged bankrupt).',
+      'Corporate Secretary (Section 171): Must appoint a resident company secretary within 6 months of incorporation. A sole director cannot act as company secretary.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr145-',
+    tags: ['resident director', 'section 145', 'company secretary', 'incorporation requirements']
+  },
+
+  ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE: {
+    id: 'ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Companies Act 1967',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 156',
+    ruleTitle: 'Mandatory Disclosure of Directors\' Interests in Contracts, Transactions & Offices',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Under Section 156(1) and (5) of the Companies Act 1967, every director of a company who is in any way, directly or indirectly, interested in a transaction or proposed transaction with the company, or who holds any office or possesses any property creating duties or interests in conflict with their duties as director, must declare the nature of that interest at a meeting of directors or by written notice to the company as soon as practicable.',
+    verbatimStatuteText: 'Every director of a company who is in any way, whether directly or indirectly, interested in a transaction or proposed transaction with the company shall as soon as practicable after the relevant facts have come to the director\'s knowledge — (a) declare the nature of the director\'s interest at a meeting of the directors of the company; or (b) send a written notice to the company containing details on the nature, character and extent of the director\'s interest.',
+    application: 'Corporate governance and audit review: Whenever a director or related party enters into a sales, lease, loan, or supply agreement with the company, formal Section 156 board disclosure minutes must be documented.',
+    practicalRules: [
+      'Mandatory Timing: Must disclose as soon as practicable after relevant facts become known.',
+      'Method of Disclosure: Formal declaration at a meeting of directors or written notice sent to the company and tabled at the next board meeting.',
+      'Offices & Property: Must also declare any office held or property possessed which creates conflicting duties/interests with company directorship.',
+      'Criminal Sanction: Non-compliance is an offence under Section 156(15) rendering the defaulting director liable to a fine or imprisonment.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr156-',
+    tags: ['director interest', 'section 156', 'conflict of interest', 'related party disclosure', 'board declaration'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '1967-12-29',
+    validFrom: '1967-12-29',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+
+  ACRA_SEC171_COMPANY_SECRETARY: {
+    id: 'ACRA_SEC171_COMPANY_SECRETARY',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Companies Act 1967',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 171',
+    ruleTitle: 'Mandatory Appointment of Qualified Resident Company Secretary within 6 Months',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Under Section 171 of the Companies Act 1967, every company must appoint one or more secretaries who must be natural persons ordinarily resident in Singapore. The office of company secretary cannot be left vacant for more than 6 months. A sole director cannot act as the company secretary.',
+    verbatimStatuteText: 'Every company shall have one or more secretaries each of whom shall be a natural person who has his principal or only place of residence in Singapore. The board of directors shall ensure that the office of secretary is not left vacant for more than 6 months at any one time. The sole director of a company shall not also be the secretary of the company.',
+    application: 'Statutory compliance upon incorporation and secretary resignation: Company directors must appoint an eligible resident secretary within 6 months via BizFile+.',
+    practicalRules: [
+      'Residency Mandate: Must be a natural person ordinarily resident in Singapore (Singapore Citizen, PR, or EntrePass/EP holder).',
+      '6-Month Vacancy Cap: Vacancy cannot exceed 6 continuous months.',
+      'Sole Director Restriction: A sole director of a company is prohibited from simultaneously acting as company secretary.',
+      'Public Companies: In a public company, secretary must hold requisite professional qualifications (e.g. qualified under CSIS, CA Singapore, advocate and solicitor, or 3 of last 5 years as secretary).'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr171-',
+    tags: ['company secretary', 'section 171', 'resident secretary', 'sole director restriction', '6 months vacancy'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '1967-12-29',
+    validFrom: '1967-12-29',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+
+  ACRA_SEC142_143_RORC: {
+    id: 'ACRA_SEC142_143_RORC',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Companies Act 1967',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Sections 142, 143 & Part 11A',
+    ruleTitle: 'Statutory Registers & Register of Registrable Controllers (RORC)',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Under Sections 142 and 143, and Part 11A (Section 386AF) of the Companies Act 1967, companies must maintain at their registered office statutory registers of members, directors, and secretaries, and maintain a confidential Register of Registrable Controllers (RORC) identifying individuals or legal entities with significant control (at least 25% of shares or voting rights) within 30 days of incorporation or subsequent changes.',
+    verbatimStatuteText: 'A company to which this Part applies must keep a register of registrable controllers of the company, and enter the prescribed particulars of all registrable controllers of the company in the register of registrable controllers within the prescribed time and in the prescribed manner.',
+    application: 'Corporate maintenance: Keeping updated electronic Register of Members (on ACRA) and private RORC with beneficial ownership verification.',
+    practicalRules: [
+      'Register of Members (Section 190): Maintained in electronic form by the Registrar on ACRA BizFile+.',
+      'Register of Directors/Secretaries (Section 173): Maintained electronically by ACRA; companies must file updates within 14 days of appointment/cessation.',
+      'Register of Registrable Controllers (Part 11A / Section 386AF): Private register identifying ultimate beneficial owners with >25% shareholding or voting power.',
+      '30-Day Setup: RORC must be established within 30 days of incorporation and lodged with ACRA central register.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P111A-#pr386AF-',
+    tags: ['rorc', 'register of controllers', 'statutory registers', 'section 142', 'part 11a', 'beneficial ownership 25%'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2017-03-31',
+    validFrom: '2017-03-31',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+
+  ACRA_SEC68_NO_PAR_VALUE_SHARES: {
+    id: 'ACRA_SEC68_NO_PAR_VALUE_SHARES',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Companies Act 1967',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 68',
+    ruleTitle: 'Abolition of Par Value and Share Premium (No Par Value Regime)',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Under Section 68 of the Companies Act 1967, shares of a Singapore company have no nominal or par value. The concept of share premium is abolished; all proceeds received from the issue of shares become part of the company\'s issued and paid-up share capital.',
+    verbatimStatuteText: 'Shares of a company have no par or nominal value.',
+    application: 'Accounting for share issues: Dr. Cash at Bank | Cr. Share Capital (100% of issue price credited to Share Capital without any Share Premium account).',
+    practicalRules: [
+      'No Par Value: Shares have no nominal value (e.g. no $1 par value).',
+      'No Share Premium: Entire proceeds received from allotment of shares represent paid-up share capital.',
+      'Issue at Any Price: Directors may issue shares at any price determined by the board, subject to shareholders\' approval under Section 161.',
+      'Classes of Shares: Companies can issue different classes of shares (ordinary, preferred, redeemable) with customized voting and dividend rights.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P14-#pr68-',
+    tags: ['no par value', 'section 68', 'share capital', 'abolition of share premium', 'share issuance'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2006-01-30',
+    validFrom: '2006-01-30',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+
+  ACRA_SEC78B_CAPITAL_REDUCTION: {
+    id: 'ACRA_SEC78B_CAPITAL_REDUCTION',
+    authority: 'ACRA',
+    authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
+    sourcePublisher: 'Singapore Statutes Online / AGC',
+    legalOrStandardInstrument: 'Companies Act 1967',
+    actTitle: 'Companies Act 1967',
+    actCode: 'CoA1967',
+    sectionOrSchedule: 'Section 78B & Section 78C',
+    ruleTitle: 'Court-Free Share Capital Reduction for Private Companies with Solvency Statement',
+    category: 'ACRA_COMPLIANCE',
+    principle: 'Under Section 78B of the Companies Act 1967, a private company limited by shares may reduce its share capital without obtaining court sanction by passing a special resolution, supported by a solvency statement signed by all directors confirming the company will remain solvent and able to pay its debts for 12 months, and complying with creditor publicity and ACRA notice lodgment requirements under Section 78E.',
+    verbatimStatuteText: 'A private company limited by shares may reduce its share capital in any way by a special resolution if the company — (a) satisfies the solvency requirements; and (b) meets such publicity requirements as may be prescribed.',
+    application: 'Returning surplus cash to shareholders or extinguishing accumulated losses against paid-up share capital: Dr. Share Capital | Cr. Cash / Bank (or Cr. Accumulated Losses).',
+    practicalRules: [
+      'Special Resolution: Requires 75% approval of shareholders voting at an EGM.',
+      'Solvency Statement (Section 78C): All directors must sign a solvency statement affirming that the company will remain able to pay debts as they fall due within the next 12 months.',
+      'Publicity Notice (Section 78B(1)(b)): Notice of resolution must be published within 8 days; 6-week creditor objection period applies.',
+      'Effective Date: Capital reduction takes effect upon lodgment of completion documents with the Registrar on BizFile+.'
+    ],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P14-#pr78B-',
+    tags: ['capital reduction', 'section 78b', 'solvency statement', 'court-free reduction', 'special resolution'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'AUTHORITATIVE_SOURCE',
+    evidenceTier: 'PRIMARY_SOURCE',
+    isVerbatimText: true,
+    effectiveDate: '2006-01-30',
+    validFrom: '2006-01-30',
+    lastVerifiedDate: '2026-09-01',
+    reviewAuditCycleDays: 365
+  },
+
+  // -------------------------------------------------------------
+};
