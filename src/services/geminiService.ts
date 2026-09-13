@@ -17,6 +17,7 @@ import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManag
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
 import { startsNewAccountingScenario } from './conversationBoundary';
+import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 
 export interface GeminiResponse {
   messageText: string;
@@ -27,6 +28,7 @@ export interface GeminiResponse {
 export interface OutputPreference {
   journal: boolean;
   statutory: boolean;
+  shareStructure?: boolean;
 }
 
 export interface FastPathEvaluation {
@@ -235,6 +237,10 @@ export async function processAccountingQuery(
   outputPreference?: OutputPreference
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
+  if (outputPreference?.shareStructure) {
+    const shareAnswer = answerShareStructureQuery(userInput);
+    if (shareAnswer) return shareAnswer;
+  }
   let apiErrorMessage: string | null = null;
   // Keep prior state only where the incoming message is compatible with it.
   // The parser has the same boundary as a defence in depth measure; applying

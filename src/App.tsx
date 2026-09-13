@@ -18,6 +18,7 @@ import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPrese
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { assessConversationRelation } from './services/conversationBoundary';
+import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 
 export const App: React.FC = () => {
   // SFRS follows IFRS - unified standard framework
@@ -293,6 +294,7 @@ export const App: React.FC = () => {
           </div>
         </div>
       </main>
+      <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pb-12"><ShareTransferCalculator /></div>
 
       <div className="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-30">
         <FeedbackDialog messages={messages} scenario={scenario} providerSettings={providerSettings} theme={theme} fontSize={fontSize} />

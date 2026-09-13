@@ -339,6 +339,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div className="mt-2 flex flex-wrap gap-3 px-1 text-[11px] text-slate-600 dark:text-slate-300">
           <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.journal} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, journal: e.target.checked })} /> Double Entry Journal</label>
           <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.statutory} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, statutory: e.target.checked })} /> Statutory Treatment</label>
+          <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={Boolean(outputPreference.shareStructure)} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, shareStructure: e.target.checked })} /> Share Structure</label>
         </div>
         <div className="flex items-center mt-1 px-1 text-[10px] text-slate-400 dark:text-slate-500">
           <span className="hidden sm:inline">{isAwaitingRelation ? 'Choose how to treat the pending question' : 'Press Enter to send, Shift+Enter for newline'}</span>

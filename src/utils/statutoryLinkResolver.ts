@@ -423,6 +423,14 @@ export function appendStatutorySourceFooter(
   // 1. Extract from statutory advisory
   if (scenarioState?.statutoryAdvisory && scenarioState.statutoryAdvisory.length > 0) {
     for (const adv of scenarioState.statutoryAdvisory) {
+      // A placeholder such as "Statutory Directives" identifies no legal
+      // provision. Do not let it suppress the provision-specific sources
+      // resolved from the answer's grounded subject matter below.
+      const isGenericDirective = /^(?:singapore\s+)?statutory(?:\s+and\s+tax)?\s+directives?$/i.test(
+        (adv.sectionOrSchedule || '').trim()
+      );
+      if (isGenericDirective && !adv.officialUrl) continue;
+
       const safeUrl = getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority);
       if (safeUrl && !links.some((l) => l.url === safeUrl)) {
         links.push({
