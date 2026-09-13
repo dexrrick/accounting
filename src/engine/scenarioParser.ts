@@ -1098,7 +1098,10 @@ export async function parseAccountingQuery(
     };
   }
 
-  if (isStatutoryQuestion) {
+  if (isStatutoryQuestion && !(
+    /\b(equipment|computer server|server|computer|machinery|plant)\b/i.test(query) &&
+    /\b(incurred|purchased|bought|acquired|purchase)\b/i.test(query)
+  )) {
     const matchedRules = querySingaporeStatutes(query);
     if (matchedRules.length > 0) {
       const primaryRule = matchedRules[0];
