@@ -101,15 +101,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <h2 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider font-sans">
               Universal Query & Statutory Assistant
             </h2>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              IFRS/SFRS(I) Double Entries • IRAS, ACRA, CPF Board & Singapore Statutes
-            </p>
           </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-[#1C2538] dark:text-emerald-300 dark:border-emerald-900/60 rounded-full text-[11px] font-medium">
-          <span className="w-1.5 h-1.5 rounded-full bg-ynab-green"></span>
-          Statutory Grounding Active
         </div>
       </div>
 
@@ -348,10 +340,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.journal} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, journal: e.target.checked })} /> Double Entry Journal</label>
           <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.statutory} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, statutory: e.target.checked })} /> Statutory Treatment</label>
         </div>
-        <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-slate-400 dark:text-slate-500">
+        <div className="flex items-center mt-1 px-1 text-[10px] text-slate-400 dark:text-slate-500">
           <span className="hidden sm:inline">{isAwaitingRelation ? 'Choose how to treat the pending question' : 'Press Enter to send, Shift+Enter for newline'}</span>
           <span className="sm:hidden">Tap send icon to calculate</span>
-          <span className="truncate">Frankfurter ECB FX</span>
         </div>
       </form>
     </div>

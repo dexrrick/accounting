@@ -24,7 +24,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   citations,
   advisories = [],
   officialAnswerLinks = [],
-  classification = 'FVTPL',
   primaryDomain,
   assumptions = [],
   accountingTreatmentSummary,
@@ -41,9 +40,9 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
     : 'Singapore Statutory & Tax Directives';
 
   return (
-    <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden space-y-6 transition-colors duration-200">
+    <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden space-y-6 flex flex-col transition-colors duration-200">
       {/* Statutory Header */}
-      <div className="p-4 bg-slate-50/80 dark:bg-[#151D2C] text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-[#2B374E]">
+      <div className="order-1 p-4 bg-slate-50/80 dark:bg-[#151D2C] text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-[#2B374E]">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-ynab-navy dark:bg-[#242F46] flex items-center justify-center text-white border border-slate-700/20 dark:border-[#2B374E] shadow-xs">
             <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
@@ -59,9 +58,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Grounded in IRAS, ACRA, CPF Board, MOM, MAS, and Singapore Statutes Online {classification ? `(${classification})` : ''}
-            </p>
           </div>
         </div>
 
@@ -77,7 +73,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       </div>
 
       {/* Decision-status legend: users should never infer certainty from presentation alone. */}
-      <div className="px-5 -mb-2 flex flex-wrap gap-2">
+      <div className="order-2 px-5 -mb-2 flex flex-wrap gap-2">
         {!evidenceIncomplete && (
           <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
             ✓ Evidence Grounded
@@ -102,7 +98,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {/* Effective Timing Banner */}
       {effectiveDateOrTiming && (
-        <div className="mx-5 p-3.5 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl flex items-start gap-3">
+        <div className="order-3 mx-5 p-3.5 bg-blue-50/90 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-xl flex items-start gap-3">
           <div className="w-6 h-6 rounded-md bg-blue-100 dark:bg-blue-900/70 flex items-center justify-center shrink-0 mt-0.5">
             <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
           </div>
@@ -119,7 +115,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {/* Dual Authority Comparison: Financial Reporting (SFRS(I)) vs Singapore Tax Treatment (IRAS) */}
       {(accountingTreatmentSummary || singaporeTaxTreatmentSummary) && (
-        <div className="px-5 space-y-3">
+        <div className="order-5 px-5 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
             <Scale className="w-4 h-4 text-slate-400" />
             <span>Financial Reporting vs Singapore Tax Bifurcation</span>
@@ -166,7 +162,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {/* Regulatory Mandates (ACRA / MOM / CPF) */}
       {regulatoryMandatesSummary && (
-        <div className="mx-5 p-4 bg-slate-50 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2">
+        <div className="order-6 mx-5 p-4 bg-slate-50 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 font-sans">
             <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
             <span>Singapore Regulatory Compliance Mandates</span>
@@ -179,7 +175,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {/* Advisory Breakdown Cards (if available) */}
       {advisories && advisories.length > 0 && (
-        <div className="px-5 space-y-3">
+        <div className="order-4 px-5 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
             <Scale className="w-4 h-4 text-slate-400" />
             <span>{directivesLabel}</span>
@@ -271,7 +267,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       )}
 
       {/* Citations Grid */}
-      <div className="p-5 pt-0 space-y-4 text-xs">
+      <div className="order-7 p-5 pt-0 space-y-4 text-xs">
         {officialAnswerLinks.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">

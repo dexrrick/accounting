@@ -4,7 +4,6 @@ import {
   Sparkles,
   CheckCircle2,
   HelpCircle,
-  Globe,
   Cpu,
   Type,
   Sun,
@@ -335,28 +334,11 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="xs:hidden">SG Accounting AI</span>
                   <span className="hidden xs:inline">Singapore Accounting & Statutory Assistant</span>
                 </h1>
-                <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-[#1C2538] dark:text-emerald-300 dark:border-emerald-900/60 shrink-0">
-                  <span className="w-1.5 h-1.5 rounded-full bg-ynab-green"></span>
-                  SFRS(I) • IRAS • ACRA • MOM • CPF
-                </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 hidden sm:block truncate">
-                Singapore Authoritative Accounting, Tax & Regulatory Research Engine • DD/MM/YYYY • SGD
-              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-            {/* ECB FX Live Indicator */}
-            <div
-              className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-[#1C2538] border border-slate-200 dark:border-[#2B374E] text-slate-700 dark:text-slate-300 text-xs font-medium"
-              title="Live foreign exchange rates powered by Frankfurter API (ECB)"
-            >
-              <Globe className="w-3.5 h-3.5 text-slate-400" />
-              <span>ECB FX Live</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-ynab-green"></span>
-            </div>
-
             {/* Font Size Adjuster */}
             <div
               className="flex items-center bg-slate-100 dark:bg-[#1C2538] p-0.5 rounded-lg border border-slate-200 dark:border-[#2B374E] text-xs shadow-inner"

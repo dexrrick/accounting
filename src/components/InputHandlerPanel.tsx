@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { AccountingScenarioState } from '../types/accounting';
-import { RefreshCw, Layers, Sparkles, Scale, ChevronDown } from 'lucide-react';
+import { RefreshCw, Layers, Sparkles, ChevronDown } from 'lucide-react';
 
 interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
@@ -81,9 +81,6 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {scenario.queryIntent === 'STATUTORY_ADVISORY' ? 'Authoritative compliance facts grounded in Singapore law' : 'Live synchronized parameters extracted from natural language'}
-              </p>
             </div>
           </div>
 
@@ -145,17 +142,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
         )}
 
         {/* Transaction / Statutory Summary Footer */}
-        {scenario.queryIntent === 'STATUTORY_ADVISORY' ? (
-          <div className="p-3 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
-              <Scale className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-              <span>Singapore Statutory Grounding Active</span>
-            </div>
-            <div className="font-mono text-slate-500 dark:text-slate-400 text-xs">
-              Directives Verified: <strong className="text-slate-800 dark:text-white">IRAS / ACRA / SSO</strong>
-            </div>
-          </div>
-        ) : scenario.directGroups && scenario.directGroups.length > 0 && scenario.directGroups.some(g => (g.lines?.length || 0) > 0) ? (
+        {scenario.directGroups && scenario.directGroups.length > 0 && scenario.directGroups.some(g => (g.lines?.length || 0) > 0) ? (
           <div className="p-3 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
               <Layers className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
