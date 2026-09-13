@@ -10,7 +10,7 @@ import { InputHandlerPanel } from './components/InputHandlerPanel';
 import { JournalTable } from './components/JournalTable';
 import { ComplianceRationale } from './components/ComplianceRationale';
 import { calculateDoubleEntries } from './engine/accountingEngine';
-import { processAccountingQuery } from './services/geminiService';
+import { processAccountingQuery, type OutputPreference } from './services/geminiService';
 import { loadProviderSettings, saveProviderSettings, type ProviderSettings } from './types/provider';
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { getSingaporeTimestamp } from './utils/dateUtils';
@@ -71,6 +71,8 @@ export const App: React.FC = () => {
   const [scenario, setScenario] = useState<AccountingScenarioState | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
+  const [outputPreference, setOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
+  const [appliedOutputPreference, setAppliedOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
   const [pendingRelation, setPendingRelation] = useState<{ text: string; userMessage: ChatMessage } | null>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -84,6 +86,7 @@ export const App: React.FC = () => {
 
   const processMessage = async (text: string, activeScenario: AccountingScenarioState | null, userMsg: ChatMessage) => {
     setIsLoading(true);
+    setAppliedOutputPreference(outputPreference);
     try {
       const response = await processAccountingQuery(
         text,
@@ -91,7 +94,8 @@ export const App: React.FC = () => {
         standard,
         providerSettings,
         providerSettings.gemini.model,
-        [...messages, userMsg]
+        [...messages, userMsg],
+        outputPreference
       );
 
       const answerState: AccountingScenarioState = {
@@ -100,7 +104,9 @@ export const App: React.FC = () => {
       };
       setScenario(answerState);
 
-      if (
+      if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
+      else if (outputPreference.statutory && !outputPreference.journal) setActiveTab('compliance');
+      else if (
         answerState.queryIntent === 'STATUTORY_ADVISORY' ||
         (!answerState.directGroups?.some((g) => g.lines.length > 0) &&
           ((answerState.statutoryAdvisory && answerState.statutoryAdvisory.length > 0) ||
@@ -164,6 +170,9 @@ export const App: React.FC = () => {
   const computed = scenario
     ? calculateDoubleEntries(scenario, standard)
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
+  const hasJournal = computed.groups.some((group) => group.lines.length > 0);
+  const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
+  const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
 
   return (
     <div className="min-h-screen bg-[#F4F7FA] dark:bg-[#131A29] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
@@ -190,6 +199,8 @@ export const App: React.FC = () => {
               onResolveRelation={handleResolveRelation}
               isLoading={isLoading}
               isAwaitingRelation={Boolean(pendingRelation)}
+              outputPreference={outputPreference}
+              onOutputPreferenceChange={setOutputPreference}
             />
           </div>
 
@@ -204,7 +215,7 @@ export const App: React.FC = () => {
 
             {/* View Switcher Tabs */}
             {scenario && (
-              computed.groups.some((g) => g.lines.length > 0) ||
+              showJournal ||
               (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
               Boolean(scenario.accountingTreatmentSummary) ||
               Boolean(scenario.singaporeTaxTreatmentSummary) ||
@@ -212,7 +223,7 @@ export const App: React.FC = () => {
             ) && (
               <div className="space-y-4">
                 <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538] px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
-                  {computed.groups.some((g) => g.lines.length > 0) && (
+                  {showJournal && (
                     <button
                       onClick={() => setActiveTab('entries')}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
@@ -226,7 +237,7 @@ export const App: React.FC = () => {
                     </button>
                   )}
 
-                  <button
+                  {showStatutory && <button
                     onClick={() => setActiveTab('compliance')}
                     className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
                       activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
@@ -236,11 +247,11 @@ export const App: React.FC = () => {
                   >
                     <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     Statutory Citations & Directives
-                  </button>
+                  </button>}
                 </div>
 
                 {/* Tab Content */}
-                {activeTab === 'entries' && computed.groups.some((g) => g.lines.length > 0) && (
+                {activeTab === 'entries' && showJournal && (
                   <JournalTable
                     groups={computed.groups}
                     standard={standard}
@@ -248,7 +259,7 @@ export const App: React.FC = () => {
                   />
                 )}
 
-                {(activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)) && (
+                {showStatutory && (activeTab === 'compliance' || !showJournal) && (
                   <ComplianceRationale
                     citations={(() => {
                       const all = [

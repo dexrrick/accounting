@@ -24,6 +24,11 @@ export interface GeminiResponse {
   clarifications?: MissingFieldInfo[];
 }
 
+export interface OutputPreference {
+  journal: boolean;
+  statutory: boolean;
+}
+
 export interface FastPathEvaluation {
   canBypass: boolean;
   reason: string;
@@ -226,7 +231,8 @@ export async function processAccountingQuery(
   standard: AccountingStandard,
   providerOrApiKey?: ProviderSettings | string,
   modelName: string = 'gemini-3.5-flash-lite',
-  chatHistory: ChatMessage[] = []
+  chatHistory: ChatMessage[] = [],
+  outputPreference?: OutputPreference
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   let apiErrorMessage: string | null = null;
@@ -302,6 +308,30 @@ export async function processAccountingQuery(
   // permission for a provider to invent a value. This is field-agnostic: new
   // scenarios can supply their own missingFields without editing this gate.
   const materialClarification = deterministicScenario.missingFields?.[0];
+  // A user-requested journal is a safety contract: return an established,
+  // balanced entry or ask for facts. Do not let a provider invent accounts or
+  // amounts merely to satisfy a display preference.
+  if (outputPreference?.journal) {
+    const hasGroundedJournal = deterministicScenario.directGroups?.some(group =>
+      group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
+    );
+    if (hasGroundedJournal) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    }
+    const clarification: MissingFieldInfo = materialClarification || {
+      fieldKey: 'journalFacts', fieldName: 'Journal-entry facts',
+      prompt: 'Please provide the transaction amount, what was received or incurred, and whether it was paid immediately or remains payable.',
+      whyNeeded: 'A balanced journal cannot be generated safely until both sides and their measurement are established.'
+    };
+    return attachAmendmentProvenance({
+      messageText: `### Clarification Required for Double Entry\n\n${clarification.prompt}`,
+      scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
+      clarifications: [clarification]
+    });
+  }
   if (deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
       (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {

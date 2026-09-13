@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { ChatMessage, MissingFieldInfo } from '../types/accounting';
 import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff } from 'lucide-react';
 import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
+import type { OutputPreference } from '../services/geminiService';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -10,6 +11,8 @@ interface ChatPanelProps {
   onResolveRelation: (isRelated: boolean) => void;
   isLoading: boolean;
   isAwaitingRelation: boolean;
+  outputPreference: OutputPreference;
+  onOutputPreferenceChange: (preference: OutputPreference) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -18,7 +21,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onSelectSuggestion,
   onResolveRelation,
   isLoading,
-  isAwaitingRelation
+  isAwaitingRelation,
+  outputPreference,
+  onOutputPreferenceChange
 }) => {
   const [inputText, setInputText] = useState('');
   const [showSuggestions, setShowSuggestions] = useState<boolean>(() => {
@@ -338,6 +343,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           >
             <Send className="w-4 h-4" />
           </button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-3 px-1 text-[11px] text-slate-600 dark:text-slate-300">
+          <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.journal} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, journal: e.target.checked })} /> Double Entry Journal</label>
+          <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.statutory} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, statutory: e.target.checked })} /> Statutory Treatment</label>
         </div>
         <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-slate-400 dark:text-slate-500">
           <span className="hidden sm:inline">{isAwaitingRelation ? 'Choose how to treat the pending question' : 'Press Enter to send, Shift+Enter for newline'}</span>
