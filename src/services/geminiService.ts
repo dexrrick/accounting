@@ -238,7 +238,7 @@ export async function processAccountingQuery(
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   if (outputPreference?.shareStructure) {
-    const shareAnswer = answerShareStructureQuery(userInput);
+    const shareAnswer = answerShareStructureQuery(userInput, currentScenario);
     if (shareAnswer) return shareAnswer;
   }
   let apiErrorMessage: string | null = null;

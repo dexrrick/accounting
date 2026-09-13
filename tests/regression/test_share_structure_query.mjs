@@ -13,4 +13,10 @@ assert.ok(directTransfer);
 assert.match(directTransfer.messageText, /Counterparty leg is missing/);
 assert.equal(directTransfer.scenarioState.shareTransferAnalysis.rows[0].afterShares, 500);
 assert.equal(directTransfer.scenarioState.shareTransferAnalysis.rows[1].afterShares, 500);
+
+const continued = answerShareStructureQuery("company A then trade 500 units of company B's share for 1000 units of company D's share", directTransfer.scenarioState);
+assert.ok(continued);
+assert.match(continued.messageText, /Follow-up Applied/);
+assert.equal(continued.scenarioState.shareTransferAnalysis.rows.find(row => row.company === 'Company B').afterShares, 0);
+assert.equal(continued.scenarioState.shareTransferAnalysis.rows.find(row => row.company === 'Company D').afterShares, 1000);
 console.log('PASS | Share-structure query calculates holdings and flags contradictory control percentage');
