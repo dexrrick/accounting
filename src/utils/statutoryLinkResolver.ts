@@ -1,4 +1,4 @@
-import { SINGAPORE_STATUTORY_REPOSITORY } from '../standards/singaporeStatutesKnowledge';
+import { SINGAPORE_STATUTORY_REPOSITORY, querySingaporeStatutes } from '../standards/singaporeStatutesKnowledge';
 import type { StatutoryAuthority } from '../types/accounting';
 
 /**
@@ -32,49 +32,6 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
 // official source for an SFRS(I) citation; it is intentionally not ACRA's
 // general accounting-standards landing page.
 export const SFRSI_2025_COLLECTION_URL = 'https://asc.acra.gov.sg/singapore-financial-reporting-standards-international/archives/effective-for-annual-reporting-period-beginning-on-1-january-2025';
-
-/**
- * Official agency guidance is preferable to legislation where it addresses the
- * precise topic. Each endpoint below is an active, first-party government page
- * verified on 12 September 2026. If no match is available, callers fall back
- * to the exact Singapore Statutes Online Act/section.
- */
-function resolveTopicSpecificOfficialSource(act: string, section: string): string | undefined {
-  const context = `${act} ${section}`.toLowerCase();
-
-  if (act.includes('income tax')) {
-    if (/14n|renovation|refurbishment/.test(context)) {
-      return 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-%28m-r%29';
-    }
-    if (/section\s*14|\b14\(1\)|business expense|deductib/.test(context)) {
-      return 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses';
-    }
-  }
-
-  if (act.includes('goods and services') || act.includes('gst')) {
-    if (/registration|first schedule|threshold|turnover/.test(context)) {
-      return 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/gst-registration-deregistration/do-i-need-to-register-for-gst';
-    }
-  }
-
-  if (act.includes('provident fund') || act.includes('cpf')) {
-    if (/rate|contribution|wage|ceiling/.test(context)) {
-      return 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay';
-    }
-  }
-
-  if (act.includes('employment act') || act.includes('mom')) {
-    if (/88a|annual leave|vacation/.test(context)) {
-      return 'https://www.mom.gov.sg/employment-practices/leave/annual-leave';
-    }
-    if (/89|sick leave|hospitalisation/.test(context)) {
-      return 'https://www.mom.gov.sg/employment-practices/leave/sick-leave';
-    }
-  }
-
-  return undefined;
-}
-
 /**
  * Generates an official Singapore Statutes Online (SSO) canonical permalink.
  * Format on sso.agc.gov.sg is https://sso.agc.gov.sg/Act/{ActCode}#pr{SectionNumber}-
@@ -103,6 +60,15 @@ export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
   // Extract clean section digits / alphanumeric (e.g. "14(1)" -> "14", "205C" -> "205C", "19A" -> "19A")
   const secMatch = sectionNumber.match(/(\d+[A-Za-z]*)/);
   const secClean = secMatch ? secMatch[1] : '';
+
+  // Prefer a curated canonical permalink whenever the statutory registry has
+  // one for this Act and provision. This treats every registered provision
+  // consistently and accommodates SSO provision-id URLs where necessary.
+  const registeredRule = Object.values(SINGAPORE_STATUTORY_REPOSITORY).find((rule) => {
+    const ruleSection = rule.sectionOrSchedule.match(/(\d+[A-Za-z]*)/)?.[1];
+    return rule.actCode.toUpperCase() === ssoCode.toUpperCase() && ruleSection === secClean;
+  });
+  if (registeredRule) return registeredRule.canonicalUrl;
 
   return secClean 
     ? `https://sso.agc.gov.sg/Act/${ssoCode}#pr${secClean}-` 
@@ -143,8 +109,11 @@ export function getSafeOfficialUrl(
   const act = (statuteOrAct || '').toLowerCase();
   const sec = sectionOrSchedule || '';
 
-  const topicSpecificSource = resolveTopicSpecificOfficialSource(act, sec);
-  if (topicSpecificSource) return topicSpecificSource;
+  // Preserve a supplied section-specific SSO source. Agency guidance can be
+  // added separately; it must not replace the cited legislation.
+  if (url.startsWith('https://sso.agc.gov.sg/Act/')) {
+    return url;
+  }
 
   if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
     return buildSsoUrl('ITA1947', sec);
@@ -171,12 +140,7 @@ export function getSafeOfficialUrl(
     return SFRSI_2025_COLLECTION_URL;
   }
 
-  // 3. Preserve a supplied, source-specific SSO link.
-  if (url.startsWith('https://sso.agc.gov.sg/Act/')) {
-    return url;
-  }
-
-  // 4. Check whether the raw URL is a source page, rather than a generic
+  // 3. Check whether the raw URL is a source page, rather than a generic
   // agency directory. Generic directories are withheld below.
   if (url.includes('asc.gov.sg')) {
     return url.includes('/singapore-financial-reporting-standards-international/')
@@ -202,7 +166,7 @@ export function getSafeOfficialUrl(
     return url;
   }
 
-  // 5. Authority-only fallbacks may be an agency home page, not evidence for a
+  // 4. Authority-only fallbacks may be an agency home page, not evidence for a
   // particular proposition. Show a section of the governing Act where that is
   // unambiguous; otherwise return no link instead of a misleading directory.
   const auth = (authority || '').toUpperCase();
@@ -364,7 +328,7 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
   );
   sanitized = sanitized.replace(
     /(?:Income Tax Act\s*(?:1947)?\s*(?:Section|§)\s*14(?:\(1\))?)/gi,
-    () => addLink('Income Tax Act 1947 Section 14(1)', 'https://sso.agc.gov.sg/Act/ITA1947#pr14-')
+    () => addLink('Income Tax Act 1947 Section 14(1)', buildSsoUrl('ITA1947', '14(1)'))
   );
   sanitized = sanitized.replace(
     /(?:Income Tax Act\s*(?:1947)?\s*(?:Section|§)\s*19A)/gi,
@@ -443,6 +407,22 @@ export function appendStatutorySourceFooter(
           });
         }
       }
+    }
+  }
+
+  const addContextualLink = (title: string, url: string, authority: string) => {
+    if (!links.some((link) => link.url === url)) links.push({ title, url, authority });
+  };
+
+  // The response assembler and a provider may sometimes supply only a broad
+  // Act or agency advisory. Independently resolve up to three relevant rules
+  // from the statutory registry so every supported topic gets its own exact,
+  // first-party source—not just capital-allowance questions.
+  const matchedRules = querySingaporeStatutes(messageText).slice(0, 3);
+  for (const rule of matchedRules) {
+    addContextualLink(`${rule.actTitle} — ${rule.sectionOrSchedule}`, rule.canonicalUrl, rule.authority);
+    for (const source of rule.supplementaryOfficialSources || []) {
+      addContextualLink(source.title, source.url, source.authority);
     }
   }
 

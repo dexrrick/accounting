@@ -16,6 +16,11 @@ export interface SingaporeStatuteRule {
   application: string;
   practicalRules: string[];
   canonicalUrl: string;
+  supplementaryOfficialSources?: Array<{
+    title: string;
+    url: string;
+    authority: StatutoryAuthority;
+  }>;
   tags: string[];
   sourceStatus?: 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
   sourceType?: 'AUTHORITATIVE_SOURCE' | 'CURATED_SUMMARY' | 'APPLICATION_RULE';
@@ -54,7 +59,7 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Must not be capital in nature (e.g. initial setup costs, asset purchases).',
       'Must not be prohibited under Section 15 of the Income Tax Act.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P16-#pr22-',
     tags: ['tax deduction', 'deductible expenses', 'section 14', 'business expenses', 'p&l deduction'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
@@ -122,6 +127,11 @@ export const SINGAPORE_STATUTORY_REPOSITORY: Record<string, SingaporeStatuteRule
       'Low-Value Assets: Assets costing $\\le\\$5,000$ each can be fully written off in 1 year, subject to an aggregate limit of $\\$30,000$ per YA.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr19A-',
+    supplementaryOfficialSources: [{
+      title: 'IRAS Capital Allowances',
+      url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances',
+      authority: 'IRAS'
+    }],
     tags: ['capital allowance', 'depreciation add-back', 'section 19a', 'plant and machinery', 'computers']
   },
 
