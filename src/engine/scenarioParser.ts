@@ -48,6 +48,8 @@ export function isStatutoryInquiry(query: string): boolean {
     q.includes('compulsory gst') ||
     q.includes('blocked input') ||
     q.includes('regulation 26') ||
+    q.includes('gst remission') ||
+    q.includes('fixed recovery rate') ||
     q.includes('zero rated') ||
     q.includes('zero-rated') ||
     q.includes('agm deadline') ||
@@ -74,6 +76,8 @@ export function isStatutoryInquiry(query: string): boolean {
     q.includes('digital payment token') ||
     q.includes('payment services act') ||
     q.includes('mas notice') ||
+    /\bvcc\b/.test(q) ||
+    q.includes('variable capital company') ||
     q.startsWith('can i claim') ||
     q.startsWith('can we claim') ||
     q.includes('is it deductible') ||

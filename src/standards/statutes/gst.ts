@@ -1,4 +1,19 @@
 import type { SingaporeStatuteRule } from './types';export const GST_STATUTE_RULES: Record<string, SingaporeStatuteRule> = {  // -------------------------------------------------------------
+  GST_REMISSION_QUALIFYING_FUNDS: {
+    id: 'GST_REMISSION_QUALIFYING_FUNDS', authority: 'IRAS', authorityName: 'Inland Revenue Authority of Singapore (IRAS)',
+    sourcePublisher: 'Inland Revenue Authority of Singapore (IRAS)', legalOrStandardInstrument: 'IRAS GST guidance — Claiming GST on expenses for qualifying funds',
+    actTitle: 'GST remission for qualifying funds', actCode: 'GSTA1993', sectionOrSchedule: 'IRAS Finance guidance',
+    ruleTitle: 'GST Remission for Qualifying Funds (Including VCCs)', category: 'TAX_GST',
+    principle: 'GST remission lets a qualifying fund, including a standalone VCC or sub-fund of an umbrella VCC, claim GST on qualifying fund expenses at an annual fixed recovery rate, subject to the remission conditions.',
+    application: 'Use this for an investment fund or VCC considering whether it may recover GST incurred on fund expenses. It is not a general GST refund available to every business.',
+    practicalRules: ['The fund must be managed by a prescribed fund manager in Singapore.', 'The fund must satisfy the conditions for its relevant income-tax concession as at the last day of its preceding financial year.', 'Claims remain subject to disallowed-expense restrictions under Regulations 26 and 27.', 'Each qualifying fund, including each VCC sub-fund, files a quarterly Statement of Claims due one month after the relevant quarter.', 'IRAS guidance states that the remission is granted until 31 December 2029; confirm eligibility and the applicable recovery rate before filing.'],
+    canonicalUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/specific-business-sectors/finance',
+    supplementaryOfficialSources: [{ title: 'IRAS — Explanatory Notes to GST Remission for Prescribed Funds', url: 'https://www.iras.gov.sg/media/docs/default-source/uploadedfiles/pdf/explanatory-notes-to-gst-remission-for-prescribed-funds.pdf', authority: 'IRAS' }],
+    tags: ['gst remission', 'gst remission for qualifying funds', 'gst remission for prescribed funds', 'qualifying funds', 'fixed recovery rate', 'statement of claims'],
+    sourceStatus: 'VERIFIED', sourceType: 'CURATED_SUMMARY', evidenceTier: 'OFFICIAL_GUIDANCE', isVerbatimText: false,
+    effectiveDate: '2026-09-14', validFrom: '2020-01-01', validTo: '2029-12-31', lastVerifiedDate: '2026-09-14', reviewAuditCycleDays: 90
+  },
+
   GST_REGISTRATION_COMPULSORY_THRESHOLD: {
     id: 'GST_REGISTRATION_COMPULSORY_THRESHOLD',
     authority: 'IRAS',

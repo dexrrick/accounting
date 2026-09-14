@@ -111,7 +111,7 @@ async function runTests() {
   console.log('\n[3. TIME-SENSITIVITY & UNCERTAINTY FALLBACK MANDATE]');
 
   // 3A. Prompt mandates the exact fallback statement
-  const fallbackInstruction = "I couldn't verify the applicable current source from the available evidence.";
+const fallbackInstruction = "I couldn't verify the applicable current source from the available evidence.";
   assert(prompt.includes(fallbackInstruction), 'Prompt must mandate the exact fallback uncertainty string');
   console.log('✓ 3A. Grounding prompt enforces the mandatory uncertainty fallback clause');
   passed++;

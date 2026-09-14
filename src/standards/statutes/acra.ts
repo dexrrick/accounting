@@ -1,17 +1,18 @@
 import type { SingaporeStatuteRule } from './types';export const ACRA_STATUTE_RULES: Record<string, SingaporeStatuteRule> = {  // -------------------------------------------------------------
   ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE: {
     id: 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE', authority: 'ACRA', authorityName: 'Accounting and Corporate Regulatory Authority (ACRA)',
-    sourcePublisher: 'Accounting and Corporate Regulatory Authority', legalOrStandardInstrument: 'Variable Capital Companies Act 2018',
-    actTitle: 'Variable Capital Companies Act 2018', actCode: 'VCCA2018', sectionOrSchedule: 'VCC structure, officer appointments and annual compliance',
-    ruleTitle: 'VCC and Umbrella VCC Governance, Segregation and Filing Requirements', category: 'ACRA_COMPLIANCE',
-    principle: 'A VCC is an investment-fund corporate structure that may be a single fund or an umbrella with sub-funds; an umbrella’s sub-funds have segregated assets and liabilities and separate annual reporting requirements.',
+    sourcePublisher: 'Singapore Statutes Online / AGC', legalOrStandardInstrument: 'Variable Capital Companies Act 2018',
+    actTitle: 'Variable Capital Companies Act 2018', actCode: 'VCCA2018', sectionOrSchedule: 'Section 5',
+    ruleTitle: 'Variable Capital Company (VCC) Framework', category: 'ACRA_COMPLIANCE',
+    principle: 'A variable capital company (VCC) is a Singapore corporate structure for investment funds. Section 5 of the Variable Capital Companies Act 2018 enables a VCC to be formed and provides for its operation and regulation.',
+    verbatimStatuteText: 'The purpose of this Act is to enable a body corporate known as a variable capital company or VCC, to be formed, and to provide for its operation and regulation.',
     application: 'Use when selecting a Singapore fund vehicle or designing the ledger, reporting and compliance scope for an umbrella VCC and each sub-fund.',
     practicalRules: ['Identify whether the structure is a single VCC or an umbrella VCC and retain sub-fund-level accounting records.', 'Ensure the VCC has the required director, company secretary, fund manager and auditor before operating.', 'Track AGM, annual-return, register-maintenance and change-notification deadlines separately from the fund manager’s MAS obligations.'],
-    canonicalUrl: 'https://www.acra.gov.sg/register/variable-capital-company/key-features-eligibility-requirements/',
-    supplementaryOfficialSources: [{ title: 'ACRA VCC management and compliance overview', url: 'https://www.acra.gov.sg/manage/variable-capital-companies/overview/', authority: 'ACRA' }],
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/VCCA2018?WholeDoc=1#pr5-',
+    supplementaryOfficialSources: [{ title: 'ACRA VCC features, eligibility and requirements', url: 'https://www.acra.gov.sg/register/variable-capital-company/key-features-eligibility-requirements/', authority: 'ACRA' }],
     tags: ['vcc', 'variable capital company', 'umbrella vcc', 'sub-fund', 'fund vehicle', 'fund manager', 'annual return'],
-    sourceStatus: 'NEEDS_REVIEW', sourceType: 'CURATED_SUMMARY', evidenceTier: 'CURATED_SUMMARY', isVerbatimText: false,
-    lastVerifiedDate: '2026-09-13', reviewAuditCycleDays: 90
+    sourceStatus: 'VERIFIED', sourceType: 'AUTHORITATIVE_SOURCE', evidenceTier: 'PRIMARY_SOURCE', isVerbatimText: true,
+    effectiveDate: '2020-01-14', validFrom: '2020-01-14', lastVerifiedDate: '2026-09-14', reviewAuditCycleDays: 90
   },
   ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION: {
     id: 'ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION',

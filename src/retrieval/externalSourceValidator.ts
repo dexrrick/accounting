@@ -66,6 +66,8 @@ export const CANONICAL_ACT_MAP: Record<string, string> = {
   'CPFA1953': 'CPFA1953',
   'Goods and Services Tax Act 1993': 'GSTA1993',
   'GSTA1993': 'GSTA1993',
+  'Variable Capital Companies Act 2018': 'VCCA2018',
+  'VCCA2018': 'VCCA2018',
   'FX_OBSERVATION': 'FX_OBSERVATION'
 };
 

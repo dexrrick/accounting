@@ -24,6 +24,9 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
   EMPLOYMENT_ACT: { ssoCode: 'EmA1968', title: 'Employment Act 1968' },
   PSA: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
   PAYMENT_SERVICES: { ssoCode: 'PSA2019', title: 'Payment Services Act 2019' },
+  VCCA: { ssoCode: 'VCCA2018', title: 'Variable Capital Companies Act 2018' },
+  VCCA2018: { ssoCode: 'VCCA2018', title: 'Variable Capital Companies Act 2018' },
+  VARIABLE_CAPITAL_COMPANIES: { ssoCode: 'VCCA2018', title: 'Variable Capital Companies Act 2018' },
   MAS: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' },
   MASA: { ssoCode: 'MASA1970', title: 'Monetary Authority of Singapore Act 1970' },
   CDCA: { ssoCode: 'CDCSA2001', title: 'Child Development Co-Savings Act 2001' },
@@ -149,6 +152,9 @@ export function getSafeOfficialUrl(
 
   if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
     return buildSsoUrl('ITA1947', sec);
+  }
+  if (act.includes('variable capital companies') || act.includes('vcc act') || act.includes('vcca2018')) {
+    return buildSsoUrl('VCCA2018', sec);
   }
   if (act.includes('companies act') || act.includes('ca1967') || act.includes('coa1967') || act.includes('audit')) {
     return buildSsoUrl('CoA1967', sec);
