@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { ChatMessage, MissingFieldInfo } from '../types/accounting';
-import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff } from 'lucide-react';
+import type { ChatImageAttachment, ChatMessage, MissingFieldInfo } from '../types/accounting';
+import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff, ImagePlus } from 'lucide-react';
 import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 import type { OutputPreference } from '../services/geminiService';
+import { createImageAttachment, validateImageFile } from '../utils/imageUtils';
+import { ImageAttachmentPreview } from './ImageAttachmentPreview';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, images?: ChatImageAttachment[]) => void;
   onSelectSuggestion: (fieldKey: string, value: number | string) => void;
   onResolveRelation: (isRelated: boolean) => void;
   isLoading: boolean;
@@ -26,6 +28,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onOutputPreferenceChange
 }) => {
   const [inputText, setInputText] = useState('');
+  const [attachments, setAttachments] = useState<ChatImageAttachment[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showSuggestions, setShowSuggestions] = useState<boolean>(() => {
     const saved = localStorage.getItem('chat_show_suggestions');
     return saved !== null ? saved === 'true' : true;
@@ -78,9 +84,31 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || isLoading || isAwaitingRelation) return;
-    onSendMessage(inputText.trim());
+    if ((!inputText.trim() && attachments.length === 0) || isLoading || isAwaitingRelation) return;
+    onSendMessage(inputText.trim(), attachments);
     setInputText('');
+    setAttachments([]);
+    setAttachmentError(null);
+  };
+
+  const addFiles = async (files: File[]) => {
+    setAttachmentError(null);
+    const available = 5 - attachments.length;
+    if (files.length > available) {
+      setAttachmentError(`You can attach a maximum of 5 images per message. Remove an image before adding more.`);
+    }
+    const selected = files.slice(0, Math.max(0, available));
+    const invalid = selected.map(validateImageFile).find((error): error is string => Boolean(error));
+    if (invalid) {
+      setAttachmentError(invalid);
+      return;
+    }
+    try {
+      const created = await Promise.all(selected.map((file, index) => createImageAttachment(file, `image-${Date.now()}-${index}`)));
+      setAttachments((current) => [...current, ...created].slice(0, 5));
+    } catch (error) {
+      setAttachmentError(error instanceof Error ? error.message : 'Unable to add the image.');
+    }
   };
 
   const scrollHorizontally = (offset: number) => {
@@ -134,6 +162,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               }`}
             >
               <div className="whitespace-pre-line font-normal">{msg.text}</div>
+              {msg.images && msg.images.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {msg.images.map((image) => (
+                    <img key={image.id} src={image.dataUrl} alt={image.fileName} className="h-20 w-20 rounded-lg border border-blue-200 object-cover dark:border-blue-900/60" />
+                  ))}
+                </div>
+              )}
 
               {msg.relationPrompt && (
                 <div className="mt-3 pt-3 border-t border-slate-200 dark:border-[#2B374E]">
@@ -207,7 +242,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span>
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]"></span>
-              <span className="text-[11px] font-medium ml-1">Analyzing statutory citations under IRAS, ACRA & SFRS...</span>
+              <span className="text-[11px] font-medium ml-1">{messages.at(-1)?.images?.length ? 'Analysing screenshot and applying accounting treatment...' : 'Analyzing statutory citations under IRAS, ACRA & SFRS...'}</span>
             </div>
           </div>
         )}
@@ -308,11 +343,32 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )}
 
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="p-2.5 sm:p-3 border-t border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538]">
+      <form
+        onSubmit={handleSubmit}
+        onDragEnter={(event) => { event.preventDefault(); if (!isLoading && !isAwaitingRelation) setIsDragging(true); }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={(event) => { if (event.currentTarget === event.target) setIsDragging(false); }}
+        onDrop={(event) => { event.preventDefault(); setIsDragging(false); void addFiles(Array.from(event.dataTransfer.files)); }}
+        className={`relative p-2.5 sm:p-3 border-t border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538] ${isDragging ? 'ring-2 ring-inset ring-ynab-blue bg-blue-50 dark:bg-blue-950/30' : ''}`}
+      >
+        <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={(event) => { void addFiles(Array.from(event.target.files || [])); event.target.value = ''; }} />
+        {isDragging && <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded bg-blue-50/95 text-sm font-semibold text-ynab-blue dark:bg-[#151D2C]/95 dark:text-blue-300">Drop screenshots here</div>}
+        <ImageAttachmentPreview attachments={attachments} onRemove={(id) => setAttachments((current) => current.filter((attachment) => attachment.id !== id))} disabled={isLoading || isAwaitingRelation} />
+        {attachmentError && <p role="alert" className="mb-2 text-[11px] text-red-600 dark:text-red-400">{attachmentError}</p>}
         <div className="relative flex items-center">
+          <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isLoading || isAwaitingRelation || attachments.length >= 5} title="Attach PNG, JPEG or WEBP images" aria-label="Attach images" className="mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-ynab-blue disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-[#242F46]">
+            <ImagePlus className="h-4 w-4" />
+          </button>
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
+            onPaste={(event) => {
+              const files = Array.from(event.clipboardData.items)
+                .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+                .map((item) => item.getAsFile())
+                .filter((file): file is File => file !== null);
+              if (files.length > 0) void addFiles(files);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -325,9 +381,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           />
           <button
             type="submit"
-            disabled={!inputText.trim() || isLoading || isAwaitingRelation}
+            disabled={(!inputText.trim() && attachments.length === 0) || isLoading || isAwaitingRelation}
             className={`absolute right-2 p-2 rounded-lg transition-all ${
-              inputText.trim() && !isLoading && !isAwaitingRelation
+              (inputText.trim() || attachments.length > 0) && !isLoading && !isAwaitingRelation
                 ? 'bg-ynab-blue text-white hover:bg-blue-600 shadow-sm'
                 : 'bg-slate-200 dark:bg-[#242F46] text-slate-400 dark:text-slate-500 cursor-not-allowed'
             }`}

@@ -1,4 +1,4 @@
-import type { AccountingStandard, AccountingScenarioState, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
@@ -29,6 +29,75 @@ export interface OutputPreference {
   journal: boolean;
   statutory: boolean;
   shareStructure?: boolean;
+}
+
+export function supportsGeminiVision(modelName: string): boolean {
+  return /^gemini-/i.test(modelName.trim());
+}
+
+export function createGeminiImageParts(attachments: ChatImageAttachment[]): Array<{ inlineData: { mimeType: string; data: string } }> {
+  return attachments.map((image) => ({
+    inlineData: { mimeType: image.mimeType, data: image.dataUrl.slice(image.dataUrl.indexOf(',') + 1) }
+  }));
+}
+
+function getCurrentImageAttachments(chatHistory: ChatMessage[]): ChatImageAttachment[] {
+  return [...chatHistory].reverse().find((message) => message.sender === 'user' && message.images?.length)?.images || [];
+}
+
+function normaliseImageEvidence(rawEvidence: unknown, attachments: ChatImageAttachment[]): ExtractedImageEvidence[] {
+  if (!Array.isArray(rawEvidence)) return [];
+  return rawEvidence.flatMap((item, imageIndex) => {
+    if (!item || typeof item !== 'object') return [];
+    const record = item as Record<string, unknown>;
+    const fieldsSource = record.fields && typeof record.fields === 'object' ? record.fields as Record<string, unknown> : {};
+    const fields: ExtractedEvidence[] = Object.entries(fieldsSource).flatMap(([field, value]) => {
+      if (typeof value !== 'string' && typeof value !== 'number') return [];
+      return [{ source: 'image' as const, imageId: attachments[imageIndex]?.id, field, value, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }];
+    });
+    return fields.length ? [{ imageId: attachments[imageIndex]?.id || `image-${imageIndex + 1}`, documentType: typeof record.documentType === 'string' ? record.documentType : undefined, fields, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }] : [];
+  });
+}
+
+export async function extractImageEvidenceWithGemini(
+  apiKey: string,
+  modelName: string,
+  attachments: ChatImageAttachment[]
+): Promise<ExtractedImageEvidence[]> {
+  if (!attachments.length) return [];
+  if (!supportsGeminiVision(modelName)) throw new Error('The selected Gemini model cannot analyse images.');
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: JSON.stringify({
+        contents: [{
+          role: 'user',
+          parts: [
+            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only: {"imageEvidence":[{"documentType":"supplier_invoice","confidence":0.0,"fields":{"supplier":"...","invoiceDate":"DD/MM/YYYY","subtotal":0,"gst":0,"total":0,"currency":"SGD"}}]}. Preserve image order. Omit unreadable fields.' },
+            ...createGeminiImageParts(attachments)
+          ]
+        }],
+        generationConfig: { temperature: 0, responseMimeType: 'application/json' }
+      }),
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`Gemini image extraction failed with HTTP ${response.status}.`);
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Gemini could not read the attached image.');
+    return normaliseImageEvidence(repairAndParseAIJson(text)?.imageEvidence, attachments);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function formatImageEvidenceForAccounting(evidence: ExtractedImageEvidence[]): string {
+  if (!evidence.length) return 'No reliable fields were extracted from the image.';
+  return evidence.map((image, index) => `Image ${index + 1} (${image.documentType || 'document'}): ${image.fields.map((field) => `${field.field}=${field.value}${field.confidence !== undefined ? ` (confidence ${field.confidence})` : ''}`).join('; ')}`).join('\n');
 }
 
 export interface FastPathEvaluation {
@@ -237,6 +306,8 @@ export async function processAccountingQuery(
   outputPreference?: OutputPreference
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
+  const imageAttachments = getCurrentImageAttachments(chatHistory);
+  const hasImages = imageAttachments.length > 0;
   if (outputPreference?.shareStructure) {
     const shareAnswer = answerShareStructureQuery(userInput, currentScenario);
     if (shareAnswer) return shareAnswer;
@@ -317,7 +388,7 @@ export async function processAccountingQuery(
   // A user-requested journal is a safety contract: return an established,
   // balanced entry or ask for facts. Do not let a provider invent accounts or
   // amounts merely to satisfy a display preference.
-  if (outputPreference?.journal) {
+  if (outputPreference?.journal && !hasImages) {
     const hasGroundedJournal = deterministicScenario.directGroups?.some(group =>
       group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
     );
@@ -338,7 +409,7 @@ export async function processAccountingQuery(
       clarifications: [clarification]
     });
   }
-  if (deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+  if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
       (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
     profiler.recordFirstVisibleResponse();
@@ -385,6 +456,12 @@ export async function processAccountingQuery(
   if (providerOrApiKey) {
     if (typeof providerOrApiKey === 'object') {
       const active = providerOrApiKey.activeProvider;
+      if (hasImages && active !== 'gemini') {
+        return {
+          messageText: '### Image analysis unavailable\n\nThe selected AI model cannot analyse images. Select a Gemini model in Settings, then retry; your screenshots remain attached to this message.',
+          scenarioState: deterministicScenario
+        };
+      }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
           return attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext, deterministicScenario));
@@ -404,7 +481,8 @@ export async function processAccountingQuery(
             chatHistory,
             groundedContext,
             deterministicScenario,
-            profiler
+            profiler,
+            imageAttachments
           ));
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -439,7 +517,8 @@ export async function processAccountingQuery(
           chatHistory,
           groundedContext,
           deterministicScenario,
-          profiler
+          profiler,
+          imageAttachments
         ));
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -1047,16 +1126,23 @@ export async function callGeminiAPI(
   chatHistory: ChatMessage[] = [],
   groundedContext?: GroundedReasoningContext,
   deterministicScenario?: AccountingScenarioState | null,
-  existingProfiler?: RequestProfiler
+  existingProfiler?: RequestProfiler,
+  imageAttachments: ChatImageAttachment[] = []
 ): Promise<GeminiResponse> {
+  if (imageAttachments.length > 0 && !supportsGeminiVision(modelName)) {
+    throw new Error('The selected Gemini model cannot analyse images.');
+  }
   const profiler = existingProfiler || new RequestProfiler(userInput, modelName);
+  const imageEvidence = await extractImageEvidenceWithGemini(apiKey, modelName, imageAttachments);
+  const imageEvidenceSummary = formatImageEvidenceForAccounting(imageEvidence);
   const tGround0 = Date.now();
   const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario, undefined, apiKey);
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
   // Multi-turn conversational history for Gemini: Condense prior turns to eliminate prompt re-bloat
-  const contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }> = [];
+  type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+  const contents: Array<{ role: 'user' | 'model'; parts: GeminiPart[] }> = [];
 
   // Filter out system welcome messages and raw processing error cards; limit to last 4 turns
   const conversationTurns = (chatHistory || [])
@@ -1078,7 +1164,8 @@ export async function callGeminiAPI(
       }
     }
     if (contents.length > 0 && contents[contents.length - 1].role === role) {
-      contents[contents.length - 1].parts[0].text += `\n\n${textToSend}`;
+      const part = contents[contents.length - 1].parts[0];
+      if ('text' in part) part.text += `\n\n${textToSend}`;
     } else {
       contents.push({ role, parts: [{ text: textToSend }] });
     }
@@ -1094,11 +1181,12 @@ Active Double Entry Journal Groups:
 ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
 ` : '';
 
-  const currentTurnText = `${activeScenarioSummary}\n[USER QUERY / FOLLOW-UP]:\n${userInput}`.trim();
+  const currentTurnText = `${activeScenarioSummary}\n[USER QUERY / FOLLOW-UP]:\n${userInput}${imageAttachments.length ? `\n\n[EXTRACTED IMAGE EVIDENCE — NOT ACCOUNTING JUDGMENT]\n${imageEvidenceSummary}` : ''}`.trim();
 
   if (contents.length > 0) {
     if (contents[contents.length - 1].role === 'user') {
-      contents[contents.length - 1].parts[0].text = currentTurnText;
+      const part = contents[contents.length - 1].parts[0];
+      if ('text' in part) part.text = currentTurnText;
     } else {
       contents.push({ role: 'user', parts: [{ text: currentTurnText }] });
     }
@@ -1242,6 +1330,7 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   const tPost0 = Date.now();
   const parsed = repairAndParseAIJson(rawJsonText);
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
+  if (imageEvidence.length > 0) result.scenarioState.imageEvidence = imageEvidence;
   // Validate AI proposed groups against deterministic accounting guardrails
   if (result.scenarioState.directGroups && result.scenarioState.directGroups.length > 0 && context.semanticUnderstanding) {
     const valResult = defaultAccountingGuardrails.validate(context.semanticUnderstanding, result.scenarioState.directGroups);

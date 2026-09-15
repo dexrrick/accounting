@@ -212,6 +212,7 @@ export interface AccountingScenarioState {
   
   isComplete: boolean;
   missingFields: MissingFieldInfo[];
+  imageEvidence?: ExtractedImageEvidence[];
 }
 
 export interface ChatMessage {
@@ -219,8 +220,37 @@ export interface ChatMessage {
   sender: 'user' | 'assistant' | 'system';
   timestamp: string;
   text: string;
+  /** Kept in session state only; never persisted with chat preferences or feedback. */
+  images?: ChatImageAttachment[];
   fullText?: string;
   clarificationPrompt?: MissingFieldInfo[];
   relationPrompt?: boolean;
   scenarioSnapshot?: AccountingScenarioState;
+}
+
+export type SupportedImageMimeType = 'image/png' | 'image/jpeg' | 'image/webp';
+
+export interface ChatImageAttachment {
+  id: string;
+  fileName: string;
+  mimeType: SupportedImageMimeType;
+  dataUrl: string;
+  size: number;
+  width?: number;
+  height?: number;
+}
+
+export interface ExtractedEvidence {
+  source: 'user_text' | 'image';
+  imageId?: string;
+  field: string;
+  value: string | number;
+  confidence?: number;
+}
+
+export interface ExtractedImageEvidence {
+  imageId: string;
+  documentType?: string;
+  fields: ExtractedEvidence[];
+  confidence?: number;
 }

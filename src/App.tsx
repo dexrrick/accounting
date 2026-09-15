@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import type {
   AccountingStandard,
   AccountingScenarioState,
-  ChatMessage
+  ChatMessage,
+  ChatImageAttachment
 } from './types/accounting';
 import { Header, type AppFontSize } from './components/Header';
 import { ChatPanel } from './components/ChatPanel';
@@ -19,6 +20,7 @@ import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { assessConversationRelation } from './services/conversationBoundary';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
+import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
 export const App: React.FC = () => {
   // SFRS follows IFRS - unified standard framework
@@ -127,12 +129,13 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, images: ChatImageAttachment[] = []) => {
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
       timestamp: getSingaporeTimestamp(),
-      text
+      text,
+      images: images.length > 0 ? images : undefined
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -213,6 +216,7 @@ export const App: React.FC = () => {
               onScenarioChange={handleScenarioChange}
               onResetToDefaults={handleResetToDefaults}
             />
+            {scenario?.imageEvidence && scenario.imageEvidence.length > 0 && <ImageEvidencePanel evidence={scenario.imageEvidence} />}
 
             {/* View Switcher Tabs */}
             {scenario && (
