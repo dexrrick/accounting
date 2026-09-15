@@ -228,6 +228,7 @@ export interface ChatMessage {
   clarificationPrompt?: MissingFieldInfo[];
   relationPrompt?: boolean;
   scenarioSnapshot?: AccountingScenarioState;
+  retryPayload?: { text: string; images: ChatImageAttachment[] };
 }
 
 export type SupportedImageMimeType = 'image/png' | 'image/jpeg' | 'image/webp';

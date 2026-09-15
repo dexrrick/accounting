@@ -120,7 +120,8 @@ export const App: React.FC = () => {
       setMessages((prev) => [...prev, {
         id: `asst-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(),
         text: createChatPreview(response.messageText, answerState, response.clarifications), fullText: response.messageText,
-        scenarioSnapshot: answerState, clarificationPrompt: response.clarifications
+        scenarioSnapshot: answerState, clarificationPrompt: response.clarifications,
+        retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
       }]);
     } catch (err: any) {
       setMessages((prev) => [...prev, { id: `err-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), text: `⚠️ **Processing Error**: ${err?.message || 'Unable to process query'}` }]);
@@ -199,6 +200,7 @@ export const App: React.FC = () => {
             <ChatPanel
               messages={messages}
               onSendMessage={handleSendMessage}
+              onRetryMessage={handleSendMessage}
               onSelectSuggestion={handleSelectSuggestion}
               onResolveRelation={handleResolveRelation}
               isLoading={isLoading}

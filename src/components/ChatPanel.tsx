@@ -9,6 +9,7 @@ import { ImageAttachmentPreview } from './ImageAttachmentPreview';
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, images?: ChatImageAttachment[]) => void;
+  onRetryMessage: (text: string, images: ChatImageAttachment[]) => void;
   onSelectSuggestion: (fieldKey: string, value: number | string) => void;
   onResolveRelation: (isRelated: boolean) => void;
   isLoading: boolean;
@@ -20,6 +21,7 @@ interface ChatPanelProps {
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   onSendMessage,
+  onRetryMessage,
   onSelectSuggestion,
   onResolveRelation,
   isLoading,
@@ -162,6 +164,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               }`}
             >
               <div className="whitespace-pre-line font-normal">{msg.text}</div>
+              {msg.retryPayload && (
+                <button type="button" onClick={() => onRetryMessage(msg.retryPayload!.text, msg.retryPayload!.images)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-ynab-blue px-3 py-1.5 text-[11px] font-semibold text-ynab-blue hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
+                  Retry image analysis
+                </button>
+              )}
               {msg.images && msg.images.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {msg.images.map((image) => (

@@ -19,7 +19,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
   * **Gemini 3.1 Flash Lite** (500 requests/day).
   * **Gemini 3.8 Flash** (High-capacity reasoning - 20 requests/day).
 * **Accessibility & Ergonomics**: Default enlarged typography (17px base) with interactive font size adjustment controls (`A-`, `A`, `A+`) in the navigation bar.
-* **Screenshot attachments & Gemini vision**: Paste, drag/drop, or select up to five PNG, JPEG, or WEBP screenshots per message. Images are validated (10 MB each), downscaled in browser memory to a 2400 px maximum side, and are not persisted to localStorage or feedback reports. Gemini requests submit image evidence as native multimodal parts; extracted evidence is displayed separately from the accounting conclusion.
+* **Screenshot attachments & Gemini vision**: Paste, drag/drop, or select up to five PNG, JPEG, or WEBP screenshots per message. Images are validated (10 MB each), downscaled in browser memory to a 2400 px maximum side, and are not persisted to localStorage. Gemini first extracts visible evidence and then applies the established accounting/source workflow; extracted evidence is displayed separately from the accounting conclusion. Feedback includes only attachment count and MIME types, never image content.
 
 ---
 

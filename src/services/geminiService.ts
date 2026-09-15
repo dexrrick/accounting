@@ -23,6 +23,7 @@ export interface GeminiResponse {
   messageText: string;
   scenarioState: AccountingScenarioState;
   clarifications?: MissingFieldInfo[];
+  imageAnalysisFailed?: boolean;
 }
 
 export interface OutputPreference {
@@ -552,6 +553,7 @@ export async function processAccountingQuery(
   profiler.recordFallback();
   profiler.recordFirstVisibleResponse();
   const fallbackResponse = attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage, groundedContext));
+  fallbackResponse.imageAnalysisFailed = hasImages && Boolean(apiErrorMessage);
   profiler.logSummary();
   return fallbackResponse;
 }
