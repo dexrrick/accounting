@@ -1,4 +1,4 @@
-import type { AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
@@ -60,7 +60,34 @@ function normaliseImageEvidence(rawEvidence: unknown, attachments: ChatImageAtta
       if (typeof value !== 'string' && typeof value !== 'number') return [];
       return [{ source: 'image' as const, imageId: attachments[attachmentIndex]?.id, field, value, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }];
     });
-    return fields.length ? [{ imageId: attachments[attachmentIndex]?.id || `image-${attachmentIndex + 1}`, documentType: typeof record.documentType === 'string' ? record.documentType : undefined, fields, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }] : [];
+    const journalLines = Array.isArray(record.journalLines) ? record.journalLines.flatMap((line): ExtractedJournalLine[] => {
+      if (!line || typeof line !== 'object') return [];
+      const journalLine = line as Record<string, unknown>;
+      if (typeof journalLine.accountName !== 'string') return [];
+      const asAmount = (value: unknown): number | undefined => {
+        if (typeof value === 'number' && value >= 0) return value;
+        if (typeof value === 'string' && /^\d[\d,]*(?:\.\d+)?$/.test(value.trim())) return Number(value.replace(/,/g, ''));
+        return undefined;
+      };
+      return [{ accountName: journalLine.accountName, accountCode: typeof journalLine.accountCode === 'string' ? journalLine.accountCode : undefined, debit: asAmount(journalLine.debit), credit: asAmount(journalLine.credit) }];
+    }) : [];
+    return (fields.length || journalLines.length) ? [{ imageId: attachments[attachmentIndex]?.id || `image-${attachmentIndex + 1}`, documentType: typeof record.documentType === 'string' ? record.documentType : undefined, fields, journalLines, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }] : [];
+  });
+}
+
+export function buildJournalGroupsFromImageEvidence(imageEvidence: ExtractedImageEvidence[]): JournalEntryGroup[] {
+  return imageEvidence.flatMap((image, imageIndex) => {
+    const extractedLines = image.journalLines || [];
+    if (extractedLines.length < 2) return [];
+    const lines = extractedLines.map((line, lineIndex) => {
+      const lowerName = line.accountName.toLowerCase();
+      const category = /payable|liability|loan/.test(lowerName) ? 'LIABILITY' as const : /revenue|sales/.test(lowerName) ? 'REVENUE' as const : /expense|cost/.test(lowerName) ? 'EXPENSE' as const : 'ASSET' as const;
+      return { id: `image-${imageIndex + 1}-line-${lineIndex + 1}`, accountCode: line.accountCode || 'IMAGE', accountName: line.accountName, category, debit: line.debit || 0, credit: line.credit || 0, lineExplanation: 'Visible journal line extracted from the screenshot.' };
+    });
+    const totalDebit = Math.round(lines.reduce((sum, line) => sum + line.debit, 0) * 100) / 100;
+    const totalCredit = Math.round(lines.reduce((sum, line) => sum + line.credit, 0) * 100) / 100;
+    if (totalDebit <= 0 || totalCredit <= 0 || Math.abs(totalDebit - totalCredit) >= 0.01) return [];
+    return [{ id: `image-journal-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Journal extracted from image ${imageIndex + 1}`, summary: 'Visible journal lines from the supplied screenshot; confirm the transaction date and context before posting.', lines, totalDebit, totalCredit, isBalanced: true, citations: [], rationalePoints: ['Amounts and accounts were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
   });
 }
 
@@ -98,7 +125,7 @@ export async function extractImageEvidenceWithGemini(
         contents: [{
           role: 'user',
           parts: [
-            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only: {"imageEvidence":[{"imageIndex":1,"documentType":"supplier_invoice","confidence":0.0,"fields":{"supplier":"...","invoiceDate":"DD/MM/YYYY","subtotal":0,"gst":0,"total":0,"currency":"SGD"}}]}. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
+            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only: {"imageEvidence":[{"imageIndex":1,"documentType":"supplier_invoice","confidence":0.0,"fields":{"supplier":"...","invoiceDate":"DD/MM/YYYY","subtotal":0,"gst":0,"total":0,"currency":"SGD"},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
             ...createGeminiImageParts(attachments)
           ]
         }],
@@ -118,7 +145,7 @@ export async function extractImageEvidenceWithGemini(
 
 function formatImageEvidenceForAccounting(evidence: ExtractedImageEvidence[]): string {
   if (!evidence.length) return 'No reliable fields were extracted from the image.';
-  return evidence.map((image, index) => `Image ${index + 1} (${image.documentType || 'document'}): ${image.fields.map((field) => `${field.field}=${field.value}${field.confidence !== undefined ? ` (confidence ${field.confidence})` : ''}`).join('; ')}`).join('\n');
+  return evidence.map((image, index) => `Image ${index + 1} (${image.documentType || 'document'}): ${image.fields.map((field) => `${field.field}=${field.value}${field.confidence !== undefined ? ` (confidence ${field.confidence})` : ''}`).join('; ')}${image.journalLines?.length ? `; journal lines: ${image.journalLines.map((line) => `${line.accountName} Dr ${line.debit || 0} Cr ${line.credit || 0}`).join(' | ')}` : ''}`).join('\n');
 }
 
 export interface FastPathEvaluation {
@@ -1360,6 +1387,12 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       ...(result.scenarioState.evidence || []),
       ...flattenImageEvidence(imageEvidence)
     ];
+    const extractedJournalGroups = buildJournalGroupsFromImageEvidence(imageEvidence);
+    if (extractedJournalGroups.length > 0) {
+      result.scenarioState.directGroups = extractedJournalGroups;
+      result.scenarioState.committedDirectGroups = undefined;
+      result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced: total debits equal total credits. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
+    }
   } else if (currentScenario?.imageEvidence?.length) {
     result.scenarioState.imageEvidence = currentScenario.imageEvidence;
     result.scenarioState.evidence = currentScenario.evidence;

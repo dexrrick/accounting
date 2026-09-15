@@ -256,4 +256,12 @@ export interface ExtractedImageEvidence {
   documentType?: string;
   fields: ExtractedEvidence[];
   confidence?: number;
+  journalLines?: ExtractedJournalLine[];
+}
+
+export interface ExtractedJournalLine {
+  accountName: string;
+  accountCode?: string;
+  debit?: number;
+  credit?: number;
 }

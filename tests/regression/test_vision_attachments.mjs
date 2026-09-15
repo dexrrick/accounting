@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { ACCEPTED_IMAGE_TYPES, extractBase64Data, MAX_IMAGE_FILE_SIZE, validateImageFile } from '../../src/utils/imageUtils.ts';
-import { createGeminiImageParts, extractImageEvidenceWithGemini, flattenImageEvidence, getMaterialImageUncertainties, processAccountingQuery, supportsGeminiVision } from '../../src/services/geminiService.ts';
+import { buildJournalGroupsFromImageEvidence, createGeminiImageParts, extractImageEvidenceWithGemini, flattenImageEvidence, getMaterialImageUncertainties, processAccountingQuery, supportsGeminiVision } from '../../src/services/geminiService.ts';
 import { invoiceVisionResponse } from '../fixtures/visionEvidenceFixtures.mjs';
 import { compileFeedbackReport } from '../../src/services/feedback.ts';
 
@@ -18,6 +18,10 @@ assert.deepEqual(createGeminiImageParts([{ id: 'img-1', fileName: 'invoice.png',
 assert.deepEqual(flattenImageEvidence([{ imageId: 'img-1', documentType: 'supplier_invoice', fields: [{ source: 'image', field: 'total', value: 10900, confidence: 0.97 }] }]), [{ source: 'image', imageId: 'img-1', field: 'total', value: 10900, confidence: 0.97 }]);
 assert.equal(getMaterialImageUncertainties([{ imageId: 'img-1', fields: [{ source: 'image', field: 'total', value: 18650, confidence: 0.6 }, { source: 'image', field: 'supplier', value: 'ABC', confidence: 0.6 }] }]).length, 1);
 assert.equal(getMaterialImageUncertainties([{ imageId: 'img-1', fields: [{ source: 'image', field: 'total', value: 18650 }] }]).length, 0, 'missing confidence is not a model uncertainty signal');
+const extractedJournal = buildJournalGroupsFromImageEvidence([{ imageId: 'img-1', fields: [], journalLines: [{ accountName: 'Inventory', accountCode: 'GL 130', debit: 1000 }, { accountName: 'Cash', accountCode: 'GL 100', credit: 200 }, { accountName: 'Accounts payable', accountCode: 'GL 200', credit: 800 }] }]);
+assert.equal(extractedJournal[0].isBalanced, true);
+assert.equal(extractedJournal[0].totalDebit, 1000);
+assert.equal(extractedJournal[0].totalCredit, 1000);
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(invoiceVisionResponse) }] } }] }) });

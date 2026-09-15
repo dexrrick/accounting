@@ -179,6 +179,7 @@ export function assembleDeterministicResponse(
 
   // 3. Assemble Direct Groups & Journal Entries
   let directGroups: JournalEntryGroup[] = [];
+  let invalidJournalProposalReason: string | undefined;
 
   const followUp = groundedContext.semanticUnderstanding?.followUpAnalysis;
   const isSettlementFollowUp = Boolean(
@@ -338,6 +339,11 @@ export function assembleDeterministicResponse(
       };
     });
   } else if (compact.requiredAccounts && compact.requiredAccounts.length > 0) {
+    const debitsCount = compact.requiredAccounts.filter(account => account.debitCredit === 'DEBIT').length;
+    const creditsCount = compact.requiredAccounts.filter(account => account.debitCredit === 'CREDIT').length;
+    if (debitsCount === 0 || creditsCount === 0) {
+      invalidJournalProposalReason = 'The proposed journal does not contain both a debit and a credit. Please identify what was received or prepaid and the account paid.';
+    } else {
     // Amounts for journal lines can ONLY come from scenario-specific structured facts/formulas
     // in deterministicScenario. Arbitrary numbers (dates, quantities, terms, percentages) from user text
     // MUST NEVER be extracted via regex into journal amounts.
@@ -382,9 +388,6 @@ export function assembleDeterministicResponse(
     } else {
       // Structured amount available from complete deterministic scenario formula or verified semantic facts
       const displayCurrency = deterministicScenario?.functionalCurrency ?? groundedContext.semanticUnderstanding?.currency?.value ?? 'SGD';
-      const debitsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'DEBIT').length;
-      const creditsCount = compact.requiredAccounts.filter(a => a.debitCredit === 'CREDIT').length;
-
       const lines: JournalLine[] = compact.requiredAccounts.map((acc, aIdx) => {
         const isDebit = acc.debitCredit === 'DEBIT';
         const amt = isDebit ? (debitsCount === 1 ? knownAmount! : 0) : (creditsCount === 1 ? knownAmount! : 0);
@@ -421,6 +424,7 @@ export function assembleDeterministicResponse(
         ],
         authorityStatus: authorityStatus === 'DETERMINISTIC' ? 'AI_PROPOSED' : authorityStatus
       }];
+    }
     }
   }
 
@@ -603,7 +607,8 @@ export function assembleDeterministicResponse(
   const missingFacts = [
     ...new Set([
       ...(groundedContext.missingFacts || []),
-      ...(compact.missingFacts || [])
+      ...(compact.missingFacts || []),
+      ...(invalidJournalProposalReason ? [invalidJournalProposalReason] : [])
     ])
   ];
 
