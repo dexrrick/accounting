@@ -212,6 +212,8 @@ export interface AccountingScenarioState {
   
   isComplete: boolean;
   missingFields: MissingFieldInfo[];
+  /** Additive provenance for facts extracted from user text or image evidence. */
+  evidence?: ExtractedEvidence[];
   imageEvidence?: ExtractedImageEvidence[];
 }
 

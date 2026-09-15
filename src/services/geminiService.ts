@@ -42,7 +42,8 @@ export function createGeminiImageParts(attachments: ChatImageAttachment[]): Arra
 }
 
 function getCurrentImageAttachments(chatHistory: ChatMessage[]): ChatImageAttachment[] {
-  return [...chatHistory].reverse().find((message) => message.sender === 'user' && message.images?.length)?.images || [];
+  const currentUserMessage = [...chatHistory].reverse().find((message) => message.sender === 'user');
+  return currentUserMessage?.images || [];
 }
 
 function normaliseImageEvidence(rawEvidence: unknown, attachments: ChatImageAttachment[]): ExtractedImageEvidence[] {
@@ -50,13 +51,32 @@ function normaliseImageEvidence(rawEvidence: unknown, attachments: ChatImageAtta
   return rawEvidence.flatMap((item, imageIndex) => {
     if (!item || typeof item !== 'object') return [];
     const record = item as Record<string, unknown>;
+    const attachmentIndex = typeof record.imageIndex === 'number' && record.imageIndex >= 1 && record.imageIndex <= attachments.length
+      ? record.imageIndex - 1
+      : imageIndex;
     const fieldsSource = record.fields && typeof record.fields === 'object' ? record.fields as Record<string, unknown> : {};
     const fields: ExtractedEvidence[] = Object.entries(fieldsSource).flatMap(([field, value]) => {
       if (typeof value !== 'string' && typeof value !== 'number') return [];
-      return [{ source: 'image' as const, imageId: attachments[imageIndex]?.id, field, value, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }];
+      return [{ source: 'image' as const, imageId: attachments[attachmentIndex]?.id, field, value, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }];
     });
-    return fields.length ? [{ imageId: attachments[imageIndex]?.id || `image-${imageIndex + 1}`, documentType: typeof record.documentType === 'string' ? record.documentType : undefined, fields, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }] : [];
+    return fields.length ? [{ imageId: attachments[attachmentIndex]?.id || `image-${attachmentIndex + 1}`, documentType: typeof record.documentType === 'string' ? record.documentType : undefined, fields, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }] : [];
   });
+}
+
+export function flattenImageEvidence(imageEvidence: ExtractedImageEvidence[]): ExtractedEvidence[] {
+  return imageEvidence.flatMap((image) => image.fields.map((field) => ({
+    ...field,
+    source: 'image' as const,
+    imageId: field.imageId || image.imageId
+  })));
+}
+
+const MATERIAL_IMAGE_FIELDS = /amount|subtotal|total|gst|tax|date|rate|percent|percentage|quantity|principal|interest|value/i;
+
+export function getMaterialImageUncertainties(imageEvidence: ExtractedImageEvidence[]): ExtractedEvidence[] {
+  return flattenImageEvidence(imageEvidence).filter((field) =>
+    MATERIAL_IMAGE_FIELDS.test(field.field) && (field.confidence === undefined || field.confidence < 0.9)
+  );
 }
 
 export async function extractImageEvidenceWithGemini(
@@ -77,7 +97,7 @@ export async function extractImageEvidenceWithGemini(
         contents: [{
           role: 'user',
           parts: [
-            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only: {"imageEvidence":[{"documentType":"supplier_invoice","confidence":0.0,"fields":{"supplier":"...","invoiceDate":"DD/MM/YYYY","subtotal":0,"gst":0,"total":0,"currency":"SGD"}}]}. Preserve image order. Omit unreadable fields.' },
+            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only: {"imageEvidence":[{"imageIndex":1,"documentType":"supplier_invoice","confidence":0.0,"fields":{"supplier":"...","invoiceDate":"DD/MM/YYYY","subtotal":0,"gst":0,"total":0,"currency":"SGD"}}]}. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
             ...createGeminiImageParts(attachments)
           ]
         }],
@@ -1179,6 +1199,7 @@ Active Parameters:
 ${JSON.stringify(currentScenario.keyParameters || [], null, 2)}
 Active Double Entry Journal Groups:
 ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
+${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (do not re-examine an image unless the user asks):\n${formatImageEvidenceForAccounting(currentScenario.imageEvidence)}` : ''}
 ` : '';
 
   const currentTurnText = `${activeScenarioSummary}\n[USER QUERY / FOLLOW-UP]:\n${userInput}${imageAttachments.length ? `\n\n[EXTRACTED IMAGE EVIDENCE — NOT ACCOUNTING JUDGMENT]\n${imageEvidenceSummary}` : ''}`.trim();
@@ -1330,7 +1351,36 @@ ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDat
   const tPost0 = Date.now();
   const parsed = repairAndParseAIJson(rawJsonText);
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
-  if (imageEvidence.length > 0) result.scenarioState.imageEvidence = imageEvidence;
+  if (imageEvidence.length > 0) {
+    result.scenarioState.imageEvidence = imageEvidence;
+    result.scenarioState.evidence = [
+      ...(result.scenarioState.evidence || []),
+      ...flattenImageEvidence(imageEvidence)
+    ];
+  } else if (currentScenario?.imageEvidence?.length) {
+    result.scenarioState.imageEvidence = currentScenario.imageEvidence;
+    result.scenarioState.evidence = currentScenario.evidence;
+  }
+  const uncertainMaterialFields = getMaterialImageUncertainties(imageEvidence);
+  if (uncertainMaterialFields.length > 0) {
+    const fieldNames = [...new Set(uncertainMaterialFields.map((field) => field.field.replace(/([A-Z])/g, ' $1').toLowerCase()))];
+    const prompt = `Please verify the screenshot ${fieldNames.join(', ')} before I prepare a definitive journal entry.`;
+    result.scenarioState = {
+      ...result.scenarioState,
+      directGroups: [],
+      projectedGroups: [],
+      isComplete: false,
+      missingFacts: [...new Set([...(result.scenarioState.missingFacts || []), ...fieldNames])],
+      missingFields: [{
+        fieldKey: 'imageVerification',
+        fieldName: 'Screenshot amount or other material fact',
+        prompt,
+        whyNeeded: 'The image evidence is not sufficiently reliable for a balanced accounting entry.'
+      }],
+      uncertaintyDisclaimer: `Possible value detected from screenshot. ${prompt}`
+    };
+    result.messageText = `${result.messageText}\n\n### Screenshot verification required\n\n${prompt}`;
+  }
   // Validate AI proposed groups against deterministic accounting guardrails
   if (result.scenarioState.directGroups && result.scenarioState.directGroups.length > 0 && context.semanticUnderstanding) {
     const valResult = defaultAccountingGuardrails.validate(context.semanticUnderstanding, result.scenarioState.directGroups);

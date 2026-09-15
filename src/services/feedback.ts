@@ -10,6 +10,7 @@ export interface FeedbackReport {
   userAgent: string;
   app: { theme: 'light' | 'dark'; fontSize: string; activeProvider: string; model: string; shareStructureEnabled: boolean };
   conversation: Array<{ sender: string; timestamp: string; text: string }>;
+  attachments: { imagesAttached: number; imageTypes: string[] };
   scenario?: Record<string, unknown>;
   telemetry?: unknown;
 }
@@ -64,6 +65,10 @@ export const compileFeedbackReport = (input: {
       timestamp,
       text: fullText || text
     })),
+    attachments: {
+      imagesAttached: input.messages.reduce((count, message) => count + (message.images?.length || 0), 0),
+      imageTypes: [...new Set(input.messages.flatMap((message) => message.images?.map((image) => image.mimeType) || []))]
+    },
     scenario: redactScenario(input.scenario),
     telemetry: (window as Window & { __LAST_REQUEST_TELEMETRY__?: unknown }).__LAST_REQUEST_TELEMETRY__
   };
