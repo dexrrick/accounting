@@ -76,7 +76,7 @@ const MATERIAL_IMAGE_FIELDS = /amount|subtotal|total|gst|tax|date|rate|percent|p
 
 export function getMaterialImageUncertainties(imageEvidence: ExtractedImageEvidence[]): ExtractedEvidence[] {
   return flattenImageEvidence(imageEvidence).filter((field) =>
-    MATERIAL_IMAGE_FIELDS.test(field.field) && (field.confidence === undefined || field.confidence < 0.9)
+    MATERIAL_IMAGE_FIELDS.test(field.field) && field.confidence !== undefined && field.confidence < 0.9
   );
 }
 
@@ -362,9 +362,10 @@ export async function processAccountingQuery(
   // one from generic expense defaults.
   const isJournalDisplayRequest = /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:(?:me\s+)?|your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(userInput);
   if (isJournalDisplayRequest) {
-    const committedGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+    const candidateGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
       ? currentScenario.committedDirectGroups
-      : (currentScenario?.directGroups || []).filter(group => !group.isHypothetical);
+      : currentScenario?.directGroups || [];
+    const committedGroups = candidateGroups.filter(group => !group.isHypothetical && group.isBalanced && group.totalDebit > 0 && group.totalCredit > 0);
     const lastGroup = committedGroups[committedGroups.length - 1];
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);

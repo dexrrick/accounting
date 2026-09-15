@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { ACCEPTED_IMAGE_TYPES, extractBase64Data, MAX_IMAGE_FILE_SIZE, validateImageFile } from '../../src/utils/imageUtils.ts';
-import { createGeminiImageParts, extractImageEvidenceWithGemini, flattenImageEvidence, getMaterialImageUncertainties, supportsGeminiVision } from '../../src/services/geminiService.ts';
+import { createGeminiImageParts, extractImageEvidenceWithGemini, flattenImageEvidence, getMaterialImageUncertainties, processAccountingQuery, supportsGeminiVision } from '../../src/services/geminiService.ts';
 import { invoiceVisionResponse } from '../fixtures/visionEvidenceFixtures.mjs';
 import { compileFeedbackReport } from '../../src/services/feedback.ts';
 
@@ -17,6 +17,7 @@ assert.equal(supportsGeminiVision('gpt-4o'), false);
 assert.deepEqual(createGeminiImageParts([{ id: 'img-1', fileName: 'invoice.png', mimeType: 'image/png', dataUrl: 'data:image/png;base64,c2FmZQ==', size: 4 }]), [{ inlineData: { mimeType: 'image/png', data: 'c2FmZQ==' } }]);
 assert.deepEqual(flattenImageEvidence([{ imageId: 'img-1', documentType: 'supplier_invoice', fields: [{ source: 'image', field: 'total', value: 10900, confidence: 0.97 }] }]), [{ source: 'image', imageId: 'img-1', field: 'total', value: 10900, confidence: 0.97 }]);
 assert.equal(getMaterialImageUncertainties([{ imageId: 'img-1', fields: [{ source: 'image', field: 'total', value: 18650, confidence: 0.6 }, { source: 'image', field: 'supplier', value: 'ABC', confidence: 0.6 }] }]).length, 1);
+assert.equal(getMaterialImageUncertainties([{ imageId: 'img-1', fields: [{ source: 'image', field: 'total', value: 18650 }] }]).length, 0, 'missing confidence is not a model uncertainty signal');
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(invoiceVisionResponse) }] } }] }) });
@@ -32,5 +33,12 @@ const feedback = compileFeedbackReport({
 });
 assert.deepEqual(feedback.attachments, { imagesAttached: 1, imageTypes: ['image/png'] });
 assert.equal(JSON.stringify(feedback).includes('private-image-content'), false);
+
+const unbalancedJournal = await processAccountingQuery('show me double entry', {
+  scenarioType: 'UNIVERSAL', rawQuery: 'test', transactionTitle: 'Pending valuation', functionalCurrency: 'SGD', transactionCurrency: 'SGD',
+  directGroups: [{ id: 'pending', title: 'Pending valuation', eventDate: '15/09/2026', summary: '', lines: [], totalDebit: 0, totalCredit: 0, isBalanced: false, citations: [], rationalePoints: [] }],
+  isComplete: false, missingFields: []
+}, 'SFRS_I');
+assert.match(unbalancedJournal.messageText, /No Double Entry Available Yet/);
 
 console.log('✓ MIME validation and base64 extraction passed.');
