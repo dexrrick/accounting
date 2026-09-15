@@ -18,7 +18,7 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
 import { startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
-import { extractEventSequence, resolveInventoryEventSequence } from '../engine/eventSequence';
+import { extractEventSequence, resolveCommercialEventSequence } from '../engine/eventSequence';
 
 export interface GeminiResponse {
   messageText: string;
@@ -453,7 +453,7 @@ export async function processAccountingQuery(
   if (outputPreference?.journal && !hasImages) {
     const sequence = extractEventSequence(userInput);
     if (sequence) {
-      const resolution = resolveInventoryEventSequence(sequence, standard);
+      const resolution = resolveCommercialEventSequence(sequence, standard);
       const sequenceScenario: AccountingScenarioState = {
         scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Related accounting events',
         functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: resolution.groups,

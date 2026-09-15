@@ -120,9 +120,11 @@ export interface NormalizedAccountingEvent {
   description: string;
   parties?: { supplier?: string; customer?: string };
   accounts?: string[];
+  paymentTerms?: string;
   currency: string;
   amount?: number;
   quantity?: number;
+  unitPrice?: number;
   tax?: { rate?: number; amount?: number; treatment?: string };
   relatesTo: string[];
   evidence: ExtractedEvidence[];
