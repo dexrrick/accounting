@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { ACCEPTED_IMAGE_TYPES, extractBase64Data, MAX_IMAGE_FILE_SIZE, validateImageFile } from '../../src/utils/imageUtils.ts';
-import { buildJournalGroupsFromImageEvidence, createGeminiImageParts, extractImageEvidenceWithGemini, flattenImageEvidence, getMaterialImageUncertainties, processAccountingQuery, supportsGeminiVision } from '../../src/services/geminiService.ts';
+import { buildJournalGroupsFromImageEvidence, buildTransactionGroupsFromImageEvidence, createGeminiImageParts, extractImageEvidenceWithGemini, flattenImageEvidence, getMaterialImageUncertainties, processAccountingQuery, supportsGeminiVision } from '../../src/services/geminiService.ts';
 import { invoiceVisionResponse } from '../fixtures/visionEvidenceFixtures.mjs';
 import { compileFeedbackReport } from '../../src/services/feedback.ts';
 
@@ -22,6 +22,9 @@ const extractedJournal = buildJournalGroupsFromImageEvidence([{ imageId: 'img-1'
 assert.equal(extractedJournal[0].isBalanced, true);
 assert.equal(extractedJournal[0].totalDebit, 1000);
 assert.equal(extractedJournal[0].totalCredit, 1000);
+const extractedTransaction = buildTransactionGroupsFromImageEvidence([{ imageId: 'img-2', fields: [{ source: 'image', field: 'transactionType', value: 'equipment_purchase' }, { source: 'image', field: 'assetName', value: 'Office Equipment' }, { source: 'image', field: 'totalAmount', value: 1200 }, { source: 'image', field: 'immediatePayment', value: 400 }, { source: 'image', field: 'remainingPayable', value: 800 }] }]);
+assert.equal(extractedTransaction[0].isBalanced, true);
+assert.deepEqual(extractedTransaction[0].lines.map((line) => [line.accountName, line.debit, line.credit]), [['Office Equipment', 1200, 0], ['Cash / Bank', 0, 400], ['Accounts Payable', 0, 800]]);
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async () => ({ ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify(invoiceVisionResponse) }] } }] }) });

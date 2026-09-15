@@ -18,6 +18,7 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
 import { startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
+import { extractEventSequence, resolveInventoryEventSequence } from '../engine/eventSequence';
 
 export interface GeminiResponse {
   messageText: string;
@@ -91,6 +92,26 @@ export function buildJournalGroupsFromImageEvidence(imageEvidence: ExtractedImag
   });
 }
 
+export function buildTransactionGroupsFromImageEvidence(imageEvidence: ExtractedImageEvidence[]): JournalEntryGroup[] {
+  return imageEvidence.flatMap((image, imageIndex) => {
+    const values = new Map(image.fields.map((field) => [field.field.toLowerCase(), field.value]));
+    const amount = (key: string) => typeof values.get(key) === 'number' ? values.get(key) as number : undefined;
+    const totalAmount = amount('totalamount') ?? amount('purchaseprice') ?? amount('amount');
+    const immediatePayment = amount('immediatepayment') ?? amount('cashpaid') ?? amount('bankpayment');
+    const remainingPayable = amount('remainingpayable') ?? amount('creditbalance') ?? amount('amountpayable');
+    const transactionType = String(values.get('transactiontype') || '').toLowerCase();
+    const assetName = typeof values.get('assetname') === 'string' ? values.get('assetname') as string : undefined;
+    if (!totalAmount || !immediatePayment || !remainingPayable || Math.abs(totalAmount - immediatePayment - remainingPayable) >= 0.01 || !/(asset_purchase|equipment_purchase|inventory_purchase)/.test(transactionType)) return [];
+    const accountName = assetName || (transactionType.includes('inventory') ? 'Inventory' : 'Office Equipment');
+    const lines = [
+      { id: `image-${imageIndex + 1}-asset`, accountCode: 'IMAGE', accountName, category: 'ASSET' as const, debit: totalAmount, credit: 0, lineExplanation: 'Asset cost extracted from the screenshot.' },
+      { id: `image-${imageIndex + 1}-bank`, accountCode: 'IMAGE', accountName: 'Cash / Bank', category: 'ASSET' as const, debit: 0, credit: immediatePayment, lineExplanation: 'Immediate payment extracted from the screenshot.' },
+      { id: `image-${imageIndex + 1}-payable`, accountCode: 'IMAGE', accountName: 'Accounts Payable', category: 'LIABILITY' as const, debit: 0, credit: remainingPayable, lineExplanation: 'Remaining supplier balance extracted from the screenshot.' }
+    ];
+    return [{ id: `image-transaction-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Transaction extracted from image ${imageIndex + 1}`, summary: 'Journal deterministically built from visible transaction facts; confirm GST treatment separately.', lines, totalDebit: totalAmount, totalCredit: immediatePayment + remainingPayable, isBalanced: true, citations: [], rationalePoints: ['Amounts and settlement split were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
+  });
+}
+
 export function flattenImageEvidence(imageEvidence: ExtractedImageEvidence[]): ExtractedEvidence[] {
   return imageEvidence.flatMap((image) => image.fields.map((field) => ({
     ...field,
@@ -125,7 +146,7 @@ export async function extractImageEvidenceWithGemini(
         contents: [{
           role: 'user',
           parts: [
-            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only: {"imageEvidence":[{"imageIndex":1,"documentType":"supplier_invoice","confidence":0.0,"fields":{"supplier":"...","invoiceDate":"DD/MM/YYYY","subtotal":0,"gst":0,"total":0,"currency":"SGD"},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
+            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only. For journals use {"imageEvidence":[{"imageIndex":1,"documentType":"journal","confidence":0.0,"fields":{},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. For transaction-task screenshots use {"imageEvidence":[{"imageIndex":1,"documentType":"accounting_transaction","confidence":0.0,"fields":{"transactionType":"equipment_purchase","assetName":"Office Equipment","totalAmount":1200,"immediatePayment":400,"remainingPayable":800,"paymentMethod":"bank_transfer","currency":"SGD"}}]}. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
             ...createGeminiImageParts(attachments)
           ]
         }],
@@ -426,6 +447,32 @@ export async function processAccountingQuery(
 
   // 1. Check if query matches an explicit deterministic test fixture
   const isFixture = isDeterministicFixture(userInput);
+  // A dated multi-event narrative is complete as a sequence even when it does
+  // not look like one of the legacy single-scenario parser fixtures. Resolve it
+  // before the generic journal clarification gate can discard the chronology.
+  if (outputPreference?.journal && !hasImages) {
+    const sequence = extractEventSequence(userInput);
+    if (sequence) {
+      const resolution = resolveInventoryEventSequence(sequence, standard);
+      const sequenceScenario: AccountingScenarioState = {
+        scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Related accounting events',
+        functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: resolution.groups,
+        eventSequence: sequence, evidence: sequence.events.flatMap(event => event.evidence),
+        isComplete: resolution.clarifications.length === 0, missingFields: resolution.clarifications
+      };
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      if (resolution.clarifications.length) {
+        return attachAmendmentProvenance({
+          messageText: `### Clarification Required for Event Sequence\n\n${resolution.clarifications[0].prompt}`,
+          scenarioState: sequenceScenario,
+          clarifications: resolution.clarifications
+        });
+      }
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(sequenceScenario, standard));
+    }
+  }
   const tDet0 = Date.now();
   const deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
@@ -1388,8 +1435,10 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       ...flattenImageEvidence(imageEvidence)
     ];
     const extractedJournalGroups = buildJournalGroupsFromImageEvidence(imageEvidence);
-    if (extractedJournalGroups.length > 0) {
-      result.scenarioState.directGroups = extractedJournalGroups;
+    const extractedTransactionGroups = buildTransactionGroupsFromImageEvidence(imageEvidence);
+    const extractedGroups = extractedJournalGroups.length > 0 ? extractedJournalGroups : extractedTransactionGroups;
+    if (extractedGroups.length > 0) {
+      result.scenarioState.directGroups = extractedGroups;
       result.scenarioState.committedDirectGroups = undefined;
       result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced: total debits equal total credits. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
     }

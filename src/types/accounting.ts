@@ -98,6 +98,40 @@ export interface JournalEntryGroup {
   citations: StandardCitation[];
   rationalePoints: string[];
   authorityStatus?: JournalAuthorityStatus;
+  /** Links this posting to the normalized event that produced it. */
+  accountingEventId?: string;
+  relatedEventIds?: string[];
+  taxSummary?: string;
+}
+
+export type AccountingEventType =
+  | 'purchase' | 'purchase_return' | 'supplier_settlement' | 'purchase_discount'
+  | 'sale' | 'sales_return' | 'customer_settlement' | 'credit_note'
+  | 'correction' | 'reversal' | 'reclassification' | 'asset_disposal' | 'other';
+
+export type AccountingEventStatus = 'actual' | 'proposed' | 'corrected' | 'reversed';
+
+/** Facts only: this deliberately contains no accounting treatment or journal lines. */
+export interface NormalizedAccountingEvent {
+  id: string;
+  date?: string;
+  type: AccountingEventType;
+  lifecycle: AccountingEventStatus;
+  description: string;
+  parties?: { supplier?: string; customer?: string };
+  accounts?: string[];
+  currency: string;
+  amount?: number;
+  quantity?: number;
+  tax?: { rate?: number; amount?: number; treatment?: string };
+  relatesTo: string[];
+  evidence: ExtractedEvidence[];
+  uncertainties: MissingFieldInfo[];
+}
+
+export interface AccountingEventSequence {
+  events: NormalizedAccountingEvent[];
+  source: 'user_text' | 'image';
 }
 
 export interface FinancialImpactSummary {
@@ -215,6 +249,7 @@ export interface AccountingScenarioState {
   /** Additive provenance for facts extracted from user text or image evidence. */
   evidence?: ExtractedEvidence[];
   imageEvidence?: ExtractedImageEvidence[];
+  eventSequence?: AccountingEventSequence;
 }
 
 export interface ChatMessage {
