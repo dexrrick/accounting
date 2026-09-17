@@ -100,7 +100,7 @@ export function resolveCommercialEventSequence(sequence: AccountingEventSequence
 export const resolveInventoryEventSequence = resolveCommercialEventSequence;
 
 export interface EventSequenceResolution {
-  family: 'commercial_goods' | 'fixed_asset';
+  family: 'commercial_goods' | 'fixed_asset' | 'lease';
   sequence: AccountingEventSequence;
   groups: JournalEntryGroup[];
   clarifications: MissingFieldInfo[];
@@ -114,6 +114,8 @@ export interface EventSequenceResolution {
 export function resolveEventSequence(text: string, standard: AccountingStandard = 'SFRS_I'): EventSequenceResolution | undefined {
   const fixedAsset = resolveFixedAssetSequence(text, standard);
   if (fixedAsset) return { family: 'fixed_asset', ...fixedAsset };
+  const lease = resolveLeaseSequence(text, standard);
+  if (lease) return { family: 'lease', ...lease };
 
   const sequence = extractEventSequence(text);
   if (!sequence) return undefined;
@@ -155,6 +157,33 @@ export function resolveFixedAssetSequence(text: string, standard: AccountingStan
     assetCitation(events[2], 'Annual depreciation', [line('c1', 'Depreciation Expense — Machinery', 'EXPENSE', yearDep, 0, 'Straight-line annual depreciation.'), line('c2', 'Accumulated Depreciation — Machinery', 'ASSET', 0, yearDep, 'Accumulated depreciation.')]),
     assetCitation(events[3], 'Depreciation to trade-in date', [line('d1', 'Depreciation Expense — Machinery', 'EXPENSE', halfDep, 0, 'Six months straight-line depreciation before derecognition.'), line('d2', 'Accumulated Depreciation — Machinery', 'ASSET', 0, halfDep, 'Accumulated depreciation.')]),
     assetCitation(events[4], 'Trade in old machinery and acquire replacement', [line('e1', 'Accumulated Depreciation — Machinery', 'ASSET', accumulatedDep, 0, 'Remove accumulated depreciation.'), line('e2', 'Loss on Disposal of Machinery', 'EXPENSE', loss, 0, 'Carrying amount exceeds trade-in proceeds.'), line('e3', 'Machinery — New Model', 'ASSET', newCost, 0, 'Replacement machine at purchase price.'), line('e4', 'Input GST receivable', 'ASSET', newCost * rate, 0, 'Recoverable GST on replacement.'), line('e5', 'Machinery — Old Model', 'ASSET', 0, cost, 'Derecognise old asset cost.'), line('e6', 'Output GST payable', 'LIABILITY', 0, oldOutputGst, 'GST on taxable trade-in supply.'), line('e7', 'Cash at Bank', 'ASSET', 0, netBank, 'Net bank payment after trade-in credit.')])
+  ];
+  return { sequence: { events, source: 'user_text' }, groups, clarifications: [] };
+}
+
+/** Deterministic lessee lifecycle for a conventional fixed-payment IFRS 16 lease. */
+export function resolveLeaseSequence(text: string, standard: AccountingStandard = 'SFRS_I'): { sequence: AccountingEventSequence; groups: JournalEntryGroup[]; clarifications: MissingFieldInfo[] } | undefined {
+  if (!/\b(?:ifrs\s*16|sfrs\(i\)\s*16|lease liability|right-of-use|rou)\b/i.test(text)) return undefined;
+  const liability = firstMoney(text, /present value[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const directCosts = firstMoney(text, /initial direct costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
+  const incentive = firstMoney(text, /lease incentive[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
+  const restoration = firstMoney(text, /restoration costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
+  const annualPayment = firstMoney(text, /annual lease payments?[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const rate = Number(text.match(/(?:incremental borrowing rate|interest expense)[^.]{0,80}?(\d+(?:\.\d+)?)\s*%/i)?.[1]) / 100;
+  const term = Number(text.match(/\b(\d+)\s*[- ]year\b/i)?.[1]);
+  const gstRate = (gstRateFrom(text) || 9) / 100;
+  if (!liability || !annualPayment || !rate || !term) return undefined;
+  const dates = [...text.matchAll(/(?:Transaction\s+\d+\s*\()?([0-3]?\d\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/gi)].map(match => match[1]);
+  const events = ['lease commencement', 'year-end lease measurement'].map((description, index) => ({ id: `event-${index + 1}`, date: dates[index], type: 'other' as const, lifecycle: 'actual' as const, description, currency: 'SGD', relatesTo: index ? ['event-1'] : [], evidence: evidence('eventText', description), uncertainties: [] }));
+  const rou = liability + directCosts + restoration - incentive;
+  const interest = liability * rate;
+  const depreciation = rou / term;
+  const gst = annualPayment * gstRate;
+  const unwinding = restoration * rate;
+  const leaseGroup = (event: NormalizedAccountingEvent, title: string, lines: JournalLine[]): JournalEntryGroup => ({ ...group(event, title, lines, event.description, standard), citations: [getCitation('IFRS16_LEASE_INCEPTION', standard)] });
+  const groups = [
+    leaseGroup(events[0], 'Initial recognition of lease', [line('l1', 'Right-of-Use Asset', 'ASSET', liability + directCosts + restoration, 0, 'Lease liability, direct costs and restoration obligation included in the ROU asset.'), line('l2', 'Lease Liability', 'LIABILITY', 0, liability, 'Present value of lease payments.'), line('l3', 'Provision for Restoration', 'LIABILITY', 0, restoration, 'Present value of restoration obligation.'), line('l4', 'Cash at Bank', 'ASSET', 0, directCosts, 'Initial direct costs paid.'), line('l5', 'Cash at Bank', 'ASSET', incentive, 0, 'Lease incentive received.'), line('l6', 'Right-of-Use Asset', 'ASSET', 0, incentive, 'Lease incentive reduces ROU asset.')]),
+    leaseGroup(events[1], 'Year-end lease entries', [line('l7', 'Finance Cost — Lease Liability', 'EXPENSE', interest, 0, 'Effective-interest accretion of lease liability.'), line('l8', 'Lease Liability', 'LIABILITY', 0, interest, 'Lease liability interest accrued.'), line('l9', 'Lease Liability', 'LIABILITY', annualPayment, 0, 'Annual lease instalment principal settlement.'), line('l10', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST billed on lease payment.'), line('l11', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'Lease payment and GST paid.'), line('l12', 'Depreciation Expense — ROU Asset', 'EXPENSE', depreciation, 0, 'Straight-line ROU depreciation.'), line('l13', 'Accumulated Depreciation — ROU Asset', 'ASSET', 0, depreciation, 'ROU accumulated depreciation.'), line('l14', 'Finance Cost — Restoration Provision', 'EXPENSE', unwinding, 0, 'Unwinding of restoration discount.'), line('l15', 'Provision for Restoration', 'LIABILITY', 0, unwinding, 'Restoration provision accreted.')])
   ];
   return { sequence: { events, source: 'user_text' }, groups, clarifications: [] };
 }
