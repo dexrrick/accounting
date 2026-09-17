@@ -182,7 +182,7 @@ export function resolveFixedAssetSequence(text: string, standard: AccountingStan
 /** Deterministic lessee lifecycle for a conventional fixed-payment IFRS 16 lease. */
 export function resolveLeaseSequence(text: string, standard: AccountingStandard = 'SFRS_I'): { sequence: AccountingEventSequence; groups: JournalEntryGroup[]; clarifications: MissingFieldInfo[] } | undefined {
   if (!/\b(?:ifrs\s*16|sfrs\(i\)\s*16|lease liability|right-of-use|rou)\b/i.test(text)) return undefined;
-  const liability = firstMoney(text, /present value[\s\S]{0,300}?\bis\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const liability = firstMoney(text, /(?:present value|\bPV\b)[\s\S]{0,300}?(?:\bis\s*|:\s*)(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
   const directCosts = firstMoney(text, /initial direct costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   const incentive = firstMoney(text, /lease incentive[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   const restoration = firstMoney(text, /restoration costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
@@ -191,7 +191,10 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
   const term = Number(text.match(/\b(\d+)\s*[- ]year\b/i)?.[1]);
   const gstRate = (gstRateFrom(text) || 9) / 100;
   const paidInAdvance = /payable\s+(?:annually\s+)?in\s+advance/i.test(text);
-  const earlyTermination = /early[ -]?terminat|contract cancellation|lease modification/i.test(text);
+  const scopeReduction = /scope reduction|partial termination|reduce(?:d)?[^.]{0,80}?(\d+(?:\.\d+)?)\s*%/i.exec(text);
+  const earlyTermination = /early[ -]?terminat|contract cancellation/i.test(text) && !scopeReduction;
+  const pvAmounts = [...text.matchAll(/\bPV\b[\s\S]{0,180}?(?:\bis\s*|:\s*)(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/gi)].map(match => money(match[1])).filter((value): value is number => value !== undefined);
+  const revisedLiability = pvAmounts.length > 1 ? pvAmounts[pvAmounts.length - 1] : undefined;
   const terminationFee = firstMoney(text, /(?:termination|contract cancellation)[^.]{0,120}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   if (!liability || !annualPayment || !rate || !term) return undefined;
   const dates = [...text.matchAll(/(?:Transaction\s+\d+\s*\()?([0-3]?\d\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/gi)].map(match => match[1]);
@@ -215,6 +218,23 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
     const rouCarryingAmount = rou - depreciation;
     const derecognitionLoss = rouCarryingAmount - liabilityAtTermination;
     groups.push(leaseGroup(events[3], 'Early termination and lease derecognition', [line('l21', 'Lease Liability', 'LIABILITY', liabilityAtTermination, 0, 'Remaining lease liability derecognised on termination.'), line('l22', 'Loss on Lease Termination', 'EXPENSE', derecognitionLoss, 0, 'Difference between ROU carrying amount and derecognised liability.'), line('l23', 'Right-of-Use Asset', 'ASSET', 0, rouCarryingAmount, 'ROU asset derecognised.'), line('l24', 'Lease Termination Expense', 'EXPENSE', terminationFee, 0, 'Termination settlement penalty.'), line('l25', 'Cash at Bank', 'ASSET', 0, terminationFee, 'Termination settlement paid.')]));
+  }
+  if (scopeReduction && revisedLiability) {
+    const reductionPercent = Number(scopeReduction[1]) / 100;
+    const liabilityBeforeModification = liabilityAfterInterest - (paidInAdvance ? annualPayment : 0);
+    const rouBeforeModification = rou - depreciation;
+    const liabilityReduction = liabilityBeforeModification * reductionPercent;
+    const rouReduction = rouBeforeModification * reductionPercent;
+    const modificationGain = liabilityReduction - rouReduction;
+    const remainingLiability = liabilityBeforeModification - liabilityReduction;
+    const remeasurementDelta = remainingLiability - revisedLiability;
+    groups.push(leaseGroup(events[3], 'Lease scope reduction and remeasurement', [line('l26', 'Lease Liability', 'LIABILITY', liabilityReduction, 0, 'Derecognise the lease liability for the reduced scope.'), line('l27', 'Right-of-Use Asset', 'ASSET', 0, rouReduction, 'Derecognise the corresponding ROU asset.'), line('l28', modificationGain >= 0 ? 'Gain on Lease Modification' : 'Loss on Lease Modification', modificationGain >= 0 ? 'REVENUE' : 'EXPENSE', modificationGain >= 0 ? 0 : -modificationGain, modificationGain >= 0 ? modificationGain : 0, 'Difference on partial lease termination.'), line('l29', remeasurementDelta >= 0 ? 'Right-of-Use Asset' : 'Lease Liability', remeasurementDelta >= 0 ? 'ASSET' : 'LIABILITY', 0, 0, 'Placeholder removed below.')].filter(item => item.id !== 'l29')));
+    const remeasurementGroup = groups[groups.length - 1];
+    if (remeasurementDelta >= 0) remeasurementGroup.lines.push(line('l30', 'Lease Liability', 'LIABILITY', remeasurementDelta, 0, 'Remeasure remaining liability using revised discount rate.'), line('l31', 'Right-of-Use Asset', 'ASSET', 0, remeasurementDelta, 'Corresponding reduction of ROU asset.'));
+    else remeasurementGroup.lines.push(line('l30', 'Right-of-Use Asset', 'ASSET', -remeasurementDelta, 0, 'Corresponding increase of ROU asset.'), line('l31', 'Lease Liability', 'LIABILITY', 0, -remeasurementDelta, 'Remeasure remaining liability using revised discount rate.'));
+    remeasurementGroup.totalDebit = remeasurementGroup.lines.reduce((sum, item) => sum + item.debit, 0);
+    remeasurementGroup.totalCredit = remeasurementGroup.lines.reduce((sum, item) => sum + item.credit, 0);
+    remeasurementGroup.isBalanced = Math.abs(remeasurementGroup.totalDebit - remeasurementGroup.totalCredit) < 0.005;
   }
   return { sequence: { events, source: 'user_text' }, groups, clarifications: [] };
 }
