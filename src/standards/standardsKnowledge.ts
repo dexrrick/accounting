@@ -282,11 +282,11 @@ export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
     sourceAuthority: 'Accounting Standards Council Singapore & IASB'
   },
   SFRS_I_1_12_INCOME_TAXES: {
-    code: 'SFRS(I) 1-12 / IAS 12 §15 & §24',
-    sfrsCode: 'SFRS(I) 1-12 §15 & §24',
-    ifrsCode: 'IAS 12 §15 & §24',
+    code: 'SFRS(I) 1-12 / IAS 12 §15, §17(b) & §24',
+    sfrsCode: 'SFRS(I) 1-12 §15, §17(b) & §24',
+    ifrsCode: 'IAS 12 §15, §17(b) & §24',
     standardTitle: 'Income Taxes - Accounting vs Tax Bases & Deferred Tax',
-    paragraph: '§15 & §24',
+    paragraph: '§15, §17(b) & §24',
     principle: 'Deferred tax arises from temporary differences between the accounting carrying amounts of assets/liabilities and their corresponding tax bases under the Income Tax Act. Taxable temporary differences require Deferred Tax Liabilities; deductible temporary differences generate Deferred Tax Assets.',
     application: 'Accelerated tax capital allowances under Section 19A of the Income Tax Act exceed accounting depreciation, producing a taxable temporary difference: Dr. Deferred Tax Expense (P&L) | Cr. Deferred Tax Liability.',
     sourceAuthority: 'Accounting Standards Council Singapore & IASB'

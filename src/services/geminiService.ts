@@ -19,6 +19,7 @@ import { resolveFactAmendment } from './factAmendmentService';
 import { startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
+import { getCitation } from '../standards/standardsKnowledge';
 
 export interface GeminiResponse {
   messageText: string;
@@ -514,6 +515,13 @@ export async function processAccountingQuery(
   const deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
+  if (deterministicScenario.scenarioType === 'DEFERRED_TAX_IAS12' && !hasImages) {
+    profiler.recordFirstVisibleResponse();
+    profiler.setTokenCounts(0, 0, 0);
+    profiler.logSummary();
+    return renderStructuredOfflineResponse(deterministicScenario, standard);
+  }
+
   // A recognized but incomplete calculation is a pending conversation, not
   // permission for a provider to invent a value. This is field-agnostic: new
   // scenarios can supply their own missingFields without editing this gate.
@@ -693,6 +701,18 @@ export function renderStructuredOfflineResponse(
       : text;
     return appendStatutorySourceFooter(fullText, state);
   };
+
+  if (parsed.scenarioType === 'DEFERRED_TAX_IAS12') {
+    const incomeTaxStandard = standard === 'SFRS_I' ? 'SFRS(I) 1-12' : 'IAS 12';
+    const citation = getCitation('SFRS_I_1_12_INCOME_TAXES', standard);
+    const replyText = `### ${incomeTaxStandard} (Income Taxes) — Deferred Tax\n\n` +
+      `When tax depreciation or an upfront write-off exceeds accounting depreciation, the asset's **tax base** is lower than its **carrying amount**. The difference is a taxable temporary difference, so recognise a **deferred tax liability** (subject to the standard's recognition exceptions).\n\n` +
+      `Measure the liability as the temporary difference multiplied by the applicable tax rate expected when it reverses. In later periods, reverse it as accounting depreciation reduces the carrying amount relative to the tax base.\n\n` +
+      `**Conceptual entries:** Dr Deferred Tax Expense; Cr Deferred Tax Liability on recognition. On reversal: Dr Deferred Tax Liability; Cr Deferred Tax Income. Current tax from the deduction is accounted for separately.\n\n` +
+      `No amounts were provided for the asset carrying amount, tax base, or applicable tax rate, so no numerical journal has been created.\n\n` +
+      `**Standard:** [${citation.standard}, ${citation.paragraph}](${citation.officialSourceUrl}) — ${citation.title}.`;
+    return { messageText: finalizeMessage(replyText, parsed), scenarioState: parsed };
+  }
 
   const ensureEventSourcedState = (state: AccountingScenarioState): AccountingScenarioState => {
     if (state.isHypothetical) return state;

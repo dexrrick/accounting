@@ -12,7 +12,7 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { classifyQuestion } from '../classification/questionClassifier';
 import { defaultTransactionUnderstandingService } from '../services/transactionUnderstandingService';
 import { extractAccountingContext, calculateAccountingDelta, commitAccountingEvent } from '../services/conversationAccountingState';
-import { startsNewAccountingScenario } from '../services/conversationBoundary';
+import { isDeferredTaxInquiry, startsNewAccountingScenario } from '../services/conversationBoundary';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
 import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
@@ -223,6 +223,22 @@ export async function parseAccountingQuery(
   // resolution, so a new narrative cannot satisfy an old workflow by accident.
   if (currentScenario && startsNewAccountingScenario(query, currentScenario)) {
     return parseAccountingQuery(query, null);
+  }
+
+  if (isDeferredTaxInquiry(query)) {
+    return {
+      scenarioType: 'DEFERRED_TAX_IAS12',
+      rawQuery: query,
+      transactionTitle: 'Deferred Tax on Accelerated Tax Depreciation',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      queryIntent: 'STATUTORY_ADVISORY',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      directGroups: [],
+      isComplete: true,
+      missingFields: [],
+      accountingTreatmentSummary: 'Accelerated tax depreciation may reduce the asset tax base below its accounting carrying amount, creating a taxable temporary difference and a deferred tax liability under SFRS(I) 1-12 / IAS 12.'
+    };
   }
 
   if (isGstRegistrationMeasurementBasisQuestion(query, currentScenario)) {

@@ -3,6 +3,12 @@ import type { ConversationAccountingContext } from '../types/conversationState';
 
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
 
+/** A self-contained income-tax accounting question must not inherit a PPE journal. */
+export function isDeferredTaxInquiry(query: string): boolean {
+  return /\bdeferred\s+tax\s+(?:liabilit(?:y|ies)|assets?|accounting)\b/i.test(query) &&
+    /\b(?:tax\s+depreciation|accelerated\s+(?:tax\s+)?(?:depreciation|write[ -]?off)|capital\s+allowances?|tax\s+base|temporary\s+differences?)\b/i.test(query);
+}
+
 /**
  * A deliberately conservative UI safeguard. Most messages are routed
  * automatically; only a substantial transaction-like message that has no
@@ -40,6 +46,8 @@ export function startsNewAccountingScenario(
   context?: ConversationAccountingContext
 ): boolean {
   if (!currentScenario && !context?.underlyingTransaction) return false;
+
+  if (isDeferredTaxInquiry(query)) return true;
 
   const q = query.toLowerCase();
   const startsNewTransaction = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/.test(q);
