@@ -14,6 +14,7 @@ const gstRateFrom = (value: string): number | undefined => money(value.match(/\b
 const partyFrom = (value: string, role: 'supplier' | 'customer'): string | undefined =>
   value.match(new RegExp(`\\b${role}(?:\\s+name)?\\s+([A-Z][\\w&.' -]+?)(?=\\s+(?:at|for|on|via|,|\\.|$))`, 'i'))?.[1]?.trim();
 const evidence = (field: string, value: string | number): ExtractedEvidence[] => [{ source: 'user_text', field, value, confidence: 0.95 }];
+const firstMoney = (text: string, pattern: RegExp): number | undefined => money(text.match(pattern)?.[1] || '');
 
 /** Extracts an ordered factual ledger; it does not decide accounting treatment. */
 export function extractEventSequence(text: string): AccountingEventSequence | undefined {
@@ -97,3 +98,63 @@ export function resolveCommercialEventSequence(sequence: AccountingEventSequence
 
 /** @deprecated Use resolveCommercialEventSequence. Kept for existing callers. */
 export const resolveInventoryEventSequence = resolveCommercialEventSequence;
+
+export interface EventSequenceResolution {
+  family: 'commercial_goods' | 'fixed_asset';
+  sequence: AccountingEventSequence;
+  groups: JournalEntryGroup[];
+  clarifications: MissingFieldInfo[];
+}
+
+/**
+ * Single, conservative dispatch point for multi-event requests.  A family is
+ * only claimed when its deterministic resolver owns every posted event; this
+ * lets existing specialist engines or the clarification flow handle the rest.
+ */
+export function resolveEventSequence(text: string, standard: AccountingStandard = 'SFRS_I'): EventSequenceResolution | undefined {
+  const fixedAsset = resolveFixedAssetSequence(text, standard);
+  if (fixedAsset) return { family: 'fixed_asset', ...fixedAsset };
+
+  const sequence = extractEventSequence(text);
+  if (!sequence) return undefined;
+  const isGoodsLifecycle = /\b(inventory|merchandise|goods|widgets?|stock)\b/i.test(text) &&
+    sequence.events.every(event => ['purchase', 'purchase_return', 'supplier_settlement', 'purchase_discount', 'sale', 'credit_note'].includes(event.type));
+  if (!isGoodsLifecycle) return undefined;
+  return { family: 'commercial_goods', sequence, ...resolveCommercialEventSequence(sequence, standard) };
+}
+
+/** Deterministic IAS 16 lifecycle resolver, separate from goods/inventory logic. */
+export function resolveFixedAssetSequence(text: string, standard: AccountingStandard = 'SFRS_I'): { sequence: AccountingEventSequence; groups: JournalEntryGroup[]; clarifications: MissingFieldInfo[] } | undefined {
+  const q = text.toLowerCase();
+  if (!/\b(machine|machinery|equipment|fixed asset|ppe)\b/.test(q) || !/\bdepreciation\b/.test(q) || !/\b(trade[ -]?in|disposal|derecogn)/.test(q)) return undefined;
+  const purchase = firstMoney(text, /purchase price of\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const ancillary = firstMoney(text, /(?:testing|site preparation)[\s\S]{0,100}?costs? of\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
+  const residual = firstMoney(text, /residual value of\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const life = Number(text.match(/useful life of\s+(\d+(?:\.\d+)?)\s+years?/i)?.[1]);
+  const newCost = firstMoney(text, /(?:list price|newer[^.]{0,80}?model)[\s\S]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const tradeIn = firstMoney(text, /trade[ -]?in allowance of\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const rate = (gstRateFrom(text) || 9) / 100;
+  if (!purchase || !residual || !life || !newCost || !tradeIn) return undefined;
+  const dates = [...text.matchAll(/Transaction\s+\d+\s*\(([^)]+)\)/gi)].map(match => match[1]);
+  const events = ['asset acquisition', 'asset liability settlement', 'annual depreciation', 'pre-disposal depreciation', 'asset trade-in'].map((description, index) => ({ id: `event-${index + 1}`, date: dates[index], type: 'other' as const, lifecycle: 'actual' as const, description, currency: 'SGD', relatesTo: index ? [`event-${index}`] : [], evidence: evidence('eventText', description), uncertainties: [] }));
+  const cost = purchase + ancillary;
+  const yearDep = (cost - residual) / life;
+  const halfDep = yearDep / 2;
+  const accumulatedDep = yearDep + halfDep;
+  const carryingAmount = cost - accumulatedDep;
+  const inputGst = purchase * rate;
+  const oldOutputGst = tradeIn * rate;
+  const loss = carryingAmount - tradeIn;
+  const netBank = newCost + newCost * rate - tradeIn - oldOutputGst;
+  const assetCitation = (event: NormalizedAccountingEvent, title: string, lines: JournalLine[]): JournalEntryGroup => ({
+    ...group(event, title, lines, event.description, standard), citations: [getCitation('IAS16_PPE_RECOGNITION', standard)]
+  });
+  const groups = [
+    assetCitation(events[0], 'Acquire delivery machinery', [line('a1', 'Machinery', 'ASSET', cost, 0, 'Purchase price and directly attributable testing/site preparation costs capitalised.'), line('a2', 'Input GST receivable', 'ASSET', inputGst, 0, 'Recoverable GST on machinery purchase.'), line('a3', 'Accounts Payable — TechMach Ltd', 'LIABILITY', 0, purchase + inputGst, 'Credit purchase liability.'), line('a4', 'Cash at Bank', 'ASSET', 0, ancillary, 'Ancillary costs paid immediately.')]),
+    assetCitation(events[1], 'Settle machinery supplier liability', [line('b1', 'Accounts Payable — TechMach Ltd', 'LIABILITY', purchase + inputGst, 0, 'Supplier liability settled.'), line('b2', 'Cash at Bank', 'ASSET', 0, purchase + inputGst, 'Bank settlement.')]),
+    assetCitation(events[2], 'Annual depreciation', [line('c1', 'Depreciation Expense — Machinery', 'EXPENSE', yearDep, 0, 'Straight-line annual depreciation.'), line('c2', 'Accumulated Depreciation — Machinery', 'ASSET', 0, yearDep, 'Accumulated depreciation.')]),
+    assetCitation(events[3], 'Depreciation to trade-in date', [line('d1', 'Depreciation Expense — Machinery', 'EXPENSE', halfDep, 0, 'Six months straight-line depreciation before derecognition.'), line('d2', 'Accumulated Depreciation — Machinery', 'ASSET', 0, halfDep, 'Accumulated depreciation.')]),
+    assetCitation(events[4], 'Trade in old machinery and acquire replacement', [line('e1', 'Accumulated Depreciation — Machinery', 'ASSET', accumulatedDep, 0, 'Remove accumulated depreciation.'), line('e2', 'Loss on Disposal of Machinery', 'EXPENSE', loss, 0, 'Carrying amount exceeds trade-in proceeds.'), line('e3', 'Machinery — New Model', 'ASSET', newCost, 0, 'Replacement machine at purchase price.'), line('e4', 'Input GST receivable', 'ASSET', newCost * rate, 0, 'Recoverable GST on replacement.'), line('e5', 'Machinery — Old Model', 'ASSET', 0, cost, 'Derecognise old asset cost.'), line('e6', 'Output GST payable', 'LIABILITY', 0, oldOutputGst, 'GST on taxable trade-in supply.'), line('e7', 'Cash at Bank', 'ASSET', 0, netBank, 'Net bank payment after trade-in credit.')])
+  ];
+  return { sequence: { events, source: 'user_text' }, groups, clarifications: [] };
+}

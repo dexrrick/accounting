@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { extractEventSequence, resolveInventoryEventSequence } from '../../src/engine/eventSequence.ts';
+import { extractEventSequence, resolveEventSequence, resolveInventoryEventSequence } from '../../src/engine/eventSequence.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 
 const narrative = [
@@ -40,4 +40,15 @@ assert.ok(alternateSequence);
 const alternateResolution = resolveInventoryEventSequence(alternateSequence);
 assert.equal(alternateResolution.clarifications.length, 0);
 assert.deepEqual(alternateResolution.groups.map(group => [group.totalDebit, group.totalCredit]), [[648, 648], [108, 108], [540, 540], [898, 898], [10.8, 10.8]]);
+
+const generatedCommercialQuestions = [
+  '1 Mar: Purchased 3 widgets on credit from supplier A at SGD 40 each plus 9% GST.\n2 Mar: Returned 1 widget to supplier A for a full credit.',
+  '1 Apr: Bought 8 goods on credit from vendor B at SGD 15 each plus 7% GST.\n2 Apr: Sold 2 goods to customer C on credit for SGD 30 each plus 7% GST.'
+];
+for (const question of generatedCommercialQuestions) {
+  const resolved = resolveEventSequence(question);
+  assert.equal(resolved?.family, 'commercial_goods');
+  assert.ok(resolved?.groups.every(group => group.isBalanced));
+}
+assert.equal(resolveEventSequence('1 May: Accrued payroll.\n31 May: Paid salaries.'), undefined, 'unsupported families must fall through rather than receive an incorrect commercial journal');
 console.log('PASS | inventory event sequence is extracted, reconciled, balanced, and routed before generic clarification');

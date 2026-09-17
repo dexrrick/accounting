@@ -18,7 +18,7 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
 import { startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
-import { extractEventSequence, resolveCommercialEventSequence } from '../engine/eventSequence';
+import { resolveEventSequence } from '../engine/eventSequence';
 
 export interface GeminiResponse {
   messageText: string;
@@ -451,13 +451,12 @@ export async function processAccountingQuery(
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
   if (outputPreference?.journal && !hasImages) {
-    const sequence = extractEventSequence(userInput);
-    if (sequence) {
-      const resolution = resolveCommercialEventSequence(sequence, standard);
+    const resolution = resolveEventSequence(userInput, standard);
+    if (resolution) {
       const sequenceScenario: AccountingScenarioState = {
-        scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Related accounting events',
+        scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: resolution.family === 'fixed_asset' ? 'Related fixed-asset events' : 'Related accounting events',
         functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: resolution.groups,
-        eventSequence: sequence, evidence: sequence.events.flatMap(event => event.evidence),
+        eventSequence: resolution.sequence, evidence: resolution.sequence.events.flatMap(event => event.evidence),
         isComplete: resolution.clarifications.length === 0, missingFields: resolution.clarifications
       };
       profiler.recordFirstVisibleResponse();
