@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { extractEventSequence, resolveEventSequence, resolveInventoryEventSequence } from '../../src/engine/eventSequence.ts';
+import { extractEventSequence, normaliseAiEventSequence, resolveEventSequence, resolveInventoryEventSequence } from '../../src/engine/eventSequence.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 
 const narrative = [
@@ -51,4 +51,10 @@ for (const question of generatedCommercialQuestions) {
   assert.ok(resolved?.groups.every(group => group.isBalanced));
 }
 assert.equal(resolveEventSequence('1 May: Accrued payroll.\n31 May: Paid salaries.'), undefined, 'unsupported families must fall through rather than receive an incorrect commercial journal');
+const aiCandidate = normaliseAiEventSequence({ events: [
+  { id: 'event-1', type: 'purchase', description: 'Purchased goods on credit.', currency: 'SGD', amount: 100, tax: { rate: 9 }, confidence: 0.95 },
+  { id: 'event-2', type: 'supplier_settlement', description: 'Paid supplier.', currency: 'SGD', amount: 109, relatesTo: ['event-1'], confidence: 0.95 }
+] });
+assert.ok(aiCandidate, 'valid AI factual candidates should pass the schema boundary');
+assert.equal(normaliseAiEventSequence({ events: [{ type: 'purchase', description: 'one event' }] }), undefined, 'incomplete or malformed AI event output must be rejected');
 console.log('PASS | inventory event sequence is extracted, reconciled, balanced, and routed before generic clarification');

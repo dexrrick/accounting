@@ -16,6 +16,24 @@ const partyFrom = (value: string, role: 'supplier' | 'customer'): string | undef
 const evidence = (field: string, value: string | number): ExtractedEvidence[] => [{ source: 'user_text', field, value, confidence: 0.95 }];
 const firstMoney = (text: string, pattern: RegExp): number | undefined => money(text.match(pattern)?.[1] || '');
 
+/** Strict boundary for AI-extracted facts; it never accepts journal lines or calculations. */
+export function normaliseAiEventSequence(payload: unknown): AccountingEventSequence | undefined {
+  const raw = payload as { events?: unknown[] };
+  if (!Array.isArray(raw?.events) || raw.events.length < 2) return undefined;
+  const allowed = new Set<NormalizedAccountingEvent['type']>(['purchase', 'purchase_return', 'supplier_settlement', 'purchase_discount', 'sale', 'sales_return', 'customer_settlement', 'credit_note', 'correction', 'reversal', 'reclassification', 'asset_disposal', 'other']);
+  const events: NormalizedAccountingEvent[] = [];
+  for (let index = 0; index < raw.events.length; index++) {
+    const item = raw.events[index] as Record<string, unknown>;
+    if (!item || typeof item.type !== 'string' || !allowed.has(item.type as NormalizedAccountingEvent['type']) || typeof item.description !== 'string') return undefined;
+    const amount = typeof item.amount === 'number' && Number.isFinite(item.amount) && item.amount > 0 ? item.amount : undefined;
+    const quantity = typeof item.quantity === 'number' && Number.isFinite(item.quantity) && item.quantity > 0 ? item.quantity : undefined;
+    const unitPrice = typeof item.unitPrice === 'number' && Number.isFinite(item.unitPrice) && item.unitPrice > 0 ? item.unitPrice : undefined;
+    const taxRate = typeof (item.tax as Record<string, unknown> | undefined)?.rate === 'number' ? (item.tax as { rate: number }).rate : undefined;
+    events.push({ id: typeof item.id === 'string' ? item.id : `event-${index + 1}`, date: typeof item.date === 'string' ? item.date : undefined, type: item.type as NormalizedAccountingEvent['type'], lifecycle: item.lifecycle === 'proposed' || item.lifecycle === 'corrected' || item.lifecycle === 'reversed' ? item.lifecycle : 'actual', description: item.description, currency: typeof item.currency === 'string' ? item.currency.toUpperCase() : 'SGD', amount, quantity, unitPrice, tax: taxRate !== undefined ? { rate: taxRate } : undefined, relatesTo: Array.isArray(item.relatesTo) ? item.relatesTo.filter((id): id is string => typeof id === 'string') : [], evidence: [{ source: 'user_text', field: 'aiEventCandidate', value: item.description, confidence: typeof item.confidence === 'number' ? item.confidence : 0.8 }], uncertainties: [] });
+  }
+  return { events, source: 'user_text' };
+}
+
 /** Extracts an ordered factual ledger; it does not decide accounting treatment. */
 export function extractEventSequence(text: string): AccountingEventSequence | undefined {
   const clauses = text.split(/(?:\r?\n|;|(?<=\.)\s+(?=(?:on\s+)?\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b))/).map(x => x.trim()).filter(Boolean);
@@ -111,13 +129,13 @@ export interface EventSequenceResolution {
  * only claimed when its deterministic resolver owns every posted event; this
  * lets existing specialist engines or the clarification flow handle the rest.
  */
-export function resolveEventSequence(text: string, standard: AccountingStandard = 'SFRS_I'): EventSequenceResolution | undefined {
+export function resolveEventSequence(text: string, standard: AccountingStandard = 'SFRS_I', aiCandidate?: AccountingEventSequence): EventSequenceResolution | undefined {
   const fixedAsset = resolveFixedAssetSequence(text, standard);
   if (fixedAsset) return { family: 'fixed_asset', ...fixedAsset };
   const lease = resolveLeaseSequence(text, standard);
   if (lease) return { family: 'lease', ...lease };
 
-  const sequence = extractEventSequence(text);
+  const sequence = aiCandidate || extractEventSequence(text);
   if (!sequence) return undefined;
   const isGoodsLifecycle = /\b(inventory|merchandise|goods|widgets?|stock)\b/i.test(text) &&
     sequence.events.every(event => ['purchase', 'purchase_return', 'supplier_settlement', 'purchase_discount', 'sale', 'credit_note'].includes(event.type));
@@ -164,7 +182,7 @@ export function resolveFixedAssetSequence(text: string, standard: AccountingStan
 /** Deterministic lessee lifecycle for a conventional fixed-payment IFRS 16 lease. */
 export function resolveLeaseSequence(text: string, standard: AccountingStandard = 'SFRS_I'): { sequence: AccountingEventSequence; groups: JournalEntryGroup[]; clarifications: MissingFieldInfo[] } | undefined {
   if (!/\b(?:ifrs\s*16|sfrs\(i\)\s*16|lease liability|right-of-use|rou)\b/i.test(text)) return undefined;
-  const liability = firstMoney(text, /present value[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const liability = firstMoney(text, /present value[\s\S]{0,300}?\bis\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
   const directCosts = firstMoney(text, /initial direct costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   const incentive = firstMoney(text, /lease incentive[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   const restoration = firstMoney(text, /restoration costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
@@ -172,18 +190,31 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
   const rate = Number(text.match(/(?:incremental borrowing rate|interest expense)[^.]{0,80}?(\d+(?:\.\d+)?)\s*%/i)?.[1]) / 100;
   const term = Number(text.match(/\b(\d+)\s*[- ]year\b/i)?.[1]);
   const gstRate = (gstRateFrom(text) || 9) / 100;
+  const paidInAdvance = /payable\s+(?:annually\s+)?in\s+advance/i.test(text);
+  const earlyTermination = /early[ -]?terminat|contract cancellation|lease modification/i.test(text);
+  const terminationFee = firstMoney(text, /(?:termination|contract cancellation)[^.]{0,120}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   if (!liability || !annualPayment || !rate || !term) return undefined;
   const dates = [...text.matchAll(/(?:Transaction\s+\d+\s*\()?([0-3]?\d\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/gi)].map(match => match[1]);
-  const events = ['lease commencement', 'year-end lease measurement'].map((description, index) => ({ id: `event-${index + 1}`, date: dates[index], type: 'other' as const, lifecycle: 'actual' as const, description, currency: 'SGD', relatesTo: index ? ['event-1'] : [], evidence: evidence('eventText', description), uncertainties: [] }));
-  const rou = liability + directCosts + restoration - incentive;
+  const events = ['lease commencement', 'year-end lease measurement', 'subsequent lease payment', 'lease termination'].map((description, index) => ({ id: `event-${index + 1}`, date: dates[index], type: 'other' as const, lifecycle: 'actual' as const, description, currency: 'SGD', relatesTo: index ? [`event-${index}`] : [], evidence: evidence('eventText', description), uncertainties: [] }));
+  const rou = liability + directCosts + restoration - incentive + (paidInAdvance ? annualPayment : 0);
   const interest = liability * rate;
   const depreciation = rou / term;
   const gst = annualPayment * gstRate;
   const unwinding = restoration * rate;
   const leaseGroup = (event: NormalizedAccountingEvent, title: string, lines: JournalLine[]): JournalEntryGroup => ({ ...group(event, title, lines, event.description, standard), citations: [getCitation('IFRS16_LEASE_INCEPTION', standard)] });
-  const groups = [
-    leaseGroup(events[0], 'Initial recognition of lease', [line('l1', 'Right-of-Use Asset', 'ASSET', liability + directCosts + restoration, 0, 'Lease liability, direct costs and restoration obligation included in the ROU asset.'), line('l2', 'Lease Liability', 'LIABILITY', 0, liability, 'Present value of lease payments.'), line('l3', 'Provision for Restoration', 'LIABILITY', 0, restoration, 'Present value of restoration obligation.'), line('l4', 'Cash at Bank', 'ASSET', 0, directCosts, 'Initial direct costs paid.'), line('l5', 'Cash at Bank', 'ASSET', incentive, 0, 'Lease incentive received.'), line('l6', 'Right-of-Use Asset', 'ASSET', 0, incentive, 'Lease incentive reduces ROU asset.')]),
-    leaseGroup(events[1], 'Year-end lease entries', [line('l7', 'Finance Cost — Lease Liability', 'EXPENSE', interest, 0, 'Effective-interest accretion of lease liability.'), line('l8', 'Lease Liability', 'LIABILITY', 0, interest, 'Lease liability interest accrued.'), line('l9', 'Lease Liability', 'LIABILITY', annualPayment, 0, 'Annual lease instalment principal settlement.'), line('l10', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST billed on lease payment.'), line('l11', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'Lease payment and GST paid.'), line('l12', 'Depreciation Expense — ROU Asset', 'EXPENSE', depreciation, 0, 'Straight-line ROU depreciation.'), line('l13', 'Accumulated Depreciation — ROU Asset', 'ASSET', 0, depreciation, 'ROU accumulated depreciation.'), line('l14', 'Finance Cost — Restoration Provision', 'EXPENSE', unwinding, 0, 'Unwinding of restoration discount.'), line('l15', 'Provision for Restoration', 'LIABILITY', 0, unwinding, 'Restoration provision accreted.')])
-  ];
+  const initialLines = [line('l1', 'Right-of-Use Asset', 'ASSET', rou + incentive, 0, 'Lease liability, initial payment, direct costs and restoration obligation included in the ROU asset.'), line('l2', 'Lease Liability', 'LIABILITY', 0, liability, 'Present value of unpaid lease payments.'), line('l3', 'Provision for Restoration', 'LIABILITY', 0, restoration, 'Present value of restoration obligation.'), line('l4', 'Cash at Bank', 'ASSET', 0, directCosts, 'Initial direct costs paid.'), line('l5', 'Cash at Bank', 'ASSET', incentive, 0, 'Lease incentive received.'), line('l6', 'Right-of-Use Asset', 'ASSET', 0, incentive, 'Lease incentive reduces ROU asset.')];
+  if (paidInAdvance) initialLines.push(line('l7', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST on first payment.'), line('l8', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'First lease payment and GST paid at commencement.'));
+  const yearEndLines = [line('l9', 'Finance Cost — Lease Liability', 'EXPENSE', interest, 0, 'Effective-interest accretion of lease liability.'), line('l10', 'Lease Liability', 'LIABILITY', 0, interest, 'Lease liability interest accrued.'), line('l11', 'Depreciation Expense — ROU Asset', 'EXPENSE', depreciation, 0, 'Straight-line ROU depreciation.'), line('l12', 'Accumulated Depreciation — ROU Asset', 'ASSET', 0, depreciation, 'ROU accumulated depreciation.')];
+  if (!paidInAdvance) yearEndLines.push(line('l13', 'Lease Liability', 'LIABILITY', annualPayment, 0, 'Annual lease instalment principal settlement.'), line('l14', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST billed on lease payment.'), line('l15', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'Lease payment and GST paid.'));
+  if (restoration) yearEndLines.push(line('l16', 'Finance Cost — Restoration Provision', 'EXPENSE', unwinding, 0, 'Unwinding of restoration discount.'), line('l17', 'Provision for Restoration', 'LIABILITY', 0, unwinding, 'Restoration provision accreted.'));
+  const groups = [leaseGroup(events[0], 'Initial recognition of lease', initialLines), leaseGroup(events[1], 'Year-end lease entries', yearEndLines)];
+  const liabilityAfterInterest = liability + interest;
+  if (paidInAdvance) groups.push(leaseGroup(events[2], 'Subsequent lease payment', [line('l18', 'Lease Liability', 'LIABILITY', annualPayment, 0, 'Second annual payment reduces lease liability.'), line('l19', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST on payment.'), line('l20', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'Annual lease payment and GST paid.')]));
+  if (earlyTermination) {
+    const liabilityAtTermination = liabilityAfterInterest - (paidInAdvance ? annualPayment : 0);
+    const rouCarryingAmount = rou - depreciation;
+    const derecognitionLoss = rouCarryingAmount - liabilityAtTermination;
+    groups.push(leaseGroup(events[3], 'Early termination and lease derecognition', [line('l21', 'Lease Liability', 'LIABILITY', liabilityAtTermination, 0, 'Remaining lease liability derecognised on termination.'), line('l22', 'Loss on Lease Termination', 'EXPENSE', derecognitionLoss, 0, 'Difference between ROU carrying amount and derecognised liability.'), line('l23', 'Right-of-Use Asset', 'ASSET', 0, rouCarryingAmount, 'ROU asset derecognised.'), line('l24', 'Lease Termination Expense', 'EXPENSE', terminationFee, 0, 'Termination settlement penalty.'), line('l25', 'Cash at Bank', 'ASSET', 0, terminationFee, 'Termination settlement paid.')]));
+  }
   return { sequence: { events, source: 'user_text' }, groups, clarifications: [] };
 }

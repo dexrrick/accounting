@@ -1,4 +1,4 @@
-import type { AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { AccountingEventSequence, AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
@@ -18,7 +18,7 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
 import { startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
-import { resolveEventSequence } from '../engine/eventSequence';
+import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 
 export interface GeminiResponse {
   messageText: string;
@@ -31,6 +31,17 @@ export interface OutputPreference {
   journal: boolean;
   statutory: boolean;
   shareStructure?: boolean;
+}
+
+/** AI may identify factual events only; strict normalization blocks journals and invented schema. */
+export async function extractEventSequenceWithGemini(text: string, apiKey: string, modelName: string): Promise<AccountingEventSequence | undefined> {
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `Extract chronological accounting EVENT FACTS from the text below. Do not calculate, recommend accounts, create journal entries, infer omitted facts, or cite standards. Return JSON only: {"events":[{"id":"event-1","date":"DD Mon YYYY","type":"purchase|purchase_return|supplier_settlement|purchase_discount|sale|sales_return|customer_settlement|credit_note|correction|reversal|reclassification|asset_disposal|other","description":"verbatim concise fact","currency":"SGD","amount":number,"quantity":number,"unitPrice":number,"tax":{"rate":number},"relatesTo":["event-1"],"confidence":0.0}]}. Omit unavailable numeric fields.\n\n${text}` }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
+  });
+  if (!response.ok) return undefined;
+  const responseText = (await response.json())?.candidates?.[0]?.content?.parts?.[0]?.text;
+  return responseText ? normaliseAiEventSequence(repairAndParseAIJson(responseText)) : undefined;
 }
 
 export function supportsGeminiVision(modelName: string): boolean {
@@ -451,7 +462,15 @@ export async function processAccountingQuery(
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
   if (outputPreference?.journal && !hasImages) {
-    const resolution = resolveEventSequence(userInput, standard);
+    let aiCandidate: AccountingEventSequence | undefined;
+    try {
+      const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
+      const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
+      if (apiKey?.trim() && apiKey.trim().length > 10) aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
+    } catch {
+      // Extraction is optional evidence acquisition; deterministic fallback remains available.
+    }
+    const resolution = resolveEventSequence(userInput, standard, aiCandidate);
     if (resolution) {
       const sequenceScenario: AccountingScenarioState = {
         scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: resolution.family === 'fixed_asset' ? 'Related fixed-asset events' : 'Related accounting events',
