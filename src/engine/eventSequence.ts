@@ -20,21 +20,25 @@ const partyFrom = (value: string, role: 'supplier' | 'customer'): string | undef
   value.match(new RegExp(`\\b${role}(?:\\s+name)?\\s+([A-Z][\\w&.' -]+?)(?=\\s+(?:at|for|on|via|,|\\.|$))`, 'i'))?.[1]?.trim();
 const evidence = (field: string, value: string | number): ExtractedEvidence[] => [{ source: 'user_text', field, value, confidence: 0.95 }];
 const firstMoney = (text: string, pattern: RegExp): number | undefined => money(text.match(pattern)?.[1] || '');
+const roundCents = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
 
 /** Strict boundary for AI-extracted facts; it never accepts journal lines or calculations. */
 export function normaliseAiEventSequence(payload: unknown): AccountingEventSequence | undefined {
   const raw = payload as { events?: unknown[] };
   if (!Array.isArray(raw?.events) || raw.events.length < 2) return undefined;
-  const allowed = new Set<NormalizedAccountingEvent['type']>(['purchase', 'purchase_return', 'supplier_settlement', 'purchase_discount', 'sale', 'sales_return', 'customer_settlement', 'credit_note', 'correction', 'reversal', 'reclassification', 'asset_disposal', 'other']);
+  const allowed = new Set<NormalizedAccountingEvent['type']>(['purchase', 'purchase_return', 'supplier_settlement', 'purchase_discount', 'sale', 'sales_return', 'customer_settlement', 'credit_note', 'lease_commencement', 'lease_payment', 'lease_modification', 'sale_and_leaseback', 'depreciation', 'correction', 'reversal', 'reclassification', 'asset_disposal', 'other']);
+  const aliases: Record<string, NormalizedAccountingEvent['type']> = { sale_leaseback: 'sale_and_leaseback', leaseback_sale: 'sale_and_leaseback', lease: 'lease_commencement', lease_interest: 'lease_payment', lease_depreciation: 'depreciation' };
   const events: NormalizedAccountingEvent[] = [];
   for (let index = 0; index < raw.events.length; index++) {
     const item = raw.events[index] as Record<string, unknown>;
-    if (!item || typeof item.type !== 'string' || !allowed.has(item.type as NormalizedAccountingEvent['type']) || typeof item.description !== 'string') return undefined;
+    if (!item || typeof item.type !== 'string' || typeof item.description !== 'string') return undefined;
+    const type = aliases[item.type] || item.type as NormalizedAccountingEvent['type'];
+    if (!allowed.has(type)) return undefined;
     const amount = typeof item.amount === 'number' && Number.isFinite(item.amount) && item.amount > 0 ? item.amount : undefined;
     const quantity = typeof item.quantity === 'number' && Number.isFinite(item.quantity) && item.quantity > 0 ? item.quantity : undefined;
     const unitPrice = typeof item.unitPrice === 'number' && Number.isFinite(item.unitPrice) && item.unitPrice > 0 ? item.unitPrice : undefined;
     const taxRate = typeof (item.tax as Record<string, unknown> | undefined)?.rate === 'number' ? (item.tax as { rate: number }).rate : undefined;
-    events.push({ id: typeof item.id === 'string' ? item.id : `event-${index + 1}`, date: typeof item.date === 'string' ? item.date : undefined, type: item.type as NormalizedAccountingEvent['type'], lifecycle: item.lifecycle === 'proposed' || item.lifecycle === 'corrected' || item.lifecycle === 'reversed' ? item.lifecycle : 'actual', description: item.description, currency: typeof item.currency === 'string' ? item.currency.toUpperCase() : 'SGD', amount, quantity, unitPrice, tax: taxRate !== undefined ? { rate: taxRate } : undefined, relatesTo: Array.isArray(item.relatesTo) ? item.relatesTo.filter((id): id is string => typeof id === 'string') : [], evidence: [{ source: 'user_text', field: 'aiEventCandidate', value: item.description, confidence: typeof item.confidence === 'number' ? item.confidence : 0.8 }], uncertainties: [] });
+    events.push({ id: typeof item.id === 'string' ? item.id : `event-${index + 1}`, date: typeof item.date === 'string' ? item.date : undefined, type, lifecycle: item.lifecycle === 'proposed' || item.lifecycle === 'corrected' || item.lifecycle === 'reversed' ? item.lifecycle : 'actual', description: item.description, currency: typeof item.currency === 'string' ? item.currency.toUpperCase() : 'SGD', amount, quantity, unitPrice, tax: taxRate !== undefined ? { rate: taxRate } : undefined, relatesTo: Array.isArray(item.relatesTo) ? item.relatesTo.filter((id): id is string => typeof id === 'string') : [], evidence: [{ source: 'user_text', field: 'aiEventCandidate', value: item.description, confidence: typeof item.confidence === 'number' ? item.confidence : 0.8 }], uncertainties: [] });
   }
   return { events, source: 'user_text' };
 }
@@ -195,7 +199,7 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
   const restoration = firstMoney(text, /restoration costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   const annualPayment = firstMoney(text, /annual(?:\s+lease)?\s+payments?[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
   const rate = Number(text.match(/(?:incremental borrowing rate|interest expense)[^.]{0,80}?(\d+(?:\.\d+)?)\s*%/i)?.[1]) / 100;
-  const term = Number(text.match(/\b(\d+)\s*[- ]year\b/i)?.[1]);
+  const term = Number(text.match(/\b(\d+)\s*(?:-|\s)years?\b/i)?.[1]);
   const gstRate = (gstRateFrom(text) || 9) / 100;
   const paidInAdvance = /payable\s+(?:annually\s+)?in\s+advance/i.test(text);
   const scopeReduction = /scope reduction|partial termination|reduce(?:d)?[^.]{0,80}?(\d+(?:\.\d+)?)\s*%/i.exec(text);
@@ -207,10 +211,10 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
   const dates = [...text.matchAll(/(?:Transaction\s+\d+\s*\()?([0-3]?\d\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{4})/gi)].map(match => match[1]);
   const events = ['lease commencement', 'year-end lease measurement', 'subsequent lease payment', 'lease termination'].map((description, index) => ({ id: `event-${index + 1}`, date: dates[index], type: 'other' as const, lifecycle: 'actual' as const, description, currency: 'SGD', relatesTo: index ? [`event-${index}`] : [], evidence: evidence('eventText', description), uncertainties: [] }));
   const rou = liability + directCosts + restoration - incentive + (paidInAdvance ? annualPayment : 0);
-  const interest = liability * rate;
-  const depreciation = rou / term;
-  const gst = annualPayment * gstRate;
-  const unwinding = restoration * rate;
+  const interest = roundCents(liability * rate);
+  const depreciation = roundCents(rou / term);
+  const gst = roundCents(annualPayment * gstRate);
+  const unwinding = roundCents(restoration * rate);
   const leaseGroup = (event: NormalizedAccountingEvent, title: string, lines: JournalLine[]): JournalEntryGroup => ({ ...group(event, title, lines, event.description, standard), citations: [getCitation('IFRS16_LEASE_INCEPTION', standard)] });
   const isSaleLeaseback = /sale and leaseback|sale-and-leaseback/i.test(text);
   const saleProceeds = firstMoney(text, /\bsold\b[\s\S]{0,160}?\bfor\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
@@ -219,10 +223,10 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
   const accumulatedDepreciation = firstMoney(text, /accumulated depreciation[^.]{0,80}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
   if (isSaleLeaseback && saleProceeds && carryingAmount && originalCost && accumulatedDepreciation) {
     const rightsRetained = liability / saleProceeds;
-    const saleLeasebackRou = carryingAmount * rightsRetained;
-    const gainOnRightsTransferred = (saleProceeds - carryingAmount) * (1 - rightsRetained);
-    const slbDepreciation = saleLeasebackRou / term;
-    const saleGst = saleProceeds * gstRate;
+    const saleLeasebackRou = roundCents(carryingAmount * rightsRetained);
+    const gainOnRightsTransferred = roundCents((saleProceeds - carryingAmount) * (1 - rightsRetained));
+    const slbDepreciation = roundCents(saleLeasebackRou / term);
+    const saleGst = roundCents(saleProceeds * gstRate);
     return { sequence: { events, source: 'user_text' }, clarifications: [], groups: [
       leaseGroup(events[0], 'Sale and leaseback at commencement', [line('slb1', 'Cash at Bank', 'ASSET', saleProceeds + saleGst, 0, 'Cash received from taxable sale.'), line('slb2', 'Accumulated Depreciation — Asset', 'ASSET', accumulatedDepreciation, 0, 'Derecognise accumulated depreciation on transferred asset.'), line('slb3', 'Right-of-Use Asset', 'ASSET', saleLeasebackRou, 0, 'ROU asset for rights retained.'), line('slb4', 'Asset — Original Cost', 'ASSET', 0, originalCost, 'Derecognise transferred asset cost.'), line('slb5', 'Output GST payable', 'LIABILITY', 0, saleGst, 'Output GST on taxable sale.'), line('slb6', 'Lease Liability', 'LIABILITY', 0, liability, 'Leaseback liability at present value.'), line('slb7', 'Gain on Sale and Leaseback', 'REVENUE', 0, gainOnRightsTransferred, 'Recognise gain only for rights transferred.')]),
       leaseGroup(events[1], 'Year-end leaseback entries', [line('slb8', 'Finance Cost — Lease Liability', 'EXPENSE', interest, 0, 'Effective-interest accretion.'), line('slb9', 'Lease Liability', 'LIABILITY', 0, interest, 'Interest accrued.'), line('slb10', 'Lease Liability', 'LIABILITY', annualPayment, 0, 'Annual lease payment reduces liability.'), line('slb11', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST on lease payment.'), line('slb12', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'Lease payment and GST paid.'), line('slb13', 'Depreciation Expense — ROU Asset', 'EXPENSE', slbDepreciation, 0, 'Straight-line depreciation of ROU asset.'), line('slb14', 'Accumulated Depreciation — ROU Asset', 'ASSET', 0, slbDepreciation, 'ROU accumulated depreciation.')])

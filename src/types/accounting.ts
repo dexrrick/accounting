@@ -107,7 +107,8 @@ export interface JournalEntryGroup {
 export type AccountingEventType =
   | 'purchase' | 'purchase_return' | 'supplier_settlement' | 'purchase_discount'
   | 'sale' | 'sales_return' | 'customer_settlement' | 'credit_note'
-  | 'correction' | 'reversal' | 'reclassification' | 'asset_disposal' | 'other';
+  | 'lease_commencement' | 'lease_payment' | 'lease_modification' | 'sale_and_leaseback'
+  | 'depreciation' | 'correction' | 'reversal' | 'reclassification' | 'asset_disposal' | 'other';
 
 export type AccountingEventStatus = 'actual' | 'proposed' | 'corrected' | 'reversed';
 

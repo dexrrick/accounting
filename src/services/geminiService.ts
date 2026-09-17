@@ -37,9 +37,9 @@ export interface OutputPreference {
 export async function extractEventSequenceWithGemini(text: string, apiKey: string, modelName: string): Promise<AccountingEventSequence | undefined> {
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `Extract chronological accounting EVENT FACTS from the text below. Do not calculate, recommend accounts, create journal entries, infer omitted facts, or cite standards. Return JSON only: {"events":[{"id":"event-1","date":"DD Mon YYYY","type":"purchase|purchase_return|supplier_settlement|purchase_discount|sale|sales_return|customer_settlement|credit_note|correction|reversal|reclassification|asset_disposal|other","description":"verbatim concise fact","currency":"SGD","amount":number,"quantity":number,"unitPrice":number,"tax":{"rate":number},"relatesTo":["event-1"],"confidence":0.0}]}. Omit unavailable numeric fields.\n\n${text}` }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `Extract chronological accounting EVENT FACTS from the text below. Do not calculate, recommend accounts, create journal entries, infer omitted facts, or cite standards. Return JSON only: {"events":[{"id":"event-1","date":"DD Mon YYYY","type":"purchase|purchase_return|supplier_settlement|purchase_discount|sale|sales_return|customer_settlement|credit_note|lease_commencement|lease_payment|lease_modification|sale_and_leaseback|depreciation|correction|reversal|reclassification|asset_disposal|other","description":"verbatim concise fact","currency":"SGD","amount":number,"quantity":number,"unitPrice":number,"tax":{"rate":number},"relatesTo":["event-1"],"confidence":0.0}]}. Omit unavailable numeric fields.\n\n${text}` }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
   });
-  if (!response.ok) return undefined;
+  if (!response.ok) throw new Error(`Gemini event extraction returned HTTP ${response.status}.`);
   const responseText = (await response.json())?.candidates?.[0]?.content?.parts?.[0]?.text;
   return responseText ? normaliseAiEventSequence(repairAndParseAIJson(responseText)) : undefined;
 }
@@ -464,20 +464,32 @@ export async function processAccountingQuery(
   if (outputPreference?.journal && !hasImages) {
     let aiCandidate: AccountingEventSequence | undefined;
     let aiExtractionRequired = false;
+    let aiExtractionFailure: string | undefined;
     try {
       const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
       const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
       aiExtractionRequired = Boolean(apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
-      if (apiKey?.trim() && apiKey.trim().length > 10) aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
-    } catch {
-      // The required-path check below turns an unavailable configured extractor into a clear response.
+      if (apiKey?.trim() && apiKey.trim().length > 10) {
+        const extractionStarted = performance.now();
+        try {
+          aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
+        } finally {
+          profiler.recordGeminiCall({ durationMs: performance.now() - extractionStarted });
+        }
+      }
+    } catch (error) {
+      aiExtractionFailure = error instanceof Error ? error.message : 'Gemini event extraction failed.';
     }
     if (aiExtractionRequired && !aiCandidate) {
-      const clarification: MissingFieldInfo = { fieldKey: 'aiEventExtraction', fieldName: 'AI event extraction', prompt: 'AI could not produce a valid event-fact sequence. Please retry after checking the configured AI provider, or simplify the transaction chronology.', whyNeeded: 'Multi-event journals are configured to require validated AI fact extraction before deterministic accounting treatment.' };
+      profiler.setQueryMode('EVENT_SEQUENCE');
+      profiler.recordFirstVisibleResponse();
+      profiler.logSummary();
+      const clarification: MissingFieldInfo = { fieldKey: 'aiEventExtraction', fieldName: 'AI event extraction', prompt: aiExtractionFailure || 'Gemini responded, but its event-fact sequence did not pass validation. Please retry or check the configured model.', whyNeeded: 'Multi-event journals are configured to require validated AI fact extraction before deterministic accounting treatment.' };
       return attachAmendmentProvenance({ messageText: `### AI Event Extraction Required for Double Entry\n\n${clarification.prompt}`, scenarioState: { scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Pending AI event extraction', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], isComplete: false, missingFields: [clarification] }, clarifications: [clarification] });
     }
     const resolution = resolveEventSequence(userInput, standard, aiCandidate);
     if (resolution) {
+      profiler.setQueryMode('EVENT_SEQUENCE');
       const sequenceScenario: AccountingScenarioState = {
         scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: resolution.family === 'fixed_asset' ? 'Related fixed-asset events' : 'Related accounting events',
         functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: resolution.groups,
