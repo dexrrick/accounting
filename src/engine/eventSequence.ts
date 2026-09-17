@@ -193,7 +193,7 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
   const directCosts = firstMoney(text, /initial direct costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   const incentive = firstMoney(text, /lease incentive[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
   const restoration = firstMoney(text, /restoration costs[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i) || 0;
-  const annualPayment = firstMoney(text, /annual lease payments?[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const annualPayment = firstMoney(text, /annual(?:\s+lease)?\s+payments?[^.]{0,100}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
   const rate = Number(text.match(/(?:incremental borrowing rate|interest expense)[^.]{0,80}?(\d+(?:\.\d+)?)\s*%/i)?.[1]) / 100;
   const term = Number(text.match(/\b(\d+)\s*[- ]year\b/i)?.[1]);
   const gstRate = (gstRateFrom(text) || 9) / 100;
@@ -212,6 +212,22 @@ export function resolveLeaseSequence(text: string, standard: AccountingStandard 
   const gst = annualPayment * gstRate;
   const unwinding = restoration * rate;
   const leaseGroup = (event: NormalizedAccountingEvent, title: string, lines: JournalLine[]): JournalEntryGroup => ({ ...group(event, title, lines, event.description, standard), citations: [getCitation('IFRS16_LEASE_INCEPTION', standard)] });
+  const isSaleLeaseback = /sale and leaseback|sale-and-leaseback/i.test(text);
+  const saleProceeds = firstMoney(text, /\bsold\b[\s\S]{0,160}?\bfor\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const carryingAmount = firstMoney(text, /carrying amount[^.]{0,120}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const originalCost = firstMoney(text, /original cost[^.]{0,80}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  const accumulatedDepreciation = firstMoney(text, /accumulated depreciation[^.]{0,80}?(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d+)?)/i);
+  if (isSaleLeaseback && saleProceeds && carryingAmount && originalCost && accumulatedDepreciation) {
+    const rightsRetained = liability / saleProceeds;
+    const saleLeasebackRou = carryingAmount * rightsRetained;
+    const gainOnRightsTransferred = (saleProceeds - carryingAmount) * (1 - rightsRetained);
+    const slbDepreciation = saleLeasebackRou / term;
+    const saleGst = saleProceeds * gstRate;
+    return { sequence: { events, source: 'user_text' }, clarifications: [], groups: [
+      leaseGroup(events[0], 'Sale and leaseback at commencement', [line('slb1', 'Cash at Bank', 'ASSET', saleProceeds + saleGst, 0, 'Cash received from taxable sale.'), line('slb2', 'Accumulated Depreciation — Asset', 'ASSET', accumulatedDepreciation, 0, 'Derecognise accumulated depreciation on transferred asset.'), line('slb3', 'Right-of-Use Asset', 'ASSET', saleLeasebackRou, 0, 'ROU asset for rights retained.'), line('slb4', 'Asset — Original Cost', 'ASSET', 0, originalCost, 'Derecognise transferred asset cost.'), line('slb5', 'Output GST payable', 'LIABILITY', 0, saleGst, 'Output GST on taxable sale.'), line('slb6', 'Lease Liability', 'LIABILITY', 0, liability, 'Leaseback liability at present value.'), line('slb7', 'Gain on Sale and Leaseback', 'REVENUE', 0, gainOnRightsTransferred, 'Recognise gain only for rights transferred.')]),
+      leaseGroup(events[1], 'Year-end leaseback entries', [line('slb8', 'Finance Cost — Lease Liability', 'EXPENSE', interest, 0, 'Effective-interest accretion.'), line('slb9', 'Lease Liability', 'LIABILITY', 0, interest, 'Interest accrued.'), line('slb10', 'Lease Liability', 'LIABILITY', annualPayment, 0, 'Annual lease payment reduces liability.'), line('slb11', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST on lease payment.'), line('slb12', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'Lease payment and GST paid.'), line('slb13', 'Depreciation Expense — ROU Asset', 'EXPENSE', slbDepreciation, 0, 'Straight-line depreciation of ROU asset.'), line('slb14', 'Accumulated Depreciation — ROU Asset', 'ASSET', 0, slbDepreciation, 'ROU accumulated depreciation.')])
+    ] };
+  }
   const initialLines = [line('l1', 'Right-of-Use Asset', 'ASSET', rou + incentive, 0, 'Lease liability, initial payment, direct costs and restoration obligation included in the ROU asset.'), line('l2', 'Lease Liability', 'LIABILITY', 0, liability, 'Present value of unpaid lease payments.'), line('l3', 'Provision for Restoration', 'LIABILITY', 0, restoration, 'Present value of restoration obligation.'), line('l4', 'Cash at Bank', 'ASSET', 0, directCosts, 'Initial direct costs paid.'), line('l5', 'Cash at Bank', 'ASSET', incentive, 0, 'Lease incentive received.'), line('l6', 'Right-of-Use Asset', 'ASSET', 0, incentive, 'Lease incentive reduces ROU asset.')];
   if (paidInAdvance) initialLines.push(line('l7', 'Input GST receivable', 'ASSET', gst, 0, 'Recoverable GST on first payment.'), line('l8', 'Cash at Bank', 'ASSET', 0, annualPayment + gst, 'First lease payment and GST paid at commencement.'));
   const yearEndLines = [line('l9', 'Finance Cost — Lease Liability', 'EXPENSE', interest, 0, 'Effective-interest accretion of lease liability.'), line('l10', 'Lease Liability', 'LIABILITY', 0, interest, 'Lease liability interest accrued.'), line('l11', 'Depreciation Expense — ROU Asset', 'EXPENSE', depreciation, 0, 'Straight-line ROU depreciation.'), line('l12', 'Accumulated Depreciation — ROU Asset', 'ASSET', 0, depreciation, 'ROU accumulated depreciation.')];
