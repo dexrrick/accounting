@@ -461,14 +461,15 @@ export async function processAccountingQuery(
   // A dated multi-event narrative is complete as a sequence even when it does
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
-  if (outputPreference?.journal && !hasImages) {
+  const journalRequested = Boolean(outputPreference?.journal || /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput));
+  if (journalRequested && !hasImages) {
     let aiCandidate: AccountingEventSequence | undefined;
     let aiExtractionRequired = false;
     let aiExtractionFailure: string | undefined;
     try {
       const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
       const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
-      aiExtractionRequired = Boolean(apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
+      aiExtractionRequired = Boolean(outputPreference?.journal && apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
       if (apiKey?.trim() && apiKey.trim().length > 10) {
         const extractionStarted = performance.now();
         try {
@@ -520,7 +521,7 @@ export async function processAccountingQuery(
   // A user-requested journal is a safety contract: return an established,
   // balanced entry or ask for facts. Do not let a provider invent accounts or
   // amounts merely to satisfy a display preference.
-  if (outputPreference?.journal && !hasImages) {
+  if (journalRequested && !hasImages) {
     const hasGroundedJournal = deterministicScenario.directGroups?.some(group =>
       group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
     );

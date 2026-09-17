@@ -239,6 +239,16 @@ export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
     application: 'Reissue proceeds and any difference from carrying cost remain within equity.',
     sourceAuthority: 'Accounting Standards Council Singapore & IASB'
   },
+  IAS32_EQUITY_ISSUANCE: {
+    code: 'IAS 32 / SFRS(I) 1-32 §16',
+    sfrsCode: 'SFRS(I) 1-32 §16',
+    ifrsCode: 'IAS 32 §16',
+    standardTitle: 'Classification of issued ordinary shares as equity',
+    paragraph: '§16',
+    principle: 'An instrument is classified as equity when it contains no contractual obligation to deliver cash or another financial asset and, for settlement in the entity’s own instruments, meets the applicable fixed-for-fixed condition.',
+    application: 'Cash received for newly issued ordinary shares is recognised in share capital when the shares are equity instruments.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
   IRAS_IMPORT_GST: {
     code: 'IRAS GST - Importing of Goods',
     sfrsCode: 'IRAS GST - Importing of Goods',

@@ -110,7 +110,9 @@ export type AccountingEventType =
   | 'lease_commencement' | 'lease_payment' | 'lease_modification' | 'sale_and_leaseback'
   | 'depreciation' | 'correction' | 'reversal' | 'reclassification' | 'asset_disposal'
   | 'foreign_currency_purchase' | 'treasury_share_reissue' | 'sale_with_right_of_return' | 'fx_remeasurement'
-  | 'fvoci_equity_acquisition' | 'fvtpl_portfolio_valuation' | 'fvoci_equity_valuation' | 'investment_distribution' | 'other';
+  | 'fvoci_equity_acquisition' | 'fvtpl_portfolio_valuation' | 'fvoci_equity_valuation' | 'investment_distribution'
+  | 'fvtpl_note_acquisition' | 'fvtpl_fund_capital_call' | 'ordinary_share_issuance' | 'related_party_advance'
+  | 'fvtpl_note_valuation' | 'coupon_receipt' | 'fvtpl_fund_valuation' | 'other';
 
 export type AccountingEventStatus = 'actual' | 'proposed' | 'corrected' | 'reversed';
 

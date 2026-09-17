@@ -87,3 +87,88 @@ export function resolveInvestmentEventSequence(text: string, standard: Accountin
   }
   return { sequence: { events, source: 'user_text' }, groups, clarifications };
 }
+
+/** Date-labelled investment narratives may contain several independently postable events on one date. */
+export function resolveDatedInvestmentSequence(text: string, standard: AccountingStandard, aiCandidate?: AccountingEventSequence): { sequence: AccountingEventSequence; groups: JournalEntryGroup[]; clarifications: MissingFieldInfo[] } | undefined {
+  const headings = [...text.matchAll(/^\s*(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)(?:\s+\d{4})?)\s*:/gim)];
+  if (headings.length < 2 || !/\b(?:FVTPL|convertible note|PE fund)\b/i.test(text)) return undefined;
+  const sections = headings.map((heading, index) => ({ date: heading[1], body: text.slice(heading.index! + heading[0].length, headings[index + 1]?.index ?? text.length).split(/\bPlease share\b/i)[0] }));
+  const facts: Array<{ date: string; type: EventType; description: string }> = [];
+  const append = (date: string, type: EventType, description: string): void => { facts.push({ date, type, description: description.trim() }); };
+  for (const section of sections) {
+    const body = section.body;
+    const before = facts.length;
+    if (/invested\s+SGD[\s\d,]+.*convertible note/i.test(body) && /FVTPL/i.test(body)) append(section.date, 'fvtpl_note_acquisition', body.split(/(?=\b(?:\d{1,2}\s+(?:Jan|Feb)|Please share)\b)/i)[0]);
+    if (/capital call/i.test(body) && /PE fund/i.test(body) && /FVTPL/i.test(body)) append(section.date, 'fvtpl_fund_capital_call', body);
+    if (/injected\s+SGD/i.test(body) && /ordinary shares/i.test(body)) append(section.date, 'ordinary_share_issuance', body.split(/Same day/i)[0]);
+    if (/advance to a related party|advance to.*holding entity/i.test(body)) append(section.date, 'related_party_advance', body.match(/Same day[^.]*\./i)?.[0] || body);
+    if (/startup note valued at/i.test(body)) append(section.date, 'fvtpl_note_valuation', body.match(/Startup note valued[^.]*\./i)?.[0] || body);
+    if (/received[^.]*coupon/i.test(body)) append(section.date, 'coupon_receipt', body.match(/Received[^.]*coupon[^.]*\./i)?.[0] || body);
+    if (/PE fund NAV reported at/i.test(body)) append(section.date, 'fvtpl_fund_valuation', body.match(/PE fund NAV reported[^.]*\./i)?.[0] || body);
+    if (facts.length === before) append(section.date, 'other', body);
+  }
+  const events: NormalizedAccountingEvent[] = facts.map((fact, index) => {
+    const linkedType: EventType | undefined = fact.type === 'fvtpl_note_valuation' || fact.type === 'coupon_receipt' ? 'fvtpl_note_acquisition' : fact.type === 'fvtpl_fund_valuation' ? 'fvtpl_fund_capital_call' : undefined;
+    const linkedIndex = linkedType ? facts.findIndex(prior => prior.type === linkedType) : -1;
+    return { id: `event-${index + 1}`, date: fact.date, type: fact.type, lifecycle: 'actual', description: fact.description, currency: 'SGD', relatesTo: linkedIndex >= 0 ? [`event-${linkedIndex + 1}`] : [], evidence: [{ source: 'user_text', field: 'eventText', value: fact.description, confidence: aiCandidate?.events[index] ? 0.9 : 0.95 }], uncertainties: [] };
+  });
+  const groups: JournalEntryGroup[] = [];
+  const clarifications: MissingFieldInfo[] = [];
+  let noteCarrying: number | undefined;
+  let fundCarrying: number | undefined;
+  const dateLabel = (date: string): string => /\b\d{4}\b/.test(date) ? formatSingaporeDate(date) : `${date.replace(/^\d{1,2}/, day => day.padStart(2, '0'))} (year not stated)`;
+  const clarify = (event: NormalizedAccountingEvent, detail: string): void => {
+    clarifications.push({ fieldKey: `${event.id}-facts`, fieldName: `Event ${event.id.split('-')[1]} facts`, prompt: `For the ${event.date} event, please confirm ${detail}.`, whyNeeded: 'A measured, balanced journal cannot be posted without these facts.' });
+  };
+  for (const event of events) {
+    const body = event.description;
+    const line = (suffix: string, accountName: string, category: JournalLine['category'], debit: number, credit: number): JournalLine => ({ id: `${event.id}-${suffix}`, accountCode: 'SEQ', accountName, category, debit: cents(debit), credit: cents(credit), lineExplanation: accountName });
+    let lines: JournalLine[] = [];
+    let title = '';
+    let citationKeys: string[] = [];
+    if (event.type === 'fvtpl_note_acquisition') {
+      const invested = find(body, /\bInvested\s+SGD\s*([\d,]+(?:\.\d+)?)/i);
+      const legal = find(body, /\bPaid\s+SGD\s*([\d,]+(?:\.\d+)?)\s+legal fee/i);
+      if (!invested || legal === undefined || !/bank transfer/i.test(body)) { clarify(event, 'the note purchase amount, paid legal fee, and bank settlement'); continue; }
+      noteCarrying = invested; title = 'Acquire FVTPL convertible note and expense legal costs'; citationKeys = ['IFRS9_INITIAL_MEASUREMENT'];
+      lines = [line('1', 'Financial Asset at FVTPL — Convertible Note', 'ASSET', invested, 0), line('2', 'Legal and Professional Fees Expense', 'EXPENSE', legal, 0), line('3', 'Cash at Bank', 'ASSET', 0, invested + legal)];
+    } else if (event.type === 'fvtpl_fund_capital_call') {
+      const funded = find(body, /\bFunded\s+SGD\s*([\d,]+(?:\.\d+)?)/i);
+      const investment = find(body, /SGD\s*([\d,]+(?:\.\d+)?)\s+for investment/i);
+      const management = find(body, /SGD\s*([\d,]+(?:\.\d+)?)\s+for management fee/i);
+      if (!funded || !investment || management === undefined || Math.abs(investment + management - funded) > 0.005) { clarify(event, 'the funded capital call and reconciling investment/fee allocation'); continue; }
+      fundCarrying = investment; title = 'Fund PE capital call and expense management fee'; citationKeys = ['IFRS9_INITIAL_MEASUREMENT', 'IAS1_EXPENSE_RECOGNITION'];
+      lines = [line('1', 'Financial Asset at FVTPL — PE Fund', 'ASSET', investment, 0), line('2', 'Management Fee Expense', 'EXPENSE', management, 0), line('3', 'Cash at Bank', 'ASSET', 0, funded)];
+    } else if (event.type === 'ordinary_share_issuance') {
+      const injected = find(body, /\bInjected\s+SGD\s*([\d,]+(?:\.\d+)?)\s+cash/i);
+      if (!injected || !/new ordinary shares/i.test(body)) { clarify(event, 'the cash consideration and ordinary share issue'); continue; }
+      title = 'Issue new ordinary shares for cash'; citationKeys = ['IAS32_EQUITY_ISSUANCE'];
+      lines = [line('1', 'Cash at Bank', 'ASSET', injected, 0), line('2', 'Share Capital', 'EQUITY', 0, injected)];
+    } else if (event.type === 'related_party_advance') {
+      const advanced = find(body, /(?:transferred|advanced)\s+SGD\s*([\d,]+(?:\.\d+)?)/i);
+      if (!advanced || !/repayable on demand/i.test(body)) { clarify(event, 'the related-party amount and demand repayment terms'); continue; }
+      title = 'Advance funds to related party on demand'; citationKeys = ['IFRS9_INITIAL_MEASUREMENT'];
+      lines = [line('1', 'Amount Due from Related Party', 'ASSET', advanced, 0), line('2', 'Cash at Bank', 'ASSET', 0, advanced)];
+    } else if (event.type === 'fvtpl_note_valuation') {
+      const value = find(body, /startup note valued at\s+SGD\s*([\d,]+(?:\.\d+)?)/i);
+      if (noteCarrying === undefined || !value) { clarify(event, 'the linked note acquisition and closing fair value'); continue; }
+      const change = cents(value - noteCarrying); noteCarrying = value; title = 'Remeasure FVTPL convertible note'; citationKeys = ['IFRS9_FVTPL_SUBSEQUENT'];
+      lines = change >= 0 ? [line('1', 'Financial Asset at FVTPL — Convertible Note', 'ASSET', change, 0), line('2', 'Fair Value Gain — Convertible Note', 'REVENUE', 0, change)] : [line('1', 'Fair Value Loss — Convertible Note', 'EXPENSE', -change, 0), line('2', 'Financial Asset at FVTPL — Convertible Note', 'ASSET', 0, -change)];
+    } else if (event.type === 'coupon_receipt') {
+      const coupon = find(body, /coupon[^.]*?SGD\s*([\d,]+(?:\.\d+)?)/i);
+      if (noteCarrying === undefined || !coupon || !/in cash/i.test(body)) { clarify(event, 'the linked note and cash coupon received'); continue; }
+      title = 'Receive convertible-note coupon'; citationKeys = ['IFRS9_FVTPL_SUBSEQUENT'];
+      lines = [line('1', 'Cash at Bank', 'ASSET', coupon, 0), line('2', 'Coupon Income', 'REVENUE', 0, coupon)];
+    } else if (event.type === 'fvtpl_fund_valuation') {
+      const value = find(body, /PE fund NAV reported at\s+SGD\s*([\d,]+(?:\.\d+)?)/i);
+      if (fundCarrying === undefined || !value) { clarify(event, 'the linked fund cost and year-end NAV'); continue; }
+      const change = cents(value - fundCarrying); fundCarrying = value; title = 'Remeasure FVTPL PE fund'; citationKeys = ['IFRS9_FVTPL_SUBSEQUENT'];
+      lines = change >= 0 ? [line('1', 'Financial Asset at FVTPL — PE Fund', 'ASSET', change, 0), line('2', 'Fair Value Gain — PE Fund', 'REVENUE', 0, change)] : [line('1', 'Fair Value Loss — PE Fund', 'EXPENSE', -change, 0), line('2', 'Financial Asset at FVTPL — PE Fund', 'ASSET', 0, -change)];
+    } else { clarify(event, 'the accounting event type and facts'); continue; }
+    const totalDebit = cents(lines.reduce((sum, item) => sum + item.debit, 0));
+    const totalCredit = cents(lines.reduce((sum, item) => sum + item.credit, 0));
+    if (totalDebit <= 0 || Math.abs(totalDebit - totalCredit) > 0.005) { clarify(event, 'the valuation amount and rounding basis'); continue; }
+    groups.push({ id: `journal-${event.id}`, accountingEventId: event.id, relatedEventIds: event.relatesTo, eventDate: dateLabel(event.date!), title, summary: body, lines, totalDebit, totalCredit, isBalanced: true, citations: citationKeys.map(key => getCitation(key, standard)), rationalePoints: [event.date && !/\b\d{4}\b/.test(event.date) ? 'The source omitted the year; no year has been inferred.' : 'Linked balances were reconciled.', ...(event.type === 'fvtpl_note_valuation' ? ['The stated closing value is treated as after the coupon receipt; confirm if the valuation includes accrued coupon.'] : [])], authorityStatus: 'DETERMINISTIC' });
+  }
+  return { sequence: { events, source: 'user_text' }, groups, clarifications };
+}
