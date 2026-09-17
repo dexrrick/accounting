@@ -8,7 +8,7 @@ const money = (value: string): number | undefined => {
 };
 const dateFrom = (value: string): string | undefined => value.match(/\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i)?.[0];
 const amountFrom = (value: string): number | undefined => money(value.match(/(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)/i)?.[1] || '');
-const quantityFrom = (value: string): number | undefined => money(value.match(/\b([\d,]+)\s+units?\b/i)?.[1] || '');
+const quantityFrom = (value: string): number | undefined => money(value.match(/\b([\d,]+)(?:\s+[a-z]+){0,2}\s+units?\b/i)?.[1] || '');
 const rateFrom = (value: string): number | undefined => money(value.match(/(?:at|for|allowance\s+of)\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)\s*(?:each|per unit)?/i)?.[1] || '');
 const gstRateFrom = (value: string): number | undefined => money(value.match(/\b(\d+(?:\.\d+)?)\s*%\s*GST/i)?.[1] || '');
 const partyFrom = (value: string, role: 'supplier' | 'customer'): string | undefined =>
@@ -89,6 +89,7 @@ export function resolveCommercialEventSequence(sequence: AccountingEventSequence
     const gstRate = event.tax?.rate ?? linked?.tax?.rate ?? defaultGstRate;
     const amount = event.amount ?? (event.quantity && linked?.unitPrice ? event.quantity * linked.unitPrice : undefined);
     if (event.currency !== 'SGD') { clarifications.push({ fieldKey: 'fxRate', fieldName: 'Transaction-date FX rate', prompt: `Please provide the SGD transaction-date rate for ${event.id}.`, whyNeeded: 'Foreign-currency amounts must be measured before the payable can be reconciled.' }); continue; }
+    if (amount === undefined) { clarifications.push({ fieldKey: 'amount', fieldName: 'Amount', prompt: `What is the measured amount for ${event.id}?`, whyNeeded: 'A journal cannot be produced until the event amount is established.' }); continue; }
     if (event.type === 'purchase') {
       const gst = amount! * gstRate / 100; defaultGstRate = gstRate; inventoryUnitCost = event.unitPrice || inventoryUnitCost; payable += amount! + gst;
       groups.push(group(event, 'Inventory purchase on credit', [line(`${event.id}-1`, 'Inventory', 'ASSET', amount!, 0, 'Inventory acquired.'), line(`${event.id}-2`, 'Input GST receivable', 'ASSET', gst, 0, 'Claimable input GST.'), line(`${event.id}-3`, 'Accounts Payable', 'LIABILITY', 0, amount! + gst, 'Supplier obligation recognised.')], event.description, standard));
