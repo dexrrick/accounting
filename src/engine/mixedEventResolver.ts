@@ -10,7 +10,7 @@ const money = '(?:SGD|S\\$|\\$)\\s*([\\d,]+(?:\\.\\d+)?)';
 const journalLine = (id: string, accountName: string, category: JournalLine['category'], debit: number, credit: number): JournalLine => ({ id, accountCode: 'SEQ', accountName, category, debit: cents(debit), credit: cents(credit), lineExplanation: accountName });
 
 function blocksFrom(text: string): Block[] {
-  const headers = [...text.matchAll(/\bTransaction\s+\d+\s*\((\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})[^)]*\)\s*:/gi)];
+  const headers = [...text.matchAll(/\bTransaction\s+\d+\s*\((\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})[\s\S]{0,200}?\)\s*:/gi)];
   return headers.map((header, index) => {
     const body = text.slice(header.index! + header[0].length, headers[index + 1]?.index ?? text.length).split(/\n\s*Task\s*:/i)[0];
     const lower = `${header[0]} ${body}`.toLowerCase();

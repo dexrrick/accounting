@@ -49,6 +49,26 @@ export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
     application: 'Unless explicitly elected as FVTOCI at trade date, equity investments are categorized as FVTPL.',
     sourceAuthority: 'Accounting Standards Council Singapore & IASB'
   },
+  IFRS9_FVTPL_SUBSEQUENT: {
+    code: 'IFRS 9 / SFRS(I) 9 §5.7.1',
+    sfrsCode: 'SFRS(I) 9 §5.7.1',
+    ifrsCode: 'IFRS 9 §5.7.1',
+    standardTitle: 'FVTPL fair value gains and losses',
+    paragraph: '§5.7.1',
+    principle: 'A gain or loss on a financial asset measured at fair value is recognised in profit or loss unless a specified exception applies, including an elected FVOCI equity instrument.',
+    application: 'Recognise changes in a FVTPL portfolio’s fair value in profit or loss.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  IFRS9_EQUITY_DIVIDENDS: {
+    code: 'IFRS 9 / SFRS(I) 9 §5.7.1A & §5.7.6',
+    sfrsCode: 'SFRS(I) 9 §5.7.1A & §5.7.6',
+    ifrsCode: 'IFRS 9 §5.7.1A & §5.7.6',
+    standardTitle: 'Dividends on FVOCI equity investments',
+    paragraph: '§5.7.1A & §5.7.6',
+    principle: 'Dividends on elected FVOCI equity investments are recognised in profit or loss when the right to receive is established, economic benefits are probable, and the amount can be measured reliably, unless they clearly represent recovery of part of the investment cost.',
+    application: 'A declared and received non-cash dividend is income when it is not a recovery of investment cost.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
   IAS21_INITIAL_FOREIGN_CURRENCY: {
     code: 'IAS 21 / SFRS(I) 1-21 §21',
     sfrsCode: 'SFRS(I) 1-21 §21',

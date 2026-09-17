@@ -36,6 +36,7 @@ const testSuites = [
   { name: 'Inventory Event Sequence', file: 'test_event_sequence_inventory.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Sale and Leaseback Event Sequence', file: 'test_sale_leaseback_sequence.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Mixed-Domain Event Sequence', file: 'test_mixed_event_sequence.mjs', layer: 'accounting-invariants', tier: 'smoke' },
+  { name: 'Investment Event Sequence', file: 'test_investment_event_sequence.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Phase 4 Live Retrieval & Source Versioning', file: 'test_phase4_live_retrieval.mjs', layer: 'regulatory-updates', tier: 'full' },
   { name: 'Coverage & Temporal Invariants', file: 'test_phase3_coverage.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Sidequest Correction Pass', file: 'test_sidequest_correction.mjs', layer: 'accounting-invariants', tier: 'full' },
