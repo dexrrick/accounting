@@ -108,7 +108,8 @@ export type AccountingEventType =
   | 'purchase' | 'purchase_return' | 'supplier_settlement' | 'purchase_discount'
   | 'sale' | 'sales_return' | 'customer_settlement' | 'credit_note'
   | 'lease_commencement' | 'lease_payment' | 'lease_modification' | 'sale_and_leaseback'
-  | 'depreciation' | 'correction' | 'reversal' | 'reclassification' | 'asset_disposal' | 'other';
+  | 'depreciation' | 'correction' | 'reversal' | 'reclassification' | 'asset_disposal'
+  | 'foreign_currency_purchase' | 'treasury_share_reissue' | 'sale_with_right_of_return' | 'fx_remeasurement' | 'other';
 
 export type AccountingEventStatus = 'actual' | 'proposed' | 'corrected' | 'reversed';
 

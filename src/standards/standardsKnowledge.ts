@@ -9,6 +9,7 @@ export interface StandardRule {
   principle: string;
   application: string;
   sourceAuthority: string;
+  officialSourceUrl?: string;
   validFrom?: string;
   validTo?: string;
   lastVerifiedDate?: string;
@@ -198,6 +199,48 @@ export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
     application: 'Determining timing of billing vs delivery of goods/services: Dr. Trade Receivables / Contract Asset | Cr. Revenue / Contract Liability.',
     sourceAuthority: 'Accounting Standards Council Singapore & IASB'
   },
+  IFRS15_RIGHT_OF_RETURN: {
+    code: 'SFRS(I) 15 / IFRS 15 B21-B25',
+    sfrsCode: 'SFRS(I) 15 B21-B25',
+    ifrsCode: 'IFRS 15 B21-B25',
+    standardTitle: 'Revenue - right of return',
+    paragraph: 'B21-B25',
+    principle: 'Recognise revenue for products not expected to be returned, a refund liability for expected refunds, and an asset for the right to recover returned products measured by reference to their former carrying amount.',
+    application: 'Separate expected returns from revenue and cost of sales when control transfers with a return right.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  IAS32_TREASURY_SHARES: {
+    code: 'IAS 32 / SFRS(I) 1-32 §33',
+    sfrsCode: 'SFRS(I) 1-32 §33',
+    ifrsCode: 'IAS 32 §33',
+    standardTitle: 'Treasury shares',
+    paragraph: '§33',
+    principle: 'Treasury shares are deducted from equity. No gain or loss is recognised in profit or loss on purchase, sale, issue or cancellation of an entity’s own equity instruments; consideration is recognised directly in equity.',
+    application: 'Reissue proceeds and any difference from carrying cost remain within equity.',
+    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+  },
+  IRAS_IMPORT_GST: {
+    code: 'IRAS GST - Importing of Goods',
+    sfrsCode: 'IRAS GST - Importing of Goods',
+    ifrsCode: 'IRAS GST - Importing of Goods',
+    standardTitle: 'Singapore import GST input tax',
+    paragraph: 'Claiming GST paid on imports',
+    principle: 'Subject to the input-tax conditions, GST paid to Singapore Customs on imports may be claimed using the import permit showing the business as importer.',
+    application: 'Record Customs-paid import GST separately from the foreign supplier payable.',
+    sourceAuthority: 'IRAS',
+    officialSourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/importing-of-goods'
+  },
+  IRAS_OUTPUT_GST: {
+    code: 'IRAS GST - Invoicing Customers',
+    sfrsCode: 'IRAS GST - Invoicing Customers',
+    ifrsCode: 'IRAS GST - Invoicing Customers',
+    standardTitle: 'Singapore output GST and returned goods',
+    paragraph: 'Invoicing and credit notes',
+    principle: 'A tax invoice shows output tax on a taxable supply. Returned goods are adjusted through a credit note with the corresponding tax amount.',
+    application: 'At the original invoice, keep output GST distinct from the IFRS 15 estimated refund liability.',
+    sourceAuthority: 'IRAS',
+    officialSourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers'
+  },
   SFRS_I_1_37_PROVISIONS: {
     code: 'SFRS(I) 1-37 / IAS 37 §14',
     sfrsCode: 'SFRS(I) 1-37 §14',
@@ -292,6 +335,6 @@ export function getCitation(ruleKey: keyof typeof STANDARDS_REPOSITORY, standard
     paragraph: rule.paragraph,
     title: rule.standardTitle,
     text: rule.principle,
-    officialSourceUrl: standardMode === 'SFRS_I' ? 'https://www.acra.gov.sg/accountancy/accounting-standards' : 'https://www.ifrs.org'
+    officialSourceUrl: rule.officialSourceUrl || (standardMode === 'SFRS_I' ? 'https://www.acra.gov.sg/accountancy/accounting-standards' : 'https://www.ifrs.org')
   };
 }

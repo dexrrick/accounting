@@ -1,6 +1,7 @@
 import type { AccountingEventSequence, AccountingStandard, ExtractedEvidence, JournalEntryGroup, JournalLine, MissingFieldInfo, NormalizedAccountingEvent } from '../types/accounting';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { getCitation } from '../standards/standardsKnowledge';
+import { resolveMixedEventSequence } from './mixedEventResolver';
 
 const money = (value: string): number | undefined => {
   const parsed = Number(value.replace(/[$,]/g, ''));
@@ -26,7 +27,7 @@ const roundCents = (value: number): number => Math.round((value + Number.EPSILON
 export function normaliseAiEventSequence(payload: unknown): AccountingEventSequence | undefined {
   const raw = payload as { events?: unknown[] };
   if (!Array.isArray(raw?.events) || raw.events.length < 2) return undefined;
-  const allowed = new Set<NormalizedAccountingEvent['type']>(['purchase', 'purchase_return', 'supplier_settlement', 'purchase_discount', 'sale', 'sales_return', 'customer_settlement', 'credit_note', 'lease_commencement', 'lease_payment', 'lease_modification', 'sale_and_leaseback', 'depreciation', 'correction', 'reversal', 'reclassification', 'asset_disposal', 'other']);
+  const allowed = new Set<NormalizedAccountingEvent['type']>(['purchase', 'purchase_return', 'supplier_settlement', 'purchase_discount', 'sale', 'sales_return', 'customer_settlement', 'credit_note', 'lease_commencement', 'lease_payment', 'lease_modification', 'sale_and_leaseback', 'depreciation', 'correction', 'reversal', 'reclassification', 'asset_disposal', 'foreign_currency_purchase', 'treasury_share_reissue', 'sale_with_right_of_return', 'fx_remeasurement', 'other']);
   const aliases: Record<string, NormalizedAccountingEvent['type']> = { sale_leaseback: 'sale_and_leaseback', leaseback_sale: 'sale_and_leaseback', lease: 'lease_commencement', lease_interest: 'lease_payment', lease_depreciation: 'depreciation' };
   const events: NormalizedAccountingEvent[] = [];
   for (let index = 0; index < raw.events.length; index++) {
@@ -129,7 +130,7 @@ export function resolveCommercialEventSequence(sequence: AccountingEventSequence
 export const resolveInventoryEventSequence = resolveCommercialEventSequence;
 
 export interface EventSequenceResolution {
-  family: 'commercial_goods' | 'fixed_asset' | 'lease';
+  family: 'commercial_goods' | 'fixed_asset' | 'lease' | 'mixed';
   sequence: AccountingEventSequence;
   groups: JournalEntryGroup[];
   clarifications: MissingFieldInfo[];
@@ -145,6 +146,8 @@ export function resolveEventSequence(text: string, standard: AccountingStandard 
   if (fixedAsset) return { family: 'fixed_asset', ...fixedAsset };
   const lease = resolveLeaseSequence(text, standard);
   if (lease) return { family: 'lease', ...lease };
+  const mixed = resolveMixedEventSequence(text, standard, aiCandidate);
+  if (mixed) return { family: 'mixed', ...mixed };
 
   const sequence = aiCandidate || extractEventSequence(text);
   if (!sequence) return undefined;
