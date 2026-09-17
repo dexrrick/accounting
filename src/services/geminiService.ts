@@ -463,12 +463,18 @@ export async function processAccountingQuery(
   // before the generic journal clarification gate can discard the chronology.
   if (outputPreference?.journal && !hasImages) {
     let aiCandidate: AccountingEventSequence | undefined;
+    let aiExtractionRequired = false;
     try {
       const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
       const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
+      aiExtractionRequired = Boolean(apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
       if (apiKey?.trim() && apiKey.trim().length > 10) aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
     } catch {
-      // Extraction is optional evidence acquisition; deterministic fallback remains available.
+      // The required-path check below turns an unavailable configured extractor into a clear response.
+    }
+    if (aiExtractionRequired && !aiCandidate) {
+      const clarification: MissingFieldInfo = { fieldKey: 'aiEventExtraction', fieldName: 'AI event extraction', prompt: 'AI could not produce a valid event-fact sequence. Please retry after checking the configured AI provider, or simplify the transaction chronology.', whyNeeded: 'Multi-event journals are configured to require validated AI fact extraction before deterministic accounting treatment.' };
+      return attachAmendmentProvenance({ messageText: `### AI Event Extraction Required for Double Entry\n\n${clarification.prompt}`, scenarioState: { scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Pending AI event extraction', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], isComplete: false, missingFields: [clarification] }, clarifications: [clarification] });
     }
     const resolution = resolveEventSequence(userInput, standard, aiCandidate);
     if (resolution) {
