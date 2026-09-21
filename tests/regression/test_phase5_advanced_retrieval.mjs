@@ -86,7 +86,15 @@ async function runPhase5Tests() {
     ...dummyVerifiedChunk,
     id: 'staged_candidate_pkg_chunk',
     parentRecordId: 'staged_candidate_pkg_record',
-    chunkText: 'Unapproved staged candidate text'
+    chunkText: 'Unapproved staged candidate text',
+    textHash: ProvisionChunker.computeTextHash('Unapproved staged candidate text'),
+    parentRecordLifecycleState: 'STAGED'
+  };
+
+  const dummyCandidateChunk = {
+    ...dummyVerifiedChunk,
+    id: 'candidate_pkg_chunk',
+    lifecycleState: 'CANDIDATE'
   };
 
   const dummyCuratedSummaryChunk = {
@@ -109,6 +117,9 @@ async function runPhase5Tests() {
   // 2B. Admission Gate: Rejection of STAGED and UNVERIFIED records
   const admittedStaged = vectorIndex.add(dummyStagedChunk);
   assert.strictEqual(admittedStaged, false, 'STAGED candidate chunk must be rejected from vector index');
+
+  const admittedCandidate = vectorIndex.add(dummyCandidateChunk);
+  assert.strictEqual(admittedCandidate, false, 'CANDIDATE chunk must be rejected from vector index');
 
   const admittedCurated = vectorIndex.add(dummyCuratedSummaryChunk);
   assert.strictEqual(admittedCurated, false, 'CURATED_SUMMARY chunk must be rejected from vector index');
