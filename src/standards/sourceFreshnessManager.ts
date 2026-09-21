@@ -1,4 +1,5 @@
 import type { AuthoritativeSourceRecord } from './unifiedSourceModel';
+import { getSingaporeDateString } from '../utils/dateUtils';
 
 export type FreshnessStatus =
   | 'ACTIVE_CURRENT'
@@ -17,7 +18,7 @@ export interface FreshnessReport {
 }
 
 export class SourceFreshnessManager {
-  public static readonly DEFAULT_REFERENCE_DATE = '2026-09-11';
+  public static readonly DEFAULT_REFERENCE_DATE = getSingaporeDateString();
   public static readonly DEFAULT_AUDIT_CYCLE_DAYS = 365;
 
   /**

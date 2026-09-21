@@ -7,6 +7,7 @@ import {
   defaultSourceFreshnessManager
 } from './sourceFreshnessManager';
 import { defaultSourceVersioningManager } from './sourceVersioning';
+import { isAskGovSingaporeUrl } from './approvedSourceRegistry';
 
 export type SourceStatus = 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
 
@@ -46,6 +47,7 @@ export interface AuthoritativeSourceRecord {
   supersededByRecordId?: string;
   historicalPredecessorRecordId?: string;
   // Phase 4 Versioning & Provenance Properties
+  lifecycleState?: 'ACTIVE' | 'CANDIDATE' | 'STAGED' | 'REJECTED';
   version?: string;
   documentHash?: string; // SHA-256 of complete raw HTTP response payload
   provisionHash?: string; // Canonical integrity hash: SHA-256 of extracted normalized provision
@@ -115,6 +117,16 @@ function mapStatuteCategoryToDomain(category: string): QueryDomain {
 export const UNIFIED_SOURCE_REGISTRY: Record<string, AuthoritativeSourceRecord> = {};
 
 /**
+ * Extracts the standard identifier from an SFRS(I) code, stripping trailing
+ * paragraph/section annotations without collapsing the standard number.
+ * e.g. "SFRS(I) 1-38 §57" -> "SFRS(I) 1-38"
+ */
+function extractStandardCode(sfrsCode: string | undefined): string {
+  if (!sfrsCode) return 'SFRS(I)';
+  return sfrsCode.replace(/\s*§.*$/, '').trim();
+}
+
+/**
  * Builds or rebuilds the unified source registry against an explicit reference date.
  */
 export function buildUnifiedSourceRegistry(
@@ -138,8 +150,18 @@ export function buildUnifiedSourceRegistry(
       status = 'VERIFIED';
     }
 
-    const type: SourceType = isVerbatim && (rule.sourceStatus === 'VERIFIED' || isHistorical) ? 'AUTHORITATIVE_SOURCE' : 'CURATED_SUMMARY';
-    const tier: EvidenceTier = isVerbatim && (rule.sourceStatus === 'VERIFIED' || isHistorical) ? 'PRIMARY_SOURCE' : 'CURATED_SUMMARY';
+    const isAskGov = isAskGovSingaporeUrl(rule.canonicalUrl);
+
+    const type: SourceType = isAskGov
+      ? 'OFFICIAL_GUIDANCE'
+      : isVerbatim && (rule.sourceStatus === 'VERIFIED' || isHistorical)
+      ? 'AUTHORITATIVE_SOURCE'
+      : 'CURATED_SUMMARY';
+    const tier: EvidenceTier = isAskGov
+      ? 'OFFICIAL_GUIDANCE'
+      : isVerbatim && (rule.sourceStatus === 'VERIFIED' || isHistorical)
+      ? 'PRIMARY_SOURCE'
+      : 'CURATED_SUMMARY';
 
     const validFrom = rule.validFrom || rule.effectiveDate;
     const validTo = rule.validTo;
@@ -174,6 +196,7 @@ export function buildUnifiedSourceRegistry(
       supersededByRecordId: rule.supersededByRecordId,
       historicalPredecessorRecordId: rule.historicalPredecessorRecordId,
       provenance: 'LOCAL_STATIC',
+      lifecycleState: 'ACTIVE',
       version: '2026.09',
       canonicalSourceUrl: rule.canonicalUrl,
       sourceAuthority: rule.canonicalUrl.includes('ask.gov.sg') ? 'ASK_GOV_SG' : rule.authority === 'IRAS' ? 'IRAS' : rule.authority === 'ACRA' ? 'ACRA' : rule.authority === 'MOM' ? 'MOM' : rule.authority === 'CPF' ? 'CPF' : rule.authority === 'MAS' ? 'MAS' : 'AGC',
@@ -208,7 +231,7 @@ export function buildUnifiedSourceRegistry(
       sourcePublisher: 'Accounting Standards Council (Singapore) / IFRS Foundation',
       legalOrStandardInstrument: std.sfrsCode ? `${std.sfrsCode} ${std.standardTitle}` : std.standardTitle,
       documentTitle: std.standardTitle,
-      standardOrActCode: std.sfrsCode.split(' ')[0] || 'SFRS(I)',
+      standardOrActCode: extractStandardCode(std.sfrsCode),
       paragraphOrSection: std.paragraph,
       sourceText: std.principle,
       principleSummary: std.standardTitle,
@@ -228,6 +251,7 @@ export function buildUnifiedSourceRegistry(
       supersededByRecordId: std.supersededByRecordId,
       historicalPredecessorRecordId: std.historicalPredecessorRecordId,
       provenance: 'LOCAL_STATIC',
+      lifecycleState: 'ACTIVE',
       version: '2026.09',
       canonicalSourceUrl: 'https://www.acra.gov.sg/accountancy/accounting-standards',
       sourceAuthority: 'ACRA',

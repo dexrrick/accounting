@@ -1,8 +1,9 @@
 import type { AccountingEventSequence, AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
+import type { TransactionUnderstanding } from './transactionUnderstandingService';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
-import { defaultAccountingGuardrails } from '../engine/accountingGuardrails';
+import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
@@ -138,6 +139,36 @@ export function getMaterialImageUncertainties(imageEvidence: ExtractedImageEvide
   return flattenImageEvidence(imageEvidence).filter((field) =>
     MATERIAL_IMAGE_FIELDS.test(field.field) && field.confidence !== undefined && field.confidence < 0.9
   );
+}
+
+function getGuardrailErrorViolations(
+  groups: JournalEntryGroup[],
+  semanticUnderstanding?: TransactionUnderstanding
+): GuardrailViolation[] {
+  if (!semanticUnderstanding || groups.length === 0) return [];
+  const validation = defaultAccountingGuardrails.validate(semanticUnderstanding, groups);
+  return validation.violations.filter((v) => v.severity === 'ERROR');
+}
+
+function buildGuardrailValidationMessage(violations: GuardrailViolation[]): string {
+  const errors = violations.filter((v) => v.severity === 'ERROR');
+  if (errors.length === 0) return '';
+  const list = errors.map((v) => `- ${v.code}: ${v.message}`).join('\n');
+  const prefix = errors.length === 1 ? 'This entry has been rejected' : 'These entries have been rejected';
+  return `### Accounting Validation Issue${errors.length > 1 ? 's' : ''}\n\nThe proposed journal failed one or more accounting safety checks:\n${list}\n\n${prefix} to prevent an incorrect accounting record.`;
+}
+
+function getDeterministicFallbackGroups(
+  currentScenario: AccountingScenarioState | null,
+  deterministicScenario: AccountingScenarioState | null | undefined
+): JournalEntryGroup[] | undefined {
+  if (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0) {
+    return currentScenario.committedDirectGroups;
+  }
+  if (deterministicScenario?.directGroups && deterministicScenario.directGroups.length > 0) {
+    return deterministicScenario.directGroups;
+  }
+  return undefined;
 }
 
 export async function extractImageEvidenceWithGemini(
@@ -1485,6 +1516,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   const tPost0 = Date.now();
   const parsed = repairAndParseAIJson(rawJsonText);
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
+  const deterministicFallback = getDeterministicFallbackGroups(currentScenario, deterministicScenario);
   if (imageEvidence.length > 0) {
     result.scenarioState.imageEvidence = imageEvidence;
     result.scenarioState.evidence = [
@@ -1495,9 +1527,28 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     const extractedTransactionGroups = buildTransactionGroupsFromImageEvidence(imageEvidence);
     const extractedGroups = extractedJournalGroups.length > 0 ? extractedJournalGroups : extractedTransactionGroups;
     if (extractedGroups.length > 0) {
-      result.scenarioState.directGroups = extractedGroups;
-      result.scenarioState.committedDirectGroups = undefined;
-      result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced: total debits equal total credits. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
+      const imageErrors = getGuardrailErrorViolations(extractedGroups, context.semanticUnderstanding);
+      if (imageErrors.length > 0) {
+        // Fail-closed: image-derived journals must not override deterministic output or clear committed groups
+        result.messageText += `\n\n${buildGuardrailValidationMessage(imageErrors)}\n\nImage-derived journal was not applied because it failed accounting validation.`;
+        result.scenarioState.isComplete = false;
+        result.scenarioState.missingFields = [
+          ...(result.scenarioState.missingFields || []),
+          ...imageErrors.map((v) => ({
+            fieldKey: `imageGuardrail-${v.code}`,
+            fieldName: 'Image-derived journal validation',
+            prompt: `${v.code}: ${v.message}`,
+            whyNeeded: 'The screenshot-derived journal violates an accounting guardrail and cannot be posted automatically.'
+          }))
+        ];
+      } else if (deterministicFallback && deterministicFallback.length > 0) {
+        // Preserve deterministic/committed journals; do not clear committedDirectGroups
+        result.messageText += `\n\n### Journal visible in screenshot\n\nA balanced journal was extracted from the screenshot, but the existing deterministic journal has been preserved. Review the image evidence before overriding it.`;
+      } else {
+        // No deterministic output available; merge validated image-derived groups
+        result.scenarioState.directGroups = extractedGroups;
+        result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced and has passed validation. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
+      }
     }
   } else if (currentScenario?.imageEvidence?.length) {
     result.scenarioState.imageEvidence = currentScenario.imageEvidence;
@@ -1523,11 +1574,32 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     };
     result.messageText = `${result.messageText}\n\n### Screenshot verification required\n\n${prompt}`;
   }
-  // Validate AI proposed groups against deterministic accounting guardrails
-  if (result.scenarioState.directGroups && result.scenarioState.directGroups.length > 0 && context.semanticUnderstanding) {
-    const valResult = defaultAccountingGuardrails.validate(context.semanticUnderstanding, result.scenarioState.directGroups);
-    if (!valResult.isValid) {
-      console.warn(`[Guardrails] Detected ${valResult.violations.length} accounting violation(s) in AI proposal:`, valResult.violations.map(v => v.code));
+  // Validate AI proposed groups against deterministic accounting guardrails and fail-closed on ERROR violations
+  const aiProposedGroups = result.scenarioState.directGroups;
+  if (aiProposedGroups && aiProposedGroups.length > 0) {
+    const aiErrors = getGuardrailErrorViolations(aiProposedGroups, context.semanticUnderstanding);
+    if (aiErrors.length > 0) {
+      if (deterministicFallback && deterministicFallback.length > 0) {
+        result.scenarioState.directGroups = deterministicFallback;
+        result.scenarioState.isComplete = true;
+        result.scenarioState.missingFields = result.scenarioState.missingFields?.filter((m) => !m.fieldKey.startsWith('guardrail-')) || [];
+        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nThe AI-proposed journal was rejected. The deterministic journal has been restored.` +
+          (result.messageText ? `\n\n---\n\n${result.messageText}` : '');
+      } else {
+        result.scenarioState.directGroups = [];
+        result.scenarioState.projectedGroups = [];
+        result.scenarioState.isComplete = false;
+        result.scenarioState.missingFields = [
+          ...(result.scenarioState.missingFields || []),
+          ...aiErrors.map((v) => ({
+            fieldKey: `guardrail-${v.code}`,
+            fieldName: 'Accounting guardrail validation',
+            prompt: `${v.code}: ${v.message}`,
+            whyNeeded: 'The AI-proposed journal violates an accounting safety check and cannot be posted automatically.'
+          }))
+        ];
+        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.`;
+      }
     }
   }
 

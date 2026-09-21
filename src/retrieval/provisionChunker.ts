@@ -27,6 +27,12 @@ export interface VerifiedChunk {
   section?: string;
   subsection?: string;
   tags?: string[];
+  /**
+   * Explicit source lifecycle state. Chunks inherit from their parent record
+   * and staged/candidate chunks are excluded from active retrieval.
+   */
+  lifecycleState?: 'ACTIVE' | 'CANDIDATE' | 'STAGED' | 'REJECTED';
+  parentRecordLifecycleState?: 'ACTIVE' | 'CANDIDATE' | 'STAGED' | 'REJECTED';
 }
 
 /**
@@ -55,8 +61,14 @@ export class ProvisionChunker {
       return [];
     }
 
-    // Hard Gate: Only approved registry records (strictly excluding STAGED or REJECTED candidates) may produce chunks
-    if ((parentRecord.sourceStatus as string) === 'REJECTED' || parentRecord.id.includes('staged') || parentRecord.id.includes('candidate')) {
+    // Hard Gate: Only approved registry records (strictly excluding STAGED, CANDIDATE, or REJECTED records) may produce chunks
+    const lifecycle = parentRecord.lifecycleState;
+    if (
+      (parentRecord.sourceStatus as string) === 'REJECTED' ||
+      lifecycle === 'CANDIDATE' ||
+      lifecycle === 'STAGED' ||
+      lifecycle === 'REJECTED'
+    ) {
       return [];
     }
 
@@ -113,7 +125,9 @@ export class ProvisionChunker {
           validTo: parentRecord.validTo,
           textHash: ProvisionChunker.computeTextHash(chunkText),
           section: parentRecord.paragraphOrSection,
-          subsection: matches[i].label
+          subsection: matches[i].label,
+          lifecycleState: parentRecord.lifecycleState,
+          parentRecordLifecycleState: parentRecord.lifecycleState
         };
 
         // Strict Invariant Check
@@ -148,7 +162,9 @@ export class ProvisionChunker {
         validFrom: parentRecord.validFrom,
         validTo: parentRecord.validTo,
         textHash: ProvisionChunker.computeTextHash(text),
-        section: parentRecord.paragraphOrSection
+        section: parentRecord.paragraphOrSection,
+        lifecycleState: parentRecord.lifecycleState,
+        parentRecordLifecycleState: parentRecord.lifecycleState
       };
 
       if (!this.verifyChunk(singleChunk, parentRecord)) {

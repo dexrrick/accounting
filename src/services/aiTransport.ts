@@ -165,7 +165,7 @@ async function callGeminiDirect(
   temperature: number = 0.1,
   jsonMode: boolean = true
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const requestBody: any = {
     contents: [
@@ -185,7 +185,10 @@ async function callGeminiDirect(
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey
+    },
     body: JSON.stringify(requestBody),
     signal
   });

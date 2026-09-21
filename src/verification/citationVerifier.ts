@@ -1,6 +1,8 @@
 import type { StandardCitation, StatutoryAuthority } from '../types/accounting';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { defaultSourceRetriever, type ISourceRetriever } from '../retrieval/sourceRetriever';
+import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
+import { isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 
 export type CitationVerificationStatus =
   | 'VERIFIED_PRIMARY_SOURCE'
@@ -30,9 +32,14 @@ export interface CitationVerificationResult {
 
 export class CitationVerifier {
   private retriever: ISourceRetriever;
+  private referenceDate: string;
 
-  constructor(retriever: ISourceRetriever = defaultSourceRetriever) {
+  constructor(
+    retriever: ISourceRetriever = defaultSourceRetriever,
+    referenceDate: string = SourceFreshnessManager.DEFAULT_REFERENCE_DATE
+  ) {
     this.retriever = retriever;
+    this.referenceDate = referenceDate;
   }
 
   private normalizeSection(text: string): string {
@@ -134,7 +141,7 @@ export class CitationVerifier {
       if (bestScore > 0) {
         matchedRecord = bestCandidate;
       } else {
-        const activeRecord = sectionCandidates.find((r) => r.sourceStatus === 'VERIFIED' && (!r.validTo || r.validTo >= '2026-09-11'));
+        const activeRecord = sectionCandidates.find((r) => r.sourceStatus === 'VERIFIED' && (!r.validTo || r.validTo >= this.referenceDate));
         if (activeRecord) {
           matchedRecord = activeRecord;
         }
@@ -182,16 +189,7 @@ export class CitationVerifier {
     }
 
     // 4. Canonical URL verification
-    const isOfficialDomain =
-      rawUrl.startsWith('https://sso.agc.gov.sg') ||
-      rawUrl.startsWith('https://www.acra.gov.sg') ||
-      rawUrl.startsWith('https://www.iras.gov.sg') ||
-      rawUrl.startsWith('https://www.cpf.gov.sg') ||
-      rawUrl.startsWith('https://www.mom.gov.sg') ||
-      rawUrl.startsWith('https://www.mas.gov.sg') ||
-      rawUrl.startsWith('https://www.ifrs.org');
-
-    if (rawUrl && !isOfficialDomain) {
+    if (rawUrl && !isApprovedSingaporeSourceUrl(rawUrl)) {
       return {
         citation,
         status: 'NON_CANONICAL_URL',
@@ -199,7 +197,7 @@ export class CitationVerifier {
         isStructurallyValid: false,
         isAuthoritativePrimarySource: false,
         matchedRecord,
-        reason: `URL '${rawUrl}' is not an official Singapore government or standard-setter portal.`,
+        reason: `URL '${rawUrl}' is not an approved Singapore government or standard-setter portal.`,
         structuralVerificationOnly: true
       };
     }
@@ -274,9 +272,24 @@ export class CitationVerifier {
       matchedRecord.sourceStatus === 'NEEDS_REVIEW' ||
       matchedRecord.sourceType === 'CURATED_SUMMARY';
 
+    const isOfficialGuidance = matchedRecord.evidenceTier === 'OFFICIAL_GUIDANCE';
+
     const status: CitationVerificationStatus = isVerifiedPrimary
       ? 'VERIFIED_PRIMARY_SOURCE'
-      : (isNeedsReview ? 'SOURCE_NEEDS_REVIEW' : 'STRUCTURALLY_VERIFIED_SUMMARY');
+      : isNeedsReview
+      ? 'SOURCE_NEEDS_REVIEW'
+      : 'STRUCTURALLY_VERIFIED_SUMMARY';
+
+    let reason: string;
+    if (isVerifiedPrimary) {
+      reason = `Citation structurally verified against primary statutory provision in ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}).`;
+    } else if (isOfficialGuidance) {
+      reason = `Citation is structurally valid against official agency guidance ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}); it is not a verified primary statutory provision.`;
+    } else if (isNeedsReview) {
+      reason = `Citation is structurally valid against ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}), but underlying record is a curated summary marked SOURCE_NEEDS_REVIEW.`;
+    } else {
+      reason = `Citation is structurally valid against ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}).`;
+    }
 
     return {
       citation,
@@ -285,9 +298,7 @@ export class CitationVerifier {
       isStructurallyValid: true,
       isAuthoritativePrimarySource: isVerifiedPrimary,
       matchedRecord,
-      reason: isVerifiedPrimary
-        ? `Citation structurally verified against primary statutory provision in ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}).`
-        : `Citation is structurally valid against ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}), but underlying record is a curated summary marked SOURCE_NEEDS_REVIEW.`,
+      reason,
       structuralVerificationOnly: true
     };
   }

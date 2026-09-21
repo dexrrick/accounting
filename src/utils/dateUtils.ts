@@ -56,3 +56,43 @@ export function getSingaporeTimestamp(): string {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
+
+/**
+ * Returns the current wall-clock instant as a Date.
+ * The Date object itself is timezone-agnostic; use `getSingaporeDateString`
+ * when a calendar date in Asia/Singapore is required.
+ */
+export function getSingaporeNow(): Date {
+  return new Date();
+}
+
+/**
+ * Formats a Date as an ISO calendar date string (`YYYY-MM-DD`) in the
+ * Asia/Singapore timezone. If no date is provided, the current Singapore
+ * date is returned.
+ */
+export function getSingaporeDateString(dateInput?: Date | string): string {
+  const date =
+    dateInput instanceof Date
+      ? dateInput
+      : dateInput
+      ? new Date(dateInput)
+      : new Date();
+
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Singapore',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  const day = parts.find((p) => p.type === 'day')?.value.padStart(2, '0') || '01';
+  const month = parts.find((p) => p.type === 'month')?.value.padStart(2, '0') || '01';
+  const year = parts.find((p) => p.type === 'year')?.value || '1970';
+
+  return `${year}-${month}-${day}`;
+}

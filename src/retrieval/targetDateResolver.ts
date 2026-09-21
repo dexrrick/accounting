@@ -6,6 +6,8 @@ export interface TargetDateResolution {
   isHistorical?: boolean;
 }
 
+import { getSingaporeDateString } from '../utils/dateUtils';
+
 const MONTH_MAP: Record<string, string> = {
   jan: '01', january: '01',
   feb: '02', february: '02',
@@ -22,7 +24,7 @@ const MONTH_MAP: Record<string, string> = {
 };
 
 export class TargetDateResolver {
-  public static readonly CURRENT_SYSTEM_DATE = '2026-09-11';
+  public static readonly CURRENT_SYSTEM_DATE = getSingaporeDateString();
 
   /**
    * Resolves target transaction, reporting, or statutory dates from user input text.

@@ -172,8 +172,14 @@ export class HybridRetriever {
     const maxRrf = 2 / (rrfK + 1); // Exact theoretical maximum RRF score
 
     for (const [chunkId, { chunk, parentRecord }] of candidateMap.entries()) {
-      // Phase 4 Gate: Strictly exclude STAGED candidate packages and REJECTED sources
-      if ((parentRecord.sourceStatus as string) === 'REJECTED' || parentRecord.id.includes('staged') || parentRecord.id.includes('candidate')) {
+      // Phase 4 Gate: Strictly exclude STAGED, CANDIDATE, and REJECTED sources
+      const lifecycle = parentRecord.lifecycleState;
+      if (
+        (parentRecord.sourceStatus as string) === 'REJECTED' ||
+        lifecycle === 'CANDIDATE' ||
+        lifecycle === 'STAGED' ||
+        lifecycle === 'REJECTED'
+      ) {
         excludedUnverified++;
         continue;
       }

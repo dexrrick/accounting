@@ -250,7 +250,13 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
     // Strictly excluding any unapproved candidate/staged updates or rejected sources
     for (const rec of lexicalRecords) {
       if (!seenRecordIds.has(rec.id)) {
-        if (!rec.id.includes('staged') && !rec.id.includes('candidate') && (rec.sourceStatus as string) !== 'REJECTED') {
+        const lifecycle = rec.lifecycleState;
+        if (
+          lifecycle !== 'CANDIDATE' &&
+          lifecycle !== 'STAGED' &&
+          lifecycle !== 'REJECTED' &&
+          (rec.sourceStatus as string) !== 'REJECTED'
+        ) {
           seenRecordIds.add(rec.id);
           records.push(rec);
         }

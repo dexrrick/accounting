@@ -40,6 +40,14 @@ export const APPROVED_SINGAPORE_SOURCE_FAMILIES: ApprovedSourceFamily[] = [
     presentationLabel: 'Official agency FAQ via Ask.gov.sg',
     mustShowCanonicalLink: true,
     legalWeight: 'GUIDANCE'
+  },
+  {
+    id: 'IFRS_FOUNDATION',
+    hosts: ['ifrs.org', 'www.ifrs.org'],
+    tier: 'FORMAL_AGENCY_INSTRUMENT',
+    presentationLabel: 'IFRS Foundation',
+    mustShowCanonicalLink: true,
+    legalWeight: 'PRIMARY'
   }
 ];
 
@@ -49,4 +57,22 @@ export function isAskGovSingaporeUrl(url?: string): boolean {
   } catch {
     return false;
   }
+}
+
+export function getApprovedSourceTierForUrl(url?: string): ApprovedSourceTier | undefined {
+  try {
+    const hostname = new URL(url || '').hostname.toLowerCase();
+    for (const family of APPROVED_SINGAPORE_SOURCE_FAMILIES) {
+      if (family.hosts.includes(hostname)) {
+        return family.tier;
+      }
+    }
+  } catch {
+    // fall through
+  }
+  return undefined;
+}
+
+export function isApprovedSingaporeSourceUrl(url?: string): boolean {
+  return getApprovedSourceTierForUrl(url) !== undefined;
 }

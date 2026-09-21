@@ -117,8 +117,15 @@ export class DeterministicVectorIndex {
     if (chunk.evidenceTier === 'CURATED_SUMMARY' || chunk.sourceType === 'CURATED_SUMMARY') {
       return false;
     }
-    // Reject staged candidate prefixes or rejected tags
-    if (chunk.parentRecordId.includes('staged') || chunk.parentRecordId.includes('candidate') || chunk.id.includes('staged')) {
+    // Reject staged/candidate/rejected lifecycle states explicitly
+    if (
+      chunk.lifecycleState === 'CANDIDATE' ||
+      chunk.lifecycleState === 'STAGED' ||
+      chunk.lifecycleState === 'REJECTED' ||
+      chunk.parentRecordLifecycleState === 'CANDIDATE' ||
+      chunk.parentRecordLifecycleState === 'STAGED' ||
+      chunk.parentRecordLifecycleState === 'REJECTED'
+    ) {
       return false;
     }
     // Must have a valid textHash

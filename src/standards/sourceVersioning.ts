@@ -310,7 +310,7 @@ export class SourceVersioningManager {
     };
 
     this.candidates.set(metadata.versionId, {
-      record: { ...record, contentHash: computedHash, versionId: metadata.versionId },
+      record: { ...record, contentHash: computedHash, versionId: metadata.versionId, lifecycleState: 'CANDIDATE' },
       metadata: finalizedMetadata
     });
 
@@ -456,6 +456,8 @@ export class SourceVersioningManager {
       candidate.metadata.supersedesVersionId = currentActiveVersionId;
     }
 
+    candidate.record.lifecycleState = 'ACTIVE';
+
     // Append to immutable ledger
     const ledgerEntry: VersionLedgerEntry = {
       versionId,
@@ -475,6 +477,21 @@ export class SourceVersioningManager {
       versionId,
       activatedRecordId: recordId
     };
+  }
+
+  /**
+   * Rejects a candidate version and marks it as permanently ineligible for activation.
+   */
+  public rejectCandidateVersion(versionId: string): { success: boolean; versionId: string; error?: string } {
+    const candidate = this.candidates.get(versionId);
+    if (!candidate) {
+      return { success: false, versionId, error: `Candidate version '${versionId}' not found` };
+    }
+
+    candidate.record.lifecycleState = 'REJECTED';
+    candidate.metadata.verificationStatus = 'REJECTED';
+
+    return { success: true, versionId };
   }
 
   /**
