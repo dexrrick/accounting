@@ -13,7 +13,8 @@ import { classifyQuestion } from '../classification/questionClassifier';
 import type { ProviderSettings } from '../types/provider';
 import { defaultTransactionUnderstandingService, type TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import type { ISourceRetriever } from '../retrieval/sourceRetriever';
+import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
+import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
@@ -38,6 +39,9 @@ export interface GroundedReasoningContext {
   semanticUnderstanding?: TransactionUnderstanding;
 }
 
+/** Maximum number of source records requested by production grounding. */
+export const GROUNDING_SOURCE_MAX_RESULTS = 6;
+
 /**
  * Maps query canonical domain to source retriever domain
  */
@@ -60,6 +64,32 @@ function mapCanonicalDomainToQueryDomain(domain: string): QueryDomain {
     default:
       return 'GENERAL';
   }
+}
+
+/** Build shared, conflict-safe retrieval hints for production and evaluation callers. */
+export function buildClassificationRetrievalHints(
+  classification: QuestionClassificationResult
+): Pick<SourceRetrievalQuery, 'domain' | 'authorities' | 'topicIds'> {
+  const matchedCoverageTopics = getCoverageTopicsByIds(classification.topicIds);
+  const topicLegacyDomains = [...new Set(matchedCoverageTopics.flatMap(topic => topic.legacyDomains))];
+  const legacyPrimaryDomain = mapCanonicalDomainToQueryDomain(classification.primaryDomain);
+  const hasTopicDomainConflict = topicLegacyDomains.length === 1 &&
+    classification.primaryDomain !== 'GENERAL' &&
+    topicLegacyDomains[0] !== legacyPrimaryDomain;
+  const targetDomain = classification.multiAuthority || hasTopicDomainConflict
+    ? undefined
+    : topicLegacyDomains.length === 1
+      ? topicLegacyDomains[0]
+      : topicLegacyDomains.length === 0
+        ? legacyPrimaryDomain
+        : undefined;
+  const authorities = [...new Set(classification.authorities as StatutoryAuthority[])];
+
+  return {
+    domain: targetDomain && targetDomain !== 'GENERAL' ? targetDomain : undefined,
+    authorities: authorities.length > 0 ? authorities : undefined,
+    topicIds: classification.topicIds
+  };
 }
 
 /**
@@ -195,15 +225,12 @@ export async function buildGroundedReasoningContext(
   );
   const classification = classifyQuestion(userInput);
 
-  // 2. Source Retrieval (Supplied with Semantic Context for Reranking)
-  const targetDomain = mapCanonicalDomainToQueryDomain(classification.primaryDomain);
-  const targetAuthorities = classification.authorities as StatutoryAuthority[];
-
+  // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
+  const retrievalHints = buildClassificationRetrievalHints(classification);
   const retrieved = await retriever.retrieveSources({
     query: userInput,
-    domain: targetDomain !== 'GENERAL' ? targetDomain : undefined,
-    authorities: targetAuthorities.length > 0 ? targetAuthorities : undefined,
-    maxResults: 6,
+    ...retrievalHints,
+    maxResults: GROUNDING_SOURCE_MAX_RESULTS,
     semanticContext: semanticUnderstanding
   });
 

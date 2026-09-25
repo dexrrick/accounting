@@ -1,3 +1,6 @@
+import { getCoverageTopicsByIds, type SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
+import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
+
 export type CanonicalDomain =
   | 'ACCOUNTING'
   | 'TAX'
@@ -11,6 +14,10 @@ export type CanonicalDomain =
 
 export interface QuestionClassificationResult {
   primaryDomain: CanonicalDomain;
+  /** Fine-grained topic domains from the master Singapore coverage registry. */
+  domains: SingaporeKnowledgeDomain[];
+  /** Canonical topic IDs shared with retrieval and the coverage catalog. */
+  topicIds: string[];
   authorities: string[];
   multiAuthority: boolean;
   currentInformationRequired: boolean;
@@ -30,6 +37,9 @@ export interface QuestionClassificationResult {
  */
 export function classifyQuestion(query: string): QuestionClassificationResult {
   const q = query.toLowerCase();
+  const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
+  const topicIds = decomposition.topics.map(topic => topic.id);
+  const topicMetadata = getCoverageTopicsByIds(topicIds);
 
   // 1. Domain Indicator Detection
   const hasAccounting =
@@ -63,7 +73,11 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('restate') ||
     q.includes('reclassif') ||
     q.includes('presentation of income') ||
-    q.includes('revenue presentation');
+    q.includes('revenue presentation') ||
+    topicMetadata.some(topic => topic.domainId.startsWith('ACCOUNTING_'));
+
+  const hasTaxAcronym = /\b(ir21|ir8a|ir8s|ais|absd|bsd|tpd|crs|fatca|eci)\b/i.test(q);
+  const hasNonGstTaxTopic = topicMetadata.some(topic => topic.domainId.startsWith('IRAS_') && topic.domainId !== 'IRAS_GST');
 
   const hasTax =
     q.includes('tax deduct') ||
@@ -82,7 +96,9 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('enterprise innovation') ||
     q.includes('add-back') ||
     q.includes('tax treatment') ||
-    q.includes('withholding tax');
+    q.includes('withholding tax') ||
+    hasTaxAcronym ||
+    hasNonGstTaxTopic;
 
   const hasGst =
     /\bgst\b/i.test(q) ||
@@ -93,7 +109,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('blocked input') ||
     q.includes('taxable turnover') ||
     q.includes('compulsory registration') ||
-    q.includes('register for gst');
+    q.includes('register for gst') ||
+    topicMetadata.some(topic => topic.domainId === 'IRAS_GST');
 
   const hasCorporate =
     q.includes('acra') ||
@@ -105,7 +122,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('annual return') ||
     /\bagm\b/i.test(q) ||
     q.includes('director') ||
-    q.includes('share capital');
+    q.includes('share capital') ||
+    topicMetadata.some(topic => topic.domainId.startsWith('ACRA_'));
 
   const hasPayroll =
     /\bcpf\b/i.test(q) ||
@@ -116,10 +134,13 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('aw ceiling') ||
     q.includes('medisave') ||
     q.includes('employer contribution') ||
-    q.includes('employee contribution');
+    q.includes('employee contribution') ||
+    q.includes('skills development levy') ||
+    /\bsdl\b/i.test(q) ||
+    /\b(shg|sinda|cdac|mbmf|ecf)\b/i.test(q) ||
+    topicMetadata.some(topic => topic.domainId.startsWith('CPF_'));
 
-  const hasEmployment =
-    /\bmom\b/i.test(q) ||
+  const hasEmploymentContext =
     q.includes('ministry of manpower') ||
     q.includes('employment act') ||
     q.includes('annual leave') ||
@@ -129,19 +150,37 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('part iv') ||
     q.includes('working hours') ||
     q.includes('rest day') ||
-    q.includes('retrenchment');
+    q.includes('retrenchment') ||
+    q.includes('progressive wage') ||
+    /\bpwm\b/i.test(q) ||
+    /\btadm\b/i.test(q) ||
+    q.includes('flexible work arrangement') ||
+    /\bfwa\b/i.test(q) ||
+    q.includes('work permit') ||
+    q.includes('employment pass') ||
+    /\bs pass\b/i.test(q) ||
+    q.includes('foreign worker') ||
+    /\bdrc\b|\bfwl\b/i.test(q);
+
+  const hasMomAcronymInEmploymentContext =
+    /\bmom\b/i.test(q) &&
+    /\b(employment|work pass|employee|worker|salary|leave|overtime|quota|levy|retrenchment|pwms?)\b/i.test(q);
+
+  const hasEmployment =
+    hasEmploymentContext || hasMomAcronymInEmploymentContext || topicMetadata.some(topic => topic.domainId.startsWith('MOM_'));
 
   const hasMasFunds =
     /\bmas\b/i.test(q) ||
     q.includes('family office') ||
     q.includes('single family office') ||
-    /\bvcc\b/i.test(q) ||
-    q.includes('variable capital company') ||
     q.includes('fund manager') ||
     q.includes('fund management company') ||
+    q.includes('fund management') ||
     q.includes('fund admin') ||
     q.includes('fund administrator') ||
-    q.includes('13o') || q.includes('13u') || q.includes('cms licence');
+    q.includes('13o') || q.includes('13u') || q.includes('cms licence') ||
+    /\b(qfd|qfdc)\b/i.test(q) ||
+    topicMetadata.some(topic => topic.domainId.startsWith('MAS_'));
 
   const hasPayrollCalculation =
     (q.includes('salary') || q.includes('earning') || q.includes('earns') || q.includes('payroll') || q.includes('wages') || q.includes('wage')) &&
@@ -157,7 +196,31 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   if (hasEmployment || hasPayrollCalculation) authorities.push('MOM');
   if (hasMasFunds) authorities.push('MAS');
 
+  // Topic metadata routes authorities for registered topics (including multiple authorities).
+  for (const authority of topicMetadata.flatMap(topic => topic.authorities)) {
+    if (!authorities.includes(authority)) authorities.push(authority);
+  }
+
   const multiAuthority = authorities.length > 1;
+  const domains = [...new Set(topicMetadata.map(topic => topic.domainId))];
+  const addDomainIfMissing = (domain: SingaporeKnowledgeDomain) => {
+    if (!domains.includes(domain)) domains.push(domain);
+  };
+  if (hasAccounting && !domains.some(domain => domain.startsWith('ACCOUNTING_'))) addDomainIfMissing('ACCOUNTING_SFRS');
+  if (hasGst && !domains.includes('IRAS_GST')) addDomainIfMissing('IRAS_GST');
+  if (hasCorporate && !domains.some(domain => domain.startsWith('ACRA_'))) addDomainIfMissing('ACRA_COMPANIES');
+  if (hasEmployment && !domains.some(domain => domain.startsWith('MOM_'))) addDomainIfMissing('MOM_EMPLOYMENT');
+  if (hasPayroll && !domains.some(domain => domain.startsWith('CPF_'))) addDomainIfMissing('CPF_CONTRIBUTIONS');
+  if (hasMasFunds && !domains.some(domain => domain.startsWith('MAS_'))) addDomainIfMissing('MAS_FUND_MANAGEMENT');
+  if (hasTax) {
+    if (/\b(ir21|ir8a|ir8s|ais|benefits-in-kind|benefits in kind)\b/i.test(q)) addDomainIfMissing('IRAS_EMPLOYER_TAX');
+    else if (/\b(personal tax|individual tax|tax residency|tax resident|183[- ]day|personal relief)\b/i.test(q)) addDomainIfMissing('IRAS_INDIVIDUAL_TAX');
+    else if (/\b(property tax|annual value)\b/i.test(q)) addDomainIfMissing('IRAS_PROPERTY_TAX');
+    else if (/\b(stamp duty|bsd|absd|ssd)\b/i.test(q)) addDomainIfMissing('IRAS_STAMP_DUTY');
+    else if (/\b(crs|fatca)\b/i.test(q)) addDomainIfMissing('IRAS_CRS_FATCA');
+    else if (/\b(corporate tax|company tax|form c|sute|pte|section 14|section 15|section 19|transfer pricing|tax loss|group relief|withholding tax|\beci\b)\b/i.test(q)) addDomainIfMissing('IRAS_CORPORATE_TAX');
+  }
+  if (multiAuthority) domains.push('MULTI_AUTHORITY');
 
   // 3. Determine Primary Domain
   let primaryDomain: CanonicalDomain = 'GENERAL';
@@ -165,7 +228,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     primaryDomain = 'MIXED';
   } else if (hasAccounting) {
     primaryDomain = 'ACCOUNTING';
-  } else if (hasTax) {
+  } else if (hasTax && (!hasGst || hasNonGstTaxTopic || /\b(corporate tax|income tax|withholding tax|tax deduct|deductib|capital allowance|sute|form c|eci)\b/i.test(q))) {
     primaryDomain = 'TAX';
   } else if (hasGst) {
     primaryDomain = 'GST';
@@ -283,12 +346,14 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   return {
     primaryDomain,
+    domains,
+    topicIds,
     authorities,
     multiAuthority,
     currentInformationRequired,
     accountingAnalysisRequired: hasAccounting,
     taxAnalysisRequired: hasTax || hasGst,
-    regulatoryAnalysisRequired: hasCorporate || hasPayroll || hasEmployment,
+    regulatoryAnalysisRequired: hasCorporate || hasPayroll || hasEmployment || topicMetadata.some(topic => !topic.domainId.startsWith('ACCOUNTING_')),
     calculationRequired,
     journalEntryRequired,
     missingFacts,

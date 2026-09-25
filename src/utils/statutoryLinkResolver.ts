@@ -47,7 +47,11 @@ export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
   const normCode = actCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
   let ssoCode: string | undefined;
 
-  if (actCode.toLowerCase().includes('coa') || actCode.toLowerCase().includes('companies') || actCode === 'CA' || actCode === 'CA1967') {
+  // Check VCCA before Companies Act aliases such as "CA", which are also
+  // substrings of "VCCA2018" and would otherwise route to CoA1967.
+  if (normCode === 'VCCA' || normCode === 'VCCA2018' || actCode.toLowerCase().includes('variable capital companies')) {
+    ssoCode = 'VCCA2018';
+  } else if (actCode.toLowerCase().includes('coa') || actCode.toLowerCase().includes('companies') || actCode === 'CA' || actCode === 'CA1967') {
     ssoCode = 'CoA1967';
   } else {
     for (const [k, v] of Object.entries(ACT_CODE_TO_SSO)) {
@@ -150,11 +154,11 @@ export function getSafeOfficialUrl(
     return canonicalizeSsoUrl(url);
   }
 
-  if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
-    return buildSsoUrl('ITA1947', sec);
-  }
   if (act.includes('variable capital companies') || act.includes('vcc act') || act.includes('vcca2018')) {
     return buildSsoUrl('VCCA2018', sec);
+  }
+  if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
+    return buildSsoUrl('ITA1947', sec);
   }
   if (act.includes('companies act') || act.includes('ca1967') || act.includes('coa1967') || act.includes('audit')) {
     return buildSsoUrl('CoA1967', sec);

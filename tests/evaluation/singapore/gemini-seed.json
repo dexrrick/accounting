@@ -1,0 +1,642 @@
+{
+  "schemaVersion": 1,
+  "description": "Initial routing and evaluation fixtures transcribed from Gemini-generated questions. Embedded factual assertions are user-generated prompts, not validated Singapore law. This pack does not define the master coverage scope.",
+  "cases": [
+    {
+      "id": "mom-work-passes-drc-levy",
+      "provenance": "gemini-seed",
+      "question": "What are the specific foreign worker dependency ratio ceilings (DRC) and levies applicable to our sector under the current guidelines?",
+      "expected": {
+        "authorities": [
+          "MOM"
+        ],
+        "topicIds": [
+          "mom-foreign-workforce-drc",
+          "mom-foreign-worker-levy"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "sector",
+          "workforce composition",
+          "requested period"
+        ],
+        "domainIds": [
+          "MOM_FOREIGN_WORKFORCE"
+        ]
+      }
+    },
+    {
+      "id": "mom-employment-act-coverage",
+      "provenance": "gemini-seed",
+      "question": "Which specific terms (overtime eligibility, annual leave progression, and public holiday pay) apply to our employee categorization under Part IV of the Employment Act?",
+      "expected": {
+        "authorities": [
+          "MOM"
+        ],
+        "topicIds": [
+          "mom_annual_leave",
+          "mom_overtime",
+          "mom-employment-act-coverage",
+          "mom-part-iv-overtime",
+          "mom-public-holidays"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "employee category",
+          "salary basis",
+          "occupation"
+        ],
+        "domainIds": [
+          "MOM_EMPLOYMENT"
+        ]
+      }
+    },
+    {
+      "id": "mom-progressive-wage-model",
+      "provenance": "gemini-seed",
+      "question": "Does the mandatory PWM apply to any in-house roles in our organization, and what are the scheduled wage increases?",
+      "expected": {
+        "authorities": [
+          "MOM"
+        ],
+        "topicIds": [
+          "mom-progressive-wage-model"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "industry",
+          "occupation",
+          "requested period"
+        ],
+        "domainIds": [
+          "MOM_EMPLOYMENT"
+        ]
+      }
+    },
+    {
+      "id": "mom-tadm-documentation",
+      "provenance": "gemini-seed",
+      "question": "What documentation is required before filing a mediation request with the Tripartite Alliance for Dispute Management (TADM)?",
+      "expected": {
+        "authorities": [
+          "MOM"
+        ],
+        "topicIds": [
+          "mom-employment-claims-tadm"
+        ],
+        "multiAuthority": false,
+        "domainIds": [
+          "MOM_EMPLOYMENT"
+        ]
+      }
+    },
+    {
+      "id": "mom-flexible-work-arrangements",
+      "provenance": "gemini-seed",
+      "question": "How do our internal HR policies align with the Tripartite Guidelines on Flexible Work Arrangement Requests?",
+      "expected": {
+        "authorities": [
+          "MOM"
+        ],
+        "topicIds": [
+          "mom-flexible-work-arrangements"
+        ],
+        "multiAuthority": false,
+        "domainIds": [
+          "MOM_EMPLOYMENT"
+        ]
+      }
+    },
+    {
+      "id": "negative-minutes-action-items",
+      "provenance": "gemini-seed-negative",
+      "question": "Who is the designated owner for each deliverable, and what is the hard deadline for completion?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-minutes-decision-tracking",
+      "provenance": "gemini-seed-negative",
+      "question": "What key trade-offs, dissenting opinions, or rationale led to this specific decision rather than the alternatives considered?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-minutes-resource-allocation",
+      "provenance": "gemini-seed-negative",
+      "question": "What budget, headcount, or cross-functional dependencies are committed to execute these points?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-minutes-approval",
+      "provenance": "gemini-seed-negative",
+      "question": "Who is the final sign-off authority required before circulating this record to stakeholders?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-minutes-review-rhythm",
+      "provenance": "gemini-seed-negative",
+      "question": "At which upcoming milestone or meeting will the progress on these tracked items be evaluated?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-mom-minutes-acronym",
+      "provenance": "gemini-seed-negative",
+      "question": "From the MOM, list the action owners, hard deadlines, and next review meeting.",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-personal-early-life",
+      "provenance": "gemini-seed-negative",
+      "question": "What was your childhood home like, and what did you dream of becoming when you were growing up?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-personal-turning-points",
+      "provenance": "gemini-seed-negative",
+      "question": "What was the most difficult decision you ever had to make in your twenties or thirties?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-personal-family-traditions",
+      "provenance": "gemini-seed-negative",
+      "question": "Which tradition or habit from your own parents do you feel was most important to pass down?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "negative-personal-perspective",
+      "provenance": "gemini-seed-negative",
+      "question": "What is something you worried about constantly when raising children that turned out not to matter at all?",
+      "expected": {
+        "authorities": [],
+        "topicIds": [],
+        "multiAuthority": false,
+        "domainIds": []
+      }
+    },
+    {
+      "id": "iras-cit-deductibility-capital-allowances",
+      "provenance": "gemini-seed",
+      "question": "Which specific staff welfare or entertainment expenses exceed non-deductible thresholds, and are our fixed asset additions eligible for Section 19/19A accelerated capital allowances?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses",
+          "iras-capital-allowances"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "expense nature",
+          "asset details",
+          "basis period"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-sute-pte",
+      "provenance": "gemini-seed",
+      "question": "Does the company qualify for the Partial Tax Exemption (PTE) or the Start-Up Tax Exemption (SUTE) scheme for the current Year of Assessment (YA)?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-cit-pte",
+          "iras-cit-sute"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "YA",
+          "company incorporation and ownership facts",
+          "chargeable income"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-tax-losses-group-relief",
+      "provenance": "gemini-seed",
+      "question": "Have we satisfied the substantial shareholding test (more than 50% continuous ownership) to carry forward unutilized tax losses and capital allowances, or transfer them via Group Relief?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "cit_loss_relief",
+          "iras-capital-allowances",
+          "iras-substantial-shareholding-test",
+          "iras-group-relief"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "ownership history",
+          "relevant basis periods",
+          "group structure"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-withholding-tax-dta",
+      "provenance": "gemini-seed",
+      "question": "What withholding tax rates apply to outbound service fees, management charges, or royalties paid to non-resident entities, and does an applicable Avoidance of Double Taxation Agreement (DTA) reduce this rate?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-double-tax-agreements"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "payment characterization",
+          "recipient residence",
+          "treaty facts",
+          "payment date"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-transfer-pricing-documentation",
+      "provenance": "gemini-seed",
+      "question": "Does our related-party transactional volume meet the S$15 million threshold that mandates contemporaneous Transfer Pricing Documentation (TPD)?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-transfer-pricing",
+          "iras-transfer-pricing-documentation"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "related-party transaction categories and amounts",
+          "financial year"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-gst-registration",
+      "provenance": "gemini-seed",
+      "question": "Has our taxable turnover exceeded S$1 million over the past 12 months (retrospective view), or is it expected to exceed S$1 million in the next 12 months (prospective view)?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "gst_compulsory_registration",
+          "iras-gst-turnover-tests"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "taxable turnover",
+          "measurement periods",
+          "business circumstances"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ]
+      }
+    },
+    {
+      "id": "iras-gst-input-tax",
+      "provenance": "gemini-seed",
+      "question": "Are all claimed tax invoices compliant with IRAS requirements (showing the GST registration number and broken-down GST amount), and have blocked input taxes (such as club subscription fees or motor car expenses) been excluded?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "GST registration",
+          "invoice details",
+          "expense nature",
+          "business purpose"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ]
+      }
+    },
+    {
+      "id": "iras-gst-zero-rating-exports",
+      "provenance": "gemini-seed",
+      "question": "Do our cross-border digital services or exported goods fulfill the strict documentation criteria under Section 21(3) of the GST Act to qualify for 0% GST rather than standard rate?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-gst-zero-rating",
+          "iras-gst-export-documentation"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "supply characterization",
+          "customer location and status",
+          "export evidence"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ]
+      }
+    },
+    {
+      "id": "iras-gst-reverse-charge",
+      "provenance": "gemini-seed",
+      "question": "Does our business procure imported services or low-value goods from overseas vendors that trigger the Reverse Charge regime due to non-taxable activities?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "gst_reverse_charge",
+          "iras-gst-imported-services",
+          "iras-gst-low-value-goods"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "recipient GST registration",
+          "input tax recovery profile",
+          "supply type",
+          "supplier location"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ]
+      }
+    },
+    {
+      "id": "iras-ais",
+      "provenance": "gemini-seed",
+      "question": "Is our entity legally required to submit employment income details digitally via AIS for Form IR8A by 1 March?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-ais-employment-income"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "employer type",
+          "employee count",
+          "income year"
+        ],
+        "domainIds": [
+          "IRAS_EMPLOYER_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-ir21",
+      "provenance": "gemini-seed",
+      "question": "At what point must an IR21 be submitted, and what amount of monies must be withheld before a non-Singapore citizen employee ceases employment or departs Singapore for more than three months?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-employer-ir21"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "citizenship and PR status",
+          "cessation or departure facts",
+          "employment income",
+          "relevant dates"
+        ],
+        "domainIds": [
+          "IRAS_EMPLOYER_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-individual-reliefs",
+      "provenance": "gemini-seed",
+      "question": "Are our eligible claims (such as SRS contributions, CPF Cash Top-Up, Working Mother's Child Relief, and Qualifying Child Relief) within the aggregate personal income tax relief cap of S$80,000 per YA?",
+      "expected": {
+        "authorities": [
+          "CPF",
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-individual-reliefs",
+          "iras-individual-relief-cap",
+          "cpf-cash-top-up-tax-relief"
+        ],
+        "multiAuthority": true,
+        "requiredFacts": [
+          "YA",
+          "tax residency",
+          "relief eligibility facts",
+          "claim amounts"
+        ],
+        "domainIds": [
+          "IRAS_INDIVIDUAL_TAX",
+          "CPF_CONTRIBUTIONS",
+          "MULTI_AUTHORITY"
+        ]
+      }
+    },
+    {
+      "id": "iras-tax-residency",
+      "provenance": "gemini-seed",
+      "question": "Does an overseas-assigned staff member or newly arrived expatriate meet the 183-day quantitative test to be taxed at resident progressive rates rather than the non-resident flat rate?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-individual-tax-residency"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "presence days",
+          "employment dates",
+          "relevant year",
+          "applicable administrative concessions"
+        ],
+        "domainIds": [
+          "IRAS_INDIVIDUAL_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-property-tax-annual-value",
+      "provenance": "gemini-seed",
+      "question": "How does the recent revision of the property's Annual Value impact the progressive property tax rates payable for owner-occupied versus non-owner-occupied status?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-property-tax-annual-value",
+          "iras-property-tax-use-status"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "Annual Value",
+          "property use",
+          "requested period"
+        ],
+        "domainIds": [
+          "IRAS_PROPERTY_TAX"
+        ]
+      }
+    },
+    {
+      "id": "iras-bsd-absd",
+      "provenance": "gemini-seed",
+      "question": "For corporate property acquisitions or residential purchases, what are the applicable ABSD remission conditions (e.g., qualifying housing developers or specific married couple remissions)?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-stamp-duty-absd",
+          "iras-stamp-duty-remissions"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "property type",
+          "buyer identity and profile",
+          "transaction date",
+          "remission conditions"
+        ],
+        "domainIds": [
+          "IRAS_STAMP_DUTY"
+        ]
+      }
+    },
+    {
+      "id": "iras-lease-stamp-duty",
+      "provenance": "gemini-seed",
+      "question": "What is the exact Average Annual Rent (AAR) calculation and payment timeline required via the e-Stamping portal to avoid late payment penalties?",
+      "expected": {
+        "authorities": [
+          "IRAS"
+        ],
+        "topicIds": [
+          "iras-stamp-duty-leases"
+        ],
+        "multiAuthority": false,
+        "requiredFacts": [
+          "lease term",
+          "rent and consideration",
+          "execution date",
+          "lease property type"
+        ],
+        "domainIds": [
+          "IRAS_STAMP_DUTY"
+        ]
+      }
+    },
+    {
+      "id": "mas-iras-section-13o",
+      "provenance": "roadmap-sentinel",
+      "question": "What are the MAS and IRAS considerations for the Section 13O fund tax incentive?",
+      "expected": {
+        "authorities": [
+          "IRAS",
+          "MAS"
+        ],
+        "topicIds": [
+          "mas-family-office-13o",
+          "iras-fund-tax-incentives-13o"
+        ],
+        "multiAuthority": true,
+        "domainIds": [
+          "IRAS_CORPORATE_TAX",
+          "MAS_FAMILY_OFFICE",
+          "MULTI_AUTHORITY"
+        ]
+      }
+    },
+    {
+      "id": "mas-iras-section-13u",
+      "provenance": "roadmap-sentinel",
+      "question": "What are the MAS and IRAS considerations for the Section 13U fund tax incentive?",
+      "expected": {
+        "authorities": [
+          "IRAS",
+          "MAS"
+        ],
+        "topicIds": [
+          "mas-family-office-13u",
+          "iras-fund-tax-incentives-13u"
+        ],
+        "multiAuthority": true,
+        "domainIds": [
+          "IRAS_CORPORATE_TAX",
+          "MAS_FAMILY_OFFICE",
+          "MULTI_AUTHORITY"
+        ]
+      }
+    }
+  ]
+}

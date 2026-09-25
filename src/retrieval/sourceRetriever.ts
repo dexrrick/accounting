@@ -11,6 +11,8 @@ export interface SourceRetrievalQuery {
   query: string;
   domain?: QueryDomain;
   authorities?: StatutoryAuthority[];
+  /** Canonical coverage-topic hints; these do not constitute source evidence. */
+  topicIds?: string[];
   maxResults?: number;
   targetDate?: string;
   includeHistorical?: boolean;

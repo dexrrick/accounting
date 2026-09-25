@@ -6,6 +6,11 @@ import type {
 } from '../types/conversationState';
 import type { TransactionUnderstanding } from '../services/transactionUnderstandingService';
 import {
+  SINGAPORE_COVERAGE_REGISTRY,
+  type SingaporeKnowledgeDomain,
+  type CoverageStatus
+} from '../standards/coverageRegistry';
+import {
   type TopicSemanticCriteria,
   CANONICAL_TOPIC_SEMANTIC_CRITERIA
 } from '../standards/semanticAccountingRules';
@@ -16,6 +21,11 @@ export interface QueryTopic {
   id: string;
   name: string;
   keywords: string[];
+  exclusionKeywords?: string[];
+  canonicalConceptId?: string;
+  domainId: SingaporeKnowledgeDomain;
+  authorities: string[];
+  coverageStatus: CoverageStatus;
   actOrStandard?: string;
   sectionMatch?: string;
   semanticCriteria?: TopicSemanticCriteria;
@@ -37,155 +47,27 @@ export interface TopicDecompositionResult {
 }
 
 export class QueryTopicResolver {
-  public static readonly CANONICAL_TOPICS: QueryTopic[] = [
-    {
-      id: 'mom_annual_leave',
-      name: 'Paid Annual Leave',
-      keywords: ['annual leave', 'leave entitlement', 'vacation days', 'paid leave', 'section 88a'],
-      actOrStandard: 'Employment Act 1968',
-      sectionMatch: '88a',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.mom_annual_leave
-    },
-    {
-      id: 'mom_sick_leave',
-      name: 'Outpatient Sick & Hospitalisation Leave',
-      keywords: ['sick leave', 'medical leave', 'hospitalisation leave', 'hospitalization', 'mc', 'section 89'],
-      actOrStandard: 'Employment Act 1968',
-      sectionMatch: '89',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.mom_sick_leave
-    },
-    {
-      id: 'mom_overtime',
-      name: 'Overtime & Working Hours (Part IV)',
-      keywords: ['overtime', 'part iv', 'working hours', 'rest day', '1.5 times', 'section 38'],
-      actOrStandard: 'Employment Act 1968',
-      sectionMatch: '38',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.mom_overtime
-    },
-    {
-      id: 'cpf_wage_ceiling',
-      name: 'CPF Ordinary Wage Ceiling',
-      keywords: ['cpf ceiling', 'ordinary wage ceiling', 'ow ceiling', 'cpf limit', 'monthly ceiling'],
-      actOrStandard: 'Central Provident Fund Act 1953',
-      sectionMatch: 'first schedule',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cpf_wage_ceiling
-    },
-    {
-      id: 'cpf_contribution_rates',
-      name: 'CPF Tiered Contribution Rates by Age',
-      keywords: ['cpf rate', 'cpf contribution', 'employee contribution', 'employer contribution', 'age 55'],
-      actOrStandard: 'Central Provident Fund Act 1953',
-      sectionMatch: 'rates',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cpf_contribution_rates
-    },
-    {
-      id: 'gst_compulsory_registration',
-      name: 'GST Compulsory Registration Threshold',
-      keywords: ['gst registration', 'compulsory registration', '1 million turnover', '1m turnover', 'gst threshold'],
-      actOrStandard: 'Goods and Services Tax Act 1993',
-      sectionMatch: 'first schedule'
-    },
-    {
-      id: 'gst_reverse_charge',
-      name: 'GST Reverse Charge on Imported Services',
-      keywords: ['reverse charge', 'imported services', 'b2b imported', 'section 14'],
-      actOrStandard: 'Goods and Services Tax Act 1993',
-      sectionMatch: '14'
-    },
-    {
-      id: 'gst_bad_debt_relief',
-      name: 'GST Bad Debt Relief',
-      keywords: ['bad debt relief', 'bad debt', 'insolvent customer', 'regulations 82', 'reg 82'],
-      actOrStandard: 'Goods and Services Tax (General) Regulations',
-      sectionMatch: '82',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.gst_bad_debt_relief
-    },
-    {
-      id: 'cit_section_14',
-      name: 'Section 14 Tax Deductibility',
-      keywords: ['section 14', 'wholly and exclusively', 'business expense tax deduction', 'deductible expense'],
-      actOrStandard: 'Income Tax Act 1947',
-      sectionMatch: '14',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cit_section_14
-    },
-    {
-      id: 'cit_loss_relief',
-      name: 'Tax Loss Carry-Forward & Carry-Back',
-      keywords: ['loss carry forward', 'loss carry back', 'unabsorbed losses', 'section 37', 'section 37e'],
-      actOrStandard: 'Income Tax Act 1947',
-      sectionMatch: '37',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.cit_loss_relief
-    },
-    {
-      id: 'acra_small_company',
-      name: 'Small Company Audit Exemption Criteria',
-      keywords: ['small company', 'audit exemption', 'audit exempt', '13th schedule', 'revenue 10m', 'assets 10m'],
-      actOrStandard: 'Companies Act 1967',
-      sectionMatch: 'thirteenth schedule'
-    },
-    {
-      id: 'acra_record_retention',
-      name: 'Accounting Records Retention Period',
-      keywords: ['retention of records', 'keep records', '5 years', 'five years', 'accounting records', 'section 199'],
-      actOrStandard: 'Companies Act 1967',
-      sectionMatch: '199'
-    },
-    {
-      id: 'acra_financial_statements',
-      name: 'Financial Statements Presentation',
-      keywords: ['financial statements', 'presentation of accounts', 'section 201', 'true and fair view'],
-      actOrStandard: 'Companies Act 1967',
-      sectionMatch: '201'
-    },
-    {
-      id: 'sfrsi_intangibles_cap',
-      name: 'SFRS(I) 1-38 Development Cost Capitalisation',
-      keywords: ['development cost', 'capitalisation', 'intangible asset', 'research vs development', 'technical feasibility', 'paragraph 57', '§57'],
-      actOrStandard: 'SFRS(I) 1-38',
-      sectionMatch: '57',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_intangibles_cap
-    },
-    {
-      id: 'sfrsi_leases',
-      name: 'SFRS(I) 16 Lease Capitalisation',
-      keywords: ['right of use', 'rou asset', 'lease liability', 'incremental borrowing rate', 'sfrs(i) 16', 'ifrs 16'],
-      actOrStandard: 'SFRS(I) 16',
-      sectionMatch: '22',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_leases
-    },
-    {
-      id: 'sfrsi_ppe',
-      name: 'SFRS(I) 1-16 PPE & Depreciation',
-      keywords: ['ppe', 'catch up depreciation', 'derecognition', 'trade in machinery', 'carrying amount', 'sfrs(i) 1-16'],
-      actOrStandard: 'SFRS(I) 1-16',
-      sectionMatch: '55',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_ppe
-    },
-    {
-      id: 'acra_share_capital',
-      name: 'Companies Act 1967 Section 68 / 63 Share Capital & Allotment',
-      keywords: ['share capital', 'allotment', 'no par value', 'unpaid shares', 'section 68', 'section 63', 'own company share'],
-      actOrStandard: 'Companies Act 1967',
-      sectionMatch: '68',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.acra_share_capital
-    },
-    {
-      id: 'sfrsi_own_equity',
-      name: 'SFRS(I) 1-32 Own Equity Presentation vs Financial Assets',
-      keywords: ['equity instrument', 'own shares', 'sfrs(i) 1-32', 'ias 32', 'share capital equity'],
-      actOrStandard: 'SFRS(I) 1-32',
-      sectionMatch: '33',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_own_equity
-    },
-    {
-      id: 'sfrsi_financial_instruments',
-      name: 'SFRS(I) 9 Financial Assets & Investments',
-      keywords: ['financial asset', 'financial instrument', 'marketable securities', 'shares in other company', 'fvtoci', 'fvtpl', 'amortised cost', 'sfrs(i) 9'],
-      actOrStandard: 'SFRS(I) 9',
-      sectionMatch: '4.1',
-      semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA.sfrsi_financial_instruments
-    }
-  ];
+  public static readonly CANONICAL_TOPICS: QueryTopic[] = SINGAPORE_COVERAGE_REGISTRY.map((metadata) => ({
+    id: metadata.id,
+    name: metadata.title,
+    keywords: metadata.keywords,
+    exclusionKeywords: metadata.exclusionKeywords,
+    domainId: metadata.domainId,
+    authorities: metadata.authorities,
+    coverageStatus: metadata.status,
+    ...(metadata.canonicalConceptId ? { canonicalConceptId: metadata.canonicalConceptId } : {}),
+    ...(metadata.actOrStandard ? { actOrStandard: metadata.actOrStandard } : {}),
+    ...(metadata.sectionMatch ? { sectionMatch: metadata.sectionMatch } : {}),
+    ...(metadata.semanticCriteriaKey && metadata.semanticCriteriaKey in CANONICAL_TOPIC_SEMANTIC_CRITERIA
+      ? { semanticCriteria: CANONICAL_TOPIC_SEMANTIC_CRITERIA[metadata.semanticCriteriaKey as keyof typeof CANONICAL_TOPIC_SEMANTIC_CRITERIA] }
+      : {})
+  }));
+
+  /** Resolve canonical IDs for callers that already classified the query. */
+  public resolveTopicIds(topicIds: readonly string[]): QueryTopic[] {
+    const wanted = new Set(topicIds);
+    return QueryTopicResolver.CANONICAL_TOPICS.filter(topic => wanted.has(topic.id));
+  }
 
   /**
    * Decomposes user query into identified statutory and accounting topics.
@@ -260,7 +142,9 @@ export class QueryTopicResolver {
       }
 
       // 3. Supporting Lexical Matching
-      const hasLexicalMatch = topic.keywords.some((kw) => qLower.includes(kw));
+      const hasLexicalMatch =
+        !(topic.exclusionKeywords ?? []).some((phrase) => qLower.includes(phrase.toLowerCase())) &&
+        topic.keywords.some((kw) => keywordMatches(qLower, kw));
 
       // 4. Topic Resolution & Attribution
       if (hasSemanticMatch && hasLexicalMatch) {
@@ -333,8 +217,20 @@ export class QueryTopicResolver {
    */
   public chunkMatchesTopic(chunkText: string, topic: QueryTopic): boolean {
     const textLower = chunkText.toLowerCase();
-    return topic.keywords.some((kw) => textLower.includes(kw));
+    return !(topic.exclusionKeywords ?? []).some((phrase) => textLower.includes(phrase.toLowerCase())) &&
+      topic.keywords.some((kw) => keywordMatches(textLower, kw));
   }
+}
+
+function keywordMatches(text: string, keyword: string): boolean {
+  const normalizedKeyword = keyword.toLowerCase();
+  // Short statutory acronyms are tokens, not substrings (e.g. ECI must not
+  // match “specific”, NCI must not match “dependencies”, or AIS “raising”).
+  if (/^[a-z0-9]{2,4}$/i.test(normalizedKeyword)) {
+    const escaped = normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`\\b${escaped}\\b`, 'i').test(text);
+  }
+  return text.includes(normalizedKeyword);
 }
 
 export const defaultQueryTopicResolver = new QueryTopicResolver();

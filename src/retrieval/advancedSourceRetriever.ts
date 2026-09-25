@@ -189,11 +189,16 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
     // 3. Deterministic Reranker with Topic Coverage
     recorder.startTimer('rerank');
     const topicDecomp = this.topicResolver.decomposeQuery(retrievalQuery.query, retrievalQuery.semanticContext);
+    // Explicit canonical topic hints from classification augment semantic/lexical matches.
+    // The registry is metadata for routing and ranking only; source eligibility, provenance,
+    // evidence tier, and temporal checks continue to come from the source lifecycle.
+    const explicitTopics = this.topicResolver.resolveTopicIds(retrievalQuery.topicIds ?? []);
+    const topicsById = new Map([...topicDecomp.topics, ...explicitTopics].map(topic => [topic.id, topic]));
     const reranked = this.reranker.rerank(hybridOutput.candidates, {
       query: retrievalQuery.query,
       targetDate: retrievalQuery.targetDate,
       referenceDate: retrievalQuery.referenceDate,
-      topics: topicDecomp.topics,
+      topics: [...topicsById.values()],
       includeHistorical: retrievalQuery.includeHistorical,
       semanticContext: retrievalQuery.semanticContext
     });

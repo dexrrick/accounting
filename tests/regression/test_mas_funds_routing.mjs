@@ -5,13 +5,16 @@ import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
 
 const classification = classifyQuestion('what is MAS 13O');
-assert.equal(classification.primaryDomain, 'MAS_FUNDS');
-assert.deepEqual(classification.authorities, ['MAS']);
+assert.equal(classification.primaryDomain, 'MIXED');
+assert.deepEqual([...classification.authorities].sort(), ['IRAS', 'MAS']);
+assert.ok(classification.topicIds.includes('mas-family-office-13o'));
+assert.ok(classification.topicIds.includes('iras-fund-tax-incentives-13o'));
+assert.ok(classification.domains.includes('MULTI_AUTHORITY'));
 
 const rules = querySingaporeStatutes('what is MAS 13O');
 assert.equal(rules[0]?.id, 'MAS_SFO_13O_13U_MATERIAL_CHANGES');
 assert.match(rules[0].canonicalUrl, /^https:\/\/ask\.gov\.sg\/mas\/questions\//);
-console.log('PASS | MAS 13O routes to MAS funds evidence, not Companies Act fallback');
+console.log('PASS | MAS 13O routes to MAS and IRAS and retains its MAS-focused statutory evidence path');
 
 const vccRules = querySingaporeStatutes('explain VCC to me');
 assert.equal(vccRules[0]?.id, 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE');

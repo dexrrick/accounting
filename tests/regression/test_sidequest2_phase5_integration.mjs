@@ -6,6 +6,7 @@ import { DeterministicReranker } from '../../src/retrieval/deterministicReranker
 import { DeterministicSemanticAlignmentEvaluator } from '../../src/retrieval/semanticAlignmentEvaluator.ts';
 import { AdvancedSourceRetriever } from '../../src/retrieval/advancedSourceRetriever.ts';
 import { CompositeSourceRetriever } from '../../src/retrieval/compositeSourceRetriever.ts';
+import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
 import {
   extractAccountingContext,
   deriveAccountingStateFromEvents
@@ -224,6 +225,11 @@ async function runSideQuest2Phase5IntegrationTests() {
 
   const topicAcct = { id: 'acct_treatment', name: 'Accounting Treatment', keywords: ['accounting', 'guidance', 'standard'] };
   const topicTax = { id: 'tax_deductibility', name: 'Tax Deductibility', keywords: ['tax', 'deduction', 'expense'] };
+  assert.equal(
+    defaultQueryTopicResolver.chunkMatchesTopic('Primary accounting guidance is relevant.', topicAcct),
+    true,
+    'Legacy caller-created QueryTopic values without exclusionKeywords must remain matchable'
+  );
 
   const rerankedTopic = reranker.rerank([candStrong, candWeakTax], {
     query: 'accounting treatment and tax deductibility',

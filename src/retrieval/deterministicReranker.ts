@@ -28,7 +28,7 @@ export interface RerankContext {
  * 1. Evidence Tier: PRIMARY_SOURCE (+0.15) > OFFICIAL_GUIDANCE (+0.05) > CURATED_SUMMARY (0.00).
  * 2. Semantic Alignment: Decoupled ISemanticAlignmentEvaluator applies structured Delta_semantics(d)
  *    evaluating source metadata (standardOrActCode, paragraphOrSection) against TransactionUnderstanding.
- * 3. Multi-topic coverage: Guarantees balanced representation across distinct queried topics,
+ * 3. Multi-topic coverage: Guarantees balanced representation across distinct queried concepts,
  *    WITHOUT forcing weak or irrelevant candidates (enforces minTopicCoverageScore >= 0.35).
  * 4. Deterministic tie-breaking:
  *    - Score descending
@@ -77,6 +77,14 @@ export class DeterministicReranker {
 
     const normLexMap = this.normalizeLexicalScores(candidates);
     const resolvedTopics = context.topics || defaultQueryTopicResolver.decomposeQuery(context.query, context.semanticContext).topics;
+    const topicsByConcept = new Map<string, QueryTopic[]>();
+    for (const topic of resolvedTopics) {
+      const conceptId = topic.canonicalConceptId ?? topic.id;
+      const aliases = topicsByConcept.get(conceptId) ?? [];
+      aliases.push(topic);
+      topicsByConcept.set(conceptId, aliases);
+    }
+    const topicConceptGroups = [...topicsByConcept.entries()].map(([conceptId, aliases]) => ({ conceptId, aliases }));
 
     const scoredCandidates: Array<{ item: HybridSearchResult; finalScore: number }> = [];
 
@@ -107,13 +115,14 @@ export class DeterministicReranker {
         deltaTier = RETRIEVAL_CONFIG.tierWeights.APPLICATION_RULE;
       }
 
-      // 6. Delta_topic: +0.10 per distinct query topic satisfied
-      let deltaTopic = 0;
+      // 6. Delta_topic: +0.10 per distinct canonical concept satisfied; compatibility aliases count once.
+      const matchedConcepts = new Set<string>();
       for (const topic of resolvedTopics) {
         if (defaultQueryTopicResolver.chunkMatchesTopic(chunk.chunkText, topic)) {
-          deltaTopic += RETRIEVAL_CONFIG.topicMatchWeight;
+          matchedConcepts.add(topic.canonicalConceptId ?? topic.id);
         }
       }
+      const deltaTopic = matchedConcepts.size * RETRIEVAL_CONFIG.topicMatchWeight;
 
       // 7. Delta_semantics: Decoupled evaluation of source metadata against TransactionUnderstanding
       const semScore = this.semanticEvaluator.evaluateAlignment(
@@ -161,28 +170,26 @@ export class DeterministicReranker {
     });
 
     // Multi-Topic Coverage Pass:
-    // If multi-topic query, ensure each identified topic gets at least one top slot
+    // If multi-topic query, ensure each distinct concept gets at least one top slot
     // WITHOUT forcing weak/irrelevant evidence (enforces minTopicCoverageScore)
     const finalSelection: HybridSearchResult[] = [];
     const remainingSlots = RETRIEVAL_CONFIG.finalTopK;
 
-    if (resolvedTopics.length > 1) {
-      const topicCovered = new Set<string>();
+    if (topicConceptGroups.length > 1) {
       const candidateList = [...scoredCandidates];
       const minCoverageScore = RETRIEVAL_CONFIG.minTopicCoverageScore ?? 0.35;
 
-      // First pass: pick best candidate for each topic IF it meets minimum quality threshold
-      for (const topic of resolvedTopics) {
+      // First pass: pick best candidate for each distinct concept if it meets minimum quality threshold.
+      for (const topicGroup of topicConceptGroups) {
         const bestForTopic = candidateList.find(
           (c) =>
             !finalSelection.some((s) => s.chunk.id === c.item.chunk.id) &&
-            defaultQueryTopicResolver.chunkMatchesTopic(c.item.chunk.chunkText, topic) &&
+            topicGroup.aliases.some(topic => defaultQueryTopicResolver.chunkMatchesTopic(c.item.chunk.chunkText, topic)) &&
             c.finalScore >= minCoverageScore
         );
 
         if (bestForTopic) {
           finalSelection.push(bestForTopic.item);
-          topicCovered.add(topic.id);
         }
       }
 

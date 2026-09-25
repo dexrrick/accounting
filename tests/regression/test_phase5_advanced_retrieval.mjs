@@ -224,6 +224,33 @@ async function runPhase5Tests() {
   console.log(`✓ 4A. Proved: Deterministic Reranker calculates exact mathematical score: ${topResult.finalScore} (matches formula 55/45 + 0.10*RRF + tier + topic)`);
   passed++;
 
+  const overtimeAliases = topicResolver.resolveTopicIds(['mom_overtime', 'mom-part-iv-overtime']);
+  const aliasReranked = reranker.rerank([{
+    ...candidatePool[0],
+    chunk: { ...dummyVerifiedChunk, chunkText: 'Part IV overtime eligibility and working hours.' }
+  }], { query: 'Part IV overtime', topics: overtimeAliases });
+  assert.equal(overtimeAliases[0].canonicalConceptId, overtimeAliases[1].canonicalConceptId);
+  assert.ok(Math.abs(aliasReranked[0].finalScore - expectedFinal) < 1e-4, 'Legacy and granular aliases must contribute one topic bonus');
+  const financialAssetAliases = topicResolver.resolveTopicIds(['sfrsi_financial_instruments', 'sfrsi_financial-asset-classification']);
+  const financialAssetAliasReranked = reranker.rerank([{
+    ...candidatePool[0],
+    chunk: { ...dummyVerifiedChunk, chunkText: 'Financial asset classification uses FVTPL or amortised cost measurement.' }
+  }], { query: 'SFRS(I) 9 financial asset classification', topics: financialAssetAliases });
+  assert.equal(financialAssetAliases[0].canonicalConceptId, financialAssetAliases[1].canonicalConceptId);
+  assert.ok(Math.abs(financialAssetAliasReranked[0].finalScore - expectedFinal) < 1e-4, 'Broad and granular IFRS 9 aliases must contribute one topic bonus');
+  console.log('✓ 4B. Proved: Legacy/granular Part IV overtime and IFRS 9 aliases count once per concept');
+  passed++;
+
+  const distinctGstTopics = topicResolver.resolveTopicIds(['gst_compulsory_registration', 'iras-gst-turnover-tests']);
+  const distinctReranked = reranker.rerank([{
+    ...candidatePool[0],
+    chunk: { ...dummyVerifiedChunk, chunkText: 'Compulsory GST registration applies under the prospective taxable turnover test.' }
+  }], { query: 'GST registration and prospective turnover test', topics: distinctGstTopics });
+  assert.notEqual(distinctGstTopics[0].canonicalConceptId ?? distinctGstTopics[0].id, distinctGstTopics[1].canonicalConceptId ?? distinctGstTopics[1].id);
+  assert.ok(Math.abs(distinctReranked[0].finalScore - (expectedFinal + 0.10)) < 1e-4, 'Distinct registration and turnover-test concepts must each contribute a topic bonus');
+  console.log('✓ 4C. Proved: Distinct GST registration and turnover-test concepts each contribute topic ranking weight');
+  passed++;
+
   // -------------------------------------------------------------------------
   // 5. HARD TEMPORAL ELIGIBILITY GATING
   // -------------------------------------------------------------------------
