@@ -132,8 +132,20 @@ export class InMemorySourceRetriever implements ISourceRetriever {
       lowerQ.includes('superseded');
 
     const scored: Array<{ record: AuthoritativeSourceRecord; score: number }> = [];
+    const hasAuthorityHint = Boolean(authorities && authorities.length > 0);
+    const hasDomainHint = Boolean(domain && domain !== 'GENERAL');
 
     for (const record of this.sources) {
+      // When both hints are explicit, treat them as joint eligibility
+      // constraints. A source from a different domain must not remain eligible
+      // merely because it shares an authority (for example, ACRA corporate law
+      // beside Singapore accounting standards). With no domain hint, retain the
+      // existing cross-domain behavior used for multi-authority questions.
+      if (hasAuthorityHint && hasDomainHint &&
+          (!authorities!.includes(record.authority) || record.domain !== domain)) {
+        continue;
+      }
+
       let score = 0;
 
       // 1. Authority match

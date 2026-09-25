@@ -191,6 +191,9 @@ export class HybridRetriever {
         if (!authorities.includes(parentRecord.authority)) {
           continue;
         }
+        if (domain && domain !== 'GENERAL' && parentRecord.domain !== domain) {
+          continue;
+        }
       } else if (domain && domain !== 'GENERAL') {
         if (parentRecord.domain !== domain) {
           continue;

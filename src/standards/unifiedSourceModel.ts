@@ -226,17 +226,28 @@ export function buildUnifiedSourceRegistry(
 
     const record: AuthoritativeSourceRecord = {
       id: key,
+      // `authority` is the existing Singapore routing bucket. The document
+      // publisher is recorded separately so IFRS-hosted summaries are not
+      // presented as if ACRA published the underlying IFRS material.
       authority: 'ACRA',
-      authorityName: 'Accounting Standards Council (ACRA) & IASB',
-      sourcePublisher: 'Accounting Standards Council (Singapore) / IFRS Foundation',
+      authorityName: std.officialSourceUrl?.includes('ifrs.org')
+        ? 'IFRS Foundation'
+        : std.officialSourceUrl?.includes('acra.gov.sg')
+          ? 'Accounting Standards Committee / ACRA'
+          : 'Accounting Standards Council (ACRA) & IASB',
+      sourcePublisher: std.officialSourceUrl?.includes('ifrs.org')
+        ? 'IFRS Foundation'
+        : std.officialSourceUrl?.includes('acra.gov.sg')
+          ? 'Accounting Standards Committee / ACRA'
+          : 'Accounting Standards Council (Singapore) / IFRS Foundation',
       legalOrStandardInstrument: std.sfrsCode ? `${std.sfrsCode} ${std.standardTitle}` : std.standardTitle,
       documentTitle: std.standardTitle,
       standardOrActCode: extractStandardCode(std.sfrsCode),
       paragraphOrSection: std.paragraph,
       sourceText: std.principle,
       principleSummary: std.standardTitle,
-      effectiveDate: std.validFrom || undefined,
-      officialSourceUrl: 'https://www.acra.gov.sg/accountancy/accounting-standards',
+      effectiveDate: std.effectiveDate || std.validFrom || undefined,
+      officialSourceUrl: std.officialSourceUrl || 'https://www.acra.gov.sg/accountancy/accounting-standards',
       domain: 'ACCOUNTING_SFRS',
       jurisdiction: 'Singapore',
       tags: [std.standardTitle.toLowerCase(), std.paragraph.toLowerCase(), 'accounting standard', 'sfrs(i)'],
@@ -253,8 +264,8 @@ export function buildUnifiedSourceRegistry(
       provenance: 'LOCAL_STATIC',
       lifecycleState: 'ACTIVE',
       version: '2026.09',
-      canonicalSourceUrl: 'https://www.acra.gov.sg/accountancy/accounting-standards',
-      sourceAuthority: 'ACRA',
+      canonicalSourceUrl: std.officialSourceUrl || 'https://www.acra.gov.sg/accountancy/accounting-standards',
+      ...(std.officialSourceUrl?.includes('ifrs.org') ? {} : { sourceAuthority: 'ACRA' as const }),
       retrievedAt: '2026-09-01T00:00:00Z',
       verificationMethod: 'CURATED_EDITORIAL_REVIEW'
     };

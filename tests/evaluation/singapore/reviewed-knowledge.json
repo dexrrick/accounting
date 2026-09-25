@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 2,
+  "purpose": "Independently reviewed answer-path benchmark. A routing score alone never establishes a correct answer.",
+  "cases": [
+    {
+      "id": "sfrsi9-debt-hold-collect",
+      "provenance": "supervisor-authored-official-source",
+      "question": "Under SFRS(I) 9, our debt investment is managed solely to collect contractual cash flows, and its contractual terms provide only payments of principal and interest on specified dates. How is this financial asset measured subsequently?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "sourceSelection": { "forbiddenRecordIds": ["ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE"] },
+        "claims": [{
+          "id": "classification",
+          "conclusion": "A debt financial asset meeting both the hold-to-collect business-model condition and the solely-payments-of-principal-and-interest condition is measured at amortised cost, subject to any applicable fair-value designation exception.",
+          "sources": [{ "recordId": "IFRS9_DEBT_CLASSIFICATION", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "authority": "IFRS Foundation", "paragraphs": ["4.1.2"] }, { "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "includes", "value": "amortised cost" }, { "path": "messageText", "op": "notMatches", "pattern": "(?:^|[.!?]\\s+)(?:(?:therefore|thus|but|however),?\\s+)?(?:this|the|our) (?:financial )?(?:asset|bond|investment)[^.!?\\n]{0,50}(?:classified as|measured at) (?:FVTPL|fair value through profit or loss)" }]
+        }],
+        "citations": { "required": [{ "claimId": "classification", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "standard": "SFRS(I) 9" }, { "claimId": "classification", "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/" }] }
+      }
+    },
+    {
+      "id": "sfrsi9-debt-collect-and-sell",
+      "provenance": "supervisor-authored-official-source",
+      "question": "Under SFRS(I) 9, our debt investment is managed both to collect contractual cash flows and to sell, and its contractual terms provide only payments of principal and interest on specified dates. How is this financial asset measured subsequently?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "classification",
+          "conclusion": "A debt financial asset satisfying the collect-and-sell business model and the solely-payments-of-principal-and-interest condition is measured at fair value through other comprehensive income, subject to applicable exceptions.",
+          "sources": [{ "recordId": "IFRS9_DEBT_CLASSIFICATION", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "authority": "IFRS Foundation", "paragraphs": ["4.1.2A"] }, { "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["fair value through other comprehensive income", "FVOCI"] }, { "path": "messageText", "op": "notMatches", "pattern": "(?:^|[.!?]\\s+)(?:(?:therefore|thus|but|however),?\\s+)?(?:this|the|our) (?:financial )?(?:asset|bond|investment)[^.!?\\n]{0,50}(?:classified as|measured at) amortised cost" }]
+        }],
+        "citations": { "required": [{ "claimId": "classification", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "standard": "SFRS(I) 9" }, { "claimId": "classification", "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/" }] }
+      }
+    },
+    {
+      "id": "sfrsi9-bond-missing-facts",
+      "provenance": "supervisor-authored-official-source",
+      "question": "Under SFRS(I) 9, how should our bond investment be classified?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "cannot-classify-without-tests",
+          "conclusion": "The facts do not establish the business model or contractual cash-flow characteristics; a definitive amortised-cost, debt-FVOCI or FVTPL classification cannot be made.",
+          "sources": [{ "recordId": "IFRS9_DEBT_CLASSIFICATION", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "authority": "IFRS Foundation", "paragraphs": ["4.1.1"] }, { "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "includes", "value": "business model" }, { "path": "messageText", "op": "includesAny", "values": ["contractual cash flows", "principal and interest"] }, { "path": "messageText", "op": "matches", "pattern": "(?:cannot|can't|insufficient|need more facts)[^\\n]{0,100}(?:classif|determin)" }, { "path": "messageText", "op": "notMatches", "pattern": "(?:^|[.!?]\\s+)(?:(?:therefore|thus|but|however),?\\s+)?(?:this|the|our) (?:financial )?(?:asset|bond|investment)[^.!?\\n]{0,50}(?:classified as|measured at) (?:amortised cost|FVOCI|FVTPL)" }]
+        }],
+        "missingFacts": { "required": [
+          { "id": "business-model", "assertions": [{ "path": "messageText", "op": "includes", "value": "business model" }, { "path": "messageText", "op": "includesAny", "values": ["Please", "Could you", "What is"] }] },
+          { "id": "cash-flow-terms", "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["contractual cash flows", "principal and interest"] }, { "path": "messageText", "op": "includesAny", "values": ["Please", "Could you", "What are"] }] }
+        ] },
+        "calculation": { "forbidJournal": true },
+        "citations": { "required": [{ "claimId": "cannot-classify-without-tests", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "standard": "SFRS(I) 9" }, { "claimId": "cannot-classify-without-tests", "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/" }] }
+      }
+    },
+    {
+      "id": "sfrsi9-initial-costs",
+      "provenance": "supervisor-authored-official-source",
+      "question": "Under SFRS(I) 9, what is the initial carrying amount of a bond investment not measured at FVTPL or covered by the trade-receivable exception, if its fair value is SGD 100,000 and directly attributable acquisition transaction costs are SGD 2,000?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "cost-capitalisation",
+          "conclusion": "This bond investment outside FVTPL and the trade-receivable exception is initially measured at fair value plus directly attributable transaction costs; SGD 100,000 plus SGD 2,000 equals SGD 102,000. The facts do not establish a journal counterparty or settlement status.",
+          "sources": [{ "recordId": "IFRS9_INITIAL_MEASUREMENT", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "authority": "IFRS Foundation", "paragraphs": ["5.1.1"] }, { "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["transaction costs", "acquisition costs"] }]
+        }],
+        "calculation": { "forbidJournal": true, "checks": [{ "path": "messageText", "op": "numberInText", "pattern": "(?:initial carrying amount|initial measurement|initial cost)[^\\n]{0,100}?SGD\\s*([\\d,]+(?:\\.\\d+)?)", "value": 102000, "tolerance": 0.01 }] },
+        "citations": { "required": [{ "claimId": "cost-capitalisation", "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/", "standard": "SFRS(I) 9" }, { "claimId": "cost-capitalisation", "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/" }] }
+      }
+    },
+    {
+      "id": "sfrsi9-amendment-effective-2025",
+      "provenance": "supervisor-authored-official-source",
+      "question": "For an annual reporting period beginning on 1 January 2025, are the ASC's 2024 amendments to SFRS(I) 9 and SFRS(I) 7 on classification and measurement already mandatorily effective?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "effective-date",
+          "conclusion": "The amendments announced by ASC in October 2024 are mandatory for annual reporting periods beginning on or after 1 January 2026; they are not mandatory for a period beginning 1 January 2025.",
+          "sources": [{ "recordId": "SFRSI9_2026_CLASSIFICATION_AMENDMENTS", "officialSourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/833/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "matches", "pattern": "(?:2025[^\\n]{0,120}(?:not mandatory|not yet mandatory|not required)|(?:not mandatory|not yet mandatory|not required)[^\\n]{0,120}2025)" }]
+        }],
+        "effectiveDate": { "assertions": [{ "path": "messageText", "op": "includes", "value": "1 January 2026" }, { "path": "messageText", "op": "includes", "value": "2025" }] },
+        "citations": { "required": [{ "claimId": "effective-date", "officialSourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/833/", "standard": "SFRS(I) 9" }] }
+      }
+    },
+    {
+      "id": "sfrsi9-equity-fvoci-election",
+      "provenance": "supervisor-authored-official-source",
+      "question": "Under SFRS(I) 9, we bought an equity investment in another company that is not held for trading and is not contingent consideration in an IFRS 3 business combination. At initial recognition we irrevocably elected to present subsequent fair value changes in OCI. On eventual sale, are the accumulated OCI gains recycled into profit or loss?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "equity-no-recycling",
+          "conclusion": "For an eligible non-trading equity investment with a valid irrevocable FVOCI election at initial recognition, subsequent fair value changes go to OCI and cumulative gains or losses are not recycled to profit or loss on disposal.",
+          "sources": [{ "recordId": "IFRS9_EQUITY_CLASSIFICATION", "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on", "authority": "IFRS Foundation", "paragraphs": ["5.7.5", "B5.7.1"] }, { "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "matches", "pattern": "(?:not|no)[^\\n]{0,80}(?:recycl|reclassif)[^\\n]{0,80}(?:profit or loss|P&L)" }]
+        }],
+        "citations": { "required": [{ "claimId": "equity-no-recycling", "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on", "standard": "SFRS(I) 9", "paragraphs": ["5.7.5", "B5.7.1"] }, { "claimId": "equity-no-recycling", "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/" }] }
+      }
+    },
+    {
+      "id": "sfrsi9-ecl-12-month-no-amount",
+      "provenance": "supervisor-authored-official-source",
+      "question": "Under SFRS(I) 9, a bond measured at amortised cost was not purchased or originated credit-impaired and has not had a significant increase in credit risk since initial recognition. Should its loss allowance use 12-month or lifetime expected credit losses, and can you calculate the amount without exposure and probability or loss estimates?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "ecl-horizon",
+          "conclusion": "Under the general impairment approach for a non-POCI amortised-cost bond, absent a significant increase in credit risk, the loss allowance is measured at 12-month expected credit losses. The monetary amount cannot be calculated from the supplied facts because probability-weighted cash shortfalls and exposure estimates are missing.",
+          "sources": [{ "recordId": "IFRS9_ECL_GENERAL", "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on", "authority": "IFRS Foundation", "paragraphs": ["5.5.5", "5.5.17"] }, { "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "matches", "pattern": "12[- ]month[^\\n]{0,80}expected credit loss" }, { "path": "messageText", "op": "matches", "pattern": "(?:cannot|can't|insufficient)[^\\n]{0,100}(?:calculat|quantif|amount)" }]
+        }],
+        "missingFacts": { "required": [{ "id": "loss-estimates", "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["exposure", "probability of default", "loss given default", "expected cash shortfalls"] }, { "path": "messageText", "op": "includesAny", "values": ["Please", "Could you", "provide"] }] }] },
+        "calculation": { "forbidJournal": true },
+        "citations": { "required": [{ "claimId": "ecl-horizon", "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on", "standard": "SFRS(I) 9", "paragraphs": ["5.5.5", "5.5.17"] }, { "claimId": "ecl-horizon", "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/" }] }
+      }
+    },
+    {
+      "id": "iras-gst-standard-rate-2023",
+      "provenance": "supervisor-authored-official-source",
+      "question": "For a standard-rated Singapore supply with a GST-exclusive taxable value of SGD 1,000 made on 15 June 2023 with no transitional complication, what GST rate and output GST apply?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "sourceSelection": { "allowedRecordIds": ["GST_RATE_8_PERCENT_2023"] },
+        "claims": [{
+          "id": "historical-rate",
+          "conclusion": "A standard-rated Singapore supply made on 15 June 2023 bears 8% GST, so output GST on SGD 1,000 is SGD 80.",
+          "sources": [{ "recordId": "GST_RATE_8_PERCENT_2023", "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates", "authority": "IRAS", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "matches", "pattern": "15 June 2023,?[^.!?;,\\n]{0,100}8%[^.!?;,\\n]{0,100}SGD\\s*80(?:\\.00)?" }]
+        }],
+        "calculation": { "forbidJournal": true, "checks": [{ "path": "messageText", "op": "numberInText", "pattern": "15 June 2023,?[^.!?;,\\n]{0,100}8%[^.!?;,\\n]{0,100}SGD\\s*([\\d,]+(?:\\.\\d+)?)", "value": 80, "tolerance": 0.01 }] },
+        "effectiveDate": { "assertions": [{ "path": "messageText", "op": "matches", "pattern": "15 June 2023,?[^.!?;,\\n]{0,100}8%" }] },
+        "citations": { "required": [{ "claimId": "historical-rate", "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates" }] }
+      }
+    },
+    {
+      "id": "cpf-ow-ceiling-2025",
+      "provenance": "supervisor-authored-official-source",
+      "question": "What was the CPF Ordinary Wage monthly ceiling in calendar year 2025?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "ceiling",
+          "conclusion": "The CPF Ordinary Wage monthly ceiling was SGD 7,400 from 1 January to 31 December 2025.",
+          "sources": [{ "recordId": "CPF_WAGE_CEILING_2025", "officialSourceUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr", "authority": "CPF Board", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "includes", "value": "7,400" }]
+        }],
+        "effectiveDate": { "assertions": [{ "path": "messageText", "op": "matches", "pattern": "(?:1 January|Jan(?:uary)? 1)[^\\n]{0,30}2025[^\\n]{0,100}(?:31 December|Dec(?:ember)? 31)[^\\n]{0,30}2025" }] },
+        "citations": { "required": [{ "claimId": "ceiling", "officialSourceUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr" }] }
+      }
+    },
+    {
+      "id": "mom-first-year-annual-leave",
+      "provenance": "supervisor-authored-official-source",
+      "question": "For an employee covered by the Employment Act who has completed 12 months of service in Singapore, what is the statutory minimum annual leave entitlement in the first year?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "leave-entitlement",
+          "conclusion": "An eligible employee has at least seven days of annual leave in the first year of service; eligibility begins after at least three months of service.",
+          "sources": [{ "recordId": "MOM_SEC88A_ANNUAL_LEAVE", "officialSourceUrl": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement", "authority": "MOM", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "includes", "value": "7 days" }]
+        }],
+        "citations": { "required": [{ "claimId": "leave-entitlement", "officialSourceUrl": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement" }] }
+      }
+    },
+    {
+      "id": "acra-audit-exemption-missing-years",
+      "provenance": "supervisor-authored-official-source",
+      "question": "Our Singapore private company has current-year revenue of SGD 8 million and assets of SGD 9 million. We have not said whether it is newly incorporated or part of a group, or provided earlier-year figures. Does it qualify for the small-company audit exemption?",
+      "reviewedOracle": {
+        "review": { "status": "INDEPENDENTLY_VERIFIED", "reviewer": "independent-reviewer", "reviewedAt": "2026-09-25" },
+        "claims": [{
+          "id": "cannot-conclude",
+          "conclusion": "Current-year revenue and assets alone do not establish audit exemption for an established company: the immediately preceding two financial years and any group-level qualification matter. For a newly incorporated company, the first-year rule differs.",
+          "sources": [{ "recordId": "ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION", "officialSourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/", "authority": "ACRA", "paragraphs": [] }],
+          "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["two consecutive financial years", "past two financial years"] }, { "path": "messageText", "op": "matches", "pattern": "(?:cannot|can't|insufficient|need more facts)[^\\n]{0,120}(?:conclud|determin|confirm|qualif)" }, { "path": "messageText", "op": "notMatches", "pattern": "(?:therefore|thus|conclusion:|your company|the company|it)[^\\n.]{0,60}qualif(?:y|ies) for (?:the )?(?:small-company )?audit exemption" }]
+        }],
+        "missingFacts": { "required": [
+          { "id": "incorporation-age", "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["newly incorporated", "first financial year", "established company"] }, { "path": "messageText", "op": "includesAny", "values": ["Please", "Could you", "confirm"] }] },
+          { "id": "prior-years", "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["two consecutive financial years", "past two financial years"] }, { "path": "messageText", "op": "includesAny", "values": ["Please", "Could you", "confirm"] }] },
+          { "id": "group-status", "assertions": [{ "path": "messageText", "op": "includesAny", "values": ["group", "subsidiary"] }, { "path": "messageText", "op": "includesAny", "values": ["Please", "Could you", "confirm"] }] }
+        ] },
+        "citations": { "required": [{ "claimId": "cannot-conclude", "officialSourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/" }] }
+      }
+    }
+  ]
+}

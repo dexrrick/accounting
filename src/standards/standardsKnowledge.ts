@@ -10,6 +10,7 @@ export interface StandardRule {
   application: string;
   sourceAuthority: string;
   officialSourceUrl?: string;
+  effectiveDate?: string;
   validFrom?: string;
   validTo?: string;
   lastVerifiedDate?: string;
@@ -35,19 +36,85 @@ export const STANDARDS_REPOSITORY: Record<string, StandardRule> = {
     ifrsCode: 'IFRS 9 §5.1.1',
     standardTitle: 'Financial Instruments - Initial Measurement',
     paragraph: '§5.1.1',
-    principle: 'At initial recognition, an entity measures a financial asset or financial liability at its fair value.',
-    application: 'For equity investments classified as FVTPL, initial carrying value equals transaction price at fair value translated at spot rate.',
-    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+    principle: 'At initial recognition, an entity measures a financial asset or financial liability at fair value. For an item not measured at fair value through profit or loss, directly attributable transaction costs are added to the initial fair value of a financial asset (and deducted for a financial liability). The separate trade-receivable expedient in paragraph 5.1.3 may apply where its conditions are met.',
+    application: 'For a financial asset outside FVTPL and the paragraph 5.1.3 trade-receivable expedient, initial carrying amount is fair value plus directly attributable acquisition transaction costs. Transaction costs for an item measured at FVTPL are not included in its initial carrying amount. Do not create a journal counterparty or settlement account unless the transaction facts establish one.',
+    sourceAuthority: 'IFRS Foundation',
+    officialSourceUrl: 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-25',
+    reviewAuditCycleDays: 365
+  },
+  IFRS9_DEBT_CLASSIFICATION: {
+    code: 'IFRS 9 / SFRS(I) 9 §4.1.1-§4.1.5',
+    sfrsCode: 'SFRS(I) 9 §4.1.1-§4.1.5',
+    ifrsCode: 'IFRS 9 §4.1.1-§4.1.5',
+    standardTitle: 'Financial Assets - Business Model and Contractual Cash Flow Classification',
+    paragraph: '§4.1.1-§4.1.5',
+    principle: 'A financial asset is classified using both the entity’s business model for managing the asset and the asset’s contractual cash flow characteristics. A debt asset is measured at amortised cost when it is held within a business model whose objective is to collect contractual cash flows and its contractual terms give rise on specified dates to cash flows that are solely payments of principal and interest on the principal amount outstanding. A qualifying debt asset held in a business model achieved by both collecting contractual cash flows and selling is measured at fair value through other comprehensive income. Assets outside those categories are measured at fair value through profit or loss, subject to the applicable designation and scope requirements.',
+    application: 'Do not infer the measurement category from the word “bond” or from management intent alone. Establish the business model and assess contractual cash flows against the SPPI condition. If either assessment is missing or inconclusive, request the relevant facts before concluding amortised cost, debt FVOCI or FVTPL. A qualifying fair value option designation may affect the otherwise applicable category.',
+    sourceAuthority: 'IFRS Foundation; Singapore adoption by ASC/ACRA',
+    officialSourceUrl: 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-25',
+    reviewAuditCycleDays: 365
   },
   IFRS9_EQUITY_CLASSIFICATION: {
-    code: 'IFRS 9 / SFRS(I) 9 §4.1.4 & §5.7.5',
-    sfrsCode: 'SFRS(I) 9 §4.1.4 & §5.7.5',
-    ifrsCode: 'IFRS 9 §4.1.4 & §5.7.5',
+    code: 'IFRS 9 / SFRS(I) 9 §4.1.4, §5.7.5-§5.7.6 & B5.7.1',
+    sfrsCode: 'SFRS(I) 9 §4.1.4, §5.7.5-§5.7.6 & B5.7.1',
+    ifrsCode: 'IFRS 9 §4.1.4, §5.7.5-§5.7.6 & B5.7.1',
     standardTitle: 'Classification of Equity Instruments',
-    paragraph: '§4.1.4 & §5.7.5',
-    principle: 'Investments in equity instruments are by default measured at Fair Value Through Profit or Loss (FVTPL). An irrevocable election may be made at initial recognition to present subsequent changes in OCI (FVTOCI).',
-    application: 'Unless explicitly elected as FVTOCI at trade date, equity investments are categorized as FVTPL.',
-    sourceAuthority: 'Accounting Standards Council Singapore & IASB'
+    paragraph: '§4.1.4, §5.7.5-§5.7.6 & B5.7.1',
+    principle: 'An investment in an equity instrument is measured at fair value through profit or loss unless the entity makes the irrevocable election at initial recognition to present subsequent changes in fair value in other comprehensive income for an investment that is neither held for trading nor contingent consideration recognised by an acquirer in a business combination within IFRS 3. Amounts accumulated in OCI for an elected investment are not subsequently reclassified to profit or loss on disposal; a transfer within equity may be made.',
+    application: 'Confirm the instrument is an equity investment within the scope of IFRS 9, is not held for trading or qualifying contingent consideration, and that the irrevocable election was made at initial recognition. When those conditions are satisfied, report fair value changes in OCI and do not recycle the cumulative gain or loss to profit or loss when the investment is sold.',
+    sourceAuthority: 'IFRS Foundation; Singapore adoption by ASC/ACRA',
+    officialSourceUrl: 'https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-25',
+    reviewAuditCycleDays: 365
+  },
+  IFRS9_ECL_GENERAL: {
+    code: 'IFRS 9 / SFRS(I) 9 §5.5.1, §5.5.3-§5.5.5 & §5.5.17',
+    sfrsCode: 'SFRS(I) 9 §5.5.1, §5.5.3-§5.5.5 & §5.5.17',
+    ifrsCode: 'IFRS 9 §5.5.1, §5.5.3-§5.5.5 & §5.5.17',
+    standardTitle: 'Expected Credit Losses - General Approach',
+    paragraph: '§5.5.1, §5.5.3-§5.5.5 & §5.5.17',
+    principle: 'Under the general impairment approach, a loss allowance is recognised for applicable financial assets. Subject to the exceptions and requirements in paragraphs 5.5.13-5.5.16, the loss allowance is measured at lifetime expected credit losses when credit risk has increased significantly since initial recognition and at 12-month expected credit losses when it has not. Expected credit losses are measured as an unbiased, probability-weighted amount reflecting a range of outcomes, the time value of money, and reasonable and supportable information available without undue cost or effort.',
+    application: 'First establish that the instrument is within the general impairment approach and determine whether it is purchased or originated credit-impaired and whether credit risk has significantly increased since initial recognition. For a non-POCI asset with no significant increase, the horizon is 12-month ECL. Do not fabricate an amount when exposure, expected cash shortfalls and probability-weighted loss estimates are not supplied; request the data needed to measure ECL.',
+    sourceAuthority: 'IFRS Foundation; Singapore adoption by ASC/ACRA',
+    officialSourceUrl: 'https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on',
+    validFrom: '2018-01-01',
+    lastVerifiedDate: '2026-09-25',
+    reviewAuditCycleDays: 365
+  },
+  SFRSI9_2026_CLASSIFICATION_AMENDMENTS: {
+    code: 'SFRS(I) 9 / SFRS(I) 7 Classification and Measurement Amendments',
+    sfrsCode: 'SFRS(I) 9',
+    ifrsCode: 'IFRS 9',
+    standardTitle: '2024 Classification and Measurement Amendments - Effective Date',
+    paragraph: 'ASC announcement dated 4 October 2024',
+    principle: 'The Accounting Standards Committee announced on 4 October 2024 that its amendments to SFRS(I) 9 and SFRS(I) 7 on classification and measurement are effective for annual reporting periods beginning on or after 1 January 2026.',
+    application: 'An annual reporting period beginning on 1 January 2025 is before the mandatory effective date announced by ASC. State the applicable reporting-period start date when assessing mandatory application; do not describe these amendments as mandatorily effective before 1 January 2026.',
+    sourceAuthority: 'Accounting Standards Committee / ACRA',
+    officialSourceUrl: 'https://www.acra.gov.sg/news-events/news-announcements/833/',
+    effectiveDate: '2026-01-01',
+    // This record is the October 2024 ACRA announcement, which remains useful
+    // evidence for a 2025 period even though the amendments take effect in 2026.
+    validFrom: '2024-10-04',
+    lastVerifiedDate: '2026-09-25',
+    reviewAuditCycleDays: 90
+  },
+  SFRSI9_ADOPTION: {
+    code: 'Singapore Financial Reporting Standards (International) - ASC/ACRA Issuance',
+    sfrsCode: 'SFRS(I) 9',
+    ifrsCode: 'IFRS 9',
+    standardTitle: 'Singapore Adoption and Issuance of SFRS(I) Standards',
+    paragraph: 'Financial reporting framework issued by the ASC',
+    principle: 'SFRS(I)s are Singapore financial reporting standards issued by the Accounting Standards Committee. ACRA’s guide identifies the SFRS(I) framework and explains that the Singapore standards are based on IFRS Accounting Standards.',
+    application: 'Use the relevant SFRS(I) edition and its Singapore effective date when answering for a Singapore reporting entity. IFRS Foundation material can support the corresponding IFRS principle, while ACRA identifies the local issued framework.',
+    sourceAuthority: 'Accounting Standards Committee / ACRA',
+    officialSourceUrl: 'https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/',
+    lastVerifiedDate: '2026-09-25',
+    reviewAuditCycleDays: 90
   },
   IFRS9_FVTPL_SUBSEQUENT: {
     code: 'IFRS 9 / SFRS(I) 9 §5.7.1',

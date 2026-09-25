@@ -1,0 +1,2005 @@
+{
+  "schemaVersion": 1,
+  "fixture": "reviewed-knowledge.json",
+  "sourceEvaluation": {
+    "candidateSelection": "Scored from an independent source retriever call.",
+    "precision": "Reviewed allow/forbidden record IDs provide a precision check; cases without a precision oracle are reported as recall-only when source recall is scored.",
+    "answerGrounding": "NOT_EVALUATED: independently retrieved candidate records are not passed into or verified as inputs to the answer function."
+  },
+  "totalCases": 11,
+  "summary": {
+    "authorityRouting": {
+      "evaluated": 0,
+      "passed": 0,
+      "failed": 0,
+      "accuracy": null
+    },
+    "domainRouting": {
+      "evaluated": 0,
+      "passed": 0,
+      "failed": 0,
+      "accuracy": null
+    },
+    "topicRouting": {
+      "evaluated": 0,
+      "passed": 0,
+      "failed": 0,
+      "accuracy": null
+    },
+    "sourceRetrieval": {
+      "evaluated": 11,
+      "passed": 10,
+      "failed": 1,
+      "accuracy": 0.9090909090909091
+    },
+    "answerCorrectness": {
+      "evaluated": 11,
+      "passed": 9,
+      "failed": 2,
+      "accuracy": 0.8181818181818182
+    },
+    "calculationCorrectness": {
+      "evaluated": 4,
+      "passed": 3,
+      "failed": 1,
+      "accuracy": 0.75
+    },
+    "citationCorrectness": {
+      "evaluated": 11,
+      "passed": 7,
+      "failed": 4,
+      "accuracy": 0.6363636363636364
+    },
+    "missingFactBehaviour": {
+      "evaluated": 3,
+      "passed": 2,
+      "failed": 1,
+      "accuracy": 0.6666666666666666
+    },
+    "effectiveDateCorrectness": {
+      "evaluated": 3,
+      "passed": 2,
+      "failed": 1,
+      "accuracy": 0.6666666666666666
+    },
+    "multiAuthorityHandling": {
+      "evaluated": 0,
+      "passed": 0,
+      "failed": 0,
+      "accuracy": null
+    }
+  },
+  "results": [
+    {
+      "id": "sfrsi9-debt-hold-collect",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "precisionChecked",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "precisionChecked",
+          "actual": [
+            "IFRS9_DEBT_CLASSIFICATION",
+            "IFRS9_DERECOGNITION_LIABILITY",
+            "IFRS9_FVTPL_SUBSEQUENT",
+            "IFRS9_INITIAL_MEASUREMENT",
+            "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+            "SFRSI9_ADOPTION"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "IFRS9_DEBT_CLASSIFICATION"
+              ],
+              "actual": [
+                "IFRS9_DEBT_CLASSIFICATION",
+                "IFRS9_DERECOGNITION_LIABILITY",
+                "IFRS9_FVTPL_SUBSEQUENT",
+                "IFRS9_INITIAL_MEASUREMENT",
+                "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+                "SFRSI9_ADOPTION"
+              ],
+              "claims": [
+                {
+                  "claimId": "classification",
+                  "status": "PASS",
+                  "expected": [
+                    "IFRS9_DEBT_CLASSIFICATION"
+                  ],
+                  "missing": []
+                }
+              ]
+            },
+            {
+              "mode": "reviewedSelectionPrecision",
+              "status": "PASS",
+              "forbiddenRecordIds": [
+                "ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE"
+              ],
+              "outsideAllowed": [],
+              "forbiddenRetrieved": []
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "classification",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includes",
+                  "expected": "amortised cost",
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe facts state that the debt investment is managed solely to collect contractual cash flows and that its specified-date cash flows are solely payments of principal and interest (the SPPI condition). With both classification conditions met, the asset is measured subsequently at **amortised cost**, subject to applicable exceptions such as a qualifying fair-value designation.\n\n### Sources\n[SFRS(I) 9 §4.1.2 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                },
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "notMatches",
+                  "expected": "(?:^|[.!?]\\s+)(?:(?:therefore|thus|but|however),?\\s+)?(?:this|the|our) (?:financial )?(?:asset|bond|investment)[^.!?\\n]{0,50}(?:classified as|measured at) (?:FVTPL|fair value through profit or loss)",
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe facts state that the debt investment is managed solely to collect contractual cash flows and that its specified-date cash flows are solely payments of principal and interest (the SPPI condition). With both classification conditions met, the asset is measured subsequently at **amortised cost**, subject to applicable exceptions such as a qualifying fair-value designation.\n\n### Sources\n[SFRS(I) 9 §4.1.2 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed calculation oracle supplied."
+        },
+        "citationCorrectness": {
+          "status": "PASS",
+          "required": [
+            {
+              "claimId": "classification",
+              "status": "PASS",
+              "expected": {
+                "claimId": "classification",
+                "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/",
+                "standard": "SFRS(I) 9"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [
+                "4.1.2"
+              ],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 §4.1.2",
+                  "paragraph": "4.1.2",
+                  "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+                }
+              ]
+            },
+            {
+              "claimId": "classification",
+              "status": "PASS",
+              "expected": {
+                "claimId": "classification",
+                "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 Singapore framework",
+                  "paragraph": "",
+                  "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+                }
+              ]
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "SFRS(I) 9 §4.1.2",
+              "paragraph": "4.1.2",
+              "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+            },
+            {
+              "standard": "SFRS(I) 9 Singapore framework",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "sfrsi9-debt-collect-and-sell",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "IFRS9_DEBT_CLASSIFICATION",
+            "IFRS9_DERECOGNITION_LIABILITY",
+            "IFRS9_FVTPL_SUBSEQUENT",
+            "IFRS9_INITIAL_MEASUREMENT",
+            "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+            "SFRSI9_ADOPTION"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "IFRS9_DEBT_CLASSIFICATION"
+              ],
+              "actual": [
+                "IFRS9_DEBT_CLASSIFICATION",
+                "IFRS9_DERECOGNITION_LIABILITY",
+                "IFRS9_FVTPL_SUBSEQUENT",
+                "IFRS9_INITIAL_MEASUREMENT",
+                "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+                "SFRSI9_ADOPTION"
+              ],
+              "claims": [
+                {
+                  "claimId": "classification",
+                  "status": "PASS",
+                  "expected": [
+                    "IFRS9_DEBT_CLASSIFICATION"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "classification",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includesAny",
+                  "expected": [
+                    "fair value through other comprehensive income",
+                    "FVOCI"
+                  ],
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe facts state that the debt investment is managed both to collect contractual cash flows and to sell, and that it meets the SPPI condition. A qualifying debt asset in that collect-and-sell business model is measured subsequently at **fair value through other comprehensive income (FVOCI)**, subject to applicable exceptions.\n\n### Sources\n[SFRS(I) 9 §4.1.2A — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                },
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "notMatches",
+                  "expected": "(?:^|[.!?]\\s+)(?:(?:therefore|thus|but|however),?\\s+)?(?:this|the|our) (?:financial )?(?:asset|bond|investment)[^.!?\\n]{0,50}(?:classified as|measured at) amortised cost",
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe facts state that the debt investment is managed both to collect contractual cash flows and to sell, and that it meets the SPPI condition. A qualifying debt asset in that collect-and-sell business model is measured subsequently at **fair value through other comprehensive income (FVOCI)**, subject to applicable exceptions.\n\n### Sources\n[SFRS(I) 9 §4.1.2A — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed calculation oracle supplied."
+        },
+        "citationCorrectness": {
+          "status": "PASS",
+          "required": [
+            {
+              "claimId": "classification",
+              "status": "PASS",
+              "expected": {
+                "claimId": "classification",
+                "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/",
+                "standard": "SFRS(I) 9"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [
+                "4.1.2A"
+              ],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 §4.1.2A",
+                  "paragraph": "4.1.2A",
+                  "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+                }
+              ]
+            },
+            {
+              "claimId": "classification",
+              "status": "PASS",
+              "expected": {
+                "claimId": "classification",
+                "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 Singapore framework",
+                  "paragraph": "",
+                  "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+                }
+              ]
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "SFRS(I) 9 §4.1.2A",
+              "paragraph": "4.1.2A",
+              "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+            },
+            {
+              "standard": "SFRS(I) 9 Singapore framework",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "sfrsi9-bond-missing-facts",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "IFRS9_DEBT_CLASSIFICATION",
+            "IFRS9_ECL_GENERAL",
+            "IFRS9_EQUITY_CLASSIFICATION",
+            "IFRS9_EQUITY_DIVIDENDS",
+            "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+            "SFRSI9_ADOPTION"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "IFRS9_DEBT_CLASSIFICATION"
+              ],
+              "actual": [
+                "IFRS9_DEBT_CLASSIFICATION",
+                "IFRS9_ECL_GENERAL",
+                "IFRS9_EQUITY_CLASSIFICATION",
+                "IFRS9_EQUITY_DIVIDENDS",
+                "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+                "SFRSI9_ADOPTION"
+              ],
+              "claims": [
+                {
+                  "claimId": "cannot-classify-without-tests",
+                  "status": "PASS",
+                  "expected": [
+                    "IFRS9_DEBT_CLASSIFICATION"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "cannot-classify-without-tests",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includes",
+                  "expected": "business model",
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                },
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includesAny",
+                  "expected": [
+                    "contractual cash flows",
+                    "principal and interest"
+                  ],
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                },
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "matches",
+                  "expected": "(?:cannot|can't|insufficient|need more facts)[^\\n]{0,100}(?:classif|determin)",
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                },
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "notMatches",
+                  "expected": "(?:^|[.!?]\\s+)(?:(?:therefore|thus|but|however),?\\s+)?(?:this|the|our) (?:financial )?(?:asset|bond|investment)[^.!?\\n]{0,50}(?:classified as|measured at) (?:amortised cost|FVOCI|FVTPL)",
+                  "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "PASS",
+          "checks": [],
+          "journal": [
+            {
+              "name": "journalAbsent",
+              "status": "PASS",
+              "expected": "no journal groups",
+              "actualGroups": 0
+            }
+          ]
+        },
+        "citationCorrectness": {
+          "status": "PASS",
+          "required": [
+            {
+              "claimId": "cannot-classify-without-tests",
+              "status": "PASS",
+              "expected": {
+                "claimId": "cannot-classify-without-tests",
+                "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/",
+                "standard": "SFRS(I) 9"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [
+                "4.1.1"
+              ],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 §4.1.1",
+                  "paragraph": "4.1.1",
+                  "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+                }
+              ]
+            },
+            {
+              "claimId": "cannot-classify-without-tests",
+              "status": "PASS",
+              "expected": {
+                "claimId": "cannot-classify-without-tests",
+                "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 Singapore framework",
+                  "paragraph": "",
+                  "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+                }
+              ]
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "SFRS(I) 9 §4.1.1",
+              "paragraph": "4.1.1",
+              "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+            },
+            {
+              "standard": "SFRS(I) 9 Singapore framework",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "PASS",
+          "required": [
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includes",
+              "expected": "business model",
+              "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            },
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "Please",
+                "Could you",
+                "What is"
+              ],
+              "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            },
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "contractual cash flows",
+                "principal and interest"
+              ],
+              "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            },
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "Please",
+                "Could you",
+                "What are"
+              ],
+              "actual": "### SFRS(I) 9 — Debt asset classification\n\nThe available facts are insufficient to determine the bond’s classification. SFRS(I) 9 requires both the business model for managing the asset and an assessment of whether its contractual cash flows are solely payments of principal and interest. Please describe how the portfolio is managed (including whether assets are held to collect, managed both to collect and sell, or managed on another basis). What are the bond’s contractual cash-flow terms, including any features that could change the timing or amount of principal or interest? Until those facts are assessed, I cannot conclude amortised cost, debt FVOCI or FVTPL.\n\n### Sources\n[SFRS(I) 9 §4.1.1 — Financial Assets - Business Model and Contractual Cash Flow Classification](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            }
+          ],
+          "forbidden": []
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "sfrsi9-initial-costs",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "IFRS9_DEBT_CLASSIFICATION",
+            "IFRS9_ECL_GENERAL",
+            "IFRS9_EQUITY_CLASSIFICATION",
+            "IFRS9_FVTPL_SUBSEQUENT",
+            "IFRS9_INITIAL_MEASUREMENT",
+            "IFRS9_LOAN_UNEXPIRED_INTEREST"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "IFRS9_INITIAL_MEASUREMENT"
+              ],
+              "actual": [
+                "IFRS9_DEBT_CLASSIFICATION",
+                "IFRS9_ECL_GENERAL",
+                "IFRS9_EQUITY_CLASSIFICATION",
+                "IFRS9_FVTPL_SUBSEQUENT",
+                "IFRS9_INITIAL_MEASUREMENT",
+                "IFRS9_LOAN_UNEXPIRED_INTEREST"
+              ],
+              "claims": [
+                {
+                  "claimId": "cost-capitalisation",
+                  "status": "PASS",
+                  "expected": [
+                    "IFRS9_INITIAL_MEASUREMENT"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "cost-capitalisation",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includesAny",
+                  "expected": [
+                    "transaction costs",
+                    "acquisition costs"
+                  ],
+                  "actual": "### SFRS(I) 9 — Initial measurement\n\nFor this financial asset, which is outside FVTPL and the paragraph 5.1.3 trade-receivable exception, initial measurement is fair value plus directly attributable transaction costs. **Initial carrying amount: SGD 102,000** (SGD 100,000 + SGD 2,000). The supplied facts do not establish a counterparty or settlement status, so they are not enough to prepare journal entries.\n\n### Sources\n[SFRS(I) 9 §5.1.1 — Financial Instruments - Initial Measurement](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "PASS",
+          "checks": [
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "numberInText",
+              "expected": 102000,
+              "actual": {
+                "match": "initial measurement is fair value plus directly attributable transaction costs. **initial carrying amount: sgd 102,000",
+                "captured": "102,000",
+                "number": 102000
+              }
+            }
+          ],
+          "journal": [
+            {
+              "name": "journalAbsent",
+              "status": "PASS",
+              "expected": "no journal groups",
+              "actualGroups": 0
+            }
+          ]
+        },
+        "citationCorrectness": {
+          "status": "PASS",
+          "required": [
+            {
+              "claimId": "cost-capitalisation",
+              "status": "PASS",
+              "expected": {
+                "claimId": "cost-capitalisation",
+                "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/",
+                "standard": "SFRS(I) 9"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [
+                "5.1.1"
+              ],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 §5.1.1",
+                  "paragraph": "5.1.1",
+                  "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+                }
+              ]
+            },
+            {
+              "claimId": "cost-capitalisation",
+              "status": "PASS",
+              "expected": {
+                "claimId": "cost-capitalisation",
+                "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 Singapore framework",
+                  "paragraph": "",
+                  "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+                }
+              ]
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "SFRS(I) 9 §5.1.1",
+              "paragraph": "5.1.1",
+              "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/"
+            },
+            {
+              "standard": "SFRS(I) 9 Singapore framework",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "sfrsi9-amendment-effective-2025",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "IFRS9_DEBT_CLASSIFICATION",
+            "IFRS9_ECL_GENERAL",
+            "IFRS9_EQUITY_CLASSIFICATION",
+            "IFRS9_INITIAL_MEASUREMENT",
+            "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+            "SFRSI9_ADOPTION"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "SFRSI9_2026_CLASSIFICATION_AMENDMENTS"
+              ],
+              "actual": [
+                "IFRS9_DEBT_CLASSIFICATION",
+                "IFRS9_ECL_GENERAL",
+                "IFRS9_EQUITY_CLASSIFICATION",
+                "IFRS9_INITIAL_MEASUREMENT",
+                "SFRSI9_2026_CLASSIFICATION_AMENDMENTS",
+                "SFRSI9_ADOPTION"
+              ],
+              "claims": [
+                {
+                  "claimId": "effective-date",
+                  "status": "PASS",
+                  "expected": [
+                    "SFRSI9_2026_CLASSIFICATION_AMENDMENTS"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "effective-date",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "matches",
+                  "expected": "(?:2025[^\\n]{0,120}(?:not mandatory|not yet mandatory|not required)|(?:not mandatory|not yet mandatory|not required)[^\\n]{0,120}2025)",
+                  "actual": "### SFRS(I) 9 — 2024 amendments effective date\n\nFor an annual reporting period beginning on 1 January 2025, the 2024 classification and measurement amendments to SFRS(I) 9 and SFRS(I) 7 are **not mandatory yet**. ACRA’s announcement states that they are effective for annual reporting periods beginning on or after **1 January 2026**.\n\n### Sources\n[SFRS(I) 9 — 2024 Classification and Measurement Amendments - Effective Date](https://www.acra.gov.sg/news-events/news-announcements/833/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed calculation oracle supplied."
+        },
+        "citationCorrectness": {
+          "status": "PASS",
+          "required": [
+            {
+              "claimId": "effective-date",
+              "status": "PASS",
+              "expected": {
+                "claimId": "effective-date",
+                "officialSourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/833/",
+                "standard": "SFRS(I) 9"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9",
+                  "paragraph": "",
+                  "officialSourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/833/"
+                }
+              ]
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "SFRS(I) 9",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/833/"
+            },
+            {
+              "standard": "SFRS(I) 9 Singapore framework",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "PASS",
+          "assertions": [
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includes",
+              "expected": "1 January 2026",
+              "actual": "### SFRS(I) 9 — 2024 amendments effective date\n\nFor an annual reporting period beginning on 1 January 2025, the 2024 classification and measurement amendments to SFRS(I) 9 and SFRS(I) 7 are **not mandatory yet**. ACRA’s announcement states that they are effective for annual reporting periods beginning on or after **1 January 2026**.\n\n### Sources\n[SFRS(I) 9 — 2024 Classification and Measurement Amendments - Effective Date](https://www.acra.gov.sg/news-events/news-announcements/833/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            },
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includes",
+              "expected": "2025",
+              "actual": "### SFRS(I) 9 — 2024 amendments effective date\n\nFor an annual reporting period beginning on 1 January 2025, the 2024 classification and measurement amendments to SFRS(I) 9 and SFRS(I) 7 are **not mandatory yet**. ACRA’s announcement states that they are effective for annual reporting periods beginning on or after **1 January 2026**.\n\n### Sources\n[SFRS(I) 9 — 2024 Classification and Measurement Amendments - Effective Date](https://www.acra.gov.sg/news-events/news-announcements/833/)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            }
+          ]
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "sfrsi9-equity-fvoci-election",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "IFRS9_DEBT_CLASSIFICATION",
+            "IFRS9_ECL_GENERAL",
+            "IFRS9_EQUITY_CLASSIFICATION",
+            "IFRS9_EQUITY_DIVIDENDS",
+            "IFRS9_FVTPL_SUBSEQUENT",
+            "IFRS9_INITIAL_MEASUREMENT"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "IFRS9_EQUITY_CLASSIFICATION"
+              ],
+              "actual": [
+                "IFRS9_DEBT_CLASSIFICATION",
+                "IFRS9_ECL_GENERAL",
+                "IFRS9_EQUITY_CLASSIFICATION",
+                "IFRS9_EQUITY_DIVIDENDS",
+                "IFRS9_FVTPL_SUBSEQUENT",
+                "IFRS9_INITIAL_MEASUREMENT"
+              ],
+              "claims": [
+                {
+                  "claimId": "equity-no-recycling",
+                  "status": "PASS",
+                  "expected": [
+                    "IFRS9_EQUITY_CLASSIFICATION"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "equity-no-recycling",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "matches",
+                  "expected": "(?:not|no)[^\\n]{0,80}(?:recycl|reclassif)[^\\n]{0,80}(?:profit or loss|P&L)",
+                  "actual": "### SFRS(I) 9 — Equity FVOCI election\n\nOn the stated facts, the investment is not held for trading or contingent consideration and the irrevocable FVOCI election was made at initial recognition. Fair value changes are presented in OCI. On disposal, the cumulative OCI gain or loss is **not subsequently reclassified (recycled) to profit or loss**; a transfer within equity may be made.\n\n### Sources\n[SFRS(I) 9 §5.7.5 — Classification of Equity Instruments](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on) · [SFRS(I) 9 §B5.7.1 — Classification of Equity Instruments](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed calculation oracle supplied."
+        },
+        "citationCorrectness": {
+          "status": "PASS",
+          "required": [
+            {
+              "claimId": "equity-no-recycling",
+              "status": "PASS",
+              "expected": {
+                "claimId": "equity-no-recycling",
+                "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on",
+                "standard": "SFRS(I) 9",
+                "paragraphs": [
+                  "5.7.5",
+                  "B5.7.1"
+                ]
+              },
+              "claimExists": true,
+              "matchingParagraphs": [
+                "5.7.5",
+                "B5.7.1"
+              ],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 §5.7.5",
+                  "paragraph": "5.7.5",
+                  "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+                },
+                {
+                  "standard": "SFRS(I) 9 §B5.7.1",
+                  "paragraph": "B5.7.1",
+                  "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+                }
+              ]
+            },
+            {
+              "claimId": "equity-no-recycling",
+              "status": "PASS",
+              "expected": {
+                "claimId": "equity-no-recycling",
+                "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 Singapore framework",
+                  "paragraph": "",
+                  "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+                }
+              ]
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "SFRS(I) 9 §5.7.5",
+              "paragraph": "5.7.5",
+              "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+            },
+            {
+              "standard": "SFRS(I) 9 §B5.7.1",
+              "paragraph": "B5.7.1",
+              "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+            },
+            {
+              "standard": "SFRS(I) 9 Singapore framework",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "sfrsi9-ecl-12-month-no-amount",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "IFRS9_DEBT_CLASSIFICATION",
+            "IFRS9_ECL_GENERAL",
+            "IFRS9_EQUITY_DIVIDENDS",
+            "IFRS9_FVTPL_SUBSEQUENT",
+            "IFRS9_INITIAL_MEASUREMENT",
+            "SFRSI9_ADOPTION"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "IFRS9_ECL_GENERAL"
+              ],
+              "actual": [
+                "IFRS9_DEBT_CLASSIFICATION",
+                "IFRS9_ECL_GENERAL",
+                "IFRS9_EQUITY_DIVIDENDS",
+                "IFRS9_FVTPL_SUBSEQUENT",
+                "IFRS9_INITIAL_MEASUREMENT",
+                "SFRSI9_ADOPTION"
+              ],
+              "claims": [
+                {
+                  "claimId": "ecl-horizon",
+                  "status": "PASS",
+                  "expected": [
+                    "IFRS9_ECL_GENERAL"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "ecl-horizon",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "matches",
+                  "expected": "12[- ]month[^\\n]{0,80}expected credit loss",
+                  "actual": "### SFRS(I) 9 — Expected credit losses\n\nBecause this non-POCI financial asset is measured at amortised cost and credit risk has not increased significantly since initial recognition, the general impairment approach uses **12-month expected credit losses (ECL)** for the loss allowance. The amount cannot be calculated from the information supplied. Please provide the exposure and probability-weighted expected cash-shortfall estimates, together with the information needed to reflect timing and reasonable, supportable scenarios.\n\n### Sources\n[SFRS(I) 9 §5.5.5 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on) · [SFRS(I) 9 §5.5.17 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                },
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "matches",
+                  "expected": "(?:cannot|can't|insufficient)[^\\n]{0,100}(?:calculat|quantif|amount)",
+                  "actual": "### SFRS(I) 9 — Expected credit losses\n\nBecause this non-POCI financial asset is measured at amortised cost and credit risk has not increased significantly since initial recognition, the general impairment approach uses **12-month expected credit losses (ECL)** for the loss allowance. The amount cannot be calculated from the information supplied. Please provide the exposure and probability-weighted expected cash-shortfall estimates, together with the information needed to reflect timing and reasonable, supportable scenarios.\n\n### Sources\n[SFRS(I) 9 §5.5.5 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on) · [SFRS(I) 9 §5.5.17 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "PASS",
+          "checks": [],
+          "journal": [
+            {
+              "name": "journalAbsent",
+              "status": "PASS",
+              "expected": "no journal groups",
+              "actualGroups": 0
+            }
+          ]
+        },
+        "citationCorrectness": {
+          "status": "PASS",
+          "required": [
+            {
+              "claimId": "ecl-horizon",
+              "status": "PASS",
+              "expected": {
+                "claimId": "ecl-horizon",
+                "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on",
+                "standard": "SFRS(I) 9",
+                "paragraphs": [
+                  "5.5.5",
+                  "5.5.17"
+                ]
+              },
+              "claimExists": true,
+              "matchingParagraphs": [
+                "5.5.5",
+                "5.5.17"
+              ],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 §5.5.5",
+                  "paragraph": "5.5.5",
+                  "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+                },
+                {
+                  "standard": "SFRS(I) 9 §5.5.17",
+                  "paragraph": "5.5.17",
+                  "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+                }
+              ]
+            },
+            {
+              "claimId": "ecl-horizon",
+              "status": "PASS",
+              "expected": {
+                "claimId": "ecl-horizon",
+                "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": [
+                {
+                  "standard": "SFRS(I) 9 Singapore framework",
+                  "paragraph": "",
+                  "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+                }
+              ]
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "SFRS(I) 9 §5.5.5",
+              "paragraph": "5.5.5",
+              "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+            },
+            {
+              "standard": "SFRS(I) 9 §5.5.17",
+              "paragraph": "5.5.17",
+              "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on"
+            },
+            {
+              "standard": "SFRS(I) 9 Singapore framework",
+              "paragraph": "",
+              "officialSourceUrl": "https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "PASS",
+          "required": [
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "exposure",
+                "probability of default",
+                "loss given default",
+                "expected cash shortfalls"
+              ],
+              "actual": "### SFRS(I) 9 — Expected credit losses\n\nBecause this non-POCI financial asset is measured at amortised cost and credit risk has not increased significantly since initial recognition, the general impairment approach uses **12-month expected credit losses (ECL)** for the loss allowance. The amount cannot be calculated from the information supplied. Please provide the exposure and probability-weighted expected cash-shortfall estimates, together with the information needed to reflect timing and reasonable, supportable scenarios.\n\n### Sources\n[SFRS(I) 9 §5.5.5 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on) · [SFRS(I) 9 §5.5.17 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            },
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "Please",
+                "Could you",
+                "provide"
+              ],
+              "actual": "### SFRS(I) 9 — Expected credit losses\n\nBecause this non-POCI financial asset is measured at amortised cost and credit risk has not increased significantly since initial recognition, the general impairment approach uses **12-month expected credit losses (ECL)** for the loss allowance. The amount cannot be calculated from the information supplied. Please provide the exposure and probability-weighted expected cash-shortfall estimates, together with the information needed to reflect timing and reasonable, supportable scenarios.\n\n### Sources\n[SFRS(I) 9 §5.5.5 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on) · [SFRS(I) 9 §5.5.17 — Expected Credit Losses - General Approach](https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on)\n[SFRS(I) 9 Singapore framework — ACRA](https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/)"
+            }
+          ],
+          "forbidden": []
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "iras-gst-standard-rate-2023",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "precisionChecked",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "FAIL",
+          "selectionMode": "precisionChecked",
+          "actual": [
+            "GST_RATE_8_PERCENT_2023",
+            "GST_REG28_DE_MINIMIS_RULE",
+            "GST_REG82_90_BAD_DEBT_RELIEF",
+            "GST_REMISSION_QUALIFYING_FUNDS",
+            "GST_SEC14_REVERSE_CHARGE",
+            "GST_SEC21_ZERO_RATED_EXPORTS"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "GST_RATE_8_PERCENT_2023"
+              ],
+              "actual": [
+                "GST_RATE_8_PERCENT_2023",
+                "GST_REG28_DE_MINIMIS_RULE",
+                "GST_REG82_90_BAD_DEBT_RELIEF",
+                "GST_REMISSION_QUALIFYING_FUNDS",
+                "GST_SEC14_REVERSE_CHARGE",
+                "GST_SEC21_ZERO_RATED_EXPORTS"
+              ],
+              "claims": [
+                {
+                  "claimId": "historical-rate",
+                  "status": "PASS",
+                  "expected": [
+                    "GST_RATE_8_PERCENT_2023"
+                  ],
+                  "missing": []
+                }
+              ]
+            },
+            {
+              "mode": "reviewedSelectionPrecision",
+              "status": "FAIL",
+              "allowedRecordIds": [
+                "GST_RATE_8_PERCENT_2023"
+              ],
+              "forbiddenRecordIds": [],
+              "outsideAllowed": [
+                "GST_REG82_90_BAD_DEBT_RELIEF",
+                "GST_REG28_DE_MINIMIS_RULE",
+                "GST_SEC14_REVERSE_CHARGE",
+                "GST_SEC21_ZERO_RATED_EXPORTS",
+                "GST_REMISSION_QUALIFYING_FUNDS"
+              ],
+              "forbiddenRetrieved": []
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "FAIL",
+          "claims": [
+            {
+              "id": "historical-rate",
+              "status": "FAIL",
+              "assertions": [
+                {
+                  "status": "FAIL",
+                  "path": "messageText",
+                  "op": "matches",
+                  "expected": "15 June 2023,?[^.!?;,\\n]{0,100}8%[^.!?;,\\n]{0,100}SGD\\s*80(?:\\.00)?",
+                  "actual": "### Semantic Transaction Analysis (Offline Mode)\n\n**Extracted Economic Facts**:\n* **Reporting Entity**: UNKNOWN\n* **Transaction Nature**: unclassified_transaction\n* **Ownership Context**: UNKNOWN\n* **Payment Status**: UNKNOWN\n* **Currency Fact**: SGD (Source: explicit, Confidence: 1)\n\n*Note: To answer free-form, custom commercial transactions with dynamic reasoning, connect an AI Provider (Google Gemini, Azure OpenAI, or OpenAI) in Settings.*"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "FAIL",
+          "checks": [
+            {
+              "status": "FAIL",
+              "path": "messageText",
+              "op": "numberInText",
+              "expected": 80,
+              "actual": {
+                "match": null,
+                "captured": null,
+                "number": null
+              }
+            }
+          ],
+          "journal": [
+            {
+              "name": "journalAbsent",
+              "status": "PASS",
+              "expected": "no journal groups",
+              "actualGroups": 0
+            }
+          ]
+        },
+        "citationCorrectness": {
+          "status": "FAIL",
+          "required": [
+            {
+              "claimId": "historical-rate",
+              "status": "FAIL",
+              "expected": {
+                "claimId": "historical-rate",
+                "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/basics-of-gst/current-gst-rates"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": []
+            }
+          ],
+          "unsupported": [],
+          "actual": []
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "FAIL",
+          "assertions": [
+            {
+              "status": "FAIL",
+              "path": "messageText",
+              "op": "matches",
+              "expected": "15 June 2023,?[^.!?;,\\n]{0,100}8%",
+              "actual": "### Semantic Transaction Analysis (Offline Mode)\n\n**Extracted Economic Facts**:\n* **Reporting Entity**: UNKNOWN\n* **Transaction Nature**: unclassified_transaction\n* **Ownership Context**: UNKNOWN\n* **Payment Status**: UNKNOWN\n* **Currency Fact**: SGD (Source: explicit, Confidence: 1)\n\n*Note: To answer free-form, custom commercial transactions with dynamic reasoning, connect an AI Provider (Google Gemini, Azure OpenAI, or OpenAI) in Settings.*"
+            }
+          ]
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "cpf-ow-ceiling-2025",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "CPF_WAGE_CEILING_2025",
+            "CPF_WAGE_CEILINGS_2026",
+            "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+            "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR",
+            "ITA_SEC14Q_RENOVATION_REFURBISHMENT",
+            "ITA_SEC37_LOSS_CARRY_FORWARD"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "CPF_WAGE_CEILING_2025"
+              ],
+              "actual": [
+                "CPF_WAGE_CEILING_2025",
+                "CPF_WAGE_CEILINGS_2026",
+                "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+                "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR",
+                "ITA_SEC14Q_RENOVATION_REFURBISHMENT",
+                "ITA_SEC37_LOSS_CARRY_FORWARD"
+              ],
+              "claims": [
+                {
+                  "claimId": "ceiling",
+                  "status": "PASS",
+                  "expected": [
+                    "CPF_WAGE_CEILING_2025"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "ceiling",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includes",
+                  "expected": "7,400",
+                  "actual": "### Statutory Directive: Historical Ordinary Wage (OW) Monthly Ceiling ($7,400 in 2025)\n\n**Governing Authority**: **CPF** | **Legislation**: **Central Provident Fund Act 1953 (First Schedule)**\n\n---\n\n#### 1. Statutory Principle\nFrom 1 January 2025 to 31 December 2025, the statutory CPF Ordinary Wage monthly ceiling was SGD 7,400 under the third phase of the ceiling increases.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Monthly OW Ceiling: SGD 7,400.\n* Max Employee CPF (20%): SGD 1,480.\n* Max Employer CPF (17%): SGD 1,258 (Total: SGD 2,738).\n* Superseded: Replaced by $8,000 on 1 January 2026.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Central Provident Fund Act 1953 First Schedule](https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Central Provident Fund Act 1953 — First Schedule**](https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-) *(CPF / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed calculation oracle supplied."
+        },
+        "citationCorrectness": {
+          "status": "FAIL",
+          "required": [
+            {
+              "claimId": "ceiling",
+              "status": "FAIL",
+              "expected": {
+                "claimId": "ceiling",
+                "officialSourceUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": []
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "Central Provident Fund Act 1953 (CPF)",
+              "paragraph": "First Schedule",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-"
+            },
+            {
+              "standard": "Central Provident Fund Act 1953",
+              "paragraph": "First Schedule",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-"
+            },
+            {
+              "standard": "Central Provident Fund Act 1953 First Schedule",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-"
+            },
+            {
+              "standard": "**Central Provident Fund Act 1953 — First Schedule**",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "PASS",
+          "assertions": [
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "matches",
+              "expected": "(?:1 January|Jan(?:uary)? 1)[^\\n]{0,30}2025[^\\n]{0,100}(?:31 December|Dec(?:ember)? 31)[^\\n]{0,30}2025",
+              "actual": "### Statutory Directive: Historical Ordinary Wage (OW) Monthly Ceiling ($7,400 in 2025)\n\n**Governing Authority**: **CPF** | **Legislation**: **Central Provident Fund Act 1953 (First Schedule)**\n\n---\n\n#### 1. Statutory Principle\nFrom 1 January 2025 to 31 December 2025, the statutory CPF Ordinary Wage monthly ceiling was SGD 7,400 under the third phase of the ceiling increases.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Monthly OW Ceiling: SGD 7,400.\n* Max Employee CPF (20%): SGD 1,480.\n* Max Employer CPF (17%): SGD 1,258 (Total: SGD 2,738).\n* Superseded: Replaced by $8,000 on 1 January 2026.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Central Provident Fund Act 1953 First Schedule](https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Central Provident Fund Act 1953 — First Schedule**](https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P18-#Sc1-) *(CPF / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+            }
+          ]
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "mom-first-year-annual-leave",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "MOM_ANNUAL_SICK_LEAVE",
+            "MOM_CDCA_PARENTAL_LEAVES",
+            "MOM_SEC21_SALARY_TIMELINES",
+            "MOM_SEC36_37_REST_DAY_PAY",
+            "MOM_SEC88A_ANNUAL_LEAVE",
+            "MOM_SEC89_SICK_LEAVE"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "MOM_SEC88A_ANNUAL_LEAVE"
+              ],
+              "actual": [
+                "MOM_ANNUAL_SICK_LEAVE",
+                "MOM_CDCA_PARENTAL_LEAVES",
+                "MOM_SEC21_SALARY_TIMELINES",
+                "MOM_SEC36_37_REST_DAY_PAY",
+                "MOM_SEC88A_ANNUAL_LEAVE",
+                "MOM_SEC89_SICK_LEAVE"
+              ],
+              "claims": [
+                {
+                  "claimId": "leave-entitlement",
+                  "status": "PASS",
+                  "expected": [
+                    "MOM_SEC88A_ANNUAL_LEAVE"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "PASS",
+          "claims": [
+            {
+              "id": "leave-entitlement",
+              "status": "PASS",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includes",
+                  "expected": "7 days",
+                  "actual": "### Statutory Directive: Annual Leave and Paid Sick / Hospitalisation Leave Statutory Entitlements\n\n**Governing Authority**: **MOM** | **Legislation**: **[Employment Act 1968](https://sso.agc.gov.sg/Act/EmA1968) (Section 88A)**\n\n---\n\n#### 1. Statutory Principle\nAn employee who has served an employer for a period of not less than 3 months shall be entitled to paid annual leave of 7 days in respect of the first 12 months of continuous service with that employer, and an additional one day of paid annual leave for every subsequent 12 months of continuous service, up to a maximum of 14 days.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Paid Annual Leave (Section 88A): Minimum 7 days after 1 year of service, increasing by 1 additional day per completed year of service, up to a statutory maximum of 14 days for 8 or more years of service.\n* Pro-rating: Employees who have served at least 3 months in a calendar year are entitled to pro-rated annual leave in that year.\n* Forfeiture / Encashment: Statutory annual leave cannot be unlawfully forfeited if statutory qualification criteria are met.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Employment Act 1968 Section 88A](https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Employment Act 1968 — Section 88A**](https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-) *(MOM / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed calculation oracle supplied."
+        },
+        "citationCorrectness": {
+          "status": "FAIL",
+          "required": [
+            {
+              "claimId": "leave-entitlement",
+              "status": "FAIL",
+              "expected": {
+                "claimId": "leave-entitlement",
+                "officialSourceUrl": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": []
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "Employment Act 1968 (MOM)",
+              "paragraph": "Section 88A",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-"
+            },
+            {
+              "standard": "Employment Act 1968",
+              "paragraph": "Section 88A",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-"
+            },
+            {
+              "standard": "Employment Act 1968",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/EmA1968"
+            },
+            {
+              "standard": "Employment Act 1968 Section 88A",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-"
+            },
+            {
+              "standard": "**Employment Act 1968 — Section 88A**",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed missing-fact oracle supplied."
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    },
+    {
+      "id": "acra-audit-exemption-missing-years",
+      "provenance": "supervisor-authored-official-source",
+      "evaluationContext": {
+        "sourceRetrieval": {
+          "mode": "recallOnly",
+          "answerGrounding": "NOT_EVALUATED",
+          "answerGroundingReason": "Candidate retrieval is run independently of the answer function; the benchmark does not establish that the answer used these records."
+        }
+      },
+      "dimensions": {
+        "authorityRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected authority labels supplied."
+        },
+        "domainRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed fine-grained domain labels supplied."
+        },
+        "topicRouting": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected topic labels supplied."
+        },
+        "sourceRetrieval": {
+          "status": "PASS",
+          "selectionMode": "recallOnly",
+          "actual": [
+            "ACRA_SEC142_143_RORC",
+            "ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE",
+            "ACRA_SEC171_COMPANY_SECRETARY",
+            "ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION",
+            "ACRA_SEC78B_CAPITAL_REDUCTION",
+            "ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE"
+          ],
+          "checks": [
+            {
+              "mode": "claimSources",
+              "status": "PASS",
+              "expected": [
+                "ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION"
+              ],
+              "actual": [
+                "ACRA_SEC142_143_RORC",
+                "ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE",
+                "ACRA_SEC171_COMPANY_SECRETARY",
+                "ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION",
+                "ACRA_SEC78B_CAPITAL_REDUCTION",
+                "ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE"
+              ],
+              "claims": [
+                {
+                  "claimId": "cannot-conclude",
+                  "status": "PASS",
+                  "expected": [
+                    "ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION"
+                  ],
+                  "missing": []
+                }
+              ]
+            }
+          ]
+        },
+        "answerCorrectness": {
+          "status": "FAIL",
+          "claims": [
+            {
+              "id": "cannot-conclude",
+              "status": "FAIL",
+              "assertions": [
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "includesAny",
+                  "expected": [
+                    "two consecutive financial years",
+                    "past two financial years"
+                  ],
+                  "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+                },
+                {
+                  "status": "FAIL",
+                  "path": "messageText",
+                  "op": "matches",
+                  "expected": "(?:cannot|can't|insufficient|need more facts)[^\\n]{0,120}(?:conclud|determin|confirm|qualif)",
+                  "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+                },
+                {
+                  "status": "PASS",
+                  "path": "messageText",
+                  "op": "notMatches",
+                  "expected": "(?:therefore|thus|conclusion:|your company|the company|it)[^\\n.]{0,60}qualif(?:y|ies) for (?:the )?(?:small-company )?audit exemption",
+                  "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+                }
+              ]
+            }
+          ]
+        },
+        "calculationCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No reviewed calculation oracle supplied."
+        },
+        "citationCorrectness": {
+          "status": "FAIL",
+          "required": [
+            {
+              "claimId": "cannot-conclude",
+              "status": "FAIL",
+              "expected": {
+                "claimId": "cannot-conclude",
+                "officialSourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/"
+              },
+              "claimExists": true,
+              "matchingParagraphs": [],
+              "actual": []
+            }
+          ],
+          "unsupported": [],
+          "actual": [
+            {
+              "standard": "Companies Act 1967 (ACRA)",
+              "paragraph": "Section 205C & Thirteenth Schedule",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-"
+            },
+            {
+              "standard": "Companies Act 1967",
+              "paragraph": "Section 205C & Thirteenth Schedule",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-"
+            },
+            {
+              "standard": "Companies Act 1967",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CoA1967"
+            },
+            {
+              "standard": "Companies Act 1967 Section 205C & Thirteenth Schedule",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-"
+            },
+            {
+              "standard": "**Companies Act 1967 — Section 205C & Thirteenth Schedule**",
+              "paragraph": "",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-"
+            }
+          ]
+        },
+        "missingFactBehaviour": {
+          "status": "FAIL",
+          "required": [
+            {
+              "status": "FAIL",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "newly incorporated",
+                "first financial year",
+                "established company"
+              ],
+              "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+            },
+            {
+              "status": "FAIL",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "Please",
+                "Could you",
+                "confirm"
+              ],
+              "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+            },
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "two consecutive financial years",
+                "past two financial years"
+              ],
+              "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+            },
+            {
+              "status": "FAIL",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "Please",
+                "Could you",
+                "confirm"
+              ],
+              "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+            },
+            {
+              "status": "PASS",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "group",
+                "subsidiary"
+              ],
+              "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+            },
+            {
+              "status": "FAIL",
+              "path": "messageText",
+              "op": "includesAny",
+              "expected": [
+                "Please",
+                "Could you",
+                "confirm"
+              ],
+              "actual": "### Statutory Directive: Small Company Audit Exemption Criteria (Revenue / Assets ≤ $10M, Staff ≤ 50)\n\n**Governing Authority**: **ACRA** | **Legislation**: **[Companies Act 1967](https://sso.agc.gov.sg/Act/CoA1967) (Section 205C & Thirteenth Schedule)**\n\n---\n\n#### 1. Statutory Principle\nA company qualifies as a \"small company\" and is exempt from statutory audit if it is a private company and fulfills at least 2 of 3 criteria for the immediate past two consecutive financial years.\n\n---\n\n#### 2. Key Rules, Thresholds & Compliance Mandates\n* Criterion 1: Total annual revenue $\\le$ SGD 10,000,000.\n* Criterion 2: Total gross assets $\\le$ SGD 10,000,000.\n* Criterion 3: Total number of full-time employees at financial year-end $\\le 50$.\n* Two Consecutive FYs Rule: Must satisfy at least 2 of 3 quantitative thresholds in each of the past 2 consecutive financial years.\n* Group Requirement: If the company is part of a corporate group, the entire group must qualify as a \"small group\" on a consolidated basis to enjoy the audit exemption.\n\n---\n\n#### 3. Official Statutory Source & Verification\n* Verified against [Companies Act 1967 Section 205C & Thirteenth Schedule](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n* Review the **Statutory Citations & \"Why\"** tab for full legal references and citations.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**Companies Act 1967 — Section 205C & Thirteenth Schedule**](https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-) *(ACRA / Verified Official Source)*\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*"
+            }
+          ],
+          "forbidden": []
+        },
+        "effectiveDateCorrectness": {
+          "status": "NOT_EVALUATED",
+          "reason": "No explicitly reviewed effective-date assertions supplied."
+        },
+        "multiAuthorityHandling": {
+          "status": "NOT_EVALUATED",
+          "reason": "No expected multi-authority label supplied."
+        }
+      }
+    }
+  ]
+}

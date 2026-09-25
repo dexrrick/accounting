@@ -21,6 +21,7 @@ import { startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
+import { answerSfrsi9KnowledgeQuery } from './sfrsi9AnswerService';
 
 export interface GeminiResponse {
   messageText: string;
@@ -540,6 +541,18 @@ export async function processAccountingQuery(
         });
       }
       return attachAmendmentProvenance(renderStructuredOfflineResponse(sequenceScenario, standard));
+    }
+  }
+  // Serve reviewed SFRS(I) 9 knowledge queries before transaction parsing.
+  // This also avoids unrelated parser matches (for example, "carrying amount"
+  // being interpreted as a passenger motor car) without changing parser rules.
+  if (!hasImages && !journalRequested) {
+    const standardsAnswer = answerSfrsi9KnowledgeQuery(userInput, standard);
+    if (standardsAnswer) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance(standardsAnswer);
     }
   }
   const tDet0 = Date.now();
