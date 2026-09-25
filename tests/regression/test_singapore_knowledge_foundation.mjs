@@ -82,6 +82,40 @@ assert.ok(drc.authorities.includes('MOM'));
 assert.ok(drc.topicIds.includes('mom-foreign-workforce-drc'));
 assert.ok(drc.domains.includes('MOM_FOREIGN_WORKFORCE'));
 
+const momOvertimeProvision = classifyQuestion('What MOM provision applies to overtime?');
+assert.deepEqual(momOvertimeProvision.authorities, ['MOM'], 'An employment provision question should not add accounting authority based on a generic word');
+assert.ok(!momOvertimeProvision.topicIds.includes('sfrsi_provisions-contingencies'));
+const momEmploymentPassAssociate = classifyQuestion('Does an associate need an Employment Pass under MOM rules?');
+assert.ok(momEmploymentPassAssociate.authorities.includes('MOM'));
+assert.ok(!momEmploymentPassAssociate.authorities.includes('ACRA'), 'An ordinary associate should not route to accounting standards');
+assert.ok(!momEmploymentPassAssociate.topicIds.includes('sfrsi_associates'));
+
+const warrantyProvision = classifyQuestion('Should we recognize a warranty provision?');
+assert.ok(warrantyProvision.topicIds.includes('sfrsi_provisions-contingencies'), 'Accounting warranty provisions remain recognizable');
+const investmentInAssociate = classifyQuestion('How do we account for an investment in an associate?');
+assert.ok(investmentInAssociate.topicIds.includes('sfrsi_associates'), 'Accounting for an investment in an associate remains recognizable');
+const subsidiaryAccounting = classifyQuestion('How do I account for a subsidiary?');
+assert.ok(subsidiaryAccounting.topicIds.includes('sfrsi_subsidiaries-consolidation'));
+const goodwillMeasurement = classifyQuestion('How should goodwill be measured?');
+assert.ok(goodwillMeasurement.topicIds.includes('sfrsi_goodwill'));
+const assetImpairment = classifyQuestion('Is this asset impaired?');
+assert.ok(assetImpairment.topicIds.includes('sfrsi_impairment'));
+for (const [query, topicId] of [
+  ['How do I test for impairment?', 'sfrsi_impairment'],
+  ['Should a subsidiary be consolidated?', 'sfrsi_subsidiaries-consolidation'],
+  ['Do I consolidate my subsidiary?', 'sfrsi_subsidiaries-consolidation'],
+  ['How should goodwill be recognized on acquisition?', 'sfrsi_goodwill']
+]) {
+  assert.ok(classifyQuestion(query).topicIds.includes(topicId), `Natural accounting question resolves to ${topicId}: ${query}`);
+}
+
+const momSubsidiaryCompliance = classifyQuestion('Does a subsidiary with impaired goodwill need an Employment Pass under MOM rules?');
+assert.ok(momSubsidiaryCompliance.authorities.includes('MOM'));
+assert.ok(!momSubsidiaryCompliance.authorities.includes('ACRA'), 'Incidental subsidiary and goodwill wording should not add accounting authority');
+assert.ok(!momSubsidiaryCompliance.topicIds.some(id => [
+  'sfrsi_subsidiaries-consolidation', 'sfrsi_goodwill', 'sfrsi_impairment'
+].includes(id)));
+
 const ir21 = classifyQuestion('When is an IR21 required before a foreign employee ceases employment?');
 assert.ok(ir21.authorities.includes('IRAS'));
 assert.ok(ir21.topicIds.includes('iras-employer-ir21'));
@@ -93,7 +127,7 @@ for (const [acronym, authority, topicId] of [
   ['FWL', 'MOM', 'mom-foreign-worker-levy'],
   ['SDL', 'CPF', 'cpf-skills-development-levy'],
   ['SINDA', 'CPF', 'cpf-self-help-group-contributions'],
-  ['QFDC', 'MAS', 'mas-qfd-qfdc'],
+  ['QDC', 'MAS', 'mas-quarterly-fund-data-collection'],
   ['FATCA', 'IRAS', 'iras-fatca-framework'],
   ['CRS', 'IRAS', 'iras-crs-framework']
 ]) {
@@ -101,6 +135,15 @@ for (const [acronym, authority, topicId] of [
   assert.ok(result.authorities.includes(authority), `${acronym} routes to ${authority}`);
   assert.ok(result.topicIds.includes(topicId), `${acronym} resolves to ${topicId}`);
 }
+
+const qfdc = classifyQuestion('What does QFDC mean?');
+assert.ok(!qfdc.authorities.includes('MAS'), 'QFDC must not be presumed to mean MAS QDC');
+assert.ok(!qfdc.topicIds.includes('mas-quarterly-fund-data-collection'));
+const qdc = classifyQuestion('What is QDC reporting for MAS funds?');
+assert.ok(qdc.authorities.includes('MAS'));
+assert.ok(qdc.topicIds.includes('mas-quarterly-fund-data-collection'));
+assert.equal(getCoverageTopicById('mas-quarterly-fund-data-collection').status, 'MISSING');
+assert.deepEqual(getCoverageTopicById('mas-quarterly-fund-data-collection').sourceRecordIds, [], 'QDC routing metadata must not imply validated content');
 
 for (const section of ['13O', '13U']) {
   const result = classifyQuestion(`What are the MAS and IRAS considerations for section ${section}?`);

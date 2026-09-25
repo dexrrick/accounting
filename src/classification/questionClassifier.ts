@@ -179,7 +179,6 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('fund admin') ||
     q.includes('fund administrator') ||
     q.includes('13o') || q.includes('13u') || q.includes('cms licence') ||
-    /\b(qfd|qfdc)\b/i.test(q) ||
     topicMetadata.some(topic => topic.domainId.startsWith('MAS_'));
 
   const hasPayrollCalculation =
