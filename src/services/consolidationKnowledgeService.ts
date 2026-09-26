@@ -2,6 +2,7 @@ import type { AccountingScenarioState, AccountingStandard, MissingFieldInfo } fr
 import { getCoverageTopicById } from '../standards/coverageRegistry';
 import { UNIFIED_SOURCE_REGISTRY } from '../standards/unifiedSourceModel';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
+import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 
 export interface ConsolidationKnowledgeAnswer {
   messageText: string;
@@ -139,6 +140,7 @@ export function answerConsolidationKnowledgeQuery(
   if (standard !== 'SFRS_I' || isJournalRequest(query)) return undefined;
   const selected = identifyLocalTopic(query);
   if (!selected) return undefined;
+  if (selected === 'goodwill' && hasExplicitNonBusinessAcquisition(query)) return undefined;
   // Do not present an SFRS(I) 3 goodwill answer for a transaction expressly
   // described as a common-control combination. Let the mapped evidence path
   // resolve the applicable accounting policy instead.
@@ -157,11 +159,10 @@ export function answerConsolidationKnowledgeQuery(
   }
   const sources = rule.standardIds
     .map(id => UNIFIED_SOURCE_REGISTRY[id])
-    .filter(record => record?.recordRole === 'SOURCE_MAP_POINTER' && record.groundingEligible === false &&
-      record.lifecycleState === 'ACTIVE' && record.urlVerificationStatus === 'VERIFIED' &&
-      defaultSourceFreshnessManager.evaluateSourceFreshness(record) === 'ACTIVE_CURRENT' &&
-      Boolean(record.officialSourceUrl));
-  // Never construct a URL from a topic, standard name, or authority.
+    .filter(record => record !== undefined && record.recordRole === 'SOURCE_MAP_POINTER' && record.groundingEligible === false &&
+      record.lifecycleState === 'ACTIVE');
+  // Local rule content remains usable when a source-map URL is unavailable.
+  // URL verification controls links independently from local content status.
   if (sources.length !== rule.standardIds.length) return undefined;
 
   const outstandingFacts = rule.requiredFacts.filter(fact => !hasMaterialFact(fact.key, query));
@@ -182,8 +183,15 @@ export function answerConsolidationKnowledgeQuery(
     ? rule.explanation
     : buildCompleteExplanation(selected, rule, query);
   const informationNeeded = missingFacts.length ? `\n\n**Information still needed:** ${missingFacts.join('; ')}.` : '';
-  const body = `${explanation}${informationNeeded}\n\nThe linked IFRS Foundation pages are official standard overviews. They identify the corresponding standards; they are not the full SFRS(I) standard text or paragraph-level evidence. No detailed calculation is made here.`;
-  const citations = sources.map(record => `[${record.documentTitle} — official overview URL verified ${record.urlVerifiedDate}](${record.officialSourceUrl})`);
+  const linkableSources = sources.filter(record =>
+    hasVerifiedSourceUrlProvenance(record) &&
+    defaultSourceFreshnessManager.evaluateSourceFreshness(record) === 'ACTIVE_CURRENT');
+  const sourceNote = linkableSources.length
+    ? 'The linked IFRS Foundation pages are official standard overviews. They identify the corresponding standards; they are not the full SFRS(I) standard text or paragraph-level evidence.'
+    : 'The corresponding official overview URLs are not currently verified, so no source links are displayed.';
+  const body = `${explanation}${informationNeeded}\n\n${sourceNote} No detailed calculation is made here.`;
+  const citations = linkableSources.map(record => `[${record.documentTitle} — official overview URL verified ${record.urlVerifiedDate}](${record.officialSourceUrl})`);
+  const sourcePointers = citations.length ? `\n\n### Official source-map pointers\n${citations.join('\n')}` : '';
   const scenarioState: AccountingScenarioState = {
     scenarioType: 'SFRSI_CONSOLIDATION_KNOWLEDGE',
     rawQuery: query,
@@ -202,7 +210,7 @@ export function answerConsolidationKnowledgeQuery(
   const topic = getCoverageTopicById(rule.topicId);
   const heading = topic?.actOrStandard || 'SFRS(I) consolidation and investments standards';
   return {
-    messageText: `### ${heading} — ${rule.title}\n\n${body}\n\n### Official source-map pointers\n${citations.join('\n')}`,
+    messageText: `### ${heading} — ${rule.title}\n\n${body}${sourcePointers}`,
     scenarioState,
     clarifications: missingFields,
     sourceMapFallbackTrace: {
@@ -211,7 +219,7 @@ export function answerConsolidationKnowledgeQuery(
       sourceMapIds: sources.map(record => record.id),
       sourceMapRecordIds: sources.map(record => record.id),
       selectedRecordIds: sources.map(record => record.id),
-      finalVerifiedUrls: sources.map(record => record.officialSourceUrl),
+      finalVerifiedUrls: linkableSources.map(record => record.officialSourceUrl),
       candidateOnly: false,
       attempts: []
     }
@@ -252,7 +260,6 @@ function hasMaterialFact(key: string, query: string): boolean {
   const protectiveOrDeniedPower = hasProtectiveOrDeniedPower(query);
   const percentage = /\b\d+(?:\.\d+)?\s*%|\b\d+(?:\.\d+)?\s+percent\b/i.test(q);
   const exactDate = /\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}\b|\b20\d{2}-\d{2}-\d{2}\b/i.test(q);
-  const businessNatureEvidence = /\b(?:business combination|acquired (?:control of )?(?:a )?business|the acquired set is a business|the set is a business|set meets the definition of a business|acquired set meets the definition of a business|acquired set)\b/i;
   const businessScopeEvidence = /\b(?:within (?:the )?(?:scope of )?SFRS\(I\)\s*3|not under common[- ]control|not a common[- ]control (?:combination|transaction)|unrelated[- ]part(?:y|ies)|independent[- ]part(?:y|ies))\b/i;
   const businessScopeMention = /\b(?:scope of SFRS\(I\)\s*3|SFRS\(I\)\s*3 scope|common[- ]control|unrelated[- ]part(?:y|ies)|independent[- ]part(?:y|ies))\b/i;
   switch (key) {
@@ -282,12 +289,10 @@ function hasMaterialFact(key: string, query: string): boolean {
       !isExplicitlyMissingFact(query, /\b(?:identifiable net assets|fair value of (?:the )?assets)\b/i) &&
       /\bconsideration\b/i.test(q) && /\b(?:nci|non[- ]controlling interests?)\b/i.test(q) &&
       /\b(?:identifiable net assets|fair value of (?:the )?assets)\b/i.test(q);
-    case 'businessOrAssets': return !isExplicitlyMissingFact(query, businessNatureEvidence) &&
-      !isInterrogativeFactMention(query, businessNatureEvidence) && businessNatureEvidence.test(q);
+    case 'businessOrAssets': return hasAffirmativeBusinessNature(query);
     case 'businessCombinationScope': return !hasExplicitCommonControlCombination(query) &&
       !isExplicitlyMissingFact(query, businessScopeMention) && !isInterrogativeFactMention(query, businessScopeMention) && businessScopeEvidence.test(q);
-    case 'businessAndScope': return !isExplicitlyMissingFact(query, businessNatureEvidence) &&
-      !isInterrogativeFactMention(query, businessNatureEvidence) && businessNatureEvidence.test(q) &&
+    case 'businessAndScope': return hasAffirmativeBusinessNature(query) &&
       !isExplicitlyMissingFact(query, businessScopeMention) && !isInterrogativeFactMention(query, businessScopeMention) && businessScopeEvidence.test(q) &&
       !/\b(?:under common control|common-control transaction|outside (?:the )?scope of SFRS\(I\)\s*3)\b/i.test(q);
     case 'acquisitionDate': return exactDate || /\b(?:on|at) the acquisition date\b/i.test(q);
@@ -348,12 +353,95 @@ function isExplicitlyMissingFact(query: string, factPattern: RegExp): boolean {
 }
 
 function isInterrogativeFactMention(query: string, factPattern: RegExp): boolean {
+  const questionSentences = query.match(/(?:^|[.!;])[^.!?;]*\?/g) || [];
+  if (questionSentences.some(question => factPattern.test(question))) return true;
   const questionPattern = /[^?]*\?/g;
   return [...query.matchAll(questionPattern)].some(question => {
     const clauses = question[0].slice(0, -1).split(/[.!;,]/);
     return clauses.some(clause => /^\s*(?:does|do|did|is|are|was|were|has|have|had|whether|if|what|which|who|can|could|should|will|would|may|might|how)\b/i.test(clause) &&
       factPattern.test(clause));
   });
+}
+
+function isScopeUncertaintyClause(text: string): boolean {
+  const scopeCue = /\b(?:common[- ]control|SFRS\(I\)\s*3\s+scope|scope of SFRS\(I\)\s*3)\b/i.exec(text);
+  const uncertaintyCue = /\b(?:not provided|not supplied|not given|missing|unknown|not known|not available|not specified|omitted|unclear|uncertain|undetermined|do not know|does not know|don't know|doesn't know|cannot confirm|can't confirm|not sure|not certain|may|might|could|possibly|perhaps|maybe)\b/i.exec(text);
+  return Boolean(scopeCue && uncertaintyCue && Math.abs(scopeCue.index - uncertaintyCue.index) <= 120);
+}
+
+function splitFactClauses(query: string): Array<{ text: string; delimiter: string }> {
+  const parts = query.split(/([.!?;,\n]+|\b(?:but|however|although)\b)/i);
+  const clauses: Array<{ text: string; delimiter: string }> = [];
+  const append = (text: string, delimiter: string) => {
+    if (text.trim()) clauses.push({ text: text.trim(), delimiter });
+  };
+  for (let index = 0; index < parts.length; index += 2) {
+    const text = parts[index];
+    const delimiter = parts[index + 1] || '';
+    const andMatches = [...text.matchAll(/\band\b/gi)];
+    let start = 0;
+    let didSplit = false;
+    for (const match of andMatches) {
+      if (match.index === undefined) continue;
+      const afterAnd = match.index + match[0].length;
+      const nextConjunction = text.slice(afterAnd).search(/\band\b/i);
+      const rightClause = text.slice(afterAnd, nextConjunction < 0 ? undefined : afterAnd + nextConjunction);
+      if (!isScopeUncertaintyClause(rightClause)) continue;
+      append(text.slice(start, match.index), 'and');
+      start = afterAnd;
+      didSplit = true;
+    }
+    if (didSplit) append(text.slice(start), delimiter);
+    else append(text, delimiter);
+  }
+  return clauses;
+}
+
+function isInterrogativeFactClause(clause: { text: string; delimiter: string }): boolean {
+  const text = clause.text.replace(/^\s*(?:but|however|although)\s+/i, '').trim();
+  return clause.delimiter.includes('?') ||
+    /^(?:does|do|did|is|are|was|were|has|have|had|whether|if|what|which|who|can|could|should|will|would|may|might|how)\b/i.test(text);
+}
+
+function hasAffirmativeBusinessNature(query: string): boolean {
+  const affirmativePattern = /\b(?:the acquired set is (?:clearly )?a business|the set is a business|(?:the )?(?:acquired set|set|investee|acquiree|target) (?:meets|satisfies) (?:the )?definition of a business|the (?:acquired set|investee|acquiree|target) constitutes a business|the (?:investee|acquiree|target) is a business|(?:(?:we|the entity|the acquirer)\s+)?(?:have\s+)?acquired (?:a )?business|acquired control of (?:a )?business|(?:this|the transaction|the acquisition|we|the entity|the acquirer)\s+(?:(?:have|has)\s+)?(?:completed|entered into|is|was|constitutes|represents)\s+(?:a\s+)?business combination)\b/i;
+  const omissionOrUncertainty = /\b(?:not provided|not supplied|not given|missing|unknown|not known|not available|not specified|omitted|unclear|uncertain|undetermined|do not know|does not know|don't know|doesn't know|cannot confirm|can't confirm|not sure|not certain|may|might|could|possibly|perhaps|maybe)\b/i;
+  const deniedBusinessNature = /\b(?:not a business|isn't a business|is not a business|does not meet (?:the )?definition of a business|doesn't meet (?:the )?definition of a business|fails? to meet (?:the )?definition of a business)\b/i;
+  const assetAcquisition = /\basset acquisition\b/i;
+  const negatedAssetAcquisition = /\b(?:not|never|no|isn't|is not|wasn't|was not)\b[\s\S]{0,35}\basset acquisition\b/i;
+  const isExplicitDenial = (clause: string) => deniedBusinessNature.test(clause) ||
+    (assetAcquisition.test(clause) && !negatedAssetAcquisition.test(clause));
+  const clauses = splitFactClauses(query);
+  const affirmative = clauses.some(clause => affirmativePattern.test(clause.text) &&
+    !omissionOrUncertainty.test(clause.text) &&
+    !isExplicitDenial(clause.text) &&
+    !isInterrogativeFactClause(clause));
+  const explicitDenial = clauses.some(clause => isExplicitDenial(clause.text) &&
+    !omissionOrUncertainty.test(clause.text) &&
+    !isInterrogativeFactClause(clause));
+  const uncertainNatureClassification = clauses.some(clause => {
+    const hasStrongNatureReference = /\b(?:asset acquisition|definition of a business)\b/i.test(clause.text);
+    const genericNatureReference = /\b(?:is|was|be|being)\s+(?:a\s+)?business\b/i.test(clause.text);
+    const acquiredSubjectNatureReference = /\b(?:the\s+)?(?:acquired set|set|acquiree|target|investee)\s+(?:is|was)\s+(?:clearly\s+)?a business\b/i.test(clause.text);
+    const interrogativeNatureReference = /^\s*(?:is|was)\s+(?:the\s+)?(?:acquired set|set|acquiree|target|investee)\s+(?:clearly\s+)?a business\b/i.test(clause.text);
+    const anaphoricNatureQuestion = /^\s*(?:is|was)\s+(?:it|this|that)\s+(?:not\s+)?(?:clearly\s+)?a business\b(?!\s+combination\b)/i.test(clause.text);
+    const hasNatureReference = hasStrongNatureReference || genericNatureReference || acquiredSubjectNatureReference || interrogativeNatureReference || anaphoricNatureQuestion;
+    return hasNatureReference && (omissionOrUncertainty.test(clause.text) || isInterrogativeFactClause(clause));
+  });
+  return affirmative && !explicitDenial && !uncertainNatureClassification;
+}
+
+function hasExplicitNonBusinessAcquisition(query: string): boolean {
+  const uncertainty = /\b(?:not provided|not supplied|not given|missing|unknown|not known|not available|not specified|omitted|unclear|uncertain|undetermined|do not know|does not know|don't know|doesn't know|cannot confirm|can't confirm|not sure|not certain|may|might|could|possibly|perhaps|maybe)\b/i;
+  const assertedAssetAcquisition = /\basset acquisition\b/i;
+  const negatedAssetAcquisition = /\b(?:not|never|no|isn't|is not|wasn't|was not)\b[\s\S]{0,35}\basset acquisition\b/i;
+  const assertedNonBusiness = /\b(?:acquired set|set|transaction|acquisition|investee|acquiree|target|it|this)\s+(?:is|was)\s+not\s+(?:a\s+)?business\b|\bnot a business\b/i;
+  return splitFactClauses(query).some(clause =>
+    !uncertainty.test(clause.text) &&
+    !isInterrogativeFactClause(clause) &&
+    ((assertedAssetAcquisition.test(clause.text) && !negatedAssetAcquisition.test(clause.text)) ||
+      assertedNonBusiness.test(clause.text))
+  );
 }
 
 function hasAffirmativeFormerEquityAccountedInterest(query: string): boolean {
@@ -366,7 +454,8 @@ function hasAffirmativeFormerEquityAccountedInterest(query: string): boolean {
 function hasExplicitCommonControlCombination(query: string): boolean {
   const positive = /\b(?:under common[- ]control|common[- ]control (?:business )?(?:combination|transaction))\b/i.test(query);
   const explicitlyDenied = /\b(?:not|never|no longer|isn't|is not|wasn't|was not)\b[\s\S]{0,35}\b(?:under common[- ]control|common[- ]control (?:business )?(?:combination|transaction))\b/i.test(query);
-  const uncertain = /\b(?:do not know|does not know|don't know|doesn't know|unknown|unclear|uncertain|not sure|not certain|cannot confirm|can't confirm)\b[\s\S]{0,55}\b(?:common[- ]control|under common[- ]control)\b/i.test(query);
+  const uncertain = splitFactClauses(query).some(clause => isScopeUncertaintyClause(clause.text) ||
+    (isInterrogativeFactClause(clause) && /\b(?:common[- ]control|under common[- ]control)\b/i.test(clause.text)));
   return positive && !explicitlyDenied && !uncertain;
 }
 

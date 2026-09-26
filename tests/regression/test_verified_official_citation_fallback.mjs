@@ -3,9 +3,11 @@ import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriev
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { resolveMappedOfficialSourceFallback } from '../../src/services/groundingContextBuilder.ts';
-import { defaultCitationVerifier } from '../../src/verification/citationVerifier.ts';
+import { CitationVerifier, defaultCitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { buildSsoUrl, getSafeOfficialUrl, sanitizeStatutoryLinks } from '../../src/utils/statutoryLinkResolver.ts';
-import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
+import { querySingaporeStatutes, SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
+import { hasVerifiedSourceUrlProvenance, isVerifiedLegacyStandardUrl } from '../../src/standards/approvedSourceRegistry.ts';
+import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 import { assembleDeterministicResponse } from '../../src/engine/responseAssembler.ts';
 
@@ -64,6 +66,62 @@ async function run() {
   assert.equal(masFaqRecord.urlVerificationStatus, 'VERIFIED');
   assert.equal(getSafeOfficialUrl(masFaq.canonicalUrl, masFaq.actTitle, masFaq.sectionOrSchedule, 'MAS'), masFaq.canonicalUrl);
 
+  const originalTestUrlRecord = UNIFIED_SOURCE_REGISTRY.TEST_VERIFIED_PARENTHESES_URL;
+  const verifiedParenthesesUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-input-tax';
+  try {
+    UNIFIED_SOURCE_REGISTRY.TEST_VERIFIED_PARENTHESES_URL = {
+      ...masFaqRecord,
+      id: 'TEST_VERIFIED_PARENTHESES_URL',
+      authority: 'IRAS',
+      authorityName: 'Inland Revenue Authority of Singapore',
+      officialSourceUrl: verifiedParenthesesUrl,
+      canonicalSourceUrl: verifiedParenthesesUrl,
+      standardOrActCode: 'TEST URL',
+      paragraphOrSection: 'Test URL',
+      urlVerificationStatus: 'VERIFIED'
+    };
+    const encodedParenthesesLink = sanitizeStatutoryLinks(`[verified IRAS page](${verifiedParenthesesUrl})`);
+    assert.equal(encodedParenthesesLink, `[verified IRAS page](${verifiedParenthesesUrl.replace('(', '%28').replace(')', '%29')})`);
+    assert.equal(sanitizeStatutoryLinks(encodedParenthesesLink), encodedParenthesesLink,
+      'A verified URL with literal parentheses remains trusted after Markdown-safe encoding and a second sanitize pass.');
+  } finally {
+    if (originalTestUrlRecord) UNIFIED_SOURCE_REGISTRY.TEST_VERIFIED_PARENTHESES_URL = originalTestUrlRecord;
+    else delete UNIFIED_SOURCE_REGISTRY.TEST_VERIFIED_PARENTHESES_URL;
+  }
+
+  const masCanonicalUrl = masFaqRecord.canonicalSourceUrl;
+  const masParsedUrl = new URL(masFaq.canonicalUrl);
+  const masExplicitDefaultPortUrl = `${masParsedUrl.protocol}//${masParsedUrl.hostname}:443${masParsedUrl.pathname}${masParsedUrl.search}${masParsedUrl.hash}`;
+  assert.equal(hasVerifiedSourceUrlProvenance(masFaqRecord), true,
+    'An explicitly verified URL remains trusted when it matches its canonical snapshot.');
+  const mutatedVerifiedUrlRecords = [
+    { ...masFaqRecord, officialSourceUrl: `${masFaq.canonicalUrl}/different-path` },
+    { ...masFaqRecord, officialSourceUrl: masFaq.canonicalUrl.replace('https://', 'http://') },
+    { ...masFaqRecord, officialSourceUrl: masFaq.canonicalUrl.replace('https://', 'https://user@') },
+    { ...masFaqRecord, officialSourceUrl: masExplicitDefaultPortUrl }
+  ];
+  for (const record of mutatedVerifiedUrlRecords) {
+    assert.equal(record.urlVerificationStatus, 'VERIFIED', 'The mutation deliberately leaves the stale VERIFIED marker in place.');
+    assert.equal(record.canonicalSourceUrl, masCanonicalUrl, 'The checked canonical snapshot remains unchanged.');
+    assert.equal(hasVerifiedSourceUrlProvenance(record), false,
+      `The shared URL provenance gate rejects changed or insecure URLs: ${record.officialSourceUrl}`);
+  }
+  const originalMutatedMasUrlRecord = UNIFIED_SOURCE_REGISTRY.TEST_MUTATED_VERIFIED_MAS_URL;
+  try {
+    UNIFIED_SOURCE_REGISTRY.TEST_MUTATED_VERIFIED_MAS_URL = {
+      ...mutatedVerifiedUrlRecords[0],
+      id: 'TEST_MUTATED_VERIFIED_MAS_URL'
+    };
+    const changedSameHostUrl = mutatedVerifiedUrlRecords[0].officialSourceUrl;
+    assert.equal(getSafeOfficialUrl(changedSameHostUrl), '',
+      'The registered-link resolver rejects a changed path on the same approved host while the prior VERIFIED marker remains.');
+    assert.equal(sanitizeStatutoryLinks(`[changed MAS page](${changedSameHostUrl})`), 'changed MAS page',
+      'Sanitization cannot expose a same-host URL mutation.');
+  } finally {
+    if (originalMutatedMasUrlRecord) UNIFIED_SOURCE_REGISTRY.TEST_MUTATED_VERIFIED_MAS_URL = originalMutatedMasUrlRecord;
+    else delete UNIFIED_SOURCE_REGISTRY.TEST_MUTATED_VERIFIED_MAS_URL;
+  }
+
   // Genuine IFRS Foundation IFRS 10 wording qualifies for the mapped control topic.
   const officialControlPage = defaultExternalSourceValidator.validateTopicContent(ifrs10Html, topicExpectation);
   assert.equal(officialControlPage.isValid, true);
@@ -104,16 +162,87 @@ async function run() {
 
   // Verified stored URLs are preferred over model-supplied strings; citations require exact registered URLs.
   const section14 = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14_GENERAL_DEDUCTION;
-  assert.equal(getSafeOfficialUrl(inventedIrasUrl, 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), section14.canonicalUrl);
+  assert.equal(getSafeOfficialUrl(inventedIrasUrl, 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), '',
+    'A sourceStatus-VERIFIED statute record cannot authorize its URL without URL-specific provenance');
   const validStoredCitation = {
     standard: 'Income Tax Act 1947',
     paragraph: 'Section 14(1)',
     authority: 'IRAS',
     officialSourceUrl: section14.canonicalUrl
   };
-  assert.equal(defaultCitationVerifier.verifyCitation(validStoredCitation, 'IRAS').isValid, true);
+  assert.equal(defaultCitationVerifier.verifyCitation(validStoredCitation, 'IRAS').status, 'NON_CANONICAL_URL',
+    'A sourceStatus-VERIFIED rule with no URL provenance does not produce a clickable citation');
   const alteredCitation = { ...validStoredCitation, officialSourceUrl: `${section14.canonicalUrl}unverified-fragment` };
   assert.equal(defaultCitationVerifier.verifyCitation(alteredCitation, 'IRAS').status, 'NON_CANONICAL_URL');
+
+  const section14Record = defaultSourceRetriever.getSourceById('ITA_SEC14_GENERAL_DEDUCTION');
+  assert.equal(section14Record.sourceStatus, 'VERIFIED');
+  assert.notEqual(section14Record.urlVerificationStatus, 'VERIFIED');
+  const staleBrokenUrl = 'https://www.iras.gov.sg/taxes/income-tax/stale-section-14';
+  const staleRuleRecord = { ...section14Record, officialSourceUrl: staleBrokenUrl };
+  const staleUrlVerifier = new CitationVerifier({
+    getSourceById: id => id === staleRuleRecord.id ? staleRuleRecord : undefined,
+    findSourcesByStandardOrAct: () => [staleRuleRecord],
+    retrieveSources: async () => []
+  });
+  assert.equal(staleUrlVerifier.verifyCitation({ ...validStoredCitation, officialSourceUrl: staleBrokenUrl }, 'IRAS').status, 'NON_CANONICAL_URL',
+    'Validated local statutory content remains separate from the stale public URL');
+  assert.equal(getSafeOfficialUrl(staleBrokenUrl), '');
+  assert.equal(sanitizeStatutoryLinks(`[stale source](${staleBrokenUrl})`), 'stale source',
+    'A stale deep link is not exposed in rendered answer text.');
+  assert.ok(querySingaporeStatutes('Section 14 wholly and exclusively business expenses').some(rule => rule.id === section14.id),
+    'Local statutory knowledge remains queryable when its public URL cannot be verified');
+
+  const verifiedSnapshotUrl = 'https://www.iras.gov.sg/taxes/income-tax/verified-section-14';
+  for (const mutatedUrl of [
+    'https://www.iras.gov.sg/taxes/income-tax/changed-section-14',
+    verifiedSnapshotUrl.replace('https://', 'http://'),
+    verifiedSnapshotUrl.replace('https://', 'https://user@'),
+    verifiedSnapshotUrl.replace('https://www.iras.gov.sg', 'https://www.iras.gov.sg:443')
+  ]) {
+    const mutatedVerifiedRecord = {
+      ...section14Record,
+      officialSourceUrl: mutatedUrl,
+      canonicalSourceUrl: verifiedSnapshotUrl,
+      urlVerificationStatus: 'VERIFIED'
+    };
+    const mutatedVerifier = new CitationVerifier({
+      getSourceById: id => id === mutatedVerifiedRecord.id ? mutatedVerifiedRecord : undefined,
+      findSourcesByStandardOrAct: () => [mutatedVerifiedRecord],
+      retrieveSources: async () => []
+    });
+    const mutatedCitation = { ...validStoredCitation, officialSourceUrl: mutatedUrl };
+    assert.equal(mutatedVerifier.verifyCitation(mutatedCitation, 'IRAS').status, 'NON_CANONICAL_URL',
+      `Citation verification rejects stale, HTTP, or credential-bearing URL identity: ${mutatedUrl}`);
+  }
+
+  const ifrs9Url = 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/';
+  assert.equal(isVerifiedLegacyStandardUrl(ifrs9Url, 'SFRS(I) 9'), true);
+  assert.equal(isVerifiedLegacyStandardUrl(ifrs9Url, 'SFRS(I) 10'), false,
+    'The legacy compatibility URL applies only to its declared standard identity.');
+  assert.equal(getSafeOfficialUrl(ifrs9Url), ifrs9Url, 'The narrow legacy allowlist keeps the existing SFRS(I) 9 URL usable');
+  for (const modifiedLegacyUrl of [
+    `${ifrs9Url}?redirect=elsewhere`,
+    `${ifrs9Url}#modified`,
+    ifrs9Url.replace(/\/$/, ''),
+    ifrs9Url.replace('/ifrs-9-financial', '/IFRS-9-financial'),
+    ifrs9Url.replace('https://www.ifrs.org', 'http://www.ifrs.org'),
+    ifrs9Url.replace('https://www.ifrs.org', 'https://user@www.ifrs.org'),
+    ifrs9Url.replace('https://www.ifrs.org', 'https://www.ifrs.org:443')
+  ]) {
+    assert.equal(isVerifiedLegacyStandardUrl(modifiedLegacyUrl, 'SFRS(I) 9'), false,
+      `Modified legacy allowlist URL must fail exact URL provenance: ${modifiedLegacyUrl}`);
+    assert.equal(getSafeOfficialUrl(modifiedLegacyUrl), '');
+  }
+  const ifrs9Record = defaultSourceRetriever.findSourcesByStandardOrAct('SFRS(I) 9')
+    .find(record => record.officialSourceUrl === ifrs9Url);
+  assert.ok(ifrs9Record, 'The verified local SFRS(I) 9 source remains in the source registry');
+  assert.equal(defaultCitationVerifier.verifyCitation({
+    standard: ifrs9Record.standardOrActCode,
+    paragraph: ifrs9Record.paragraphOrSection,
+    authority: ifrs9Record.authority,
+    officialSourceUrl: ifrs9Url
+  }).isValid, true, 'The exact explicitly grandfathered SFRS(I) 9 URL remains usable');
 
   // Mapped retrieval uses an explicit pointer, fetches its topic, and keeps evidence CANDIDATE-only.
   const mappedRetriever = new ControlledWebRetriever(undefined, new SourceCache());
@@ -138,6 +267,7 @@ async function run() {
   assert.equal(candidate.sourceStatus, 'NEEDS_REVIEW');
   assert.equal(candidate.provenance, 'LIVE_EXTERNAL');
   assert.equal(candidate.officialSourceUrl, ifrs10Url);
+  assert.equal(candidate.canonicalSourceUrl, ifrs10Url, 'The candidate snapshots its validated final URL.');
   assert.equal(candidate.authority, 'ACRA', 'Singapore accounting authority remains separate from the page publisher');
   assert.equal(candidate.sourcePublisher, 'IFRS Foundation', 'IFRS-hosted source is attributed to its actual publisher');
   assert.equal(candidate.authorityName, 'IFRS Foundation');
@@ -161,6 +291,18 @@ async function run() {
   assert.equal(liveVerification.isValid, true);
   assert.equal(liveVerification.matchedRecord.sourcePublisher, 'IFRS Foundation');
   assert.equal(getSafeOfficialUrl(candidate.officialSourceUrl, candidate.standardOrActCode, candidate.paragraphOrSection, 'ACRA', [candidate]), ifrs10Url);
+
+  const mutatedLiveCandidate = {
+    ...candidate,
+    officialSourceUrl: 'https://www.ifrs.org/issued-standards/list-of-standards/changed-ifrs-10/',
+    canonicalSourceUrl: candidate.canonicalSourceUrl
+  };
+  const mutatedLiveCitation = { ...liveCitation, officialSourceUrl: mutatedLiveCandidate.officialSourceUrl };
+  assert.equal(getSafeOfficialUrl(mutatedLiveCandidate.officialSourceUrl, mutatedLiveCandidate.standardOrActCode,
+    mutatedLiveCandidate.paragraphOrSection, 'ACRA', [mutatedLiveCandidate]), '',
+  'The live resolver rejects a same-approved-host URL mutation but retains the validated final URL for the unmodified candidate.');
+  assert.equal(defaultCitationVerifier.verifyCitation(mutatedLiveCitation, 'ACRA', [mutatedLiveCandidate]).isValid, false,
+    'Live citation validation rejects changed URL identity without bypassing lifecycle or answer-scope qualification.');
 
   const citationContext = {
     classification: { intent: 'STATUTORY_ADVISORY', primaryDomain: 'ACCOUNTING', taxAnalysisRequired: false, authorities: ['ACRA'], topicIds: [] },

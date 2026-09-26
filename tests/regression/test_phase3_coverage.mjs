@@ -5,6 +5,7 @@ import { UNIFIED_SOURCE_REGISTRY, getAllAuthoritativeSources, buildUnifiedSource
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { defaultCitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { evaluateFastPathEligibility } from '../../src/services/geminiService.ts';
+import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
 
 async function runPhase3Tests() {
   console.log('=== RUNNING PHASE 3: BETTER EVIDENCE COVERAGE & TEMPORAL TESTS ===\n');
@@ -399,12 +400,15 @@ async function runPhase3Tests() {
     text: 'verbatim statute excerpt'
   };
   const ver13W = defaultCitationVerifier.verifyCitation(cite13W);
-  assert.strictEqual(ver13W.status, 'VERIFIED_PRIMARY_SOURCE');
-  assert.strictEqual(ver13W.isValid, true);
-  assert.strictEqual(ver13W.isAuthoritativePrimarySource, true);
   assert(ver13W.matchedRecord, 'Matched record must exist');
   assert.strictEqual(ver13W.matchedRecord.freshnessStatus, 'ACTIVE_CURRENT');
-  console.log('✓ 10A. Proved: Section 13W citation verified as ACTIVE_CURRENT VERIFIED_PRIMARY_SOURCE');
+  assert.strictEqual(ver13W.matchedRecord.sourceStatus, 'VERIFIED', 'Section 13W source content remains verified');
+  assert.strictEqual(ver13W.matchedRecord.isVerbatimText, true, 'Section 13W remains verbatim primary-source content');
+  assert.strictEqual(ver13W.status, 'NON_CANONICAL_URL', 'Source-content verification alone must not verify the submitted URL');
+  assert.strictEqual(ver13W.isValid, false, 'A URL without URL-specific provenance must not be a valid clickable citation');
+  assert.strictEqual(getSafeOfficialUrl(cite13W.officialSourceUrl, cite13W.standard, cite13W.paragraph, cite13W.authority), '',
+    'The unverified Section 13W URL must be withheld by the display gate');
+  console.log('✓ 10A. Proved: Section 13W content remains current and verbatim while its unverified URL is rejected');
   passed++;
 
   // 10B: Historical 8% GST Rate Citation

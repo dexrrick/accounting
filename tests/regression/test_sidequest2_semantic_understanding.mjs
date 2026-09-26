@@ -3,6 +3,8 @@ import { defaultTransactionUnderstandingService } from '../../src/services/trans
 import { defaultAccountingGuardrails } from '../../src/engine/accountingGuardrails.ts';
 import { isDeterministicFixture, parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { querySingaporeStatutes } from '../../src/standards/singaporeStatutesKnowledge.ts';
+import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
 
 async function runSideQuest2Tests() {
   console.log('================================================================');
@@ -196,10 +198,20 @@ async function runSideQuest2Tests() {
   console.log('\n[8. END-TO-END OFFLINE PIPELINE EXECUTION]');
   const result = await processAccountingQuery(bugQuery, null, 'SFRS_I');
 
-  // Verify grounded content
-  assert.ok(result.messageText.includes('Companies Act 1967 — Section 68'), 'Response must link the verified Companies Act Section 68 source');
+  // Local statutory content remains available, but source-content status alone
+  // does not establish that its URL is safe to display.
+  const section68Rule = querySingaporeStatutes('Companies Act 1967 Section 68 share capital')
+    .find(rule => rule.id === 'ACRA_SEC68_NO_PAR_VALUE_SHARES');
+  assert.ok(section68Rule?.verbatimStatuteText.includes('no par or nominal value'),
+    'Section 68 statutory content must remain available locally for grounding');
+  assert.equal(getSafeOfficialUrl(section68Rule.canonicalUrl, 'Companies Act 1967', 'Section 68', 'ACRA'), '',
+    'A VERIFIED source-content record without URL-specific provenance must not yield a clickable link');
+
+  // Verify grounded accounting content
   assert.ok(result.messageText.includes('Share Capital'), 'Response must cite Share Capital under Equity');
   assert.ok(result.messageText.includes('Amount Due from Shareholder'), 'Response must cite Amount Due from Shareholder');
+  assert.doesNotMatch(result.messageText, /\]\(https?:\/\/[^)]+\)/,
+    'The response must not emit an unverified statutory URL as a markdown link');
 
   // Negative assertions
   assert.ok(!result.messageText.includes('Financial Asset at FVTPL'), 'Response must NOT mention Financial Asset at FVTPL');
@@ -207,7 +219,7 @@ async function runSideQuest2Tests() {
   assert.ok(!result.messageText.includes('1.34 SGD/USD'), 'Response must NOT calculate FX translation');
   assert.ok(!result.messageText.includes('Cash at Bank (USD Account)'), 'Response must NOT credit USD Cash at Bank');
 
-  console.log('✓ 8A. Proved: End-to-end response links the verified Section 68 source and shows Share Capital and Amount Due from Shareholder');
+  console.log('✓ 8A. Proved: Section 68 content and shareholder accounting remain available while its unverified URL is withheld');
   console.log('✓ 8B. Proved: Zero mention of Financial Asset at FVTPL, Foreign Shares Investment, USD, or FX translation');
   passed += 2;
 

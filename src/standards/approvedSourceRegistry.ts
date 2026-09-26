@@ -85,6 +85,52 @@ export function isApprovedSingaporeSourceUrl(url?: string): boolean {
   return getApprovedSourceTierForUrl(url) !== undefined;
 }
 
+type SourceUrlProvenance = {
+  officialSourceUrl?: string;
+  canonicalSourceUrl?: string;
+  urlVerificationStatus?: string;
+  standardOrActCode?: string;
+};
+
+/**
+ * Normalizes only URL identity details needed for an exact provenance match.
+ * Parentheses are decoded because Markdown output safely percent-encodes them
+ * in destinations; path, query, fragment, scheme, and host identity otherwise
+ * remain part of the comparison.
+ */
+function normalizeVerifiedOfficialUrl(rawUrl?: string): string | undefined {
+  if (!rawUrl) return undefined;
+  try {
+    const trimmed = rawUrl.trim();
+    const parsed = new URL(trimmed);
+    const authority = trimmed.match(/^https:\/\/([^/?#]+)/i)?.[1];
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port ||
+        !authority || authority.includes('@') || authority.includes(':') || !isApprovedSingaporeSourceUrl(trimmed)) {
+      return undefined;
+    }
+    const path = parsed.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')');
+    return `${parsed.origin}${path}${parsed.search}${parsed.hash}`;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Checks URL provenance independently from source-content status. An explicit
+ * VERIFIED marker is trusted only when the current URL still matches the
+ * canonical URL snapshot that was checked. The legacy exception is exact and
+ * limited to its declared standard-level URL.
+ */
+export function hasVerifiedSourceUrlProvenance(record: SourceUrlProvenance): boolean {
+  if (record.urlVerificationStatus === 'VERIFIED') {
+    const officialUrl = normalizeVerifiedOfficialUrl(record.officialSourceUrl);
+    const canonicalUrl = normalizeVerifiedOfficialUrl(record.canonicalSourceUrl);
+    return Boolean(officialUrl && canonicalUrl && officialUrl === canonicalUrl);
+  }
+  if (record.urlVerificationStatus !== undefined) return false;
+  return isVerifiedLegacyStandardUrl(record.officialSourceUrl, record.standardOrActCode);
+}
+
 /**
  * A narrow compatibility allowlist for the existing validated SFRS(I) 9 pack.
  * This is a standard-level public landing page, not paragraph-level evidence.
@@ -98,15 +144,10 @@ const VERIFIED_LEGACY_STANDARD_URLS: ReadonlyArray<{ url: string; standardCodes:
 
 export function isVerifiedLegacyStandardUrl(url: string | undefined, standardCode: string | undefined): boolean {
   if (!url || !standardCode) return false;
-  try {
-    const parsed = new URL(url);
-    const normalized = `${parsed.hostname.toLowerCase().replace(/^www\./, '')}${parsed.pathname.toLowerCase().replace(/\/+$/, '')}`;
-    return VERIFIED_LEGACY_STANDARD_URLS.some(entry => {
-      const candidate = new URL(entry.url);
-      const candidateNormalized = `${candidate.hostname.toLowerCase().replace(/^www\./, '')}${candidate.pathname.toLowerCase().replace(/\/+$/, '')}`;
-      return normalized === candidateNormalized && entry.standardCodes.some(code => code.toLowerCase() === standardCode.toLowerCase());
-    });
-  } catch {
-    return false;
-  }
+  const normalizedUrl = normalizeVerifiedOfficialUrl(url);
+  if (!normalizedUrl) return false;
+  return VERIFIED_LEGACY_STANDARD_URLS.some(entry => {
+    const candidateUrl = normalizeVerifiedOfficialUrl(entry.url);
+    return normalizedUrl === candidateUrl && entry.standardCodes.some(code => code.toLowerCase() === standardCode.toLowerCase());
+  });
 }

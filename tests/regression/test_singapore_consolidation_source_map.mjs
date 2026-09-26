@@ -270,6 +270,137 @@ assert.ok(questionedGoodwillEligibility.scenarioState.missingFacts?.includes('Wh
 assert.ok(questionedGoodwillEligibility.scenarioState.missingFacts?.includes('Whether the transaction is within SFRS(I) 3 scope, including common-control status'),
   'Uncertain business nature and interrogative scope wording remain unresolved goodwill facts.');
 
+const affirmativeBusinessGoodwill = answerConsolidationKnowledgeQuery(
+  'We acquired a business. How much goodwill should we recognise?',
+  'SFRS_I'
+);
+assert.ok(affirmativeBusinessGoodwill);
+assert.ok(!affirmativeBusinessGoodwill.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+  'An explicit affirmative statement that we acquired a business satisfies the business-nature fact.');
+
+const affirmativeBusinessCombinationGoodwill = answerConsolidationKnowledgeQuery(
+  'This was a business combination. How much goodwill should we recognise?',
+  'SFRS_I'
+);
+assert.ok(affirmativeBusinessCombinationGoodwill);
+assert.ok(!affirmativeBusinessCombinationGoodwill.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+  'An explicit statement that the transaction was a business combination satisfies business nature.');
+assert.ok(affirmativeBusinessCombinationGoodwill.scenarioState.missingFacts?.includes('Whether the transaction is within SFRS(I) 3 scope, including common-control status'),
+  'Business-combination wording does not resolve the separate SFRS(I) 3 scope fact.');
+
+const affirmativeBusinessCombinationForms = answerConsolidationKnowledgeQuery(
+  'We completed a business combination. How much goodwill should we recognise?',
+  'SFRS_I'
+);
+assert.ok(affirmativeBusinessCombinationForms);
+assert.ok(!affirmativeBusinessCombinationForms.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+  'An explicit statement that we completed a business combination satisfies business nature.');
+
+const affirmativeBusinessUnknownCommonControl = answerConsolidationKnowledgeQuery(
+  'We acquired a business, but common-control status is unknown. How much goodwill should we recognise?',
+  'SFRS_I'
+);
+assert.ok(affirmativeBusinessUnknownCommonControl);
+assert.ok(!affirmativeBusinessUnknownCommonControl.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+  'Uncertainty about common control does not undo the separate affirmative business-nature fact.');
+assert.ok(affirmativeBusinessUnknownCommonControl.scenarioState.missingFacts?.includes('Whether the transaction is within SFRS(I) 3 scope, including common-control status'),
+  'Common-control uncertainty remains a missing scope fact.');
+
+const affirmativeBusinessUnknownCommonControlWithAnd = answerConsolidationKnowledgeQuery(
+  'We acquired a business and do not know whether this was a common-control transaction. How much goodwill should we recognise?',
+  'SFRS_I'
+);
+assert.ok(affirmativeBusinessUnknownCommonControlWithAnd);
+assert.ok(!affirmativeBusinessUnknownCommonControlWithAnd.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+  'An and-linked common-control scope uncertainty does not undo the affirmative business-nature fact.');
+assert.ok(affirmativeBusinessUnknownCommonControlWithAnd.scenarioState.missingFacts?.includes('Whether the transaction is within SFRS(I) 3 scope, including common-control status'),
+  'The and-linked common-control uncertainty remains a missing scope fact.');
+
+for (const [query, description] of [
+  [
+    'We acquired a business, but the target may be under common control. How much goodwill should we recognise?',
+    'A possible common-control relationship involving the target does not undo an affirmative business-nature fact.'
+  ],
+  [
+    'We acquired a business and do not know if the target is under common control. How much goodwill should we recognise?',
+    'An and-linked target common-control uncertainty does not undo an affirmative business-nature fact.'
+  ]
+]) {
+  const targetCommonControlUncertainty = answerConsolidationKnowledgeQuery(query, 'SFRS_I');
+  assert.ok(targetCommonControlUncertainty, `Target common-control uncertainty remains on the goodwill missing-facts path: ${query}`);
+  assert.ok(!targetCommonControlUncertainty.scenarioState.missingFacts?.includes('Whether the acquired set is a business'), description);
+  assert.ok(targetCommonControlUncertainty.scenarioState.missingFacts?.includes('Whether the transaction is within SFRS(I) 3 scope, including common-control status'),
+    'Target common-control uncertainty leaves SFRS(I) 3 scope unresolved.');
+}
+
+const affirmativeBusinessBeforeScopeQuestion = answerConsolidationKnowledgeQuery(
+  'We acquired a business, is the transaction within SFRS(I) 3 scope? How much goodwill should we recognise?',
+  'SFRS_I'
+);
+assert.ok(affirmativeBusinessBeforeScopeQuestion);
+assert.ok(!affirmativeBusinessBeforeScopeQuestion.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+  'A separate comma-led scope question does not turn the preceding business statement into a question.');
+assert.ok(affirmativeBusinessBeforeScopeQuestion.scenarioState.missingFacts?.includes('Whether the transaction is within SFRS(I) 3 scope, including common-control status'),
+  'The comma-led SFRS(I) 3 scope question remains unanswered.');
+
+const definitionBusinessGoodwill = answerConsolidationKnowledgeQuery(
+  'The acquired set meets the definition of a business. How much goodwill should we recognise?',
+  'SFRS_I'
+);
+assert.ok(definitionBusinessGoodwill);
+assert.ok(!definitionBusinessGoodwill.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+  'Explicit wording that the acquired set meets the definition satisfies the business-nature fact.');
+
+for (const query of [
+  'We acquired a set. How much goodwill should we recognise?',
+  'Is the acquired set a business? How much goodwill should we recognise?',
+  'We acquired a business? How much goodwill should we recognise?',
+  'We do not know whether the acquired set is a business. How much goodwill should we recognise?',
+  'The acquired set may be a business. How much goodwill should we recognise?',
+  'Business combination. How much goodwill should we recognise?',
+  'Is this a business combination? How much goodwill should we recognise?',
+  'This may be a business combination. How much goodwill should we recognise?',
+  'We acquired a business, but is the acquired set a business? How much goodwill should we recognise?',
+  'We acquired a business, but we do not know whether the acquired set is a business. How much goodwill should we recognise?',
+  'We acquired a business, but is it a business? How much goodwill should we recognise?',
+  'We acquired a business, but is it not a business? How much goodwill should we recognise?',
+  'We acquired a business, but maybe it was an asset acquisition. How much goodwill should we recognise?',
+  'We acquired a business, but it may not meet the definition of a business. How much goodwill should we recognise?',
+  'We acquired a business, but could it instead be an asset acquisition? How much goodwill should we recognise?'
+]) {
+  const unresolvedBusiness = answerConsolidationKnowledgeQuery(query, 'SFRS_I');
+  assert.ok(unresolvedBusiness, `Goodwill question remains on the local missing-facts path: ${query}`);
+  assert.ok(unresolvedBusiness.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+    `Non-affirmative business wording keeps the business-nature fact missing: ${query}`);
+}
+
+for (const query of [
+  'We acquired a business, but is it under common control? How much goodwill should we recognise?',
+  'We acquired a business, but is it a business combination under common control? How much goodwill should we recognise?'
+]) {
+  const unresolvedScope = answerConsolidationKnowledgeQuery(query, 'SFRS_I');
+  assert.ok(unresolvedScope, `A common-control question remains on the local goodwill missing-facts path: ${query}`);
+  assert.ok(!unresolvedScope.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+    `A common-control question does not undo an earlier affirmative business-nature fact: ${query}`);
+  assert.ok(unresolvedScope.scenarioState.missingFacts?.includes('Whether the transaction is within SFRS(I) 3 scope, including common-control status'),
+    `The common-control question leaves SFRS(I) 3 scope unresolved: ${query}`);
+}
+
+assert.equal(answerConsolidationKnowledgeQuery(
+  'This was an asset acquisition, not a business. How much goodwill should we recognise?',
+  'SFRS_I'
+), undefined, 'Explicit non-business asset acquisitions do not enter the local business-combination goodwill route.');
+
+for (const query of [
+  'Is this an asset acquisition? How much goodwill should we recognise?',
+  'We do not know whether this is an asset acquisition. How much goodwill should we recognise?'
+]) {
+  const unresolvedAcquisitionType = answerConsolidationKnowledgeQuery(query, 'SFRS_I');
+  assert.ok(unresolvedAcquisitionType, `Questioned or uncertain asset-acquisition classification remains unresolved: ${query}`);
+  assert.ok(unresolvedAcquisitionType.scenarioState.missingFacts?.includes('Whether the acquired set is a business'),
+    `Uncertain acquisition nature remains a missing fact: ${query}`);
+}
+
 const inverseOrderGoodwillMissingFacts = answerConsolidationKnowledgeQuery(
   'We acquired control of a business on 1 October 2025. Consideration transferred was SGD 1,000,000. Fair value of identifiable net assets is not provided. NCI measurement basis is unknown. It is unknown whether the transaction is within SFRS(I) 3 scope. The fair value of any previously held interest is not provided. How much goodwill should we recognise?',
   'SFRS_I'
@@ -361,14 +492,39 @@ assert.equal(renderedWithoutContext.sourceMapFallbackTrace, undefined,
 const original = UNIFIED_SOURCE_REGISTRY.SFRSI10_SOURCE_MAP;
 try {
   UNIFIED_SOURCE_REGISTRY.SFRSI10_SOURCE_MAP = { ...original, urlVerificationStatus: 'CANDIDATE' };
-  assert.equal(answerConsolidationKnowledgeQuery(controlQuestion, 'SFRS_I'), undefined,
-    'If a mapped URL loses verified status, local citations fail closed.');
+  const localWithoutVerifiedUrl = answerConsolidationKnowledgeQuery(controlQuestion, 'SFRS_I');
+  assert.ok(localWithoutVerifiedUrl,
+    'Validated local consolidation knowledge remains available when a public pointer URL loses verified status.');
+  assert.deepEqual(localWithoutVerifiedUrl.sourceMapFallbackTrace.finalVerifiedUrls, [],
+    'A pointer without URL verification must not appear among final verified URLs.');
+  assert.doesNotMatch(localWithoutVerifiedUrl.messageText, /\]\(https:\/\//,
+    'A stale or candidate pointer URL is not exposed as a clickable citation.');
+  const sameHostPathMutation = new URL(original.officialSourceUrl).origin + '/modified-source-map-path';
+  UNIFIED_SOURCE_REGISTRY.SFRSI10_SOURCE_MAP = { ...original, officialSourceUrl: sameHostPathMutation };
+  const localWithMutatedPointer = answerConsolidationKnowledgeQuery(controlQuestion, 'SFRS_I');
+  assert.ok(localWithMutatedPointer,
+    'Validated local consolidation guidance remains available after a same-host pointer mutation.');
+  assert.deepEqual(localWithMutatedPointer.sourceMapFallbackTrace.finalVerifiedUrls, [],
+    'A stale VERIFIED marker cannot authorize a different path on the same approved host.');
+  assert.doesNotMatch(localWithMutatedPointer.messageText, /\]\(https:\/\//,
+    'A mutated same-host pointer is not emitted as a clickable citation.');
+  UNIFIED_SOURCE_REGISTRY.SFRSI10_SOURCE_MAP = {
+    ...original,
+    officialSourceUrl: 'https://example.com/modified-standard-url'
+  };
+  const modifiedPointerUrl = answerConsolidationKnowledgeQuery(controlQuestion, 'SFRS_I');
+  assert.ok(modifiedPointerUrl, 'Local rule content remains available when the pointer URL is unusable.');
+  assert.deepEqual(modifiedPointerUrl.sourceMapFallbackTrace.finalVerifiedUrls, [],
+    'A modified pointer URL outside approved source domains is not displayed, even if its old URL status remains VERIFIED.');
   UNIFIED_SOURCE_REGISTRY.SFRSI10_SOURCE_MAP = { ...original, lifecycleState: 'STAGED' };
   assert.equal(answerConsolidationKnowledgeQuery(controlQuestion, 'SFRS_I'), undefined,
     'Staged source-map pointers cannot support a local citation.');
   UNIFIED_SOURCE_REGISTRY.SFRSI10_SOURCE_MAP = { ...original, lastVerifiedDate: '2020-01-01' };
-  assert.equal(answerConsolidationKnowledgeQuery(controlQuestion, 'SFRS_I'), undefined,
-    'An overdue source-map pointer cannot support a local citation.');
+  const localWithOverduePointer = answerConsolidationKnowledgeQuery(controlQuestion, 'SFRS_I');
+  assert.ok(localWithOverduePointer,
+    'An overdue URL verification date does not invalidate the separate local consolidation rule.');
+  assert.deepEqual(localWithOverduePointer.sourceMapFallbackTrace.finalVerifiedUrls, [],
+    'An overdue source-map pointer is not displayed as a current verified link.');
 } finally {
   UNIFIED_SOURCE_REGISTRY.SFRSI10_SOURCE_MAP = original;
 }

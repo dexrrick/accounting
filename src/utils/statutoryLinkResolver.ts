@@ -1,7 +1,7 @@
 import { SINGAPORE_STATUTORY_REPOSITORY, querySingaporeStatutes } from '../standards/singaporeStatutesKnowledge';
 import { getAllAuthoritativeSources, type AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import type { StatutoryAuthority } from '../types/accounting';
-import { isAskGovSingaporeUrl, isApprovedSingaporeSourceUrl, isVerifiedLegacyStandardUrl } from '../standards/approvedSourceRegistry';
+import { hasVerifiedSourceUrlProvenance, isAskGovSingaporeUrl, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 
 /**
  * Mapping of Singapore Legislation Shortcodes to SSO Act Identifiers
@@ -41,14 +41,23 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
 // general accounting-standards landing page.
 export const SFRSI_2025_COLLECTION_URL = 'https://asc.acra.gov.sg/singapore-financial-reporting-standards-international/archives/effective-for-annual-reporting-period-beginning-on-1-january-2025';
 
-type SourceRecordMetadata = { recordRole?: string; groundingEligible?: boolean; urlVerificationStatus?: string };
+type SourceRecordMetadata = {
+  recordRole?: string;
+  groundingEligible?: boolean;
+  urlVerificationStatus?: string;
+  canonicalSourceUrl?: string;
+  standardOrActCode?: string;
+};
 
 function normalizeRegisteredUrl(rawUrl: string): string {
   try {
-    const parsed = new URL(rawUrl);
-    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-    const path = decodeURIComponent(parsed.pathname).toLowerCase().replace(/\/+$/, '');
-    return `${host}${path}${parsed.search}${parsed.hash}`;
+    const trimmed = rawUrl.trim();
+    const parsed = new URL(trimmed);
+    const authority = trimmed.match(/^https:\/\/([^/?#]+)/i)?.[1];
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port ||
+        !authority || authority.includes('@') || authority.includes(':') || !isApprovedSingaporeSourceUrl(trimmed)) return '';
+    const path = parsed.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')');
+    return `${parsed.origin}${path}${parsed.search}${parsed.hash}`;
   } catch {
     return '';
   }
@@ -62,7 +71,7 @@ function isUsableSourceRecord(record: AuthoritativeSourceRecord): boolean {
     record.lifecycleState !== 'STAGED' &&
     record.lifecycleState !== 'REJECTED' &&
     (record.sourceStatus as string) !== 'REJECTED' &&
-    (record.sourceStatus === 'VERIFIED' || metadata.urlVerificationStatus === 'VERIFIED' || isVerifiedLegacyStandardUrl(record.officialSourceUrl, record.standardOrActCode)) &&
+    hasVerifiedSourceUrlProvenance(record) &&
     Boolean(record.officialSourceUrl);
 }
 
@@ -85,27 +94,13 @@ function getUsableRegisteredRecords(verifiedEvidence: readonly AuthoritativeSour
     return metadata.recordRole === 'DISCOVERED_EVIDENCE' &&
       metadata.groundingEligible === true &&
       metadata.urlVerificationStatus === 'VERIFIED' &&
+      hasVerifiedSourceUrlProvenance(record) &&
       record.provenance === 'LIVE_EXTERNAL' &&
       record.lifecycleState === 'CANDIDATE' &&
       record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED' &&
       Boolean(record.officialSourceUrl);
   });
   return [...qualifiedLive, ...local];
-}
-
-function findRegisteredRuleUrl(
-  statuteOrAct?: string,
-  sectionOrSchedule?: string
-): string {
-  if (!statuteOrAct) return '';
-  const instrument = normalizeTopicText(statuteOrAct);
-  const rules = Object.values(SINGAPORE_STATUTORY_REPOSITORY);
-  const matchingRule = rules.find(rule => {
-    const ruleNames = [rule.actTitle, rule.actCode, rule.ruleTitle].map(normalizeTopicText);
-    const named = ruleNames.some(name => name && (instrument.includes(name) || name.includes(instrument)));
-    return rule.sourceStatus === 'VERIFIED' && named && (!sectionOrSchedule || sectionMatches(rule.sectionOrSchedule, sectionOrSchedule));
-  });
-  return matchingRule?.canonicalUrl || '';
 }
 
 function isRuleExplicitlyIdentified(rule: (typeof SINGAPORE_STATUTORY_REPOSITORY)[string], text: string): boolean {
@@ -134,7 +129,9 @@ export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
     const ruleMapped = Object.entries(ACT_CODE_TO_SSO).find(([key]) => ruleCode.includes(key))?.[1].ssoCode || ruleCode;
     return wantedCode === ruleMapped && (!sectionNumber || sectionMatches(rule.sectionOrSchedule, sectionNumber));
   });
-  return matchingRule?.canonicalUrl || '';
+  return matchingRule
+    ? getSafeOfficialUrl(undefined, matchingRule.actTitle, matchingRule.sectionOrSchedule, matchingRule.authority)
+    : '';
 }
 
 /** Resolve any legacy SSO fragment through the verified registry equivalent. */
@@ -152,7 +149,7 @@ export function canonicalizeSsoUrl(url: string): string {
         return false;
       }
     });
-    return matchingRule?.canonicalUrl || '';
+    return matchingRule ? getSafeOfficialUrl(matchingRule.canonicalUrl) : '';
   } catch {
     return url;
   }
@@ -192,9 +189,6 @@ export function getSafeOfficialUrl(
       return instrumentMatches && authorityMatches && sectionMatches(record.paragraphOrSection, sectionOrSchedule);
     });
     if (matchingRecord && isApprovedSingaporeSourceUrl(matchingRecord.officialSourceUrl)) return matchingRecord.officialSourceUrl;
-
-    const registeredRuleUrl = findRegisteredRuleUrl(statuteOrAct, sectionOrSchedule);
-    if (registeredRuleUrl && isApprovedSingaporeSourceUrl(registeredRuleUrl)) return registeredRuleUrl;
   }
 
   return '';

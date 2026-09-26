@@ -16,7 +16,7 @@ async function runTests() {
   assert(acraRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be classified as STATUTORY_ADVISORY');
   assert(acraRes.messageText.includes('Section 205C'), 'Must cite Section 205C');
   assert(acraRes.messageText.includes('10,000,000') || acraRes.messageText.includes('10M'), 'Must mention 10M threshold');
-  assert(acraRes.messageText.includes('sso.agc.gov.sg/Act/CoA1967'), 'Must link to Companies Act 1967 on SSO');
+  assert(!acraRes.messageText.includes('sso.agc.gov.sg/Act/CoA1967'), 'An unverified statutory URL must not be emitted as a link');
   console.log('✓ ACRA Audit Exemption verified successfully.\n');
 
   // TEST 2: CPF 2026 Wage Ceilings Query
@@ -54,18 +54,18 @@ async function runTests() {
   // TEST 4: Canonical SSO URL Builder
   console.log('Test 4: Canonical SSO URL Builder');
   const itaUrl = buildSsoUrl('ITA', '14(1)');
-  assert.strictEqual(itaUrl, 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-');
+  assert.strictEqual(itaUrl, '');
   const caUrl = buildSsoUrl('CA', '205C');
-  assert.strictEqual(caUrl, 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-');
+  assert.strictEqual(caUrl, '');
   const gstUrl = buildSsoUrl('GSTA', '21');
-  assert.strictEqual(gstUrl, 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P15-#pr21-');
+  assert.strictEqual(gstUrl, '');
   console.log('✓ Canonical SSO URL Builder verified successfully.\n');
 
   // TEST 5: Link Sanitizer (Anti-hallucination)
   console.log('Test 5: Link Sanitizer (Anti-hallucination)');
   const textWithFakeLink = 'Refer to [Section 14(1) Income Tax Act](https://example.com/fake-iras-pdf-1234.pdf) for deductibility.';
   const sanitized = sanitizeStatutoryLinks(textWithFakeLink);
-  assert(sanitized.includes('https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-'), 'Hallucinated link must be replaced with canonical SSO link');
+  assert.strictEqual(sanitized, 'Refer to Section 14(1) Income Tax Act for deductibility.', 'Unverified registry URLs are not substituted into model text.');
   console.log('✓ Link Sanitizer verified successfully.\n');
 
   // TEST 6: Existing Double Entry Journal (Entertainment 3k)

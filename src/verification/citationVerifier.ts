@@ -2,7 +2,7 @@ import type { StandardCitation, StatutoryAuthority } from '../types/accounting';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { defaultSourceRetriever, isAnswerGroundingEligibleSource, type ISourceRetriever } from '../retrieval/sourceRetriever';
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
-import { isApprovedSingaporeSourceUrl, isVerifiedLegacyStandardUrl } from '../standards/approvedSourceRegistry';
+import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 
 export type CitationVerificationStatus =
   | 'VERIFIED_PRIMARY_SOURCE'
@@ -52,9 +52,9 @@ export class CitationVerifier {
   private normalizeExactUrl(urlStr: string): string {
     try {
       const parsed = new URL(urlStr.trim());
-      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
-      const path = decodeURIComponent(parsed.pathname).toLowerCase().replace(/\/+$/, '');
-      return `${host}${path}${parsed.search}${parsed.hash}`;
+      if (parsed.username || parsed.password) return '';
+      const path = parsed.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')');
+      return `${parsed.origin}${path}${parsed.search}${parsed.hash}`;
     } catch {
       return '';
     }
@@ -81,6 +81,7 @@ export class CitationVerifier {
     return metadata.recordRole === 'DISCOVERED_EVIDENCE' &&
       metadata.groundingEligible === true &&
       metadata.urlVerificationStatus === 'VERIFIED' &&
+      hasVerifiedSourceUrlProvenance(record) &&
       record.provenance === 'LIVE_EXTERNAL' &&
       record.lifecycleState === 'CANDIDATE' &&
       record.sourceStatus === 'NEEDS_REVIEW' &&
@@ -89,9 +90,7 @@ export class CitationVerifier {
   }
 
   private isRegisteredUrlVerified(record: AuthoritativeSourceRecord): boolean {
-    const metadata = record as unknown as { urlVerificationStatus?: string };
-    return record.sourceStatus === 'VERIFIED' || metadata.urlVerificationStatus === 'VERIFIED' ||
-      isVerifiedLegacyStandardUrl(record.officialSourceUrl, record.standardOrActCode);
+    return hasVerifiedSourceUrlProvenance(record);
   }
 
   private verifyLiveCandidateCitation(
@@ -106,7 +105,8 @@ export class CitationVerifier {
       ((expectedAuthority === 'ASC' || expectedAuthority === 'ACRA') && record.authority === 'ACRA');
     const exactUrl = this.normalizeExactUrl(citation.officialSourceUrl || '') === this.normalizeExactUrl(record.officialSourceUrl);
     const inScope = Boolean(retrievedEvidenceScope?.includes(record));
-    const urlApproved = isApprovedSingaporeSourceUrl(record.officialSourceUrl);
+    const urlApproved = isApprovedSingaporeSourceUrl(citation.officialSourceUrl) &&
+      hasVerifiedSourceUrlProvenance(record);
     const topicSpecific = this.isTopicSpecificSourceUrl(record.officialSourceUrl);
     if (!authorityMatches || !expectedMatches) {
       return {
@@ -181,10 +181,10 @@ export class CitationVerifier {
       const sameUrl = this.normalizeExactUrl(record.officialSourceUrl) === this.normalizeExactUrl(rawUrl);
       return codeMatches && paragraphMatches && sameUrl;
     });
+    if (liveSectionMatch) {
+      return this.verifyLiveCandidateCitation(citation, liveSectionMatch, expectedAuthority, retrievedEvidenceScope);
+    }
     if (!matchedRecords || matchedRecords.length === 0) {
-      if (liveSectionMatch) {
-        return this.verifyLiveCandidateCitation(citation, liveSectionMatch, expectedAuthority, retrievedEvidenceScope);
-      }
       return {
         citation,
         status: 'SOURCE_NOT_FOUND',
@@ -204,9 +204,6 @@ export class CitationVerifier {
     });
 
     if (sectionCandidates.length === 0) {
-      if (liveSectionMatch) {
-        return this.verifyLiveCandidateCitation(citation, liveSectionMatch, expectedAuthority, retrievedEvidenceScope);
-      }
       return {
         citation,
         status: 'PARAGRAPH_NOT_FOUND',

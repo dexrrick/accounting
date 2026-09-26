@@ -61,11 +61,14 @@ const preview = createChatPreview(followUp.messageText, state);
 assert.match(preview, /prorated gross salary/i);
 assert.doesNotMatch(preview, /Official Statutory & Regulatory Verification Sources|Employment Act 1968 — Section 22/);
 const links = extractOfficialAnswerLinks(followUp.messageText);
-assert.ok(links.length > 0, 'source links remain available outside the chat preview');
+assert.deepEqual(links, [], 'Payroll and CPF calculations remain local while their unverified statutory URLs stay unlinked.');
 const citationsMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
   citations: [], advisories: [], standard: 'SFRS_I', officialAnswerLinks: links
 }));
-assert.ok(citationsMarkup.includes(links[0].title), 'footer-only official links appear in the citations tab');
+assert.match(citationsMarkup, /Singapore Statutes Online/,
+  'The statutory panel remains available for navigation when an answer has no verified source links.');
+assert.doesNotMatch(citationsMarkup, /Official links supplied with this answer|Employment Act 1968 — Section 22/,
+  'The citations panel does not invent an answer-specific link when no URL has verified provenance.');
 
 const factsMarkup = renderToStaticMarkup(React.createElement(InputHandlerPanel, {
   scenario: state, onResetToDefaults: () => {}

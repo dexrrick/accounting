@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { querySingaporeStatutes } from '../../src/standards/singaporeStatutesKnowledge.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
-import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
+import { getSafeOfficialUrl, sanitizeStatutoryLinks } from '../../src/utils/statutoryLinkResolver.ts';
 
 const classification = classifyQuestion('what is MAS 13O');
 assert.equal(classification.primaryDomain, 'MIXED');
@@ -19,11 +19,11 @@ console.log('PASS | MAS 13O routes to MAS and IRAS and retains its MAS-focused s
 const vccRules = querySingaporeStatutes('explain VCC to me');
 assert.equal(vccRules[0]?.id, 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE');
 assert.equal(vccRules[0]?.actCode, 'VCCA2018');
-assert.match(vccRules[0].canonicalUrl, /^https:\/\/sso\.agc\.gov\.sg\/Act\/VCCA2018/);
-assert.match(
-  getSafeOfficialUrl('', 'Variable Capital Companies Act 2018', 'Section 5', 'ACRA'),
-  /^https:\/\/sso\.agc\.gov\.sg\/Act\/VCCA2018/
-);
+assert.ok(vccRules[0]?.principle, 'The local VCC statutory rule remains available for routing and explanation.');
+assert.equal(getSafeOfficialUrl(vccRules[0].canonicalUrl, 'Variable Capital Companies Act 2018', 'Section 5', 'ACRA'), '',
+  'The VCC rule’s sourceStatus does not make its URL clickable without URL-specific verification.');
+assert.equal(sanitizeStatutoryLinks(`[VCC Act](${vccRules[0].canonicalUrl})`), 'VCC Act',
+  'The unverified VCC Act URL is removed from rendered markdown.');
 
 const vccScenario = await parseAccountingQuery('explain VCC to me');
 assert.notEqual(vccScenario.scenarioType, 'UNRECOGNIZED');

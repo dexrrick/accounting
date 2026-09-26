@@ -3,6 +3,7 @@ import { classifyQuestion } from '../../src/classification/questionClassifier.ts
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { defaultCitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
 
 async function runPhase1Tests() {
   console.log('=== RUNNING PHASE 1: EVIDENCE FOUNDATION BEHAVIORAL TESTS ===\n');
@@ -169,11 +170,14 @@ async function runPhase1Tests() {
     authority: 'IRAS'
   };
   const vPrimary = defaultCitationVerifier.verifyCitation(primaryCitation, 'IRAS');
-  assert.strictEqual(vPrimary.isValid, true, 'Primary citation must pass');
-  assert.strictEqual(vPrimary.isStructurallyValid, true, 'Primary citation is structurally valid');
-  assert.strictEqual(vPrimary.status, 'VERIFIED_PRIMARY_SOURCE', 'Must be tagged VERIFIED_PRIMARY_SOURCE');
-  assert.strictEqual(vPrimary.isAuthoritativePrimarySource, true, 'Must be marked authoritative primary source');
-  console.log('✓ 3B. Verbatim statutory provision verified as VERIFIED_PRIMARY_SOURCE');
+  assert.ok(vPrimary.matchedRecord, 'Primary citation must still match its statutory source record');
+  assert.strictEqual(vPrimary.matchedRecord.sourceStatus, 'VERIFIED', 'Primary statutory content remains verified');
+  assert.strictEqual(vPrimary.matchedRecord.isVerbatimText, true, 'Primary statutory content remains verbatim');
+  assert.strictEqual(vPrimary.isValid, false, 'A verified source record alone must not authorize its URL');
+  assert.strictEqual(vPrimary.status, 'NON_CANONICAL_URL', 'Missing URL-specific provenance must be reported');
+  assert.strictEqual(getSafeOfficialUrl(primaryCitation.officialSourceUrl, primaryCitation.standard, primaryCitation.paragraph, primaryCitation.authority), '',
+    'The primary citation URL must be withheld by the display gate');
+  console.log('✓ 3B. Verbatim statutory content is matched while its unverified URL is withheld');
 
   // 3C. Invalid Paragraph on Valid Source
   const invalidParaCitation = {

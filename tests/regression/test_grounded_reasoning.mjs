@@ -10,6 +10,7 @@ import { buildAccountingMessages, parseAccountingAIResponse } from '../../src/se
 import { defaultCitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
 
 console.log('=== RUNNING PHASE 2: GROUNDED GEMINI REASONING PIPELINE TESTS ===\n');
 
@@ -232,19 +233,29 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   const resultCitations = processedAi.scenarioState.directGroups[0].citations;
   const submittedCitations = mockAiOutputWithCitations.directGroups[0].citations;
 
-  // Verify Case A: Valid primary statutory source
-  const citeA = resultCitations[0];
-  assert.strictEqual(citeA.verificationStatus, 'VERIFIED_PRIMARY_SOURCE', 'Case A must be VERIFIED_PRIMARY_SOURCE');
-  assert.strictEqual(citeA.isAuthoritativePrimarySource, true, 'Case A isAuthoritativePrimarySource must be true');
-  assert.strictEqual(citeA.isStructurallyValid, true, 'Case A isStructurallyValid must be true');
-  console.log('✓ 4A. Case A: Primary statutory provision verified as VERIFIED_PRIMARY_SOURCE');
+  // The source record still supports the statutory content, but sourceStatus
+  // alone must not cause the unverified URL to appear in the answer.
+  const evidenceScope = [...testEvidenceContext.primaryEvidence, ...testEvidenceContext.officialGuidance, ...testEvidenceContext.curatedSummaries];
+  const submittedCaseA = submittedCitations[0];
+  const verificationA = defaultCitationVerifier.verifyCitation(submittedCaseA, submittedCaseA.authority, evidenceScope);
+  assert.strictEqual(verificationA.matchedRecord?.sourceStatus, 'VERIFIED', 'Case A still matches verified statutory content');
+  assert.strictEqual(verificationA.matchedRecord?.isVerbatimText, true, 'Case A still matches verbatim primary-source content');
+  assert.strictEqual(verificationA.status, 'NON_CANONICAL_URL', 'Case A URL must fail without URL-specific provenance');
+  assert.strictEqual(verificationA.isValid, false, 'Case A must not be a clickable citation');
+  assert.strictEqual(getSafeOfficialUrl(submittedCaseA.officialSourceUrl, submittedCaseA.standard, submittedCaseA.paragraph, submittedCaseA.authority), '',
+    'The display gate must withhold Case A’s unverified URL');
+  assert.deepEqual(resultCitations, [], 'An unverified URL must not be retained as a user-facing citation');
+  const resultGroup = processedAi.scenarioState.directGroups[0];
+  assert.strictEqual(resultGroup.totalDebit, 100, 'Suppressing the citation must preserve the debit');
+  assert.strictEqual(resultGroup.totalCredit, 100, 'Suppressing the citation must preserve the credit');
+  assert.strictEqual(resultGroup.isBalanced, true, 'Citation suppression must preserve the balanced journal');
+  console.log('✓ 4A. Case A: Verified statutory content is retained as evidence but its unverified URL is withheld');
   passed++;
 
   // Cases B-F are rejected and omitted. Verify their substantive rejection
   // reasons directly rather than expecting invalid citations to remain in the
   // user-facing answer.
-  assert.strictEqual(resultCitations.length, 1, 'Only the valid exact-record citation should remain in the answer');
-  const evidenceScope = [...testEvidenceContext.primaryEvidence, ...testEvidenceContext.officialGuidance, ...testEvidenceContext.curatedSummaries];
+  assert.strictEqual(resultCitations.length, 0, 'No citations with unverified URLs should remain in the answer');
   const rejectedCases = [
     ['B', 'NON_CANONICAL_URL'],
     ['C', 'SOURCE_NOT_FOUND'],
@@ -337,8 +348,9 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   const rawAiJson = JSON.stringify(mockAiOutputWithCitations);
   const azureParsed = parseAccountingAIResponse(rawAiJson, null, 'test query', testEvidenceContext);
   const azureCitations = azureParsed.scenarioState.directGroups[0].citations;
-  assert.strictEqual(azureCitations[0].verificationStatus, 'VERIFIED_PRIMARY_SOURCE', 'Azure parsed output must have Case A verified');
-  assert.strictEqual(azureCitations.length, 1, 'Azure parsing must also omit all rejected citations');
+  assert.deepEqual(azureCitations, [], 'Azure parsing must also withhold every citation whose URL lacks verified provenance');
+  assert.strictEqual(azureParsed.scenarioState.directGroups[0].isBalanced, true,
+    'Withholding unverified citation URLs must preserve the balanced journal');
   console.log('✓ 6B. Azure OpenAI and OpenAI adapter uses identical postProcessAIResponse verification');
   passed++;
 
@@ -374,11 +386,14 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   ];
   for (const cite of unsupportedCitations) {
     const verified = defaultCitationVerifier.verifyCitation(cite, cite.authority, retrievedEvidenceForTax);
-    assert.strictEqual(verified.status, 'UNVERIFIED', `${cite.standard} must be UNVERIFIED when not in retrieved evidence`);
-    assert.strictEqual(verified.isValid, false, 'Unsupported claim isValid must be false');
+    assert.strictEqual(verified.status, 'NON_CANONICAL_URL', `${cite.standard} URL must be rejected without URL-specific provenance`);
+    assert.strictEqual(verified.isValid, false, 'Unsupported citation must not be valid');
     assert.strictEqual(verified.isAuthoritativePrimarySource, false, 'Unsupported claim cannot be authoritative primary source');
+    assert.ok(verified.matchedRecord, `${cite.standard} may match registered source content`);
+    assert.ok(!retrievedEvidenceForTax.some(record => record.id === verified.matchedRecord.id),
+      `${cite.standard} content must remain outside the retrieved evidence scope for this answer`);
   }
-  console.log('✓ 7A. PROOF 1: Unsupported GST/CPF/tax claims are strictly rejected as UNVERIFIED');
+  console.log('✓ 7A. PROOF 1: Unsupported GST/CPF/tax sources remain outside answer scope and their unverified URLs are rejected');
   passed++;
 
   // 7B. Fabricated citations are rejected
@@ -508,9 +523,11 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
     'IRAS',
     []
   );
-  assert.strictEqual(zeroEvidenceVerification.status, 'UNVERIFIED', 'The rejected claim remains classifiable as UNVERIFIED without evidence');
+  assert.strictEqual(zeroEvidenceVerification.status, 'NON_CANONICAL_URL', 'The citation URL must be rejected before evidence-scope evaluation');
+  assert.ok(!zeroEvidenceContext.primaryEvidence.length && !zeroEvidenceContext.officialGuidance.length && !zeroEvidenceContext.curatedSummaries.length,
+    'The answer context must remain empty of authoritative source evidence');
   assert.strictEqual(zeroEvidenceVerification.isAuthoritativePrimarySource, false, 'No claim can be presented as authoritative primary source without retrieved evidence');
-  console.log('✓ 7E. PROOF 5: No retrieved evidence → citation is omitted and remains UNVERIFIED');
+  console.log('✓ 7E. PROOF 5: No evidence triggers an uncertainty fallback and citation URL suppression');
   passed++;
 
   // =========================================================================
@@ -610,14 +627,20 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
     ]
   };
   const taxProcessed = postProcessAIResponse(taxAIOutput, null, taxQuery, taxCtx);
-  const taxCite = taxProcessed.scenarioState.directGroups[0].citations[0];
-  assert.strictEqual(taxCite.structuralVerificationOnly, true, 'Citation must declare structuralVerificationOnly: true');
-  assert.strictEqual(taxCite.verificationStatus, 'VERIFIED_PRIMARY_SOURCE', 'Section 14(1) citation must be structurally verified');
+  const taxCite = taxAIOutput.directGroups[0].citations[0];
+  const taxVerification = defaultCitationVerifier.verifyCitation(taxCite);
+  assert.strictEqual(taxProcessed.scenarioState.directGroups[0].citations.length, 0,
+    'Section 14(1) content must not be emitted as a citation with an unverified URL');
+  assert.strictEqual(taxVerification.structuralVerificationOnly, true,
+    'Citation verifier must retain its structural-verification boundary');
+  assert.strictEqual(taxVerification.status, 'NON_CANONICAL_URL',
+    'Section 14(1) URL without independent provenance must be rejected');
+  assert.strictEqual(getSafeOfficialUrl(taxCite.officialSourceUrl, taxCite.standard, taxCite.paragraph, taxCite.authority), '',
+    'The display gate must withhold the Section 14(1) URL');
 
   // Verify defaultCitationVerifier also returns structuralVerificationOnly: true
-  const verifierResult = defaultCitationVerifier.verifyCitation(taxCite);
-  assert.strictEqual(verifierResult.structuralVerificationOnly, true, 'defaultCitationVerifier must declare structuralVerificationOnly: true');
-  console.log('✓ 8D. Structural verification integrity guaranteed (structuralVerificationOnly: true explicit on results and citations)');
+  assert.strictEqual(taxVerification.structuralVerificationOnly, true, 'defaultCitationVerifier must declare structuralVerificationOnly: true');
+  console.log('✓ 8D. Structural verification boundary remains explicit while unverified statutory URLs are withheld');
   passed++;
 
   console.log('\n=============================================================');
