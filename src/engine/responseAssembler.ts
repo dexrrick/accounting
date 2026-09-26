@@ -95,6 +95,74 @@ export type CompactAIDecision = CompactStatutoryDecision & CompactAccountingDeci
   uncertaintyDisclaimer?: string;
 };
 
+export function isMealInputTaxQuery(userInput: string): boolean {
+  return /\b(?:gst|input\s+tax|input\s+gst)\b/i.test(userInput) &&
+    /\b(?:meals?|lunch(?:eon)?|dining|entertainment)\b/i.test(userInput) &&
+    /\b(?:claim\w*|recover\w*|input\s+tax)\b/i.test(userInput);
+}
+
+export function hasUnresolvedMealInputTaxEligibility(userInput: string, missingFacts: string[] = []): boolean {
+  return isMealInputTaxQuery(userInput) && missingFacts.length > 0;
+}
+
+/**
+ * Replace only a positive, unconditional meal/entertainment input-GST claim
+ * with a fact-requesting response. Conditional answers remain untouched.
+ */
+export function guardUnconditionalMealInputTaxClaim(
+  responseText: string,
+  userInput: string,
+  groundedContext: Pick<GroundedReasoningContext, 'primaryEvidence' | 'officialGuidance' | 'curatedSummaries' | 'sourceMapFallbackTrace'>,
+  missingFacts: string[] = []
+): string {
+  if (!isMealInputTaxQuery(userInput)) return responseText;
+
+  const assertiveClaim = /\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:is|are)\s+(?:(?:always|universally|automatically)\s+)?(?:fully\s+)?(?:claimable|recoverable)\b|\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:can be|are|is)\s+(?:(?:always|universally|automatically)\s+)?(?:claimed|recovered)\b/i;
+  const allInputsClaimable = /\b(?:all|every|each)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:claimable|recoverable|claimed|recovered)\b/i;
+  const canAlwaysClaim = /\b(?:you|we|the company|a business|the business|taxpayers?)\s+can\s+(?:always\s+)?(?:claim|recover)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b/i;
+  const universalNegativeClaim = /\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:is|are)\s+(?:never|not ever)\s+(?:fully\s+)?(?:claimable|recoverable|claimed|recovered)\b|\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\bcan\s+never\s+(?:be\s+)?(?:claimed|recovered|claimable|recoverable)\b|\b(?:you|we|the company|a business|the business|taxpayers?)\s+can\s+never\s+(?:claim|recover)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b|\bno\b[^.!?\n]{0,100}\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,100}\b(?:claimable|recoverable|claimed|recovered)\b/i;
+  const sentences = responseText.split(/(?<=[.!?])\s+|\r?\n+/).filter(Boolean);
+  const assertsUnqualifiedPositiveClaim = sentences.some(sentence => {
+    const notAllCaution = /\bnot\s+(?:all|every|each)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:claimable|recoverable|claimed|recovered)\b/i.test(sentence);
+    if (notAllCaution) return false;
+    const absoluteNegative = universalNegativeClaim.test(sentence);
+    const positive = assertiveClaim.test(sentence) || allInputsClaimable.test(sentence) || canAlwaysClaim.test(sentence);
+    if (!positive && !absoluteNegative) return false;
+    // Negation must attach to the claim predicate itself. A later clause such
+    // as “supporting invoices are not required” does not cancel “GST is
+    // claimable”; it makes that unsupported universal assertion more serious.
+    const negatedClaimPredicate = /\b(?:is|are|be|being)\s+(?:(?:always|universally|automatically)\s+)?(?:not|never)\s+(?:(?:always|universally|automatically)\s+)?(?:fully\s+)?(?:claimable|recoverable)\b|\b(?:cannot|can['’]t|must not|should not)\s+(?:be\s+)?(?:claimed|recovered)\b/i.test(sentence);
+    if (negatedClaimPredicate && !absoluteNegative) return false;
+    const sentenceDisregardsFacts = /\b(?:regardless of|irrespective of|without regard to)\s+(?:the )?(?:purpose|records|documentation|business use|registration)\b/i.test(sentence) ||
+      /\bwithout\s+(?:any\s+)?(?:records?|documentation|valid tax invoice|business purpose)\b/i.test(sentence) ||
+      /\b(?:despite|even if)\b[^.!?\n]{0,80}\bno\s+(?:records?|documentation|valid tax invoice|business purpose)\b/i.test(sentence);
+    const sentenceIsConditional = /\b(?:may|might|could)\s+be\s+(?:claimable|claimed|recoverable|recovered)\b|\b(?:if|when|provided(?: that)?|subject to|only if|only where|unless|to the extent|based on)\b[^.!?\n]{0,120}\b(?:ordinary input.tax|conditions?|requirements?|valid tax invoice|business purpose|taxable supplies|registered for gst)\b/i.test(sentence);
+    return sentenceDisregardsFacts || !sentenceIsConditional;
+  });
+  if (!assertsUnqualifiedPositiveClaim) return responseText;
+
+  const records = [
+    ...groundedContext.primaryEvidence,
+    ...groundedContext.officialGuidance,
+    ...groundedContext.curatedSummaries
+  ];
+  const candidateInputTaxPage = groundedContext.sourceMapFallbackTrace?.candidateOnly === true &&
+    groundedContext.sourceMapFallbackTrace.sourceMapIds.includes('IRAS_GST_INPUT_TAX_SOURCE_MAP');
+  const evidenceStatus = candidateInputTaxPage
+    ? 'The retrieved IRAS input-tax page is candidate evidence pending review; it does not establish this case’s eligibility.'
+    : records.length === 0
+      ? 'No authoritative IRAS evidence was retrieved to establish this case’s eligibility.'
+      : 'The available evidence does not establish this case’s eligibility without the facts below.';
+  const requiredFacts = missingFacts.filter(fact =>
+    /registration|business or private use|supporting tax invoice|business purpose|who attended/i.test(fact)
+  );
+  const factRequest = requiredFacts.length > 0
+    ? requiredFacts.join('; ')
+    : 'business purpose, attendees and their relationship to the company, GST registration and use, and a valid tax invoice';
+
+  return `Do not assume input GST on customer or supplier meals is always claimable. ${evidenceStatus} Before assessing a claim, confirm: ${factRequest}.`;
+}
+
 /**
  * Deterministic Response Assembler
  * Takes a compact AI decision + deterministic engine state and deterministically
@@ -649,6 +717,32 @@ export function assembleDeterministicResponse(
       ...(invalidJournalProposalReason ? [invalidJournalProposalReason] : [])
     ])
   ];
+  const guardedStatutoryAdvisory = safeStatutoryAdvisory.map(advisory => ({
+    ...advisory,
+    summary: guardUnconditionalMealInputTaxClaim(advisory.summary || '', userInput, groundedContext, missingFacts),
+    keyRules: advisory.keyRules?.map(rule =>
+      guardUnconditionalMealInputTaxClaim(rule, userInput, groundedContext, missingFacts)
+    ),
+    ...(hasUnresolvedMealInputTaxEligibility(userInput, missingFacts) && typeof advisory.isGstClaimable === 'boolean'
+      ? { isGstClaimable: undefined }
+      : {})
+  }));
+  const selectedAccountingTreatmentSummary = compact.treatment ||
+    (isRecognizedDeterministicFixture ? deterministicScenario?.accountingTreatmentSummary : undefined);
+  const selectedSingaporeTaxImpact = compact.singaporeTaxImpact ||
+    (isRecognizedDeterministicFixture ? deterministicScenario?.singaporeTaxTreatmentSummary : undefined);
+  const selectedRegulatoryMandatesSummary = isRecognizedDeterministicFixture
+    ? deterministicScenario?.regulatoryMandatesSummary
+    : undefined;
+  const guardedAccountingTreatmentSummary = typeof selectedAccountingTreatmentSummary === 'string'
+    ? guardUnconditionalMealInputTaxClaim(selectedAccountingTreatmentSummary, userInput, groundedContext, missingFacts)
+    : selectedAccountingTreatmentSummary;
+  const guardedSingaporeTaxImpact = typeof selectedSingaporeTaxImpact === 'string'
+    ? guardUnconditionalMealInputTaxClaim(selectedSingaporeTaxImpact, userInput, groundedContext, missingFacts)
+    : selectedSingaporeTaxImpact;
+  const guardedRegulatoryMandatesSummary = typeof selectedRegulatoryMandatesSummary === 'string'
+    ? guardUnconditionalMealInputTaxClaim(selectedRegulatoryMandatesSummary, userInput, groundedContext, missingFacts)
+    : selectedRegulatoryMandatesSummary;
 
   // 7. Uncertainty Disclaimer
   let uncertaintyDisclaimer = compact.uncertaintyDisclaimer || deterministicScenario?.uncertaintyDisclaimer || '';
@@ -658,6 +752,7 @@ export function assembleDeterministicResponse(
       uncertaintyDisclaimer = uncertaintyDisclaimer ? `${notice} ${uncertaintyDisclaimer}` : notice;
     }
   }
+  uncertaintyDisclaimer = guardUnconditionalMealInputTaxClaim(uncertaintyDisclaimer, userInput, groundedContext, missingFacts);
 
   // 8. Deterministic Markdown Response Construction (Eliminates LLM markdown token bloat!)
   let messageText = compact.messageText || '';
@@ -905,9 +1000,9 @@ export function assembleDeterministicResponse(
     functionalCurrency: deterministicScenario?.functionalCurrency || 'SGD',
     transactionCurrency: deterministicScenario?.transactionCurrency || (groundedContext.semanticUnderstanding?.currency?.value || 'SGD'),
     authorityStatus: finalAuthorityStatus,
-    accountingTreatmentSummary: compact.treatment || (isRecognizedDeterministicFixture ? deterministicScenario?.accountingTreatmentSummary : undefined),
-    singaporeTaxTreatmentSummary: compact.singaporeTaxImpact || (isRecognizedDeterministicFixture ? deterministicScenario?.singaporeTaxTreatmentSummary : undefined),
-    regulatoryMandatesSummary: isRecognizedDeterministicFixture ? deterministicScenario?.regulatoryMandatesSummary : undefined,
+    accountingTreatmentSummary: guardedAccountingTreatmentSummary,
+    singaporeTaxTreatmentSummary: guardedSingaporeTaxImpact,
+    regulatoryMandatesSummary: guardedRegulatoryMandatesSummary,
     effectiveDateOrTiming: isRecognizedDeterministicFixture ? deterministicScenario?.effectiveDateOrTiming : undefined,
     uncertaintyDisclaimer: uncertaintyDisclaimer || undefined,
     amount: resolvedAmount,
@@ -918,7 +1013,7 @@ export function assembleDeterministicResponse(
     directGroups,
     committedDirectGroups,
     projectedGroups,
-    statutoryAdvisory: safeStatutoryAdvisory.length > 0 ? safeStatutoryAdvisory : undefined,
+    statutoryAdvisory: guardedStatutoryAdvisory.length > 0 ? guardedStatutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: missingFacts.length > 0 ? missingFacts : undefined,
     ownershipContext: deterministicScenario?.ownershipContext || groundedContext.semanticUnderstanding?.ownershipContext || currentScenario?.ownershipContext,
@@ -932,7 +1027,11 @@ export function assembleDeterministicResponse(
   };
 
   return {
-    messageText: appendStatutorySourceFooter(messageText, scenarioState, retrievedEvidenceScope),
+    messageText: appendStatutorySourceFooter(
+      guardUnconditionalMealInputTaxClaim(messageText, userInput, groundedContext, missingFacts),
+      scenarioState,
+      retrievedEvidenceScope
+    ),
     scenarioState,
     sourceMapFallbackTrace: groundedContext.sourceMapFallbackTrace,
     groundingEvidence: buildResponseGroundingEvidenceTrace(groundedContext)

@@ -20,11 +20,12 @@ import { defaultControlledWebRetriever, type ControlledFetchOptions, type Contro
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
-import { assembleDeterministicResponse } from '../engine/responseAssembler';
+import { assembleDeterministicResponse, guardUnconditionalMealInputTaxClaim, hasUnresolvedMealInputTaxEligibility } from '../engine/responseAssembler';
 import { extractAccountingContext } from './conversationAccountingState';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import { OfficialSitemapDiscoveryAdapter } from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
+import { defaultExternalSourceValidator } from '../retrieval/externalSourceValidator';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
@@ -213,6 +214,74 @@ function isRelatedTopicRelevant(topic: MappedCoverageTopic, query: string): bool
   });
 }
 
+function isSourceMapRelevantToQuery(pointer: SourceMapPointer, query: string): boolean {
+  const title = normalizeEvidenceText(pointer.documentTitle);
+  const asksAboutServices = /\bservices?\b/i.test(query);
+  const asksAboutGoodsOrExports = /\b(?:goods?|exports?|exporting|shipments?)\b/i.test(query);
+  const asksPaymentSpecificWht = /\b(?:interest|royalt(?:y|ies)|management fees?|service fees?|consultancy fees?)\b/i.test(query) &&
+    /\b(?:wht|withholding tax)\b/i.test(query);
+  if (title.includes('exporting of goods') && asksAboutServices && !asksAboutGoodsOrExports) return false;
+  if (title.includes('providing international services') && asksAboutGoodsOrExports && !asksAboutServices) return false;
+  if (title.includes('overview of withholding tax') && asksPaymentSpecificWht) return false;
+  return true;
+}
+
+function isLocalGstRateRecord(record: AuthoritativeSourceRecord): boolean {
+  return record.authority === 'IRAS' &&
+    record.domain === 'IRAS_GST' &&
+    record.standardOrActCode === 'GSTA1993' &&
+    /\bsection\s*16\b/i.test(record.paragraphOrSection) &&
+    record.provenance === 'LOCAL_STATIC' &&
+    record.lifecycleState === 'ACTIVE' &&
+    (record.sourceStatus === 'VERIFIED' || record.sourceStatus === 'HISTORICAL') &&
+    Boolean(record.validFrom);
+}
+
+/**
+ * A cross-year invoice/payment question can require both sides of an explicit
+ * GST rate boundary. Follow only a local statutory predecessor/successor link
+ * when the query names the two adjacent validity years; never infer a rate or
+ * add neighboring versions for a single-date/current-rate question.
+ */
+function getExplicitlyLinkedGstRateRecords(
+  query: string,
+  retrieved: AuthoritativeSourceRecord[],
+  retriever: ISourceRetriever
+): AuthoritativeSourceRecord[] {
+  if (!/\b(?:gst|goods\s+and\s+services\s+tax)\b/i.test(query) ||
+      !/\b(?:invoice|invoiced|payment|paid|time\s+of\s+supply)\b/i.test(query)) return [];
+
+  const years = [...new Set((query.match(/\b20\d{2}\b/g) || []).map(Number))].sort((a, b) => a - b);
+  if (years.length !== 2 || years[1] !== years[0] + 1) return [];
+  const [earlierYear, laterYear] = years;
+  const rateRecords = retrieved.filter(isLocalGstRateRecord);
+  const additions = new Map<string, AuthoritativeSourceRecord>();
+
+  for (const base of rateRecords) {
+    const linkedIds = [base.supersededByRecordId, base.historicalPredecessorRecordId].filter((id): id is string => Boolean(id));
+    for (const linkedId of linkedIds) {
+      const linked = retriever.getSourceById(linkedId);
+      if (!linked || !isLocalGstRateRecord(linked) || rateRecords.some(record => record.id === linked.id)) continue;
+
+      const earlier = base.validTo && base.validTo.slice(0, 4) === String(earlierYear) ? base
+        : linked.validTo && linked.validTo.slice(0, 4) === String(earlierYear) ? linked
+          : undefined;
+      const later = base.validFrom && base.validFrom.slice(0, 4) === String(laterYear) ? base
+        : linked.validFrom && linked.validFrom.slice(0, 4) === String(laterYear) ? linked
+          : undefined;
+      const linkedBoundaryCrossesYears = Boolean(
+        earlier?.validTo?.slice(0, 4) === String(earlierYear) &&
+        later?.validFrom?.slice(0, 4) === String(laterYear) &&
+        (earlier.supersededByRecordId === later.id || earlier.historicalPredecessorRecordId === later.id ||
+          later.supersededByRecordId === earlier.id || later.historicalPredecessorRecordId === earlier.id)
+      );
+      if (linkedBoundaryCrossesYears) additions.set(linked.id, linked);
+    }
+  }
+
+  return [...additions.values()];
+}
+
 function isAssociateToSubsidiaryTransitionQuestion(query: string): boolean {
   const hasAssociateContext = /\b(?:associate|equity[\s-]*accounted|previously held|existing investment)\b/i.test(query);
   const hasAdditionalAcquisition = /\b(?:acquir\w*|purchas\w*|additional|further|increas\w*)\b/i.test(query);
@@ -279,7 +348,7 @@ function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   return [];
 }
 
-const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)\s+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
+const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)[\s-]+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
 
 /** A present-day tax page cannot establish a prior period without pointer-level validity dates. */
 function hasVerifiedHistoricalIrasScope(
@@ -290,9 +359,19 @@ function hasVerifiedHistoricalIrasScope(
   query: string
 ): boolean {
   if (!topic.domainId.startsWith('IRAS_')) return true;
-  if (UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query)) return false;
+  if (isUndatedHistoricalIrasRequest(topic, query)) return false;
   if (!targetIsHistorical || !targetDate) return true;
   return Boolean(pointer?.validFrom && pointer.validTo && targetDate >= pointer.validFrom && targetDate <= pointer.validTo);
+}
+
+function isUndatedHistoricalIrasRequest(topic: MappedCoverageTopic, query: string): boolean {
+  if (!UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query)) return false;
+  // “Prior-year losses” identifies the vintage of a loss balance, not a
+  // request for a superseded rule. Current carry-forward guidance may be
+  // retrieved, while eligibility still waits on the YA and continuity facts.
+  const lossCarryForwardTopic = topic.id === 'iras-cit-loss-carry-forward' || topic.id === 'iras-substantial-shareholding-test';
+  const describesPriorYearLosses = /\b(?:prior|previous|preceding|last)[\s-]+(?:financial\s+|basis\s+|tax\s+)?(?:year|ya)\s+(?:trade\s+)?losses?\b|\b(?:trade\s+)?losses?\b[\s\S]{0,80}\b(?:from|of)\s+(?:the\s+)?(?:prior|previous|preceding|last)[\s-]+(?:financial\s+|basis\s+|tax\s+)?(?:year|ya)\b/i.test(query);
+  return !(lossCarryForwardTopic && describesPriorYearLosses);
 }
 
 function makeLiveCandidateEvidence(
@@ -403,7 +482,10 @@ export async function resolveMappedOfficialSourceFallback(
     }
   }
 
-  const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'VALIDATED' && topic.status !== 'HISTORICAL');
+  // The caller has already checked whether adequate local evidence was found.
+  // An explicitly requested fallback topic can therefore be VALIDATED in the
+  // coverage catalog while still lacking a matching local record for this query.
+  const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'HISTORICAL');
   if (topicsRequiringFallback.length === 0) {
     return { records: [], trace: { path: 'NOT_NEEDED', sourceMapIds: [], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: false, attempts: [] } };
   }
@@ -454,7 +536,19 @@ export async function resolveMappedOfficialSourceFallback(
     if (result.status !== 'SUCCESS' || !result.content || !result.finalUrl || !result.topicMatched ||
         !isApprovedSingaporeSourceUrl(result.finalUrl) || !approvedHostsForTopic(topic).includes(finalHost)) return undefined;
 
-    const excerpt = selectRelevantFetchedText(result.substantiveText || result.content, expectation.topicTerms);
+    // Recheck the raw HTML at this boundary as well as in ControlledWebRetriever.
+    // Injected adapters and cached/custom retrievers must not make navigation
+    // labels or a generic shell sufficient topic evidence.
+    const contentValidation = defaultExternalSourceValidator.validateTopicContent(result.content, expectation);
+    if (!contentValidation.isValid) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.titleMatched = false;
+      attempt.contentMatched = false;
+      attempt.error = contentValidation.reason || 'Fetched page lacks visible topic-specific body content.';
+      return undefined;
+    }
+
+    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', expectation.topicTerms);
     if (!excerpt || !expectation.topicTerms.some(term => containsTopicTerm(excerpt, term))) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
@@ -475,13 +569,14 @@ export async function resolveMappedOfficialSourceFallback(
         record.lifecycleState === 'ACTIVE' && record.urlVerificationStatus === 'VERIFIED' &&
         hasVerifiedSourceUrlProvenance(record) &&
         record.sourceMapTopicIds?.includes(topic.id) &&
+        isSourceMapRelevantToQuery(record, query) &&
         // A framework overview can route framework-level questions only. It
         // cannot be used as a substitute for one of this registry's narrow
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
     const historicalIrasQuery = topic.domainId.startsWith('IRAS_') && Boolean(
-      UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query) ||
+      isUndatedHistoricalIrasRequest(topic, query) ||
       targetIsHistorical
     );
     const applicablePointers = pointers.filter(pointer => hasVerifiedHistoricalIrasScope(topic, pointer, targetDate, targetIsHistorical, query));
@@ -713,13 +808,17 @@ export async function buildGroundedReasoningContext(
     maxResults: GROUNDING_SOURCE_MAX_RESULTS,
     semanticContext: semanticUnderstanding
   });
+  const contextualLocalRetrieved = [
+    ...localRetrieved,
+    ...getExplicitlyLinkedGstRateRecords(userInput, localRetrieved, retriever)
+  ];
   const initiallyMatchedCoverage = getCoverageTopicsByIds(retrievalHints.topicIds || []) as MappedCoverageTopic[];
-  const localRetrievedIds = new Set(localRetrieved.map(record => record.id));
+  const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
   const fallbackTopicIds = initiallyMatchedCoverage
     .filter(topic => topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
     .map(topic => topic.id);
   const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, retrievalOptions);
-  const retrieved = [...localRetrieved, ...mappedFallback.records];
+  const retrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
 
   // 3. Four-Tier Evidence Sorting based explicitly on evidenceTier
   const primaryEvidence: AuthoritativeSourceRecord[] = [];
@@ -1241,8 +1340,26 @@ export function postProcessAIResponse(
   // Verify and normalize statutory advisories
   const statutoryAdvisory = (parsed.statutoryAdvisory || deterministicScenario?.statutoryAdvisory || currentScenario?.statutoryAdvisory || []).map((adv: any) => ({
     ...adv,
+    ...(typeof adv.summary === 'string' ? {
+      summary: guardUnconditionalMealInputTaxClaim(adv.summary, userInput, groundedContext, groundedContext.missingFacts)
+    } : {}),
+    ...(Array.isArray(adv.keyRules) ? {
+      keyRules: adv.keyRules.map((rule: string) =>
+        guardUnconditionalMealInputTaxClaim(rule, userInput, groundedContext, groundedContext.missingFacts)
+      )
+    } : {}),
+    ...(hasUnresolvedMealInputTaxEligibility(userInput, groundedContext.missingFacts) && typeof adv.isGstClaimable === 'boolean'
+      ? { isGstClaimable: undefined }
+      : {}),
     officialUrl: getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority, retrievedEvidenceScope) || undefined
   }));
+
+  const selectedAccountingTreatmentSummary = parsed.accountingTreatmentSummary ||
+    deterministicScenario?.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary;
+  const selectedSingaporeTaxTreatmentSummary = parsed.singaporeTaxTreatmentSummary ||
+    deterministicScenario?.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary;
+  const selectedRegulatoryMandatesSummary = parsed.regulatoryMandatesSummary ||
+    deterministicScenario?.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary;
 
   // Uncertainty handling & conditional conclusions
   let uncertaintyDisclaimer = parsed.uncertaintyDisclaimer || currentScenario?.uncertaintyDisclaimer || '';
@@ -1271,6 +1388,13 @@ export function postProcessAIResponse(
     }
   }
 
+  uncertaintyDisclaimer = guardUnconditionalMealInputTaxClaim(
+    uncertaintyDisclaimer,
+    userInput,
+    groundedContext,
+    groundedContext.missingFacts
+  );
+
   // Ensure assumptions are explicit and separated from missing facts
   const assumptions: ExplicitAssumption[] = [
     ...(parsed.assumptions || []),
@@ -1288,9 +1412,15 @@ export function postProcessAIResponse(
     transactionTitle: finalTitle,
     functionalCurrency: parsed.functionalCurrency || deterministicScenario?.functionalCurrency || currentScenario?.functionalCurrency || 'SGD',
     transactionCurrency: parsed.transactionCurrency || deterministicScenario?.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
-    accountingTreatmentSummary: parsed.accountingTreatmentSummary || deterministicScenario?.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary,
-    singaporeTaxTreatmentSummary: parsed.singaporeTaxTreatmentSummary || deterministicScenario?.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary,
-    regulatoryMandatesSummary: parsed.regulatoryMandatesSummary || deterministicScenario?.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary,
+    accountingTreatmentSummary: typeof selectedAccountingTreatmentSummary === 'string'
+      ? guardUnconditionalMealInputTaxClaim(selectedAccountingTreatmentSummary, userInput, groundedContext, groundedContext.missingFacts)
+      : selectedAccountingTreatmentSummary,
+    singaporeTaxTreatmentSummary: typeof selectedSingaporeTaxTreatmentSummary === 'string'
+      ? guardUnconditionalMealInputTaxClaim(selectedSingaporeTaxTreatmentSummary, userInput, groundedContext, groundedContext.missingFacts)
+      : selectedSingaporeTaxTreatmentSummary,
+    regulatoryMandatesSummary: typeof selectedRegulatoryMandatesSummary === 'string'
+      ? guardUnconditionalMealInputTaxClaim(selectedRegulatoryMandatesSummary, userInput, groundedContext, groundedContext.missingFacts)
+      : selectedRegulatoryMandatesSummary,
     effectiveDateOrTiming: parsed.effectiveDateOrTiming || deterministicScenario?.effectiveDateOrTiming || currentScenario?.effectiveDateOrTiming,
     uncertaintyDisclaimer: uncertaintyDisclaimer || undefined,
     authorityStatus: computedAuthorityStatus,
@@ -1306,7 +1436,11 @@ export function postProcessAIResponse(
   };
 
   return {
-    messageText: appendStatutorySourceFooter(parsed.messageText || '', scenarioState, retrievedEvidenceScope),
+    messageText: appendStatutorySourceFooter(
+      guardUnconditionalMealInputTaxClaim(parsed.messageText || '', userInput, groundedContext, groundedContext.missingFacts),
+      scenarioState,
+      retrievedEvidenceScope
+    ),
     scenarioState,
     sourceMapFallbackTrace: groundedContext.sourceMapFallbackTrace,
     groundingEvidence: buildGroundingEvidenceTrace(groundedContext)

@@ -33,8 +33,94 @@ assert.ok(!renderedService.missingFacts.some(fact => /year or period when the se
 
 const blockedInputAdvisory = convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX);
 assert.equal(blockedInputAdvisory.isGstClaimable, undefined, 'General blocked-input-tax guidance has exceptions and cannot decide every claim.');
-assert.match(blockedInputAdvisory.keyRules.join(' '), /third-party-use costs may be claimable/i);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /motor car used by a third party may qualify for input tax/i);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /connected person.*recovery must not be ancillary/i);
 assert.match(blockedInputAdvisory.keyRules.join(' '), /1 October 2021/i);
+
+const timeOfSupply = SINGAPORE_STATUTORY_REPOSITORY.GST_SEC11_TIME_OF_SUPPLY;
+assert.equal(timeOfSupply.validFrom, '2011-01-01', 'The current general invoice/payment rule starts with the 2011 time-of-supply change.');
+assert.match(timeOfSupply.principle, /earlier of when an invoice is issued and when payment is received/i);
+assert.doesNotMatch(timeOfSupply.principle, /basic tax point/i);
+assert.match(timeOfSupply.practicalRules.join(' '), /pre-1 January 2011.*Basic Tax Point.*14-day rule/i);
+assert.doesNotMatch(timeOfSupply.practicalRules.join(' '), /14-Day Rule: If invoice is issued within 14 days/i);
+
+const internationalServices = SINGAPORE_STATUTORY_REPOSITORY.GST_SEC21_ZERO_RATED_EXPORTS;
+assert.match(internationalServices.principle, /specific category in Section 21\(3\)/i);
+assert.match(internationalServices.principle, /overseas customer alone is insufficient/i);
+assert.match(internationalServices.practicalRules.join(' '), /direct-benefit test/i);
+assert.match(internationalServices.practicalRules.join(' '), /partial-exemption rules/i);
+assert.equal(
+  convertToAdvisory(internationalServices).isGstClaimable,
+  undefined,
+  'A zero-rated output supply does not determine whether separate input tax is recoverable.'
+);
+
+const passengerCarTaxRule = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_1_K_MOTOR_CAR;
+assert.match(passengerCarTaxRule.principle, /subject to vehicle- and business-specific exceptions/i);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /private-hire cars.*instructional purposes/i);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /foreign-registered cars used exclusively outside Singapore/i);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /Taxi running-expense exception: Section 15\(1\)\(k\)\(i\), subject to Section 15\(2D\)/i);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /12 November 2018.*authorised purpose.*Section 14ZA\(8\)/i);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /taxi rule and does not itself extend to private-hire cars/i);
+assert.doesNotMatch(passengerCarTaxRule.practicalRules.join(' '), /G-plate.*100% eligible|G\/Y plate.*eligible/i);
+assert.equal(
+  convertToAdvisory(passengerCarTaxRule).isTaxDeductible,
+  undefined,
+  'General motor-car guidance has exceptions and cannot decide deductibility without vehicle facts.'
+);
+
+const ownUsePassengerCar = await parseAccountingQuery(
+  'The company bought an S-plate passenger car for own use by employees for SGD 120k with bank. How to record the purchase?'
+);
+assert.equal(ownUsePassengerCar?.scenarioType, 'CAR_PURCHASE_STATUTORY', 'An explicit ordinary S-plate employee-use purchase retains its specialized accounting path.');
+assert.equal(ownUsePassengerCar?.statutoryAdvisory?.find(advisory => advisory.sectionOrSchedule === 'Section 15(1)(k)')?.isTaxDeductible, false);
+assert.equal(ownUsePassengerCar?.statutoryAdvisory?.find(advisory => advisory.sectionOrSchedule === 'Regulation 26 & 27')?.isGstClaimable, false);
+assert.match(ownUsePassengerCar?.transactionTitle ?? '', /general tax restrictions/i);
+assert.match(ownUsePassengerCar?.uncertaintyDisclaimer ?? '', /no applicable exception/i);
+assert.match(ownUsePassengerCar?.uncertaintyDisclaimer ?? '', /plate.*alone does not establish.*capital-allowance or GST recovery eligibility/i);
+assert.doesNotMatch(ownUsePassengerCar?.uncertaintyDisclaimer ?? '', /G\/Y plate.*eligible/i);
+
+const ownUsePassengerCarWithoutRegistration = await parseAccountingQuery(
+  'The company bought a passenger car for own use by employees for SGD 120k with bank.'
+);
+assert.notEqual(ownUsePassengerCarWithoutRegistration?.scenarioType, 'CAR_PURCHASE_STATUTORY', 'Own use alone does not establish the vehicle registration class for the passenger-car restrictions.');
+const exceptionPassengerCar = await parseAccountingQuery(
+  'The company bought an S-plate passenger car for use by employees as a private-hire taxi for SGD 120k.'
+);
+assert.notEqual(exceptionPassengerCar?.scenarioType, 'CAR_PURCHASE_STATUTORY', 'Private-hire use is excluded from the ordinary private-car fast path so its exception facts are assessed separately.');
+
+const historicalSection13W = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR;
+const currentSection13W = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC13W_EQUITY_DISPOSAL_2026;
+assert.match(historicalSection13W.practicalRules.join(' '), /before 1 June 2022/i);
+assert.match(historicalSection13W.practicalRules.join(' '), /on or after 1 June 2022/i);
+assert.match(historicalSection13W.practicalRules.join(' '), /preceding 60 months/i);
+assert.match(historicalSection13W.practicalRules.join(' '), /do not aggregate group holdings/i);
+assert.match(currentSection13W.principle, /registered business trust or variable capital company/i);
+assert.match(currentSection13W.practicalRules.join(' '), /group assessment is unavailable.*registered business trust.*variable capital company/i);
+
+for (const withholdingTaxRule of [
+  SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC45_WITHHOLDING_TAX,
+  SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES
+]) {
+  const timingRules = withholdingTaxRule.practicalRules.join(' ');
+  assert.match(timingRules, /earliest of.*agreement or contract.*invoice date if there is no agreement or contract/i);
+  assert.match(timingRules, /credited to the non-resident/i);
+  assert.match(timingRules, /actual payment/i);
+  assert.match(timingRules, /credit terms do not defer/i);
+}
+
+const section14N = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14N_RENOVATION_REFURBISHMENT;
+assert.match(section14N.principle, /refreshed SGD 300,000 cap/i);
+assert.match(section14N.practicalRules.join(' '), /existing relevant 3-year period does not coincide/i);
+assert.match(section14N.practicalRules.join(' '), /election is irrevocable/i);
+assert.match(section14N.practicalRules.join(' '), /starts carrying on a trade or business during a fixed 3-year period.*full SGD 300,000 cap.*do not prorate/i);
+assert.match(section14N.practicalRules.join(' '), /commencing business in YA 2026 may use the full cap across YAs 2026 and 2027/i);
+
+const lossAndAllowanceRules = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC37_LOSS_CARRY_FORWARD;
+assert.match(lossAndAllowanceRules.practicalRules.join(' '), /Trade-loss comparison dates:.*calendar year/i);
+assert.match(lossAndAllowanceRules.practicalRules.join(' '), /Capital-allowance comparison dates:.*YA/i);
+assert.match(lossAndAllowanceRules.practicalRules.join(' '), /same trade or business.*principal activities/i);
+assert.match(lossAndAllowanceRules.practicalRules.join(' '), /not stated as carry-forward conditions for trade losses/i);
 
 const customerCarRepair = await parseAccountingQuery('We paid SGD 500 to repair our customer car. Can we claim input GST?');
 assert.notEqual(customerCarRepair?.scenarioType, 'CAR_PURCHASE_STATUTORY', 'A customer-car repair is not an entity passenger-car acquisition.');

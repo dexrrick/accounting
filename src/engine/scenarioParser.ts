@@ -86,9 +86,10 @@ export function isStatutoryInquiry(query: string): boolean {
 function isExplicitOwnUsePassengerCarPurchase(query: string): boolean {
   const q = query.toLowerCase();
   const isThirdPartyCarUse = /\b(?:customer|client|third[\s.-]party|connected person|policyholder|insured|contractor|consultant|adviser|advisor|visitor|guest|replacement (?:car|vehicle)|courtesy car|loaner|repair|maintenance|rental|lease)\b/.test(q);
+  const indicatesPassengerCarException = /\b(?:taxi|private[\s-]?hire|hire[sd]? out|hired out|driving instruction|driving school|instructional|foreign[\s-]?registered|outside singapore|exclusively outside)\b/.test(q);
   const hasExplicitCompanyEmployeeUse = /\b(?:own(?:ed)? use by (?:the )?(?:company|employees|staff|directors)|(?:used|reserved|provided) (?:solely )?(?:by|for) (?:the )?(?:company|employees|staff|directors)|for (?:the )?(?:company|employees|staff|directors)(?:'s)? (?:own )?(?:business )?use|for use by (?:the )?(?:company|employees|staff|directors)|in the company fleet)\b/.test(q);
-  return !isThirdPartyCarUse && hasExplicitCompanyEmployeeUse &&
-    /\b(?:s-plate|passenger (?:motor )?car)\b/.test(q) &&
+  return !isThirdPartyCarUse && !indicatesPassengerCarException && hasExplicitCompanyEmployeeUse &&
+    /\bs[\s-]?plate\b/.test(q) &&
     /\b(?:bought|purchas\w*|buy\w*)\b/.test(q) &&
     !/\b(?:car dealer|motor trade)\b/.test(q);
 }
@@ -1111,7 +1112,7 @@ export async function parseAccountingQuery(
     ];
 
     const carAdvisories = [
-      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_1_K_MOTOR_CAR),
+      { ...convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_1_K_MOTOR_CAR), isTaxDeductible: false },
       { ...convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX), isGstClaimable: false }
     ];
 
@@ -1123,14 +1124,14 @@ export async function parseAccountingQuery(
       queryIntent: hasExplicitCarCost ? 'HYBRID' : 'STATUTORY_ADVISORY',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
-      transactionTitle: 'Purchase of Passenger Motor Car (Tax Disallowed & GST Blocked)',
+      transactionTitle: 'Purchase of S-Plate Private Passenger Car (General Tax Restrictions)',
       functionalCurrency,
       transactionCurrency: functionalCurrency,
       accountingTreatmentSummary: 'Capitalize gross motor vehicle cost into Non-Current Assets under SFRS(I) 1-16 §16. Input GST is capitalized because it is non-recoverable. Depreciate straight-line over useful life through P&L.',
-      singaporeTaxTreatmentSummary: 'Under Section 15(1)(k) of the Income Tax Act 1947, no tax deduction or Section 19/19A Capital Allowances are granted on passenger cars (S-plate). Accounting depreciation must be added back 100% in the corporate tax computation. Under Regulation 27 of the GST (General) Regulations, input GST on the entity’s own passenger motor car is blocked from recovery.',
+      singaporeTaxTreatmentSummary: 'Assuming this is an ordinary Singapore-registered S-plate private passenger car for the company’s own use, and no specific exception applies, Section 15(1)(k) generally disallows the related deduction and capital allowances; accounting depreciation is added back. Input GST on the entity’s own private passenger car is generally blocked under the GST Regulations. Check vehicle-specific exceptions and the entity’s GST attribution facts before finalising the tax treatment.',
       regulatoryMandatesSummary: 'Companies Act 1967 Section 199 mandatory retention of purchase vouchers, invoices, and payment proof for at least 5 years.',
       effectiveDateOrTiming: 'Singapore 9% GST rate (since 1 Jan 2024); ITA Section 15(1)(k) active.',
-      uncertaintyDisclaimer: 'Commercial goods vehicles (G/Y plate) are eligible for Section 19A Capital Allowances and GST recovery; this disallowance strictly applies to passenger motor cars (S-plate).',
+      uncertaintyDisclaimer: 'This treatment assumes an ordinary Singapore-registered S-plate private passenger car used by the company or its employees, with no applicable exception. Taxi/private-hire or instructional use, qualifying foreign-registered cars used exclusively outside Singapore, and other vehicle-specific facts can change the income-tax result. A G/Y plate or “commercial vehicle” label alone does not establish Section 19/19A capital-allowance or GST recovery eligibility; assess input-tax recovery separately under the GST rules.',
       statutoryAdvisory: carAdvisories,
       directGroups: [
         {
@@ -1149,8 +1150,8 @@ export async function parseAccountingQuery(
           citations: carCitations,
           authorityStatus: carAuthorityStatus,
           rationalePoints: [
-            'Under GST (General) Regulations Regulation 27: input GST on the entity’s own passenger motor car (S-plate) is blocked from recovery. The full invoice amount is capitalized into the asset cost.',
-            'Under Section 15(1)(k) of the Income Tax Act 1947: No deduction or capital allowance is granted on passenger cars. Depreciation in accounting records must be added back 100% in the corporate tax computation.',
+            'Assuming an ordinary S-plate private passenger car with no applicable exception, input GST on the entity’s own car is blocked under the GST Regulations and non-recoverable GST is included in asset cost.',
+            'Assuming no vehicle-specific exception, Section 15(1)(k) generally disallows the related deduction and capital allowances; add back accounting depreciation where the disallowance applies.',
             hasExplicitCarCost
               ? 'Sum of Debits = Sum of Credits ($' + effectiveCarCost.toLocaleString() + '). Journal entry is 100% balanced.'
               : '⚠️ AMOUNTS PENDING: Motor vehicle purchase price was not specified in query. Journal structure is proposed; monetary amounts must be determined before posting.'

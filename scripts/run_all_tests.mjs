@@ -42,6 +42,8 @@ const testSuites = [
   { name: 'Official Tax Source Links', file: 'test_official_tax_source_links.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Missing Fact Guards', file: 'test_iras_missing_fact_guards.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS Verified Source Map and Fallback', file: 'test_iras_source_map.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS End-to-End Routing and Retrieval', file: 'test_iras_e2e_routing.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS Provisional Answer Pipeline', file: 'test_iras_end_to_end_provisional.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Business Equipment Acquisition', file: 'test_business_equipment_acquisition.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Inventory Event Sequence', file: 'test_event_sequence_inventory.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Sale and Leaseback Event Sequence', file: 'test_sale_leaseback_sequence.mjs', layer: 'accounting-invariants', tier: 'smoke' },

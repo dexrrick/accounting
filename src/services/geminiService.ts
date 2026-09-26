@@ -1084,21 +1084,21 @@ export function renderStructuredOfflineResponse(
     };
   }
 
-  // 4. CAR PURCHASE WITH BLOCKED GST & DISALLOWED TAX DEPRECIATION
+  // 4. CAR PURCHASE WITH CONDITIONAL STATUTORY TREATMENT
   if (parsed.scenarioType === 'CAR_PURCHASE_STATUTORY' && parsed.directGroups) {
     const grp = parsed.directGroups[0];
     const cost = grp.totalDebit;
-    const replyText = `### Statutory Directive: Acquisition of Passenger Motor Car\n\n` +
+    const replyText = `### Statutory Guidance: S-Plate Private Passenger Car Purchase\n\n` +
       `**Governing Authorities**: **IRAS & AGC Singapore** | **Statutes**: **Income Tax Act 1947 §15(1)(k)** & **GST (General) Regulations Reg 27**\n\n` +
+      `**Scope and assumptions**: This summary assumes an ordinary Singapore-registered S-plate private passenger car used by the company or its employees, with no applicable exception. Confirm the vehicle definition, registration and use facts before applying the income-tax treatment. Qualifying private-hire or instructional vehicles used in the company’s business, certain foreign-registered cars used exclusively outside Singapore, and the limited rules for older Q/RU business cars may have different income-tax treatment. Taxi running expenses are a separate exception under Sections 15(1)(k)(i) and 15(2D): for expenses from 12 November 2018, deduct only amounts attributable to an authorised purpose under Section 14ZA(8). That taxi rule does not itself extend to private-hire cars. GST input-tax recovery must be assessed separately under the GST Regulations, including the vehicle definition, use, attribution and ordinary claim conditions.\n\n` +
       `---\n\n` +
-      `#### 1. Disallowance of Input GST Claim (Regulation 27)\n` +
-      `* Under **Regulation 27 of the GST (General) Regulations**, input tax incurred on the entity’s own passenger motor car (S-plate) is **blocked from recovery**.\n` +
-      `* **Accounting Treatment**: The full purchase price of **SGD ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}** (inclusive of GST) is capitalized into asset cost. No amount is debited to *GST Input Tax*.\n\n` +
+      `#### 1. GST Input-Tax Treatment (Regulation 27)\n` +
+      `* For the assumed car, if it falls within the motor-car definition in Regulation 25(1), **Regulation 27 generally blocks** input tax on the car and related costs when supplied or imported for use by the taxable person or its employees. Check the definition and exclusions against the actual vehicle.\n` +
+      `* **Accounting Treatment**: On the stated blocked-input-tax assumption, capitalize the supplied acquisition amount of **SGD ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}** as the asset cost, including any input GST that is non-recoverable.\n\n` +
       `---\n\n` +
-      `#### 2. Prohibition of Tax Deductions & Capital Allowances (§15(1)(k))\n` +
-      `* Under **Section 15(1)(k) of the Income Tax Act 1947**, **no tax deduction or Section 19/19A Capital Allowances** are granted on passenger motor cars.\n` +
-      `* **Tax Add-Back**: All accounting depreciation charged in P&L must be **added back 100%** in the corporate tax computation (Form C-S / Form C).\n` +
-      `* Petrol, parking, road tax, and maintenance expenses for the passenger car are also non-deductible under Section 15(1)(k).\n\n` +
+      `#### 2. General Income-Tax Treatment (§15(1)(k))\n` +
+      `* For ordinary private and business cars, **Section 15(1)(k) generally disallows** related expenses and capital allowances, subject to vehicle- and business-specific exceptions.\n` +
+      `* Where the disallowance applies, add back accounting depreciation and generally disallow running costs. IRAS identifies a capped running-cost deduction for qualifying Q- or RU-plated business cars registered before 1 April 1998; qualifying private-hire or instructional vehicles and certain foreign-registered cars may also have separate capital-allowance treatment. Verify the applicable conditions before computing the company’s tax deduction or allowances.\n\n` +
       `---\n\n` +
       `### Single Compound Journal Entry (${grp.eventDate})\n\n` +
       `* **Debit**: **Motor Vehicles - Cost (Non-Current Asset)** — **SGD ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Full gross outlay capitalized)*\n` +

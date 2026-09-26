@@ -55,16 +55,23 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
     actTitle: 'Income Tax Act 1947',
     actCode: 'ITA1947',
     sectionOrSchedule: 'Section 15(1)(k)',
-    ruleTitle: 'Prohibition of Tax Deduction & Capital Allowances on Private Passenger Motor Cars (S-Plate)',
+    ruleTitle: 'Passenger Motor Car Expense and Capital Allowance Restrictions (with Exceptions)',
     category: 'TAX_INCOME',
-    principle: 'No deduction shall be allowed for any outgoings and expenses incurred in respect of a motor car registered as a passenger car (whether private or company car, including RU and private hire cars used by staff), nor shall any capital allowance be granted.',
-    application: 'Purchasing a private passenger car (S-plate) yields zero tax depreciation. Petrol, parking, road tax, repairs, and ERP incurred on company passenger cars are completely non-deductible.',
+    principle: 'Section 15(1)(k) generally disallows expenses incurred in respect of passenger motor cars and capital allowances on private and business cars, subject to vehicle- and business-specific exceptions. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available.',
+    application: 'Identify the vehicle category and registration date, how the car is used, and the type of cost. Distinguish tax depreciation from capital allowances and running-cost deductions; do not infer eligibility from a G/Y plate or the label “commercial vehicle”.',
     practicalRules: [
-      'Company passenger motor cars (S-plate cars) are completely disallowed for Section 14 deductions and Section 19/19A Capital Allowances.',
-      'Commercial goods vehicles (G-plate, Y-plate vans, lorries, trucks) ARE 100% eligible for Section 19A Capital Allowances and running expenses are deductible.',
-      'Strict add-back of car depreciation and operating expenses is mandatory in Form C-S Tax Computation.'
+      'Running expenses for private cars (e.g. S-plated cars) and business cars (e.g. Q- and RU-plated cars registered on or after 1 April 1998) are generally non-deductible even when used for business. Direct costs and employee reimbursements are treated alike.',
+      'Transport allowances paid to staff are deductible to the employer but form part of the employees’ taxable employment income. Transportation services are distinct from hiring or operating a private car.',
+      'Taxi running-expense exception: Section 15(1)(k)(i), subject to Section 15(2D), permits qualifying taxi outgoings and expenses. For expenses incurred on or after 12 November 2018, deduct only amounts attributable to use of the taxi for an “authorised purpose” under Section 14ZA(8): carrying passengers, or collecting, conveying and delivering cargo for reward where the statutory Registrar-approval conditions are met. This is a taxi rule and does not itself extend to private-hire cars.',
+      'IRAS identifies exceptions for certain foreign-registered cars used exclusively outside Singapore for business, and a capped deduction for motor-vehicle expenses of Q- or RU-plated business cars registered before 1 April 1998. Check the applicable conditions and cap.',
+      'Capital allowances are generally unavailable for private and business cars, except cars registered as private-hire cars or for instructional purposes that are hired out or used for driving instruction in the course of the company’s business. Qualifying vans, lorries and motorcycles used for business, and qualifying foreign-registered cars used exclusively outside Singapore, may qualify under Sections 19 or 19A.',
+      'Accounting depreciation is not itself a tax deduction. Add it back where the vehicle is within the tax disallowance; assess any capital-allowance exception separately.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-',
+    supplementaryOfficialSources: [
+      { title: 'IRAS — Tax Treatment of Business Expenses (Motor Vehicle Expenses)', url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-%28m-r%29', authority: 'IRAS' },
+      { title: 'IRAS — Capital Allowances (Motor Vehicles)', url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances', authority: 'IRAS' }
+    ],
     tags: ['car expenses', 'passenger car', 'motor car', 's-plate', 'car depreciation', 'section 15(1)(k)']
   },
 
@@ -149,31 +156,32 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
     id: 'ITA_SEC37_LOSS_CARRY_FORWARD',
     authority: 'IRAS',
     authorityName: 'Inland Revenue Authority of Singapore (IRAS)',
-    sourcePublisher: 'Singapore Statutes Online / AGC',
+    sourcePublisher: 'Inland Revenue Authority of Singapore (IRAS)',
     legalOrStandardInstrument: 'Income Tax Act 1947',
     actTitle: 'Income Tax Act 1947',
     actCode: 'ITA1947',
     sectionOrSchedule: 'Section 37',
-    ruleTitle: 'Loss Carry-Forward & Substantial Shareholding Continuity Test (50% Continuity)',
+    ruleTitle: 'Loss and Capital Allowance Carry-Forward Conditions and Shareholding Dates',
     category: 'TAX_INCOME',
-    principle: 'Under Section 37(3)(a) of the Income Tax Act 1947, unabsorbed trade losses and capital allowances may be carried forward indefinitely to offset against future taxable income from all sources, subject to the substantial shareholding test (at least 50% continuity of ultimate shareholders as at the relevant comparison dates).',
-    verbatimStatuteText: 'There shall be deducted from the statutory income of any person for any year of assessment the amount of a loss incurred by that person in any trade, business, profession or vocation, provided that no deduction shall be allowed to any company unless the Comptroller is satisfied that the shareholders of the company on the last day of the year in which the loss was incurred were substantially the same as the shareholders of the company on the first day of the year of assessment in which the loss is to be deducted.',
-    application: 'Corporate tax computation: unabsorbed losses from prior YAs offset current year statutory income if shareholder continuity >= 50% is proven.',
+    principle: 'Unutilised trade losses and capital allowances may generally be carried forward indefinitely, subject to the shareholding test at the relevant dates. The first comparison date differs: losses use the last day of the calendar year in which the loss was incurred, while capital allowances use the last day of the YA in which they arose. Capital allowances also require continuity of the same trade or business and no change in principal activities.',
+    application: 'For each item, identify whether it is a trade loss or capital allowance and its year of origin. Compare the shareholders and their holdings on the matching origin date and the first day of the YA of deduction. For capital allowances, also verify the same-business and principal-activity conditions.',
     practicalRules: [
-      'Indefinite Carry-Forward: Unabsorbed trade losses carry forward indefinitely until fully utilised.',
-      'Substantial Shareholding Test (SST): Shareholders holding >= 50% of paid-up capital/shares must be substantially identical on comparison dates (last day of loss year vs first day of YA of deduction).',
-      'Order of Deduction: Unabsorbed capital allowances from prior years are deducted before unabsorbed trade losses.',
-      'Shareholding Waiver: Minister or Comptroller may waive SST if substantial change was not for tax benefit.'
+      'Carry-forward: Unutilised trade losses and capital allowances can generally be carried forward indefinitely, subject to their separate qualifying conditions and the shareholding test.',
+      'Trade-loss comparison dates: The last day of the calendar year in which the loss was incurred and the first day of the YA in which it is deducted.',
+      'Capital-allowance comparison dates: The last day of the YA in which the allowance arose and the first day of the YA in which it is deducted.',
+      'Shareholding test: Compare common shareholders’ aggregate percentage at those two dates. The test is met where the same shareholders collectively hold at least 50% at both dates; ultimate holding company shareholders are considered where applicable.',
+      'Capital allowances only: The company must continue the same trade or business for which the allowances were granted and have no change in its principal activities. These are not stated as carry-forward conditions for trade losses.',
+      'A waiver of the shareholding test may be available in qualifying circumstances; do not assume it applies.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P19-#pr37-',
+    canonicalUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/unutilised-items-%28capital-allowances-trade-losses-donations%29',
     tags: ['loss carry forward', 'section 37', 'tax losses', 'substantial shareholding', 'sst 50%', 'unabsorbed losses'],
     sourceStatus: 'VERIFIED',
-    sourceType: 'AUTHORITATIVE_SOURCE',
-    evidenceTier: 'PRIMARY_SOURCE',
-    isVerbatimText: true,
+    sourceType: 'CURATED_SUMMARY',
+    evidenceTier: 'OFFICIAL_GUIDANCE',
+    isVerbatimText: false,
     effectiveDate: '1948-01-01',
     validFrom: '1948-01-01',
-    lastVerifiedDate: '2026-09-01',
+    lastVerifiedDate: '2026-09-26',
     reviewAuditCycleDays: 365
   },
 
@@ -226,7 +234,9 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
       'Minimum Shareholding: At least 20% of the ordinary shares of the investee company.',
       'Holding Period: Minimum 24 continuous months immediately preceding the disposal.',
       'Ordinary Shares: Applies to ordinary shares (shares that carry voting, dividend, and surplus asset rights without fixed preference).',
-      'Exclusions: Does not apply to unlisted property-holding companies whose main business is holding immovable property in Singapore.'
+      'Property exclusions depend on disposal date and investee facts. For non-listed shares disposed before 1 June 2022, exclusions covered trading Singapore immovable property and principally holding Singapore immovable property with passive or no income; property development and qualifying Section 10D letting businesses were not excluded on that basis.',
+      'For non-listed shares disposed on or after 1 June 2022, exclusions cover trading or principally holding immovable property anywhere with passive or no income, and property development in Singapore or elsewhere. The property-development exclusion has an exception where the developed property is used in the investee’s own business to derive trade income and no development activity occurred in the preceding 60 months. Other statutory exclusions also apply.',
+      'The pre-2026 20% test is met by the divesting company itself; do not aggregate group holdings for this historical period.'
     ],
     canonicalUrl: 'https://www.iras.gov.sg/media/docs/default-source/e-tax/etaxguide_certainty-of-non-taxation-of-companies-gain-on-disposal-of-equity-investments.pdf',
     tags: ['section 13w', 'safe harbour', 'share disposal', 'capital gain exemption', '20 percent 24 months'],
@@ -252,12 +262,13 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
     sectionOrSchedule: 'Section 13W',
     ruleTitle: 'Section 13W Treatment for Ordinary and Qualifying Preference Shares from 2026',
     category: 'TAX_INCOME',
-    principle: 'For disposals on or after 1 January 2026, Section 13W can apply to qualifying gains from ordinary shares and qualifying preference shares. The 20% holding requirement over a continuous 24 months may be assessed on a group basis, subject to the detailed conditions and exclusions.',
+    principle: 'For disposals on or after 1 January 2026, Section 13W may exempt qualifying gains from ordinary shares and qualifying preference shares held at the required 20% level for a continuous 24 months immediately before disposal. A group assessment is conditional on the detailed statutory group criteria and does not apply to a divesting registered business trust or variable capital company; other exclusions also apply.',
     application: 'Confirm the share class, disposal date, continuous holding and group holdings before concluding that a gain is outside tax.',
     practicalRules: [
       'Qualifying ordinary shares or preference shares may be covered for disposals from 1 January 2026.',
-      'Assess the 20% holding requirement over the 24 months before disposal, including group holdings where eligible.',
-      'Check statutory exclusions and the detailed IRAS guidance before treating a gain as non-taxable.'
+      'The 20% threshold refers to the total paid-up share capital of ordinary shares and qualifying preference shares. The relevant class must be held continuously for at least 24 months immediately before disposal.',
+      'First test the divesting company on a standalone basis. If it does not meet the threshold, aggregate related-company holdings only where the detailed same-group and continuous-period tests are met. Group assessment is unavailable where the divesting company is a registered business trust or a variable capital company.',
+      'For non-listed investees, apply the property-related exclusions according to the disposal date, including the post-1 June 2022 trading, passive-holding and 60-month property-development conditions and their exception. Also check excluded-divesting-company and other statutory exclusions before treating a gain as exempt.'
     ],
     canonicalUrl: 'https://www.iras.gov.sg/media/docs/default-source/e-tax/etaxguide_certainty-of-non-taxation-of-companies-gain-on-disposal-of-equity-investments.pdf',
     tags: ['section 13w', 'safe harbour', 'share disposal', 'preference shares', 'ordinary shares', '20 percent 24 months'],
@@ -287,11 +298,12 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
     application: 'For an intercompany loan payment, confirm the lender’s residence, Singapore nexus, treaty position and the loan purpose before computing withholding tax.',
     practicalRules: [
       'Rate: 15% reduced final withholding tax can apply to qualifying gross interest; another rate or treaty relief may apply depending on the facts.',
-      'Payment Deadline: Must e-file Form S45 and remit withheld tax to IRAS by the 15th of the second month following the payment date.',
-      'Date of Payment: Deemed paid when credited to payee account, reinvested, accumulated, capitalized, or made available.',
+      'Date of Payment (except director fees): Use the earliest of (a) when payment is due and payable under the agreement or contract, or the invoice date if there is no agreement or contract, (b) when it is credited to the non-resident’s or designated account, and (c) actual payment. Credit terms do not defer the date.',
+      'Filing and Payment Deadline: File and pay by the 15th of the second month from the applicable date of payment. Director-fee timing has separate rules.',
       'Late Payment Penalty: 5% initial late payment penalty plus additional 1% per month up to maximum 15%.'
     ],
     canonicalUrl: 'https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax',
+    supplementaryOfficialSources: [{ title: 'IRAS — Withholding Tax Filing and Payment Due Date', url: 'https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date', authority: 'IRAS' }],
     tags: ['withholding tax', 'section 45', 'interest withholding', 'non-resident interest', '15% final tax'],
     sourceStatus: 'VERIFIED',
     sourceType: 'CURATED_SUMMARY',
@@ -321,10 +333,12 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
     practicalRules: [
       'Royalties Rate: The 10% gross-payment final rate may apply where a non-resident derives the royalty through operations outside Singapore; operations in Singapore, treaty relief or an exemption may change the rate and basis.',
       'Management / Technical Service Fees: For services performed in Singapore, non-final withholding at the prevailing corporate income tax rate for the year the services were provided may apply, even if payment occurs in another year; attribute mixed-location services accordingly.',
-      'Filing Deadline: 15th of the second month after the date of payment via myTax Portal.',
+      'Date of Payment (except director fees): Earliest of when payment is due and payable under the agreement or contract, or the invoice date if there is no agreement or contract; when credited to the non-resident’s or designated account; and actual payment. Credit terms do not defer the date.',
+      'Filing Deadline: File and pay by the 15th of the second month after the applicable date of payment via myTax Portal. Director-fee timing has separate rules.',
       'Software Exemption: Commercial off-the-shelf software licenses without copyright acquisition enjoy administrative concession from withholding tax under IRAS e-Tax Guide.'
     ],
     canonicalUrl: 'https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax',
+    supplementaryOfficialSources: [{ title: 'IRAS — Withholding Tax Filing and Payment Due Date', url: 'https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date', authority: 'IRAS' }],
     tags: ['section 45a', 'royalties withholding', 'technical service fees', 'management fees', 'withholding non-resident'],
     sourceStatus: 'VERIFIED',
     sourceType: 'CURATED_SUMMARY',
@@ -378,15 +392,19 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
     sectionOrSchedule: 'Section 14N',
     ruleTitle: 'Deduction for Renovation and Refurbishment (R&R) Costs',
     category: 'TAX_INCOME',
-    principle: 'Under Section 14N of the Income Tax Act 1947, qualifying non-structural renovation or refurbishment expenditure for a continuing trade, business or profession may be deducted, subject to a SGD 300,000 cap for each fixed 3-year period beginning YA 2025. A 1-year write-off may be elected for qualifying expenditure incurred from YA 2025.',
-    application: 'Check the YA, qualifying work, trade continuity, the remaining cap for the fixed 3-year period and the elected claim period before calculating a deduction.',
+    principle: 'Under Section 14N of the Income Tax Act 1947, qualifying non-structural renovation or refurbishment expenditure for a continuing trade, business or profession may be deducted, subject to a SGD 300,000 cap for each fixed 3-year period beginning YA 2025. For the first fixed period, YA 2025 to YA 2027, a taxpayer whose existing relevant period does not coincide with that period receives a refreshed SGD 300,000 cap. A 1-year write-off may be elected for qualifying expenditure incurred from YA 2025.',
+    application: 'Check the YA from the company’s basis period, qualifying work, trade continuity, the remaining fixed-period cap, whether the transitional refreshed cap applies, and any irrevocable 1-year election before calculating a deduction.',
     practicalRules: [
-      'Cap: SGD 300,000 for each fixed 3-year period, beginning YA 2025 to YA 2027.',
-      'Deduction Schedule: Normally one-third in each of 3 consecutive YAs; from YA 2025, a 1-year write-off may be elected for qualifying expenditure.',
+      'Cap: SGD 300,000 for each fixed 3-year period: YA 2025–2027, YA 2028–2030, YA 2031–2033, and each later consecutive period.',
+      'YA 2025 transition: A taxpayer whose existing relevant 3-year period does not coincide with YA 2025–2027 receives a refreshed SGD 300,000 cap for that first fixed period. Do not carry the old rolling-cap balance forward as if no transition applied.',
+      'No proration on commencement: A taxpayer that starts carrying on a trade or business during a fixed 3-year period may use the full SGD 300,000 cap for that period. For example, a company commencing business in YA 2026 may use the full cap across YAs 2026 and 2027; do not prorate it for the shorter operating period.',
+      'Deduction Schedule: Normally one-third in each of 3 consecutive YAs beginning with the YA relating to the basis period in which costs were first incurred. A 1-year write-off may be elected for qualifying expenditure incurred from YA 2025; the election is irrevocable.',
       'Qualifying Items: General lighting, floor tiles, false ceilings, fixed partitions, wall coverings, doors, plumbing, electrical installations.',
-      'Non-Qualifying Items: Structural changes and fine art. Non-structural designer or professional fees may qualify from YA 2025.'
+      'Non-Qualifying Items: Structural changes and fine art. Non-structural designer or professional fees may qualify from YA 2025.',
+      'No double deduction: Costs qualifying as repairs under Section 14(1)(c) or as plant and machinery under Sections 19 or 19A are claimed under those provisions, not again under Section 14N.'
     ],
     canonicalUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(m-r)',
+    supplementaryOfficialSources: [{ title: 'IRAS — Tax Deduction for Renovation or Refurbishment Works Done to Business Premises', url: 'https://www.iras.gov.sg/media/docs/default-source/e-tax/etaxguide_it_deduction_r_r_costs.pdf?sfvrsn=7d6cbeea_34', authority: 'IRAS' }],
     tags: ['renovation deduction', 'section 14n', 'r&r deduction', '300000 cap', 'renovation 3 years'],
     sourceStatus: 'VERIFIED',
     sourceType: 'CURATED_SUMMARY',

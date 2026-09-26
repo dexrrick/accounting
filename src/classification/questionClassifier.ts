@@ -357,7 +357,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   // Scenario-specific tax conclusions need the facts that determine the
   // applicable IRAS treatment. Keep general explain/definition requests clear.
   const asksAboutSpecificTaxCase = !isPureConceptualQuery &&
-    /\b(?:our|my|this|we|company|paid|paying|claim|file)\b/i.test(q);
+    /\b(?:our|my|this|we|company|paid|paying|claim\w*|file)\b/i.test(q);
   if (asksAboutSpecificTaxCase && hasTax && /\b(?:deductib\w*|deduct\w*|tax deduction)\b/i.test(q) &&
       /\b(?:expense|cost|payment|fee|meal|entertainment|renovat\w*|fit.out|machinery|equipment|car|vehicle|asset)\b/i.test(q)) {
     if (!/\b(?:business purpose|for the business|for our business|wholly and exclusively|private use|personal use)\b/i.test(q)) {
@@ -365,6 +365,29 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     }
     if (!/\b(?:capital|revenue expense|operating expense)\b/i.test(q)) {
       missingFacts.push('Whether the expenditure is capital or revenue in nature');
+    }
+    if (!/\b(?:invoice|receipt|supporting documents?|records?)\b/i.test(q)) {
+      missingFacts.push('Invoices, receipts or other records supporting the expense and business purpose');
+    }
+  }
+  // Section 14N eligibility depends on the actual work and YA-specific
+  // election/cap facts. Ask for those details even when a short question does
+  // not say "our company" or supply a date.
+  if (!isPureConceptualQuery && hasTax &&
+      /\b(?:renovat\w*|refurbish\w*|section 14n)\b/i.test(q) &&
+      /\b(?:deduct\w*|deduction|claim\w*|immediate(?:ly)?|section 14n)\b/i.test(q)) {
+    if (!/\b(?:scope|description|work comprises|work involves)\b/i.test(q)) {
+      missingFacts.push('Description and scope of the renovation or refurbishment work');
+    }
+    if (!/\b(?:repair|improv\w*|structural)\b/i.test(q)) {
+      missingFacts.push('Whether the work is a repair, structural alteration or improvement');
+    }
+    if (!/\b(?:incurred|expenditure date|basis period|year of assessment|\bya\s*20\d{2})\b/i.test(q)) {
+      missingFacts.push('Date the expenditure was incurred, its basis period and the relevant Year of Assessment');
+    }
+    if (!/\b(?:prior|previous|earlier) section 14n claims?\b/i.test(q) &&
+        !/\b(?:cap utilization|cap used|election made|elected under section 14n)\b/i.test(q)) {
+      missingFacts.push('Prior Section 14N claims, cap utilization and any election made');
     }
   }
   if (/\b(?:renovat\w*|refurbish\w*|section 14n)\b/i.test(q) &&
@@ -378,25 +401,61 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
       missingFacts.push('Company financial year end and YA basis period containing the renovation expenditure');
     }
   }
-  if (asksAboutSpecificTaxCase && hasGst && /\b(?:claim|recover|charge|zero.rate|exempt)\b/i.test(q)) {
+  if (asksAboutSpecificTaxCase && hasGst && /\b(?:claim\w*|recover\w*|charge\w*|zero.rate|exempt)\b/i.test(q)) {
     if (!/\b(?:gst.registered|registered for gst|not registered for gst)\b/i.test(q)) {
       missingFacts.push('Supplier and customer GST registration status, where relevant');
     }
-    if (!/\b(?:business use|private use|personal use|tax invoice)\b/i.test(q) && /\b(?:input tax|input gst|claim|recover)\b/i.test(q)) {
+    if (!/\b(?:business use|private use|personal use|tax invoice)\b/i.test(q) && /\b(?:input tax|input gst|claim\w*|recover\w*)\b/i.test(q)) {
       missingFacts.push('Business or private use and supporting tax invoice for the GST claim');
     }
+    if (/\b(?:meals?|dining|entertainment)\b/i.test(q)) {
+      if (!/\b(?:business purpose|purpose of (?:the )?meal)\b/i.test(q)) missingFacts.push('Business purpose of the meal or entertainment');
+      if (!/\b(?:attendees?|who attended|relationship to (?:the )?company)\b/i.test(q)) missingFacts.push('Who attended and their relationship to the company');
+    }
+    if (/\b(?:passenger\s+(?:motor\s+)?car|s-plate|motor car)\b/i.test(q) && /\b(?:claim|recover|input tax|input gst)\b/i.test(q)) {
+      missingFacts.push('Vehicle registration/use details and whether a specific motor-car exception applies');
+    }
+    if (/\bservice\w*\b/i.test(q) && /\b(?:overseas|zero.rate|out.of.scope)\b/i.test(q)) {
+      if (!/\b(?:type|nature|what kind) of service\b/i.test(q)) missingFacts.push('Nature of the services supplied');
+      if (!/\b(?:customer|recipient|client)\b/i.test(q)) missingFacts.push('Customer/recipient location and status');
+      if (!/\b(?:place of supply|where (?:the )?service|performed in|performed outside)\b/i.test(q)) missingFacts.push('Where the services are performed and the applicable place-of-supply facts');
+    }
+  }
+  if (asksAboutSpecificTaxCase && hasTax && /\b(?:prior|previous|preceding|last)[\s-]+(?:financial\s+|basis\s+|tax\s+)?(?:year|ya)\b/i.test(q) && /\bloss(?:es)?\b/i.test(q)) {
+    if (!/\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(q)) missingFacts.push('Year of Assessment in which the loss arose and the YA in which it would be used');
+    if (!/\b(?:shareholding|shareholders?|ownership change|same shareholders?)\b/i.test(q)) missingFacts.push('Whether the required shareholding continuity test is met');
+    if (!/\b(?:same business|business continuity|continuity of business)\b/i.test(q)) missingFacts.push('Whether the company continues the same business, where the statutory test requires it');
+  }
+  if (hasGst && /\b2022\b/i.test(q) && /\b2023\b/i.test(q) && /\b(?:invoice|payment|gst rate)\b/i.test(q)) {
+    if (!/\b(?:goods|services)\b/i.test(q)) missingFacts.push('Whether the supply is goods or services');
+    if (!/\b(?:delivered|performed|supply date|date of supply)\b/i.test(q)) missingFacts.push('Actual delivery/performance date and the portion supplied before or after 1 January 2023');
+    if (!/\b(?:part payment|instalment|continuous supply)\b/i.test(q)) missingFacts.push('Whether there were part-payments, instalments or a continuous supply');
   }
   if (asksAboutSpecificTaxCase && /\b(?:withholding tax|\bwht\b)\b/i.test(q)) {
     if (!/\b(?:non.resident|resident in|tax resident in)\b/i.test(q)) {
       missingFacts.push('Recipient tax residence');
+    }
+    if (!/\b(?:beneficial owner|beneficially owned|beneficial ownership)\b/i.test(q)) {
+      missingFacts.push('Whether the overseas recipient is the beneficial owner of the payment');
+    }
+    if (!/\b(?:treaty|double tax agreement|double taxation agreement|dta|tax convention)\b/i.test(q)) {
+      missingFacts.push('Whether treaty relief is available and the residence/beneficial-owner documents supporting it');
     }
     if (!/\b(?:performed in singapore|performed outside singapore|services in singapore|services outside singapore)\b/i.test(q) &&
         /\b(?:service|management|technical|consult)\b/i.test(q)) {
       missingFacts.push('Where the services were physically performed');
     }
     if (/\b(?:service|management|technical|consult)\b/i.test(q) &&
+        !/\b(?:scope|nature|description|agreement|contract|deliverables?)\b/i.test(q)) {
+      missingFacts.push('Contractual scope and nature of the services actually supplied');
+    }
+    if (/\b(?:service|management|technical|consult)\b/i.test(q) &&
         !/\b(?:services? (?:were |was )?(?:provided|performed|rendered) (?:in|during) (?:19|20)\d{2}|service (?:year|period) (?:19|20)\d{2})\b/i.test(q)) {
       missingFacts.push('Year or period when the services were provided');
+    }
+    if (/\b(?:interest|loan|loan interest)\b/i.test(q) &&
+        !/\b(?:loan terms|loan agreement|interest-bearing|use of funds|source of the interest|singapore.source)\b/i.test(q)) {
+      missingFacts.push('Loan terms and facts relevant to whether the interest is Singapore-sourced');
     }
     if (!/\b(?:paid on|payment date|due on|credited on|deemed paid)\b/i.test(q)) {
       missingFacts.push('Payment or deemed-payment date');
@@ -408,6 +467,32 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     }
     if (!/\b(?:departure|departing|leaving singapore|overseas posting|cessation date|last day)\b/i.test(q)) {
       missingFacts.push('Employment cessation, departure or overseas-posting details');
+    }
+    if (!/\b(?:exempt(?:ion)?|exemption criteria|not required to file|filing exemption)\b/i.test(q)) {
+      missingFacts.push('Whether an IR21 filing exemption applies to this employee');
+    }
+    if (!/\b(?:withhold|withholding|withheld|release of remuneration|release the salary)\b/i.test(q)) {
+      missingFacts.push('Whether remuneration must be withheld pending tax clearance and when it may be released');
+    }
+  }
+
+  // Employment-income reporting for a particular bonus depends on the
+  // contractual entitlement and actual payment/credit timing, not only the
+  // month shown in payroll. Keep this separate from accounting accrual queries.
+  if (!isPureConceptualQuery && /\bbonus(?:es)?\b/i.test(q) &&
+      /\b(?:employee|payroll|reported|reporting|ir8a|ais|taxable|year of assessment)\b/i.test(q) &&
+      /\b(?:reported|reporting|payroll|ir8a|ais|taxable|which year)\b/i.test(q)) {
+    if (!/\b(?:contractual|discretionary|non.contractual|entitlement|became due)\b/i.test(q)) {
+      missingFacts.push('Whether the bonus is contractual or discretionary and when contractual entitlement arose');
+    }
+    if (!/\b(?:paid on|payment date|credited on|date paid|date credited|received on)\b/i.test(q)) {
+      missingFacts.push('Exact date the bonus was paid, credited or otherwise made available to the employee');
+    }
+    if (!/\b(?:ya\s*20\d{2}|year of assessment|reporting year|calendar year|ais|ir8a)\b/i.test(q)) {
+      missingFacts.push('Relevant reporting year/Year of Assessment and AIS/IR8A reporting period');
+    }
+    if (!/\b(?:service period|period of service|relates to|performance period)\b/i.test(q)) {
+      missingFacts.push('Service or performance period to which the bonus relates and the applicable payroll period');
     }
   }
 

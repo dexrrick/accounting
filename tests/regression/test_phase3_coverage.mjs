@@ -170,7 +170,7 @@ async function runPhase3Tests() {
   // TEST 4: IRAS / INCOME TAX ACT EXPANSION
   console.log('\n[4. IRAS / INCOME TAX ACT EXPANSION]');
   const expectedIras = [
-    { key: 'ITA_SEC37_LOSS_CARRY_FORWARD', section: 'Section 37', textCheck: 'loss incurred by that person' },
+    { key: 'ITA_SEC37_LOSS_CARRY_FORWARD', section: 'Section 37', textCheck: 'calendar year in which the loss was incurred' },
     { key: 'ITA_SEC37E_LOSS_CARRY_BACK', section: 'Section 37E', textCheck: '$100,000' },
     { key: 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR', section: 'Section 13W', textCheck: 'ordinary shares' },
     { key: 'ITA_SEC13W_EQUITY_DISPOSAL_2026', section: 'Section 13W', textCheck: 'preference shares' },
@@ -183,7 +183,12 @@ async function runPhase3Tests() {
     const rec = UNIFIED_SOURCE_REGISTRY[item.key];
     assert(rec, `IRAS rule ${item.key} must exist`);
     assert.strictEqual(rec.authority, 'IRAS');
-    if (item.key.startsWith('ITA_SEC14N_') || item.key.startsWith('ITA_SEC13W_') || item.key.startsWith('ITA_SEC45')) {
+    if (item.key === 'ITA_SEC37_LOSS_CARRY_FORWARD') {
+      assert.strictEqual(rec.sourceStatus, 'NEEDS_REVIEW');
+      assert.strictEqual(rec.evidenceTier, 'CURATED_SUMMARY');
+      assert.strictEqual(rec.isVerbatimText, false);
+      assert(rec.officialSourceUrl.includes('iras.gov.sg/'));
+    } else if (item.key.startsWith('ITA_SEC14N_') || item.key.startsWith('ITA_SEC13W_') || item.key.startsWith('ITA_SEC45')) {
       assert.strictEqual(rec.sourceStatus,
         item.key === 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR' || item.key === 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025'
           ? 'HISTORICAL' : 'NEEDS_REVIEW');

@@ -51,9 +51,9 @@ import type { SingaporeStatuteRule } from './types';export const GST_STATUTE_RUL
     ruleTitle: 'Disallowed / Blocked Input Tax Claims under Singapore GST Law',
     category: 'TAX_GST',
     principle: 'Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.',
-    application: 'Check who uses a motor car, the nature and date of staff medical treatment, and the other input-tax conditions before deciding whether a claim is blocked.',
+    application: 'For motor-car costs, distinguish use by the taxable person or its employees from use by a third party or connected person, and check the vehicle definition and ordinary input-tax conditions. For staff medical costs, check the type and date of treatment and the statutory exception relied on.',
     practicalRules: [
-      '1. Motor Cars: Purchase, hire and running costs of motor cars used by the business or employees are generally blocked. From 1 January 2023, qualifying third-party-use costs may be claimable; connected-person use has additional recovery conditions. Vehicles excluded from the Regulation 25 motor-car definition may qualify.',
+      '1. Motor Cars: Regulation 27 generally blocks input tax on a motor car supplied or imported for use by the taxable person and on related goods or services. Use includes physical use and economic use by the taxable person or its employees. From 1 January 2023, costs incurred on a motor car used by a third party may qualify for input tax, subject to the ordinary claim conditions. For use by a connected person, the claimant must also recover the expense (only the recovered portion if partly recovered) and the recovery must not be ancillary to its primary supply. Check the Regulation 25(1) definition and exclusions; a vehicle outside that definition is not blocked by Regulation 27 on that basis.',
       '2. Club Subscription Fees: Entrance fees and subscription charges paid to sports, recreational, or social clubs.',
       '3. Staff Medical: Medical treatment is generally blocked, except for WICA or collective-agreement obligations and, for expenses from 1 October 2021, specified work-risk treatment required by Singapore law or government advisory. Staff medical or accident insurance has the narrower WICA/collective-agreement exception. Family benefits remain blocked.',
       '4. Family Benefits: Any expenses incurred on benefits provided to the family members of your employees.',
@@ -78,14 +78,15 @@ import type { SingaporeStatuteRule } from './types';export const GST_STATUTE_RUL
     sectionOrSchedule: 'Section 21(3)',
     ruleTitle: 'Zero-Rating of International Services and Exported Goods (0% GST)',
     category: 'TAX_GST',
-    principle: 'Supplies of goods exported out of Singapore and supplies of international services falling within Section 21(3) are zero-rated (taxed at 0%).',
-    application: 'Singapore software companies exporting SaaS or advisory services to overseas clients bill at 0% GST and can still reclaim 9% input GST on business overheads.',
+    principle: 'A supply of exported goods or services is zero-rated only where it satisfies the requirements of the relevant zero-rating provision. A service must fall within a specific category in Section 21(3) and meet that category’s conditions; an overseas customer alone is insufficient.',
+    application: 'Identify the service category and applicable Section 21(3) limb. Check the contract, direct beneficiary and belonging status where required, the place of performance where relevant to that limb, and any connection to land or goods in Singapore. Separately assess input-tax recovery under the ordinary attribution, documentation and blocked-input rules.',
     practicalRules: [
       'Goods Export: Must maintain required export documentation (Bill of Lading, Air Waybill, export permits) within 60 days.',
-      'International Services (Section 21(3)): Software, consulting, and management services provided under contract to overseas clients, directly benefiting an overseas person outside Singapore, qualify for 0% GST.',
-      'Input Tax Benefit: Even though output tax is 0%, the business can claim 100% of input GST paid on qualifying business purchases.'
+      'International Services (Section 21(3)): Not all services supplied to overseas customers qualify. Apply the conditions of the specific paragraph; for example, Section 21(3)(j) includes a contract and direct-benefit test and, for an overseas person, requires that person to be outside Singapore when the service is performed. Other paragraphs have their own service, recipient, place or goods-related conditions.',
+      'Input Tax: A zero-rated taxable supply may support recovery of attributable input tax, but recovery remains subject to the normal input-tax conditions, attribution and partial-exemption rules, and Regulations 26 and 27.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P15-#pr21-',
+    supplementaryOfficialSources: [{ title: 'IRAS — Providing International Services', url: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/charging-gst-%28output-tax%29/when-to-charge-0-gst-%28zero-rate%29/providing-international-services', authority: 'IRAS' }],
     tags: ['zero rated', '0% gst', 'export of services', 'section 21(3)', 'international services']
   },
 
@@ -194,26 +195,30 @@ import type { SingaporeStatuteRule } from './types';export const GST_STATUTE_RUL
     actTitle: 'Goods and Services Tax Act 1993',
     actCode: 'GSTA1993',
     sectionOrSchedule: 'Section 11',
-    ruleTitle: 'General Time of Supply Rules (Invoice Issuance, Payment Receipt, Performance)',
+    ruleTitle: 'General Time of Supply Rules (Invoice Issuance or Payment Receipt)',
     category: 'TAX_GST',
-    principle: 'Under Section 11(1) of the Goods and Services Tax Act 1993, a supply of goods or services is treated as taking place at the earliest of: (a) the date a tax invoice is issued, (b) the date any payment in respect of the supply is received, or (c) the basic tax point when the goods are removed/made available or services performed.',
+    principle: 'For most transactions, the time of supply is the earlier of when an invoice is issued and when payment is received. Delivery of goods or performance of services is not an additional general trigger under the current rule; specific statutory rules can apply to particular supplies.',
     verbatimStatuteText: 'Subject to the provisions of this Act, a supply of goods or services shall be treated as taking place — (a) at the time when an invoice in respect of the supply is issued; or (b) at the time when any payment in respect of the supply is received by the supplier, whichever is the earlier.',
-    application: 'Determining which quarterly GST return period (F5) must include output tax for delivered goods or prepaid contracts.',
+    application: 'Determine the GST reporting period using the invoice date and payment-received date, and check whether a specific time-of-supply rule applies. Do not use delivery, service completion or the historical 14-day rule as an extra current general trigger.',
     practicalRules: [
-      'General Rule: Earliest of (1) tax invoice issue date, (2) payment receipt date, and (3) service completion / goods delivery date.',
-      '14-Day Rule: If invoice is issued within 14 days after goods delivery or service completion, the invoice date becomes the time of supply (unless payment was received earlier).',
+      'Current General Rule: For most transactions, use the earlier of invoice issuance and receipt of payment. A document triggers the rule when it functions as a bill for payment; a pro-forma invoice or statement of account may not do so.',
+      'Historical Transition: The pre-1 January 2011 general regime used a Basic Tax Point and a 14-day rule. Do not apply those historical rules to supplies on or after 1 January 2011; check the applicable historical law for an earlier supply.',
       'Continuous Supplies of Services: Time of supply is the earlier of invoice issuance or payment receipt.',
       'Deposit / Prepayments: GST must be accounted for on deposits or prepayments in the period the cash is received.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P13-#pr11-',
+    supplementaryOfficialSources: [
+      { title: 'IRAS — When to Report Supplies in GST Returns', url: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/charging-gst-%28output-tax%29/when-to-report-supplies-in-gst-returns', authority: 'IRAS' },
+      { title: 'IRAS — GST: Time of Supply Rules (Historical Transition)', url: 'https://www.iras.gov.sg/media/docs/default-source/uploadedfiles/pdf/gst-tos-rules.pdf?sfvrsn=14973190_0', authority: 'IRAS' }
+    ],
     tags: ['time of supply', 'section 11', 'tax point', 'invoice date', 'payment date', 'earliest date'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',
     evidenceTier: 'PRIMARY_SOURCE',
     isVerbatimText: true,
-    effectiveDate: '1994-04-01',
-    validFrom: '1994-04-01',
-    lastVerifiedDate: '2026-09-01',
+    effectiveDate: '2011-01-01',
+    validFrom: '2011-01-01',
+    lastVerifiedDate: '2026-09-26',
     reviewAuditCycleDays: 365
   },
 

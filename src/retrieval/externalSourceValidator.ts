@@ -67,6 +67,17 @@ export interface TopicContentValidationResult extends ExternalValidationResult {
   substantiveText?: string;
 }
 
+/** Remove page chrome before topic matching so menu labels cannot act as evidence. */
+function extractVisiblePageText(rawDocument: string): string {
+  const withoutChrome = rawDocument
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
+    .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+  const contentMatch = withoutChrome.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)\s*>/i);
+  const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
+  return cleanHtmlText(contentMatch?.[1] || bodyMatch?.[1] || withoutChrome);
+}
+
 const TOPIC_TERM_STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the']);
 
 function normalizeTopicTerm(value: string): string {
@@ -217,8 +228,7 @@ export class ExternalSourceValidator {
 
     const titleMatch = rawDocument.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
-    const mainMatch = rawDocument.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)>/i);
-    const substantiveText = cleanHtmlText(mainMatch?.[1] || rawDocument);
+    const substantiveText = extractVisiblePageText(rawDocument);
     if (!pageTitle || /^(?:home(?:page)?|search(?: results)?|sign in|log in|login|access denied|not found|error)(?:\s*[-|:].*)?$/i.test(pageTitle)) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has a generic, unavailable, or login title', pageTitle, substantiveText };
     }
@@ -226,6 +236,11 @@ export class ExternalSourceValidator {
     const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const normalizedTitle = normalize(pageTitle);
     const normalizedContent = normalize(substantiveText);
+    const visibleWords = normalizedContent.split(/\s+/).filter(Boolean);
+    const distinctVisibleWords = new Set(visibleWords);
+    if (visibleWords.length < 10 || distinctVisibleWords.size < 8 || substantiveText.length < 55) {
+      return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has too little visible body content to substantiate a topic; navigation or page chrome is not evidence', pageTitle, substantiveText };
+    }
     const titleSpecificity = expectation.expectedTitles
       .map(normalize)
       .filter(value => value.length > 0)

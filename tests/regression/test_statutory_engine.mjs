@@ -41,6 +41,13 @@ async function runTests() {
   assert(carRes.scenarioState.queryIntent === 'HYBRID', 'Must be classified as HYBRID');
   assert(carRes.messageText.includes('Regulation 27'), 'Must cite GST Regulation 27 for a passenger car.');
   assert(carRes.messageText.includes('15(1)(k)'), 'Must cite Section 15(1)(k) of the Income Tax Act');
+  assert.match(carRes.messageText, /assumes an ordinary Singapore-registered S-plate private passenger car.*with no applicable exception/i);
+  assert.match(carRes.messageText, /qualifying private-hire or instructional vehicles.*different income-tax treatment/i);
+  assert.match(carRes.messageText, /Taxi running expenses are a separate exception.*12 November 2018.*authorised purpose under Section 14ZA\(8\)/i);
+  assert.match(carRes.messageText, /That taxi rule does not itself extend to private-hire cars/i);
+  assert.match(carRes.messageText, /GST input-tax recovery must be assessed separately/i);
+  assert.doesNotMatch(carRes.messageText, /no tax deduction or Section 19\/19A Capital Allowances are granted on passenger motor cars/i);
+  assert.doesNotMatch(carRes.messageText, /Petrol, parking, road tax, and maintenance expenses.*also non-deductible/i);
   assert(carRes.scenarioState.directGroups?.length === 1, 'Must have 1 journal group');
   const grp = carRes.scenarioState.directGroups[0];
   assert(grp.isBalanced === true, 'Journal entry must be strictly balanced');

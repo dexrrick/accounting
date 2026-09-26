@@ -1,0 +1,402 @@
+{
+  "schemaVersion": 1,
+  "fixtureName": "IRAS end-to-end answer benchmark (provisional)",
+  "reviewStatus": "PENDING_REVIEW",
+  "purpose": "Singapore accountant workflows with independently reviewed content expectations. Overall answer scoring remains pending: synthetic no-provider execution does not verify live retrieval, model grounding, citation support or final-answer quality.",
+  "contentOracleReview": {
+    "status": "INDEPENDENTLY_VERIFIED",
+    "reviewer": "iras_e2e_content_review",
+    "reviewedAt": "2026-09-26",
+    "caseCount": 19,
+    "scope": "All 19 cases; expected content only, not runtime outputs",
+    "dimensions": ["substantiveConclusion", "missingFactHandling", "effectiveDateHandling", "calculationCorrectness"],
+    "runtimeApproval": false,
+    "notes": "Independent review approved all content expectations after correcting meal conditions, the Section 14N commencement cap and the Form C-S/Lite foreign-tax-credit exclusion. Per-case overall review gates remain pending source-selection and live-answer verification."
+  },
+  "sourceExpectationReview": {
+    "status": "INDEPENDENTLY_REVIEWED",
+    "reviewer": "iras_e2e_retrieval_review",
+    "reviewedAt": "2026-09-26",
+    "scope": "Catalog topic/page associations and dated-local policy only",
+    "runtimeApproval": false,
+    "notes": "Current-topic map associations align with the registry. Historical YA2024 renovation and dated GST cases were corrected to separate catalog associations from runtime selection. Required dated local records must be observed independently; an empty map trace is not evidence."
+  },
+  "reviewedDimensions": [],
+  "unverifiedDimensions": [
+    "classification",
+    "topicRouting",
+    "sourceSelection",
+    "retrieval",
+    "grounding",
+    "substantiveConclusion",
+    "citationCorrectness",
+    "missingFactHandling",
+    "effectiveDateHandling",
+    "calculationCorrectness"
+  ],
+  "cases": [
+    {
+      "id": "gst-customer-supplier-meals",
+      "workflow": "GST input tax / entertainment",
+      "provisionalExecution": true,
+      "question": "Can GST be claimed for meals with customers or suppliers?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_GST" },
+        "topicIds": ["iras-gst-entertainment", "iras-gst-input-tax"],
+        "pendingTopicIds": ["iras-gst-input-tax"],
+        "sourceMapIds": ["IRAS_GST_INPUT_TAX_SOURCE_MAP"],
+        "substantiveConclusion": "Do not answer with a blanket yes or no. Entertainment food and drink input tax can be claimed only where the ordinary input-tax conditions are met, including business purpose and the applicable tax-invoice, payment and entertainment-record details; do not describe all customer or supplier meals as blocked.",
+        "missingFacts": ["business purpose", "who attended and their relationship to the company", "GST registration and taxable-supply use", "valid tax invoice and supporting records"],
+        "effectiveDate": "No tax period is given; do not apply a historical period rule without dates.",
+        "citations": ["https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+        "grounding": "Any claim about input-tax eligibility must be supported by retrieved IRAS evidence; a source-map pointer alone is not evidence."
+      }
+    },
+    {
+      "id": "gst-passenger-car-input-tax",
+      "workflow": "GST blocked input tax",
+      "provisionalExecution": true,
+      "question": "Can the company claim GST on a passenger car?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_GST" },
+        "topicIds": ["iras-gst-blocked-input-tax", "iras-gst-motor-vehicles"],
+        "sourceMapIds": ["IRAS_GST_INPUT_TAX_SOURCE_MAP"],
+        "substantiveConclusion": "Distinguish passenger motor cars from other vehicles and state the applicable restriction conditionally; do not generalize the passenger-car rule to every vehicle.",
+        "missingFacts": ["vehicle registration and classification", "vehicle ownership or lease facts", "business use and any potentially applicable statutory exception", "GST registration and tax invoice"],
+        "effectiveDate": "Ask for the acquisition or expense period if historical treatment is relevant.",
+        "citations": ["https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+        "grounding": "Use the IRAS blocked-input-tax / motor-vehicle guidance, not an unrelated income-tax car page."
+      }
+    },
+    {
+      "id": "gst-overseas-services-zero-rated-or-out-of-scope",
+      "workflow": "GST international services classification",
+      "provisionalExecution": true,
+      "question": "A company provides services overseas. Is the income zero-rated or out-of-scope?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_GST" },
+        "topicIds": ["iras-gst-zero-rating", "iras-gst-out-of-scope-supplies"],
+        "sourceMapIds": ["IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP", "IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP"],
+        "disallowedSourceMapIds": ["IRAS_GST_ZERO_RATED_EXPORT_SOURCE_MAP"],
+        "substantiveConclusion": "Do not decide from the phrase 'provides services overseas'. Explain that zero-rating and out-of-scope treatment are distinct and depend on the statutory service category and transaction facts.",
+        "missingFacts": ["nature and contractual scope of the service", "customer identity and location", "where the service is performed and received", "relevant Section 21(3) category and supporting evidence"],
+        "effectiveDate": "Request the supply period if a historical rule or rate is in issue.",
+        "citations": ["https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-0-gst-(zero-rate)/providing-international-services", "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-is-gst-not-charged/out-of-scope-supplies"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+        "grounding": "Support classification with the specific IRAS international-services and out-of-scope pages that match the facts."
+      }
+    },
+    {
+      "id": "gst-invoice-december-2022-payment-january-2023",
+      "workflow": "GST time of supply / rate transition",
+      "provisionalExecution": true,
+      "question": "Invoice issued in December 2022 but payment received in January 2023. Which GST rate applies?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_GST" },
+        "topicIds": ["iras-gst-time-of-supply", "iras-gst-standard-rated-supplies"],
+        "pendingTopicIds": ["iras-gst-standard-rated-supplies"],
+        "catalogSourceMapIds": ["IRAS_GST_TIME_OF_SUPPLY_SOURCE_MAP", "IRAS_GST_CHARGING_SOURCE_MAP"],
+        "sourceMapIds": [],
+        "runtimeEvidencePolicy": "DATED_LOCAL_EVIDENCE_REQUIRED_NO_UNDATED_MAP",
+        "requiredLocalRecordIds": ["GST_RATE_7_PERCENT", "GST_RATE_8_PERCENT_2023", "GST_SEC11_TIME_OF_SUPPLY"],
+        "sourceSelectionReviewStatus": "PENDING_REVIEW",
+        "substantiveConclusion": "Apply the transition and time-of-supply rules to the full transaction facts; do not select the rate solely from the payment date or automatically use today's rate.",
+        "missingFacts": ["whether the supply is goods or services", "actual supply or performance date", "how much of the goods were delivered or services performed before and after 1 January 2023", "tax-invoice issue date and validity", "payment date and whether part-payments or continuous supplies are involved"],
+        "effectiveDate": "Distinguish the 1 January 2023 GST rate transition and any relevant historical rule; do not choose 7% or 8% until the pre/post-1 January 2023 supply facts are known. The current general time-of-supply rule is invoice or payment; the old basic-tax-point rule is historical and must not be stated as current.",
+        "citations": ["https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-report-supplies-in-gst-returns", "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)"],
+        "reviewEvidence": [{ "url": "https://www.iras.gov.sg/media/docs/default-source/uploadedfiles/pdf/gst-tos-rules.pdf?sfvrsn=14973190_0", "authority": "IRAS", "format": "PDF", "status": "OFFICIAL_REVIEW_REFERENCE_NOT_FETCHED", "notRuntimeHtmlFallback": true }],
+        "calculation": "No amount is supplied; calculate the applicable rate only after the rate basis is established.",
+        "grounding": "Historical answer must use date-valid local rules or verified historical evidence; an undated current IRAS page cannot establish 2022 treatment. The linked IRAS transition PDF is a review reference only and is not assumed to be a fetched HTML fallback."
+      }
+    },
+    {
+      "id": "cit-business-expense-deductibility-missing-facts",
+      "workflow": "Corporate tax deductibility",
+      "provisionalExecution": true,
+      "question": "Can this expense be claimed as a tax deduction?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-cit-deductibility", "iras-cit-disallowed-expenses"],
+        "pendingTopicIds": ["iras-cit-disallowed-expenses"],
+        "sourceMapIds": ["IRAS_CIT_EXPENSES_SOURCE_MAP"],
+        "substantiveConclusion": "Do not allow or deny an unidentified expense. Explain the general business-purpose and statutory-disallowance tests conditionally, then request facts.",
+        "missingFacts": ["nature of expense and what was acquired", "business purpose and connection to income", "capital or revenue character", "private element", "invoice and supporting records", "relevant basis period / YA"],
+        "effectiveDate": "Request basis period / YA before applying period-specific tax rules.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+        "grounding": "Support only the general deduction conditions actually present in retrieved IRAS evidence."
+      }
+    },
+    {
+      "id": "cit-renovation-immediate-deduction-missing-period",
+      "workflow": "Section 14N / renovation versus repair",
+      "provisionalExecution": true,
+      "question": "Can renovation cost be deducted immediately?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-cit-renovation-refurbishment", "iras-cit-deductibility"],
+        "pendingTopicIds": ["iras-cit-deductibility"],
+        "sourceMapIds": ["IRAS_CIT_RR_SOURCE_MAP", "IRAS_CIT_EXPENSES_SOURCE_MAP"],
+        "substantiveConclusion": "Do not conclude that renovation cost is immediately deductible. Distinguish qualifying Section 14N renovation/refurbishment from repair, structural or improvement expenditure and identify the applicable YA-specific options.",
+        "missingFacts": ["description and scope of work", "repair versus improvement / structural character", "date incurred and basis period / YA", "prior Section 14N claims, cap utilization and election"],
+        "effectiveDate": "No YA is supplied; request the basis period and use the corresponding Section 14N rule window.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(m-r)"],
+        "calculation": "No amount or YA supplied; do not calculate an immediate deduction.",
+        "grounding": "Use relevant IRAS Section 14N / expense guidance and any applicable dated local rule."
+      }
+    },
+    {
+      "id": "cit-renovation-section-14n-ya2024",
+      "workflow": "Section 14N historical treatment",
+      "question": "For qualifying renovation costs in a company basis period for YA 2024, what Section 14N deduction timing and cap period applied?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-cit-renovation-refurbishment"],
+        "sourceMapIds": [],
+        "catalogSourceMapIds": ["IRAS_CIT_RR_SOURCE_MAP"],
+        "runtimeEvidencePolicy": "DATED_LOCAL_EVIDENCE_REQUIRED_NO_UNDATED_MAP",
+        "requiredLocalRecordIds": ["ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"],
+        "substantiveConclusion": "Use only the locally dated YA 2024 Section 14N rule and explain the qualifying-work, cap-period and election conditions; do not infer historical validity from the current page alone.",
+        "missingFacts": ["qualifying non-structural work and date incurred", "basis period and YA", "first claim and cap-period history", "whether the one-year option was elected", "earlier amounts used against the cap"],
+        "effectiveDate": "YA 2024 historical local-rule interval; reject an undated live page as proof of the period's rule.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(m-r)"],
+        "calculation": "No expenditure amount is supplied; do not calculate a deduction.",
+        "grounding": "Cite the dated local rule for historical content and distinguish it from a current source-map page pointer."
+      }
+    },
+    {
+      "id": "cit-renovation-section-14n-ya2026",
+      "workflow": "Section 14N current-period treatment",
+      "question": "For qualifying non-structural renovation costs incurred for YA 2026, what Section 14N options and cap period should the company check?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-cit-renovation-refurbishment"],
+        "sourceMapIds": ["IRAS_CIT_RR_SOURCE_MAP"],
+        "substantiveConclusion": "Use the YA 2026 rule window and the YA 2025–2027 fixed-period S$300,000 cap, subject to qualifying work and claim history. The full cap is available without proration when the trade or business begins partway through the fixed period (for example, in YA 2026); distinguish the three-year deduction from an eligible one-year election.",
+        "missingFacts": ["qualifying work and date incurred", "basis period / YA", "trade or business commencement date and whether it operated throughout the fixed cap period", "amounts already claimed against the cap", "deduction timing option selected"],
+        "effectiveDate": "YA 2026; do not apply the YA 2024 cap period or timing option automatically.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(m-r)"],
+        "calculation": "No expenditure amount or cap utilization is supplied; do not calculate a deduction.",
+        "grounding": "A current source page is candidate guidance; the period-specific local rule controls unless verified dated official evidence supports the claim."
+      }
+    },
+    {
+      "id": "cit-passenger-car-expense-and-capital-allowance",
+      "workflow": "Corporate tax / passenger car",
+      "provisionalExecution": true,
+      "question": "Company bought a passenger car. Can it claim tax deduction and capital allowance?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-cit-disallowed-expenses", "iras-capital-allowances"],
+        "sourceMapIds": ["IRAS_CIT_EXPENSES_SOURCE_MAP", "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP"],
+        "disallowedDomainIds": ["IRAS_GST"],
+        "disallowedSourceMapIds": ["IRAS_GST_INPUT_TAX_SOURCE_MAP"],
+        "substantiveConclusion": "Separate accounting depreciation from tax deductibility and capital allowances. Address passenger-car restrictions and state any exception conditionally.",
+        "missingFacts": ["vehicle registration/classification and ownership", "whether a statutory business exception applies", "business/private use", "basis period / YA", "whether the car is stock-in-trade, rented or otherwise within a specific exception"],
+        "effectiveDate": "Ask for the acquisition / expense period and YA for any historical rule changes.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses", "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_COST_AND_PERIOD_FACTS",
+        "grounding": "Use the income-tax passenger-car restriction and capital-allowance source; do not cite GST motor-vehicle guidance for income-tax treatment."
+      }
+    },
+    {
+      "id": "cit-prior-year-loss-carry-forward",
+      "workflow": "Corporate tax losses / continuity tests",
+      "provisionalExecution": true,
+      "question": "Can the company use prior-year losses?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-cit-loss-carry-forward", "iras-substantial-shareholding-test"],
+        "pendingTopicIds": ["iras-substantial-shareholding-test"],
+        "sourceMapIds": ["IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"],
+        "substantiveConclusion": "Do not assume the losses are available. Distinguish the relevant loss type and apply the continuity / shareholding requirements that govern it.",
+        "missingFacts": ["YA in which loss arose and YA of intended use", "trade loss versus capital allowance", "shareholding changes at the relevant dates", "business continuity facts where required", "amount and prior utilization"],
+        "effectiveDate": "Request the relevant YAs; verify the version of the applicable continuity rules for those periods.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/unutilised-items-(capital-allowances-trade-losses-donations)"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_LOSS_BALANCES_AND_YAS",
+        "grounding": "Do not infer eligibility from a general source-map pointer; use evidence for the relevant loss type and period."
+      }
+    },
+    {
+      "id": "wht-overseas-interest-payment",
+      "workflow": "Withholding tax / interest",
+      "provisionalExecution": true,
+      "question": "A Singapore company pays interest to an overseas company. Is withholding tax required?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-withholding-tax-interest-royalties", "iras-withholding-tax"],
+        "pendingTopicIds": ["iras-withholding-tax-interest-royalties"],
+        "sourceMapIds": ["IRAS_WHT_RATES_SOURCE_MAP", "IRAS_WHT_SCOPE_SOURCE_MAP"],
+        "substantiveConclusion": "Do not give an unconditional rate. Determine whether the payment is Singapore-sourced interest to a non-resident and assess any applicable exemption or treaty relief.",
+        "missingFacts": ["recipient tax residence and status", "beneficial owner / recipient capacity", "loan and interest terms and Singapore-source connection", "treaty residence and relief documentation", "deemed payment date and YA/period"],
+        "effectiveDate": "Rate and filing treatment must match the deemed payment date and any applicable treaty period.",
+        "citations": ["https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates", "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"],
+        "calculation": "No amount or established rate is supplied; do not calculate withholding tax.",
+        "grounding": "Use IRAS payment-category and rate guidance; do not infer treaty rates from the source map."
+      }
+    },
+    {
+      "id": "wht-overseas-related-management-fee",
+      "workflow": "Withholding tax / service fees",
+      "provisionalExecution": true,
+      "question": "A Singapore company pays management fees to an overseas related company. Is withholding tax applicable?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-withholding-tax-management-fees", "iras-withholding-tax"],
+        "pendingTopicIds": ["iras-withholding-tax-management-fees"],
+        "sourceMapIds": ["IRAS_WHT_RATES_SOURCE_MAP", "IRAS_WHT_SCOPE_SOURCE_MAP"],
+        "substantiveConclusion": "Do not decide from the label 'management fee' alone. Determine the substantive service, where it was performed, recipient status and any treaty relief before concluding.",
+        "missingFacts": ["contract and actual services", "where each service was performed", "recipient residence/status and beneficial ownership", "whether treaty relief is claimed and documentation", "payment / deemed payment date"],
+        "effectiveDate": "Apply rate and due-date rules for the relevant deemed payment date; do not assume the current rate for an earlier payment.",
+        "citations": ["https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates", "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"],
+        "calculation": "No amount or applicable rate is established.",
+        "grounding": "The cited page must support service-fee scope and the stated performance-location condition."
+      }
+    },
+    {
+      "id": "employer-tax-clearance-ir21",
+      "workflow": "Employer reporting / IR21",
+      "provisionalExecution": true,
+      "question": "When do we need to file IR21?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_EMPLOYER_TAX" },
+        "topicIds": ["iras-employer-ir21"],
+        "sourceMapIds": ["IRAS_IR21_SOURCE_MAP"],
+        "substantiveConclusion": "Give the filing rule conditionally based on the employee's status and departure/cessation facts; identify withholding and any exemption process without assuming they apply.",
+        "missingFacts": ["employee citizenship / Singapore permanent-resident status", "cessation date and reason", "whether the employee is leaving Singapore or ceasing Singapore employment", "any qualifying exemption", "whether remuneration must be withheld pending clearance"],
+        "effectiveDate": "Request cessation/departure dates and apply the rule in force for that event.",
+        "citations": ["https://www.iras.gov.sg/taxes/individual-income-tax/employers/tax-clearance-for-foreign-spr-employees-(ir21)"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_EMPLOYEE_FACTS",
+        "grounding": "Use the IRAS IR21 employer guidance and do not state an unqualified filing deadline without facts."
+      }
+    },
+    {
+      "id": "employer-bonus-reporting-timing",
+      "workflow": "Employer reporting / bonus timing",
+      "provisionalExecution": true,
+      "question": "Employee received a bonus in April for June payroll. When should it be reported?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_EMPLOYER_TAX" },
+        "topicIds": ["iras-employee-bonus-timing", "iras-ais-employment-income"],
+        "pendingTopicIds": ["iras-ais-employment-income"],
+        "sourceMapIds": ["IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP"],
+        "pendingSourceMapIds": ["IRAS_AIS_IR8A_SOURCE_MAP"],
+        "substantiveConclusion": "Distinguish contractual from non-contractual bonus entitlement. Tax timing depends on when the employee became entitled under the contractual terms or when a non-contractual bonus was paid; a payroll month label alone does not determine reporting. Keep CPF/payment issues outside an IRAS-only conclusion.",
+        "missingFacts": ["whether the bonus is contractual or non-contractual", "contract terms and date entitlement arose", "actual payment / credit date", "service period and payroll dates", "relevant reporting year and AIS filing context"],
+        "effectiveDate": "Use contractual entitlement or non-contractual payment facts and the applicable reporting year; do not infer the tax year from the payroll label alone.",
+        "citations": ["https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not/employment-income/salary-bonus-director's-fee-commission-and-others", "https://www.iras.gov.sg/taxes/individual-income-tax/employers/auto-inclusion-scheme-(ais)-for-employment-income/reporting-employee-earnings-(ir8a-appendix-8a-appendix-8b)"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_PAYROLL_AND_ENTITLEMENT_DATES",
+        "grounding": "The employment-income timing page must support the tax timing conclusion; AIS page supports reporting process only."
+      }
+    },
+    {
+      "id": "gst-historical-standard-rated-supply-2023",
+      "workflow": "GST historical rate / calculation",
+      "question": "A GST-registered Singapore supplier made a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2023; invoice and payment were on that date. What are output GST and the invoice total?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_GST" },
+        "topicIds": ["iras-gst-standard-rated-supplies", "iras-gst-time-of-supply"],
+        "sourceMapIds": [],
+        "catalogSourceMapIds": ["IRAS_GST_CHARGING_SOURCE_MAP", "IRAS_GST_TIME_OF_SUPPLY_SOURCE_MAP"],
+        "runtimeEvidencePolicy": "DATED_LOCAL_EVIDENCE_REQUIRED_NO_UNDATED_MAP",
+        "requiredLocalRecordIds": ["GST_RATE_8_PERCENT_2023"],
+        "substantiveConclusion": "Apply the rate effective on the stated transaction date because supply, invoice and payment dates align and the supply is specified as standard-rated.",
+        "missingFacts": [],
+        "effectiveDate": "1 July 2023; do not use the current GST rate.",
+        "citations": ["https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)"],
+        "calculation": { "rate": 0.08, "outputTax": 80, "invoiceTotal": 1080, "currency": "SGD" },
+        "grounding": "The local historical rate rule or dated IRAS evidence must support the 2023 rate."
+      }
+    },
+    {
+      "id": "gst-historical-standard-rated-supply-2024",
+      "workflow": "GST historical rate / calculation",
+      "question": "A GST-registered Singapore supplier made a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2024; invoice and payment were on that date. What are output GST and the invoice total?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_GST" },
+        "topicIds": ["iras-gst-standard-rated-supplies", "iras-gst-time-of-supply"],
+        "sourceMapIds": [],
+        "catalogSourceMapIds": ["IRAS_GST_CHARGING_SOURCE_MAP", "IRAS_GST_TIME_OF_SUPPLY_SOURCE_MAP"],
+        "runtimeEvidencePolicy": "DATED_LOCAL_EVIDENCE_REQUIRED_NO_UNDATED_MAP",
+        "requiredLocalRecordIds": ["GST_RATE_9_PERCENT"],
+        "substantiveConclusion": "Apply the rate effective on the stated transaction date because supply, invoice and payment dates align and the supply is specified as standard-rated.",
+        "missingFacts": [],
+        "effectiveDate": "1 July 2024; do not use the current GST rate.",
+        "citations": ["https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)"],
+        "calculation": { "rate": 0.09, "outputTax": 90, "invoiceTotal": 1090, "currency": "SGD" },
+        "grounding": "The local historical rate rule or dated IRAS evidence must support the 2024 rate."
+      }
+    },
+    {
+      "id": "cit-section-13w-pre-2026-disposal",
+      "workflow": "Section 13W historical eligibility",
+      "question": "For an ordinary-share disposal completed on 30 December 2025, can the company rely on Section 13W?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-section-13w"],
+        "sourceMapIds": [],
+        "requiredLocalRecordIds": ["ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"],
+        "substantiveConclusion": "Use the date-bounded pre-2026 local summary only as a conditional rule; request ownership, holding period, investee and exclusion facts, and disclose that the current HTML fallback does not validate the linked e-Tax Guide content.",
+        "missingFacts": ["ordinary-share percentage held through the continuous holding period", "investee business / property-holding status and exclusions", "whether gain is capital or revenue", "disposal and acquisition dates"],
+        "effectiveDate": "Disposal 30 December 2025; do not apply the post-1 January 2026 expansion.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/taxable-non-taxable-income", "https://www.iras.gov.sg/docs/default-source/e-tax/etaxguide_certainty-of-non-taxation-of-companies-gain-on-disposal-of-equity-investments.pdf?sfvrsn=ceb9a99_18"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_NUMERIC_OWNERSHIP_FACTS",
+        "grounding": "Do not claim the linked Section 13W PDF was fetched or validated; use the dated local rule with an explicit source limitation."
+      }
+    },
+    {
+      "id": "cit-section-13w-post-2026-disposal",
+      "workflow": "Section 13W current-period eligibility",
+      "question": "For a disposal on 2 January 2026 of qualifying preference shares, can Section 13W apply where the company and eligible group entities held the required interest?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-section-13w"],
+        "sourceMapIds": [],
+        "requiredLocalRecordIds": ["ITA_SEC13W_EQUITY_DISPOSAL_2026"],
+        "substantiveConclusion": "Use only the date-bounded post-2026 local summary and explain that share rights, ownership threshold/period, eligible group basis and exclusions must all be proved; disclose the live PDF validation gap.",
+        "missingFacts": ["preference-share rights", "company and group ownership percentages and continuous holding period", "group relationship and aggregation basis", "investee/property-holding exclusions", "capital versus revenue nature"],
+        "effectiveDate": "Disposal 2 January 2026; do not apply the pre-2026 rule window.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/taxable-non-taxable-income", "https://www.iras.gov.sg/docs/default-source/e-tax/etaxguide_certainty-of-non-taxation-of-companies-gain-on-disposal-of-equity-investments.pdf?sfvrsn=ceb9a99_18"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_NUMERIC_OWNERSHIP_FACTS",
+        "grounding": "Do not claim the linked Section 13W PDF was fetched or validated; use the dated local rule with an explicit source limitation."
+      }
+    },
+    {
+      "id": "cit-form-cs-lite-foreign-tax-credit-ya2026",
+      "workflow": "Corporate return eligibility / YA 2026",
+      "question": "For YA 2026, can a Singapore-incorporated company with S$180,000 revenue use Form C-S (Lite) if it claims a foreign tax credit?",
+      "provisionalOracle": {
+        "review": { "status": "PENDING_REVIEW" },
+        "classification": { "authority": "IRAS", "domainId": "IRAS_CORPORATE_TAX" },
+        "topicIds": ["iras-cit-returns", "iras-foreign-tax-credit"],
+        "sourceMapIds": ["IRAS_CIT_RETURNS_SOURCE_MAP", "IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP"],
+        "substantiveConclusion": "For YA 2026, a company actually claiming a foreign tax credit is ineligible for Form C-S and therefore Form C-S (Lite), even with S$180,000 revenue; it must use the applicable Form C route. Confirm the credit claim and other return facts rather than deciding from revenue alone.",
+        "missingFacts": ["confirm the company made the stated foreign tax credit claim", "confirm all other YA 2026 return eligibility conditions"],
+        "effectiveDate": "YA 2026 only; verify current IRAS return eligibility before using for another YA.",
+        "citations": ["https://www.iras.gov.sg/taxes/corporate-income-tax/form-c-s-form-c-s-(lite)-form-c-filing/overview-of-form-c-s-form-c-s-(lite)-form-c", "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-reliefs/foreign-tax-credit"],
+        "calculation": "NOT_APPLICABLE_WITHOUT_TAXABLE_INCOME_AND_CREDIT_AMOUNT",
+        "grounding": "Cite the Form C-S eligibility page for the filing conclusion; foreign-tax-credit page alone does not establish form eligibility."
+      }
+    }
+  ]
+}
