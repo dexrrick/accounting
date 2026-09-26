@@ -101,8 +101,18 @@ export function isMealInputTaxQuery(userInput: string): boolean {
     /\b(?:claim\w*|recover\w*|input\s+tax)\b/i.test(userInput);
 }
 
+function isUnresolvedMealInputTaxFact(fact: string): boolean {
+  return /\b(?:customer|supplier)\s+gst\s+registration status\b/i.test(fact) ||
+    /\bgst\s+registration status\b/i.test(fact) ||
+    /\bbusiness or private use\b/i.test(fact) ||
+    /\bsupporting tax invoice\b/i.test(fact) ||
+    /\bbusiness purpose of (?:the )?(?:meal|entertainment)\b/i.test(fact) ||
+    /\bpurpose of (?:the )?(?:meal|entertainment)\b/i.test(fact) ||
+    /\bwho attended\b|\battendees?\b|\brelationship to (?:the )?company\b/i.test(fact);
+}
+
 export function hasUnresolvedMealInputTaxEligibility(userInput: string, missingFacts: string[] = []): boolean {
-  return isMealInputTaxQuery(userInput) && missingFacts.length > 0;
+  return isMealInputTaxQuery(userInput) && missingFacts.some(isUnresolvedMealInputTaxFact);
 }
 
 /**
@@ -115,16 +125,33 @@ export function guardUnconditionalMealInputTaxClaim(
   groundedContext: Pick<GroundedReasoningContext, 'primaryEvidence' | 'officialGuidance' | 'curatedSummaries' | 'sourceMapFallbackTrace'>,
   missingFacts: string[] = []
 ): string {
-  if (!isMealInputTaxQuery(userInput)) return responseText;
+  if (!hasUnresolvedMealInputTaxEligibility(userInput, missingFacts)) return responseText;
 
   const assertiveClaim = /\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:is|are)\s+(?:(?:always|universally|automatically)\s+)?(?:fully\s+)?(?:claimable|recoverable)\b|\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:can be|are|is)\s+(?:(?:always|universally|automatically)\s+)?(?:claimed|recovered)\b/i;
   const allInputsClaimable = /\b(?:all|every|each)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:claimable|recoverable|claimed|recovered)\b/i;
   const canAlwaysClaim = /\b(?:you|we|the company|a business|the business|taxpayers?)\s+can\s+(?:always\s+)?(?:claim|recover)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b/i;
   const universalNegativeClaim = /\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:is|are)\s+(?:never|not ever)\s+(?:fully\s+)?(?:claimable|recoverable|claimed|recovered)\b|\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\bcan\s+never\s+(?:be\s+)?(?:claimed|recovered|claimable|recoverable)\b|\b(?:you|we|the company|a business|the business|taxpayers?)\s+can\s+never\s+(?:claim|recover)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b|\bno\b[^.!?\n]{0,100}\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,100}\b(?:claimable|recoverable|claimed|recovered)\b/i;
-  const sentences = responseText.split(/(?<=[.!?])\s+|\r?\n+/).filter(Boolean);
-  const assertsUnqualifiedPositiveClaim = sentences.some(sentence => {
+  const broadMealNegativeClaim = /\b(?:input\s+tax|input\s+gst|gst)\b[^.!?\n]{0,200}\b(?:disallowed|blocked|not\s+(?:claimable|recoverable|allowed|allowable)|ineligible|restricted)\b/i;
+  const claimPatterns = [assertiveClaim, allInputsClaimable, canAlwaysClaim, universalNegativeClaim, broadMealNegativeClaim];
+  const findClaim = (text: string): RegExpExecArray | undefined => {
+    const matches = claimPatterns
+      .map(pattern => pattern.exec(text))
+      .filter((match): match is RegExpExecArray => match !== null)
+      .sort((left, right) => left.index - right.index);
+    return matches[0];
+  };
+  const isUnqualifiedClaim = (sentence: string): boolean => {
     const notAllCaution = /\bnot\s+(?:all|every|each)\b[^.!?\n]{0,120}\b(?:gst|input\s+tax|input\s+gst)\b[^.!?\n]{0,120}\b(?:claimable|recoverable|claimed|recovered)\b/i.test(sentence);
     if (notAllCaution) return false;
+    const hasMealTaxScope = /\b(?:gst|input\s+tax|input\s+gst)\b/i.test(sentence) &&
+      /\b(?:business\s+entertainment|entertainment|meals?|lunch(?:eon)?|dining)\b/i.test(sentence);
+    const negativeMealCostIsSpecific = /\b(?:input\s+tax|input\s+gst|gst)\b[^.!?\n]{0,100}\b(?:on|for)\b[^.!?\n]{0,60}\b(?:private|personal|non[- ]business|without (?:a )?business purpose|no business purpose)\b[^.!?\n]{0,50}\b(?:meal|lunch(?:eon)?|dining|entertainment|use|cost|expense)\b|\b(?:input\s+tax|input\s+gst|gst)\b[^.!?\n]{0,100}\b(?:meal|lunch(?:eon)?|dining|entertainment|use|cost|expense)\b[^.!?\n]{0,60}\b(?:private|personal|non[- ]business|without (?:a )?business purpose|no business purpose)\b/i.test(sentence);
+    const broadNegative = hasMealTaxScope && broadMealNegativeClaim.test(sentence);
+    if (broadNegative && !negativeMealCostIsSpecific) {
+      const generalNegative = /\b(?:generally|usually|typically|normally|ordinarily|as a general rule)\b[^.!?\n]{0,60}\b(?:disallowed|blocked|not\s+(?:claimable|recoverable|allowed|allowable)|ineligible|restricted)\b/i.test(sentence);
+      const hasSpecificRequirementCondition = /\b(?:if|when|where|provided(?: that)?|subject to|only if|only where|unless|to the extent|based on)\b[^.!?\n]{0,120}\b(?:ordinary input.tax|conditions?|requirements?|valid tax invoice|business purpose|taxable supplies|registered for gst)\b/i.test(sentence);
+      if (generalNegative || !hasSpecificRequirementCondition) return true;
+    }
     const absoluteNegative = universalNegativeClaim.test(sentence);
     const positive = assertiveClaim.test(sentence) || allInputsClaimable.test(sentence) || canAlwaysClaim.test(sentence);
     if (!positive && !absoluteNegative) return false;
@@ -136,10 +163,37 @@ export function guardUnconditionalMealInputTaxClaim(
     const sentenceDisregardsFacts = /\b(?:regardless of|irrespective of|without regard to)\s+(?:the )?(?:purpose|records|documentation|business use|registration)\b/i.test(sentence) ||
       /\bwithout\s+(?:any\s+)?(?:records?|documentation|valid tax invoice|business purpose)\b/i.test(sentence) ||
       /\b(?:despite|even if)\b[^.!?\n]{0,80}\bno\s+(?:records?|documentation|valid tax invoice|business purpose)\b/i.test(sentence);
-    const sentenceIsConditional = /\b(?:may|might|could)\s+be\s+(?:claimable|claimed|recoverable|recovered)\b|\b(?:if|when|provided(?: that)?|subject to|only if|only where|unless|to the extent|based on)\b[^.!?\n]{0,120}\b(?:ordinary input.tax|conditions?|requirements?|valid tax invoice|business purpose|taxable supplies|registered for gst)\b/i.test(sentence);
+    const sentenceIsConditional = /\b(?:may|might|could)\s+be\s+(?:claimable|claimed|recoverable|recovered)\b|\b(?:if|when|where|provided(?: that)?|subject to|only if|only where|unless|to the extent|based on)\b[^.!?\n]{0,120}\b(?:ordinary input.tax|conditions?|requirements?|valid tax invoice|business purpose|taxable supplies|registered for gst)\b/i.test(sentence);
     return sentenceDisregardsFacts || !sentenceIsConditional;
-  });
-  if (!assertsUnqualifiedPositiveClaim) return responseText;
+  };
+
+  const splitResponseText = (text: string): string[] => {
+    const segments: string[] = [];
+    let segmentStart = 0;
+    for (let index = 0; index < text.length; index += 1) {
+      const character = text[index];
+      if (character === '\r' || character === '\n') {
+        if (index > segmentStart) segments.push(text.slice(segmentStart, index));
+        const lineBreakEnd = character === '\r' && text[index + 1] === '\n' ? index + 2 : index + 1;
+        segments.push(text.slice(index, lineBreakEnd));
+        index = lineBreakEnd - 1;
+        segmentStart = lineBreakEnd;
+        continue;
+      }
+      if (!'.!?'.includes(character)) continue;
+      const isDecimalPoint = character === '.' && /\d/.test(text[index - 1] || '') && /\d/.test(text[index + 1] || '');
+      const isSentenceEnd = !isDecimalPoint && (index + 1 === text.length || /\s/.test(text[index + 1]));
+      if (!isSentenceEnd) continue;
+      segments.push(text.slice(segmentStart, index + 1));
+      segmentStart = index + 1;
+    }
+    if (segmentStart < text.length) segments.push(text.slice(segmentStart));
+    return segments;
+  };
+
+  const accountingContext = /\b(?:dr|cr|debit|credit|journal|entry|accounting|expense|cash|bank|paid|payment|record|recorded|booking|balance|sgd|amount)\b/i;
+  const offendingSentences = splitResponseText(responseText).filter(segment => isUnqualifiedClaim(segment));
+  if (offendingSentences.length === 0) return responseText;
 
   const records = [
     ...groundedContext.primaryEvidence,
@@ -153,14 +207,61 @@ export function guardUnconditionalMealInputTaxClaim(
     : records.length === 0
       ? 'No authoritative IRAS evidence was retrieved to establish this case’s eligibility.'
       : 'The available evidence does not establish this case’s eligibility without the facts below.';
-  const requiredFacts = missingFacts.filter(fact =>
-    /registration|business or private use|supporting tax invoice|business purpose|who attended/i.test(fact)
-  );
+  const requiredFacts = missingFacts.filter(isUnresolvedMealInputTaxFact);
   const factRequest = requiredFacts.length > 0
     ? requiredFacts.join('; ')
     : 'business purpose, attendees and their relationship to the company, GST registration and use, and a valid tax invoice';
 
-  return `Do not assume input GST on customer or supplier meals is always claimable. ${evidenceStatus} Before assessing a claim, confirm: ${factRequest}.`;
+  const replacement = `Do not assume input GST on customer or supplier meals is always claimable. ${evidenceStatus} Before assessing a claim, confirm: ${factRequest}.`;
+  const replaceClaimClause = (sentence: string): string => {
+    if (!isUnqualifiedClaim(sentence)) return sentence;
+    const claim = findClaim(sentence);
+    if (!claim) return sentence;
+
+    let prefixBoundaryIndex = 0;
+    let prefixBoundary: 'comma' | 'semicolon' | 'colon' | 'conjunction' | undefined;
+    const beforeClaim = sentence.slice(0, claim.index);
+    const boundaryPattern = /;|,|:|\b(?:and|but)\b/gi;
+    for (const boundary of beforeClaim.matchAll(boundaryPattern)) {
+      const kind = boundary[0] === ';' ? 'semicolon'
+        : boundary[0] === ',' ? 'comma'
+          : boundary[0] === ':' ? 'colon'
+            : 'conjunction';
+      if (kind === 'conjunction' && !accountingContext.test(beforeClaim.slice(0, boundary.index))) continue;
+      prefixBoundaryIndex = boundary.index;
+      prefixBoundary = kind;
+    }
+
+    const prefixCandidate = (prefixBoundary ? sentence.slice(0, prefixBoundaryIndex) : beforeClaim).trim();
+    const preservePrefix = Boolean(prefixCandidate) && (Boolean(prefixBoundary) || accountingContext.test(prefixCandidate));
+    const prefix = preservePrefix ? prefixCandidate.replace(/[\s,;:]+$/g, '') : '';
+
+    const afterClaim = sentence.slice(claim.index + claim[0].length);
+    let suffix = '';
+    const semicolonBoundary = /;/.exec(afterClaim);
+    if (semicolonBoundary) {
+      suffix = afterClaim.slice(semicolonBoundary.index + semicolonBoundary[0].length).trim();
+    } else {
+      const suffixBoundaryPattern = /,\s*(?:and|but)\s+|\s+(?:and|but)\s+/gi;
+      for (const boundary of afterClaim.matchAll(suffixBoundaryPattern)) {
+        const candidate = afterClaim.slice(boundary.index + boundary[0].length).trim();
+        if (accountingContext.test(candidate)) suffix = candidate;
+      }
+    }
+    suffix = suffix.replace(/^[,;:]\s*/, '');
+    if (suffix) suffix = suffix[0].toUpperCase() + suffix.slice(1);
+
+    const prefixHasAccountingContent = accountingContext.test(prefix);
+    const guardedPrefix = prefix
+      ? `${prefix}${prefixHasAccountingContent ? '.' : prefixBoundary === 'colon' ? ':' : ','} `
+      : '';
+    const guardedSuffix = suffix
+      ? `${replacement} ${/[.!?]$/.test(replacement) ? '' : '.'}${suffix}`
+      : replacement;
+    return `${guardedPrefix}${guardedSuffix}`;
+  };
+
+  return splitResponseText(responseText).map(replaceClaimClause).join('');
 }
 
 /**

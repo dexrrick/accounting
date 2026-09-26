@@ -231,6 +231,119 @@ assert.equal(mealGrounding.sourceMapFallbackTrace?.candidateOnly, true,
 assert.ok(mealGrounding.sourceMapFallbackTrace?.sourceMapIds.includes('IRAS_GST_INPUT_TAX_SOURCE_MAP'));
 assert.match(freeformMealResponse.messageText, /candidate evidence pending review/i,
   'Candidate-only mapped evidence must remain labeled in the replacement.');
+const mixedAccountingQuestion = 'We paid SGD 200 for a customer lunch. What is the accounting entry, and can we claim the GST?';
+const mixedAccountingGroup = {
+  id: 'customer-lunch-entry',
+  title: 'Customer lunch',
+  summary: 'Record the meal expense paid in cash.',
+  lines: [
+    { id: 'meal-debit', accountCode: '6000', accountName: 'Meals expense', category: 'EXPENSE', debit: 200, credit: 0, lineExplanation: 'Customer lunch' },
+    { id: 'cash-credit', accountCode: '1000', accountName: 'Cash', category: 'ASSET', debit: 0, credit: 200, lineExplanation: 'Cash paid' }
+  ],
+  citations: [],
+  rationalePoints: []
+};
+const mixedAccountingResponse = postProcessAIResponse(
+  {
+    messageText: 'Record Dr Meals expense SGD 200.00, and GST is always claimable on customer lunches. The cash entry remains balanced.',
+    directGroups: [mixedAccountingGroup]
+  },
+  null,
+  mixedAccountingQuestion,
+  mealGrounding
+);
+assert.match(mixedAccountingResponse.messageText, /Record Dr Meals expense SGD 200\.00/,
+  'The meal GST guard preserves the accounting entry discussion in a mixed answer.');
+assert.match(mixedAccountingResponse.messageText, /The cash entry remains balanced\./,
+  'The meal GST guard preserves unrelated prose after the unsupported claim.');
+assert.match(mixedAccountingResponse.messageText, /SGD 200\.00/,
+  'The meal GST guard preserves decimal monetary amounts without splitting on the decimal point.');
+assert.doesNotMatch(mixedAccountingResponse.messageText, /GST is always claimable/,
+  'Only the unsupported categorical meal GST claim is corrected.');
+assert.deepEqual(
+  mixedAccountingResponse.scenarioState.directGroups?.[0]?.lines?.map(line => ({ accountName: line.accountName, debit: line.debit, credit: line.credit })),
+  [
+    { accountName: 'Meals expense', debit: 200, credit: 0 },
+    { accountName: 'Cash', debit: 0, credit: 200 }
+  ],
+  'The valid balanced journal data survives meal GST claim correction.'
+);
+const compactMixedAccountingResponse = postProcessAIResponse(
+  {
+    directAnswer: 'Record Dr Meals expense SGD 200.00, and GST is always claimable on customer lunches.',
+    treatment: 'Record the customer lunch as a meals expense paid in cash.',
+    singaporeTaxImpact: 'GST is always claimable on customer lunches.',
+    directGroups: [mixedAccountingGroup]
+  },
+  null,
+  mixedAccountingQuestion,
+  mealGrounding
+);
+assert.match(compactMixedAccountingResponse.messageText, /Record Dr Meals expense SGD 200\.00/,
+  'Compact mixed answers preserve accounting prose and decimal amounts.');
+assert.doesNotMatch(compactMixedAccountingResponse.messageText, /GST is always claimable/,
+  'Compact mixed answers correct the unsupported GST claim in the answer and tax impact.');
+assert.deepEqual(
+  compactMixedAccountingResponse.scenarioState.directGroups?.[0]?.lines?.map(line => ({ accountName: line.accountName, debit: line.debit, credit: line.credit })),
+  [
+    { accountName: 'Meals expense', debit: 200, credit: 0 },
+    { accountName: 'Cash', debit: 0, credit: 200 }
+  ],
+  'The compact path preserves balanced journal data when it corrects the tax claim.'
+);
+const broadBlockedMealAnswer = 'Under SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred. Under Singapore GST rules, input tax on business entertainment (such as a customer lunch) is generally disallowed as a blocked input tax claim, unless specific statutory exceptions apply.';
+const broadBlockedMealAnswerFreeform = postProcessAIResponse(
+  { messageText: broadBlockedMealAnswer, directGroups: [mixedAccountingGroup] },
+  null,
+  mixedAccountingQuestion,
+  mealGrounding
+);
+assert.match(broadBlockedMealAnswerFreeform.messageText, /business entertaining expenses are recognized as operating expenses in profit or loss when incurred/i,
+  'Correct accounting treatment survives correction of a broad negative GST premise.');
+assert.doesNotMatch(broadBlockedMealAnswerFreeform.messageText, /input tax on business entertainment.*generally disallowed as a blocked input tax claim/i,
+  'A broad negative GST claim for customer meals is corrected despite an exceptions caveat.');
+assert.deepEqual(
+  broadBlockedMealAnswerFreeform.scenarioState.directGroups?.[0]?.lines?.map(line => ({ accountName: line.accountName, debit: line.debit, credit: line.credit })),
+  [
+    { accountName: 'Meals expense', debit: 200, credit: 0 },
+    { accountName: 'Cash', debit: 0, credit: 200 }
+  ],
+  'The balanced meal journal survives correction of the broad negative GST premise.'
+);
+const broadBlockedMealAnswerCompact = postProcessAIResponse(
+  {
+    directAnswer: broadBlockedMealAnswer,
+    treatment: 'Business entertaining expenses are recognized as operating expenses in profit or loss when incurred.',
+    singaporeTaxImpact: 'Input tax on business entertainment is generally disallowed as a blocked input tax claim, unless specific statutory exceptions apply.',
+    directGroups: [mixedAccountingGroup]
+  },
+  null,
+  mixedAccountingQuestion,
+  mealGrounding
+);
+assert.match(broadBlockedMealAnswerCompact.messageText, /business entertaining expenses are recognized as operating expenses in profit or loss when incurred/i,
+  'The compact path preserves the accounting conclusion.');
+assert.doesNotMatch(broadBlockedMealAnswerCompact.messageText, /input tax on business entertainment.*generally disallowed as a blocked input tax claim/i,
+  'The compact path corrects the broad negative GST premise in its answer and tax-impact field.');
+assert.doesNotMatch(broadBlockedMealAnswerCompact.scenarioState.singaporeTaxTreatmentSummary || '', /generally disallowed as a blocked input tax claim/i,
+  'The compact tax-impact field does not retain the broad negative premise.');
+assert.deepEqual(
+  broadBlockedMealAnswerCompact.scenarioState.directGroups?.[0]?.lines?.map(line => ({ accountName: line.accountName, debit: line.debit, credit: line.credit })),
+  [
+    { accountName: 'Meals expense', debit: 200, credit: 0 },
+    { accountName: 'Cash', debit: 0, credit: 200 }
+  ],
+  'The compact path retains balanced journal data while correcting a broad negative GST premise.'
+);
+const privateMealGstStatement = 'Input tax on meals for private use is generally not claimable.';
+const privateMealGstResponse = postProcessAIResponse(
+  { messageText: privateMealGstStatement, directGroups: [] },
+  null,
+  mealQuery,
+  mealGrounding
+);
+assert.ok(privateMealGstResponse.messageText.includes(privateMealGstStatement),
+  'A specific negative statement about private-use meal costs remains intact.');
 const compactMealResponse = postProcessAIResponse(
   { directAnswer: unconditionalMealClaim, keyRules: [unconditionalMealClaim], messageText: unconditionalMealClaim },
   null,
@@ -259,6 +372,23 @@ const qualifiedUniversalMealResponse = postProcessAIResponse(
 );
 assert.ok(qualifiedUniversalMealResponse.messageText.includes(qualifiedUniversalMealText),
   'A claim explicitly conditioned on ordinary input-tax requirements must not be suppressed.');
+const conditionalWhereMealText = 'GST is claimable where the ordinary input-tax conditions are met, including a valid tax invoice and business use.';
+const conditionalWhereMealResponse = postProcessAIResponse(
+  { messageText: conditionalWhereMealText, directGroups: [] },
+  null,
+  mealQuery,
+  mealGrounding
+);
+assert.ok(conditionalWhereMealResponse.messageText.includes(conditionalWhereMealText),
+  'A claim conditioned by where ordinary input-tax requirements are met must remain unchanged.');
+const compactConditionalWhereMealResponse = postProcessAIResponse(
+  { directAnswer: conditionalWhereMealText },
+  null,
+  mealQuery,
+  mealGrounding
+);
+assert.ok(compactConditionalWhereMealResponse.messageText.includes(conditionalWhereMealText),
+  'The compact path must also preserve claim wording conditional on where ordinary input-tax requirements are met.');
 for (const unqualifiedClaim of [
   'All input GST on customer meals is claimable.',
   'You can always claim GST on meals.',
@@ -364,6 +494,20 @@ const resolvedFalseBadge = postProcessAIResponse(
 );
 assert.equal(resolvedFalseBadge.scenarioState.statutoryAdvisory?.[0]?.isGstClaimable, false,
   'A claimability boolean is retained when the meal query has no outstanding missing facts.');
+const unrelatedMissingFactGrounding = {
+  ...mealGrounding,
+  missingFacts: ['Company financial year end and YA basis period containing the renovation expenditure']
+};
+const unrelatedMissingFactMealResponse = postProcessAIResponse(
+  { messageText: unconditionalMealClaim, directGroups: [] },
+  { scenarioType: 'UNIVERSAL', directGroups: [], statutoryAdvisory: [guardedAdvisory] },
+  mealQuery,
+  unrelatedMissingFactGrounding
+);
+assert.ok(unrelatedMissingFactMealResponse.messageText.includes(unconditionalMealClaim),
+  'An unrelated corporate-tax missing fact does not trigger the meal GST prose guard.');
+assert.equal(unrelatedMissingFactMealResponse.scenarioState.statutoryAdvisory?.[0]?.isGstClaimable, true,
+  'An unrelated corporate-tax missing fact does not suppress the meal GST claimability badge.');
 
 for (const [disclaimer, shouldRemain] of [
   ['GST is never claimable for customer meals.', false],

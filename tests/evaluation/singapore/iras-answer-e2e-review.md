@@ -1,5 +1,9 @@
 # IRAS end-to-end validation — 26 September 2026
 
+## Subsequent live validation
+
+The subsequent [live-validation report](../../../docs/evaluation/iras_live_validation_2026-09-26.md) records real Gemini answers for all 19 reviewed cases, real official retrieval, seven bounded provider retries, and independent ten-dimensional review. The overall result is **LIVE_FAIL** and the phase remains incomplete. The earlier offline results below are preserved as historical observations; they do not describe current provider availability or establish live acceptance.
+
 ## Status
 
 Offline implementation, independent reviews and substitute validation are complete. The overall IRAS answer benchmark remains **PENDING_REVIEW**. The user confirmed that no AI provider is configured and requested that live-answer validation be reported as pending.

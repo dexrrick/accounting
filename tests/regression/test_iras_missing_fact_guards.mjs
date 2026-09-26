@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import {
+  guardUnconditionalMealInputTaxClaim,
+  hasUnresolvedMealInputTaxEligibility
+} from '../../src/engine/responseAssembler.ts';
 import { convertToAdvisory, SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
 
 const taxExpense = classifyQuestion('Can we deduct this company expense for income tax?');
@@ -18,6 +22,47 @@ const gstClaim = classifyQuestion('Can we claim input GST on this customer meal?
 assert.ok(gstClaim.domains.includes('IRAS_GST'));
 assert.ok(gstClaim.missingFacts.some(fact => /registration status/i.test(fact)));
 assert.ok(gstClaim.missingFacts.some(fact => /business or private use/i.test(fact)));
+
+const mixedMealQuestion = 'We paid SGD 200 for a customer lunch. What is the accounting entry, and can we claim the GST?';
+const mealGstFacts = [
+  'Supplier and customer GST registration status, where relevant',
+  'Business or private use and supporting tax invoice for the GST claim',
+  'Business purpose of the meal or entertainment',
+  'Who attended and their relationship to the company'
+];
+for (const fact of mealGstFacts) {
+  assert.equal(hasUnresolvedMealInputTaxEligibility(mixedMealQuestion, [fact]), true,
+    `Meal GST eligibility remains unresolved for the GST-specific fact: ${fact}`);
+}
+const unrelatedTaxFact = 'Financial year end and YA basis period';
+assert.equal(hasUnresolvedMealInputTaxEligibility(mixedMealQuestion, [unrelatedTaxFact]), false,
+  'An unrelated corporate-tax fact must not suppress a meal GST claimability conclusion.');
+
+const unsupportedMealClaim = 'GST is always claimable on customer lunches.';
+const mixedMealResponse = 'Record Dr Meals Expense SGD 200 and Cr Cash SGD 200; GST is always claimable on customer lunches. The entry remains a SGD 200 expense.';
+const emptyGroundedEvidence = { primaryEvidence: [], officialGuidance: [], curatedSummaries: [] };
+const guardedMixedMealResponse = guardUnconditionalMealInputTaxClaim(
+  mixedMealResponse,
+  mixedMealQuestion,
+  emptyGroundedEvidence,
+  ['Supporting tax invoice for the GST claim']
+);
+assert.ok(guardedMixedMealResponse.includes('Record Dr Meals Expense SGD 200 and Cr Cash SGD 200'),
+  'The meal GST guard preserves journal discussion before an unsupported claim in the same sentence.');
+assert.ok(guardedMixedMealResponse.includes('The entry remains a SGD 200 expense.'),
+  'The meal GST guard preserves unrelated accounting discussion after the claim.');
+assert.ok(!guardedMixedMealResponse.includes(unsupportedMealClaim),
+  'The unconditional GST assertion is removed from the mixed accounting response.');
+assert.match(guardedMixedMealResponse, /Do not assume input GST.*always claimable/i);
+
+const unrelatedFactMealResponse = guardUnconditionalMealInputTaxClaim(
+  unsupportedMealClaim,
+  mixedMealQuestion,
+  emptyGroundedEvidence,
+  [unrelatedTaxFact]
+);
+assert.equal(unrelatedFactMealResponse, unsupportedMealClaim,
+  'A missing corporate-tax fact alone must not trigger the meal GST prose guard.');
 
 const managementFee = classifyQuestion('Must we pay withholding tax on a management fee to an overseas company?');
 assert.ok(managementFee.domains.includes('IRAS_CORPORATE_TAX'));

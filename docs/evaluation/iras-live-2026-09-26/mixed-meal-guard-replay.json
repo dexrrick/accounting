@@ -1,0 +1,407 @@
+{
+  "kind": "DETERMINISTIC_REPLAY_OF_REAL_CAPTURE",
+  "newLiveProviderRun": false,
+  "sourceCapture": "mixed-meal-default-capture.jsonl",
+  "caseId": "mixed-customer-meal-journal",
+  "checkedAt": "2026-09-26T12:38:22.270Z",
+  "checks": {
+    "originalEvidenceUnchanged": true,
+    "unsupportedClaimCorrected": true,
+    "accountingTextPreserved": true,
+    "journalAmountsUnchanged": true,
+    "journalBalanced": true
+  },
+  "originalGeminiCandidate": {
+    "transactionNature": "Customer lunch expense payment",
+    "treatment": "Under SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred. Under Singapore GST rules, input tax on business entertainment (such as a customer lunch) is generally disallowed as a blocked input tax claim, unless specific statutory exceptions apply.",
+    "requiredAccounts": [
+      {
+        "accountName": "Entertainment Expense",
+        "category": "EXPENSE",
+        "debitCredit": "DEBIT",
+        "rationale": "To record the cost of the customer lunch incurred for business purposes."
+      },
+      {
+        "accountName": "Cash / Bank",
+        "category": "ASSET",
+        "debitCredit": "CREDIT",
+        "rationale": "To record the cash or bank outflow for the paid expense."
+      }
+    ],
+    "bifurcateFx": false,
+    "tradeDiscountHandling": "Not applicable as no trade discount is indicated in the prompt.",
+    "missingFacts": [
+      "Supplier and customer GST registration status, where relevant",
+      "Business or private use and supporting tax invoice for the GST claim",
+      "GST registration status of the company",
+      "Whether GST is included in the SGD 200 amount",
+      "Invoices or receipts supporting the lunch expense"
+    ],
+    "assumptions": [
+      {
+        "field": "businessPurpose",
+        "assumedValue": "The lunch was incurred for business purposes related to entertaining a customer.",
+        "basis": "User prompt specifies 'customer lunch'.",
+        "materiality": "LOW"
+      }
+    ],
+    "citations": [
+      {
+        "standard": "GST (General) Regulations",
+        "paragraph": "Regulation 26 & 27",
+        "authority": "IRAS",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      }
+    ]
+  },
+  "finalResponse": {
+    "messageText": "### SFRS(I) Accounting Assessment: Customer lunch expense payment\n\n**Authority Status**: **⚠️ Conditional Proposal**\n\n#### 1. Accounting Treatment Principle\nUnder SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred.Do not assume input GST on customer or supplier meals is always claimable. The available evidence does not establish this case’s eligibility without the facts below. Before assessing a claim, confirm: Supplier and customer GST registration status, where relevant; Business or private use and supporting tax invoice for the GST claim; GST registration status of the company.\n\n---\n\n#### 4. Key Statutory & Computational Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: GST\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Counterparty**: SUPPLIER\n* **Payment Status**: PAID\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 200\n* **Semantic Provenance**: AI Grounded Reasoning\n\n---\n\n### Double Entry Journal: Customer lunch expense payment (26/09/2026)\n\n> ⚠️ **Uncertified Journal Proposal**: Account selections proposed by AI. Monetary amounts are uncalculated because required transaction values were not provided. Do not post to general ledger without independent valuation.\n\n* **Debit**: **Entertainment Expense** — **SGD 200.00** *(To record the cost of the customer lunch incurred for business purposes.)*\n* **Credit**: **Cash / Bank** — **SGD 200.00** *(To record the cash or bank outflow for the paid expense.)*\n\n**Balance Check**: Total Debits (SGD 200) == Total Credits (SGD 200)  ✓ Balanced\n",
+    "scenarioState": {
+      "scenarioType": "UNIVERSAL",
+      "queryIntent": "HYBRID",
+      "primaryDomain": "IRAS_GST",
+      "rawQuery": "We paid SGD 200 for a customer lunch. What is the accounting entry, and can we claim the GST?",
+      "transactionTitle": "Customer lunch expense payment",
+      "functionalCurrency": "SGD",
+      "transactionCurrency": "SGD",
+      "authorityStatus": "CONDITIONAL",
+      "accountingTreatmentSummary": "Under SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred.Do not assume input GST on customer or supplier meals is always claimable. The available evidence does not establish this case’s eligibility without the facts below. Before assessing a claim, confirm: Supplier and customer GST registration status, where relevant; Business or private use and supporting tax invoice for the GST claim; GST registration status of the company.",
+      "uncertaintyDisclaimer": "Conclusion is conditional upon establishing: Supplier and customer GST registration status, where relevant; Business or private use and supporting tax invoice for the GST claim; GST registration status of the company; Whether GST is included in the SGD 200 amount; Invoices or receipts supporting the lunch expense.",
+      "amount": 200,
+      "accountingEvents": [
+        {
+          "id": "grp-ai-proposed-1",
+          "transactionId": "grp-ai-proposed-1",
+          "type": "initial_transaction",
+          "description": "Customer lunch expense payment",
+          "amount": 200,
+          "currency": "SGD",
+          "affectedAccounts": [
+            "Entertainment Expense",
+            "Cash / Bank"
+          ],
+          "journalLines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "5000",
+              "accountName": "Entertainment Expense",
+              "category": "EXPENSE",
+              "debit": 200,
+              "credit": 0,
+              "lineExplanation": "To record the cost of the customer lunch incurred for business purposes."
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Cash / Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200,
+              "lineExplanation": "To record the cash or bank outflow for the paid expense."
+            }
+          ],
+          "eventDate": "26/09/2026",
+          "isHypothetical": false
+        }
+      ],
+      "actualEvents": [
+        {
+          "id": "grp-ai-proposed-1",
+          "transactionId": "grp-ai-proposed-1",
+          "type": "initial_transaction",
+          "description": "Customer lunch expense payment",
+          "amount": 200,
+          "currency": "SGD",
+          "affectedAccounts": [
+            "Entertainment Expense",
+            "Cash / Bank"
+          ],
+          "journalLines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "5000",
+              "accountName": "Entertainment Expense",
+              "category": "EXPENSE",
+              "debit": 200,
+              "credit": 0,
+              "lineExplanation": "To record the cost of the customer lunch incurred for business purposes."
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Cash / Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200,
+              "lineExplanation": "To record the cash or bank outflow for the paid expense."
+            }
+          ],
+          "eventDate": "26/09/2026",
+          "isHypothetical": false
+        }
+      ],
+      "isHypothetical": false,
+      "keyParameters": [
+        {
+          "label": "Evaluation Mode",
+          "value": "AI Grounded Reasoning",
+          "badge": "AI Active"
+        },
+        {
+          "label": "Detected Domain",
+          "value": "GST",
+          "badge": "Classification"
+        },
+        {
+          "label": "AI Status",
+          "value": "Live Grounded Pipeline Connected",
+          "badge": "Online"
+        },
+        {
+          "label": "Reporting Entity",
+          "value": "COMPANY",
+          "badge": "AI Semantic"
+        },
+        {
+          "label": "Counterparty",
+          "value": "SUPPLIER",
+          "badge": "AI Semantic"
+        },
+        {
+          "label": "Payment Status",
+          "value": "PAID",
+          "badge": "AI Semantic"
+        },
+        {
+          "label": "Currency",
+          "value": "SGD (explicit)",
+          "badge": "AI Semantic"
+        },
+        {
+          "label": "Transaction Amount",
+          "value": "SGD 200",
+          "badge": "AI Semantic"
+        },
+        {
+          "label": "Semantic Provenance",
+          "value": "AI Grounded Reasoning",
+          "badge": "AI Semantic"
+        }
+      ],
+      "directGroups": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/09/2026",
+          "title": "Customer lunch expense payment",
+          "summary": "Under SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred. Under Singapore GST rules, input tax on business entertainment (such as a customer lunch) is generally disallowed as a blocked input tax claim, unless specific statutory exceptions apply.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "5000",
+              "accountName": "Entertainment Expense",
+              "category": "EXPENSE",
+              "debit": 200,
+              "credit": 0,
+              "lineExplanation": "To record the cost of the customer lunch incurred for business purposes."
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Cash / Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200,
+              "lineExplanation": "To record the cash or bank outflow for the paid expense."
+            }
+          ],
+          "totalDebit": 200,
+          "totalCredit": 200,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "Under SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred. Under Singapore GST rules, input tax on business entertainment (such as a customer lunch) is generally disallowed as a blocked input tax claim, unless specific statutory exceptions apply.",
+            "Authority Status: CONDITIONAL (Proposed by AI)"
+          ],
+          "authorityStatus": "CONDITIONAL"
+        }
+      ],
+      "committedDirectGroups": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/09/2026",
+          "title": "Customer lunch expense payment",
+          "summary": "Under SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred. Under Singapore GST rules, input tax on business entertainment (such as a customer lunch) is generally disallowed as a blocked input tax claim, unless specific statutory exceptions apply.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "5000",
+              "accountName": "Entertainment Expense",
+              "category": "EXPENSE",
+              "debit": 200,
+              "credit": 0,
+              "lineExplanation": "To record the cost of the customer lunch incurred for business purposes."
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Cash / Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200,
+              "lineExplanation": "To record the cash or bank outflow for the paid expense."
+            }
+          ],
+          "totalDebit": 200,
+          "totalCredit": 200,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "Under SFRS(I), business entertaining expenses are recognized as operating expenses in profit or loss when incurred. Under Singapore GST rules, input tax on business entertainment (such as a customer lunch) is generally disallowed as a blocked input tax claim, unless specific statutory exceptions apply.",
+            "Authority Status: CONDITIONAL (Proposed by AI)"
+          ],
+          "authorityStatus": "CONDITIONAL"
+        }
+      ],
+      "assumptions": [
+        {
+          "id": "sem-asm-1",
+          "field": "currency_or_transaction_parameter",
+          "assumedValue": "The lunch was incurred for business purposes related to entertaining a customer.",
+          "basisOrRationale": "The lunch was incurred for business purposes related to entertaining a customer.",
+          "materiality": "LOW",
+          "userClarificationPrompt": "Please confirm currency or transaction parameters if different."
+        },
+        {
+          "id": "assump-1",
+          "field": "businessPurpose",
+          "assumedValue": "The lunch was incurred for business purposes related to entertaining a customer.",
+          "basisOrRationale": "User prompt specifies 'customer lunch'.",
+          "materiality": "LOW"
+        }
+      ],
+      "missingFacts": [
+        "Supplier and customer GST registration status, where relevant",
+        "Business or private use and supporting tax invoice for the GST claim",
+        "GST registration status of the company",
+        "Whether GST is included in the SGD 200 amount",
+        "Invoices or receipts supporting the lunch expense"
+      ],
+      "ownershipContext": "not_applicable",
+      "semanticUnderstanding": {
+        "extractionSource": "ai",
+        "provenance": {
+          "tier": "AI_REASONING",
+          "isFallback": false,
+          "engine": "gemini",
+          "confidenceCapped": false,
+          "timestamp": "2026-09-26T12:29:36.685Z"
+        },
+        "reportingEntity": {
+          "type": "company",
+          "description": "Reporting entity incurring a customer lunch expense"
+        },
+        "counterparty": {
+          "role": "supplier",
+          "description": "Restaurant or vendor providing the customer lunch"
+        },
+        "transactionType": "expense_payment",
+        "subject": "customer lunch",
+        "instrument": "cash_at_bank",
+        "ownershipContext": "not_applicable",
+        "paymentStatus": "paid",
+        "amount": 200,
+        "currency": {
+          "value": "SGD",
+          "source": "explicit",
+          "confidence": 1,
+          "rationale": "SGD is explicitly stated in the query."
+        },
+        "transactionDate": null,
+        "jurisdiction": "SG",
+        "factsMissing": [
+          "GST registration status of the company",
+          "Whether GST is included in the SGD 200 amount",
+          "Invoices or receipts supporting the lunch expense"
+        ],
+        "assumptions": [
+          "The lunch was incurred for business purposes related to entertaining a customer."
+        ],
+        "confidence": 0.95,
+        "actualMeasurementBasis": "UNKNOWN",
+        "measurementBasis": "AMORTISED_COST",
+        "isHypothetical": false,
+        "followUpAnalysis": {
+          "eventType": "other",
+          "isFollowUp": false,
+          "targetMeasurementBasis": "AMORTISED_COST",
+          "settlementAccount": "cash_at_bank",
+          "isHypothetical": false,
+          "explanation": "Initial transaction recording an ordinary business entertainment expense and querying GST claimability."
+        }
+      },
+      "actualMeasurementBasis": "UNKNOWN",
+      "projectedMeasurementBasis": "AMORTISED_COST",
+      "classification": "AMORTISED_COST",
+      "isComplete": false,
+      "missingFields": []
+    },
+    "sourceMapFallbackTrace": {
+      "path": "NOT_NEEDED",
+      "sourceMapIds": [],
+      "selectedRecordIds": [],
+      "finalVerifiedUrls": [],
+      "candidateOnly": false,
+      "attempts": []
+    },
+    "groundingEvidence": [
+      {
+        "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P112-#pr82-",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "GST_REG28_DE_MINIMIS_RULE",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P112-#Sc1-",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/specific-business-sectors/finance",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P15-#pr21-",
+        "candidateOnly": false
+      }
+    ]
+  }
+}

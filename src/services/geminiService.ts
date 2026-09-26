@@ -7,6 +7,7 @@ import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
+import { toSafeProviderError } from './aiTransport';
 import {
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
@@ -39,6 +40,11 @@ export interface OutputPreference {
   journal: boolean;
   statutory: boolean;
   shareStructure?: boolean;
+}
+
+/** Optional read-only observer used by the live validation harness. */
+export interface AccountingQueryDiagnostics {
+  onGroundedContext?: (context: GroundedReasoningContext) => void;
 }
 
 /** AI may identify factual events only; strict normalization blocks journals and invented schema. */
@@ -421,7 +427,8 @@ export async function processAccountingQuery(
   providerOrApiKey?: ProviderSettings | string,
   modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = [],
-  outputPreference?: OutputPreference
+  outputPreference?: OutputPreference,
+  diagnostics?: AccountingQueryDiagnostics
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   const imageAttachments = getCurrentImageAttachments(chatHistory);
@@ -638,6 +645,7 @@ export async function processAccountingQuery(
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
   const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey);
+  diagnostics?.onGroundedContext?.(groundedContext);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
   // 3. Evaluate Fast-Path Bypass (ONLY for explicit deterministic fixtures)
@@ -1531,7 +1539,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       profiler.recordFirstVisibleResponse();
 
       if (!res.ok) {
-        throw new Error(`Gemini HTTP Error ${res.status}: ${await res.text()}`);
+        throw toSafeProviderError('Gemini API', res.status);
       }
 
       const data = await res.json();
