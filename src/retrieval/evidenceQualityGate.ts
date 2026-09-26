@@ -5,6 +5,7 @@ import { getCoverageTopicById, getCoverageTopicsByIds } from '../standards/cover
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { findRecordEligibilityRejection } from '../verification/claimEvidenceVerifier';
+import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 
 export interface EvidenceQualityTraceAttempt {
   topicId: string;
@@ -42,7 +43,7 @@ export interface EvidenceQualityInput {
 export interface EvidenceQualityAssessment {
   status: 'LOCAL_SUFFICIENT' | 'RETRIEVED_SUFFICIENT' | 'LIMITED' | 'INSUFFICIENT';
   eligibleRecords: AuthoritativeSourceRecord[];
-  rejectedRecords: Array<{ recordId: string; reason: string }>;
+  rejectedRecords: Array<{ recordId: string; code: string; reason: string }>;
   coveredTopicIds: string[];
   uncoveredTopicIds: string[];
   missingFacts: string[];
@@ -162,7 +163,7 @@ function normalizeUrlIdentity(rawUrl: string | undefined): string | undefined {
   try {
     const url = new URL(rawUrl);
     url.hash = '';
-    url.pathname = url.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')');
+    url.pathname = url.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')').replace(/%27/gi, "'");
     return `${url.origin.toLowerCase()}${url.pathname}${url.search}`;
   } catch {
     return undefined;
@@ -189,17 +190,27 @@ function traceProvesLiveRecord(
   ));
 }
 
-function isValidatedLocalRecord(record: AuthoritativeSourceRecord, targetDate?: string, referenceDate?: string): boolean {
-  return record.provenance === 'LOCAL_STATIC' && !findRecordEligibilityRejection(record, targetDate, referenceDate);
-}
-
 function isVerifiedLiveCandidate(record: AuthoritativeSourceRecord, topicId: string, targetDate: string | undefined, trace?: EvidenceQualitySourceMapTrace): boolean {
-  return record.provenance === 'LIVE_EXTERNAL' && !findRecordEligibilityRejection(record, targetDate) &&
+  return record.provenance === 'LIVE_EXTERNAL' &&
     record.lifecycleState === 'CANDIDATE' && (record.recordRole as string | undefined) === 'DISCOVERED_EVIDENCE' &&
     record.groundingEligible === true && record.sourceType !== 'APPLICATION_RULE' &&
     record.evidenceTier !== 'APPLICATION_RULE' && record.sourceAuthority === 'IRAS' &&
     (!targetDate || isWithinTargetPeriod(record, targetDate)) && traceProvesLiveRecord(record, topicId, trace) &&
     Boolean(record.sourceText?.trim());
+}
+
+function eligibilityRejectionMessage(code: string): string {
+  switch (code) {
+    case 'LOCAL_SOURCE_NOT_VERIFIED': return 'Local record is not marked VERIFIED or HISTORICAL.';
+    case 'LOCAL_SOURCE_REVIEW_PROVENANCE_MISSING': return 'Local record lacks a recognized review method.';
+    case 'LOCAL_SOURCE_REVIEW_AUDIT_OVERDUE': return 'Local record is overdue for its review audit.';
+    case 'SOURCE_NOT_IN_EFFECT_ON_TARGET_DATE': return 'Local record is outside its effective date range for the target date.';
+    case 'SOURCE_URL_NOT_APPROVED_OR_CANONICAL': return 'Local record URL is not an approved source URL or does not match its canonical URL.';
+    case 'SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE': return 'Local record is not active or eligible for evidence grounding.';
+    case 'LIVE_SOURCE_CANDIDATE_INCOMPLETE': return 'Live source candidate is missing required retrieval or URL verification metadata.';
+    case 'LIVE_HISTORICAL_PAGE_SCOPE_UNVERIFIED': return 'Current live page retrieval does not establish the requested historical date.';
+    default: return `Evidence eligibility check rejected the record (${code}).`;
+  }
 }
 
 function explicitGstRateTransitionYears(query: string): number[] {
@@ -255,6 +266,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   const localByTopic = new Set<string>();
   const liveByTopic = new Set<string>();
   const irasRequest = hasIrasAssessmentScope(input);
+  const reject = (recordId: string, code: string, reason: string) => rejectedRecords.push({ recordId, code, reason });
 
   if (!irasRequest) {
     const untouchedRecords = uniqueRecords.filter(isUntouchedRecordEligible);
@@ -271,7 +283,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   }
 
   if (targetTopics.length === 0) {
-    for (const record of uniqueRecords) rejectedRecords.push({ recordId: record.id, reason: 'IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient.' });
+    for (const record of uniqueRecords) reject(record.id, 'IRAS_TOPIC_UNRESOLVED', 'IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient.');
     return {
       status: 'INSUFFICIENT',
       eligibleRecords: [],
@@ -285,26 +297,34 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   }
 
   const transitionYears = explicitGstRateTransitionYears(input.query);
+  const unresolvedRenovationBasisPeriod = hasUnresolvedSection14NBasisPeriod(input.query);
   for (const record of uniqueRecords) {
+    if (unresolvedRenovationBasisPeriod && record.id.startsWith('ITA_SEC14N_RENOVATION_REFURBISHMENT')) {
+      reject(record.id, 'SECTION14N_BASIS_PERIOD_UNRESOLVED',
+        'An explicit calendar date and the stated YA differ; the company basis period must be established before choosing a Section 14N rule.');
+      continue;
+    }
     if (!isIrasEvidenceRecord(record)) {
-      rejectedRecords.push({ recordId: record.id, reason: 'Non-IRAS record is outside the governed IRAS evidence scope.' });
+      reject(record.id, 'EVIDENCE_OUTSIDE_IRAS_SCOPE', 'Non-IRAS record is outside the governed IRAS evidence scope.');
       continue;
     }
     if (record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false) {
-      rejectedRecords.push({ recordId: record.id, reason: 'Source-map pointers are routing metadata, not answer evidence.' });
+      reject(record.id, 'SOURCE_MAP_POINTER_NOT_EVIDENCE', 'Source-map pointers are routing metadata, not answer evidence.');
       continue;
     }
     if (record.sourceType === 'APPLICATION_RULE' || record.evidenceTier === 'APPLICATION_RULE') {
-      rejectedRecords.push({ recordId: record.id, reason: 'Application rules are not authority evidence.' });
+      reject(record.id, 'APPLICATION_SOURCE_NOT_ALLOWED', 'Application rules are not authority evidence.');
       continue;
     }
     if (!record.sourceText?.trim()) {
-      rejectedRecords.push({ recordId: record.id, reason: 'Record has no substantive evidence text.' });
+      reject(record.id, 'SOURCE_TEXT_MISSING', 'Record has no substantive evidence text.');
       continue;
     }
 
     let accepted = false;
+    let rejectedCode = 'TOPIC_ASSOCIATION_NOT_FOUND';
     let rejectedReason = 'No registry topic association with distinctive matching source text.';
+    const eligibilityRejection = findRecordEligibilityRejection(record, targetDate, referenceDate);
     for (const topic of targetTopics) {
       const associated = metadataAssociatesRecord(record, topic);
       if (!associated) continue;
@@ -315,18 +335,27 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       const transitionTargetDate = transitionContext
         ? transitionYears.map(year => `${year}-06-30`).find(date => isWithinTargetPeriod(record, date))
         : undefined;
-      const local = isValidatedLocalRecord(record, targetDate, referenceDate) ||
-        Boolean(transitionTargetDate && isValidatedLocalRecord(record, transitionTargetDate, referenceDate));
-      const live = !local && isVerifiedLiveCandidate(record, topic.id, targetDate, input.sourceMapFallbackTrace);
+      const transitionEligibilityRejection = transitionTargetDate
+        ? findRecordEligibilityRejection(record, transitionTargetDate, referenceDate)
+        : undefined;
+      const local = record.provenance === 'LOCAL_STATIC' && !eligibilityRejection ||
+        Boolean(record.provenance === 'LOCAL_STATIC' && transitionTargetDate && !transitionEligibilityRejection);
+      const live = !local && !eligibilityRejection &&
+        isVerifiedLiveCandidate(record, topic.id, targetDate, input.sourceMapFallbackTrace);
       const topicTextMatches = distinctiveTextMatches(record, topic) || transitionContext ||
         (topic.domainId === 'IRAS_GST' && isStandardGstRateContext(record, topic, rateYears));
       if (!local && !live) {
-        rejectedReason = record.provenance === 'LIVE_EXTERNAL'
-          ? 'Live candidate lacks a matching successful URL/topic/content retrieval trace or verified provenance.'
-          : 'Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope.';
+        rejectedCode = eligibilityRejection || transitionEligibilityRejection ||
+          (record.provenance === 'LIVE_EXTERNAL' ? 'LIVE_RETRIEVAL_TRACE_NOT_VERIFIED' : 'SOURCE_NOT_ELIGIBLE');
+        rejectedReason = eligibilityRejection || transitionEligibilityRejection
+          ? eligibilityRejectionMessage(rejectedCode)
+          : record.provenance === 'LIVE_EXTERNAL'
+            ? 'Live candidate lacks a matching successful URL/topic/content retrieval trace or verified provenance.'
+            : 'Record provenance or lifecycle is not eligible for IRAS evidence.';
         continue;
       }
       if (!topicTextMatches) {
+        rejectedCode = 'TOPIC_TEXT_NOT_DISTINCTIVE';
         rejectedReason = 'Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic.';
         continue;
       }
@@ -336,7 +365,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       if (local) localByTopic.add(topic.id);
       else liveByTopic.add(topic.id);
     }
-    if (!accepted) rejectedRecords.push({ recordId: record.id, reason: rejectedReason });
+    if (!accepted) reject(record.id, rejectedCode, rejectedReason);
   }
 
   // Keep a live candidate only for a gap not already covered by validated local

@@ -401,9 +401,8 @@ export class CitationVerifier {
       matchedRecord.sourceType === 'AUTHORITATIVE_SOURCE' &&
       matchedRecord.isVerbatimText === true;
 
-    const isNeedsReview =
-      matchedRecord.evidenceTier === 'CURATED_SUMMARY' ||
-      matchedRecord.sourceStatus === 'NEEDS_REVIEW' ||
+    const isNeedsReview = matchedRecord.sourceStatus === 'NEEDS_REVIEW';
+    const isCuratedSummary = matchedRecord.evidenceTier === 'CURATED_SUMMARY' ||
       matchedRecord.sourceType === 'CURATED_SUMMARY';
 
     const isOfficialGuidance = matchedRecord.evidenceTier === 'OFFICIAL_GUIDANCE';
@@ -421,6 +420,8 @@ export class CitationVerifier {
       reason = `Citation is structurally valid against official agency guidance ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}); it is not a verified primary statutory provision.`;
     } else if (isNeedsReview) {
       reason = `Citation is structurally valid against ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}), but underlying record is a curated summary marked SOURCE_NEEDS_REVIEW.`;
+    } else if (isCuratedSummary) {
+      reason = `Citation is structurally valid against the reviewed curated summary ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}); the summary is not verbatim primary-source text.`;
     } else {
       reason = `Citation is structurally valid against ${matchedRecord.documentTitle} (${matchedRecord.paragraphOrSection}).`;
     }

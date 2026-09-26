@@ -39,7 +39,10 @@ async function runTests() {
     'SFRS_I'
   );
   assert(carRes.scenarioState.queryIntent === 'HYBRID', 'Must be classified as HYBRID');
-  assert(carRes.messageText.includes('Regulation 27'), 'Admitted GST motor-car evidence remains visible.');
+  assert.ok(carRes.scenarioState.statutoryAdvisory.some(advisory =>
+    (advisory.sectionOrSchedule === 'Regulation 26 & 27' || advisory.sectionOrSchedule === 'GST on Motor Vehicles') &&
+    /motor car|input tax/i.test(advisory.summary) && advisory.officialUrl?.startsWith('https://www.iras.gov.sg/')
+  ), 'Relevant IRAS motor-car/input-tax evidence remains visible without requiring a particular summary label.');
   assert.doesNotMatch(carRes.messageText, /15\(1\)\(k\)|Section 14ZA\(8\)/i,
     'Unadmitted income-tax rules must not leak into the GST answer.');
   assert.match(carRes.messageText, /cannot establish the tax treatment|information still needed/i);
@@ -140,7 +143,8 @@ async function runTests() {
   );
   assert(gstRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
   assert(gstRes.messageText.includes('1,000,000') || gstRes.messageText.includes('1 million'), 'Must cite $1M threshold');
-  assert.match(gstRes.messageText, /retrospective|prospective/i, 'Admitted registration evidence must mention its tests');
+  assert.match(gstRes.messageText, /end of any calendar year/i, 'Admitted registration evidence must state the calendar-year test');
+  assert.match(gstRes.messageText, /reasonable grounds for believing/i, 'Admitted registration evidence must state the forward-looking test');
   console.log('✓ GST Compulsory Registration query verified.\n');
 
   // TEST 9: MOM Statutory Leave Entitlements

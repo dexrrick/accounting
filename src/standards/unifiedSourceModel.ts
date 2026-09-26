@@ -73,6 +73,8 @@ export interface AuthoritativeSourceRecord {
   urlVerifiedDate?: string;
   urlVerificationMethod?: string;
   urlVerificationEvidence?: string;
+  /** Source-map URL identity that independently verified this record's link. */
+  urlVerificationSourceMapId?: string;
   sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'MAS' | 'ASK_GOV_SG' | 'REFERENCE_API';
   retrievedAt?: string;
   verificationMethod?: string;
@@ -143,6 +145,31 @@ function getStatuteSourceAuthority(canonicalUrl: string, authority: StatutoryAut
   }
 }
 
+function isValidReviewDate(value: string | undefined): boolean {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function hasCuratedEditorialReviewProvenance(rule: (typeof SINGAPORE_STATUTORY_REPOSITORY)[string]): boolean {
+  const reviewCycle = rule.reviewAuditCycleDays ?? SourceFreshnessManager.DEFAULT_AUDIT_CYCLE_DAYS;
+  return rule.authority === 'IRAS' && rule.sourceType === 'CURATED_SUMMARY' && rule.isVerbatimText === false &&
+    (rule.evidenceTier === 'CURATED_SUMMARY' || rule.evidenceTier === 'OFFICIAL_GUIDANCE') &&
+    isValidReviewDate(rule.lastVerifiedDate) && Number.isFinite(reviewCycle) && reviewCycle > 0;
+}
+
+function normalizeSourceMapUrl(rawUrl: string | undefined): string | undefined {
+  if (!rawUrl) return undefined;
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== 'https:' || url.username || url.password || url.port) return undefined;
+    url.pathname = url.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')').replace(/%27/gi, "'");
+    return `${url.origin.toLowerCase()}${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Curated list of verified primary statutory and standards records.
  * Explicitly marks sourceStatus ('VERIFIED' vs 'NEEDS_REVIEW' vs 'HISTORICAL') and
@@ -176,11 +203,13 @@ export function buildUnifiedSourceRegistry(
     const hasVerbatimText = Boolean(rule.verbatimStatuteText && rule.verbatimStatuteText.trim().length > 0);
     const isVerbatim = rule.isVerbatimText === true && hasVerbatimText;
     const isHistorical = rule.sourceStatus === 'HISTORICAL';
+    const hasEditorialReview = hasCuratedEditorialReviewProvenance(rule);
 
     let status: SourceStatus = 'NEEDS_REVIEW';
     if (isHistorical) {
       status = 'HISTORICAL';
-    } else if (isVerbatim && rule.sourceStatus === 'VERIFIED') {
+    } else if ((isVerbatim && rule.sourceStatus === 'VERIFIED') ||
+        (rule.sourceStatus === 'VERIFIED' && hasEditorialReview)) {
       status = 'VERIFIED';
     }
 
@@ -195,7 +224,10 @@ export function buildUnifiedSourceRegistry(
       ? 'OFFICIAL_GUIDANCE'
       : isVerbatim && (rule.sourceStatus === 'VERIFIED' || isHistorical)
       ? 'PRIMARY_SOURCE'
-      : 'CURATED_SUMMARY';
+      : rule.authority === 'IRAS' && rule.sourceType === 'CURATED_SUMMARY' &&
+        (rule.evidenceTier === 'OFFICIAL_GUIDANCE' || rule.evidenceTier === 'CURATED_SUMMARY')
+        ? rule.evidenceTier
+        : 'CURATED_SUMMARY';
 
     const validFrom = rule.validFrom || rule.effectiveDate;
     const validTo = rule.validTo;
@@ -235,7 +267,13 @@ export function buildUnifiedSourceRegistry(
       canonicalSourceUrl: rule.canonicalUrl,
       sourceAuthority: getStatuteSourceAuthority(rule.canonicalUrl, rule.authority),
       retrievedAt: '2026-09-01T00:00:00Z',
-      verificationMethod: isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'STATUTORY_LEGISLATION_AUDIT' : 'CURATED_EDITORIAL_REVIEW'
+      verificationMethod: rule.authority !== 'IRAS'
+        ? isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'STATUTORY_LEGISLATION_AUDIT' : 'CURATED_EDITORIAL_REVIEW'
+        : isVerbatim && rule.sourceStatus === 'VERIFIED'
+          ? 'STATUTORY_LEGISLATION_AUDIT'
+          : isHistorical || (rule.sourceStatus === 'VERIFIED' && hasEditorialReview)
+            ? 'CURATED_EDITORIAL_REVIEW'
+            : undefined
     };
 
     // URL verification is tracked separately from evidence/content review.
@@ -479,6 +517,24 @@ export function buildUnifiedSourceRegistry(
     };
     record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
     UNIFIED_SOURCE_REGISTRY[definition.id] = record;
+
+    // A topic pointer verifies only the exact public URL identity. Store that
+    // relationship on matching evidence records; their content status and
+    // evidence tier remain independently governed above.
+    const mappedUrl = normalizeSourceMapUrl(definition.canonicalSourceUrl);
+    if (mappedUrl) {
+      for (const evidenceRecord of Object.values(UNIFIED_SOURCE_REGISTRY)) {
+        if (evidenceRecord.id === definition.id || evidenceRecord.recordRole === 'SOURCE_MAP_POINTER' ||
+            !evidenceRecord.sourceText.trim()) continue;
+        if (normalizeSourceMapUrl(evidenceRecord.officialSourceUrl) !== mappedUrl ||
+            normalizeSourceMapUrl(evidenceRecord.canonicalSourceUrl) !== mappedUrl) continue;
+        evidenceRecord.urlVerificationStatus = 'VERIFIED';
+        evidenceRecord.urlVerifiedDate = definition.urlVerifiedDate;
+        evidenceRecord.urlVerificationMethod = 'VERIFIED_SOURCE_MAP_URL_IDENTITY_MATCH';
+        evidenceRecord.urlVerificationEvidence = `Exact URL identity matches verified source-map record ${definition.id}; ${definition.urlVerificationEvidence}`;
+        evidenceRecord.urlVerificationSourceMapId = definition.id;
+      }
+    }
   }
 
   return UNIFIED_SOURCE_REGISTRY;

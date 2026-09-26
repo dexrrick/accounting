@@ -715,10 +715,10 @@
         "iras-gst-blocked-input-tax"
       ],
       "expectedSourceMapIds": [
-        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+        "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
       ],
       "mappingStatus": "MAPPED",
-      "evidence": "Official IRAS Conditions for Claiming Input Tax page checked 2026-09-26; existing local blocked-input-tax record remains linked.",
+      "evidence": "Official IRAS Purchase and Sale of Motor Vehicles page checked 2026-09-26; the motor-car rule is mapped to the dedicated motor-vehicle guidance page, with the existing local blocked-input-tax record retained.",
       "routingOracle": {
         "review": {
           "status": "INDEPENDENTLY_VERIFIED",
@@ -741,7 +741,7 @@
         "forbiddenTopicIds": [],
         "sourceSelection": {
           "expectedSourceMapIds": [
-            "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+            "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
           ]
         }
       },
@@ -762,7 +762,7 @@
             "reviewStatus": "PENDING_REVIEW",
             "expectedRoute": "MAPPED_SOURCE",
             "expectedSourceMapIds": [
-              "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+              "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
             ],
             "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
           },
@@ -782,7 +782,7 @@
           "citation": {
             "reviewStatus": "PENDING_REVIEW",
             "expectedSourceMapIds": [
-              "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+              "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
             ],
             "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
           },
@@ -3854,10 +3854,10 @@
         "iras-gst-blocked-input-tax"
       ],
       "expectedSourceMapIds": [
-        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+        "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
       ],
       "mappingStatus": "MAPPED",
-      "evidence": "The existing IRAS Conditions for Claiming Input Tax page is linked to motor-vehicle/blocked-input-tax topics. This generic unrelated-customer-use scenario stays within the HTML guidance route; no insurer or policyholder-specific guide is assumed.",
+      "evidence": "The specific IRAS Purchase and Sale of Motor Vehicles page is mapped for current vehicle guidance; the historical 2023 answer path still requires dated local evidence.",
       "routingOracle": {
         "review": {
           "status": "PENDING_REVIEW"

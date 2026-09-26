@@ -31,40 +31,50 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
     id: 'ITA_SEC15_PROHIBITED_DEDUCTIONS',
     authority: 'IRAS',
     authorityName: 'Inland Revenue Authority of Singapore & AGC',
+    sourcePublisher: 'Singapore Statutes Online / Attorney-General’s Chambers',
+    legalOrStandardInstrument: 'Income Tax Act 1947',
     actTitle: 'Income Tax Act 1947',
     actCode: 'ITA1947',
     sectionOrSchedule: 'Section 15(1)',
-    ruleTitle: 'Prohibited Non-Deductible Business Expenses',
+    ruleTitle: 'Selected Deductions Disallowed Under Section 15',
     category: 'TAX_INCOME',
-    principle: 'Notwithstanding any other provisions of this Act, no deduction shall be allowed in respect of: domestic or private expenses; capital sums; improvements; fines and statutory penalties; and non-trade expenses.',
-    application: 'Statutory fines (ACRA late filing fines, traffic fines), non-business private expenses paid via company funds, and capital acquisitions cannot be deducted against corporate tax.',
+    principle: 'Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.',
+    application: 'For a specific expense, identify the relevant Section 15 limb and any statutory exception before deciding whether it is deductible. Capital allowances for qualifying assets are assessed separately from depreciation.',
     practicalRules: [
-      'Private or domestic expenses of directors/shareholders are disallowed.',
-      'Fines and penalties imposed for violation of law are strictly non-deductible.',
-      'Income tax paid or payable is non-deductible.',
-      'Capital expenditure must be added back in tax computation (capital allowances claimed separately).'
+      'Domestic or private expenses are disallowed under Section 15(1)(a), subject to the specific exception in Section 14(1)(g).',
+      'Expenses not wholly and exclusively laid out to acquire income, capital withdrawn or employed as capital, capital employed in improvements other than plantation replanting, and sums recoverable under insurance or indemnity are disallowed under Section 15(1)(b) to (e), subject to the Act’s specific exceptions.',
+      'Rent or repair costs for premises not incurred to produce income and Singapore or foreign income tax are disallowed under Section 15(1)(f) and (g).',
+      'Specified passenger motor-car outgoings and expenses are dealt with separately under Section 15(1)(k); see the motor-car rule for the vehicle categories and exceptions.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-',
-    tags: ['non-deductible', 'prohibited expenses', 'fines', 'section 15', 'add-back']
+    tags: ['non-deductible', 'prohibited expenses', 'section 15', 'add-back'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'CURATED_SUMMARY',
+    evidenceTier: 'CURATED_SUMMARY',
+    isVerbatimText: false,
+    lastVerifiedDate: '2026-09-26',
+    reviewAuditCycleDays: 90
   },
 
   ITA_SEC15_1_K_MOTOR_CAR: {
     id: 'ITA_SEC15_1_K_MOTOR_CAR',
     authority: 'IRAS',
     authorityName: 'Inland Revenue Authority of Singapore (IRAS)',
+    sourcePublisher: 'Singapore Statutes Online / Attorney-General’s Chambers',
+    legalOrStandardInstrument: 'Income Tax Act 1947',
     actTitle: 'Income Tax Act 1947',
     actCode: 'ITA1947',
     sectionOrSchedule: 'Section 15(1)(k)',
     ruleTitle: 'Passenger Motor Car Expense and Capital Allowance Restrictions (with Exceptions)',
     category: 'TAX_INCOME',
-    principle: 'Section 15(1)(k) generally disallows expenses incurred in respect of passenger motor cars and capital allowances on private and business cars, subject to vehicle- and business-specific exceptions. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available.',
+    principle: 'Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available.',
     application: 'Identify the vehicle category and registration date, how the car is used, and the type of cost. Distinguish tax depreciation from capital allowances and running-cost deductions; do not infer eligibility from a G/Y plate or the label “commercial vehicle”.',
     practicalRules: [
       'Running expenses for private cars (e.g. S-plated cars) and business cars (e.g. Q- and RU-plated cars registered on or after 1 April 1998) are generally non-deductible even when used for business. Direct costs and employee reimbursements are treated alike.',
-      'Transport allowances paid to staff are deductible to the employer but form part of the employees’ taxable employment income. Transportation services are distinct from hiring or operating a private car.',
-      'Taxi running-expense exception: Section 15(1)(k)(i), subject to Section 15(2D), permits qualifying taxi outgoings and expenses. For expenses incurred on or after 12 November 2018, deduct only amounts attributable to use of the taxi for an “authorised purpose” under Section 14ZA(8): carrying passengers, or collecting, conveying and delivering cargo for reward where the statutory Registrar-approval conditions are met. This is a taxi rule and does not itself extend to private-hire cars.',
+      'Transport allowances paid to staff are deductible to the employer but form part of the employees’ taxable employment income. Point-to-point transportation services are distinct from hiring or operating a private car; IRAS generally disallows hired-car costs except where the company carries on a car-hire or driving-instruction business.',
+      'Taxi running-expense exception: Section 15(1)(k)(i), subject to Section 15(2D), permits qualifying taxi outgoings and expenses. For expenses incurred on or after 12 November 2018, deduct only amounts attributable to use of the taxi for an “authorised purpose” as defined in Section 14ZA(8). This taxi rule does not itself extend to private-hire cars.',
       'IRAS identifies exceptions for certain foreign-registered cars used exclusively outside Singapore for business, and a capped deduction for motor-vehicle expenses of Q- or RU-plated business cars registered before 1 April 1998. Check the applicable conditions and cap.',
-      'Capital allowances are generally unavailable for private and business cars, except cars registered as private-hire cars or for instructional purposes that are hired out or used for driving instruction in the course of the company’s business. Qualifying vans, lorries and motorcycles used for business, and qualifying foreign-registered cars used exclusively outside Singapore, may qualify under Sections 19 or 19A.',
+      'Capital allowances are generally unavailable for private and business cars. IRAS identifies exceptions for private-hire cars and instructional cars hired out or used for driving instruction in the business; the Acts also contain other narrowly conditioned exceptions, including for taxis, qualifying foreign-registered cars and specified legacy business service passenger vehicles. Confirm the exact statutory conditions before applying an exception. Qualifying vans, lorries and motorcycles used for business may qualify under Sections 19 or 19A.',
       'Accounting depreciation is not itself a tax deduction. Add it back where the vehicle is within the tax disallowance; assess any capital-allowance exception separately.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-',
@@ -72,25 +82,34 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
       { title: 'IRAS — Tax Treatment of Business Expenses (Motor Vehicle Expenses)', url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-%28m-r%29', authority: 'IRAS' },
       { title: 'IRAS — Capital Allowances (Motor Vehicles)', url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances', authority: 'IRAS' }
     ],
-    tags: ['car expenses', 'passenger car', 'motor car', 's-plate', 'car depreciation', 'section 15(1)(k)']
+    tags: ['car expenses', 'passenger car', 'motor car', 's-plate', 'car depreciation', 'section 15(1)(k)'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'CURATED_SUMMARY',
+    evidenceTier: 'OFFICIAL_GUIDANCE',
+    isVerbatimText: false,
+    lastVerifiedDate: '2026-09-26',
+    reviewAuditCycleDays: 90
   },
 
   ITA_SEC19_19A_CAPITAL_ALLOWANCES: {
     id: 'ITA_SEC19_19A_CAPITAL_ALLOWANCES',
     authority: 'IRAS',
     authorityName: 'Inland Revenue Authority of Singapore (IRAS)',
+    sourcePublisher: 'Inland Revenue Authority of Singapore (IRAS)',
+    legalOrStandardInstrument: 'Income Tax Act 1947',
     actTitle: 'Income Tax Act 1947',
     actCode: 'ITA1947',
     sectionOrSchedule: 'Section 19 & Section 19A',
     ruleTitle: 'Capital Allowances on Plant and Machinery in Lieu of Depreciation',
     category: 'TAX_INCOME',
     principle: 'Accounting depreciation is disallowed for tax. In its place, Capital Allowances (CA) are granted on qualifying plant and machinery used in trade or business.',
-    application: 'Companies write off machinery, computers, and office equipment over 1 year (Section 19A(2) 100% write-off for computers & automation equipment, or low-value assets $\\le\\$5,000$ capped at $\\sim\\$30,000$ per YA) or over 3 years straight-line (Section 19A(1)).',
+    application: 'A business may claim capital allowances on qualifying plant and machinery used in its trade or business, using an available write-off method. Eligibility and the applicable method depend on the asset and the relevant Year of Assessment.',
     practicalRules: [
       'Accounting depreciation is added back in tax computation.',
       'Section 19A(1): Accelerated 3-year write-off (33.33% per year).',
-      'Section 19A(2): 1-year (100%) accelerated write-off for computers, software, and qualifying automation equipment.',
-      'Low-Value Assets: Assets costing $\\le\\$5,000$ each can be fully written off in 1 year, subject to an aggregate limit of $\\$30,000$ per YA.'
+      'Section 19A(2): 1-year (100%) write-off is available for computers and prescribed automation equipment; prescribed automation equipment can include specified computer software.',
+      'Section 19A(10A): A 1-year write-off is available for low-value assets costing no more than SGD 5,000 each, subject to an aggregate SGD 30,000 limit per YA.',
+      'IRAS also describes a 2-year write-off option for assets acquired during basis periods for YAs 2021, 2022 and 2024; check the relevant YA and statutory conditions.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P16-#pr19A-',
     supplementaryOfficialSources: [{
@@ -98,7 +117,13 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
       url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances',
       authority: 'IRAS'
     }],
-    tags: ['capital allowance', 'depreciation add-back', 'section 19a', 'plant and machinery', 'computers']
+    tags: ['capital allowance', 'depreciation add-back', 'section 19a', 'plant and machinery', 'computers'],
+    sourceStatus: 'VERIFIED',
+    sourceType: 'CURATED_SUMMARY',
+    evidenceTier: 'OFFICIAL_GUIDANCE',
+    isVerbatimText: false,
+    lastVerifiedDate: '2026-09-26',
+    reviewAuditCycleDays: 90
   },
 
   ITA_SUTE_PTE_TAX_EXEMPTION: {

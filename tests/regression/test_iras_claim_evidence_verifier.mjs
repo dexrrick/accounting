@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
+import { UNIFIED_SOURCE_REGISTRY, buildUnifiedSourceRegistry } from '../../src/standards/unifiedSourceModel.ts';
+import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
+import { CitationVerifier } from '../../src/verification/citationVerifier.ts';
+import { InMemorySourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
+import { selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
 
 const localUrl = 'https://www.iras.gov.sg/taxes/gst/input-tax?topic=claiming';
 const liveUrl = 'https://www.iras.gov.sg/taxes/gst/input-tax?topic=claiming&version=2026';
@@ -69,9 +74,23 @@ assert.deepEqual(validLocal.accepted[0], {
   text: localQuote,
   recordId: 'IRAS_LOCAL_VERIFIED',
   quote: localQuote,
-  canonicalUrl: localUrl,
   supportKind: 'EXACT_SOURCE_QUOTE'
-});
+}, 'The local source remains usable as evidence without exposing its unverified URL.');
+
+const verifiedLocalUrl = verifyEvidenceClaims(
+  [makeClaim(localQuote, 'IRAS_LOCAL_VERIFIED')],
+  [makeLocalRecord({ urlVerificationStatus: 'VERIFIED', urlVerifiedDate: '2026-09-26', urlVerificationMethod: 'TESTED_EXACT_SOURCE_MAP_MATCH' })],
+  { missingFacts: [] }
+);
+assert.equal(verifiedLocalUrl.accepted[0].canonicalUrl, localUrl,
+  'An exact URL with separate verified provenance can be rendered as a citation.');
+const guessedUrl = verifyEvidenceClaims(
+  [makeClaim(localQuote, 'IRAS_LOCAL_VERIFIED', { citationUrl: localUrl })],
+  [makeLocalRecord()],
+  { missingFacts: [] }
+);
+assert.equal(guessedUrl.rejected[0].reason, 'CITATION_URL_UNVERIFIED',
+  'An approved host and matching canonical URL do not authorize a clickable citation.');
 
 const liveQuote = 'The current GST rate is 9% for taxable supplies.';
 const validLive = verifyEvidenceClaims(
@@ -81,6 +100,25 @@ const validLive = verifyEvidenceClaims(
 );
 assert.equal(validLive.accepted.length, 1, 'A genuine official live candidate with exact quote and provenance is accepted.');
 assert.equal(validLive.accepted[0].supportKind, 'EXACT_SOURCE_QUOTE');
+
+const remoteText = [
+  'Motor vehicle input tax is generally restricted.',
+  ...Array.from({ length: 12 }, (_, index) => `Unrelated filing detail ${index} has no bearing on vehicle eligibility.`),
+  'A qualifying vehicle exception may apply only when its conditions are met.'
+].join(' ');
+const selectedFragments = selectRelevantFetchedText(remoteText,
+  ['motor vehicle input tax', 'qualifying vehicle exception'], 300,
+  'motor vehicle input tax qualifying vehicle exception');
+assert.match(selectedFragments, /\n\n/, 'Noncontiguous fetched sentence windows retain a visible fragment boundary.');
+const combinedFragmentClaim = selectedFragments.replace(/\n\n/g, ' ');
+const crossWindowQuote = verifyEvidenceClaims(
+  [makeClaim(combinedFragmentClaim, 'IRAS_LIVE_CANDIDATE', { citationUrl: liveUrl })],
+  [makeLiveRecord({ sourceText: selectedFragments })],
+  { missingFacts: [] }
+);
+assert.equal(crossWindowQuote.accepted.length, 0,
+  'A quote joining noncontiguous live-page fragments is not a verbatim source span.');
+assert.equal(crossWindowQuote.rejected[0].reason, 'QUOTE_NOT_WHOLE_SENTENCE_OR_PARAGRAPH');
 
 const changedPolarity = 'Input tax is not claimable for qualifying taxable business purchases.';
 const polarityResult = verifyEvidenceClaims(
@@ -185,6 +223,7 @@ const reviewedSummaryClaim = verifyEvidenceClaims(
 );
 assert.equal(reviewedSummaryClaim.accepted.length, 1,
   'An explicitly reviewed, date-bounded historical local summary may be quoted exactly even when it is not verbatim statute text.');
+assert.equal(reviewedSummaryClaim.accepted[0].supportKind, 'REVIEWED_EDITORIAL_SUMMARY');
 
 const reviewedCurrentSummary = makeLocalRecord({
   id: 'IRAS_VERIFIED_CURATED_SUMMARY',
@@ -202,6 +241,60 @@ const reviewedCurrentClaim = verifyEvidenceClaims(
 );
 assert.equal(reviewedCurrentClaim.accepted.length, 1,
   'An explicitly reviewed current local summary can be quoted exactly without being represented as verbatim statute text.');
+assert.equal(reviewedCurrentClaim.accepted[0].supportKind, 'REVIEWED_EDITORIAL_SUMMARY');
+
+const unifiedReviewedSummary = UNIFIED_SOURCE_REGISTRY.IRAS_FORM_CS_LITE_CRITERIA;
+assert.equal(unifiedReviewedSummary.sourceStatus, 'VERIFIED',
+  'A curated rule with review metadata retains its content review status in the unified registry.');
+assert.equal(unifiedReviewedSummary.sourceType, 'CURATED_SUMMARY');
+assert.equal(unifiedReviewedSummary.evidenceTier, 'OFFICIAL_GUIDANCE');
+assert.equal(unifiedReviewedSummary.isVerbatimText, false);
+assert.equal(unifiedReviewedSummary.verificationMethod, 'CURATED_EDITORIAL_REVIEW');
+assert.equal(unifiedReviewedSummary.urlVerificationStatus, 'VERIFIED');
+assert.equal(unifiedReviewedSummary.urlVerificationSourceMapId, 'IRAS_CIT_RETURNS_SOURCE_MAP',
+  'A source-map URL match is recorded separately from the curated content-review status.');
+assert.equal(UNIFIED_SOURCE_REGISTRY.MAS_SFO_13O_13U_MATERIAL_CHANGES.sourceStatus, 'NEEDS_REVIEW',
+  'The IRAS curated-summary status correction does not promote MAS content.');
+const reviewedSummaryCitation = new CitationVerifier(new InMemorySourceRetriever([unifiedReviewedSummary])).verifyCitation({
+  standard: unifiedReviewedSummary.standardOrActCode,
+  paragraph: unifiedReviewedSummary.paragraphOrSection,
+  title: unifiedReviewedSummary.documentTitle,
+  text: unifiedReviewedSummary.sourceText,
+  officialSourceUrl: unifiedReviewedSummary.officialSourceUrl,
+  authority: 'IRAS'
+}, 'IRAS');
+assert.equal(reviewedSummaryCitation.isValid, true);
+assert.equal(reviewedSummaryCitation.status, 'STRUCTURALLY_VERIFIED_SUMMARY',
+  'A reviewed curated summary is not mislabeled as content needing review by citation diagnostics.');
+const originalUnreviewedFixture = SINGAPORE_STATUTORY_REPOSITORY.TEST_UNREVIEWED_CURATED_SUMMARY;
+const originalMissingReviewFixture = SINGAPORE_STATUTORY_REPOSITORY.TEST_VERIFIED_SUMMARY_WITHOUT_REVIEW_PROVENANCE;
+const summaryFixture = {
+  id: 'TEST_CURATED_SUMMARY', authority: 'IRAS', authorityName: 'IRAS', actTitle: 'Income Tax Act 1947',
+  actCode: 'ITA1947', sectionOrSchedule: 'Section 999', ruleTitle: 'Test summary', category: 'TAX_INCOME',
+  principle: 'A reviewed summary fixture for source registry provenance behavior.', application: '', practicalRules: [],
+  canonicalUrl: localUrl, tags: ['test summary'], sourceType: 'CURATED_SUMMARY', evidenceTier: 'CURATED_SUMMARY',
+  isVerbatimText: false, lastVerifiedDate: '2026-09-26', reviewAuditCycleDays: 90
+};
+try {
+  SINGAPORE_STATUTORY_REPOSITORY.TEST_UNREVIEWED_CURATED_SUMMARY = {
+    ...summaryFixture, id: 'TEST_UNREVIEWED_CURATED_SUMMARY', sourceStatus: 'NEEDS_REVIEW'
+  };
+  SINGAPORE_STATUTORY_REPOSITORY.TEST_VERIFIED_SUMMARY_WITHOUT_REVIEW_PROVENANCE = {
+    ...summaryFixture, id: 'TEST_VERIFIED_SUMMARY_WITHOUT_REVIEW_PROVENANCE', sourceStatus: 'VERIFIED', lastVerifiedDate: undefined
+  };
+  buildUnifiedSourceRegistry('2026-09-26');
+  assert.equal(UNIFIED_SOURCE_REGISTRY.TEST_UNREVIEWED_CURATED_SUMMARY.sourceStatus, 'NEEDS_REVIEW',
+    'A curated summary explicitly marked unreviewed remains NEEDS_REVIEW.');
+  assert.equal(UNIFIED_SOURCE_REGISTRY.TEST_VERIFIED_SUMMARY_WITHOUT_REVIEW_PROVENANCE.sourceStatus, 'NEEDS_REVIEW',
+    'A VERIFIED label without dated editorial review provenance is not enough to keep a curated summary VERIFIED.');
+  assert.equal(UNIFIED_SOURCE_REGISTRY.TEST_UNREVIEWED_CURATED_SUMMARY.sourceType, 'CURATED_SUMMARY');
+} finally {
+  if (originalUnreviewedFixture) SINGAPORE_STATUTORY_REPOSITORY.TEST_UNREVIEWED_CURATED_SUMMARY = originalUnreviewedFixture;
+  else delete SINGAPORE_STATUTORY_REPOSITORY.TEST_UNREVIEWED_CURATED_SUMMARY;
+  if (originalMissingReviewFixture) SINGAPORE_STATUTORY_REPOSITORY.TEST_VERIFIED_SUMMARY_WITHOUT_REVIEW_PROVENANCE = originalMissingReviewFixture;
+  else delete SINGAPORE_STATUTORY_REPOSITORY.TEST_VERIFIED_SUMMARY_WITHOUT_REVIEW_PROVENANCE;
+  buildUnifiedSourceRegistry('2026-09-26');
+}
 
 const localWithoutReviewProvenance = verifyEvidenceClaims(
   [makeClaim(localQuote, 'IRAS_LOCAL_VERIFIED')],

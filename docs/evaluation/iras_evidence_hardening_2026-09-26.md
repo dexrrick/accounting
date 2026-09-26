@@ -1,5 +1,7 @@
 # IRAS evidence pipeline hardening — 26/09/2026
 
+**Continuation:** The later [final IRAS hardening assessment](iras_evidence_completion_2026-09-26.md) records the builder/reviewer fixes, final 20-case live capture, ten-dimension assessment and Node-runtime limitation. The historical validation statements below describe the earlier phase.
+
 This work addresses the shared causes in [the live-validation report](iras_live_validation_2026-09-26.md). It does not replace individual benchmark answers, change the reviewed expectations, or turn the original LIVE_FAIL results into passes.
 
 ## Failure analysis

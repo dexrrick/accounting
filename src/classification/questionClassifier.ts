@@ -1,5 +1,6 @@
 import { getCoverageTopicsByIds, type SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
+import { hasUnresolvedSection14NBasisPeriod } from '../retrieval/statutoryDateScope';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -52,10 +53,18 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const withholdingDueDateOnlyContext = /\b(?:wht|withholding tax)\b/i.test(q) &&
     /\b(?:treated as paid|deemed payment|deemed paid|deemed date|filing due|payment due|due date|deadline)\b/i.test(q) &&
     !/\b(?:rates?|payment categor(?:y|ies)|types? of payment|subject to (?:wht|withholding tax)|whether (?:wht|withholding tax) applies)\b/i.test(q);
+  const section13wTaxOnlyContext = /\b(?:section\s*)?13w\b/i.test(q) &&
+    /\b(?:tax|iras|disposal|exemption|safe harbour|safe harbor)\b/i.test(q) &&
+    !explicitAccountingIntent &&
+    !/\b(?:acra|companies act|share class rights|allotment|annual return|corporate filing)\b/i.test(q);
   const topicMetadata = allTopicMetadata.filter(topic =>
     !(passengerCarTaxOnlyContext && topic.domainId.startsWith('ACCOUNTING_')) &&
     !(employmentTaxAssessmentContext && topic.domainId.startsWith('ACRA_')) &&
-    !(withholdingDueDateOnlyContext && topic.id === 'iras-withholding-tax')
+    !(withholdingDueDateOnlyContext && topic.id === 'iras-withholding-tax') &&
+    !(section13wTaxOnlyContext && [
+      'acra_preference-shares', 'acra_share-transfers', 'acra_share-allotments',
+      'acra_share_capital', 'sfrsi_own_equity', 'sfrsi_financial_instruments'
+    ].includes(topic.id))
   );
   const topicIds = topicMetadata.map(topic => topic.id);
 
@@ -400,16 +409,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
       missingFacts.push('Trade or business commencement and operation throughout the applicable cap period');
     }
   }
-  if (/\b(?:renovat\w*|refurbish\w*|section 14n)\b/i.test(q) &&
-      /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.test(q) &&
-      /\b(?:[0-3]?\d[/-][01]?\d[/-]20\d{2}|20\d{2}-[01]\d-[0-3]\d|[0-3]?\d\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})\b/i.test(q)) {
-    const yaYear = /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.exec(q)?.[1];
-    const expenditureYear = /\b[0-3]?\d[/-][01]?\d[/-](20\d{2})\b/.exec(q)?.[1] ||
-      /\b(20\d{2})-[01]\d-[0-3]\d\b/.exec(q)?.[1] ||
-      /\b[0-3]?\d\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(20\d{2})\b/i.exec(q)?.[1];
-    if (yaYear && expenditureYear && yaYear !== expenditureYear) {
-      missingFacts.push('Company financial year end and YA basis period containing the renovation expenditure');
-    }
+  if (hasUnresolvedSection14NBasisPeriod(q)) {
+    missingFacts.push('Company financial year end and YA basis period containing the renovation expenditure');
   }
   if (asksAboutSpecificTaxCase && hasGst && /\b(?:claim\w*|recover\w*|charge\w*|zero.rate|exempt)\b/i.test(q)) {
     if (!/\b(?:gst.registered|registered for gst|not registered for gst)\b/i.test(q)) {

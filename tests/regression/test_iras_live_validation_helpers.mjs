@@ -5,6 +5,7 @@ import {
   classifyFinalAnswerPath,
   extractClarificationRequests,
   extractMarkdownCitations,
+  isTransientGeminiFailure,
   localEvidenceWasSuppliedToAnswerCall,
   providerStatus,
   safeText
@@ -45,6 +46,14 @@ assert.equal(providerStatus([{ stage: 'answer-generation', httpStatus: 200, rawC
   'A static Offline heading alone is not evidence that the provider failed.');
 assert.equal(providerStatus([{ stage: 'answer-generation', httpStatus: 200, rawCandidateText: '{bad json', rawCandidateJsonValid: false }], false, '> **Gemini API Call Notice**: Invalid JSON'), 'LIVE_FAIL',
   'A raw candidate followed by the production provider-error fallback is not a pass.');
+assert.equal(isTransientGeminiFailure([{ stage: 'answer-generation', transportFailureKind: 'TIMEOUT' }]), true);
+assert.equal(isTransientGeminiFailure([{ stage: 'answer-generation', httpStatus: 503 }]), true);
+assert.equal(isTransientGeminiFailure([{ stage: 'answer-generation', httpStatus: 200, rawCandidateText: '{bad json' }]), false,
+  'A substantive response failure must not trigger a timeout retry.');
+assert.equal(isTransientGeminiFailure([
+  { stage: 'answer-generation', transportFailureKind: 'TIMEOUT' },
+  { stage: 'answer-generation', httpStatus: 200, rawCandidateText: '{"taxClaims":[]}' }
+]), false, 'A successful answer call ends the bounded retry.');
 
 const localRecord = { documentTitle: 'Local GST Evidence', sourceText: 'Validated local evidence text with sufficient length for exact prompt matching.' };
 assert.equal(localEvidenceWasSuppliedToAnswerCall([localRecord], [{ stage: 'semantic-extraction-or-other', request: { systemInstruction: { parts: [{ text: localRecord.sourceText }] } } }]), false,

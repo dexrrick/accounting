@@ -10,6 +10,7 @@ import { classifyQuestion } from '../../src/classification/questionClassifier.ts
 import { IRAS_SOURCE_MAP_DEFINITIONS, SINGAPORE_COVERAGE_REGISTRY, getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
 import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSourceRegistry.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
+import { QueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
 
 const benchmark = JSON.parse(await readFile(path.resolve('tests/evaluation/singapore/iras-source-map.json'), 'utf8'));
 const htmlResponse = (body, status = 200) => new Response(body, {
@@ -21,13 +22,37 @@ const ratesDefinition = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IR
 const ratesUrl = ratesDefinition.canonicalSourceUrl;
 const unutilisedItemsDefinition = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP');
 const unutilisedItemsUrl = unutilisedItemsDefinition.canonicalSourceUrl;
+const motorVehiclesDefinition = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP');
+const ir21Definition = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_IR21_SOURCE_MAP');
+const bonusTimingDefinition = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP');
 const unutilisedItemsHtml = `<html><head><title>${unutilisedItemsDefinition.pageTitle}</title></head><body><main>
-  <h1>${unutilisedItemsDefinition.pageTitle}</h1><p>IRAS ${unutilisedItemsDefinition.shortDescription} carry-back relief trade losses.</p>
+  <h1>${unutilisedItemsDefinition.pageTitle}</h1>
+  <p>Unutilised capital allowances and unutilised trade losses may be carried forward to future Years of Assessment.</p>
+  <p>Carry-forward is subject to qualifying conditions, including the shareholding test.</p>
+  <p>To determine whether there is a substantial change in shareholders, compare shareholding on the relevant dates.</p>
+  <p>IRAS ${unutilisedItemsDefinition.shortDescription} carry-back relief donations.</p>
   </main></body></html>`;
 const ratesHtml = `<html><head><title>${ratesDefinition.pageTitle}</title></head><body><main>
   <h1>${ratesDefinition.pageTitle}</h1><p>IRAS corporate income tax rate and exemption scheme information for companies.</p>
   </main></body></html>`;
 const ratesQuery = 'What corporate income tax rate applies to a company?';
+
+async function fetchMappedPage(topicIds, query, definition, title, body, finalUrl = definition.canonicalSourceUrl) {
+  const html = `<html><head><title>${title}</title></head><body><main><h1>${title}</h1>${body}</main></body></html>`;
+  return resolveMappedOfficialSourceFallback(topicIds, query, defaultSourceRetriever, {
+    discoveryAdapter: emptyDiscovery,
+    webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+    fetchOptions: {
+      useCache: false,
+      customFetch: async requestedUrl => {
+        assert.equal(requestedUrl, definition.canonicalSourceUrl);
+        const response = htmlResponse(html);
+        if (finalUrl !== requestedUrl) Object.defineProperty(response, 'url', { value: finalUrl });
+        return response;
+      }
+    }
+  });
+}
 
 async function run() {
   assert.equal(benchmark.reviewedAt, '2026-09-26');
@@ -123,6 +148,54 @@ async function run() {
   const broadDtaTopic = getCoverageTopicById('iras-double-tax-agreements');
   assert.ok(!broadDtaTopic.sourceRecordIds.includes('IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP'));
   assert.ok(getCoverageTopicById('iras-foreign-tax-credit').sourceRecordIds.includes('IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP'));
+  const expectedLocalBindings = {
+    'iras-cit-loss-carry-forward': ['ITA_SEC37_LOSS_CARRY_FORWARD'],
+    'iras-substantial-shareholding-test': ['ITA_SEC37_LOSS_CARRY_FORWARD'],
+    'iras-withholding-tax-interest-royalties': ['ITA_SEC45_WITHHOLDING_TAX'],
+    'iras-withholding-tax-management-fees': ['ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES'],
+    'iras-cit-renovation-refurbishment': ['ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025', 'ITA_SEC14N_RENOVATION_REFURBISHMENT'],
+    'iras-section-13w': ['ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR', 'ITA_SEC13W_EQUITY_DISPOSAL_2026'],
+    'iras-cit-returns': ['IRAS_FORM_CS_LITE_CRITERIA']
+  };
+  for (const [topicId, expectedRecordIds] of Object.entries(expectedLocalBindings)) {
+    const localRecordIds = getCoverageTopicById(topicId).sourceRecordIds.filter(id => !id.endsWith('_SOURCE_MAP'));
+    for (const recordId of expectedRecordIds) {
+      assert.ok(localRecordIds.includes(recordId), `${topicId} explicitly binds to ${recordId}.`);
+    }
+  }
+  for (const [query, expectedRecordId] of [
+    ['Can the company carry forward prior-year trade losses?', 'ITA_SEC37_LOSS_CARRY_FORWARD'],
+    ['A Singapore company pays interest to an overseas company. Is withholding tax required?', 'ITA_SEC45_WITHHOLDING_TAX'],
+    ['A Singapore company pays management fees to an overseas related company. Is withholding tax applicable?', 'ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES'],
+    ['For YA 2026, can the company use Form C-S Lite if it claims a foreign tax credit?', 'IRAS_FORM_CS_LITE_CRITERIA']
+  ]) {
+    const records = await defaultSourceRetriever.retrieveSources({ query, domain: 'IRAS_TAX', maxResults: 8 });
+    assert.ok(records.some(record => record.id === expectedRecordId), `${query} retrieves the explicit local record ${expectedRecordId}.`);
+  }
+  const formLiteQuery = 'For YA 2026, can a Singapore company use Form C-S (Lite) if it claims a foreign tax credit?';
+  const resolver = new QueryTopicResolver();
+  const formLiteTopics = resolver.decomposeQuery(formLiteQuery).topics.map(topic => topic.id);
+  assert.ok(formLiteTopics.includes('iras-cit-returns'), 'Form C-S eligibility uses its explicit local rule binding.');
+  assert.ok(!formLiteTopics.includes('iras-foreign-tax-credit'), 'The Form C-S foreign-tax-credit disqualifier does not route a separate FTC page.');
+  assert.ok(resolver.decomposeQuery('How do I calculate foreign tax credit relief for foreign tax paid overseas?').topics.some(topic => topic.id === 'iras-foreign-tax-credit'),
+    'A substantive FTC treatment question still routes to the FTC topic.');
+
+  assert.ok(motorVehiclesDefinition, 'A dedicated motor-vehicle map is registered.');
+  assert.equal(motorVehiclesDefinition.canonicalSourceUrl,
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/purchase-and-sale-of-motor-vehicles');
+  assert.equal(motorVehiclesDefinition.pageTitle, 'Purchase and Sale of Motor Vehicles');
+  assert.deepEqual(motorVehiclesDefinition.topicIds, ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles']);
+  assert.ok(!getCoverageTopicById('iras-gst-motor-vehicles').sourceRecordIds.includes('IRAS_GST_INPUT_TAX_SOURCE_MAP'),
+    'Motor-vehicle treatment is routed to its specific page instead of the generic input-tax page.');
+  assert.equal(getCoverageTopicById('iras-gst-motor-vehicles').sectionMatch, 'Regulation 25(1) and 27');
+  assert.equal(getCoverageTopicById('iras-gst-blocked-input-tax').sectionMatch, '26 and 27');
+  assert.ok(ir21Definition);
+  assert.equal(ir21Definition.canonicalSourceUrl,
+    'https://www.iras.gov.sg/taxes/individual-income-tax/employers/tax-clearance-for-foreign-spr-employees-(ir21)/tax-clearance-for-employees');
+  assert.equal(ir21Definition.pageTitle, 'Tax Clearance for Employees');
+  assert.ok(bonusTimingDefinition);
+  assert.equal(bonusTimingDefinition.pageTitle, 'Employment Income (Salary, bonus, director\'s fee)');
+
   const section13wPre = benchmark.cases.find(item => item.id === 'section13w-pre-2026-disposal');
   const section13wPost = benchmark.cases.find(item => item.id === 'section13w-post-2026-disposal');
   assert.equal(section13wPre?.mappingStatus, 'DISCOVERY_ONLY');
@@ -182,6 +255,59 @@ async function run() {
   assert.equal(carryBackDiscoveryCount, 0, 'Relative prior-YA intent does not allow sitemap discovery.');
   assert.deepEqual(carryBackHistoricalFallback.trace.sourceMapIds, []);
   assert.equal(carryBackHistoricalFallback.trace.path, 'NO_VERIFIED_MAP');
+
+  const lossCarryForward = await fetchMappedPage(
+    ['iras-cit-loss-carry-forward', 'iras-substantial-shareholding-test'],
+    'Can the company use prior-year losses?',
+    unutilisedItemsDefinition,
+    unutilisedItemsDefinition.pageTitle,
+    '<p>IRAS explains that unutilised capital allowances and unutilised trade losses may be carried forward to future Years of Assessment.</p><p>Carry-forward is subject to qualifying conditions, including the shareholding test.</p><p>Compare shareholding on the relevant dates to determine if there has been a substantial change in shareholders.</p>'
+  );
+  assert.equal(lossCarryForward.trace.path, 'MAPPED_SOURCE', 'The official Unutilised Items page now satisfies both mapped loss topics using page-specific terms.');
+  assert.deepEqual(lossCarryForward.trace.selectedRecordIds.length, 2);
+  assert.ok(lossCarryForward.trace.attempts.every(attempt => attempt.fetchStatus === 'SUCCESS' && attempt.titleMatched && attempt.contentMatched));
+
+  const motorVehicles = await fetchMappedPage(
+    ['iras-gst-motor-vehicles'],
+    'Can the company claim GST on a passenger motor car?',
+    motorVehiclesDefinition,
+    'IRAS | Purchase and Sale of Motor Vehicles',
+    '<p>For GST, input tax for purchase and sale of motor vehicles depends on whether the vehicle is a motor car.</p><p>Motor car purchase and running costs are generally not claimable under Regulation 27; other vehicles may qualify subject to ordinary input-tax conditions.</p>'
+  );
+  assert.equal(motorVehicles.trace.path, 'MAPPED_SOURCE');
+  assert.equal(motorVehicles.trace.sourceMapIds[0], 'IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP');
+  assert.equal(motorVehicles.records[0].officialSourceUrl, motorVehiclesDefinition.canonicalSourceUrl);
+
+  const ir21 = await fetchMappedPage(
+    ['iras-employer-ir21'],
+    'When must we file Form IR21 before an employee leaves Singapore?',
+    ir21Definition,
+    'IRAS | Tax Clearance for Employees',
+    '<p>IRAS Tax Clearance for Employees requires the employer to file Form IR21 at least one month before the employee ceases work, starts an overseas posting, or leaves Singapore for over three months.</p><p>The employer must withhold monies when aware of the impending cessation, and listed scenarios do not require tax clearance.</p>'
+  );
+  assert.equal(ir21.trace.path, 'MAPPED_SOURCE');
+  assert.equal(ir21.trace.sourceMapIds[0], 'IRAS_IR21_SOURCE_MAP');
+  assert.equal(ir21.records[0].documentTitle, 'IRAS | Tax Clearance for Employees');
+  assert.equal(ir21.records[0].officialSourceUrl, ir21Definition.canonicalSourceUrl);
+
+  const bonusActualTitle = 'IRAS | Employment Income (Salary, bonus, director\'s fee)';
+  const encodedBonusFinalUrl = bonusTimingDefinition.canonicalSourceUrl.replace("director's", 'director%27s');
+  const bonusTiming = await fetchMappedPage(
+    ['iras-employee-bonus-timing'],
+    'When is a contractual or discretionary employment bonus taxable?',
+    bonusTimingDefinition,
+    bonusActualTitle,
+    '<p>Taxes on bonuses differ by entitlement timing. A contractual bonus becomes taxable when the employee is entitled, while a non-contractual bonus is generally taxable when paid.</p><p>Bonuses paid in advance subject to future conditions are taxable on payment.</p>',
+    encodedBonusFinalUrl
+  );
+  assert.equal(bonusTiming.trace.path, 'MAPPED_SOURCE', 'The actual IRAS employment-income title is accepted by its source-specific title expectation.');
+  assert.equal(bonusTiming.trace.attempts[0].pageTitle, bonusActualTitle);
+  assert.equal(bonusTiming.trace.attempts[0].titleMatched, true);
+  assert.equal(bonusTiming.records[0].officialSourceUrl, encodedBonusFinalUrl);
+  assert.equal(hasVerifiedSourceUrlProvenance({
+    ...bonusTiming.records[0],
+    canonicalSourceUrl: bonusTimingDefinition.canonicalSourceUrl
+  }), true, 'Literal and %27 encoded apostrophes identify the same verified IRAS source path.');
 
   for (const foreignTaxCreditQuery of [
     'A Singapore company paid foreign tax on income also reported in Singapore. What foreign tax credit relief may it claim?',
@@ -290,7 +416,7 @@ async function run() {
             if (!definition) return new Response('not found', { status: 404 });
             const topicText = definition.topicIds.map(topicId => {
               const topic = getCoverageTopicById(topicId);
-              return topic ? `${topic.title} ${(topic.keywords || []).join(' ')}` : '';
+              return topic ? `${topic.title} ${(topic.aliases || []).join(' ')} ${(topic.keywords || []).join(' ')}` : '';
             }).join(' ');
             const escapedTitle = definition.pageTitle.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
             return htmlResponse(`<html><head><title>${escapedTitle}</title></head><body><main><h1>${escapedTitle}</h1><p>IRAS ${definition.shortDescription} ${topicText}</p></main></body></html>`);
@@ -336,7 +462,7 @@ async function run() {
   assert.ok(gstRegistration.sourceRecordIds.includes('IRAS_GST_REGISTRATION_SOURCE_MAP'));
   const blockedInputTax = getCoverageTopicById('iras-gst-blocked-input-tax');
   assert.ok(blockedInputTax.sourceRecordIds.includes('GST_REG26_BLOCKED_INPUT_TAX'));
-  assert.ok(blockedInputTax.sourceRecordIds.includes('IRAS_GST_INPUT_TAX_SOURCE_MAP'));
+  assert.ok(blockedInputTax.sourceRecordIds.includes('IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP'));
   assert.ok(SINGAPORE_COVERAGE_REGISTRY.some(topic => topic.id === 'iras-gst-filing-deadlines'));
 
   const statutorySection14 = UNIFIED_SOURCE_REGISTRY.ITA_SEC14_GENERAL_DEDUCTION;

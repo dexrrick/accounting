@@ -4,6 +4,8 @@ import type { GroundedReasoningContext } from './groundingContextBuilder';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
 import { verifyEvidenceClaims } from '../verification/claimEvidenceVerifier';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
+import { evaluateIrasApplications } from '../engine/irasApplicationEvaluator';
+import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
@@ -119,11 +121,17 @@ export function renderIrasEvidenceResponse(
     missingFacts: context.missingFacts, targetDate: quality.targetDate
   });
   const calculation = computeVerifiedStandardGst(query, quality.eligibleRecords, quality.targetDate, unresolvedGstFacts(context));
+  const applicationConclusions = quality.uncoveredTopicIds.length === 0
+    ? evaluateIrasApplications(query, quality.eligibleRecords, quality.targetDate)
+    : [];
   const { treatment, groups } = accountingGroups(parsed, context, query, deterministicScenario, standard);
   const lines: string[] = [];
   if (calculation) {
     const record = quality.eligibleRecords.find(item => item.id === calculation.sourceRecordId)!;
-    lines.push(`Output GST: SGD ${calculation.outputTax.toFixed(2)} (${(calculation.rate * 100).toFixed(2).replace(/\.00$/, '')}% of SGD ${calculation.netAmount.toFixed(2)}). Invoice total: SGD ${calculation.invoiceTotal.toFixed(2)}. Calculated deterministically from the dated local rate and the stated aligned supply, invoice and payment dates. [Rate evidence](<${record.canonicalSourceUrl || record.officialSourceUrl}>).`);
+    const rateLink = hasVerifiedSourceUrlProvenance(record) && (record.canonicalSourceUrl || record.officialSourceUrl)
+      ? ` [Rate evidence](<${record.canonicalSourceUrl || record.officialSourceUrl}>)`
+      : '';
+    lines.push(`Output GST: SGD ${calculation.outputTax.toFixed(2)} (${(calculation.rate * 100).toFixed(2).replace(/\.00$/, '')}% of SGD ${calculation.netAmount.toFixed(2)}). Invoice total: SGD ${calculation.invoiceTotal.toFixed(2)}. Calculated deterministically from the dated local rate and the stated aligned supply, invoice and payment dates.${rateLink ? `${rateLink}.` : ''}`);
   }
   if (context.classification.multiAuthority) lines.push('This evidence review covers the IRAS component. Other authority requirements have not been verified by this tax evidence check.');
   if (treatment) lines.push(treatment);
@@ -137,16 +145,32 @@ export function renderIrasEvidenceResponse(
   if (quality.status === 'INSUFFICIENT' || quality.uncoveredTopicIds.length > 0) {
     lines.push('The available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.');
   }
+  for (const conclusion of applicationConclusions) {
+    const record = quality.eligibleRecords.find(item => item.id === conclusion.sourceRecordId)!;
+    const verifiedUrl = hasVerifiedSourceUrlProvenance(record) && (record.canonicalSourceUrl || record.officialSourceUrl);
+    const linkLabel = record.sourceType === 'CURATED_SUMMARY' || record.isVerbatimText === false
+      ? 'Related IRAS guidance page' : 'Supporting rule';
+    lines.push(`${conclusion.text}${verifiedUrl ? ` [${linkLabel}](<${verifiedUrl}>).` : ''}`);
+  }
   if (context.missingFacts.length > 0) {
     lines.push(`Information still needed to complete the question:\n${context.missingFacts.map(fact => `- ${fact}`).join('\n')}`);
   }
   if (verification.accepted.length > 0) {
-    lines.push(mode === 'LOCAL' ? 'Validated local source evidence:' : 'Supporting source passages:');
+    lines.push('Admitted source evidence and reviewed summaries:');
     for (const claim of verification.accepted) {
       const record = quality.eligibleRecords.find(item => item.id === claim.recordId)!;
-      lines.push(`> ${claim.text.replace(/\n/g, '\n> ')}\n\n[${record.documentTitle.replace(/[\[\]]/g, '')}](<${claim.canonicalUrl}>) — ${record.provenance === 'LIVE_EXTERNAL' ? 'retrieved official evidence' : 'validated local evidence'}${record.validFrom || record.validTo ? `; recorded scope ${record.validFrom || 'unknown'} to ${record.validTo || 'open-ended'}` : ''}.`);
+      const documentTitle = record.documentTitle.replaceAll('[', '').replaceAll(']', '');
+      const sourceLabel = claim.canonicalUrl ? `[${documentTitle}](<${claim.canonicalUrl}>)` : documentTitle;
+      const urlNote = claim.canonicalUrl ? '' : '; public URL not independently verified';
+      const scope = record.validFrom || record.validTo ? `; recorded scope ${record.validFrom || 'unknown'} to ${record.validTo || 'open-ended'}` : '';
+      if (claim.supportKind === 'REVIEWED_EDITORIAL_SUMMARY') {
+        const relatedPage = claim.canonicalUrl ? `; [related IRAS guidance page](<${claim.canonicalUrl}>)` : '';
+        lines.push(`${claim.text}\n\nReviewed local editorial summary (nonverbatim; ${documentTitle})${relatedPage}${urlNote}${scope}.`);
+      } else {
+        lines.push(`> ${claim.text.replace(/\n/g, '\n> ')}\n\n${sourceLabel} — ${record.provenance === 'LIVE_EXTERNAL' ? 'retrieved official evidence' : 'validated local evidence'}${urlNote}${scope}.`);
+      }
     }
-    if (!calculation) lines.push('These passages establish the quoted rules; they do not by themselves confirm that every condition is met in this case.');
+    if (!calculation && applicationConclusions.length === 0) lines.push('This evidence states the recorded rules; it does not by itself confirm that every condition is met in this case.');
   } else if (quality.status !== 'INSUFFICIENT') {
     lines.push('No generated tax claim passed claim-to-evidence verification. A supported conclusion could not be established.');
   }
@@ -162,13 +186,22 @@ export function renderIrasEvidenceResponse(
     missingFields: deterministicScenario?.missingFields || [],
     accountingTreatmentSummary: treatment || undefined,
     directGroups: groups, keyParameters: [],
-    uncertaintyDisclaimer: missingFacts.length ? `Required facts remain unresolved: ${missingFacts.join('; ')}.` : calculation ? undefined : 'Only the quoted source rules have been verified; their application is not independently established.',
+    uncertaintyDisclaimer: missingFacts.length ? `Required facts remain unresolved: ${missingFacts.join('; ')}.` : calculation ? undefined : 'Only the admitted source evidence and reviewed summaries have been checked; their application is not independently established.',
     // Do not spread model/current/offline state: unsupported metadata is not evidence.
     statutoryAdvisory: verification.accepted.map(claim => ({
       authority: 'IRAS' as const, topic: 'Supplied source evidence', summary: claim.text,
       statuteOrAct: quality.eligibleRecords.find(record => record.id === claim.recordId)!.legalOrStandardInstrument,
       sectionOrSchedule: quality.eligibleRecords.find(record => record.id === claim.recordId)!.paragraphOrSection,
-      officialUrl: claim.canonicalUrl, keyRules: []
+      officialUrl: claim.canonicalUrl || '', keyRules: []
+    })).concat(applicationConclusions.map(conclusion => {
+      const record = quality.eligibleRecords.find(item => item.id === conclusion.sourceRecordId)!;
+      return {
+        authority: 'IRAS' as const, topic: 'Deterministic rule application', summary: conclusion.text,
+        statuteOrAct: record.legalOrStandardInstrument,
+        sectionOrSchedule: record.paragraphOrSection,
+        officialUrl: hasVerifiedSourceUrlProvenance(record) ? record.canonicalSourceUrl || record.officialSourceUrl : '',
+        keyRules: []
+      };
     }))
   };
   return {
@@ -176,6 +209,7 @@ export function renderIrasEvidenceResponse(
     sourceMapFallbackTrace: context.sourceMapFallbackTrace,
     evidenceQuality: quality, claimVerification: verification,
     calculation: calculation ? { ...calculation, verification: 'DETERMINISTIC_SOURCE_BACKED_CALCULATION' } : undefined,
+    applicationConclusions,
     answerPath: mode === 'LOCAL' ? 'VALIDATED_LOCAL' : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode
   };
 }

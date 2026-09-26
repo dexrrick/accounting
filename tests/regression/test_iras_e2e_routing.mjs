@@ -35,7 +35,7 @@ const exactPhraseCases = [
   {
     query: 'Can the company claim GST on a passenger car?',
     topics: ['iras-gst-motor-vehicles', 'iras-gst-blocked-input-tax'],
-    sourceMap: 'IRAS_GST_INPUT_TAX_SOURCE_MAP',
+    sourceMap: 'IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP',
     domain: 'IRAS_GST'
   },
   {

@@ -7,6 +7,7 @@ export interface TargetDateResolution {
 }
 
 import { getSingaporeDateString } from '../utils/dateUtils';
+import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 
 const MONTH_MAP: Record<string, string> = {
   jan: '01', january: '01',
@@ -23,6 +24,49 @@ const MONTH_MAP: Record<string, string> = {
   dec: '12', december: '12'
 };
 
+const EXPLICIT_DATE_PATTERN = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})`;
+
+function section13wDisposalDate(query: string): string | undefined {
+  const candidates: Array<{ date: string; distance: number }> = [];
+  for (const action of query.matchAll(/\b(?:dispos\w*|sold|sale)\b/gi)) {
+    const after = query.slice(action.index! + action[0].length, action.index! + action[0].length + 75);
+    const afterDate = new RegExp(EXPLICIT_DATE_PATTERN, 'i').exec(after);
+    if (afterDate && !/\b(?:acquir\w*|purchas\w*|bought)\b/i.test(after.slice(0, afterDate.index))) {
+      candidates.push({ date: afterDate[0], distance: afterDate.index });
+    }
+    const before = query.slice(Math.max(0, action.index! - 45), action.index);
+    const beforeDates = [...before.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+    const nearestBefore = beforeDates.at(-1);
+    const beforeDistance = nearestBefore ? before.length - nearestBefore.index! - nearestBefore[0].length : Infinity;
+    if (nearestBefore && beforeDistance <= 16 &&
+      !/\b(?:and|then|acquir\w*|purchas\w*|bought)\b/i.test(before.slice(nearestBefore.index! + nearestBefore[0].length)) &&
+      !/\b(?:acquir\w*|purchas\w*|bought)\b/i.test(before.slice(0, nearestBefore.index))) {
+      candidates.push({ date: nearestBefore[0], distance: beforeDistance });
+    }
+  }
+  candidates.sort((left, right) => left.distance - right.distance);
+  if (new Set(candidates.map(candidate => candidate.date)).size !== 1) return undefined;
+  return candidates[0].date;
+}
+
+function section13wDisposalYear(query: string): string | undefined {
+  const years = new Set<string>();
+  for (const action of query.matchAll(/\b(?:dispos\w*|sold|sale)\b/gi)) {
+    const after = query.slice(action.index! + action[0].length, action.index! + action[0].length + 45);
+    const match = /\b(?:on|in|during)\s+(?:(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+)?(20\d{2})\b/i.exec(after);
+    if (match && !/\b(?:acquir\w*|purchas\w*|bought)\b/i.test(after.slice(0, match.index))) {
+      years.add(match[1]);
+    }
+  }
+  if (years.size === 1) return [...years][0];
+  if (years.size > 1 ||
+      !/\b(?:dispos\w*|sold|sale)\b/i.test(query) ||
+      /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(query) ||
+      /\b(?:acquir\w*|purchas\w*|bought)\b/i.test(query)) return undefined;
+  const mentionedYears = [...new Set([...query.matchAll(/\b20\d{2}\b/g)].map(match => match[0]))];
+  return mentionedYears.length === 1 ? mentionedYears[0] : undefined;
+}
+
 export class TargetDateResolver {
   public static readonly CURRENT_SYSTEM_DATE = getSingaporeDateString();
 
@@ -37,6 +81,28 @@ export class TargetDateResolver {
     const q = query.trim();
     if (!q) {
       return { confidence: 'LOW', source: 'NONE' };
+    }
+
+    if (/\b(?:section\s*)?13w\b/i.test(q)) {
+      const disposalDate = section13wDisposalDate(q);
+      if (disposalDate) return this.resolveTargetDate(disposalDate, currentDate);
+      const disposalYear = section13wDisposalYear(q);
+      if (disposalYear) {
+        const iso = `${disposalYear}-06-30`;
+        return { targetDate: iso, confidence: 'MEDIUM', source: 'INFERRED',
+          rawMatchedText: disposalYear, isHistorical: iso < currentDate };
+      }
+      if (/\b20\d{2}\b/.test(q)) {
+        return { confidence: 'LOW', source: 'NONE' };
+      }
+    }
+
+    const section14NYa = /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.exec(q)?.[1];
+    if (section14NYa && /\b(?:renovat\w*|refurbish\w*|section\s*14n)\b/i.test(q) &&
+        !hasUnresolvedSection14NBasisPeriod(q)) {
+      const iso = `${section14NYa}-01-01`;
+      return { targetDate: iso, confidence: 'MEDIUM', source: 'INFERRED',
+        rawMatchedText: `YA ${section14NYa}`, isHistorical: iso < currentDate };
     }
 
     // 1. Explicit DD/MM/YYYY or DD-MM-YYYY (Singapore statutory standard)

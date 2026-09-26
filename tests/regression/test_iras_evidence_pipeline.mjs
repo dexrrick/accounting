@@ -48,10 +48,26 @@ assert.doesNotMatch(bad.messageText,/15%|17%|30 November|VCCA/);
 assert.match(bad.messageText,/No generated tax claim passed/);
 const good = postProcessAIResponse({taxClaims:[{text:rate.sourceText,quote:rate.sourceText,recordId:rate.id,kind:'RULE'}]},null,query,context);
 assert.match(good.messageText,/8%/);
-assert.match(good.messageText,/GSTA1993/);
+assert.match(good.messageText,/Goods and Services Tax Act 1993/);
 assert.doesNotMatch(good.messageText,/Income Tax Act/);
+assert.doesNotMatch(good.messageText,/\]\(<https:/,
+  'Validated local evidence remains usable while its unverified URL is omitted from clickable output.');
 assert.equal(good.calculation.verification,'DETERMINISTIC_SOURCE_BACKED_CALCULATION');
 assert.equal(good.calculation.outputTax,80,'Calculation comes from dated evidence and explicit facts, not model arithmetic');
+const verifiedRate = {
+  ...rate,
+  urlVerificationStatus:'VERIFIED',
+  urlVerifiedDate:'2026-09-26',
+  urlVerificationMethod:'TESTED_EXACT_SOURCE_MAP_MATCH'
+};
+const verifiedUrlContext = {
+  ...context,
+  primaryEvidence:[verifiedRate,timing],
+  evidenceQuality:{...evidenceQuality,eligibleRecords:[verifiedRate,timing]}
+};
+const linkedEvidence = renderIrasEvidenceResponse({},verifiedUrlContext,query,null,'SFRS_I','LOCAL');
+assert.ok(linkedEvidence.messageText.includes(`(<${verifiedRate.canonicalSourceUrl}>)`),
+  'A separately verified exact URL is available for clickable source rendering.');
 const unrelatedFact=renderIrasEvidenceResponse({}, {...context,missingFacts:['Useful life for the separate equipment purchase']},query,null,'SFRS_I','LOCAL');
 assert.equal(unrelatedFact.calculation.outputTax,80,'An unrelated accounting fact must not suppress an established GST calculation');
 assert.equal(unrelatedFact.scenarioState.isComplete,false);

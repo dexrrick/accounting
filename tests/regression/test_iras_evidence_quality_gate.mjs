@@ -78,10 +78,14 @@ const falseTopicTag = makeRecord({
 result = gate(mealQuery, [mealTopic], [falseTopicTag]);
 assert.equal(result.status, 'INSUFFICIENT', 'False topic tags cannot substitute for distinctive relevant text.');
 assert.equal(result.rejectedRecords[0].reason, 'Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic.');
+assert.equal(result.rejectedRecords[0].code, 'TOPIC_TEXT_NOT_DISTINCTIVE',
+  'Topic diagnostics retain a stable rejection code alongside their readable reason.');
 
 const needsReview = makeRecord({ id: 'MEAL_NEEDS_REVIEW', sourceStatus: 'NEEDS_REVIEW' });
 assert.equal(gate(mealQuery, [mealTopic], [needsReview]).status, 'INSUFFICIENT',
   'Local NEEDS_REVIEW summaries do not become evidence because their text is relevant.');
+assert.equal(gate(mealQuery, [mealTopic], [needsReview]).rejectedRecords[0].code, 'LOCAL_SOURCE_NOT_VERIFIED',
+  'The evidence gate exposes the exact eligibility rejection returned by the quote verifier.');
 
 const acceptedLocal = makeRecord({ id: 'MEAL_REVIEWED_LOCAL' });
 assert.equal(findRecordEligibilityRejection(acceptedLocal, '2026-09-26'), undefined,
@@ -108,6 +112,8 @@ for (const [id, overrides, expectedReason] of [
   const assessment = gate(mealQuery, [mealTopic], [ineligible], { targetDate: '2026-09-26' });
   assert.equal(assessment.eligibleRecords.some(record => record.id === id), false,
     `${id} must not cover a topic unless it passes verifier eligibility.`);
+  assert.equal(assessment.rejectedRecords.find(record => record.recordId === id)?.code, expectedReason,
+    `${id} diagnostics preserve the exact verifier rejection code.`);
   assert.equal(assessment.coveredTopicIds.includes(mealTopic), false);
   const quoteCheck = verifyEvidenceClaims([{
     kind: 'RULE', text: ineligible.sourceText, quote: ineligible.sourceText, recordId: id
@@ -143,13 +149,33 @@ assert.equal(gate('Section 13W disposal on 30 December 2025', [section13WTopic],
   'LOCAL_SUFFICIENT', 'A historical record is eligible inside its declared period.');
 assert.equal(gate('Section 13W disposal on 2 January 2026', [section13WTopic], [section13wHistorical], { domain: 'IRAS_TAX', targetDate: '2026-01-02' }).status,
   'INSUFFICIENT', 'A historical record cannot cross its validTo boundary.');
+const expiredSection13wAssessment = gate('Section 13W disposal on 2 January 2026', [section13WTopic], [section13wHistorical], {
+  domain: 'IRAS_TAX', targetDate: '2026-01-02'
+});
+assert.equal(expiredSection13wAssessment.rejectedRecords[0].code, 'SOURCE_NOT_IN_EFFECT_ON_TARGET_DATE',
+  'Dated evidence diagnostics preserve the verifier rejection code for out-of-period records.');
 
 const sec14nHistorical = UNIFIED_SOURCE_REGISTRY.ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025;
-const sec14nCurrentReview = UNIFIED_SOURCE_REGISTRY.ITA_SEC14N_RENOVATION_REFURBISHMENT;
+const sec14nCurrentReviewed = UNIFIED_SOURCE_REGISTRY.ITA_SEC14N_RENOVATION_REFURBISHMENT;
 assert.equal(gate('Section 14N treatment for YA 2024', [section14NTopic], [sec14nHistorical], { domain: 'IRAS_TAX' }).status,
   'LOCAL_SUFFICIENT', 'YA 2024 selects the validated historical Section 14N record.');
-assert.equal(gate('Section 14N treatment for YA 2026', [section14NTopic], [sec14nCurrentReview], { domain: 'IRAS_TAX' }).status,
-  'INSUFFICIENT', 'A current NEEDS_REVIEW Section 14N summary is not promoted to evidence.');
+const currentSection14nAssessment = gate('Section 14N treatment for YA 2026', [section14NTopic], [sec14nCurrentReviewed], { domain: 'IRAS_TAX' });
+assert.equal(currentSection14nAssessment.status, 'LOCAL_SUFFICIENT',
+  'The reviewed current Section 14N summary is eligible for the post-2024 period.');
+assert.deepEqual(currentSection14nAssessment.eligibleRecords.map(record => record.id), [sec14nCurrentReviewed.id],
+  'The current Section 14N evidence is selected only in its declared date window.');
+const ambiguousSection14nAssessment = gate(
+  'Can Section 14N apply to refurbishment paid on 31/12/2024 for YA 2025?',
+  [section14NTopic], [sec14nHistorical, sec14nCurrentReviewed], { domain: 'IRAS_TAX' }
+);
+assert.equal(ambiguousSection14nAssessment.status, 'INSUFFICIENT');
+assert.ok(ambiguousSection14nAssessment.rejectedRecords.every(item => item.code === 'SECTION14N_BASIS_PERIOD_UNRESOLVED'),
+  'A cost date alone cannot choose the YA 2025 rule without the company basis period.');
+const confirmedSection14nQuery = 'Can we deduct Section 14N renovation paid on 31/12/2024 for YA 2025? Our FYE is 31 December 2024.';
+const confirmedSection14nAssessment = gate(confirmedSection14nQuery,
+  [section14NTopic], [sec14nHistorical, sec14nCurrentReviewed], { domain: 'IRAS_TAX' });
+assert.deepEqual(confirmedSection14nAssessment.eligibleRecords.map(record => record.id), [sec14nCurrentReviewed.id],
+  'A stated 31 December 2024 FYE places the cost in the calendar basis period for YA 2025.');
 
 const gst2023 = UNIFIED_SOURCE_REGISTRY.GST_RATE_8_PERCENT_2023;
 const gstTimeOfSupply = UNIFIED_SOURCE_REGISTRY.GST_SEC11_TIME_OF_SUPPLY;
@@ -204,6 +230,19 @@ result = gate(mealQuery, [mealTopic], [liveCandidate], {
   sourceMapFallbackTrace: { ...successfulTrace, attempts: [{ ...successfulTrace.attempts[0], fetchStatus: 'TOPIC_MISMATCH', contentMatched: false }] }
 });
 assert.equal(result.status, 'INSUFFICIENT', 'HTTP success or candidate status cannot override a failed topic-validation trace.');
+
+const apostropheUrl = "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/director's-fee";
+const encodedApostropheUrl = apostropheUrl.replace("'", '%27');
+const apostropheCandidate = { ...liveCandidate, officialSourceUrl: encodedApostropheUrl, canonicalSourceUrl: encodedApostropheUrl };
+result = gate(mealQuery, [mealTopic], [apostropheCandidate], {
+  sourceMapFallbackTrace: {
+    ...successfulTrace,
+    finalVerifiedUrls: [apostropheUrl],
+    attempts: [{ ...successfulTrace.attempts[0], finalUrl: apostropheUrl }]
+  }
+});
+assert.deepEqual(result.eligibleRecords.map(record => record.id), [apostropheCandidate.id],
+  'Literal and percent-encoded apostrophes are treated as the same path URL identity.');
 
 result = gate(mealQuery, [], [relevantMeal], { authorities: ['IRAS'], domain: 'IRAS_GST' });
 assert.equal(result.status, 'INSUFFICIENT', 'An IRAS query without resolved IRAS topics fails closed.');

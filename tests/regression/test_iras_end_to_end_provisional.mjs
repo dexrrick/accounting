@@ -230,22 +230,35 @@ const mechanicsContext = await buildGroundedReasoningContext(
   }
 );
 assert.ok(mechanicsContext.evidenceQuality, 'The real context builder attaches the evidence-quality assessment.');
-// This is a unit test of the legacy sentence-level meal guard using an
-// explicitly synthetic retrieval fixture. Keep the new evidence policy
-// exercised by the real production context and its dedicated integration test.
-const legacyMealGuardContext = { ...mechanicsContext, evidenceQuality: undefined };
-const mechanicsEvidence = [
-  ...mechanicsContext.primaryEvidence,
-  ...mechanicsContext.officialGuidance,
-  ...mechanicsContext.curatedSummaries
-].filter(record => record.provenance === 'LIVE_EXTERNAL');
+// Local-first evidence may now cover this query without a web request. Call
+// the fallback explicitly so this test continues to exercise the synthetic
+// live-candidate path without making that path a prerequisite for the answer.
+const mechanicsFallback = await resolveMappedOfficialSourceFallback(
+  ['iras-gst-entertainment'],
+  mechanicsQuestion,
+  defaultSourceRetriever,
+  {
+    webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+    discoveryAdapter: { discoverOfficialSourceCandidates: async () => [] },
+    fetchOptions: { useCache: false, customFetch: async url => syntheticIrasResponse(url) }
+  }
+);
+const mechanicsEvidence = mechanicsFallback.records.filter(record => record.provenance === 'LIVE_EXTERNAL');
 const selectedEvidence = mechanicsEvidence[0];
-assert.ok(selectedEvidence, 'Synthetic IRAS page should be admitted as retrieved candidate evidence for the routed meal query.');
+assert.ok(selectedEvidence, `Synthetic IRAS page should be admitted as retrieved candidate evidence for the routed meal query: ${JSON.stringify(mechanicsFallback.trace)}`);
 assert.equal(selectedEvidence.lifecycleState, 'CANDIDATE');
 assert.equal(selectedEvidence.groundingEligible, true);
 assert.equal(selectedEvidence.recordRole, 'DISCOVERED_EVIDENCE');
-assert.equal(mechanicsContext.sourceMapFallbackTrace?.candidateOnly, true);
-assert.ok(mechanicsContext.sourceMapFallbackTrace?.finalVerifiedUrls.includes(selectedEvidence.officialSourceUrl));
+assert.equal(mechanicsFallback.trace.candidateOnly, true);
+assert.ok(mechanicsFallback.trace.finalVerifiedUrls.includes(selectedEvidence.officialSourceUrl));
+const legacyMealGuardContext = {
+  ...mechanicsContext,
+  primaryEvidence: [...mechanicsContext.primaryEvidence, ...mechanicsFallback.records.filter(record => record.evidenceTier === 'PRIMARY_SOURCE')],
+  officialGuidance: [...mechanicsContext.officialGuidance, ...mechanicsFallback.records.filter(record => record.evidenceTier === 'OFFICIAL_GUIDANCE')],
+  curatedSummaries: [...mechanicsContext.curatedSummaries, ...mechanicsFallback.records.filter(record => record.evidenceTier !== 'PRIMARY_SOURCE' && record.evidenceTier !== 'OFFICIAL_GUIDANCE')],
+  evidenceQuality: undefined,
+  sourceMapFallbackTrace: mechanicsFallback.trace
+};
 
 const unsupportedTaxClaim = 'GST is always claimable for every customer or supplier meal, regardless of purpose or records.';
 const validCandidateCitation = {
@@ -504,10 +517,10 @@ const totals = Object.fromEntries(dimensions.map(dimension => {
 }));
 baseline.provisionalTotals = totals;
 baseline.syntheticMechanics = {
-  fallbackPath: mechanicsContext.sourceMapFallbackTrace?.path,
-  mapIds: mechanicsContext.sourceMapFallbackTrace?.sourceMapIds || [],
+  fallbackPath: mechanicsFallback.trace.path,
+  mapIds: mechanicsFallback.trace.sourceMapIds || [],
   candidateCount: mechanicsEvidence.length,
-  finalUrls: mechanicsContext.sourceMapFallbackTrace?.finalVerifiedUrls || [],
+  finalUrls: mechanicsFallback.trace.finalVerifiedUrls || [],
   evidenceRecordIds: groundedCandidateTrace.map(record => record.recordId),
   structuralCitationStatus: processedGroup?.citations?.[0]?.verificationStatus || null,
   narrowMealClaimRemoved: !processed.messageText.includes(unsupportedTaxClaim),

@@ -1,13 +1,14 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
+import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 
 export type VerifiedEvidenceClaim = {
   text: string;
   recordId: string;
   quote: string;
-  canonicalUrl: string;
-  supportKind: 'EXACT_SOURCE_QUOTE';
+  /** Present only when the record has independent, exact URL verification. */
+  canonicalUrl?: string;
+  supportKind: 'EXACT_SOURCE_QUOTE' | 'REVIEWED_EDITORIAL_SUMMARY';
 };
 
 export type RejectedEvidenceClaim = {
@@ -255,15 +256,20 @@ export function verifyEvidenceClaims(
       continue;
     }
 
-    const canonicalUrl = normalizeApprovedHttpsUrl(record.canonicalSourceUrl);
-    if (!canonicalUrl) {
+    const sourceUrl = normalizeApprovedHttpsUrl(record.canonicalSourceUrl);
+    if (!sourceUrl) {
       rejected.push(reject(text, 'SOURCE_URL_NOT_APPROVED_OR_CANONICAL'));
       continue;
     }
+    const canonicalUrl = hasVerifiedSourceUrlProvenance(record) ? sourceUrl : undefined;
     if (claim.citationUrl !== undefined) {
       const citationUrl = normalizeApprovedHttpsUrl(claim.citationUrl);
-      if (!citationUrl || citationUrl !== canonicalUrl) {
+      if (!citationUrl || citationUrl !== sourceUrl) {
         rejected.push(reject(text, 'CITATION_URL_MISMATCH'));
+        continue;
+      }
+      if (!canonicalUrl) {
+        rejected.push(reject(text, 'CITATION_URL_UNVERIFIED'));
         continue;
       }
     }
@@ -282,8 +288,10 @@ export function verifyEvidenceClaims(
       text,
       recordId: record.id,
       quote,
-      canonicalUrl,
-      supportKind: 'EXACT_SOURCE_QUOTE'
+      ...(canonicalUrl ? { canonicalUrl } : {}),
+      supportKind: record.provenance === 'LOCAL_STATIC' &&
+        (record.sourceType === 'CURATED_SUMMARY' || record.isVerbatimText === false)
+        ? 'REVIEWED_EDITORIAL_SUMMARY' : 'EXACT_SOURCE_QUOTE'
     });
   }
 

@@ -26,7 +26,11 @@ assert.doesNotMatch(leaveResponse, /sso\.agc\.gov\.sg/, 'A known Act and section
 
 const irasPathWithParentheses = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax';
 const sanitizedIrasLink = sanitizeStatutoryLinks(`[IRAS input-tax guidance](${irasPathWithParentheses})`);
-assert.equal(sanitizedIrasLink, 'IRAS input-tax guidance', 'An official host alone does not verify an unregistered page URL');
+assert.match(sanitizedIrasLink, /\[IRAS input-tax guidance\]\(https:\/\/www\.iras\.gov\.sg\//,
+  'The explicitly registered IRAS input-tax source-map URL remains linkable.');
+const unregisteredIrasUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/unregistered-page';
+assert.equal(sanitizeStatutoryLinks(`[Unregistered page](${unregisteredIrasUrl})`), 'Unregistered page',
+  'An official host alone does not verify an unregistered page URL.');
 
 const masSfoFaq = 'https://ask.gov.sg/mas/questions/clx8ktis900dbryozeeumiiux?from=relatedquestions';
 assert.equal(getSafeOfficialUrl(masSfoFaq, 'MAS SFO FAQ', '', 'MAS'), masSfoFaq,

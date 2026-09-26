@@ -94,9 +94,9 @@ type SourceUrlProvenance = {
 
 /**
  * Normalizes only URL identity details needed for an exact provenance match.
- * Parentheses are decoded because Markdown output safely percent-encodes them
- * in destinations; path, query, fragment, scheme, and host identity otherwise
- * remain part of the comparison.
+ * Parentheses and apostrophes are decoded because Markdown/HTTP URL handling
+ * may percent-encode them in destinations; path, query, fragment, scheme, and
+ * host identity otherwise remain part of the comparison.
  */
 function normalizeVerifiedOfficialUrl(rawUrl?: string): string | undefined {
   if (!rawUrl) return undefined;
@@ -108,7 +108,7 @@ function normalizeVerifiedOfficialUrl(rawUrl?: string): string | undefined {
         !authority || authority.includes('@') || authority.includes(':') || !isApprovedSingaporeSourceUrl(trimmed)) {
       return undefined;
     }
-    const path = parsed.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')');
+    const path = parsed.pathname.replace(/%28/gi, '(').replace(/%29/gi, ')').replace(/%27/gi, "'");
     return `${parsed.origin}${path}${parsed.search}${parsed.hash}`;
   } catch {
     return undefined;

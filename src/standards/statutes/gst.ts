@@ -53,18 +53,24 @@ import type { SingaporeStatuteRule } from './types';export const GST_STATUTE_RUL
     principle: 'Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.',
     application: 'For motor-car costs, distinguish use by the taxable person or its employees from use by a third party or connected person, and check the vehicle definition and ordinary input-tax conditions. For staff medical costs, check the type and date of treatment and the statutory exception relied on.',
     practicalRules: [
-      '1. Motor Cars: Regulation 27 generally blocks input tax on a motor car supplied or imported for use by the taxable person and on related goods or services. Use includes physical use and economic use by the taxable person or its employees. From 1 January 2023, costs incurred on a motor car used by a third party may qualify for input tax, subject to the ordinary claim conditions. For use by a connected person, the claimant must also recover the expense (only the recovered portion if partly recovered) and the recovery must not be ancillary to its primary supply. Check the Regulation 25(1) definition and exclusions; a vehicle outside that definition is not blocked by Regulation 27 on that basis.',
-      '2. Club Subscription Fees: Entrance fees and subscription charges paid to sports, recreational, or social clubs.',
-      '3. Staff Medical: Medical treatment is generally blocked, except for WICA or collective-agreement obligations and, for expenses from 1 October 2021, specified work-risk treatment required by Singapore law or government advisory. Staff medical or accident insurance has the narrower WICA/collective-agreement exception. Family benefits remain blocked.',
-      '4. Family Benefits: Any expenses incurred on benefits provided to the family members of your employees.',
-      '5. Betting & Lotteries: Transactions involving games of chance, lotteries, and betting.'
+      '1. Motor Cars (Regulation 27): Input tax on the purchase and running expenses of a motor car, and goods or services supplied directly in connection with it, is generally blocked; check the Regulation 25(1) definition and exclusions. For cars used by the taxable person or its employees, use includes both physical use and economic use to make supplies. From 1 January 2023, input tax on motor-car costs incurred for a third party may be claimed if the ordinary input-tax conditions are met. Costs for a connected person remain blocked unless the taxable person recovers the costs (only the recovered portion where recovery is partial) and that recovery is not ancillary to another supply to that connected person.',
+      '2. Club Subscription Fees (Regulation 26): Joining, membership, subscription and transfer fees charged by sports and recreation clubs are disallowed; expenses for using club facilities may be claimable if the ordinary conditions are met.',
+      '3. Staff Medical and Insurance (Regulation 26): Staff medical expenses are disallowed unless obligatory under WICA or a collective agreement, or, for expenses incurred on or after 1 October 2021, the medical treatment is connected to a health risk or requirement arising from the nature of the work or work environment and is either required under Singapore written law or related to COVID-19 and provided under a Government or public-authority advisory. IRAS also allows qualifying pre-employment medical examinations used to assess a candidate’s suitability, subject to ordinary claim conditions. Staff medical or accident insurance premiums have the narrower WICA or collective-agreement exception.',
+      '4. Family Benefits (Regulation 26): Benefits provided to employees’ family members or relatives are disallowed.',
+      '5. Betting and Games of Chance (Regulation 26): Transactions involving betting, sweepstakes, lotteries, fruit machines or games of chance are disallowed.'
     ],
     canonicalUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax',
+    supplementaryOfficialSources: [{
+      title: 'IRAS — Purchase and Sale of Motor Vehicles',
+      url: 'https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/common-scenarios---do-i-claim-gst/purchase-and-sale-of-motor-vehicles',
+      authority: 'IRAS'
+    }],
     tags: ['blocked input tax', 'regulation 26', 'regulation 27', 'gst car claim', 'medical insurance gst', 'club subscriptions'],
     sourcePublisher: 'Inland Revenue Authority of Singapore (IRAS)',
     sourceType: 'CURATED_SUMMARY',
     evidenceTier: 'OFFICIAL_GUIDANCE',
     isVerbatimText: false,
+    sourceStatus: 'VERIFIED',
     lastVerifiedDate: '2026-09-26',
     reviewAuditCycleDays: 90
   },

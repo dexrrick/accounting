@@ -77,10 +77,19 @@ const renderedService = classifyQuestion('Must we pay withholding tax on consult
 assert.ok(!renderedService.missingFacts.some(fact => /year or period when the services were provided/i.test(fact)));
 
 const blockedInputAdvisory = convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX);
+assert.equal(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX.sourceStatus, 'VERIFIED');
+assert.equal(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX.sourceType, 'CURATED_SUMMARY');
+assert.equal(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX.isVerbatimText, false);
+assert.ok(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX.supplementaryOfficialSources?.some(
+  source => source.title === 'IRAS — Purchase and Sale of Motor Vehicles'
+));
 assert.equal(blockedInputAdvisory.isGstClaimable, undefined, 'General blocked-input-tax guidance has exceptions and cannot decide every claim.');
-assert.match(blockedInputAdvisory.keyRules.join(' '), /motor car used by a third party may qualify for input tax/i);
-assert.match(blockedInputAdvisory.keyRules.join(' '), /connected person.*recovery must not be ancillary/i);
-assert.match(blockedInputAdvisory.keyRules.join(' '), /1 October 2021/i);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /From 1 January 2023.*third party.*may be claimed/i);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /connected person.*recovery is not ancillary/i);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /1 October 2021.*nature of the work or work environment.*Singapore written law/i);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /COVID-19.*Government or public-authority advisory/i);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /Regulation 27/);
+assert.match(blockedInputAdvisory.keyRules.join(' '), /Regulation 26.*pre-employment medical examinations/i);
 
 const timeOfSupply = SINGAPORE_STATUTORY_REPOSITORY.GST_SEC11_TIME_OF_SUPPLY;
 assert.equal(timeOfSupply.validFrom, '2011-01-01', 'The current general invoice/payment rule starts with the 2011 time-of-supply change.');
@@ -101,18 +110,38 @@ assert.equal(
 );
 
 const passengerCarTaxRule = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_1_K_MOTOR_CAR;
+assert.equal(passengerCarTaxRule.sourceStatus, 'VERIFIED');
+assert.equal(passengerCarTaxRule.sourceType, 'CURATED_SUMMARY');
+assert.equal(passengerCarTaxRule.isVerbatimText, false);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /registered on or after 1 April 1998/);
 assert.match(passengerCarTaxRule.principle, /subject to vehicle- and business-specific exceptions/i);
-assert.match(passengerCarTaxRule.practicalRules.join(' '), /private-hire cars.*instructional purposes/i);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /private-hire cars and instructional cars/i);
 assert.match(passengerCarTaxRule.practicalRules.join(' '), /foreign-registered cars used exclusively outside Singapore/i);
 assert.match(passengerCarTaxRule.practicalRules.join(' '), /Taxi running-expense exception: Section 15\(1\)\(k\)\(i\), subject to Section 15\(2D\)/i);
 assert.match(passengerCarTaxRule.practicalRules.join(' '), /12 November 2018.*authorised purpose.*Section 14ZA\(8\)/i);
-assert.match(passengerCarTaxRule.practicalRules.join(' '), /taxi rule and does not itself extend to private-hire cars/i);
+assert.match(passengerCarTaxRule.practicalRules.join(' '), /taxi rule does not itself extend to private-hire cars/i);
 assert.doesNotMatch(passengerCarTaxRule.practicalRules.join(' '), /G-plate.*100% eligible|G\/Y plate.*eligible/i);
 assert.equal(
   convertToAdvisory(passengerCarTaxRule).isTaxDeductible,
   undefined,
   'General motor-car guidance has exceptions and cannot decide deductibility without vehicle facts.'
 );
+
+const section15SelectedDeductions = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_PROHIBITED_DEDUCTIONS;
+assert.equal(section15SelectedDeductions.sourceStatus, 'VERIFIED');
+assert.equal(section15SelectedDeductions.sourceType, 'CURATED_SUMMARY');
+assert.equal(section15SelectedDeductions.isVerbatimText, false);
+assert.match(section15SelectedDeductions.principle, /selected limbs, not an exhaustive list/i);
+assert.doesNotMatch(section15SelectedDeductions.principle, /fines and statutory penalties/i,
+  'The Section 15 summary does not attribute the separate Section 14V fine prohibition to Section 15.');
+
+const capitalAllowanceRule = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC19_19A_CAPITAL_ALLOWANCES;
+assert.equal(capitalAllowanceRule.sourceStatus, 'VERIFIED');
+assert.equal(capitalAllowanceRule.sourceType, 'CURATED_SUMMARY');
+assert.equal(capitalAllowanceRule.isVerbatimText, false);
+assert.match(capitalAllowanceRule.practicalRules.join(' '), /specified computer software/i);
+assert.doesNotMatch(capitalAllowanceRule.practicalRules.join(' '), /all software|software generally qualifies/i,
+  'Software is described as eligible only where it is within prescribed automation equipment.');
 
 const ownUsePassengerCar = await parseAccountingQuery(
   'The company bought an S-plate passenger car for own use by employees for SGD 120k with bank. How to record the purchase?'
@@ -197,5 +226,16 @@ const carAccountingAndTax = classifyQuestion('For accounting, prepare the journa
 assert.ok(carAccountingAndTax.authorities.includes('ACRA'));
 assert.ok(carAccountingAndTax.authorities.includes('IRAS'));
 assert.equal(carAccountingAndTax.multiAuthority, true, 'Explicit accounting/journal plus tax questions retain multi-authority routing.');
+
+for (const shareClass of ['ordinary shares', 'preference shares']) {
+  const section13wTax = classifyQuestion(`Does Section 13W exempt our gain on disposal of ${shareClass} from income tax?`);
+  assert.deepEqual(section13wTax.authorities, ['IRAS'], `Section 13W tax treatment of ${shareClass} must stay with IRAS.`);
+  assert.ok(section13wTax.topicIds.includes('iras-section-13w'));
+}
+
+const section13wMixed = classifyQuestion('For a disposal of preference shares, explain both Section 13W tax treatment and the accounting treatment in the financial statements.');
+assert.ok(section13wMixed.authorities.includes('IRAS'));
+assert.ok(section13wMixed.authorities.includes('ACRA'));
+assert.equal(section13wMixed.multiAuthority, true, 'An explicit Section 13W accounting question must remain mixed.');
 
 console.log('PASS | IRAS case questions identify material tax facts without burdening conceptual queries');

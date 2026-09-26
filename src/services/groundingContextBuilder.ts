@@ -302,6 +302,9 @@ function getTopicStandardIdentifiers(topic: MappedCoverageTopic, pointer?: Sourc
     }
   }
   if (pointer?.standardOrActCode) identifiers.add(pointer.standardOrActCode);
+  // An exact reviewed IRAS page title identifies the mapped guidance when its
+  // article text does not spell out the full GST or Income Tax Act name.
+  if (topic.domainId.startsWith('IRAS_') && pointer?.documentTitle) identifiers.add(pointer.documentTitle);
   return [...identifiers];
 }
 
@@ -320,7 +323,7 @@ function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
   return focusedTerms.length > 0 ? focusedTerms : allTerms;
 }
 
-function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = ''): string {
+export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = ''): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
   const sentences = text.split(/(?<=[.!?])\s+|\n+/).map(sentence => sentence.trim()).filter(Boolean);
@@ -349,9 +352,12 @@ function selectRelevantFetchedText(pageText: string, terms: string[], maxChars =
     }
   }
   let output = '';
-  for (const [, sentence] of [...chosen.entries()].sort((a, b) => a[0] - b[0])) {
-    if (output.length + sentence.length + 1 > maxChars) break;
-    output += `${output ? ' ' : ''}${sentence}`;
+  let previousIndex: number | undefined;
+  for (const [index, sentence] of [...chosen.entries()].sort((a, b) => a[0] - b[0])) {
+    const separator = output ? index === previousIndex! + 1 ? ' ' : '\n\n' : '';
+    if (output.length + sentence.length + separator.length > maxChars) break;
+    output += `${separator}${sentence}`;
+    previousIndex = index;
   }
   return output;
 }

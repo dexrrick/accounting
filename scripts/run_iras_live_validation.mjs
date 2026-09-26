@@ -169,6 +169,12 @@ function compactEvidence(record) {
     sourceStatus: record.sourceStatus,
     sourceType: record.sourceType,
     evidenceTier: record.evidenceTier,
+    isVerbatimText: record.isVerbatimText,
+    verificationMethod: record.verificationMethod,
+    urlVerificationStatus: record.urlVerificationStatus,
+    urlVerifiedDate: record.urlVerifiedDate,
+    urlVerificationMethod: record.urlVerificationMethod,
+    urlVerificationSourceMapId: record.urlVerificationSourceMapId,
     freshnessStatus: record.freshnessStatus,
     lifecycleState: record.lifecycleState,
     provenance: record.provenance,
@@ -491,12 +497,24 @@ function providerStatus(modelCalls, applicationFailure, finalMessage = '') {
   return 'BLOCKED_BY_PROVIDER';
 }
 
+function isTransientGeminiFailure(modelCalls) {
+  const failed = modelCalls.filter(call =>
+    call.transportFailureKind === 'TIMEOUT' ||
+    [429, 500, 502, 503, 504].includes(call.httpStatus)
+  );
+  return failed.length > 0 && !modelCalls.some(call =>
+    call.stage === 'answer-generation' && call.rawCandidateText &&
+    call.httpStatus >= 200 && call.httpStatus < 300
+  );
+}
+
 export {
   classifyFinalAnswerPath,
   classifyRetrieval,
   classifyTransportFailure,
   extractClarificationRequests,
   extractMarkdownCitations,
+  isTransientGeminiFailure,
   localEvidenceWasSuppliedToAnswerCall,
   providerStatus,
   safeText
@@ -576,28 +594,47 @@ async function main() {
   try {
     for (const testCase of cases) {
       if (options.resume && completedIds.has(testCase.id)) continue;
-      const observer = createFetchObserver(apiKey);
+      const attempts = [];
       let groundedContext;
       let response;
       let applicationFailure;
       const startedAt = new Date().toISOString();
       const preferences = testCase.outputPreference || { journal: false, statutory: false };
-      try {
-        response = await processAccountingQuery(
-          testCase.question,
-          null,
-          'SFRS_I',
-          { activeProvider: 'gemini', gemini: { apiKey, model: MODEL } },
-          MODEL,
-          [],
-          preferences,
-          { onGroundedContext(context) { groundedContext = collectContext(context); } }
-        );
-      } catch (error) {
-        applicationFailure = safeText(error?.message || 'Application pipeline failed.', apiKey);
-      } finally {
-        await observer.finish();
+      for (let attemptNumber = 1; attemptNumber <= 2; attemptNumber += 1) {
+        const observer = createFetchObserver(apiKey);
+        let attemptFailure;
+        try {
+          response = await processAccountingQuery(
+            testCase.question,
+            null,
+            'SFRS_I',
+            { activeProvider: 'gemini', gemini: { apiKey, model: MODEL } },
+            MODEL,
+            [],
+            preferences,
+            { onGroundedContext(context) { groundedContext = collectContext(context); } }
+          );
+          applicationFailure = undefined;
+        } catch (error) {
+          attemptFailure = safeText(error?.message || 'Application pipeline failed.', apiKey);
+          applicationFailure = attemptFailure;
+        } finally {
+          await observer.finish();
+        }
+        attempts.push({
+          attemptNumber,
+          modelCalls: observer.modelCalls.map(call => ({ ...call, attemptNumber })),
+          sourceFetches: observer.sourceFetches.map(fetch => ({ ...fetch, attemptNumber })),
+          applicationFailure: attemptFailure,
+          transientProviderFailure: isTransientGeminiFailure(observer.modelCalls)
+        });
+        if (attemptNumber === 2 || !attempts[0].transientProviderFailure) break;
       }
+
+      const observer = {
+        modelCalls: attempts.flatMap(attempt => attempt.modelCalls),
+        sourceFetches: attempts.flatMap(attempt => attempt.sourceFetches)
+      };
 
       const classification = groundedContext?.classification || classifyQuestion(testCase.question);
       const finalResponse = response || {};
@@ -632,7 +669,7 @@ async function main() {
         localKnowledgeAnswered: 'NOT_EVALUATED',
         finalAnswerPath,
         sourceMapIdsSelected: groundedContext?.sourceMapIdsSelected || [],
-        sourceMapIdsExpected: testCase.expected?.sourceMapIds || [],
+        sourceMapIdsExpected: testCase.provisionalOracle?.sourceMapIds || testCase.expected?.sourceMapIds || [],
         actualSourceFetches: observer.sourceFetches,
         redirectsEncountered: observer.sourceFetches.filter(fetch => fetch.status === 'REDIRECT').map(fetch => ({
           requestedUrl: fetch.requestedUrl,
@@ -648,6 +685,13 @@ async function main() {
           status: modelCallStatus,
           model: MODEL,
           outputPreference: preferences,
+          attempts: attempts.map(attempt => ({
+            attemptNumber: attempt.attemptNumber,
+            modelCallCount: attempt.modelCalls.length,
+            answerCallCount: attempt.modelCalls.filter(call => call.stage === 'answer-generation').length,
+            applicationFailure: attempt.applicationFailure,
+            transientProviderFailure: attempt.transientProviderFailure
+          })),
           semanticCalls: observer.modelCalls.filter(call => call.stage !== 'answer-generation'),
           answerCalls: observer.modelCalls.filter(call => call.stage === 'answer-generation'),
           calls: observer.modelCalls,
@@ -671,7 +715,7 @@ async function main() {
         },
         calculatedResult: extractCalculatedResult(finalResponse),
         finalResponse,
-        expected: testCase.expected || null,
+        expected: testCase.provisionalOracle || testCase.expected || null,
         dimensions: {
           classification: 'NOT_EVALUATED',
           topicRouting: 'NOT_EVALUATED',

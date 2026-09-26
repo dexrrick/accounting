@@ -32,6 +32,57 @@ For narrow tasks, remain narrow.
 
 ---
 
+
+## Subagent workflow
+
+For substantial coding or repository tasks:
+
+1. Act as the supervisor in the main session.
+2. Inspect the repository and relevant project instructions before changing code.
+3. Understand the requirement and form a concrete implementation plan first.
+4. Keep architecture, ambiguous requirements, difficult debugging, integration decisions, and final verification with the supervisor.
+5. Delegate clearly scoped implementation work to the `builder` custom agent.
+6. After implementation, delegate an independent review to the `reviewer` custom agent.
+7. Review the builder and reviewer outputs yourself before declaring completion.
+8. If review finds straightforward issues, delegate the fixes back to `builder`.
+9. If review finds an architectural or ambiguous issue, resolve it in the supervisor session before further implementation.
+10. Run the repository's appropriate targeted tests, type checks, linters, or validation before declaring the task complete.
+
+### Delegation rules
+
+- Prefer `builder` for:
+  - implementing an approved plan;
+  - targeted code edits;
+  - refactors with clear boundaries;
+  - adding or updating tests;
+  - fixing straightforward test/type/lint failures;
+  - repetitive or mechanical changes.
+
+- Prefer `reviewer` for:
+  - independent diff review;
+  - correctness and regression checks;
+  - edge-case analysis;
+  - missing-test identification;
+  - requirement-compliance checks.
+
+- Keep with the supervisor:
+  - architecture and design decisions;
+  - unclear or conflicting requirements;
+  - cross-module trade-offs;
+  - difficult debugging;
+  - security-sensitive judgment calls;
+  - accounting-policy judgment calls;
+  - final integration and completion decision.
+
+- Do not duplicate the same investigation across multiple agents unless necessary.
+- Give subagents narrow tasks with clear acceptance criteria.
+- Provide only the context needed for the delegated task.
+- Avoid spawning agents for trivial one-file or obvious edits.
+- Prefer sequential `builder -> reviewer -> supervisor` work when tasks depend on each other.
+- Use parallel subagents only for genuinely independent work.
+
+---
+
 ## Repository map
 
 Use this map to decide what context is relevant.
@@ -463,7 +514,7 @@ Do not assume that an available current spot rate is appropriate for a historica
 
 ## Performance and context efficiency
 
-Codex should minimise unnecessary context usage.
+Codex should minimise unnecessary context and token usage without compromising accounting correctness or required verification.
 
 For each task:
 
@@ -472,11 +523,37 @@ For each task:
 - inspect imports/callers only as needed;
 - avoid opening generated files, dependency trees, lockfiles, large fixtures, or unrelated modules unless required;
 - do not reread files already understood unless they changed;
-- avoid dumping large files into context when a targeted section/search is sufficient.
+- avoid dumping large files into context when a targeted section/search is sufficient;
+- do not repeat repository-wide searches when a previous targeted search already located the relevant code;
+- summarise large command/test output and retain only the lines needed to diagnose the task;
+- avoid asking subagents to independently rediscover context already established by the supervisor;
+- avoid speculative refactors, cleanup, documentation, or extra test generation outside the requested scope;
+- prefer the lowest reasoning effort that is sufficient for routine, mechanical, or well-scoped edits;
+- stop once the requested behaviour is implemented, reviewed, and appropriately verified.
 
 Large files such as `src/engine/scenarioParser.ts` should be searched for relevant functions/terms before reading broad sections.
 
 Do not traverse `node_modules`, build output, or generated artifacts.
+
+### Test and validation efficiency
+
+- Run the smallest relevant test or check first.
+- Do not run the full test suite after every small change.
+- Skip tests for comments, documentation, formatting-only edits, or other clearly non-functional changes unless repository tooling specifically requires them.
+- For localized code changes, prefer targeted tests and `npm run test:smoke` before broader validation.
+- Run `npm test` only when the existing Tests section requires it because the change is broad, high-risk, or affects shared accounting/parser/standards/source/retrieval behaviour.
+- Do not rerun a passing test or check unless relevant code changed, the result is needed for final verification, or a later change could have invalidated it.
+- Do not run `npm run test:integration` unless the change concerns live external-source/service behaviour or it is specifically relevant.
+- When a test fails, inspect the smallest useful failure output first instead of repeatedly rerunning the entire suite.
+
+### Usage conservation
+
+- Prefer completing one well-scoped implementation cycle over repeated exploratory iterations.
+- Before starting optional, broad, or nonessential work, consider whether it materially contributes to the user's requested outcome. If not, do not do it.
+- If usage is becoming constrained, prioritize in this order: correctness of the requested change, targeted verification, independent review, then optional cleanup or broader checks.
+- Do not consume remaining usage on unrelated improvements, cosmetic refactors, duplicate reviews, or broad exploratory testing.
+- If the environment exposes a reliable usage indicator and remaining usage is low, avoid starting another large optional task; finish the current safe checkpoint and report what remains.
+- Never weaken accounting correctness, source integrity, security checks, or necessary validation solely to save tokens.
 
 ---
 

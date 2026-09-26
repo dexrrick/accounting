@@ -1,5 +1,7 @@
 # IRAS post-hardening live validation — 26/09/2026
 
+**Continuation:** A subsequent [final IRAS hardening assessment](iras_evidence_completion_2026-09-26.md) supersedes the case results below with a new 20-case real Gemini/IRAS capture. This document preserves the earlier run and its original limitations.
+
 **Overall: LIVE_FAIL. The IRAS E2E phase remains incomplete.** The original reviewed 19-case benchmark and a separate mixed customer-lunch question were run through `processAccountingQuery` with the existing Gemini provider (`gemini-3.5-flash-lite`) and real controlled official retrieval. The [sanitized capture](iras-evidence-hardening-2026-09-26/live-final-captures.jsonl) records the questions, classification, topic and source-map selections, actual fetches, redirects, canonical URLs, excerpts, provider candidate, final answer, citations, missing facts, dates, journals and per-request gate diagnostics. The original [LIVE_FAIL assessment](iras_live_validation_2026-09-26.md) is unchanged. No key or request headers were captured.
 
 The capture precedes the final two localized corrections to generic missing-fact prompts and mixed-answer clause preservation. Those corrections were verified by the full offline suite and by replaying the captured Gemini lunch candidate through the corrected post-processor; they were **not** presented as a new complete live run. There were no synthetic provider responses or synthetic IRAS pages in the live capture.

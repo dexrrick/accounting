@@ -7,6 +7,8 @@ import { defaultCitationVerifier } from '../../src/verification/citationVerifier
 import { evaluateFastPathEligibility } from '../../src/services/geminiService.ts';
 import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
 import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
+import { getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 
 async function runPhase3Tests() {
   console.log('=== RUNNING PHASE 3: BETTER EVIDENCE COVERAGE & TEMPORAL TESTS ===\n');
@@ -184,15 +186,17 @@ async function runPhase3Tests() {
     assert(rec, `IRAS rule ${item.key} must exist`);
     assert.strictEqual(rec.authority, 'IRAS');
     if (item.key === 'ITA_SEC37_LOSS_CARRY_FORWARD') {
-      assert.strictEqual(rec.sourceStatus, 'NEEDS_REVIEW');
-      assert.strictEqual(rec.evidenceTier, 'CURATED_SUMMARY');
+      assert.strictEqual(rec.sourceStatus, 'VERIFIED');
+      assert.strictEqual(rec.sourceType, 'CURATED_SUMMARY');
+      assert.strictEqual(rec.evidenceTier, 'OFFICIAL_GUIDANCE');
       assert.strictEqual(rec.isVerbatimText, false);
       assert(rec.officialSourceUrl.includes('iras.gov.sg/'));
     } else if (item.key.startsWith('ITA_SEC14N_') || item.key.startsWith('ITA_SEC13W_') || item.key.startsWith('ITA_SEC45')) {
       assert.strictEqual(rec.sourceStatus,
         item.key === 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR' || item.key === 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025'
-          ? 'HISTORICAL' : 'NEEDS_REVIEW');
-      assert.strictEqual(rec.evidenceTier, 'CURATED_SUMMARY');
+          ? 'HISTORICAL' : 'VERIFIED');
+      assert.strictEqual(rec.sourceType, 'CURATED_SUMMARY');
+      assert.strictEqual(rec.evidenceTier, 'OFFICIAL_GUIDANCE');
       assert.strictEqual(rec.isVerbatimText, false);
       assert(rec.officialSourceUrl.includes('iras.gov.sg/'));
       if (item.key === 'ITA_SEC14N_RENOVATION_REFURBISHMENT') assert.strictEqual(rec.validFrom, '2025-01-01');
@@ -357,6 +361,11 @@ async function runPhase3Tests() {
     maxResults: 3
   });
   assert.equal(historicalShareDisposal[0]?.id, 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR');
+  assert.deepEqual(
+    getCoverageTopicById('iras-section-13w').sourceRecordIds.filter(id => id.startsWith('ITA_SEC13W_')).sort(),
+    ['ITA_SEC13W_EQUITY_DISPOSAL_2026', 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR'].sort(),
+    'Section 13W binds both dated local records while retrieval selects by target date.'
+  );
   const currentShareDisposal = await defaultSourceRetriever.retrieveSources({
     query: 'For a 2026 Section 13W preference share disposal, what is the 20% holding requirement?',
     domain: 'IRAS_TAX',
@@ -369,6 +378,11 @@ async function runPhase3Tests() {
     maxResults: 3
   });
   assert.equal(historicalRenovation[0]?.id, 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025');
+  assert.deepEqual(
+    getCoverageTopicById('iras-cit-renovation-refurbishment').sourceRecordIds.filter(id => id.startsWith('ITA_SEC14N_')).sort(),
+    ['ITA_SEC14N_RENOVATION_REFURBISHMENT', 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025'].sort(),
+    'Section 14N binds both dated local records while retrieval selects by target date.'
+  );
   const currentRenovation = await defaultSourceRetriever.retrieveSources({
     query: 'For YA 2026 Section 14N renovation and refurbishment expenditure, what fixed 3-year cap applies?',
     domain: 'IRAS_TAX',
@@ -382,6 +396,18 @@ async function runPhase3Tests() {
   });
   assert.ok(mixedYaRenovation.every(record => !record.id.startsWith('ITA_SEC14N_RENOVATION_REFURBISHMENT')),
     'A 2024 transaction date plus YA 2025 needs the company basis period before selecting either Section 14N summary.');
+  const confirmedYaRenovation = await defaultSourceRetriever.retrieveSources({
+    query: 'Can we deduct Section 14N renovation paid on 31/12/2024 for YA 2025? Our FYE is 31 December 2024.',
+    domain: 'IRAS_TAX', authorities: ['IRAS'], maxResults: 10
+  });
+  assert.ok(confirmedYaRenovation.some(record => record.id === 'ITA_SEC14N_RENOVATION_REFURBISHMENT'),
+    'A stated calendar-year basis period permits the YA 2025 rule.');
+  assert.ok(!classifyQuestion('Can we deduct Section 14N renovation paid on 31/12/2024 for YA 2025? Our FYE is 31 December 2024.')
+    .missingFacts.some(fact => /financial year end and YA basis period/i.test(fact)),
+    'The classifier does not request an FYE that the user already supplied.');
+  assert.ok(classifyQuestion('Can we deduct Section 14N renovation paid on 31/12/2024 for YA 2025?')
+    .missingFacts.some(fact => /financial year end and YA basis period/i.test(fact)),
+    'The classifier still requests an unresolved basis period.');
   console.log('✓ 8F. Proved: Section 13W retrieval separates pre-2026 ordinary-share rules from 2026 preference-share rules');
   passed++;
 

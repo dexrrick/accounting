@@ -7,6 +7,7 @@ import {
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { evaluateEvidenceQuality, isIrasEvidenceRequest } from './evidenceQualityGate';
+import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 
 export interface SourceRetrievalQuery {
   query: string;
@@ -125,15 +126,7 @@ export class InMemorySourceRetriever implements ISourceRetriever {
     } = retrievalQuery;
     const lowerQ = query.toLowerCase();
     const queryTokens = lowerQ.split(/[\s,.;:!?/()]+/).filter((t) => t.length > 2);
-    // Section 14N changes are scoped by YA and its basis period. A transaction
-    // date in a different calendar year cannot select one of the YA summaries
-    // until the company's basis period is known.
-    const renovationYa = /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.exec(query)?.[1];
-    const expenditureCalendarYear = /\b[0-3]?\d[/-][01]?\d[/-](20\d{2})\b/.exec(query)?.[1] ||
-      /\b(20\d{2})-[01]\d-[0-3]\d\b/.exec(query)?.[1] ||
-      /\b[0-3]?\d\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(20\d{2})\b/i.exec(query)?.[1];
-    const renovationBasisPeriodUnclear = /\b(?:renovat\w*|refurbish\w*|section 14n)\b/i.test(query) &&
-      Boolean(renovationYa && expenditureCalendarYear && renovationYa !== expenditureCalendarYear);
+    const renovationBasisPeriodUnclear = hasUnresolvedSection14NBasisPeriod(query);
 
     // Resolve target date (either explicit or parsed from query)
     const resolvedDateInfo = explicitTargetDate
