@@ -40,6 +40,8 @@ const testSuites = [
   { name: 'GST Registration Measurement-Basis Follow-Up', file: 'test_gst_registration_measurement_basis.mjs', layer: 'conversation-state', tier: 'smoke' },
   { name: 'Deferred Tax Standards Boundary', file: 'test_deferred_tax_boundary.mjs', layer: 'conversation-state', tier: 'smoke' },
   { name: 'Official Tax Source Links', file: 'test_official_tax_source_links.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS Missing Fact Guards', file: 'test_iras_missing_fact_guards.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'IRAS Verified Source Map and Fallback', file: 'test_iras_source_map.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Business Equipment Acquisition', file: 'test_business_equipment_acquisition.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Inventory Event Sequence', file: 'test_event_sequence_inventory.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Sale and Leaseback Event Sequence', file: 'test_sale_leaseback_sequence.mjs', layer: 'accounting-invariants', tier: 'smoke' },

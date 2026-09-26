@@ -34,12 +34,12 @@ async function runTests() {
   // TEST 3: Passenger Car (Blocked Input GST & Non-Deductible Depreciation)
   console.log('Test 3: Passenger Motor Car Purchase (Hybrid Query)');
   const carRes = await processAccountingQuery(
-    'I bought a company car for SGD 120k with bank. How to record double entries and can I claim 9% GST under IRAS?',
+    'The company bought an S-plate passenger car for own use by employees for SGD 120k with bank. How to record double entries and can I claim 9% GST under IRAS?',
     null,
     'SFRS_I'
   );
   assert(carRes.scenarioState.queryIntent === 'HYBRID', 'Must be classified as HYBRID');
-  assert(carRes.messageText.includes('Regulation 26'), 'Must cite GST Regulation 26');
+  assert(carRes.messageText.includes('Regulation 27'), 'Must cite GST Regulation 27 for a passenger car.');
   assert(carRes.messageText.includes('15(1)(k)'), 'Must cite Section 15(1)(k) of the Income Tax Act');
   assert(carRes.scenarioState.directGroups?.length === 1, 'Must have 1 journal group');
   const grp = carRes.scenarioState.directGroups[0];
@@ -48,8 +48,35 @@ async function runTests() {
   assert(grp.totalCredit === 120000, 'Credit must be 120,000');
   // Verify GST input tax is NOT claimed in journal
   const gstLine = grp.lines.find(l => l.accountCode === '1190');
-  assert(!gstLine, 'Input GST line must NOT exist because it is blocked under Regulation 26');
+  assert(!gstLine, 'Input GST line must NOT exist because it is blocked under Regulation 27');
+  const blockedCarAdvisory = carRes.scenarioState.statutoryAdvisory.find(advisory => advisory.sectionOrSchedule === 'Regulation 26 & 27');
+  assert.equal(blockedCarAdvisory?.isGstClaimable, false, 'An explicit company passenger-car fast path retains its own-use GST block.');
   console.log('✓ Passenger Car Hybrid Entry verified successfully.\n');
+
+  const thirdPartyReplacementCar = await parseAccountingQuery(
+    'Can we claim input GST? The company bought an S-plate passenger car as a replacement vehicle for an insurance policyholder. Please check Regulation 27.'
+  );
+  assert.notEqual(thirdPartyReplacementCar?.scenarioType, 'CAR_PURCHASE_STATUTORY', 'A policyholder replacement car is not assumed to be the company’s own passenger car.');
+  const thirdPartyGstAdvisory = thirdPartyReplacementCar?.statutoryAdvisory?.find(advisory => advisory.sectionOrSchedule === 'Regulation 26 & 27');
+  assert.ok(thirdPartyGstAdvisory, 'The third-party scenario retains general IRAS blocked-input-tax guidance.');
+  assert.equal(thirdPartyGstAdvisory.isGstClaimable, undefined, 'Recipient and use facts are required before deciding third-party motor-car input-tax recovery.');
+  console.log('✓ Third-party replacement car remains conditional on IRAS use and recipient facts.\n');
+
+  const contractorUseCar = await parseAccountingQuery(
+    "Can we claim input GST? The company bought an S-plate passenger company car for an unrelated contractor to use. Please check Regulation 27."
+  );
+  assert.notEqual(contractorUseCar?.scenarioType, 'CAR_PURCHASE_STATUTORY', 'The words “company car” alone do not establish company or employee own-use when an unrelated contractor uses it.');
+  const contractorGstAdvisory = contractorUseCar?.statutoryAdvisory?.find(advisory => advisory.sectionOrSchedule === 'Regulation 26 & 27');
+  assert.equal(contractorGstAdvisory?.isGstClaimable, undefined, 'Third-party contractor use remains conditional instead of receiving an unconditional GST block.');
+  console.log('✓ A company car used by an unrelated contractor remains outside the own-use fast path.\n');
+
+  const consultantUseCar = await parseAccountingQuery(
+    "Can we claim input GST? The company bought its own S-plate passenger company car exclusively for an unrelated consultant's use."
+  );
+  assert.notEqual(consultantUseCar?.scenarioType, 'CAR_PURCHASE_STATUTORY', 'Company ownership alone does not establish own-use when an unrelated consultant exclusively uses the car.');
+  const consultantGstAdvisory = consultantUseCar?.statutoryAdvisory?.find(advisory => advisory.sectionOrSchedule === 'Regulation 26 & 27');
+  assert.equal(consultantGstAdvisory?.isGstClaimable, undefined, 'An unrelated consultant-use case does not receive an unconditional GST block.');
+  console.log('✓ Company ownership alone does not trigger the car GST block for consultant-only use.\n');
 
   // TEST 4: Canonical SSO URL Builder
   console.log('Test 4: Canonical SSO URL Builder');

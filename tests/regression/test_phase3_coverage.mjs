@@ -6,6 +6,7 @@ import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { defaultCitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { evaluateFastPathEligibility } from '../../src/services/geminiService.ts';
 import { getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
+import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
 
 async function runPhase3Tests() {
   console.log('=== RUNNING PHASE 3: BETTER EVIDENCE COVERAGE & TEMPORAL TESTS ===\n');
@@ -171,22 +172,48 @@ async function runPhase3Tests() {
   const expectedIras = [
     { key: 'ITA_SEC37_LOSS_CARRY_FORWARD', section: 'Section 37', textCheck: 'loss incurred by that person' },
     { key: 'ITA_SEC37E_LOSS_CARRY_BACK', section: 'Section 37E', textCheck: '$100,000' },
-    { key: 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR', section: 'Section 13W', textCheck: '20%' },
-    { key: 'ITA_SEC45_WITHHOLDING_TAX', section: 'Section 45', textCheck: 'deduct tax therefrom' },
+    { key: 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR', section: 'Section 13W', textCheck: 'ordinary shares' },
+    { key: 'ITA_SEC13W_EQUITY_DISPOSAL_2026', section: 'Section 13W', textCheck: 'preference shares' },
+    { key: 'ITA_SEC45_WITHHOLDING_TAX', section: 'Section 45', textCheck: 'Interest' },
     { key: 'ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES', section: 'Section 45A', textCheck: 'royalties' },
-    { key: 'ITA_SEC14Q_RENOVATION_REFURBISHMENT', section: 'Section 14Q', textCheck: '$300,000' }
+    { key: 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025', section: 'Section 14N', textCheck: 'YAs 2021, 2022 and 2024' },
+    { key: 'ITA_SEC14N_RENOVATION_REFURBISHMENT', section: 'Section 14N', textCheck: '1-year write-off' }
   ];
   for (const item of expectedIras) {
     const rec = UNIFIED_SOURCE_REGISTRY[item.key];
     assert(rec, `IRAS rule ${item.key} must exist`);
     assert.strictEqual(rec.authority, 'IRAS');
-    assert.strictEqual(rec.sourceStatus, 'VERIFIED');
-    assert.strictEqual(rec.evidenceTier, 'PRIMARY_SOURCE');
-    assert.strictEqual(rec.isVerbatimText, true);
-    assert(rec.sourceText.includes(item.textCheck), `Verbatim text for ${item.key} must contain '${item.textCheck}'`);
-    assert(rec.officialSourceUrl.includes('sso.agc.gov.sg/Act/ITA1947'), `Canonical SSO URL for ${item.key} must be valid`);
+    if (item.key.startsWith('ITA_SEC14N_') || item.key.startsWith('ITA_SEC13W_') || item.key.startsWith('ITA_SEC45')) {
+      assert.strictEqual(rec.sourceStatus,
+        item.key === 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR' || item.key === 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025'
+          ? 'HISTORICAL' : 'NEEDS_REVIEW');
+      assert.strictEqual(rec.evidenceTier, 'CURATED_SUMMARY');
+      assert.strictEqual(rec.isVerbatimText, false);
+      assert(rec.officialSourceUrl.includes('iras.gov.sg/'));
+      if (item.key === 'ITA_SEC14N_RENOVATION_REFURBISHMENT') assert.strictEqual(rec.validFrom, '2025-01-01');
+      if (item.key === 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025') assert.strictEqual(rec.validTo, '2024-12-31');
+      if (item.key === 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR') assert.strictEqual(rec.validTo, '2025-12-31');
+      if (item.key === 'ITA_SEC13W_EQUITY_DISPOSAL_2026') assert.strictEqual(rec.validFrom, '2026-01-01');
+      if (item.key.startsWith('ITA_SEC45')) assert.strictEqual(rec.validFrom, '2026-01-01', 'Current WHT guidance must not cover historical rates or filing dates.');
+    } else {
+      assert.strictEqual(rec.sourceStatus, 'VERIFIED');
+      assert.strictEqual(rec.evidenceTier, 'PRIMARY_SOURCE');
+      assert.strictEqual(rec.isVerbatimText, true);
+      assert(rec.officialSourceUrl.includes('sso.agc.gov.sg/Act/ITA1947'), `Canonical SSO URL for ${item.key} must be valid`);
+    }
+    assert(rec.sourceText.includes(item.textCheck), `Source text for ${item.key} must contain '${item.textCheck}'`);
   }
-  console.log('✓ 4. Proved: All 6 IRAS corporate tax statutory provisions registered with authentic SSO verbatim text and PRIMARY_SOURCE tier');
+  assert.match(UNIFIED_SOURCE_REGISTRY.ITA_SEC45_WITHHOLDING_TAX.sourceText, /confirm Singapore source.*treaty relief/i);
+  assert.match(UNIFIED_SOURCE_REGISTRY.ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES.sourceText, /where services are physically performed/i);
+  assert.doesNotMatch(UNIFIED_SOURCE_REGISTRY.ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES.sourceText, /all non-resident management fees/i);
+  const whtGuidance = SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES.practicalRules.join(' ');
+  assert.match(whtGuidance, /operations outside Singapore/i);
+  assert.match(whtGuidance, /year the services were provided/i);
+  const formCsRules = SINGAPORE_STATUTORY_REPOSITORY.IRAS_FORM_CS_LITE_CRITERIA.practicalRules.join(' ');
+  assert.match(formCsRules, /Foreign Tax Credit|foreign tax credit/i);
+  assert.match(formCsRules, /current-year loss\/capital-allowance carry-back/i);
+  assert.match(SINGAPORE_STATUTORY_REPOSITORY.IRAS_FORM_CS_LITE_CRITERIA.canonicalUrl, /iras\.gov\.sg\/taxes\/corporate-income-tax/);
+  console.log('✓ 4. Proved: IRAS tax provisions retain their declared evidence tiers and YA 2025 renovation guidance is not represented as verbatim legislation');
   passed++;
 
   // TEST 5: GST EXPANSION & HISTORICAL RATES
@@ -209,6 +236,9 @@ async function runPhase3Tests() {
     if (item.validTo) assert.strictEqual(rec.validTo, item.validTo);
     if (item.validFrom) assert.strictEqual(rec.validFrom, item.validFrom);
   }
+  const gstTransition = SINGAPORE_STATUTORY_REPOSITORY.GST_RATE_8_PERCENT_2023.practicalRules.join(' ');
+  assert.match(gstTransition, /invoice, payment and delivery\/performance timing/i);
+  assert.doesNotMatch(gstTransition, /were prorated/i);
   console.log('✓ 5. Proved: GST Reg 28, Sec 14, Regs 82-90, Sec 11, and historical/current GST rates (7%, 8%, 9%) registered cleanly');
   passed++;
 
@@ -316,6 +346,40 @@ async function runPhase3Tests() {
   console.log('✓ 8E. Proved: Current CPF query resolves CPF_WAGE_CEILINGS_2026 as top result');
   passed++;
 
+  const historicalShareDisposal = await defaultSourceRetriever.retrieveSources({
+    query: 'For a 2024 Section 13W ordinary share disposal, what was the 20% holding requirement?',
+    domain: 'IRAS_TAX',
+    maxResults: 3
+  });
+  assert.equal(historicalShareDisposal[0]?.id, 'ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR');
+  const currentShareDisposal = await defaultSourceRetriever.retrieveSources({
+    query: 'For a 2026 Section 13W preference share disposal, what is the 20% holding requirement?',
+    domain: 'IRAS_TAX',
+    maxResults: 3
+  });
+  assert.equal(currentShareDisposal[0]?.id, 'ITA_SEC13W_EQUITY_DISPOSAL_2026');
+  const historicalRenovation = await defaultSourceRetriever.retrieveSources({
+    query: 'For YA 2024 Section 14N renovation and refurbishment expenditure, could a 1-year deduction be elected?',
+    domain: 'IRAS_TAX',
+    maxResults: 3
+  });
+  assert.equal(historicalRenovation[0]?.id, 'ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025');
+  const currentRenovation = await defaultSourceRetriever.retrieveSources({
+    query: 'For YA 2026 Section 14N renovation and refurbishment expenditure, what fixed 3-year cap applies?',
+    domain: 'IRAS_TAX',
+    maxResults: 3
+  });
+  assert.equal(currentRenovation[0]?.id, 'ITA_SEC14N_RENOVATION_REFURBISHMENT');
+  const mixedYaRenovation = await defaultSourceRetriever.retrieveSources({
+    query: 'Can we deduct Section 14N renovation paid on 31/12/2024 for YA 2025?',
+    domain: 'IRAS_TAX',
+    maxResults: 5
+  });
+  assert.ok(mixedYaRenovation.every(record => !record.id.startsWith('ITA_SEC14N_RENOVATION_REFURBISHMENT')),
+    'A 2024 transaction date plus YA 2025 needs the company basis period before selecting either Section 14N summary.');
+  console.log('✓ 8F. Proved: Section 13W retrieval separates pre-2026 ordinary-share rules from 2026 preference-share rules');
+  passed++;
+
   // TEST 9: FAST-PATH DETERMINISTIC SAFETY & AUDIT INVARIANTS
   console.log('\n[9. FAST-PATH DETERMINISTIC SAFETY & AUDIT INVARIANTS]');
 
@@ -390,7 +454,7 @@ async function runPhase3Tests() {
   // TEST 10: CITATION VERIFICATION & DISCIPLINE FOR NEW PROVISIONS
   console.log('\n[10. CITATION VERIFICATION & DISCIPLINE FOR NEW PROVISIONS]');
 
-  // 10A: Section 13W Safe Harbour Verified Primary Source
+  // 10A: Section 13W guidance cannot inherit URL trust from a source-content status.
   const cite13W = {
     standard: 'Income Tax Act 1947',
     paragraph: 'Section 13W',
@@ -401,14 +465,14 @@ async function runPhase3Tests() {
   };
   const ver13W = defaultCitationVerifier.verifyCitation(cite13W);
   assert(ver13W.matchedRecord, 'Matched record must exist');
-  assert.strictEqual(ver13W.matchedRecord.freshnessStatus, 'ACTIVE_CURRENT');
-  assert.strictEqual(ver13W.matchedRecord.sourceStatus, 'VERIFIED', 'Section 13W source content remains verified');
-  assert.strictEqual(ver13W.matchedRecord.isVerbatimText, true, 'Section 13W remains verbatim primary-source content');
+  assert.strictEqual(UNIFIED_SOURCE_REGISTRY.ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR.validTo, '2025-12-31');
+  assert.strictEqual(UNIFIED_SOURCE_REGISTRY.ITA_SEC13W_EQUITY_DISPOSAL_2026.validFrom, '2026-01-01');
+  assert.strictEqual(UNIFIED_SOURCE_REGISTRY.ITA_SEC13W_EQUITY_DISPOSAL_2026.isVerbatimText, false);
   assert.strictEqual(ver13W.status, 'NON_CANONICAL_URL', 'Source-content verification alone must not verify the submitted URL');
   assert.strictEqual(ver13W.isValid, false, 'A URL without URL-specific provenance must not be a valid clickable citation');
   assert.strictEqual(getSafeOfficialUrl(cite13W.officialSourceUrl, cite13W.standard, cite13W.paragraph, cite13W.authority), '',
     'The unverified Section 13W URL must be withheld by the display gate');
-  console.log('✓ 10A. Proved: Section 13W content remains current and verbatim while its unverified URL is rejected');
+  console.log('✓ 10A. Proved: Section 13W historical/current boundaries are explicit and its unverified URL is rejected');
   passed++;
 
   // 10B: Historical 8% GST Rate Citation

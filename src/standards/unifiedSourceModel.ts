@@ -7,8 +7,8 @@ import {
   defaultSourceFreshnessManager
 } from './sourceFreshnessManager';
 import { defaultSourceVersioningManager } from './sourceVersioning';
-import { isAskGovSingaporeUrl } from './approvedSourceRegistry';
-import { SINGAPORE_COVERAGE_REGISTRY } from './coverageRegistry';
+import { hasVerifiedSourceUrlProvenance, isAskGovSingaporeUrl } from './approvedSourceRegistry';
+import { IRAS_SOURCE_MAP_DEFINITIONS, SINGAPORE_COVERAGE_REGISTRY } from './coverageRegistry';
 
 export type SourceStatus = 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
 
@@ -65,12 +65,14 @@ export interface AuthoritativeSourceRecord {
   recordRole?: 'EVIDENCE' | 'SOURCE_MAP_POINTER';
   groundingEligible?: boolean;
   sourceMapTopicIds?: string[];
-  sourceMapScope?: 'STANDARD' | 'FRAMEWORK';
+  sourceMapScope?: 'STANDARD' | 'FRAMEWORK' | 'TOPIC';
   retrievalHints?: string[];
   relatedTopicIds?: string[];
   /** Verifies URL identity/reachability only; it does not verify page claims or standard paragraphs. */
   urlVerificationStatus?: 'VERIFIED' | 'CANDIDATE' | 'REJECTED';
   urlVerifiedDate?: string;
+  urlVerificationMethod?: string;
+  urlVerificationEvidence?: string;
   sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'MAS' | 'ASK_GOV_SG' | 'REFERENCE_API';
   retrievedAt?: string;
   verificationMethod?: string;
@@ -117,6 +119,27 @@ function mapStatuteCategoryToDomain(category: string): QueryDomain {
       return 'MAS_FUNDS';
     default:
       return 'GENERAL';
+  }
+}
+
+function getStatuteSourceAuthority(canonicalUrl: string, authority: StatutoryAuthority): AuthoritativeSourceRecord['sourceAuthority'] {
+  if (isAskGovSingaporeUrl(canonicalUrl)) return 'ASK_GOV_SG';
+
+  let hostname = '';
+  try {
+    hostname = new URL(canonicalUrl).hostname.toLowerCase();
+  } catch {
+    // Retain the rule's authority when a malformed source URL cannot identify a publisher.
+  }
+  if (hostname === 'sso.agc.gov.sg') return 'AGC';
+
+  switch (authority) {
+    case 'IRAS': return 'IRAS';
+    case 'ACRA': return 'ACRA';
+    case 'MOM': return 'MOM';
+    case 'CPF': return 'CPF';
+    case 'MAS': return 'MAS';
+    default: return 'AGC';
   }
 }
 
@@ -210,7 +233,7 @@ export function buildUnifiedSourceRegistry(
       lifecycleState: 'ACTIVE',
       version: '2026.09',
       canonicalSourceUrl: rule.canonicalUrl,
-      sourceAuthority: rule.canonicalUrl.includes('ask.gov.sg') ? 'ASK_GOV_SG' : rule.authority === 'IRAS' ? 'IRAS' : rule.authority === 'ACRA' ? 'ACRA' : rule.authority === 'MOM' ? 'MOM' : rule.authority === 'CPF' ? 'CPF' : rule.authority === 'MAS' ? 'MAS' : 'AGC',
+      sourceAuthority: getStatuteSourceAuthority(rule.canonicalUrl, rule.authority),
       retrievedAt: '2026-09-01T00:00:00Z',
       verificationMethod: isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'STATUTORY_LEGISLATION_AUDIT' : 'CURATED_EDITORIAL_REVIEW'
     };
@@ -391,6 +414,72 @@ export function buildUnifiedSourceRegistry(
   };
   frameworkRecord.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(frameworkRecord, referenceDate);
   UNIFIED_SOURCE_REGISTRY.SFRSI_FRAMEWORK_ACRA = frameworkRecord;
+
+  // 5. Verified IRAS topic pointers. Require explicit URL provenance metadata,
+  // exact canonical URL identity and a page-specific path; source status alone
+  // cannot make a tax page clickable or usable as answer evidence.
+  for (const definition of IRAS_SOURCE_MAP_DEFINITIONS) {
+    const topics = SINGAPORE_COVERAGE_REGISTRY.filter(topic =>
+      topic.domainId.startsWith('IRAS_') && topic.sourceRecordIds.includes(definition.id));
+    if (topics.length === 0 || definition.urlVerificationStatus !== 'VERIFIED' ||
+        !definition.urlVerifiedDate || !definition.urlVerificationEvidence || !definition.pageTitle.trim() ||
+        !hasVerifiedSourceUrlProvenance({
+          officialSourceUrl: definition.canonicalSourceUrl,
+          canonicalSourceUrl: definition.canonicalSourceUrl,
+          urlVerificationStatus: definition.urlVerificationStatus
+        })) continue;
+
+    let sourceUrl: URL;
+    try {
+      sourceUrl = new URL(definition.canonicalSourceUrl);
+    } catch {
+      continue;
+    }
+    const pathSegments = sourceUrl.pathname.split('/').filter(Boolean);
+    if (!['www.iras.gov.sg', 'iras.gov.sg'].includes(sourceUrl.hostname.toLowerCase()) ||
+        sourceUrl.search || sourceUrl.hash || pathSegments.length < 3) continue;
+
+    const topicIds = topics.map(topic => topic.id);
+    const record: AuthoritativeSourceRecord = {
+      id: definition.id,
+      authority: 'IRAS',
+      authorityName: 'Inland Revenue Authority of Singapore',
+      sourcePublisher: 'Inland Revenue Authority of Singapore',
+      legalOrStandardInstrument: 'IRAS Administrative Guidance',
+      documentTitle: definition.pageTitle,
+      standardOrActCode: 'IRAS',
+      paragraphOrSection: 'Official topic page / source-map pointer',
+      sourceText: '',
+      principleSummary: `${definition.shortDescription} This URL-verified pointer routes retrieval only and is not answer evidence or a legal provision.`,
+      officialSourceUrl: definition.canonicalSourceUrl,
+      domain: topics[0].legacyDomains[0],
+      jurisdiction: 'Singapore',
+      tags: [...new Set(topics.flatMap(topic => [topic.id, topic.title, ...topic.keywords, ...(topic.aliases ?? [])]))],
+      sourceStatus: 'NEEDS_REVIEW',
+      sourceType: 'OFFICIAL_GUIDANCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
+      isVerbatimText: false,
+      lastVerifiedDate: definition.urlVerifiedDate,
+      reviewAuditCycleDays: 90,
+      provenance: 'LOCAL_STATIC',
+      lifecycleState: 'ACTIVE',
+      canonicalSourceUrl: definition.canonicalSourceUrl,
+      verificationMethod: 'SOURCE_MAP_POINTER_EDITORIAL_REVIEW',
+      recordRole: 'SOURCE_MAP_POINTER',
+      groundingEligible: false,
+      sourceMapScope: 'TOPIC',
+      sourceMapTopicIds: topicIds,
+      retrievalHints: [...new Set(topics.flatMap(topic => [...topic.sectionHints ?? [], ...topic.keywords, ...(topic.aliases ?? [])]))],
+      relatedTopicIds: [...new Set(topics.flatMap(topic => topic.relatedTopicIds ?? []))],
+      urlVerificationStatus: definition.urlVerificationStatus,
+      urlVerifiedDate: definition.urlVerifiedDate,
+      urlVerificationMethod: definition.urlVerificationMethod,
+      urlVerificationEvidence: definition.urlVerificationEvidence,
+      extractionStatus: 'PARTIAL'
+    };
+    record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
+    UNIFIED_SOURCE_REGISTRY[definition.id] = record;
+  }
 
   return UNIFIED_SOURCE_REGISTRY;
 }

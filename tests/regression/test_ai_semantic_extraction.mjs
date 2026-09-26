@@ -207,7 +207,7 @@ async function runTests() {
     'i have a rental agreement for 3 years, paying 1 month sgd3,000 what\'s the double entry',
     'Purchase of office equipment with a list price of SGD 20,000 with 10% trade discount and credit terms',
     'trade-in old machinery on 1 april 2026 with catch-up depreciation',
-    'I bought a passenger motor car for SGD 120k with bank. Can I claim input GST under IRAS?',
+    'Our company bought an S-plate passenger car for own use by employees for SGD 120k with bank. Can I claim input GST under IRAS?',
     'a staff is earning sgd3200 a month, his last day is 16/9/2026, calculate his september salary and employer employee cpf',
     'Can software development expenditure be capitalised under SFRS(I) 1-38, and how does IRAS treat it for tax deduction?',
     'What are the ACRA requirements for small company audit exemption under Section 205C?',

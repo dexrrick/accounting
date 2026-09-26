@@ -38,8 +38,26 @@ export interface QuestionClassificationResult {
 export function classifyQuestion(query: string): QuestionClassificationResult {
   const q = query.toLowerCase();
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
-  const topicIds = decomposition.topics.map(topic => topic.id);
-  const topicMetadata = getCoverageTopicsByIds(topicIds);
+  const allTopicIds = decomposition.topics.map(topic => topic.id);
+  const allTopicMetadata = getCoverageTopicsByIds(allTopicIds);
+  const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(q) ||
+    /\bdouble entr\w*/i.test(q);
+  const taxCreditWithoutAccountingIntent = /\b(?:foreign tax credit|tax credit|double tax relief foreign tax credit)\b/i.test(q) && !explicitAccountingIntent;
+  const passengerCarTaxOnlyContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
+    /\b(?:deduct\w*|running costs?|capital allowances?|income tax|corporate tax)\b/i.test(q) &&
+    !explicitAccountingIntent;
+  const employmentTaxAssessmentContext = /\b(?:bonus|directors?(?:['’]s)? fees?)\b/i.test(q) &&
+    /\b(?:employee tax|employment income|tax assessment|assessment year|year of assessment|taxable year)\b/i.test(q) &&
+    !/\b(?:acra|companies act|annual return|agm|audit exemption|director duties|conflict of interest|section 156)\b/i.test(q);
+  const withholdingDueDateOnlyContext = /\b(?:wht|withholding tax)\b/i.test(q) &&
+    /\b(?:treated as paid|deemed payment|deemed paid|deemed date|filing due|payment due|due date|deadline)\b/i.test(q) &&
+    !/\b(?:rates?|payment categor(?:y|ies)|types? of payment|subject to (?:wht|withholding tax)|whether (?:wht|withholding tax) applies)\b/i.test(q);
+  const topicMetadata = allTopicMetadata.filter(topic =>
+    !(passengerCarTaxOnlyContext && topic.domainId.startsWith('ACCOUNTING_')) &&
+    !(employmentTaxAssessmentContext && topic.domainId.startsWith('ACRA_')) &&
+    !(withholdingDueDateOnlyContext && topic.id === 'iras-withholding-tax')
+  );
+  const topicIds = topicMetadata.map(topic => topic.id);
 
   // 1. Domain Indicator Detection
   const hasAccounting =
@@ -49,10 +67,10 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('ifrs') ||
     /\bias\s*\d*\b/i.test(q) ||
     q.includes('intangible asset') ||
-    q.includes('depreciat') ||
+    (q.includes('depreciat') && !passengerCarTaxOnlyContext) ||
     q.includes('amorti') ||
     q.includes('debit') ||
-    q.includes('credit') ||
+    (/\bcredit\b/i.test(q) && !taxCreditWithoutAccountingIntent) ||
     q.includes('journal') ||
     q.includes('double entr') ||
     q.includes('bookkeeping') ||
@@ -129,7 +147,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('section 201') ||
     q.includes('annual return') ||
     /\bagm\b/i.test(q) ||
-    (q.includes('director') && !hasInvesteeAccountingGovernanceContext) ||
+    (q.includes('director') && !hasInvesteeAccountingGovernanceContext && !employmentTaxAssessmentContext) ||
     q.includes('share capital') ||
     topicMetadata.some(topic => topic.domainId.startsWith('ACRA_'));
 
@@ -225,7 +243,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     else if (/\b(property tax|annual value)\b/i.test(q)) addDomainIfMissing('IRAS_PROPERTY_TAX');
     else if (/\b(stamp duty|bsd|absd|ssd)\b/i.test(q)) addDomainIfMissing('IRAS_STAMP_DUTY');
     else if (/\b(crs|fatca)\b/i.test(q)) addDomainIfMissing('IRAS_CRS_FATCA');
-    else if (/\b(corporate tax|company tax|form c|sute|pte|section 14|section 15|section 19|transfer pricing|tax loss|group relief|withholding tax|\beci\b)\b/i.test(q)) addDomainIfMissing('IRAS_CORPORATE_TAX');
+    else if (/\b(corporate tax|company tax|income tax|tax deduct\w*|deductib\w*|capital allowance|form c|sute|pte|section 14|section 15|section 19|transfer pricing|tax loss|group relief|withholding tax|eci)\b/i.test(q)) addDomainIfMissing('IRAS_CORPORATE_TAX');
   }
   if (multiAuthority) domains.push('MULTI_AUTHORITY');
 
@@ -333,6 +351,63 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   if (!isPureConceptualQuery && (q.includes('car') || q.includes('vehicle')) && (q.includes('bought') || q.includes('purchas') || q.includes('claim') || q.includes('deduct') || q.includes('entry'))) {
     if (!q.includes('s-plate') && !q.includes('g-plate') && !q.includes('passenger') && !q.includes('commercial')) {
       missingFacts.push('Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)');
+    }
+  }
+
+  // Scenario-specific tax conclusions need the facts that determine the
+  // applicable IRAS treatment. Keep general explain/definition requests clear.
+  const asksAboutSpecificTaxCase = !isPureConceptualQuery &&
+    /\b(?:our|my|this|we|company|paid|paying|claim|file)\b/i.test(q);
+  if (asksAboutSpecificTaxCase && hasTax && /\b(?:deductib\w*|deduct\w*|tax deduction)\b/i.test(q) &&
+      /\b(?:expense|cost|payment|fee|meal|entertainment|renovat\w*|fit.out|machinery|equipment|car|vehicle|asset)\b/i.test(q)) {
+    if (!/\b(?:business purpose|for the business|for our business|wholly and exclusively|private use|personal use)\b/i.test(q)) {
+      missingFacts.push('Business purpose and any private element of the expense');
+    }
+    if (!/\b(?:capital|revenue expense|operating expense)\b/i.test(q)) {
+      missingFacts.push('Whether the expenditure is capital or revenue in nature');
+    }
+  }
+  if (/\b(?:renovat\w*|refurbish\w*|section 14n)\b/i.test(q) &&
+      /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.test(q) &&
+      /\b(?:[0-3]?\d[/-][01]?\d[/-]20\d{2}|20\d{2}-[01]\d-[0-3]\d|[0-3]?\d\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})\b/i.test(q)) {
+    const yaYear = /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.exec(q)?.[1];
+    const expenditureYear = /\b[0-3]?\d[/-][01]?\d[/-](20\d{2})\b/.exec(q)?.[1] ||
+      /\b(20\d{2})-[01]\d-[0-3]\d\b/.exec(q)?.[1] ||
+      /\b[0-3]?\d\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(20\d{2})\b/i.exec(q)?.[1];
+    if (yaYear && expenditureYear && yaYear !== expenditureYear) {
+      missingFacts.push('Company financial year end and YA basis period containing the renovation expenditure');
+    }
+  }
+  if (asksAboutSpecificTaxCase && hasGst && /\b(?:claim|recover|charge|zero.rate|exempt)\b/i.test(q)) {
+    if (!/\b(?:gst.registered|registered for gst|not registered for gst)\b/i.test(q)) {
+      missingFacts.push('Supplier and customer GST registration status, where relevant');
+    }
+    if (!/\b(?:business use|private use|personal use|tax invoice)\b/i.test(q) && /\b(?:input tax|input gst|claim|recover)\b/i.test(q)) {
+      missingFacts.push('Business or private use and supporting tax invoice for the GST claim');
+    }
+  }
+  if (asksAboutSpecificTaxCase && /\b(?:withholding tax|\bwht\b)\b/i.test(q)) {
+    if (!/\b(?:non.resident|resident in|tax resident in)\b/i.test(q)) {
+      missingFacts.push('Recipient tax residence');
+    }
+    if (!/\b(?:performed in singapore|performed outside singapore|services in singapore|services outside singapore)\b/i.test(q) &&
+        /\b(?:service|management|technical|consult)\b/i.test(q)) {
+      missingFacts.push('Where the services were physically performed');
+    }
+    if (/\b(?:service|management|technical|consult)\b/i.test(q) &&
+        !/\b(?:services? (?:were |was )?(?:provided|performed|rendered) (?:in|during) (?:19|20)\d{2}|service (?:year|period) (?:19|20)\d{2})\b/i.test(q)) {
+      missingFacts.push('Year or period when the services were provided');
+    }
+    if (!/\b(?:paid on|payment date|due on|credited on|deemed paid)\b/i.test(q)) {
+      missingFacts.push('Payment or deemed-payment date');
+    }
+  }
+  if (asksAboutSpecificTaxCase && /\bir21\b|tax clearance/i.test(q)) {
+    if (!/\b(?:citizen|permanent resident|\bspr\b|foreign employee)\b/i.test(q)) {
+      missingFacts.push('Employee citizenship or permanent-resident status');
+    }
+    if (!/\b(?:departure|departing|leaving singapore|overseas posting|cessation date|last day)\b/i.test(q)) {
+      missingFacts.push('Employment cessation, departure or overseas-posting details');
     }
   }
 

@@ -83,6 +83,16 @@ export function isStatutoryInquiry(query: string): boolean {
   );
 }
 
+function isExplicitOwnUsePassengerCarPurchase(query: string): boolean {
+  const q = query.toLowerCase();
+  const isThirdPartyCarUse = /\b(?:customer|client|third[\s.-]party|connected person|policyholder|insured|contractor|consultant|adviser|advisor|visitor|guest|replacement (?:car|vehicle)|courtesy car|loaner|repair|maintenance|rental|lease)\b/.test(q);
+  const hasExplicitCompanyEmployeeUse = /\b(?:own(?:ed)? use by (?:the )?(?:company|employees|staff|directors)|(?:used|reserved|provided) (?:solely )?(?:by|for) (?:the )?(?:company|employees|staff|directors)|for (?:the )?(?:company|employees|staff|directors)(?:'s)? (?:own )?(?:business )?use|for use by (?:the )?(?:company|employees|staff|directors)|in the company fleet)\b/.test(q);
+  return !isThirdPartyCarUse && hasExplicitCompanyEmployeeUse &&
+    /\b(?:s-plate|passenger (?:motor )?car)\b/.test(q) &&
+    /\b(?:bought|purchas\w*|buy\w*)\b/.test(q) &&
+    !/\b(?:car dealer|motor trade)\b/.test(q);
+}
+
 /**
  * Detects whether a query matches an explicitly supported deterministic benchmark test fixture.
  * Deterministic fixtures are strictly pre-defined benchmark test scenarios used for regression testing,
@@ -118,10 +128,8 @@ export function isDeterministicFixture(query: string): boolean {
     q.includes('machinery on 1 april 2026') ||
     (q.includes('trade-in') && q.includes('machinery'));
 
-  // 6. Explicit Benchmark Fixture: Passenger Motor Car Section 15(1)(k) / GST Reg 26 (SGD 120,000 car)
-  const isCarFixture =
-    (q.includes('passenger motor car') || (q.includes('car') && (q.includes('120k') || q.includes('120,000')))) &&
-    (q.includes('bought') || q.includes('purchas') || q.includes('paid'));
+  // 6. Explicit Benchmark Fixture: Passenger Motor Car Section 15(1)(k) / GST Reg 27 (SGD 120,000 car)
+  const isCarFixture = isExplicitOwnUsePassengerCarPurchase(q);
 
   // 7. Explicit Benchmark Fixture: Prorated Payroll & CPF (SGD 3,200 salary, MOM §22 proration)
   const isPayrollFixture =
@@ -1053,9 +1061,7 @@ export async function parseAccountingQuery(
   // e.g. "What is the 2026 CPF Ordinary Wage ceiling?"
   // e.g. "Can I claim input GST on a passenger car?"
   // =========================================================================
-  const isCarPurchase = (q.includes('car') || q.includes('motor car') || q.includes('passenger car')) &&
-    (q.includes('bought') || q.includes('purchas') || q.includes('paid') || q.includes('pay') || q.includes('buy')) &&
-    !q.includes('rental') && !q.includes('lease');
+  const isCarPurchase = isExplicitOwnUsePassengerCarPurchase(q);
 
   const isStatutoryQuestion = isStatutoryInquiry(q);
 
@@ -1083,7 +1089,7 @@ export async function parseAccountingQuery(
         debit: effectiveCarCost,
         credit: 0,
         lineExplanation: hasExplicitCarCost
-          ? 'Capitalization of motor vehicle at gross purchase price. Input GST is completely capitalized into cost because input tax recovery is blocked under Singapore GST Regulation 26.'
+          ? 'Capitalization of passenger motor vehicle at gross purchase price. Input GST is included in cost because the entity’s own S-plate motor-car input tax is blocked under Singapore GST Regulation 27.'
           : 'Capitalization of motor vehicle — [Valuation pending determination]'
       },
       {
@@ -1106,7 +1112,7 @@ export async function parseAccountingQuery(
 
     const carAdvisories = [
       convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_1_K_MOTOR_CAR),
-      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX)
+      { ...convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.GST_REG26_BLOCKED_INPUT_TAX), isGstClaimable: false }
     ];
 
     const carAuthorityStatus: JournalAuthorityStatus = hasExplicitCarCost ? 'DETERMINISTIC' : 'CONDITIONAL';
@@ -1121,7 +1127,7 @@ export async function parseAccountingQuery(
       functionalCurrency,
       transactionCurrency: functionalCurrency,
       accountingTreatmentSummary: 'Capitalize gross motor vehicle cost into Non-Current Assets under SFRS(I) 1-16 §16. Input GST is capitalized because it is non-recoverable. Depreciate straight-line over useful life through P&L.',
-      singaporeTaxTreatmentSummary: 'Under Section 15(1)(k) of the Income Tax Act 1947, no tax deduction or Section 19/19A Capital Allowances are granted on passenger cars (S-plate). Accounting depreciation must be added back 100% in Form C-S. Under Regulation 26 of the GST Regulations, 9% input GST is strictly blocked from recovery.',
+      singaporeTaxTreatmentSummary: 'Under Section 15(1)(k) of the Income Tax Act 1947, no tax deduction or Section 19/19A Capital Allowances are granted on passenger cars (S-plate). Accounting depreciation must be added back 100% in the corporate tax computation. Under Regulation 27 of the GST (General) Regulations, input GST on the entity’s own passenger motor car is blocked from recovery.',
       regulatoryMandatesSummary: 'Companies Act 1967 Section 199 mandatory retention of purchase vouchers, invoices, and payment proof for at least 5 years.',
       effectiveDateOrTiming: 'Singapore 9% GST rate (since 1 Jan 2024); ITA Section 15(1)(k) active.',
       uncertaintyDisclaimer: 'Commercial goods vehicles (G/Y plate) are eligible for Section 19A Capital Allowances and GST recovery; this disallowance strictly applies to passenger motor cars (S-plate).',
@@ -1143,7 +1149,7 @@ export async function parseAccountingQuery(
           citations: carCitations,
           authorityStatus: carAuthorityStatus,
           rationalePoints: [
-            'Under IRAS GST Regulation 26: 9% Input GST incurred on passenger cars (S-plate) is strictly blocked from recovery. The full invoice amount is capitalized into the asset cost.',
+            'Under GST (General) Regulations Regulation 27: input GST on the entity’s own passenger motor car (S-plate) is blocked from recovery. The full invoice amount is capitalized into the asset cost.',
             'Under Section 15(1)(k) of the Income Tax Act 1947: No deduction or capital allowance is granted on passenger cars. Depreciation in accounting records must be added back 100% in the corporate tax computation.',
             hasExplicitCarCost
               ? 'Sum of Debits = Sum of Credits ($' + effectiveCarCost.toLocaleString() + '). Journal entry is 100% balanced.'
@@ -1158,7 +1164,7 @@ export async function parseAccountingQuery(
           value: hasExplicitCarCost ? `${functionalCurrency} ${effectiveCarCost.toLocaleString()}` : 'Pending Determination',
           badge: hasExplicitCarCost ? 'Outflow' : 'Missing Fact'
         },
-        { label: '9% Input GST Status', value: 'BLOCKED (Regulation 26)', badge: 'IRAS Disallowed', highlight: true },
+        { label: 'Input GST Status', value: 'BLOCKED (Regulation 27)', badge: 'IRAS Disallowed', highlight: true },
         { label: 'Corporate Tax Deduction', value: 'DISALLOWED (§15(1)(k))', badge: 'No CA Granted', highlight: true },
         { label: 'Depreciation Add-Back', value: 'Mandatory in Form C-S', badge: 'Tax Add-Back' },
         { label: 'Governing Authorities', value: 'IRAS & AGC Singapore', badge: 'SSO Verified' }

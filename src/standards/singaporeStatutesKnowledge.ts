@@ -61,6 +61,8 @@ export function convertToAdvisory(rule: SingaporeStatuteRule): StatutoryAdvisory
     authority: rule.authority, statuteOrAct: rule.actTitle, sectionOrSchedule: rule.sectionOrSchedule, topic: rule.ruleTitle,
     summary: rule.principle, keyRules: rule.practicalRules, officialUrl: rule.canonicalUrl,
     isTaxDeductible: (rule.id === 'ITA_SEC15_1_K_MOTOR_CAR' || rule.id === 'ITA_SEC15_PROHIBITED_DEDUCTIONS') ? false : (rule.id === 'ITA_SEC14_GENERAL_DEDUCTION' || rule.id === 'ITA_SEC14C_EIS_INNOVATION') ? true : undefined,
-    isGstClaimable: rule.id === 'GST_REG26_BLOCKED_INPUT_TAX' ? false : rule.id === 'GST_SEC21_ZERO_RATED_EXPORTS' ? true : undefined
+    // Regulation 26/27 has exceptions; a general advisory cannot decide a
+    // particular input-tax claim without the expense and use facts.
+    isGstClaimable: rule.id === 'GST_SEC21_ZERO_RATED_EXPORTS' ? true : undefined
   };
 }

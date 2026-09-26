@@ -52,17 +52,43 @@ function standardPathTokens(standardOrAct: string): string[] {
 }
 
 function candidateScore(url: string, request: OfficialSourceDiscoveryRequest): number {
-  const path = new URL(url).pathname.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  const candidate = new URL(url);
+  const path = candidate.pathname.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
   const standards = standardPathTokens(request.standardOrAct);
   const matchedStandard = standards.some(token => path.replace(/[^a-z0-9]+/g, '').includes(token.replace(/[^a-z0-9]+/g, '')));
-  if (!matchedStandard) return 0;
+  if (matchedStandard) {
+    const topicWords = `${request.topicTitle} ${request.query}`
+      .toLowerCase()
+      .split(/[^a-z0-9]+/)
+      .filter(word => word.length >= 5);
+    const matchedTopicWords = new Set(topicWords.filter(word => path.includes(word)));
+    return 10 + matchedTopicWords.size;
+  }
 
-  const topicWords = `${request.topicTitle} ${request.query}`
+  const irasDiscovery = request.approvedHosts.some(host => ['iras.gov.sg', 'www.iras.gov.sg', 'sso.agc.gov.sg'].includes(host.toLowerCase()));
+  if (!irasDiscovery) return 0;
+
+  // IRAS and SSO sitemap routes do not encode IFRS/IAS standard IDs in their
+  // path. Score only topic-specific lexical overlap and reject broad landing
+  // pages that happen to share generic words such as "tax", "GST" or "income".
+  const stopWords = new Set([
+    'iras', 'singapore', 'tax', 'taxes', 'income', 'gst', 'goods', 'services',
+    'company', 'companies', 'business', 'businesses', 'the', 'and', 'for', 'from',
+    'with', 'under', 'into', 'what', 'when', 'where', 'does', 'should', 'can', 'are'
+  ]);
+  const topicTitleWords = request.topicTitle
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter(word => word.length >= 5);
-  const matchedTopicWords = new Set(topicWords.filter(word => path.includes(word)));
-  return 10 + matchedTopicWords.size;
+    .filter(word => word.length >= 4 && !stopWords.has(word));
+  const queryWords = request.query
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(word => word.length >= 5 && !stopWords.has(word));
+  const matchedTitleWords = new Set(topicTitleWords.filter(word => path.includes(word)));
+  const matchedQueryWords = new Set(queryWords.filter(word => path.includes(word)));
+  const distinctiveTitleMatch = [...matchedTitleWords].some(word => word.length >= 9);
+  if (matchedTitleWords.size < 2 && !distinctiveTitleMatch && matchedQueryWords.size < 2) return 0;
+  return 20 + matchedTitleWords.size * 4 + matchedQueryWords.size;
 }
 
 /**
@@ -165,10 +191,11 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     const distinctHosts = approvedHosts.filter(host => {
       if (host === 'ifrs.org' && approvedHosts.includes('www.ifrs.org')) return false;
       if (host === 'acra.gov.sg' && approvedHosts.includes('www.acra.gov.sg')) return false;
+      if (host === 'iras.gov.sg' && approvedHosts.includes('www.iras.gov.sg')) return false;
       return true;
     });
     const preferredHosts = distinctHosts.sort((a, b) => {
-      const score = (host: string) => host === 'www.ifrs.org' ? 0 : host === 'ifrs.org' ? 1 : host === 'asc.acra.gov.sg' ? 2 : 3;
+      const score = (host: string) => host === 'www.ifrs.org' ? 0 : host === 'ifrs.org' ? 1 : host === 'asc.acra.gov.sg' ? 2 : host === 'sso.agc.gov.sg' ? 3 : host === 'www.iras.gov.sg' ? 4 : host === 'iras.gov.sg' ? 5 : 6;
       return score(a) - score(b);
     }).slice(0, MAX_HOSTS_PER_SEARCH);
     const candidates = new Set<string>();
@@ -178,7 +205,6 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       for (const url of sitemapUrls) {
         if (candidateScore(url, request) > 0) candidates.add(url);
       }
-      if (candidates.size > 0) break;
     }
 
     return [...candidates]

@@ -62,6 +62,19 @@ const expectedLegacyResolverIds = [
 for (const id of expectedLegacyResolverIds) assert.ok(getCoverageTopicById(id), `Preserve resolver topic ${id}`);
 
 const resolver = new QueryTopicResolver();
+for (const query of [
+  'How do share options affect control of an investee?',
+  'Do options over shares give an investor potential voting rights?'
+]) {
+  assert.ok(
+    resolver.decomposeQuery(query).topics.some(topic => topic.id === 'sfrsi10-potential-voting-rights'),
+    `Scoped share-option wording resolves potential voting rights: ${query}`
+  );
+}
+assert.ok(
+  !resolver.decomposeQuery('For YA 2026 renovation, what Section 14N options should the company check?').topics.some(topic => topic.id === 'sfrsi10-potential-voting-rights'),
+  'Generic options in a Section 14N tax question do not route to potential voting rights.'
+);
 assert.deepEqual(
   resolver.constructor.CANONICAL_TOPICS.map(topic => topic.id),
   topicIds,

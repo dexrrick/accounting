@@ -1,0 +1,4256 @@
+{
+  "schemaVersion": 1,
+  "fixtureName": "IRAS source-map benchmark",
+  "reviewedAt": "2026-09-26",
+  "purpose": "IRAS routing and source-map pointer-selection benchmark. Retrieval review independently verified routing for 31 cases; content review independently verified selected outcome dimensions for 8 cases. No live retrieval or end-to-end answer is scored as approved.",
+  "reviewedDimensions": [],
+  "unverifiedDimensions": [
+    "authorityRouting",
+    "domainRouting",
+    "topicRouting",
+    "multiAuthorityHandling",
+    "sourceSelection",
+    "sourceRetrieval",
+    "retrieval",
+    "grounding",
+    "answerPath",
+    "substantiveConclusion",
+    "calculationCorrectness",
+    "citationCorrectness",
+    "missingFactBehaviour",
+    "effectiveDateCorrectness"
+  ],
+  "reviewScope": "Official IRAS page titles/topics and URLs were opened or directly checked on 2026-09-26. Routing metadata is independently verified for 31 named cases; selected substantive, missing-fact, effective-date and numeric GST outcome dimensions are independently verified for 8 named cases. Answer-path and top-level reviewedOracle gates remain PENDING_REVIEW; no live or end-to-end answer scoring is claimed. Source-map pointers establish neither tax claims nor historical validity.",
+  "cases": [
+    {
+      "id": "cit-rate-and-exemption-schemes",
+      "question": "What is the corporate income tax rate for a company?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-tax-rate"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_RATE_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Corporate Income Tax Rates page title and topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-tax-rate"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-tax-rate"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_RATE_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RATE_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Answer with the current IRAS company income tax rate and discuss any exemption only if company facts establish eligibility."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RATE_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "Year of Assessment",
+              "company type and exemption eligibility facts"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-eci-filing",
+      "question": "When does a company need to file estimated chargeable income with IRAS?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-eci"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_BASIS_FILING_SOURCE_MAP",
+        "IRAS_CIT_ECI_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Estimated Chargeable Income (ECI) Filing page title and topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-eci"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-eci"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_BASIS_FILING_SOURCE_MAP",
+            "IRAS_CIT_ECI_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_BASIS_FILING_SOURCE_MAP",
+              "IRAS_CIT_ECI_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "A company must generally file its ECI within 3 months after the end of its financial year. It may qualify for the filing waiver if its annual revenue is not more than SGD 5 million and its ECI is nil; confirm both conditions for the relevant financial year."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_BASIS_FILING_SOURCE_MAP",
+              "IRAS_CIT_ECI_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "financial year end",
+              "annual revenue for the relevant financial year",
+              "whether estimated chargeable income is nil"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-renovation-section-14n",
+      "question": "What is IRAS tax treatment for renovation and refurbishment expenses?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-renovation-refurbishment"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_RR_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS business-expense M-R page checked for renovation and refurbishment treatment; local statute topic uses Section 14N.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-renovation-refurbishment"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-renovation-refurbishment"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_RR_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RR_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Apply the Section 14N renovation and refurbishment guidance only for the relevant Year of Assessment and qualifying costs."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RR_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "Year of Assessment",
+              "nature and date of qualifying costs",
+              "prior Section 14N claims"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-group-relief",
+      "question": "What IRAS guidance covers group relief between related companies?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-group-relief"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_GROUP_RELIEF_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Group Relief page title and topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-group-relief"
+        ],
+        "allowedTopicIds": [
+          "iras-group-relief"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_GROUP_RELIEF_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_GROUP_RELIEF_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Group relief is subject to the statutory group and claim conditions; company relationship, periods and transferred item facts are needed."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_GROUP_RELIEF_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "claiming and claimant company details",
+              "basis periods",
+              "type and amount of unutilised item"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "withholding-scope-and-rates",
+      "question": "Which payment categories to non-residents may trigger Singapore withholding tax, and where can I check the payment-type rates?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-withholding-tax"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to the existing IRAS WHT overview, payment-scope and payment-type/rates pages. The filing due-date page is excluded from this umbrella scope-and-rates case.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-withholding-tax"
+        ],
+        "allowedTopicIds": [
+          "iras-withholding-tax"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+            "IRAS_WHT_RATES_SOURCE_MAP",
+            "IRAS_WHT_SCOPE_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+              "IRAS_WHT_RATES_SOURCE_MAP",
+              "IRAS_WHT_SCOPE_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Whether withholding tax applies depends on the payment category, recipient non-resident status, Singapore source/nexus and applicable exceptions or treaty relief. Use the specific payment-type page for the rate; do not infer a due date from this scope-and-rates question."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+              "IRAS_WHT_RATES_SOURCE_MAP",
+              "IRAS_WHT_SCOPE_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "exact payment category and contract terms",
+              "recipient legal entity and tax residence",
+              "where services or rights are used/performed",
+              "Singapore source/nexus facts",
+              "treaty residence and exemption documents if relief is claimed"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-registration-tests",
+      "question": "How should a Singapore company assess GST registration and taxable turnover tests?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "gst_compulsory_registration",
+        "iras-gst-turnover-tests"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_REGISTRATION_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS GST registration guidance checked 2026-09-26; existing local threshold record remains linked.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "gst_compulsory_registration",
+          "iras-gst-turnover-tests"
+        ],
+        "allowedTopicIds": [
+          "gst_compulsory_registration",
+          "iras-gst-turnover-tests"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_REGISTRATION_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_REGISTRATION_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Apply both compulsory-registration tests: retrospective, where taxable turnover for a calendar year exceeds SGD 1 million, and prospective, where the business can reasonably expect taxable turnover to exceed SGD 1 million in the next 12 months. The relevant turnover and dates determine which test applies."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_REGISTRATION_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "taxable turnover for the current calendar year and prior calendar year",
+              "contracts or other evidence supporting expected taxable turnover in the next 12 months",
+              "dates on which either test is met"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-zero-rating",
+      "question": "What zero-rating rules apply to exports of goods and international services?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-zero-rating"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_ZERO_RATED_EXPORT_SOURCE_MAP",
+        "IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS pages for exporting goods and providing international services checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-zero-rating"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-zero-rating"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_ZERO_RATED_EXPORT_SOURCE_MAP",
+            "IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_ZERO_RATED_EXPORT_SOURCE_MAP",
+              "IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Goods exports and international services have distinct zero-rating conditions and evidence requirements; zero-rating is not automatic."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_ZERO_RATED_EXPORT_SOURCE_MAP",
+              "IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "supply type",
+              "customer and destination",
+              "export and supporting-document evidence"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-input-tax-and-blocked-input-tax",
+      "question": "What conditions apply to blocked input tax for motor vehicles?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-blocked-input-tax"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Conditions for Claiming Input Tax page checked 2026-09-26; existing local blocked-input-tax record remains linked.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-blocked-input-tax"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-blocked-input-tax"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "GST (General) Regulations Regulation 27 generally blocks input tax on motor cars. Determine the vehicle classification, who uses it, whether the recipient is an unrelated third party or a connected person, and the date the cost was incurred. Qualifying unrelated third-party motor-car costs may be claimable from 1 January 2023 subject to normal input-tax conditions; do not extend that treatment to connected persons or earlier costs without applicable evidence."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "vehicle classification and registration class",
+              "who used the car and whether that person is connected with the claimant",
+              "date the purchase, hire or running cost was incurred",
+              "claimant identity, tax invoice and taxable-business use"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-filing-and-payment-due-dates",
+      "question": "What is the GST return due date and GST payment due date?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-filing-deadlines"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_DUE_DATES_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS GST Due Dates and Requests for Extension page checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-filing-deadlines"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-filing-deadlines"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_DUE_DATES_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_DUE_DATES_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "A GST return and payment are generally due one month after the end of the GST accounting period. Confirm the period end and any applicable filing extension or payment arrangement."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_DUE_DATES_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "end date of the GST accounting period",
+              "whether IRAS granted an extension or a GIRO arrangement changes the payment debit date"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "employer-tax-clearance-ir21",
+      "question": "What should an employer check before filing tax clearance for a departing foreign employee using IR21?",
+      "domainId": "IRAS_EMPLOYER_TAX",
+      "topicIds": [
+        "iras-employer-ir21"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_IR21_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Tax Clearance for Foreign & SPR Employees (IR21) page checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-employer-ir21"
+        ],
+        "allowedTopicIds": [
+          "iras-employer-ir21"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_IR21_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_IR21_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Determine whether IR21 clearance and withholding obligations apply from employee status and cessation/departure facts."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_IR21_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "employee citizenship and residency status",
+              "cessation/departure date",
+              "last remuneration and monies to withhold"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "employment-income-annual-reporting",
+      "question": "Which employment income details should an employer report through AIS and Form IR8A?",
+      "domainId": "IRAS_EMPLOYER_TAX",
+      "topicIds": [
+        "iras-ais-employment-income"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_AIS_IR8A_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Reporting Employee Earnings (IR8A, Appendix 8A/8B) page checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-ais-employment-income"
+        ],
+        "allowedTopicIds": [
+          "iras-ais-employment-income"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_AIS_IR8A_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_AIS_IR8A_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Report employment earnings using the applicable AIS/IR8A instructions and form requirements for the reporting year."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_AIS_IR8A_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "reporting year",
+              "employee income and benefits",
+              "employer AIS participation status"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "section13w-pre-2026-disposal",
+      "question": "For an ordinary-share disposal completed on 30 December 2025, can the company rely on Section 13W?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-section-13w"
+      ],
+      "expectedSourceMapIds": [],
+      "mappingStatus": "DISCOVERY_ONLY",
+      "evidence": "No narrow IRAS page was verified for HTML fallback. The official IRAS taxable/non-taxable-income page links the 2025 fourth-edition Section 13W e-Tax Guide as a PDF; this benchmark remains discovery-only until PDF retrieval is validated.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-section-13w"
+        ],
+        "allowedTopicIds": [
+          "iras-section-13w"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NO_VERIFIED_MAP"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "DISCOVERY_ONLY_PDF_NOT_HTML_VALIDATED",
+            "expectedSourceMapIds": [],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "A 2025 fourth-edition IRAS e-Tax Guide exists as a PDF, but this HTML fallback cannot validate its contents. The date-bounded pre-2026 local summary indicates the safe harbour may apply to qualifying ordinary shares held at least 20% for a continuous 24 months, subject to exclusions; confirm shareholding, holding period, investee status and disposal facts before concluding.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [
+              "ordinary-share percentage held throughout the 24-month period",
+              "investee business/property-holding status and statutory exclusions",
+              "whether the gain is revenue or capital in nature"
+            ],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "PRE_2026_LOCAL_RULE_WINDOW_2012_TO_2025; LIVE_PDF_CONTENT_NOT_VALIDATED",
+            "expectedTargetPeriod": "Disposal on 30/12/2025; use the pre-2026 dated local summary and do not infer the 2026 expansion.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-customer-meal-input-tax",
+      "question": "A GST-registered company paid for a documented working lunch with a prospective customer. Can it claim the input GST?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-entertainment"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "The existing IRAS Conditions for Claiming Input Tax page is linked to the entertainment topic as a general input-tax route; the page pointer does not decide customer-meal eligibility by itself.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-entertainment"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-entertainment"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Do not decide solely from the label “customer meal.” Check ordinary input-tax conditions, business purpose/use in making taxable supplies, claimant registration, valid tax invoice and the identity/use facts; retrieve the relevant IRAS guidance before allowing or denying the claim."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "invoice and GST charged by the supplier",
+              "who attended and whether attendees were customers, employees or connected persons",
+              "documented business purpose and any private/personal element",
+              "taxable-supply use of the meal expense",
+              "whether the claimant incurred the cost or merely paid as agent"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-basis-period-year-of-assessment-and-deadlines",
+      "question": "What is the corporate basis period for a company?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-basis-period"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Basic Guide to Corporate Income Tax for Companies page was opened and checked for basis-period/YA and corporate-return due-date sections on 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-basis-period"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-basis-period"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Use the company accounting period to identify its basis period and corresponding Year of Assessment under IRAS guidance."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "financial year end",
+              "first or changed accounting period"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-capital-allowances",
+      "question": "Where does IRAS explain capital allowances for plant and machinery?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-capital-allowances"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Capital Allowances page title and topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-capital-allowances"
+        ],
+        "allowedTopicIds": [
+          "iras-capital-allowances"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Capital allowance treatment depends on asset eligibility, qualifying expenditure and the selected allowance claim conditions."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "asset description and use",
+              "date incurred and first use",
+              "allowance option previously claimed"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-unutilised-losses-and-shareholding-test",
+      "question": "Does the substantial shareholding test apply to tax loss carry-forward?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-loss-carry-forward",
+        "iras-substantial-shareholding-test"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Unutilised Items page title and relevant carry-forward/carry-back topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-loss-carry-forward",
+          "iras-substantial-shareholding-test"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-loss-carry-forward",
+          "iras-substantial-shareholding-test"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Carry-forward of losses and allowances is subject to conditions including the applicable shareholding test; ownership and relevant dates are needed."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "shareholders and ownership percentages at relevant dates",
+              "basis period and YA",
+              "type and amount of unutilised item"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-residency-and-foreign-income-relief",
+      "question": "What does IRAS say about corporate tax residence?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS company-residency, foreign-income and foreign-tax-credit pages checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "allowedTopicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Company tax residence depends on where control and management is exercised; governance and decision-making facts matter."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "where strategic control and management decisions occur",
+              "board and management arrangements",
+              "period for which residence is required"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-transfer-pricing",
+      "question": "What IRAS guidance should a company consult for transfer pricing documentation?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-transfer-pricing",
+        "iras-transfer-pricing-documentation"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_TRANSFER_PRICING_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Transfer Pricing page title and topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-transfer-pricing",
+          "iras-transfer-pricing-documentation"
+        ],
+        "allowedTopicIds": [
+          "iras-transfer-pricing",
+          "iras-transfer-pricing-documentation"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_TRANSFER_PRICING_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_TRANSFER_PRICING_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Related-party transactions should be assessed under the arm’s-length principle and applicable documentation requirements."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_TRANSFER_PRICING_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "related-party relationship",
+              "transaction type and value",
+              "financial year and documentation thresholds"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-voluntary-registration",
+      "question": "What are the requirements for voluntary GST registration?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "gst_compulsory_registration",
+        "iras-gst-voluntary-registration"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_REGISTRATION_SOURCE_MAP",
+        "IRAS_GST_VOLUNTARY_REGISTRATION_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Applying for GST Registration page title and voluntary-registration topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "gst_compulsory_registration",
+          "iras-gst-voluntary-registration"
+        ],
+        "allowedTopicIds": [
+          "gst_compulsory_registration",
+          "iras-gst-voluntary-registration"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_REGISTRATION_SOURCE_MAP",
+            "IRAS_GST_VOLUNTARY_REGISTRATION_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_REGISTRATION_SOURCE_MAP",
+              "IRAS_GST_VOLUNTARY_REGISTRATION_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Voluntary registration has application conditions and ongoing obligations; check the current IRAS process against the business facts."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_REGISTRATION_SOURCE_MAP",
+              "IRAS_GST_VOLUNTARY_REGISTRATION_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "business entity and taxable activities",
+              "registration date requested",
+              "ability to meet ongoing GST obligations"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-standard-exempt-and-out-of-scope",
+      "question": "What is an out-of-scope supply for GST?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-out-of-scope-supplies"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS GST charging, exempt-supply and out-of-scope-supply pages checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-out-of-scope-supplies"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-out-of-scope-supplies"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "An out-of-scope supply is distinct from standard-rated and exempt supplies; classify the transaction facts before determining reporting."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "place and nature of supply",
+              "supplier and customer locations",
+              "transaction structure"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-imported-services-reverse-charge-and-ovr",
+      "question": "How does GST reverse charge apply to imported services?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "gst_reverse_charge",
+        "iras-gst-imported-services"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Local Businesses and Overseas Businesses GST/digital-economy pages checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "gst_reverse_charge",
+          "iras-gst-imported-services"
+        ],
+        "allowedTopicIds": [
+          "gst_reverse_charge",
+          "iras-gst-imported-services"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Assess the local-business reverse-charge treatment for imported services using recipient and service facts."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "recipient GST status and input-tax recovery profile",
+              "supplier location",
+              "service type and place of use"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-customer-accounting",
+      "question": "What GST customer accounting for prescribed goods requirements apply?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-customer-accounting"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_CUSTOMER_ACCOUNTING_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Customer Accounting for Prescribed Goods page title and topic checked 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-customer-accounting"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-customer-accounting"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_CUSTOMER_ACCOUNTING_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_CUSTOMER_ACCOUNTING_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Customer accounting applies only to prescribed goods and qualifying transactions; supplier, customer and invoice status must be checked."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_CUSTOMER_ACCOUNTING_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "goods and transaction value",
+              "GST registration status of parties",
+              "invoice and accounting records"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-tax-invoices-and-record-retention",
+      "question": "What GST tax invoice requirements and GST record keeping apply?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-tax-invoice-record-keeping"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Official IRAS Invoicing Customers page checked for tax-invoice and five-year record-retention sections on 2026-09-26.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-tax-invoice-record-keeping"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-tax-invoice-record-keeping"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+            "IRAS_GST_INVOICING_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+              "IRAS_GST_INVOICING_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Follow IRAS tax-invoice and record-keeping requirements; the verified guidance states GST records are retained for at least five years."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+              "IRAS_GST_INVOICING_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "supply type and value",
+              "invoice date and customer status",
+              "record type and retention start point"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "wht-deemed-payment-due-date-and-treaty",
+      "question": "When is WHT treated as paid for a non-resident payment, when is filing due, and what treaty relief facts must be checked?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-wht-deemed-payment-date",
+        "iras-wht-filing-payment-due-date",
+        "iras-wht-treaty-relief"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_WHT_DUE_DATE_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to the specific IRAS WHT filing/payment due-date page through the deemed-date, filing-deadline and WHT-treaty topics; broad DTA/foreign-tax-credit coverage is excluded.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-wht-deemed-payment-date",
+          "iras-wht-filing-payment-due-date",
+          "iras-wht-treaty-relief"
+        ],
+        "allowedTopicIds": [
+          "iras-wht-deemed-payment-date",
+          "iras-wht-filing-payment-due-date",
+          "iras-wht-treaty-relief"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_WHT_DUE_DATE_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_DUE_DATE_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Determine the deemed payment date from the contract and payment facts; if there is no contract, use the relevant invoice date under IRAS guidance. WHT filing and payment are generally due by the 15th of the second month following the deemed payment date. Treaty relief still requires the applicable treaty and supporting facts."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_DUE_DATE_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "contractual due date, or invoice date if there is no contract",
+              "actual payment, credit or availability date",
+              "payment category and recipient residence",
+              "service performance location if the payment is for services",
+              "treaty residence certificate, beneficial entitlement and required IRAS documents",
+              "payment year and applicable rule period"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "employment-bonus-and-director-fee-timing",
+      "question": "For a bonus and directors’ fees, what dates determine the employee tax assessment year?",
+      "domainId": "IRAS_EMPLOYER_TAX",
+      "topicIds": [
+        "iras-employee-bonus-timing",
+        "iras-directors-fees"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "The timing case routes to IRAS employment-income timing guidance. The separate AIS/IR8A page is not treated as evidence of bonus or director-fee assessment timing.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-employee-bonus-timing",
+          "iras-directors-fees"
+        ],
+        "allowedTopicIds": [
+          "iras-employee-bonus-timing",
+          "iras-directors-fees"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Bonus timing depends on when the employee becomes entitled under the plan/contract; directors’ fees timing depends on the relevant approval facts. The service year alone is insufficient to assign an assessment year."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "bonus plan/contract terms and vesting or entitlement date",
+              "bonus approval and payment dates",
+              "director-fee resolution and approval date",
+              "relevant service period and YA being tested"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-form-c-filing-deadline",
+      "question": "What is the Form C filing due date for a company?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "evidence": "Official IRAS Basic Guide to Corporate Income Tax page opened and checked for the filing due-date section on 2026-09-26.",
+      "conclusion": "Determine the Form C filing due date for the company’s Year of Assessment from the current IRAS guide.",
+      "missingFacts": [
+        "Year of Assessment",
+        "filing category and any extension"
+      ],
+      "mappingStatus": "MAPPED",
+      "expectedSourceMapIds": [
+        "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-cit-filing-deadlines"
+      ],
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-filing-deadlines"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-filing-deadlines"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "A company generally files Form C electronically by 30 November of the relevant YA. Identify the correct YA and check current IRAS filing notices or extensions before relying on the date."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_BASIS_FILING_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "company basis period and resulting YA",
+              "whether the return is Form C rather than an eligible simplified Form C-S return",
+              "any current IRAS notice or extension affecting the filing deadline"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-foreign-sourced-income",
+      "question": "How is foreign-sourced income treated for corporate tax?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "evidence": "Official IRAS Companies Receiving Foreign Income page title and topic checked 2026-09-26.",
+      "conclusion": "Apply the IRAS rules for specified foreign income received in Singapore and verify any exemption conditions.",
+      "missingFacts": [
+        "income type and source",
+        "date received in Singapore",
+        "tax and substance evidence"
+      ],
+      "mappingStatus": "MAPPED",
+      "expectedSourceMapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-foreign-sourced-income"
+      ],
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-foreign-sourced-income"
+        ],
+        "allowedTopicIds": [
+          "iras-foreign-sourced-income"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Foreign income received in Singapore is not automatically exempt. Determine whether the specific income category meets the statutory exemption conditions, including receipt and applicable subject-to-tax or headline-tax requirements, before excluding it from chargeable income."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "type and source jurisdiction of the income",
+              "date and manner the income was received in Singapore",
+              "foreign tax paid and proof, where the exemption requires it",
+              "applicable exemption category and any condition-specific substance or headline-tax facts"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-foreign-tax-credit",
+      "question": "A Singapore company paid foreign tax on income also reported in Singapore. What foreign tax credit relief may it claim?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "evidence": "The IRAS Foreign Tax Credit page is routed only to the narrow foreign-tax-credit topic; it is not used as a general guide to every Double Tax Agreement provision.",
+      "conclusion": "Check the applicable agreement and foreign tax credit conditions; treaty relief is not assumed without residence, income and tax facts.",
+      "missingFacts": [
+        "jurisdictions and applicable agreement",
+        "income category and source",
+        "foreign tax paid and supporting proof"
+      ],
+      "mappingStatus": "MAPPED",
+      "expectedSourceMapIds": [
+        "IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-foreign-tax-credit"
+      ],
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-foreign-tax-credit"
+        ],
+        "allowedTopicIds": [
+          "iras-foreign-tax-credit"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Foreign tax credit relief may be available for qualifying foreign tax on foreign income also taxed in Singapore, subject to the applicable agreement/unilateral relief rules, source, tax-paid proof and credit limitation. Do not infer treaty protection for unrelated income categories."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "income type and source jurisdiction",
+              "whether and when the income is received in Singapore and taxed here",
+              "foreign tax assessment/payment evidence",
+              "applicable DTA and residence/entitlement facts",
+              "Singapore tax attributable to the same income and credit limitation details"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-standard-rated-supplies",
+      "question": "What GST standard-rated supply rule applies?",
+      "domainId": "IRAS_GST",
+      "evidence": "Official IRAS When to Charge GST page title and standard-rate topic checked 2026-09-26.",
+      "conclusion": "Assess whether the transaction is a standard-rated supply under IRAS guidance before charging GST.",
+      "missingFacts": [
+        "nature and place of supply",
+        "supplier GST registration status",
+        "transaction date"
+      ],
+      "mappingStatus": "MAPPED",
+      "expectedSourceMapIds": [
+        "IRAS_GST_CHARGING_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-standard-rated-supplies"
+      ],
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-standard-rated-supplies"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-standard-rated-supplies"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_CHARGING_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_CHARGING_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "For 2026, a GST-registered supplier generally charges 9% on a standard-rated taxable supply. First classify the supply and identify the time of supply; zero-rated, exempt and out-of-scope supplies are treated differently."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_CHARGING_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "nature and place of supply",
+              "supplier GST-registration status",
+              "whether an exception makes the supply zero-rated, exempt or out-of-scope",
+              "invoice, payment and delivery/performance dates for the time-of-supply rule"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-exempt-supplies",
+      "question": "What are exempt supplies for GST?",
+      "domainId": "IRAS_GST",
+      "evidence": "Official IRAS Supplies Exempt from GST page title and topic checked 2026-09-26.",
+      "conclusion": "Determine whether the transaction fits an exempt-supply category; input-tax recovery consequences may also need checking.",
+      "missingFacts": [
+        "supply category and transaction facts",
+        "whether related input tax is claimed"
+      ],
+      "mappingStatus": "MAPPED",
+      "expectedSourceMapIds": [
+        "IRAS_GST_EXEMPT_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-exempt-supplies"
+      ],
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-exempt-supplies"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-exempt-supplies"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_EXEMPT_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_EXEMPT_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Treat a transaction as exempt only if it falls within an exempt-supply category under the GST rules. Confirm the exact supply classification and separately assess whether related input tax is recoverable; exemption is not the same as zero-rating or out-of-scope treatment."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_EXEMPT_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "exact goods/services or property interest supplied",
+              "contract and customer/recipient facts needed to classify the supply",
+              "whether the supply is exempt, zero-rated or outside scope",
+              "input tax directly attributable to the supply and any partial-exemption position"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-ovr-low-value-goods",
+      "question": "What does overseas vendor registration require for remote services and low-value goods?",
+      "domainId": "IRAS_GST",
+      "evidence": "Official IRAS Overseas Businesses page title and OVR topic checked 2026-09-26.",
+      "conclusion": "Assess overseas supplier registration and collection obligations under the current OVR rules based on supplies, customer and turnover facts.",
+      "missingFacts": [
+        "supplier establishment and registration status",
+        "remote services/low-value goods supplied",
+        "Singapore customer and turnover facts"
+      ],
+      "mappingStatus": "MAPPED",
+      "expectedSourceMapIds": [
+        "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP",
+        "IRAS_GST_OVR_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-ovr",
+        "iras-gst-low-value-goods"
+      ],
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-ovr",
+          "iras-gst-low-value-goods"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-ovr",
+          "iras-gst-low-value-goods"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP",
+            "IRAS_GST_OVR_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP",
+              "IRAS_GST_OVR_SOURCE_MAP"
+            ],
+            "policy": "Fetch only the exact mapped or bounded discovered official URL and require title, topic and final-host validation."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only a validated fetched candidate excerpt may enter grounding; the static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "An overseas supplier should assess OVR rules when it supplies remote services or low-value goods to Singapore consumers. Registration liability depends on supplier establishment, supply type, customer status, turnover tests and marketplace arrangements; do not conclude from the product label alone."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP",
+              "IRAS_GST_OVR_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Do not cite a pointer; cite only a final validated official URL supporting a reviewed claim."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "supplier establishment and Singapore GST-registration status",
+              "whether the supply is a remote service or low-value good",
+              "customer location and GST-registration status",
+              "global and Singapore turnover for the relevant period",
+              "whether an electronic marketplace is the supplier or deemed supplier"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "CURRENT_URL_VERIFICATION_DOES_NOT_ESTABLISH_RULE_EFFECTIVE_PERIOD",
+            "expectedTargetPeriod": "No historical tax period is specified; historical use requires dated source evidence."
+          }
+        }
+      }
+    },
+    {
+      "id": "section13w-post-2026-disposal",
+      "question": "For a disposal on 2 January 2026 of qualifying preference shares, can Section 13W apply where the company and eligible group entities held the required interest?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-section-13w"
+      ],
+      "expectedSourceMapIds": [],
+      "mappingStatus": "DISCOVERY_ONLY",
+      "evidence": "No narrow IRAS page was verified for HTML fallback. The 2025 fourth-edition Section 13W e-Tax Guide is linked as a PDF from IRAS taxable/non-taxable-income guidance; PDF retrieval and validation remain unavailable in this HTML source-map route.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-section-13w"
+        ],
+        "allowedTopicIds": [
+          "iras-section-13w"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NO_VERIFIED_MAP"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "DISCOVERY_ONLY_PDF_NOT_HTML_VALIDATED",
+            "expectedSourceMapIds": [],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "For disposals from 1 January 2026, the date-bounded local summary reflects expansion to qualifying preference shares and eligible group-basis holdings. Eligibility remains conditional on share rights, continuous 24-month ownership threshold, statutory exclusions and the detailed IRAS PDF guide; do not infer a safe-harbour result from the prompt alone.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [
+              "preference-share rights and whether they meet qualifying criteria",
+              "company and group ownership percentages across the full 24 months",
+              "group relationship and eligible aggregation basis",
+              "investee/property-holding exclusions and whether gain is capital or revenue"
+            ],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "2026_ONWARD_LOCAL_RULE_WINDOW; LIVE_PDF_CONTENT_NOT_VALIDATED",
+            "expectedTargetPeriod": "Disposal on 02/01/2026; apply only the post-2026 period summary, subject to proof of every condition.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-renovation-section-14n-ya2024",
+      "question": "For qualifying renovation costs in a company basis period for YA 2024, what Section 14N deduction timing and cap period applied?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-renovation-refurbishment"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_RR_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to the existing IRAS Business Expenses (M-R) page for current-topic retrieval; the historical answer must use the date-bounded local Section 14N YA 2018–2024 record because the page pointer has no historical validity interval.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-renovation-refurbishment"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-renovation-refurbishment"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "HISTORICAL_LOCAL_RULE_ONLY"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "HISTORICAL_LOCAL_RULE_ONLY",
+            "expectedSourceMapIds": [],
+            "policy": "Do not fetch the current IRAS page for YA 2024 without a pointer validity interval; use only the applicable date-bounded local historical record and its official-source reference."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "For YAs 2018–2024, qualifying R&R expenditure was generally deducted over three consecutive YAs subject to the cap period determined by the first claim; the one-year option applied only for qualifying expenditure in YAs 2021, 2022 and 2024. Establish the exact YA, first-claim cap period and any election before calculating.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [
+              "itemised nature of work and whether structural or otherwise excluded",
+              "first R&R claim date and expenditure already counted toward the historical cap period",
+              "whether a one-year deduction election was made for YA 2024",
+              "business continuity and invoices"
+            ],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "LOCAL_HISTORICAL_RECORD_VALID_FOR_YA_2024; NO_HISTORICAL_POINTER_INTERVAL",
+            "expectedTargetPeriod": "YA 2024; the current HTML pointer does not establish historical validity.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-renovation-section-14n-ya2026",
+      "question": "For qualifying non-structural renovation costs incurred for YA 2026, what Section 14N options and cap period should the company check?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-renovation-refurbishment"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_RR_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to the existing IRAS Business Expenses (M-R) page, with current period handling subject to live page validation; the URL pointer alone is not tax-claim evidence.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-renovation-refurbishment"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-renovation-refurbishment"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_RR_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RR_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "For YAs from 2025, qualifying Section 14N costs may generally be deducted over three consecutive YAs or under the one-year option, subject to the fixed SGD 300,000 cap for YAs 2025–2027. Confirm qualifying work, prior claims against the cap and election before calculating.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RR_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [
+              "when the costs were incurred and which basis period they fall into",
+              "itemised works and whether structural or otherwise excluded",
+              "amount of YA 2025–2027 cap already used",
+              "whether the company elects one-year deduction or three-year deduction",
+              "business continuity and supporting invoices"
+            ],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "LOCAL_RULE_VALID_FROM_YA_2025; CURRENT_SOURCE_PAGE_REQUIRES_CONTENT_VALIDATION",
+            "expectedTargetPeriod": "YA 2026; verify the current IRAS page before relying on a current live claim.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-deductible-versus-capital-expense",
+      "question": "A company paid recurring software subscriptions and also bought a server for multi-year use. Which costs are potentially deductible as business expenses?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Uses the existing IRAS Business Expenses page route for deductible/non-deductible expense guidance; the classification depends on the actual nature and useful-life facts.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_EXPENSES_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_EXPENSES_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Recurring operating subscriptions incurred wholly and exclusively in producing income may qualify as revenue deductions if not private or otherwise prohibited. A server acquired for multi-year use is capital in nature; do not deduct its full cost as an operating expense, and assess capital allowances separately under the applicable conditions."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_EXPENSES_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "contract and invoice split between subscription, implementation and hardware",
+              "business/private use and income-producing purpose",
+              "asset ownership, use and date first brought into use",
+              "whether the server meets capital-allowance conditions",
+              "YA and any prior claims"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-passenger-car-income-tax-deduction",
+      "question": "Can a company deduct depreciation and running costs for its S-plate passenger motor car, and can it claim capital allowances?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-disallowed-expenses",
+        "iras-capital-allowances"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP",
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "The existing IRAS Business Expenses and Capital Allowances routes support general expense/allowance retrieval; passenger-car treatment must be grounded in the local Section 15 rule and the facts, not inferred from the broad pages alone.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-disallowed-expenses",
+          "iras-capital-allowances"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-disallowed-expenses",
+          "iras-capital-allowances"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP",
+            "IRAS_CIT_EXPENSES_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP",
+              "IRAS_CIT_EXPENSES_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Passenger-car expenses and capital allowances are generally disallowed under the relevant motor-car restriction; verify registration class and whether a statutory business exception applies before deciding. Do not treat an S-plate label alone as sufficient to resolve ownership, rental/trading or other exception facts."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP",
+              "IRAS_CIT_EXPENSES_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "vehicle registration class and actual vehicle type",
+              "whether the company owns, leases, rents, trades in or repairs the vehicle",
+              "business purpose and who uses the car",
+              "whether a statutory exception applies",
+              "depreciation/running-cost amounts and YA"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-loss-carry-back-relief",
+      "question": "Can a company carry back current-year unabsorbed trade losses to reduce the immediately preceding YA assessment?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-loss-carry-back"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to the IRAS Unutilised Items page covering trade losses and carry-back relief; eligibility and cap remain subject to the actual YA and statutory tests.",
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "iras_retrieval_reviewer",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-loss-carry-back"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-loss-carry-back"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "HISTORICAL_LOCAL_RULE_ONLY",
+          "evidence": "The phrase 'immediately preceding YA' is unresolved historical intent. Do not fetch the current undated IRAS pointer or use sitemap discovery. Section 37E local statutory guidance is dated from 2006; confirm the loss YA and use only that period-applicable local rule, or ask for clarification if applicability cannot be established."
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "HISTORICAL_LOCAL_RULE_ONLY",
+            "expectedSourceMapIds": [],
+            "policy": "The routing catalog associates this topic with the IRAS Unutilised Items map, but the relative prior-YA request does not establish a reviewed validity interval for that current page. Fail closed for live fallback and sitemap discovery; ITA Section 37E local statutory guidance is valid from 2006 and may be used only if the loss YA is within its period."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Carry-back relief may be available for qualifying current-year unabsorbed trade losses, generally subject to the statutory aggregate cap, one-preceding-YA limit, substantial-shareholding continuity and election requirements. Confirm current rules and whether the same-business test applies to the item before quantifying relief."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [],
+            "expectedPolicy": "Do not cite a current page for an unresolved prior-YA period; cite only applicable dated local evidence or a future verified period-specific source."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "loss YA and immediately preceding YA",
+              "amount/type of unabsorbed trade loss and other carry-back items",
+              "shareholder continuity on the comparison dates",
+              "same-business facts if capital allowances are included",
+              "election and filing status"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "wht-overseas-interest-payment",
+      "question": "A Singapore company pays interest on a loan to a non-resident lender. When may Singapore WHT apply, and what determines the rate?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to IRAS payment-scope and payment-type/rates guidance. The interest-specific local record notes that recipient residence, Singapore source, treaty position and date can change the result.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-withholding-tax-interest-royalties"
+        ],
+        "allowedTopicIds": [
+          "iras-withholding-tax-interest-royalties"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_WHT_RATES_SOURCE_MAP",
+            "IRAS_WHT_SCOPE_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_RATES_SOURCE_MAP",
+              "IRAS_WHT_SCOPE_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Interest or specified loan charges paid to a non-resident may attract Singapore WHT when the Singapore source/nexus and statutory conditions are met. A 15% final rate may apply only to qualifying gross interest; treaty relief, exemptions and other facts can change the rate/basis, so do not apply 15% automatically."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_RATES_SOURCE_MAP",
+              "IRAS_WHT_SCOPE_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "lender legal identity, residence and beneficial entitlement",
+              "loan terms and nature of each charge",
+              "borrower/loan Singapore source and use-of-funds facts",
+              "interest payment/credit/availability date",
+              "applicable DTA residence certificate and exemption evidence"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "wht-management-service-fees",
+      "question": "A Singapore company pays management and technical service fees to a non-resident group company. Which facts determine whether WHT applies and the rate?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-withholding-tax-management-fees"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to existing IRAS payment-scope and payment-type/rates pages for the specific management/service-fee topic. The WHT due-date page is excluded because the question asks only whether the payment is subject to WHT and its rate; local treatment distinguishes service location, recipient status, treaty and service year.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-withholding-tax-management-fees"
+        ],
+        "allowedTopicIds": [
+          "iras-withholding-tax-management-fees"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_WHT_RATES_SOURCE_MAP",
+            "IRAS_WHT_SCOPE_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_RATES_SOURCE_MAP",
+              "IRAS_WHT_SCOPE_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedConclusion": "Management/service fees require classification of the service, recipient residence and where the work was physically performed. Services performed in Singapore may be subject to non-final WHT at the prevailing corporate rate for the service year; treaty relief or exemption can alter the result. Payment year alone does not set this rate."
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_WHT_RATES_SOURCE_MAP",
+              "IRAS_WHT_SCOPE_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedFacts": [
+              "statement of work and breakdown of services/royalties",
+              "which services were physically performed in Singapore and supporting records",
+              "recipient residence and beneficial entitlement",
+              "service period/YA and deemed payment date",
+              "DTA eligibility and documents"
+            ]
+          },
+          "effectiveDate": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NO_TARGET_PERIOD_SPECIFIED_DO_NOT_INFER_HISTORICAL_APPLICABILITY",
+            "expectedTargetPeriod": "No historical period is specified; current page verification does not establish earlier-period rules."
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-third-party-passenger-car-cost",
+      "question": "On 15 May 2023, a company buys an S-plate passenger car for an unrelated customer to use while the customer's own car is repaired. May the company claim input GST?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-motor-vehicles",
+        "iras-gst-blocked-input-tax"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "The existing IRAS Conditions for Claiming Input Tax page is linked to motor-vehicle/blocked-input-tax topics. This generic unrelated-customer-use scenario stays within the HTML guidance route; no insurer or policyholder-specific guide is assumed.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-motor-vehicles",
+          "iras-gst-blocked-input-tax"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-motor-vehicles",
+          "iras-gst-blocked-input-tax"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "HISTORICAL_LOCAL_RULE_ONLY"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "HISTORICAL_LOCAL_RULE_ONLY",
+            "expectedSourceMapIds": [],
+            "policy": "Do not use the undated current IRAS page as historical evidence for 15 May 2023; use the applicable local third-party motor-car rule and retain the exact date-specific conditions."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "For a 15 May 2023 cost incurred for unrelated customer use, do not automatically apply the own-use passenger-car block. IRAS guidance allows qualifying third-party motor-car costs from 1 January 2023 subject to normal input-tax conditions; confirm the company incurred the cost for business purposes, has a valid tax invoice and meets ordinary recovery requirements.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [],
+            "expectedPolicy": "Cite the applicable local dated rule or a validated period-specific official source; do not cite the undated current IRAS pointer as proof of 2023 treatment."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [
+              "whether the company incurred the cost or acted only as payment agent",
+              "whose name is on the tax invoice and who bears the cost",
+              "company GST registration and taxable-supply use",
+              "business purpose, records and any private element"
+            ],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "THIRD_PARTY_MOTOR_CAR_GUIDANCE_APPLIES_FROM_2023-01-01_SUBJECT_TO_NORMAL_CONDITIONS",
+            "expectedTargetPeriod": "The stated transaction date is 15 May 2023; do not infer this treatment for earlier costs.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    },
+    {
+      "id": "cit-form-cs-and-lite-eligibility-ya2026",
+      "question": "For YA 2026, can a Singapore-incorporated company with S$180,000 revenue use Form C-S (Lite) if it claims a foreign tax credit?",
+      "domainId": "IRAS_CORPORATE_TAX",
+      "topicIds": [
+        "iras-cit-returns"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_RETURNS_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "Routes to the specific IRAS overview of Form C-S, Form C-S (Lite) and Form C. Eligibility conditions in the local YA 2026 rule exclude a foreign-tax-credit claim from Form C-S eligibility.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-cit-returns"
+        ],
+        "allowedTopicIds": [
+          "iras-cit-returns"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "IRAS_CIT_RETURNS_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "MAPPED_SOURCE",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RETURNS_SOURCE_MAP"
+            ],
+            "policy": "Fetch only an exact mapped IRAS URL, validate final title/topic/host, and retain fetched text as candidate evidence."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "Only validated fetched IRAS candidate text or date-bounded local evidence may support claims; a static source-map pointer is never evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "No. For YA 2026, claiming a foreign tax credit disqualifies the company from Form C-S and Form C-S (Lite), despite its Singapore incorporation and SGD 180,000 revenue. It must file Form C.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedResult": "NOT_APPLICABLE_WITHOUT_NUMERIC_FACTS",
+            "expectedAmounts": []
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [
+              "IRAS_CIT_RETURNS_SOURCE_MAP"
+            ],
+            "expectedPolicy": "Cite only validated final IRAS pages or the applicable dated local statutory record; never cite the routing pointer as evidence."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "YA_2026_FORM_CS_RULES_ONLY; VERIFY_CURRENT_IRAS_GUIDANCE",
+            "expectedTargetPeriod": "YA 2026; the case does not establish eligibility for another YA.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-standard-rated-supply-historical-2023",
+      "question": "A GST-registered Singapore supplier completed a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2023; it issued the tax invoice and received payment on that same date. What are output GST and the invoice total?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-standard-rated-supplies"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_CHARGING_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "The case maps to the existing IRAS standard-rated-supplies page, but the 1 July 2023 calculation must use the date-bounded local SSO GSTA Section 16 rate record because the HTML pointer has no historical validity interval. Supply, invoice and payment dates are all specified away from the rate-change boundary.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-standard-rated-supplies"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-standard-rated-supplies"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "HISTORICAL_LOCAL_RULE_ONLY"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "HISTORICAL_LOCAL_RULE_ONLY",
+            "expectedSourceMapIds": [],
+            "policy": "Decline the current IRAS page for 1 July 2023; use only the Section 16 local source record whose validFrom/validTo covers the date."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "The date-bounded SSO GST Act Section 16 record supports the rate; do not treat the current IRAS source-map pointer as historical evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "The supply is stated to be standard-rated and tax-exclusive, and supply, tax-invoice and payment dates all fall on 1 July 2023. Apply the 8% standard rate: output GST is SGD 80 and the invoice total is SGD 1,080.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "8_PERCENT_OUTPUT_GST_80_TOTAL_1080",
+            "taxableValueSGD": 1000,
+            "rate": 0.08,
+            "expectedAmounts": [
+              {
+                "description": "Output GST",
+                "amount": 80,
+                "currency": "SGD"
+              },
+              {
+                "description": "Invoice total",
+                "amount": 1080,
+                "currency": "SGD"
+              }
+            ],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [],
+            "expectedLocalSourceIds": [
+              "GST_RATE_8_PERCENT_2023"
+            ],
+            "expectedPolicy": "Cite the date-bounded SSO GSTA Section 16 record; do not cite the undated current IRAS pointer as historical rate proof."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "LOCAL_GST_RATE_VALID_FROM_2023-01-01_TO_2023-12-31",
+            "expectedTargetPeriod": "1 July 2023; supply, invoice and payment dates agree.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    },
+    {
+      "id": "gst-standard-rated-supply-historical-2024",
+      "question": "A GST-registered Singapore supplier completed a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2024; it issued the tax invoice and received payment on that same date. What are output GST and the invoice total?",
+      "domainId": "IRAS_GST",
+      "topicIds": [
+        "iras-gst-standard-rated-supplies"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_CHARGING_SOURCE_MAP"
+      ],
+      "mappingStatus": "MAPPED",
+      "evidence": "The case maps to the existing IRAS standard-rated-supplies page, but the 1 July 2024 calculation must use the date-bounded local SSO GSTA Section 16 rate record because the HTML pointer has no historical validity interval. Supply, invoice and payment dates are all specified away from the rate-change boundary.",
+      "routingOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "authorities": [
+          "IRAS"
+        ],
+        "domainIds": [
+          "IRAS_GST"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "iras-gst-standard-rated-supplies"
+        ],
+        "allowedTopicIds": [
+          "iras-gst-standard-rated-supplies"
+        ],
+        "forbiddenTopicIds": [],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "HISTORICAL_LOCAL_RULE_ONLY"
+        }
+      },
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "expectedOutcomes": {
+          "sourceRetrieval": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedRoute": "HISTORICAL_LOCAL_RULE_ONLY",
+            "expectedSourceMapIds": [],
+            "policy": "Decline the current IRAS page for 1 July 2024; use only the Section 16 local source record whose validFrom/validTo covers the date."
+          },
+          "grounding": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedEvidencePolicy": "The date-bounded SSO GST Act Section 16 record supports the rate; do not treat the current IRAS source-map pointer as historical evidence."
+          },
+          "substantiveConclusion": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedConclusion": "The supply is stated to be standard-rated and tax-exclusive, and supply, tax-invoice and payment dates all fall on 1 July 2024. Apply the 9% standard rate: output GST is SGD 90 and the invoice total is SGD 1,090.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "calculation": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "9_PERCENT_OUTPUT_GST_90_TOTAL_1090",
+            "taxableValueSGD": 1000,
+            "rate": 0.09,
+            "expectedAmounts": [
+              {
+                "description": "Output GST",
+                "amount": 90,
+                "currency": "SGD"
+              },
+              {
+                "description": "Invoice total",
+                "amount": 1090,
+                "currency": "SGD"
+              }
+            ],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "citation": {
+            "reviewStatus": "PENDING_REVIEW",
+            "expectedSourceMapIds": [],
+            "expectedLocalSourceIds": [
+              "GST_RATE_9_PERCENT"
+            ],
+            "expectedPolicy": "Cite the date-bounded SSO GSTA Section 16 record; do not cite the undated current IRAS pointer as historical rate proof."
+          },
+          "missingFacts": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedFacts": [],
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          },
+          "effectiveDate": {
+            "reviewStatus": "INDEPENDENTLY_VERIFIED",
+            "expectedResult": "LOCAL_GST_RATE_VALID_FROM_2024-01-01",
+            "expectedTargetPeriod": "1 July 2024; supply, invoice and payment dates agree.",
+            "reviewer": "iras_content_reviewer",
+            "reviewedAt": "2026-09-26"
+          }
+        }
+      }
+    }
+  ],
+  "reviewNotes": "reviewedDimensions and unverifiedDimensions describe dimensions reviewed uniformly across all 43 cases; individual routingOracle.review and expectedOutcomes review metadata control case-level scoring."
+}

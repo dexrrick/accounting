@@ -124,6 +124,15 @@ export class InMemorySourceRetriever implements ISourceRetriever {
     } = retrievalQuery;
     const lowerQ = query.toLowerCase();
     const queryTokens = lowerQ.split(/[\s,.;:!?/()]+/).filter((t) => t.length > 2);
+    // Section 14N changes are scoped by YA and its basis period. A transaction
+    // date in a different calendar year cannot select one of the YA summaries
+    // until the company's basis period is known.
+    const renovationYa = /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.exec(query)?.[1];
+    const expenditureCalendarYear = /\b[0-3]?\d[/-][01]?\d[/-](20\d{2})\b/.exec(query)?.[1] ||
+      /\b(20\d{2})-[01]\d-[0-3]\d\b/.exec(query)?.[1] ||
+      /\b[0-3]?\d\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(20\d{2})\b/i.exec(query)?.[1];
+    const renovationBasisPeriodUnclear = /\b(?:renovat\w*|refurbish\w*|section 14n)\b/i.test(query) &&
+      Boolean(renovationYa && expenditureCalendarYear && renovationYa !== expenditureCalendarYear);
 
     // Resolve target date (either explicit or parsed from query)
     const resolvedDateInfo = explicitTargetDate
@@ -149,6 +158,7 @@ export class InMemorySourceRetriever implements ISourceRetriever {
 
     for (const record of this.sources) {
       if (!isAnswerGroundingEligibleSource(record)) continue;
+      if (renovationBasisPeriodUnclear && record.id.startsWith('ITA_SEC14N_RENOVATION_REFURBISHMENT')) continue;
       // When both hints are explicit, treat them as joint eligibility
       // constraints. A source from a different domain must not remain eligible
       // merely because it shares an authority (for example, ACRA corporate law

@@ -254,7 +254,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
                             : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800'
                         }`}>
-                          GST 9%: {adv.isGstClaimable ? '✓ Claimable Input Tax' : '✗ Blocked Input Tax (Reg 26)'}
+                          GST 9%: {adv.isGstClaimable ? '✓ Claimable Input Tax' : '✗ Blocked Input Tax (Reg 26/27)'}
                         </span>
                       )}
                     </div>

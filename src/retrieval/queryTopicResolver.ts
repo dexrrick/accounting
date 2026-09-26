@@ -228,6 +228,11 @@ export class QueryTopicResolver {
 
 function keywordMatches(text: string, keyword: string): boolean {
   const normalizedKeyword = keyword.toLowerCase();
+  // Statute section labels are identifiers: section 14 must not match
+  // section 14N, which is a distinct Income Tax Act provision.
+  if (normalizedKeyword === 'section 14') {
+    return /\bsection\s+14\b/i.test(text);
+  }
   // Short statutory acronyms are tokens, not substrings (e.g. ECI must not
   // match “specific”, NCI must not match “dependencies”, or AIS “raising”).
   if (/^[a-z0-9]{2,4}$/i.test(normalizedKeyword)) {

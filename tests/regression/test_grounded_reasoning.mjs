@@ -566,7 +566,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   passed++;
 
   // 8B. Recognized transactions calculated by the deterministic accounting engine have authorityStatus === 'DETERMINISTIC'
-  const recognizedCarQuery = 'Company buys passenger car for 100000 with bank';
+  const recognizedCarQuery = 'Company buys an S-plate passenger car for 100000 for use by employees';
   const carDeterministic = await parseAccountingQuery(recognizedCarQuery);
   assert.strictEqual(carDeterministic.scenarioType, 'CAR_PURCHASE_STATUTORY');
   assert.strictEqual(carDeterministic.authorityStatus, 'DETERMINISTIC');
@@ -582,6 +582,10 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   );
   assert.strictEqual(carProcessed.scenarioState.authorityStatus, 'DETERMINISTIC', 'Recognized transaction must have authorityStatus === DETERMINISTIC');
   assert.strictEqual(carProcessed.scenarioState.directGroups[0].authorityStatus, 'DETERMINISTIC', 'Recognized directGroup must have authorityStatus === DETERMINISTIC');
+  const ambiguousCarQuery = 'Company buys passenger car for 100000 with bank';
+  const ambiguousCar = await parseAccountingQuery(ambiguousCarQuery);
+  assert.notStrictEqual(ambiguousCar.scenarioType, 'CAR_PURCHASE_STATUTORY', 'A passenger-car purchase without explicit own-use facts must not enter the automatic statutory fast path.');
+  assert.ok(!ambiguousCar.statutoryAdvisory?.some(advisory => advisory.isGstClaimable === false), 'Ambiguous recipient/use facts must not receive an unconditional GST block.');
   console.log('✓ 8B. Fully specified recognized transactions computed by deterministic engine receive DETERMINISTIC');
   passed++;
 

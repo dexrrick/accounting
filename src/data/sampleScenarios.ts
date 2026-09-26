@@ -53,7 +53,7 @@ export const SAMPLE_PROMPTS: SamplePrompt[] = [
     id: 'car-purchase-blocked',
     title: 'Passenger Car: Blocked GST & Non-Deductible Depreciation',
     standard: 'IRAS Reg 26 & S15(1)(k)',
-    query: 'I bought a company car for SGD 120k with bank. How to record double entries and can I claim 9% GST under IRAS?',
+    query: 'I bought an S-plate passenger company car for SGD 120k with bank. How to record double entries and can I claim 9% GST under IRAS?',
     tag: 'Blocked GST & Tax'
   },
   {

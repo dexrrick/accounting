@@ -78,7 +78,7 @@ console.log('\n[2. ERADICATION OF HARD-CODED FALLBACK AMOUNTS]');
   console.log('✓ 2A. Proved: Capitalisation without outlay defaults to 0.00 lines, isBalanced: false, and missing facts card (no $50,000 default)');
 
   // 2B: Car purchase query with NO car cost
-  const queryCar = 'We bought a company car for our director transport, how do we account for it?';
+  const queryCar = "We bought an S-plate passenger car for the company's own use transporting our director, how do we account for it?";
   const parsedCar = await parseAccountingQuery(queryCar);
 
   assert.strictEqual(parsedCar.isComplete, false, 'Car purchase without stated cost cannot be isComplete === true');

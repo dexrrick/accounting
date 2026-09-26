@@ -303,7 +303,7 @@ export function evaluateFastPathEligibility(
     { topic: 'Loss Carry-Forward Relief', test: qLower.includes('carry forward') || qLower.includes('carry-forward'), sectionMatch: '37' },
     { topic: 'Safe Harbour Share Disposal', test: qLower.includes('safe harbour') || qLower.includes('safe harbor') || (qLower.includes('disposal') && qLower.includes('shares')), sectionMatch: '13w' },
     { topic: 'Withholding Tax', test: qLower.includes('withholding tax') || qLower.includes('section 45'), sectionMatch: '45' },
-    { topic: 'Renovation & Refurbishment S14Q', test: qLower.includes('renovation') || qLower.includes('refurbishment') || qLower.includes('14q'), sectionMatch: '14q' },
+    { topic: 'Renovation & Refurbishment S14N', test: qLower.includes('renovation') || qLower.includes('refurbishment') || qLower.includes('14n'), sectionMatch: '14n' },
     { topic: 'GST De Minimis Rule', test: qLower.includes('de minimis') || (qLower.includes('regulation 28') && qLower.includes('gst')), sectionMatch: '28' },
     { topic: 'GST Reverse Charge', test: qLower.includes('reverse charge') || (qLower.includes('imported services') && qLower.includes('gst')), sectionMatch: '14' },
     { topic: 'GST Bad Debt Relief', test: qLower.includes('bad debt relief') || (qLower.includes('bad debt') && qLower.includes('gst')), sectionMatch: '82' },
@@ -1089,10 +1089,10 @@ export function renderStructuredOfflineResponse(
     const grp = parsed.directGroups[0];
     const cost = grp.totalDebit;
     const replyText = `### Statutory Directive: Acquisition of Passenger Motor Car\n\n` +
-      `**Governing Authorities**: **IRAS & AGC Singapore** | **Statutes**: **Income Tax Act 1947 §15(1)(k)** & **GST (General) Regulations Reg 26**\n\n` +
+      `**Governing Authorities**: **IRAS & AGC Singapore** | **Statutes**: **Income Tax Act 1947 §15(1)(k)** & **GST (General) Regulations Reg 27**\n\n` +
       `---\n\n` +
-      `#### 1. Disallowance of 9% Input GST Claim (Regulation 26)\n` +
-      `* Under **Regulation 26 of the GST (General) Regulations**, input tax incurred on the purchase, hire, or running expenses of a passenger motor car (S-plate) is **strictly blocked from recovery**.\n` +
+      `#### 1. Disallowance of Input GST Claim (Regulation 27)\n` +
+      `* Under **Regulation 27 of the GST (General) Regulations**, input tax incurred on the entity’s own passenger motor car (S-plate) is **blocked from recovery**.\n` +
       `* **Accounting Treatment**: The full purchase price of **SGD ${cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}** (inclusive of GST) is capitalized into asset cost. No amount is debited to *GST Input Tax*.\n\n` +
       `---\n\n` +
       `#### 2. Prohibition of Tax Deductions & Capital Allowances (§15(1)(k))\n` +

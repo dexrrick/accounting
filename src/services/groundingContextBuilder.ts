@@ -22,10 +22,12 @@ import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statut
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
 import { extractAccountingContext } from './conversationAccountingState';
-import { isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
+import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import { OfficialSitemapDiscoveryAdapter } from '../retrieval/officialSitemapDiscovery';
+import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
+const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
 
 /**
  * Provider-neutral structured reasoning context.
@@ -272,7 +274,25 @@ function selectRelevantFetchedText(pageText: string, terms: string[], maxChars =
 }
 
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
-  return topic.domainId === 'ACCOUNTING_SFRS' ? [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS] : [];
+  if (topic.domainId === 'ACCOUNTING_SFRS') return [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS];
+  if (topic.domainId.startsWith('IRAS_')) return [...APPROVED_IRAS_DISCOVERY_HOSTS];
+  return [];
+}
+
+const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)\s+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
+
+/** A present-day tax page cannot establish a prior period without pointer-level validity dates. */
+function hasVerifiedHistoricalIrasScope(
+  topic: MappedCoverageTopic,
+  pointer: SourceMapPointer | undefined,
+  targetDate: string | undefined,
+  targetIsHistorical: boolean,
+  query: string
+): boolean {
+  if (!topic.domainId.startsWith('IRAS_')) return true;
+  if (UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query)) return false;
+  if (!targetIsHistorical || !targetDate) return true;
+  return Boolean(pointer?.validFrom && pointer.validTo && targetDate >= pointer.validFrom && targetDate <= pointer.validTo);
 }
 
 function makeLiveCandidateEvidence(
@@ -288,6 +308,10 @@ function makeLiveCandidateEvidence(
   const host = new URL(url).hostname.toLowerCase();
   const discoveredPublisher = host === 'ifrs.org' || host === 'www.ifrs.org'
     ? 'IFRS Foundation'
+    : host === 'iras.gov.sg' || host === 'www.iras.gov.sg'
+      ? 'Inland Revenue Authority of Singapore (IRAS)'
+      : host === 'sso.agc.gov.sg'
+        ? 'Singapore Statutes Online / AGC'
     : host === 'asc.acra.gov.sg'
       ? 'Accounting Standards Committee / ACRA'
       : host === 'acra.gov.sg' || host === 'www.acra.gov.sg'
@@ -306,13 +330,15 @@ function makeLiveCandidateEvidence(
     sourcePublisher: discoveredPublisher,
     legalOrStandardInstrument: pointer?.legalOrStandardInstrument || topic.actOrStandard || topic.title,
     documentTitle: pageTitle,
-    standardOrActCode: pointer?.standardOrActCode || topic.actOrStandard || 'SFRS(I)',
+    standardOrActCode: pointer?.standardOrActCode || topic.actOrStandard || topic.title,
     paragraphOrSection: topic.paragraphHints?.[0] || topic.sectionHints?.[0] || topic.title,
     sourceText: excerpt,
     principleSummary: topic.shortDescription || topic.title,
-    effectiveDate: topic.effectiveFrom,
-    validFrom: topic.effectiveFrom,
-    validTo: topic.effectiveTo,
+    effectiveDate: pointer
+      ? pointer.effectiveDate || pointer.validFrom
+      : topic.effectiveFrom,
+    validFrom: pointer ? pointer.validFrom : topic.effectiveFrom,
+    validTo: pointer ? pointer.validTo : topic.effectiveTo,
     officialSourceUrl: url,
     domain: (pointer?.domain || topic.legacyDomains[0] || 'ACCOUNTING_SFRS') as QueryDomain,
     jurisdiction: 'Singapore',
@@ -324,7 +350,7 @@ function makeLiveCandidateEvidence(
     lastVerifiedDate: currentDate,
     provenance: 'LIVE_EXTERNAL' as const,
     canonicalSourceUrl: url,
-    sourceAuthority: 'ACRA' as const,
+    sourceAuthority: host === 'sso.agc.gov.sg' ? 'AGC' : topic.domainId.startsWith('IRAS_') ? 'IRAS' : 'ACRA',
     retrievedAt,
     verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
     extractionStatus: 'PARTIAL' as const,
@@ -387,11 +413,24 @@ export async function resolveMappedOfficialSourceFallback(
   const sourceMapIds = new Set<string>();
   const finalVerifiedUrls = new Set<string>();
   const discoveredEvidenceIds = new Set<string>();
+  const targetDateResolution = defaultTargetDateResolver.resolveTargetDate(query);
+  const targetDate = targetDateResolution.targetDate;
+  const currentSingaporeYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
+  const currentYearYaProxy = targetDateResolution.source === 'INFERRED' &&
+    /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(targetDateResolution.rawMatchedText || '') &&
+    targetDate?.slice(0, 4) === currentSingaporeYear;
+  const targetIsHistorical = targetDateResolution.isHistorical === true && !currentYearYaProxy;
 
   const tryFetch = async (topic: MappedCoverageTopic, candidateUrl: string, pointer?: SourceMapPointer): Promise<AuthoritativeSourceRecord | undefined> => {
+    const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
+    const focusedIrasTitles = irasDiscovery
+      ? [topic.title, ...(topic.aliases || []), ...topic.keywords]
+        .filter(value => normalizeEvidenceText(value).split(' ').filter(Boolean).length >= 2)
+      : [];
     const expectation = {
-      standardIdentifiers: getTopicStandardIdentifiers(topic, pointer),
-      expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim())].filter((value): value is string => Boolean(value)),
+      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : [])],
+      expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedIrasTitles]
+        .filter((value): value is string => Boolean(value)),
       topicTerms: getTopicContentTerms(topic),
       minimumTopicTermMatches: 1
     };
@@ -434,13 +473,24 @@ export async function resolveMappedOfficialSourceFallback(
       .filter((record): record is SourceMapPointer => Boolean(
         record && record.recordRole === 'SOURCE_MAP_POINTER' && record.groundingEligible === false &&
         record.lifecycleState === 'ACTIVE' && record.urlVerificationStatus === 'VERIFIED' &&
+        hasVerifiedSourceUrlProvenance(record) &&
         record.sourceMapTopicIds?.includes(topic.id) &&
         // A framework overview can route framework-level questions only. It
         // cannot be used as a substitute for one of this registry's narrow
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
-    for (const pointer of pointers) {
+    const historicalIrasQuery = topic.domainId.startsWith('IRAS_') && Boolean(
+      UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query) ||
+      targetIsHistorical
+    );
+    const applicablePointers = pointers.filter(pointer => hasVerifiedHistoricalIrasScope(topic, pointer, targetDate, targetIsHistorical, query));
+    if (historicalIrasQuery && applicablePointers.length === 0) {
+      attempts.push({ topicId: topic.id, fetchStatus: 'HISTORICAL_SCOPE_UNVERIFIED', titleMatched: false, contentMatched: false,
+        error: 'No reviewed source-map pointer validity window covers the requested historical tax period.' });
+      continue;
+    }
+    for (const pointer of applicablePointers) {
       sourceMapIds.add(pointer.id);
       if (!isApprovedSingaporeSourceUrl(pointer.officialSourceUrl)) {
         attempts.push({ topicId: topic.id, sourceMapId: pointer.id, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false, error: 'Mapped URL is outside approved official sources.' });
@@ -451,6 +501,8 @@ export async function resolveMappedOfficialSourceFallback(
 
     const succeededForTopic = records.some(record => record.tags.includes(topic.id));
     if (succeededForTopic) continue;
+    // Discovered pages have no reviewed period-specific validity metadata.
+    if (historicalIrasQuery) continue;
     const approvedHosts = approvedHostsForTopic(topic);
     if (approvedHosts.length === 0) continue;
     let discoveredCandidates: string[] = [];

@@ -87,6 +87,11 @@ export interface SingaporeCoverageTopic {
   canonicalSourceId?: string;
   canonicalSourceUrl?: string;
   pageTitle?: string;
+  /** URL identity/reachability verification is separate from content verification. */
+  urlVerificationStatus?: 'VERIFIED' | 'CANDIDATE' | 'REJECTED';
+  urlVerifiedDate?: string;
+  urlVerificationMethod?: 'OFFICIAL_HTML_PAGE_TITLE_AND_TOPIC_CHECK';
+  urlVerificationEvidence?: string;
   paragraphHints?: string[];
   sectionHints?: string[];
   relatedTopicIds?: string[];
@@ -135,6 +140,10 @@ interface TopicSpec {
   canonicalSourceId?: string;
   canonicalSourceUrl?: string;
   pageTitle?: string;
+  urlVerificationStatus?: 'VERIFIED' | 'CANDIDATE' | 'REJECTED';
+  urlVerifiedDate?: string;
+  urlVerificationMethod?: 'OFFICIAL_HTML_PAGE_TITLE_AND_TOPIC_CHECK';
+  urlVerificationEvidence?: string;
   paragraphHints?: string[];
   sectionHints?: string[];
   relatedTopicIds?: string[];
@@ -172,6 +181,10 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
     ...(spec.canonicalSourceId ? { canonicalSourceId: spec.canonicalSourceId } : {}),
     ...(spec.canonicalSourceUrl ? { canonicalSourceUrl: spec.canonicalSourceUrl } : {}),
     ...(spec.pageTitle ? { pageTitle: spec.pageTitle } : {}),
+    ...(spec.urlVerificationStatus ? { urlVerificationStatus: spec.urlVerificationStatus } : {}),
+    ...(spec.urlVerifiedDate ? { urlVerifiedDate: spec.urlVerifiedDate } : {}),
+    ...(spec.urlVerificationMethod ? { urlVerificationMethod: spec.urlVerificationMethod } : {}),
+    ...(spec.urlVerificationEvidence ? { urlVerificationEvidence: spec.urlVerificationEvidence } : {}),
     ...(spec.paragraphHints ? { paragraphHints: [...spec.paragraphHints] } : {}),
     ...(spec.sectionHints ? { sectionHints: [...spec.sectionHints] } : {}),
     ...(spec.relatedTopicIds ? { relatedTopicIds: [...spec.relatedTopicIds] } : {}),
@@ -182,6 +195,170 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
     ...(spec.contentFingerprint ? { contentFingerprint: spec.contentFingerprint } : {}),
     ...(spec.lifecycleState ? { lifecycleState: spec.lifecycleState } : {})
   };
+}
+
+/** Directly inspected first-party IRAS pages. These entries route retrieval only. */
+export interface IrasSourceMapDefinition {
+  id: string;
+  topicIds: readonly string[];
+  domainId: Extract<SingaporeKnowledgeDomain, `IRAS_${string}`>;
+  canonicalSourceUrl: string;
+  pageTitle: string;
+  subdomain: string;
+  shortDescription: string;
+  urlVerificationStatus: 'VERIFIED';
+  urlVerifiedDate: string;
+  urlVerificationMethod: 'OFFICIAL_HTML_PAGE_TITLE_AND_TOPIC_CHECK';
+  urlVerificationEvidence: string;
+}
+
+const IRAS_URL_VERIFICATION_DATE = '2026-09-26';
+const IRAS_URL_VERIFICATION_METHOD = 'OFFICIAL_HTML_PAGE_TITLE_AND_TOPIC_CHECK' as const;
+const irasSourceMap = (
+  id: string,
+  domainId: IrasSourceMapDefinition['domainId'],
+  topicIds: readonly string[],
+  canonicalSourceUrl: string,
+  pageTitle: string,
+  subdomain: string,
+  shortDescription: string
+): IrasSourceMapDefinition => ({
+  id,
+  domainId,
+  topicIds,
+  canonicalSourceUrl,
+  pageTitle,
+  subdomain,
+  shortDescription,
+  urlVerificationStatus: 'VERIFIED',
+  urlVerifiedDate: IRAS_URL_VERIFICATION_DATE,
+  urlVerificationMethod: IRAS_URL_VERIFICATION_METHOD,
+  urlVerificationEvidence: `Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on ${IRAS_URL_VERIFICATION_DATE}.`
+});
+
+/**
+ * Narrow IRAS source map. Each URL below was opened on the official IRAS host
+ * and checked against its page title and relevant topic. The records generated
+ * from this catalog remain URL-routing pointers, not evidence of tax claims.
+ */
+export const IRAS_SOURCE_MAP_DEFINITIONS: readonly IrasSourceMapDefinition[] = [
+  irasSourceMap('IRAS_CIT_RATE_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-cit-tax-rate', 'iras-cit-sute', 'iras-cit-pte'],
+    'https://www.iras.gov.sg/quick-links/tax-rates/corporate-income-tax-rates',
+    'Corporate Income Tax Rates', 'corporate-income-tax', 'IRAS corporate income tax rate and exemption-scheme overview.'),
+  irasSourceMap('IRAS_CIT_ECI_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-cit-eci'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing',
+    'Estimated Chargeable Income (ECI) Filing', 'corporate-income-tax', 'IRAS filing guidance for Estimated Chargeable Income.'),
+  irasSourceMap('IRAS_CIT_BASIS_FILING_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-cit-basis-period', 'iras-cit-filing-deadlines', 'iras-cit-eci'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/basic-guide-to-corporate-income-tax-for-companies',
+    'Basic Guide to Corporate Income Tax for Companies', 'corporate-income-tax', 'IRAS guidance on corporate basis periods, Years of Assessment and corporate return filing due dates.'),
+  irasSourceMap('IRAS_CIT_RETURNS_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-cit-returns'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/form-c-s-form-c-s-(lite)-form-c-filing/overview-of-form-c-s-form-c-s-(lite)-form-c',
+    'Overview of Form C-S/ Form C-S (Lite)/ Form C', 'corporate-income-tax', 'IRAS overview of corporate income tax return types and eligibility.'),
+  irasSourceMap('IRAS_CIT_EXPENSES_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-cit-deductibility', 'iras-cit-disallowed-expenses'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses',
+    'Business Expenses', 'corporate-income-tax', 'IRAS overview of deductible and non-deductible business expenses.'),
+  irasSourceMap('IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-capital-allowances'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances',
+    'Capital Allowances', 'corporate-income-tax', 'IRAS guidance on capital allowances, including Sections 19 and 19A.'),
+  irasSourceMap('IRAS_CIT_RR_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-cit-renovation-refurbishment'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(m-r)',
+    'Tax Treatment of Business Expenses (M-R)', 'corporate-income-tax', 'IRAS business-expense guidance containing the Section 14N renovation and refurbishment treatment.'),
+  irasSourceMap('IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-cit-loss-carry-forward', 'iras-cit-loss-carry-back', 'iras-substantial-shareholding-test', 'iras-cit-donations'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/unutilised-items-(capital-allowances-trade-losses-donations)',
+    'Unutilised Items (Capital Allowances, Trade Losses & Donations)', 'corporate-income-tax', 'IRAS guidance on carry-forward, carry-back, shareholding tests and group relief of unutilised items.'),
+  irasSourceMap('IRAS_CIT_GROUP_RELIEF_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-group-relief'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-reliefs/group-relief',
+    'Group Relief', 'corporate-income-tax', 'IRAS corporate group-relief guidance.'),
+  irasSourceMap('IRAS_WHT_RATES_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-withholding-tax', 'iras-withholding-tax-management-fees', 'iras-withholding-tax-interest-royalties'],
+    'https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates',
+    'Types of Payment & the Applicable Withholding Tax Rates', 'withholding-tax', 'IRAS administrative guidance by payment type, including interest, royalties and service or management fees.'),
+  irasSourceMap('IRAS_WHT_SCOPE_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-withholding-tax', 'iras-withholding-tax-management-fees', 'iras-withholding-tax-interest-royalties'],
+    'https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax',
+    'Payments that are subject to withholding tax', 'withholding-tax', 'IRAS guidance on payment categories that may trigger withholding tax for non-resident companies.'),
+  irasSourceMap('IRAS_WHT_OVERVIEW_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-withholding-tax'],
+    'https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)',
+    'Overview of Withholding Tax (WHT)', 'withholding-tax', 'IRAS overview of payer and non-resident recipient obligations, filing and payment.'),
+  irasSourceMap('IRAS_WHT_DUE_DATE_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-wht-deemed-payment-date', 'iras-wht-filing-payment-due-date', 'iras-wht-treaty-relief'],
+    'https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date',
+    'Withholding Tax (WHT) Filing and Payment Due Date', 'withholding-tax', 'IRAS guidance on deemed payment dates, filing and payment deadlines, director-fee timing and treaty-exempt filing.'),
+  irasSourceMap('IRAS_CIT_RESIDENCY_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-corporate-tax-residency'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence',
+    'Tax Residency of a Company/ Certificate of Residence', 'corporate-income-tax', 'IRAS guidance on company tax residence and certificates of residence.'),
+  irasSourceMap('IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-foreign-sourced-income', 'iras-section-13-exemptions'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income',
+    'Companies Receiving Foreign Income', 'corporate-income-tax', 'IRAS guidance on specified foreign income received in Singapore and exemption conditions.'),
+  irasSourceMap('IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-foreign-tax-credit'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-reliefs/foreign-tax-credit',
+    'Foreign Tax Credit', 'corporate-income-tax', 'IRAS guidance on foreign tax credit, including double-tax relief under applicable agreements.'),
+  irasSourceMap('IRAS_TRANSFER_PRICING_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-transfer-pricing', 'iras-transfer-pricing-documentation', 'iras-related-party-loans'],
+    'https://www.iras.gov.sg/taxes/corporate-income-tax/specific-topics/transfer-pricing',
+    'Transfer Pricing', 'corporate-income-tax', 'IRAS transfer-pricing guidance for related-party transactions, documentation and loans.'),
+  irasSourceMap('IRAS_GST_REGISTRATION_SOURCE_MAP', 'IRAS_GST', ['gst_compulsory_registration', 'iras-gst-turnover-tests'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/gst-registration-deregistration/do-i-need-to-register-for-gst',
+    'Do I need to register for GST', 'goods-services-tax', 'IRAS guidance on compulsory and voluntary GST registration.'),
+  irasSourceMap('IRAS_GST_VOLUNTARY_REGISTRATION_SOURCE_MAP', 'IRAS_GST', ['iras-gst-voluntary-registration'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/gst-registration-deregistration/applying-for-gst-registration',
+    'Applying for GST registration', 'goods-services-tax', 'IRAS application guidance, including voluntary registration conditions and process details.'),
+  irasSourceMap('IRAS_GST_CHARGING_SOURCE_MAP', 'IRAS_GST', ['iras-gst-standard-rated-supplies'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)',
+    'When to Charge Goods and Services Tax (GST)', 'goods-services-tax', 'IRAS overview of the standard-rate rule and exceptions to charging GST.'),
+  irasSourceMap('IRAS_GST_ZERO_RATED_EXPORT_SOURCE_MAP', 'IRAS_GST', ['iras-gst-zero-rating', 'iras-gst-export-documentation'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-0-gst-(zero-rate)/exporting-of-goods',
+    'Exporting of Goods', 'goods-services-tax', 'IRAS guidance on zero-rating goods exports and required supporting evidence.'),
+  irasSourceMap('IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP', 'IRAS_GST', ['iras-gst-zero-rating'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-0-gst-(zero-rate)/providing-international-services',
+    'Providing international services', 'goods-services-tax', 'IRAS guidance on international services that may qualify for zero-rating.'),
+  irasSourceMap('IRAS_GST_EXEMPT_SOURCE_MAP', 'IRAS_GST', ['iras-gst-exempt-supplies', 'iras-gst-partial-exemption'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-is-gst-not-charged/supplies-exempt-from-gst',
+    'Supplies Exempt from GST', 'goods-services-tax', 'IRAS guidance on exempt supplies and input-tax recovery where exempt supplies are made.'),
+  irasSourceMap('IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP', 'IRAS_GST', ['iras-gst-out-of-scope-supplies'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-is-gst-not-charged/out-of-scope-supplies',
+    'Out-of-scope Supplies', 'goods-services-tax', 'IRAS guidance on transactions outside the scope of the GST Act.'),
+  irasSourceMap('IRAS_GST_INPUT_TAX_SOURCE_MAP', 'IRAS_GST', ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles', 'iras-gst-entertainment'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax',
+    'Conditions for Claiming Input Tax', 'goods-services-tax', 'IRAS input-tax conditions and disallowed or blocked input-tax scenarios.'),
+  irasSourceMap('IRAS_GST_IMPORTED_SERVICES_SOURCE_MAP', 'IRAS_GST', ['iras-gst-imported-services', 'iras-gst-low-value-goods'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/gst-and-digital-economy/local-businesses',
+    'Local businesses importing services and importing or supplying low-value goods', 'goods-services-tax', 'IRAS guidance on reverse charge and overseas vendor registration for local businesses.'),
+  irasSourceMap('IRAS_GST_TIME_OF_SUPPLY_SOURCE_MAP', 'IRAS_GST', ['iras-gst-time-of-supply'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-report-supplies-in-gst-returns',
+    'When to Report Supplies in GST Returns', 'goods-services-tax', 'IRAS guidance on time-of-supply rules and GST reporting periods.'),
+  irasSourceMap('IRAS_GST_INVOICING_SOURCE_MAP', 'IRAS_GST', ['iras-gst-input-tax', 'iras-gst-credit-notes', 'iras-gst-tax-invoice-record-keeping'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers',
+    'Invoicing Customers', 'goods-services-tax', 'IRAS guidance on tax invoices, credit notes and supporting records.'),
+  irasSourceMap('IRAS_GST_CUSTOMER_ACCOUNTING_SOURCE_MAP', 'IRAS_GST', ['iras-gst-customer-accounting'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)/customer-accounting-for-prescribed-goods',
+    'Customer Accounting for Prescribed Goods', 'goods-services-tax', 'IRAS guidance on prescribed goods, customer accounting, invoicing and reporting.'),
+  irasSourceMap('IRAS_GST_OVR_SOURCE_MAP', 'IRAS_GST', ['iras-gst-ovr', 'iras-gst-low-value-goods'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/gst-and-digital-economy/overseas-businesses',
+    'Overseas businesses supplying remote services and low-value goods to Singapore', 'goods-services-tax', 'IRAS Overseas Vendor Registration guidance for remote services, low-value goods and electronic marketplaces.'),
+  irasSourceMap('IRAS_GST_BAD_DEBT_SOURCE_MAP', 'IRAS_GST', ['gst_bad_debt_relief'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/common-scenarios---do-i-charge-gst/bad-debt-relief',
+    'Bad Debt Relief', 'goods-services-tax', 'IRAS guidance on eligibility and claiming GST bad-debt relief.'),
+  irasSourceMap('IRAS_GST_DUE_DATES_SOURCE_MAP', 'IRAS_GST', ['iras-gst-filing-deadlines'],
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/due-dates-and-requests-for-extension',
+    'Due Dates and Requests for Extension', 'goods-services-tax', 'IRAS guidance on GST return filing and payment due dates.'),
+  irasSourceMap('IRAS_IR21_SOURCE_MAP', 'IRAS_EMPLOYER_TAX', ['iras-employer-ir21'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/employers/tax-clearance-for-foreign-spr-employees-(ir21)',
+    'Tax Clearance for Foreign & SPR Employees (IR21)', 'employer-tax', 'IRAS employer tax-clearance guidance for Form IR21.'),
+  irasSourceMap('IRAS_AIS_IR8A_SOURCE_MAP', 'IRAS_EMPLOYER_TAX', ['iras-ais-employment-income', 'iras-stock-options'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/employers/auto-inclusion-scheme-(ais)-for-employment-income/reporting-employee-earnings-(ir8a-appendix-8a-appendix-8b)',
+    'Reporting Employee Earnings (IR8A, App 8A/8B)', 'employer-tax', 'IRAS employer reporting guidance for employment income and related annual forms.'),
+  irasSourceMap('IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP', 'IRAS_EMPLOYER_TAX', ['iras-directors-fees', 'iras-employee-bonus-timing'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not/employment-income/salary-bonus-director\'s-fee-commission-and-others',
+    'Employment Income (Salary, bonus, director\'s fee, commission and others)', 'employer-tax', 'IRAS guidance on bonus entitlement timing and director-fee assessment timing.'),
+  irasSourceMap('IRAS_BENEFITS_IN_KIND_SOURCE_MAP', 'IRAS_EMPLOYER_TAX', ['iras-employment-benefits'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/tax-principles-and-flexible-benefits',
+    'Tax Principles and Flexible Benefits', 'employer-tax', 'IRAS guidance on taxable employment benefits and benefits-in-kind reporting.')
+];
+
+const irasSourceMapsByTopic = new Map<string, IrasSourceMapDefinition[]>();
+for (const definition of IRAS_SOURCE_MAP_DEFINITIONS) {
+  for (const topicId of definition.topicIds) {
+    const topicMaps = irasSourceMapsByTopic.get(topicId) ?? [];
+    topicMaps.push(definition);
+    irasSourceMapsByTopic.set(topicId, topicMaps);
+  }
 }
 
 const topicSpecs: TopicSpec[] = [
@@ -266,23 +443,29 @@ const topicSpecs: TopicSpec[] = [
 
   // IRAS corporate income tax, including investment and fund-related topics.
   { id: 'iras-cit-tax-rate', title: 'Corporate Income Tax Rate', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['corporate tax rate', 'corporate income tax rate', 'tax rate for company'] },
+  { id: 'iras-cit-basis-period', title: 'Corporate Tax Basis Period and Year of Assessment', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['corporate basis period', 'basis period tax', 'year of assessment company', 'corporate tax YA'] },
+  { id: 'iras-cit-filing-deadlines', title: 'Corporate Income Tax Filing Due Dates', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['corporate tax filing deadline', 'corporate return due date', 'form c filing due date', 'eci filing due date'] },
   { id: 'iras-cit-eci', title: 'Estimated Chargeable Income Filing', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['eci', 'estimated chargeable income', 'file eci'] },
   { id: 'iras-cit-returns', title: 'Form C-S, Form C-S Lite and Form C', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['form c-s', 'form c-s lite', 'form c corporate tax', 'corporate tax return'] },
-  { id: 'iras-cit-disallowed-expenses', title: 'Prohibited Deductions and Non-deductible Expenses', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['non-deductible expense', 'non-deductible threshold', 'prohibited deduction', 'section 15 deduction', 'entertainment expense tax', 'entertainment expenses'] , actOrStandard: 'Income Tax Act 1947', sectionMatch: '15', sourceRecordIds: ['ITA_SEC15_PROHIBITED_DEDUCTIONS'], legacyPackIds: ['corporate-tax-adjustments'] },
+  { id: 'iras-cit-disallowed-expenses', title: 'Prohibited Deductions and Non-deductible Expenses', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['non-deductible expense', 'non-deductible threshold', 'prohibited deduction', 'section 15 deduction', 'entertainment expense tax', 'entertainment expenses', 'company passenger motor car expenses', 's-plate passenger car tax deduction'], queryPatterns: [String.raw`\b(?:s-plate|passenger (?:motor )?car)\b[\s\S]{0,120}\b(?:deduct\w*|tax deduction|capital allowances?)\b`], actOrStandard: 'Income Tax Act 1947', sectionMatch: '15', sourceRecordIds: ['ITA_SEC15_PROHIBITED_DEDUCTIONS', 'ITA_SEC15_1_K_MOTOR_CAR'], legacyPackIds: ['corporate-tax-adjustments'] },
   { id: 'iras-cit-deductibility', title: 'Corporate Tax Deductibility', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', status: 'IMPLEMENTING', keywords: ['tax deductibility', 'deductibility', 'tax deductible', 'deductible for tax', 'staff welfare expense tax', 'staff welfare', 'entertainment expenses'], actOrStandard: 'Income Tax Act 1947', sectionMatch: '14', sourceRecordIds: ['ITA_SEC14_GENERAL_DEDUCTION'], legacyPackIds: ['corporate-tax-adjustments'] },
   { id: 'iras-capital-allowances', title: 'Capital Allowances under Sections 19 and 19A', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', status: 'IMPLEMENTING', keywords: ['capital allowance', 'section 19', 'section 19a', 'accelerated capital allowance'], actOrStandard: 'Income Tax Act 1947', sectionMatch: '19/19A', sourceRecordIds: ['ITA_SEC19_19A_CAPITAL_ALLOWANCES'], legacyPackIds: ['corporate-tax-adjustments'] },
-  { id: 'iras-cit-renovation-refurbishment', title: 'Renovation and Refurbishment Deductions', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['renovation and refurbishment', 'r&r deduction', 'renovation tax deduction'] },
+  { id: 'iras-cit-renovation-refurbishment', title: 'Renovation and Refurbishment Deductions', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['renovation and refurbishment', 'r&r deduction', 'renovation tax deduction', 'section 14n', '14n deduction'] },
   { id: 'iras-cit-sute', title: 'Start-up Tax Exemption', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['sute', 'start-up tax exemption', 'startup tax exemption'] },
   { id: 'iras-cit-pte', title: 'Partial Tax Exemption', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['pte', 'partial tax exemption', 'partial tax exempt'] },
   { id: 'iras-cit-donations', title: 'Tax Treatment of Donations', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['corporate donation', 'donation deduction company', 'tax deduction for donations'] },
   { id: 'iras-cit-loss-carry-forward', title: 'Carry-forward of Tax Losses and Capital Allowances', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['loss carry-forward', 'loss carry forward', 'capital allowance carry forward', 'unabsorbed capital allowance'] },
-  { id: 'iras-cit-loss-carry-back', title: 'Carry-back Relief', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['carry-back relief', 'carry back tax loss', 'loss carry-back'] },
+  { id: 'iras-cit-loss-carry-back', title: 'Carry-back Relief', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['carry-back relief', 'carry back tax loss', 'loss carry-back'], queryPatterns: [String.raw`\bcarry(?:[-\s]+)back\b[\s\S]{0,100}\b(?:unabsorbed\s+)?(?:trade\s+)?losses?\b[\s\S]{0,100}\b(?:immediately\s+)?(?:preceding|prior|previous)\s+ya\b`] },
   { id: 'iras-group-relief', title: 'Group Relief', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['group relief', 'transfer losses within group', 'group relief claim'] },
   { id: 'iras-substantial-shareholding-test', title: 'Substantial Shareholding Test for Loss Carry-forward', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['substantial shareholding test', 'shareholding test tax losses', 'continuous ownership tax loss'] },
   { id: 'iras-withholding-tax', title: 'Withholding Tax on Payments to Non-residents', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['withholding tax', 'wht', 'section 45 withholding', 'non-resident payment'] },
+  { id: 'iras-wht-deemed-payment-date', title: 'Withholding Tax Deemed Payment Date', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['withholding tax deemed payment', 'wht date of payment', 'when wht is due and payable', 'withholding tax accrual date'], queryPatterns: [String.raw`\b(?:wht|withholding tax)\b[\s\S]{0,80}\b(?:treated as paid|deemed (?:payment|paid|date))\b`] },
+  { id: 'iras-wht-filing-payment-due-date', title: 'Withholding Tax Filing and Payment Due Date', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['withholding tax filing due date', 'wht payment deadline', 'pay withholding tax to iras'], queryPatterns: [String.raw`\b(?:wht|withholding tax)\b[\s\S]{0,180}\b(?:filing due|payment due|due date|deadline)\b`] },
+  { id: 'iras-wht-treaty-relief', title: 'Withholding Tax Treaty Relief and Exemption', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['withholding tax treaty relief', 'wht tax treaty rate', 'dta withholding tax exemption'], queryPatterns: [String.raw`\b(?:wht|withholding tax)\b[\s\S]{0,200}\b(?:treaty relief|treaty|dta)\b`] },
+  { id: 'iras-foreign-tax-credit', title: 'Foreign Tax Credit and Double Tax Relief', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['foreign tax credit', 'claim foreign tax credit', 'double tax relief foreign tax credit', 'foreign tax paid singapore credit'] },
   { id: 'iras-withholding-tax-management-fees', title: 'Withholding Tax on Management and Service Fees', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['management fee withholding tax', 'service fee withholding tax', 'consultancy fee non-resident'] },
   { id: 'iras-withholding-tax-interest-royalties', title: 'Withholding Tax on Interest and Royalties', domainId: 'IRAS_CORPORATE_TAX', priority: 'P1', keywords: ['interest withholding tax', 'royalty withholding tax', 'royalties paid overseas'] },
-  { id: 'iras-double-tax-agreements', title: 'Double Tax Agreements and Treaty Relief', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['double tax agreement', 'dta', 'tax treaty', 'treaty relief'] },
+  { id: 'iras-double-tax-agreements', title: 'Double Tax Agreements and Treaty Relief', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['double tax agreement', 'dta', 'tax treaty'] },
   { id: 'iras-corporate-tax-residency', title: 'Company Tax Residency', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['company tax residency', 'tax resident company', 'corporate tax residence'] },
   { id: 'iras-foreign-sourced-income', title: 'Foreign-sourced Income and Exemptions', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['foreign-sourced income', 'foreign sourced income', 'foreign income exemption'] },
   { id: 'iras-section-13-exemptions', title: 'Section 13 Corporate Tax Exemptions', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['section 13 exemption', 'section 13 tax exemption', 'foreign income section 13'] },
@@ -297,6 +480,7 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-family-office-tax', title: 'Family Office Tax Topics', domainId: 'IRAS_CORPORATE_TAX', priority: 'P2', keywords: ['family office tax', 'family office tax treatment'] },
 
   // IRAS GST.
+  { id: 'iras-gst-voluntary-registration', title: 'Voluntary GST Registration', domainId: 'IRAS_GST', priority: 'P1', keywords: ['voluntary gst registration', 'apply for gst voluntarily', 'voluntary gst registration conditions'] },
   { id: 'iras-gst-turnover-tests', title: 'Retrospective and Prospective GST Registration Tests', domainId: 'IRAS_GST', priority: 'P1', keywords: ['retrospective test', 'prospective test', 'taxable turnover', 'gst turnover test'] },
   { id: 'iras-gst-standard-rated-supplies', title: 'Standard-rated Supplies', domainId: 'IRAS_GST', priority: 'P1', keywords: ['standard-rated supply', 'standard rated supplies', 'standard rate gst'] },
   { id: 'iras-gst-zero-rating', title: 'Zero-rated Supplies and Export Eligibility', domainId: 'IRAS_GST', priority: 'P1', keywords: ['zero-rated', 'zero rated', 'zero-rating', 'zero rating gst', 'section 21(3)'] },
@@ -306,6 +490,9 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-gst-blocked-input-tax', title: 'Blocked Input Tax', domainId: 'IRAS_GST', priority: 'P1', keywords: ['blocked input tax', 'motor car input tax', 'club subscription input tax', 'regulation 26'], actOrStandard: 'Goods and Services Tax (General) Regulations', sectionMatch: '26', sourceRecordIds: ['GST_REG26_BLOCKED_INPUT_TAX'], legacyPackIds: ['gst-registration-and-input-tax'] },
   { id: 'iras-gst-partial-exemption', title: 'Partial Exemption and De Minimis Rules', domainId: 'IRAS_GST', priority: 'P2', keywords: ['partial exemption gst', 'de minimis', 'de minimis rule'] },
   { id: 'iras-gst-imported-services', title: 'GST on Imported Services', domainId: 'IRAS_GST', priority: 'P1', keywords: ['imported services', 'services from overseas vendor', 'overseas services gst'], canonicalConceptId: 'gst-reverse-charge-imported-services' },
+  { id: 'iras-gst-ovr', title: 'Overseas Vendor Registration for Remote Services and Low-value Goods', domainId: 'IRAS_GST', priority: 'P1', keywords: ['overseas vendor registration', 'ovr remote services', 'ovr low-value goods', 'overseas digital services gst'] },
+  { id: 'iras-gst-customer-accounting', title: 'GST Customer Accounting for Prescribed Goods', domainId: 'IRAS_GST', priority: 'P1', keywords: ['gst customer accounting', 'prescribed goods customer accounting', 'customer accounting tax invoice'] },
+  { id: 'iras-gst-tax-invoice-record-keeping', title: 'GST Tax Invoices and Record Keeping', domainId: 'IRAS_GST', priority: 'P1', keywords: ['gst tax invoice requirements', 'gst record keeping', 'retain tax invoices gst', 'gst records retention'] },
   { id: 'iras-gst-low-value-goods', title: 'GST on Low-value Goods', domainId: 'IRAS_GST', priority: 'P2', keywords: ['low-value goods', 'low value goods', 'lvg gst'] },
   { id: 'iras-gst-time-of-supply', title: 'Time of Supply', domainId: 'IRAS_GST', priority: 'P1', keywords: ['time of supply', 'tax point gst', 'when to account for gst'] },
   { id: 'iras-gst-credit-notes', title: 'Credit Notes and GST Adjustments', domainId: 'IRAS_GST', priority: 'P2', keywords: ['gst credit note', 'credit note gst', 'output tax adjustment'] },
@@ -317,11 +504,13 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-gst-export-documentation', title: 'Export Documentation and Zero-rating Evidence', domainId: 'IRAS_GST', priority: 'P1', keywords: ['export documentation gst', 'export evidence', 'proof of export', 'documentation criteria', 'exported goods', 'cross-border digital services'] },
   { id: 'iras-gst-groups', title: 'GST Group Registration', domainId: 'IRAS_GST', priority: 'P2', keywords: ['gst group', 'gst group registration', 'group registration gst'] },
   { id: 'iras-gst-qualifying-funds', title: 'GST Remission for Qualifying Funds', domainId: 'IRAS_GST', priority: 'P2', keywords: ['qualifying fund gst', 'fund gst remission', 'gst remission fund'] },
+  { id: 'iras-gst-filing-deadlines', title: 'GST Return and Payment Due Dates', domainId: 'IRAS_GST', priority: 'P1', keywords: ['gst filing deadline', 'gst return due date', 'gst payment due date', 'accounting period gst return'] },
 
   // IRAS employer, individual, property and stamp duty.
   { id: 'iras-ais-employment-income', title: 'Auto-Inclusion Scheme and Employment Income Reporting', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P1', keywords: ['ais', 'auto-inclusion scheme', 'auto inclusion scheme', 'ir8a', 'ir8s'] },
   { id: 'iras-employer-ir21', title: 'Tax Clearance for Foreign Employees — IR21', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P1', keywords: ['ir21', 'tax clearance foreign employee', 'tax clearance for non-singapore citizen', 'withhold monies employee'] },
   { id: 'iras-employment-benefits', title: 'Benefits in Kind and Employment Benefits Reporting', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P2', keywords: ['benefits-in-kind', 'benefits in kind', 'employee benefits tax reporting'] },
+  { id: 'iras-employee-bonus-timing', title: 'Tax Timing of Employment Bonuses', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P1', keywords: ['employment bonus tax timing', 'when bonus is taxable', 'bonus entitlement year of assessment', 'contractual bonus tax'] },
   { id: 'iras-directors-fees', title: 'Directors’ Fees for Tax Reporting', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P2', keywords: ['directors fees tax', 'director fee reporting', 'directors’ fees'] },
   { id: 'iras-stock-options', title: 'Employee Stock Options and Share Benefits', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P2', keywords: ['employee stock option tax', 'stock options employment income', 'share award tax'] },
   { id: 'iras-individual-tax-residency', title: 'Individual Tax Residency and Days of Presence', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['tax residency', 'tax resident individual', '183-day', '183 day', 'non-resident employment income'] },
@@ -504,7 +693,7 @@ const consolidationTopicSpecs: TopicSpec[] = [
     { id: 'sfrsi10-variable-returns', title: 'Variable returns', keywords: ['exposure to variable returns', 'returns from investee'], related: ['sfrsi10-control', 'sfrsi10-ability-to-affect-returns'] },
     { id: 'sfrsi10-ability-to-affect-returns', title: 'Ability to affect returns', keywords: ['link between power and returns', 'use power to affect returns'], related: ['sfrsi10-control', 'sfrsi10-power', 'sfrsi10-variable-returns'] },
     { id: 'sfrsi10-de-facto-control', title: 'De facto control', keywords: ['less than majority voting rights', 'practical ability to direct', 'dispersed other shareholders'], queryPatterns: [String.raw`\bremaining\s+shares\s+(?:are\s+)?widely\s+dispersed\b`], related: ['sfrsi10-control', 'sfrsi10-power'] },
-    { id: 'sfrsi10-potential-voting-rights', title: 'Potential voting rights', keywords: ['options', 'convertible instruments', 'substantive potential voting rights'], queryPatterns: [String.raw`\bpotential\s+voting\s+rights?\b`, String.raw`\boption\s+to\s+acquire\s+another\s+\d+(?:\.\d+)?\s*%`], related: ['sfrsi10-control', 'sfrsi10-power'] },
+    { id: 'sfrsi10-potential-voting-rights', title: 'Potential voting rights', keywords: ['convertible instruments', 'substantive potential voting rights', 'share options', 'options over shares'], queryPatterns: [String.raw`\bpotential\s+voting\s+rights?\b`, String.raw`\boption\s+to\s+acquire\s+another\s+\d+(?:\.\d+)?\s*%`], related: ['sfrsi10-control', 'sfrsi10-power'] },
     { id: 'sfrsi10-acquisition-control-date', title: 'Acquisition and control date', keywords: ['date control is obtained', 'when control begins', 'acquisition date control'], queryPatterns: [String.raw`\bability to direct relevant activities\b`], related: ['sfrsi3-acquisition-date', 'sfrsi-associate-to-subsidiary', 'sfrsi-step-acquisition'] },
     { id: 'sfrsi10-consolidation', title: 'Consolidation', keywords: ['consolidated financial statements', 'consolidate subsidiary', 'consolidation procedures'], queryPatterns: [String.raw`\binvestee be consolidated\b`], related: ['sfrsi10-control', 'sfrsi10-nci', 'sfrsi10-intragroup-eliminations'] },
     { id: 'sfrsi10-nci', title: 'Non-controlling interests', keywords: ['non controlling interest', 'non-controlling interest', 'minority interest'], related: ['sfrsi3-nci', 'sfrsi10-ownership-changes', 'sfrsi10-loss-of-control'] },
@@ -567,7 +756,26 @@ const consolidationTopicSpecs: TopicSpec[] = [
   mappedTopic('sfrsi11', { id: 'sfrsi-joint-arrangement-classification', title: 'Joint operation versus joint venture', keywords: ['joint operation versus joint venture', 'classify joint arrangement', 'rights and obligations arrangement'], related: ['sfrsi11-joint-operation', 'sfrsi11-joint-venture', 'sfrsi11-joint-control'], standards: ['sfrsi11'] })
 ];
 
-export const SINGAPORE_COVERAGE_REGISTRY: SingaporeCoverageTopic[] = [...topicSpecs, ...consolidationTopicSpecs].map(topic);
+function topicWithIrasSourceMaps(spec: TopicSpec): SingaporeCoverageTopic {
+  const sources = irasSourceMapsByTopic.get(spec.id);
+  if (!sources?.length) return topic(spec);
+  const primary = sources[0];
+  return topic({
+    ...spec,
+    sourceRecordIds: [...new Set([...(spec.sourceRecordIds ?? []), ...sources.map(source => source.id)])],
+    subdomain: primary.subdomain,
+    shortDescription: primary.shortDescription,
+    canonicalSourceId: primary.id,
+    canonicalSourceUrl: primary.canonicalSourceUrl,
+    pageTitle: primary.pageTitle,
+    urlVerificationStatus: primary.urlVerificationStatus,
+    urlVerifiedDate: primary.urlVerifiedDate,
+    urlVerificationMethod: primary.urlVerificationMethod,
+    urlVerificationEvidence: primary.urlVerificationEvidence
+  });
+}
+
+export const SINGAPORE_COVERAGE_REGISTRY: SingaporeCoverageTopic[] = [...topicSpecs, ...consolidationTopicSpecs].map(topicWithIrasSourceMaps);
 
 export const LEGACY_COVERAGE_PACK_MAPPINGS: Record<string, string[]> = Object.fromEntries(
   [...new Set(SINGAPORE_COVERAGE_REGISTRY.flatMap(item => item.legacyPackIds ?? []))].map(packId => [
