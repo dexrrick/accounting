@@ -393,7 +393,7 @@ async function runPhase3Tests() {
   const cite13W = {
     standard: 'Income Tax Act 1947',
     paragraph: 'Section 13W',
-    officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr13W-',
+    officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P14-#pr13W-',
     authority: 'IRAS',
     title: 'Exemption of Gains from Disposal of Ordinary Shares',
     text: 'verbatim statute excerpt'
@@ -433,9 +433,11 @@ async function runPhase3Tests() {
     text: 'An entity shall assess at the end of each reporting period whether there is any indication that an asset may be impaired.'
   };
   const verSfrs36 = defaultCitationVerifier.verifyCitation(citeSfrs36);
-  assert.strictEqual(verSfrs36.status, 'SOURCE_NEEDS_REVIEW');
+  assert.strictEqual(verSfrs36.status, 'NON_CANONICAL_URL', 'A generic ACRA framework page is not a citation URL for a specific SFRS(I) paragraph');
+  assert.strictEqual(verSfrs36.isValid, false);
+  assert.strictEqual(verSfrs36.isStructurallyValid, false);
   assert.strictEqual(verSfrs36.isAuthoritativePrimarySource, false);
-  console.log('✓ 10C. Proved: SFRS(I) 1-36 citation enforces SOURCE_NEEDS_REVIEW curated summary discipline');
+  console.log('✓ 10C. Proved: Generic ACRA framework URL is rejected for a paragraph-specific SFRS(I) citation');
   passed++;
 
   console.log(`\n=============================================================`);
@@ -447,4 +449,3 @@ runPhase3Tests().catch((err) => {
   console.error('Phase 3 test failed:', err);
   process.exit(1);
 });
-

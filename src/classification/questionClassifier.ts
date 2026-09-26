@@ -112,6 +112,14 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('register for gst') ||
     topicMetadata.some(topic => topic.domainId === 'IRAS_GST');
 
+  // References to an investee's directors can be evidence in an accounting
+  // control/significant-influence assessment. They should not independently
+  // route the question into company-law coverage unless corporate context is
+  // explicit or the question is not framed as an investee accounting issue.
+  const hasInvesteeAccountingGovernanceContext =
+    /\b(?:investee|associate|subsidiary)\b/i.test(q) &&
+    /\b(?:control|significant influence|relevant operating decisions|policy decisions)\b/i.test(q);
+
   const hasCorporate =
     q.includes('acra') ||
     q.includes('companies act') ||
@@ -121,7 +129,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('section 201') ||
     q.includes('annual return') ||
     /\bagm\b/i.test(q) ||
-    q.includes('director') ||
+    (q.includes('director') && !hasInvesteeAccountingGovernanceContext) ||
     q.includes('share capital') ||
     topicMetadata.some(topic => topic.domainId.startsWith('ACRA_'));
 

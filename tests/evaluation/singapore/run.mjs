@@ -12,8 +12,12 @@ import {
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const fixturePath = path.join(directory, 'gemini-seed.json');
+const reviewedFixturePath = path.join(directory, 'reviewed-knowledge.json');
+const consolidationFixturePath = path.join(directory, 'consolidation-source-map.json');
 
 export const BENCHMARK_DIMENSIONS = [
+  // Keep the original dimensions stable for existing consumers. The following
+  // phase dimensions split the stages that were previously combined.
   'authorityRouting',
   'domainRouting',
   'topicRouting',
@@ -23,7 +27,16 @@ export const BENCHMARK_DIMENSIONS = [
   'citationCorrectness',
   'missingFactBehaviour',
   'effectiveDateCorrectness',
-  'multiAuthorityHandling'
+  'multiAuthorityHandling',
+  'classification',
+  'sourceSelection',
+  'retrieval',
+  'grounding',
+  'answerPath',
+  'substantiveConclusion',
+  'citation',
+  'missingFacts',
+  'effectiveDate'
 ];
 
 const REVIEW_STATUS = 'INDEPENDENTLY_VERIFIED';
@@ -87,6 +100,246 @@ function reviewGate(oracle) {
   return { eligible: true };
 }
 
+function expectedReviewGate(expected) {
+  const status = expected?.review?.status;
+  if (status && status !== REVIEW_STATUS) {
+    return { eligible: false, reason: `Expected-label review status is not ${REVIEW_STATUS}.` };
+  }
+  return { eligible: true };
+}
+
+function routingReviewGate(routingOracle, expected) {
+  if (!routingOracle) return expectedReviewGate(expected);
+  const review = routingOracle.review;
+  if (review?.status !== REVIEW_STATUS) {
+    return { eligible: false, reason: `Routing oracle review status is not ${REVIEW_STATUS}.` };
+  }
+  if (typeof review.reviewer !== 'string' || !review.reviewer.trim() ||
+      typeof review.reviewedAt !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(review.reviewedAt)) {
+    return { eligible: false, reason: 'Independently verified routing oracle requires a reviewer and reviewedAt date (YYYY-MM-DD).' };
+  }
+  return { eligible: true };
+}
+
+function evaluateTopicConstraints({ requiredTopicIds, allowedTopicIds, forbiddenTopicIds, actualTopicIds }) {
+  const hasAssertions = [requiredTopicIds, allowedTopicIds, forbiddenTopicIds].some(Array.isArray);
+  if (!hasAssertions) return null;
+
+  const required = Array.isArray(requiredTopicIds) ? containsSetResult(requiredTopicIds, actualTopicIds) : null;
+  const allowed = Array.isArray(allowedTopicIds) ? sorted(allowedTopicIds) : null;
+  const forbidden = Array.isArray(forbiddenTopicIds) ? sorted(forbiddenTopicIds) : [];
+  const unexpected = allowed === null ? [] : sorted(actualTopicIds).filter(topicId => !allowed.includes(topicId));
+  const forbiddenFound = sorted(actualTopicIds).filter(topicId => forbidden.includes(topicId));
+  const checks = [
+    ...(required ? [{ name: 'requiredTopicIds', ...required }] : []),
+    ...(allowed ? [{ name: 'allowedTopicIds', status: unexpected.length === 0 ? 'PASS' : 'FAIL', allowed, unexpected }] : []),
+    ...(Array.isArray(forbiddenTopicIds) ? [{ name: 'forbiddenTopicIds', status: forbiddenFound.length === 0 ? 'PASS' : 'FAIL', forbidden, found: forbiddenFound }] : [])
+  ];
+  return {
+    status: checks.every(check => check.status === 'PASS') ? 'PASS' : 'FAIL',
+    expected: { required: required?.expected || [], allowed, forbidden },
+    actual: sorted(actualTopicIds),
+    checks,
+    missing: required?.missing || [],
+    unexpected,
+    forbidden: forbiddenFound
+  };
+}
+
+function evaluateClassification(results) {
+  const evaluated = results.filter(result => result.status !== 'NOT_EVALUATED');
+  if (evaluated.length === 0) return unevaluated('No reviewed classification labels supplied.');
+  return {
+    status: evaluated.every(result => result.status === 'PASS') ? 'PASS' : 'FAIL',
+    checks: evaluated.map(result => result.status)
+  };
+}
+
+function evaluateSourceSelection({ expected, retrievedRecords, answer, gate, sourceError }) {
+  if (!gate.eligible) return unevaluated(gate.reason);
+  if (!expected || ![
+    expected.allowedRecordIds,
+    expected.forbiddenRecordIds,
+    expected.expectedSourceMapIds,
+    expected.allowedSourceMapIds,
+    expected.expectedSourceMapTopicIds
+  ].some(Array.isArray)) {
+    return unevaluated('No reviewed source-selection oracle supplied.');
+  }
+  const records = Array.isArray(retrievedRecords) ? retrievedRecords : [];
+  const actualRecordIds = records.map(record => record?.id).filter(value => typeof value === 'string');
+  const trace = getSourceMapTrace(answer);
+  const actualMapIds = traceList(trace, [
+    'sourceMapIds',
+    'pointerIds', 'sourceMapPointerIds', 'sourceMapRecordIds', 'selectedSourceMapIds', 'selectedMapRecordIds'
+  ]);
+  const traceTopicIds = traceList(trace, ['topicIds', 'sourceMapTopicIds', 'selectedSourceMapTopicIds']);
+  const checks = [];
+  if (Array.isArray(expected.expectedSourceMapIds)) {
+    const mapResult = exactSetResult(expected.expectedSourceMapIds, actualMapIds);
+    const traceReported = typeof trace.path === 'string' && Array.isArray(trace.sourceMapIds);
+    checks.push({
+      mode: 'expectedSourceMapIds',
+      ...mapResult,
+      status: mapResult.status === 'PASS' && traceReported ? 'PASS' : 'FAIL',
+      ...(traceReported ? {} : { reason: 'Answer source-map trace is missing its path and sourceMapIds.' })
+    });
+  }
+  if (Array.isArray(expected.allowedSourceMapIds)) {
+    const unexpected = actualMapIds.filter(id => !expected.allowedSourceMapIds.includes(id));
+    checks.push({
+      mode: 'allowedSourceMapIds',
+      status: unexpected.length === 0 ? 'PASS' : 'FAIL',
+      allowed: sorted(expected.allowedSourceMapIds),
+      actual: sorted(actualMapIds),
+      unexpected
+    });
+  }
+  if (Array.isArray(expected.expectedSourceMapTopicIds)) {
+    checks.push({ mode: 'expectedSourceMapTopicIds', ...exactSetResult(expected.expectedSourceMapTopicIds, traceTopicIds) });
+  }
+  if (Array.isArray(expected.allowedRecordIds) || Array.isArray(expected.forbiddenRecordIds)) {
+    const allowed = Array.isArray(expected.allowedRecordIds) ? expected.allowedRecordIds : null;
+    const forbidden = Array.isArray(expected.forbiddenRecordIds) ? expected.forbiddenRecordIds : [];
+    const outsideAllowed = allowed === null ? [] : actualRecordIds.filter(id => !allowed.includes(id));
+    const forbiddenRetrieved = actualRecordIds.filter(id => forbidden.includes(id));
+    checks.push({
+      mode: 'reviewedRecordSelection',
+      status: outsideAllowed.length === 0 && forbiddenRetrieved.length === 0 ? 'PASS' : 'FAIL',
+      allowedRecordIds: allowed === null ? undefined : sorted(allowed),
+      forbiddenRecordIds: sorted(forbidden),
+      outsideAllowed,
+      forbiddenRetrieved
+    });
+  }
+  if (checks.length === 0) return unevaluated('No executable source-selection assertions supplied.');
+  const scope = Array.isArray(expected.expectedSourceMapIds) || Array.isArray(expected.allowedSourceMapIds) || Array.isArray(expected.expectedSourceMapTopicIds)
+    ? 'SOURCE_MAP_POINTER_IDENTITY_ONLY'
+    : 'RETRIEVED_RECORD_SELECTION';
+  if (sourceError && checks.some(check => check.mode === 'reviewedRecordSelection')) {
+    return { status: 'FAIL', scope, reason: `Source selection failed: ${sourceError}`, checks };
+  }
+  return { status: checks.every(check => check.status === 'PASS') ? 'PASS' : 'FAIL', scope, checks };
+}
+
+function evaluateRetrievalDimension(sourceEvaluation, expected, answer, gate) {
+  if (!gate.eligible) return unevaluated(gate.reason);
+  if (expected && typeof expected === 'object') {
+    const trace = getSourceMapTrace(answer);
+    const actualRecordIds = traceList(trace, [
+      'selectedRecordIds', 'fetchedRecordIds', 'retrievedEvidenceIds', 'selectedEvidenceRecordIds', 'evidenceRecordIds'
+    ]);
+    const actualUrls = traceList(trace, [
+      'finalVerifiedUrls', 'verifiedFinalUrls', 'finalResolvedUrls', 'finalUrls', 'officialSourceUrls'
+    ]).map(normalizeUrl);
+    const checks = [];
+    const requiredIds = expected.requiredRecordIds || expected.requiredSourceIds || [];
+    const requiredUrls = expected.expectedFinalUrls || expected.requiredFinalUrls || [];
+    if (Array.isArray(requiredIds) && requiredIds.length) {
+      checks.push({ name: 'requiredFetchedRecords', ...containsSetResult(requiredIds, actualRecordIds) });
+    }
+    if (Array.isArray(requiredUrls) && requiredUrls.length) {
+      checks.push({ name: 'requiredVerifiedFinalUrls', ...containsSetResult(requiredUrls.map(normalizeUrl), actualUrls) });
+    }
+    if (expected.requireSuccessfulFetch === true) {
+      const fetched = extractGroundingEvidence(answer).filter(record => actualRecordIds.includes(record.id));
+      const successfulFetch = trace.path === 'MAPPED_SOURCE' && fetched.length > 0 &&
+        fetched.every(record => isSuccessfulFetchStatus(record.fetchStatus));
+      checks.push({ name: 'successfulFetch', status: successfulFetch ? 'PASS' : 'FAIL', actual: fetched.map(record => record.fetchStatus || 'NOT_REPORTED') });
+    }
+    if (checks.length === 0) return unevaluated('Retrieval oracle has no executable record, URL, or fetch-status assertions.');
+    return { status: checks.every(check => check.status === 'PASS') ? 'PASS' : 'FAIL', checks };
+  }
+  const retrievalChecks = (sourceEvaluation?.checks || []).filter(check => ['legacyExact', 'claimSources'].includes(check.mode));
+  if (retrievalChecks.length === 0) return unevaluated('No reviewed retrieval recall/exact-source expectations supplied.');
+  return {
+    status: retrievalChecks.every(check => check.status === 'PASS') ? 'PASS' : 'FAIL',
+    checks: retrievalChecks
+  };
+}
+
+function evaluateAnswerPath(expected, answer, gate) {
+  if (!gate.eligible) return unevaluated(gate.reason);
+  if (!expected?.expectedMode) return unevaluated('No independently reviewed answer-path expectation supplied.');
+  const trace = getSourceMapTrace(answer);
+  const actual = trace.path || trace.mode || trace.route || trace.answerPath;
+  if (typeof actual !== 'string' || !actual) {
+    return { status: 'FAIL', expected: expected.expectedMode, actual: 'NOT_REPORTED', reason: 'Answer does not expose a source-map path trace.' };
+  }
+  const normalize = value => String(value).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+  return { status: normalize(actual) === normalize(expected.expectedMode) ? 'PASS' : 'FAIL', expected: expected.expectedMode, actual };
+}
+
+function getSourceMapTrace(answer) {
+  return answer?.sourceMapFallbackTrace ?? answer?.scenarioState?.sourceMapFallbackTrace ?? {};
+}
+
+function traceList(trace, keys) {
+  const values = keys.flatMap(key => Array.isArray(trace?.[key]) ? trace[key] : []);
+  return [...new Set(values.filter(value => typeof value === 'string'))];
+}
+
+function isSuccessfulFetchStatus(status) {
+  return ['SUCCESS', 'FETCHED', 'VERIFIED', 'LIVE_VERIFIED', 'OK', 'HTTP_200'].includes(String(status || '').toUpperCase());
+}
+
+function evaluateGrounding(expected, answer, answerError, gate) {
+  if (!gate.eligible) return unevaluated(gate.reason);
+  if (!expected || typeof expected !== 'object') return unevaluated('No independently reviewed answer-grounding oracle supplied.');
+  const evidence = extractGroundingEvidence(answer);
+  if (!answer) return { status: 'FAIL', reason: answerError || 'Answer function returned no answer.', actual: [] };
+  const ids = evidence.map(record => record.id).filter(value => typeof value === 'string');
+  const required = expected.requiredRecordIds || expected.requiredSourceIds || [];
+  const allowed = expected.allowedRecordIds || expected.allowedSourceIds || null;
+  const requiredResult = Array.isArray(required) && required.length > 0
+    ? containsSetResult(required, ids)
+    : null;
+  const outsideAllowed = Array.isArray(allowed) ? ids.filter(id => !allowed.includes(id)) : [];
+  const invalidLifecycle = evidence.filter(record => {
+    const lifecycle = String(record.lifecycle || record.lifecycleState || record.status || '').toUpperCase();
+    if (record.groundingEligible === false || ['STAGED', 'REJECTED', 'INACTIVE'].includes(lifecycle)) return true;
+    if (lifecycle !== 'CANDIDATE') return false;
+    return !(expected.allowValidatedCandidateEvidence === true && isVerifiedCandidateEvidence(record, getSourceMapTrace(answer)));
+  });
+  const requireEligible = expected.requireGroundingEligible !== false;
+  const checks = [
+    ...(requiredResult ? [{ name: 'requiredSources', ...requiredResult }] : []),
+    ...(Array.isArray(allowed) ? [{ name: 'allowedSources', status: outsideAllowed.length === 0 ? 'PASS' : 'FAIL', outsideAllowed }] : []),
+    ...(requireEligible ? [{ name: 'lifecycleEligibility', status: invalidLifecycle.length === 0 && evidence.length > 0 ? 'PASS' : 'FAIL', invalid: invalidLifecycle.map(record => record.id) }] : [])
+  ];
+  if (checks.length === 0) return unevaluated('Grounding oracle must require/allow source IDs or eligible evidence.');
+  return { status: checks.every(check => check.status === 'PASS') ? 'PASS' : 'FAIL', checks, actual: ids };
+}
+
+function extractGroundingEvidence(answer) {
+  const raw = answer?.groundingEvidence ?? answer?.scenarioState?.groundingEvidence ??
+    answer?.groundingContext?.selectedEvidence;
+  if (Array.isArray(raw)) return raw.filter(record => record && typeof record === 'object').map(normalizeGroundingRecord);
+  if (Array.isArray(raw?.records)) return raw.records.map(normalizeGroundingRecord);
+  if (Array.isArray(raw?.sources)) return raw.sources.map(normalizeGroundingRecord);
+  if (Array.isArray(raw?.selectedSources)) return raw.selectedSources.map(normalizeGroundingRecord);
+  if (Array.isArray(raw?.groundingEvidence)) return raw.groundingEvidence.map(normalizeGroundingRecord);
+  return [];
+}
+
+function normalizeGroundingRecord(record) {
+  return {
+    ...record,
+    id: record.id || record.recordId || record.sourceId,
+    lifecycle: record.lifecycle || record.lifecycleState || record.sourceLifecycle || record.status
+  };
+}
+
+function isVerifiedCandidateEvidence(record, trace) {
+  const finalUrl = normalizeUrl(record.finalUrl || record.officialSourceUrl || record.url);
+  const traceUrls = traceList(trace, ['finalVerifiedUrls', 'verifiedFinalUrls', 'finalResolvedUrls', 'finalUrls']).map(normalizeUrl);
+  return record.groundingEligible === true && record.candidateOnly === true &&
+    typeof record.provenance === 'string' && record.provenance.length > 0 &&
+    isSuccessfulFetchStatus(record.fetchStatus) && record.topicMatched === true &&
+    record.titleMatched === true && record.contentMatched === true &&
+    Boolean(finalUrl && traceUrls.includes(finalUrl));
+}
+
 function oracleSourceIds(oracle) {
   return (oracle?.claims || []).flatMap(claim => (claim.sources || [])
     .map(source => source.recordId)
@@ -99,7 +352,14 @@ export async function runSingaporeBenchmark({
   sourceRetriever = defaultAdvancedSourceRetriever,
   answerFunction = productionAnswerFunction
 } = {}) {
-  const fixtures = fixturesData ?? JSON.parse(await readFile(selectedFixturesPath, 'utf8'));
+  let fixtures = fixturesData ?? JSON.parse(await readFile(selectedFixturesPath, 'utf8'));
+  const includedSupplementalFixtures = !fixturesData && path.resolve(selectedFixturesPath) === path.resolve(reviewedFixturePath)
+    ? [path.basename(consolidationFixturePath)]
+    : [];
+  if (includedSupplementalFixtures.length > 0) {
+    const consolidation = JSON.parse(await readFile(consolidationFixturePath, 'utf8'));
+    fixtures = { ...fixtures, cases: [...fixtures.cases, ...consolidation.cases] };
+  }
   const results = [];
 
   for (const testCase of fixtures.cases) {
@@ -109,14 +369,21 @@ export async function runSingaporeBenchmark({
     const actualTopicIds = classification.topicIds ?? decomposition.topics.map(topic => topic.id);
     const expected = testCase.expected || {};
     const oracle = testCase.reviewedOracle;
+    const routingOracle = testCase.routingOracle;
+    const answerPathOracle = testCase.answerPathOracle;
     const gate = reviewGate(oracle);
-    const sourceSelection = gate.eligible ? oracle?.sourceSelection : undefined;
-
+    const expectedGate = expectedReviewGate(expected);
+    const routingGate = routingReviewGate(routingOracle, expected);
+    const answerPathGate = answerPathOracle ? reviewGate(answerPathOracle) : gate;
+    const answerSourceSelection = gate.eligible ? oracle?.sourceSelection : undefined;
+    const routeSourceSelection = routingGate.eligible ? routingOracle?.sourceSelection : undefined;
     let retrievedRecords;
     const expectedOracleSourceIds = gate.eligible ? oracleSourceIds(oracle) : [];
     const legacySourceIds = Array.isArray(expected.sourceRecordIds) ? expected.sourceRecordIds : null;
-    const hasSourcePrecisionOracle = gate.eligible && (
-      Array.isArray(sourceSelection?.allowedRecordIds) || Array.isArray(sourceSelection?.forbiddenRecordIds)
+    const hasSourcePrecisionOracle = (
+      gate.eligible && (Array.isArray(answerSourceSelection?.allowedRecordIds) || Array.isArray(answerSourceSelection?.forbiddenRecordIds))
+    ) || (
+      routingGate.eligible && (Array.isArray(routeSourceSelection?.allowedRecordIds) || Array.isArray(routeSourceSelection?.forbiddenRecordIds))
     );
     const shouldRetrieve = legacySourceIds !== null || expectedOracleSourceIds.length > 0 || hasSourcePrecisionOracle;
     let sourceError;
@@ -134,7 +401,7 @@ export async function runSingaporeBenchmark({
 
     let answer;
     let answerError;
-    if (gate.eligible) {
+    if (gate.eligible || (routingOracle && routingGate.eligible) || (answerPathOracle && answerPathGate.eligible)) {
       try {
         answer = await answerFunction(testCase.question, 'SFRS_I', testCase);
       } catch (error) {
@@ -143,52 +410,103 @@ export async function runSingaporeBenchmark({
     }
 
     const sourceIds = (Array.isArray(retrievedRecords) ? retrievedRecords : []).map(record => record?.id).filter(value => typeof value === 'string');
+    const sourceRetrieval = evaluateSourceDimension({
+      legacyExpected: legacySourceIds,
+      oracleExpected: expectedOracleSourceIds,
+      sourceSelection: answerSourceSelection,
+      actual: sourceIds,
+      error: sourceError,
+      gate,
+      oracle
+    });
+    const routingExpected = routingOracle && routingGate.eligible ? routingOracle : expected;
+    const routingLabelsGate = routingOracle ? routingGate : expectedGate;
+    const authorityRouting = routingLabelsGate.eligible && routingExpected.authorities
+      ? exactSetResult(routingExpected.authorities, classification.authorities)
+      : unevaluated(routingLabelsGate.reason || 'No expected authority labels supplied.');
+    const domainRouting = routingLabelsGate.eligible && routingExpected.domainIds
+      ? exactSetResult(routingExpected.domainIds, classification.domains)
+      : unevaluated(routingLabelsGate.reason || 'No reviewed fine-grained domain labels supplied.');
+    const reviewedTopicOracle = routingGate.eligible ? routingOracle : null;
+    const topicConstraints = reviewedTopicOracle
+      ? evaluateTopicConstraints({
+          requiredTopicIds: reviewedTopicOracle.requiredTopicIds,
+          allowedTopicIds: reviewedTopicOracle.allowedTopicIds,
+          forbiddenTopicIds: reviewedTopicOracle.forbiddenTopicIds,
+          actualTopicIds
+        })
+      : null;
+    const topicRouting = reviewedTopicOracle
+      ? topicConstraints || unevaluated('Reviewed routing oracle has no topic assertions.')
+      : expectedGate.eligible && Array.isArray(expected.requiredTopicIds)
+        ? containsSetResult(expected.requiredTopicIds, actualTopicIds)
+        : expectedGate.eligible && expected.topicIds
+          ? exactSetResult(expected.topicIds, actualTopicIds)
+          : unevaluated((routingOracle ? routingGate.reason : expectedGate.reason) || 'No expected topic labels supplied.');
+    const answerCorrectness = gate.eligible
+      ? evaluateAnswerCorrectness(oracle, answer, answerError)
+      : unevaluated(gate.reason);
+    const calculationCorrectness = gate.eligible
+      ? evaluateCalculation(oracle?.calculation, answer, answerError)
+      : unevaluated(gate.reason);
+    const citationCorrectness = gate.eligible
+      ? evaluateCitations(oracle?.citations, answer, answerError, oracle)
+      : unevaluated(gate.reason);
+    const missingFactBehaviour = gate.eligible && oracle?.missingFacts
+      ? evaluateMissingFactOracle(oracle.missingFacts, answer, answerError)
+      : unevaluated(gate.eligible ? 'No reviewed missing-fact oracle supplied.' : gate.reason);
+    const effectiveDateCorrectness = gate.eligible
+      ? evaluateEffectiveDate(oracle?.effectiveDate, answer, answerError)
+      : unevaluated(gate.reason);
+    const multiAuthorityHandling = routingLabelsGate.eligible && typeof routingExpected.multiAuthority === 'boolean'
+      ? {
+          status: classification.multiAuthority === routingExpected.multiAuthority ? 'PASS' : 'FAIL',
+          expected: routingExpected.multiAuthority,
+          actual: classification.multiAuthority,
+          authorities: sorted(classification.authorities)
+        }
+      : unevaluated(routingLabelsGate.reason || 'No expected multi-authority label supplied.');
     const dimensions = {
-      authorityRouting: expected.authorities
-        ? exactSetResult(expected.authorities, classification.authorities)
-        : unevaluated('No expected authority labels supplied.'),
-      domainRouting: expected.domainIds
-        ? exactSetResult(expected.domainIds, classification.domains)
-        : unevaluated('No reviewed fine-grained domain labels supplied.'),
-      topicRouting: expected.topicIds
-        ? exactSetResult(expected.topicIds, actualTopicIds)
-        : unevaluated('No expected topic labels supplied.'),
-      sourceRetrieval: evaluateSourceDimension({
-        legacyExpected: legacySourceIds,
-        oracleExpected: expectedOracleSourceIds,
-        sourceSelection,
-        actual: sourceIds,
-        error: sourceError,
-        gate,
-        oracle
+      authorityRouting,
+      domainRouting,
+      topicRouting,
+      sourceRetrieval,
+      answerCorrectness,
+      calculationCorrectness,
+      citationCorrectness,
+      missingFactBehaviour,
+      effectiveDateCorrectness,
+      multiAuthorityHandling,
+      classification: evaluateClassification([authorityRouting, domainRouting, multiAuthorityHandling]),
+      sourceSelection: evaluateSourceSelection({
+        expected: routeSourceSelection || answerSourceSelection,
+        retrievedRecords,
+        answer,
+        gate: routeSourceSelection ? routingGate : gate,
+        sourceError
       }),
-      answerCorrectness: gate.eligible
-        ? evaluateAnswerCorrectness(oracle, answer, answerError)
-        : unevaluated(gate.reason),
-      calculationCorrectness: gate.eligible
-        ? evaluateCalculation(oracle?.calculation, answer, answerError)
-        : unevaluated(gate.reason),
-      citationCorrectness: gate.eligible
-        ? evaluateCitations(oracle?.citations, answer, answerError, oracle)
-        : unevaluated(gate.reason),
-      missingFactBehaviour: gate.eligible && oracle?.missingFacts
-        ? evaluateMissingFactOracle(oracle.missingFacts, answer, answerError)
-        : unevaluated(gate.eligible ? 'No reviewed missing-fact oracle supplied.' : gate.reason),
-      effectiveDateCorrectness: gate.eligible
-        ? evaluateEffectiveDate(oracle?.effectiveDate, answer, answerError)
-        : unevaluated(gate.reason),
-      multiAuthorityHandling: typeof expected.multiAuthority === 'boolean'
-        ? {
-            status: classification.multiAuthority === expected.multiAuthority ? 'PASS' : 'FAIL',
-            expected: expected.multiAuthority,
-            actual: classification.multiAuthority,
-            authorities: sorted(classification.authorities)
-          }
-        : unevaluated('No expected multi-authority label supplied.')
+      retrieval: evaluateRetrievalDimension(sourceRetrieval, oracle?.retrieval, answer, gate),
+      grounding: evaluateGrounding(oracle?.grounding, answer, answerError, gate),
+      answerPath: answerPathOracle
+        ? evaluateAnswerPath(answerPathOracle.answerPath, answer, answerPathGate)
+        : evaluateAnswerPath(oracle?.answerPath, answer, answerPathGate),
+      substantiveConclusion: answerCorrectness,
+      citation: citationCorrectness,
+      missingFacts: missingFactBehaviour,
+      effectiveDate: effectiveDateCorrectness
     };
     results.push({
       id: testCase.id,
       provenance: testCase.provenance,
+      caseContext: {
+        expectedAnswerPath: answerPathOracle?.answerPath?.expectedMode || testCase.answerPathExpectation || null,
+        oracleReviewStatus: oracle?.review?.status || 'NOT_SUPPLIED',
+        routingReviewStatus: routingOracle?.review?.status || (expected.review?.status ? `LEGACY_${expected.review.status}` : 'NOT_SUPPLIED'),
+        answerPathReviewStatus: answerPathOracle?.review?.status || (oracle?.answerPath ? oracle.review?.status : 'NOT_SUPPLIED'),
+        answerReviewEligible: gate.eligible,
+        routingReviewEligible: routingGate.eligible,
+        answerPathReviewEligible: answerPathGate.eligible && Boolean(answerPathOracle?.answerPath || oracle?.answerPath)
+      },
       evaluationContext: {
         sourceRetrieval: {
           mode: dimensions.sourceRetrieval.selectionMode || 'notEvaluated',
@@ -207,8 +525,10 @@ export async function runSingaporeBenchmark({
     sourceEvaluation: {
       candidateSelection: 'Scored from an independent source retriever call.',
       precision: 'Reviewed allow/forbidden record IDs provide a precision check; cases without a precision oracle are reported as recall-only when source recall is scored.',
-      answerGrounding: 'NOT_EVALUATED: independently retrieved candidate records are not passed into or verified as inputs to the answer function.'
+      sourceMapSelection: 'SOURCE_MAP_POINTER_IDENTITY_ONLY checks the selected map pointer IDs reported by the answer route; it does not imply that a page was fetched, selected as grounding evidence, or cited.',
+      answerGrounding: 'NOT_EVALUATED unless an independently reviewed grounding oracle and answer grounding evidence are both supplied; independently retrieved candidate records do not establish answer grounding.'
     },
+    supplementalFixtures: includedSupplementalFixtures,
     totalCases: results.length,
     summary,
     results
@@ -476,12 +796,14 @@ function evaluateCitations(expected, answer, answerError, oracle) {
   const required = Array.isArray(expected.required) ? expected.required : [];
   const allowed = Array.isArray(expected.allowed) ? expected.allowed : required;
   const forbidUnsupported = expected.forbidUnsupported === true;
-  if (required.length === 0 && !forbidUnsupported) return unevaluated('No reviewed citation support requirements supplied.');
+  const requireVerifiedLiveUrls = expected.requireVerifiedLiveUrls === true;
+  if (required.length === 0 && !forbidUnsupported && !requireVerifiedLiveUrls) return unevaluated('No reviewed citation support requirements supplied.');
   if (!answer || typeof answer.messageText !== 'string') {
     return { status: 'FAIL', reason: answerError || 'Answer function returned no answer.', required: [], unsupported: [] };
   }
 
   const actual = collectCitations(answer);
+  const verifiedLiveUrls = extractVerifiedLiveUrls(answer);
   const requiredResults = required.map(requirement => {
     const requiredClaim = (oracle?.claims || []).find(claim => claim.id === requirement.claimId);
     const claimExists = typeof requirement.claimId === 'string' && Boolean(requiredClaim);
@@ -498,11 +820,14 @@ function evaluateCitations(expected, answer, answerError, oracle) {
     }));
     const standardMatches = !requirement.standard || urlMatches.some(citation => standardsMatch(citation.standard, requirement.standard));
     const paragraphsMatch = paragraphs.length === 0 || matchingParagraphs.length === paragraphs.length;
+    const liveVerificationRequired = requireVerifiedLiveUrls || requirement.requireVerifiedLiveUrl === true;
+    const liveVerified = !liveVerificationRequired || verifiedLiveUrls.includes(expectedUrl);
     return {
       claimId: requirement.claimId,
-      status: claimExists && urlMatches.length > 0 && standardMatches && paragraphsMatch ? 'PASS' : 'FAIL',
+      status: claimExists && urlMatches.length > 0 && standardMatches && paragraphsMatch && liveVerified ? 'PASS' : 'FAIL',
       expected: requirement,
       claimExists,
+      liveVerified,
       matchingParagraphs,
       actual: urlMatches.map(({ standard, paragraph, officialSourceUrl }) => ({ standard, paragraph, officialSourceUrl }))
     };
@@ -515,6 +840,13 @@ function evaluateCitations(expected, answer, answerError, oracle) {
       status: allowed.some(permitted => citationMatchesRequirement(citation, permitted)) ? 'PASS' : 'FAIL'
     }));
   }
+  if (requireVerifiedLiveUrls) {
+    unsupportedResults.push(...actual.map(citation => ({
+      citation,
+      status: verifiedLiveUrls.includes(normalizeUrl(citation.officialSourceUrl)) ? 'PASS' : 'FAIL',
+      reason: 'Citation URL is absent from the answer path trace of successfully verified live sources.'
+    })));
+  }
   const all = [...requiredResults, ...unsupportedResults];
   return {
     status: all.every(result => result.status === 'PASS') && (requiredResults.length > 0 || forbidUnsupported) ? 'PASS' : 'FAIL',
@@ -522,6 +854,16 @@ function evaluateCitations(expected, answer, answerError, oracle) {
     unsupported: unsupportedResults.filter(result => result.status === 'FAIL').map(result => result.citation),
     actual: actual.map(({ standard, paragraph, officialSourceUrl }) => ({ standard, paragraph, officialSourceUrl }))
   };
+}
+
+function extractVerifiedLiveUrls(answer) {
+  const trace = getSourceMapTrace(answer);
+  if (trace.path !== 'MAPPED_SOURCE') return [];
+  const traceUrls = new Set(traceList(trace, ['finalVerifiedUrls', 'verifiedFinalUrls', 'verifiedSourceUrls', 'finalResolvedUrls', 'finalUrls']).map(normalizeUrl));
+  const evidenceUrls = extractGroundingEvidence(answer).filter(record => isVerifiedCandidateEvidence(record, trace))
+    .map(record => normalizeUrl(record.finalUrl || record.officialSourceUrl || record.url))
+    .filter(url => url && traceUrls.has(url));
+  return [...new Set(evidenceUrls)];
 }
 
 function citationMatchesRequirement(citation, requirement) {

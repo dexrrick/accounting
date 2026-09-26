@@ -54,7 +54,7 @@ async function runTests() {
   // TEST 4: Canonical SSO URL Builder
   console.log('Test 4: Canonical SSO URL Builder');
   const itaUrl = buildSsoUrl('ITA', '14(1)');
-  assert.strictEqual(itaUrl, 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P16-#pr22-');
+  assert.strictEqual(itaUrl, 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-');
   const caUrl = buildSsoUrl('CA', '205C');
   assert.strictEqual(caUrl, 'https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P16-#pr205C-');
   const gstUrl = buildSsoUrl('GSTA', '21');
@@ -65,7 +65,7 @@ async function runTests() {
   console.log('Test 5: Link Sanitizer (Anti-hallucination)');
   const textWithFakeLink = 'Refer to [Section 14(1) Income Tax Act](https://example.com/fake-iras-pdf-1234.pdf) for deductibility.';
   const sanitized = sanitizeStatutoryLinks(textWithFakeLink);
-  assert(sanitized.includes('https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P16-#pr22-'), 'Hallucinated link must be replaced with canonical SSO link');
+  assert(sanitized.includes('https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-'), 'Hallucinated link must be replaced with canonical SSO link');
   console.log('✓ Link Sanitizer verified successfully.\n');
 
   // TEST 6: Existing Double Entry Journal (Entertainment 3k)

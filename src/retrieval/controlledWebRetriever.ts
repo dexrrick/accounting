@@ -1,4 +1,4 @@
-import { defaultExternalSourceValidator, ExternalSourceValidator } from './externalSourceValidator';
+import { defaultExternalSourceValidator, ExternalSourceValidator, type TopicContentExpectation } from './externalSourceValidator';
 import { defaultSourceCache, SourceCache, type CachedSource } from './sourceCache';
 import { computeSha256 } from '../standards/sourceVersioning';
 
@@ -13,7 +13,8 @@ export type ControlledFetchStatus =
   | 'INVALID_CONTENT'
   | 'REDIRECT_REJECTED'
   | 'HASH_MISMATCH'
-  | 'PROVENANCE_MISMATCH';
+  | 'PROVENANCE_MISMATCH'
+  | 'TOPIC_MISMATCH';
 
 export interface ControlledFetchOptions {
   timeoutMs?: number;
@@ -23,6 +24,8 @@ export interface ControlledFetchOptions {
   customFetch?: (url: string, init?: RequestInit) => Promise<Response>;
   redirectCount?: number;
   maxRedirects?: number;
+  /** Requires fetched title and substantive page content to match the mapped topic. */
+  topicValidation?: TopicContentExpectation;
 }
 
 export interface ControlledFetchResult {
@@ -34,6 +37,12 @@ export interface ControlledFetchResult {
   error?: string;
   retrievedAt: string;
   sourceUrl: string;
+  finalUrl?: string;
+  pageTitle?: string;
+  topicMatched?: boolean;
+  titleMatched?: boolean;
+  contentMatched?: boolean;
+  substantiveText?: string;
   etag?: string;
   lastModified?: string;
 }
@@ -92,6 +101,13 @@ export class ControlledWebRetriever {
           this.cache.invalidate(url);
           cached = null;
         } else if (this.cache.isFresh(url)) {
+          const topicCheck = options.topicValidation
+            ? this.validator.validateTopicContent(cached.rawContent, options.topicValidation)
+            : undefined;
+          if (topicCheck && !topicCheck.isValid) {
+            this.cache.invalidate(url);
+            cached = null;
+          } else {
           return {
             status: 'SUCCESS',
             httpStatus: cached.httpStatus,
@@ -99,10 +115,17 @@ export class ControlledWebRetriever {
             contentHash: cached.contentHash,
             cached: true,
             retrievedAt: cached.retrievedAt,
-            sourceUrl: url,
+            sourceUrl: cached.canonicalUrl,
+            finalUrl: cached.canonicalUrl,
+            pageTitle: topicCheck?.pageTitle,
+            topicMatched: options.topicValidation ? true : undefined,
+            titleMatched: options.topicValidation ? true : undefined,
+            contentMatched: options.topicValidation ? true : undefined,
+            substantiveText: topicCheck?.substantiveText,
             etag: cached.etag,
             lastModified: cached.lastModified
           };
+          }
         }
       }
     }
@@ -142,6 +165,25 @@ export class ControlledWebRetriever {
 
       // Handle 304 Not Modified
       if (response.status === 304 && cached && cached.rawContent) {
+        const topicCheck = options.topicValidation
+          ? this.validator.validateTopicContent(cached.rawContent, options.topicValidation)
+          : undefined;
+        if (topicCheck && !topicCheck.isValid) {
+          this.cache.invalidate(url);
+          return {
+            status: 'TOPIC_MISMATCH',
+            httpStatus: 304,
+            error: topicCheck.reason,
+            retrievedAt,
+            sourceUrl: cached.canonicalUrl,
+            finalUrl: cached.canonicalUrl,
+            pageTitle: topicCheck.pageTitle,
+            topicMatched: false,
+            titleMatched: false,
+            contentMatched: false,
+            substantiveText: topicCheck.substantiveText
+          };
+        }
         this.cache.touch(url, ttlMs);
         return {
           status: 'SUCCESS',
@@ -150,7 +192,13 @@ export class ControlledWebRetriever {
           contentHash: cached.contentHash,
           cached: true,
           retrievedAt,
-          sourceUrl: url,
+          sourceUrl: cached.canonicalUrl,
+          finalUrl: cached.canonicalUrl,
+          pageTitle: topicCheck?.pageTitle,
+          topicMatched: options.topicValidation ? true : undefined,
+          titleMatched: options.topicValidation ? true : undefined,
+          contentMatched: options.topicValidation ? true : undefined,
+          substantiveText: topicCheck?.substantiveText,
           etag: cached.etag,
           lastModified: cached.lastModified
         };
@@ -212,6 +260,20 @@ export class ControlledWebRetriever {
         };
       }
 
+      const responseUrl = response.url || url;
+      if (responseUrl !== url) {
+        const finalUrlCheck = this.validator.validateRedirect(url, responseUrl);
+        if (!finalUrlCheck.isValid) {
+          return {
+            status: 'REDIRECT_REJECTED',
+            httpStatus: response.status,
+            error: finalUrlCheck.reason,
+            retrievedAt,
+            sourceUrl: url
+          };
+        }
+      }
+
       const text = await response.text();
       if (!text || text.trim().length === 0) {
         return {
@@ -221,6 +283,35 @@ export class ControlledWebRetriever {
           retrievedAt,
           sourceUrl: url
         };
+      }
+
+      const contentType = response.headers?.get('content-type') || undefined;
+      if (options.topicValidation) {
+        if (!contentType || (!contentType.toLowerCase().includes('text/html') && !contentType.toLowerCase().includes('text/plain'))) {
+          return {
+            status: 'INVALID_CONTENT',
+            httpStatus: response.status,
+            error: `Topic-verified source must return HTML or plain text; received '${contentType || 'unknown content type'}'`,
+            retrievedAt,
+            sourceUrl: responseUrl
+          };
+        }
+        const topicCheck = this.validator.validateTopicContent(text, options.topicValidation);
+        if (!topicCheck.isValid) {
+          return {
+            status: 'TOPIC_MISMATCH',
+            httpStatus: response.status,
+            error: topicCheck.reason,
+            retrievedAt,
+            sourceUrl: responseUrl,
+            finalUrl: responseUrl,
+            pageTitle: topicCheck.pageTitle,
+            topicMatched: false,
+            titleMatched: false,
+            contentMatched: false,
+            substantiveText: topicCheck.substantiveText
+          };
+        }
       }
 
       const hash = computeSha256(text);
@@ -240,14 +331,12 @@ export class ControlledWebRetriever {
 
       const etag = response.headers?.get('etag') || undefined;
       const lastModified = response.headers?.get('last-modified') || undefined;
-      const contentType = response.headers?.get('content-type') || undefined;
-
       // Store into cache
       if (useCache) {
-        const defaultUrlTtl = url.includes('frankfurter') ? 3_600_000 : 86_400_000;
+        const defaultUrlTtl = responseUrl.includes('frankfurter') ? 3_600_000 : 86_400_000;
         const effectiveTtl = ttlMs ?? defaultUrlTtl;
         const cachedSource: CachedSource = {
-          canonicalUrl: url,
+          canonicalUrl: responseUrl,
           retrievedAt,
           contentHash: hash,
           rawContent: text,
@@ -267,7 +356,13 @@ export class ControlledWebRetriever {
         contentHash: hash,
         cached: false,
         retrievedAt,
-        sourceUrl: url,
+        sourceUrl: responseUrl,
+        finalUrl: responseUrl,
+        pageTitle: options.topicValidation ? this.validator.validateTopicContent(text, options.topicValidation).pageTitle : undefined,
+        topicMatched: options.topicValidation ? true : undefined,
+        titleMatched: options.topicValidation ? true : undefined,
+        contentMatched: options.topicValidation ? true : undefined,
+        substantiveText: options.topicValidation ? this.validator.validateTopicContent(text, options.topicValidation).substantiveText : undefined,
         etag,
         lastModified
       };

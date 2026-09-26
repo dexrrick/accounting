@@ -230,6 +230,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
 
   const processedAi = postProcessAIResponse(mockAiOutputWithCitations, null, 'test query', testEvidenceContext);
   const resultCitations = processedAi.scenarioState.directGroups[0].citations;
+  const submittedCitations = mockAiOutputWithCitations.directGroups[0].citations;
 
   // Verify Case A: Valid primary statutory source
   const citeA = resultCitations[0];
@@ -239,40 +240,30 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   console.log('✓ 4A. Case A: Primary statutory provision verified as VERIFIED_PRIMARY_SOURCE');
   passed++;
 
-  // Verify Case B: Curated summary can NEVER become VERIFIED_PRIMARY_SOURCE
-  const citeB = resultCitations[1];
-  assert.strictEqual(citeB.verificationStatus, 'SOURCE_NEEDS_REVIEW', 'Case B must be SOURCE_NEEDS_REVIEW');
-  assert.strictEqual(citeB.isAuthoritativePrimarySource, false, 'Case B isAuthoritativePrimarySource must be false');
-  assert.strictEqual(citeB.isStructurallyValid, true, 'Case B isStructurallyValid must be true');
-  console.log('✓ 4B. Case B: Curated standard summary verified as SOURCE_NEEDS_REVIEW (never primary source)');
-  passed++;
-
-  // Verify Case C: Fabricated standard
-  const citeC = resultCitations[2];
-  assert.strictEqual(citeC.verificationStatus, 'SOURCE_NOT_FOUND', 'Case C must be SOURCE_NOT_FOUND');
-  assert.strictEqual(citeC.isStructurallyValid, false, 'Case C isStructurallyValid must be false');
-  console.log('✓ 4C. Case C: Fabricated standard flagged as SOURCE_NOT_FOUND');
-  passed++;
-
-  // Verify Case D: Fabricated paragraph
-  const citeD = resultCitations[3];
-  assert.strictEqual(citeD.verificationStatus, 'PARAGRAPH_NOT_FOUND', 'Case D must be PARAGRAPH_NOT_FOUND');
-  assert.strictEqual(citeD.isStructurallyValid, false, 'Case D isStructurallyValid must be false');
-  console.log('✓ 4D. Case D: Fabricated paragraph on valid act flagged as PARAGRAPH_NOT_FOUND');
-  passed++;
-
-  // Verify Case E: Authority mismatch
-  const citeE = resultCitations[4];
-  assert.strictEqual(citeE.verificationStatus, 'AUTHORITY_MISMATCH', 'Case E must be AUTHORITY_MISMATCH');
-  assert.strictEqual(citeE.isStructurallyValid, false, 'Case E isStructurallyValid must be false');
-  console.log('✓ 4E. Case E: Authority mismatch flagged as AUTHORITY_MISMATCH');
-  passed++;
-
-  // Verify Case F: Non-canonical domain
-  const citeF = resultCitations[5];
-  assert.strictEqual(citeF.verificationStatus, 'NON_CANONICAL_URL', 'Case F must be NON_CANONICAL_URL');
-  assert.strictEqual(citeF.isStructurallyValid, false, 'Case F isStructurallyValid must be false');
-  console.log('✓ 4F. Case F: External blog URL flagged as NON_CANONICAL_URL');
+  // Cases B-F are rejected and omitted. Verify their substantive rejection
+  // reasons directly rather than expecting invalid citations to remain in the
+  // user-facing answer.
+  assert.strictEqual(resultCitations.length, 1, 'Only the valid exact-record citation should remain in the answer');
+  const evidenceScope = [...testEvidenceContext.primaryEvidence, ...testEvidenceContext.officialGuidance, ...testEvidenceContext.curatedSummaries];
+  const rejectedCases = [
+    ['B', 'NON_CANONICAL_URL'],
+    ['C', 'SOURCE_NOT_FOUND'],
+    ['D', 'PARAGRAPH_NOT_FOUND'],
+    ['E', 'AUTHORITY_MISMATCH'],
+    ['F', 'NON_CANONICAL_URL']
+  ];
+  for (const [caseId, expectedStatus] of rejectedCases) {
+    const inputCitation = submittedCitations[caseId.charCodeAt(0) - 'A'.charCodeAt(0)];
+    const verification = defaultCitationVerifier.verifyCitation(inputCitation, inputCitation.authority, evidenceScope);
+    assert.strictEqual(verification.status, expectedStatus, `Case ${caseId} must retain its specific rejection reason`);
+    assert.strictEqual(verification.isValid, false, `Case ${caseId} must not be valid`);
+    assert.ok(!resultCitations.some(citation => citation.standard === inputCitation.standard &&
+      citation.paragraph === inputCitation.paragraph &&
+      citation.officialSourceUrl === inputCitation.officialSourceUrl &&
+      citation.authority === inputCitation.authority),
+      `Rejected case ${caseId} must be omitted from the user-facing answer`);
+  }
+  console.log('✓ 4B-F. Invalid, generic, or out-of-scope citations retain distinct rejection reasons and are omitted');
   passed++;
 
   // =========================================================================
@@ -347,8 +338,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   const azureParsed = parseAccountingAIResponse(rawAiJson, null, 'test query', testEvidenceContext);
   const azureCitations = azureParsed.scenarioState.directGroups[0].citations;
   assert.strictEqual(azureCitations[0].verificationStatus, 'VERIFIED_PRIMARY_SOURCE', 'Azure parsed output must have Case A verified');
-  assert.strictEqual(azureCitations[1].verificationStatus, 'SOURCE_NEEDS_REVIEW', 'Azure parsed output must have Case B marked needs review');
-  assert.strictEqual(azureCitations[2].verificationStatus, 'SOURCE_NOT_FOUND', 'Azure parsed output must have Case C rejected');
+  assert.strictEqual(azureCitations.length, 1, 'Azure parsing must also omit all rejected citations');
   console.log('✓ 6B. Azure OpenAI and OpenAI adapter uses identical postProcessAIResponse verification');
   passed++;
 
@@ -362,19 +352,19 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   const unsupportedCitations = [
     {
       standard: 'Goods and Services Tax Act 1993',
-      paragraph: 'Section 21(3)',
-      title: 'Zero-Rating of International Services and Exported Goods',
-      text: 'taxed at 0% for international services',
+      paragraph: 'First Schedule',
+      title: 'GST Compulsory Registration Threshold',
+      text: 'taxable turnover exceeds SGD 1,000,000',
       authority: 'IRAS',
-      officialSourceUrl: 'https://sso.agc.gov.sg/Act/GSTA1993#pr21-'
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/GSTA1993?ProvIds=P112-#Sc1-'
     },
     {
-      standard: 'Skills Development Levy Act 1979',
-      paragraph: 'Section 3',
-      title: 'Skills Development Levy',
-      text: 'payable at prescribed statutory rates',
+      standard: 'Central Provident Fund Act 1953',
+      paragraph: 'Section 7 & First Schedule',
+      title: 'Statutory CPF Contribution Rates & Rounding Rules',
+      text: 'employer and employee contributions at statutory rates',
       authority: 'CPF',
-      officialSourceUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/skills-development-levy'
+      officialSourceUrl: 'https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-'
     }
   ];
   const retrievedEvidenceForTax = [
@@ -498,7 +488,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
             standard: 'Income Tax Act 1947',
             paragraph: 'Section 14(1)',
             authority: 'IRAS',
-            officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-'
+            officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-'
           }
         ]
       }
@@ -512,9 +502,15 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
     'Mandatory uncertainty disclaimer must be injected when no evidence is retrieved'
   );
   const zeroCitations = zeroEvidenceResult.scenarioState.directGroups[0].citations;
-  assert.strictEqual(zeroCitations[0].verificationStatus, 'UNVERIFIED', 'Citation must be UNVERIFIED when no evidence was retrieved');
-  assert.strictEqual(zeroCitations[0].isAuthoritativePrimarySource, false, 'No claim can be presented as authoritative primary source without retrieved evidence');
-  console.log('✓ 7E. PROOF 5: No retrieved evidence → no claim presented as authoritative (enforced fallback & UNVERIFIED status)');
+  assert.strictEqual(zeroCitations.length, 0, 'Citation without retrieved evidence must be omitted from the user-facing answer');
+  const zeroEvidenceVerification = defaultCitationVerifier.verifyCitation(
+    ungroundedAiOutput.directGroups[0].citations[0],
+    'IRAS',
+    []
+  );
+  assert.strictEqual(zeroEvidenceVerification.status, 'UNVERIFIED', 'The rejected claim remains classifiable as UNVERIFIED without evidence');
+  assert.strictEqual(zeroEvidenceVerification.isAuthoritativePrimarySource, false, 'No claim can be presented as authoritative primary source without retrieved evidence');
+  console.log('✓ 7E. PROOF 5: No retrieved evidence → citation is omitted and remains UNVERIFIED');
   passed++;
 
   // =========================================================================
@@ -607,7 +603,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
             standard: 'Income Tax Act 1947',
             paragraph: 'Section 14(1)',
             authority: 'IRAS',
-            officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-'
+            officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-'
           }
         ]
       }

@@ -48,6 +48,14 @@ export const APPROVED_SINGAPORE_SOURCE_FAMILIES: ApprovedSourceFamily[] = [
     presentationLabel: 'IFRS Foundation',
     mustShowCanonicalLink: true,
     legalWeight: 'PRIMARY'
+  },
+  {
+    id: 'SINGAPORE_ACCOUNTING_STANDARDS_COMMITTEE',
+    hosts: ['asc.acra.gov.sg'],
+    tier: 'FORMAL_AGENCY_INSTRUMENT',
+    presentationLabel: 'Accounting Standards Committee / ACRA',
+    mustShowCanonicalLink: true,
+    legalWeight: 'PRIMARY'
   }
 ];
 
@@ -75,4 +83,30 @@ export function getApprovedSourceTierForUrl(url?: string): ApprovedSourceTier | 
 
 export function isApprovedSingaporeSourceUrl(url?: string): boolean {
   return getApprovedSourceTierForUrl(url) !== undefined;
+}
+
+/**
+ * A narrow compatibility allowlist for the existing validated SFRS(I) 9 pack.
+ * This is a standard-level public landing page, not paragraph-level evidence.
+ */
+const VERIFIED_LEGACY_STANDARD_URLS: ReadonlyArray<{ url: string; standardCodes: readonly string[] }> = [
+  {
+    url: 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/',
+    standardCodes: ['SFRS(I) 9', 'IFRS 9']
+  }
+];
+
+export function isVerifiedLegacyStandardUrl(url: string | undefined, standardCode: string | undefined): boolean {
+  if (!url || !standardCode) return false;
+  try {
+    const parsed = new URL(url);
+    const normalized = `${parsed.hostname.toLowerCase().replace(/^www\./, '')}${parsed.pathname.toLowerCase().replace(/\/+$/, '')}`;
+    return VERIFIED_LEGACY_STANDARD_URLS.some(entry => {
+      const candidate = new URL(entry.url);
+      const candidateNormalized = `${candidate.hostname.toLowerCase().replace(/^www\./, '')}${candidate.pathname.toLowerCase().replace(/\/+$/, '')}`;
+      return normalized === candidateNormalized && entry.standardCodes.some(code => code.toLowerCase() === standardCode.toLowerCase());
+    });
+  } catch {
+    return false;
+  }
 }

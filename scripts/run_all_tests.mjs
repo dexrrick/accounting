@@ -28,6 +28,8 @@ const testSuites = [
   { name: 'Phase 7 Coverage Registry', file: 'test_phase7_coverage_registry.mjs', layer: 'coverage-governance', tier: 'full' },
   { name: 'Singapore Knowledge Routing Benchmark', file: 'test_singapore_knowledge_benchmark.mjs', layer: 'coverage-governance', tier: 'smoke' },
   { name: 'Singapore Knowledge Foundation Registry and Routing', file: 'test_singapore_knowledge_foundation.mjs', layer: 'coverage-governance', tier: 'smoke' },
+  { name: 'Singapore Consolidation Source Map and Local Routing', file: 'test_singapore_consolidation_source_map.mjs', layer: 'coverage-governance', tier: 'smoke' },
+  { name: 'Verified Official Citation and Source-Map Fallback', file: 'test_verified_official_citation_fallback.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'SFRS(I) 9 Reviewed Knowledge Pack', file: 'test_sfrsi9_knowledge_pack.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Corporate Tax Treatment Pack', file: 'test_corporate_tax_treatment.mjs', layer: 'corporate-tax', tier: 'smoke' },
   { name: 'Phase 7 Remaining Topic Packs', file: 'test_phase7_remaining_packs.mjs', layer: 'coverage-governance', tier: 'full' },

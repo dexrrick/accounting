@@ -18,7 +18,10 @@ export const ALLOWED_REGULATORY_HOSTNAMES = new Set([
   'www.mas.gov.sg',
   // Ask.gov.sg publishes first-party FAQs for MAS, IRAS, CPF and other
   // Singapore agencies. It is guidance, not a substitute for legislation.
-  'ask.gov.sg'
+  'ask.gov.sg',
+  'ifrs.org',
+  'www.ifrs.org',
+  'asc.acra.gov.sg'
 ]);
 
 export const ALLOWED_REFERENCE_HOSTNAMES = new Set([
@@ -50,6 +53,35 @@ export interface ExternalValidationResult {
   isValid: boolean;
   errorCode?: ExternalValidationErrorCode;
   reason?: string;
+}
+
+export interface TopicContentExpectation {
+  standardIdentifiers: string[];
+  expectedTitles: string[];
+  topicTerms: string[];
+  minimumTopicTermMatches?: number;
+}
+
+export interface TopicContentValidationResult extends ExternalValidationResult {
+  pageTitle?: string;
+  substantiveText?: string;
+}
+
+const TOPIC_TERM_STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the']);
+
+function normalizeTopicTerm(value: string): string {
+  return value.toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(token => token && !TOPIC_TERM_STOPWORDS.has(token))
+    .join(' ');
+}
+
+function containsTopicTerm(content: string, term: string): boolean {
+  const normalizedContent = normalizeTopicTerm(content);
+  const normalizedTerm = normalizeTopicTerm(term);
+  return Boolean(normalizedTerm && ` ${normalizedContent} `.includes(` ${normalizedTerm} `));
 }
 
 /**
@@ -174,6 +206,48 @@ export class ExternalSourceValidator {
     );
   }
 
+  /** Reject official but unrelated pages and generic portals before use as evidence. */
+  public validateTopicContent(
+    rawDocument: string,
+    expectation: TopicContentExpectation
+  ): TopicContentValidationResult {
+    if (!rawDocument || typeof rawDocument !== 'string') {
+      return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has no document content' };
+    }
+
+    const titleMatch = rawDocument.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
+    const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
+    const mainMatch = rawDocument.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)>/i);
+    const substantiveText = cleanHtmlText(mainMatch?.[1] || rawDocument);
+    if (!pageTitle || /^(?:home(?:page)?|search(?: results)?|sign in|log in|login|access denied|not found|error)(?:\s*[-|:].*)?$/i.test(pageTitle)) {
+      return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has a generic, unavailable, or login title', pageTitle, substantiveText };
+    }
+
+    const normalize = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const normalizedTitle = normalize(pageTitle);
+    const normalizedContent = normalize(substantiveText);
+    const titleSpecificity = expectation.expectedTitles
+      .map(normalize)
+      .filter(value => value.length > 0)
+      .some(value => normalizedTitle.includes(value));
+    const identityMatched = expectation.standardIdentifiers.some(identifier => {
+      const key = normalize(identifier);
+      return key.length > 0 && (normalizedTitle.includes(key) || normalizedContent.includes(key));
+    });
+    if (!titleSpecificity || !identityMatched) {
+      return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page title or content does not identify the mapped standard/source', pageTitle, substantiveText };
+    }
+
+    const terms = [...new Set(expectation.topicTerms.map(normalize).filter(term => term.length > 2))];
+    const matchingTerms = terms.filter(term => containsTopicTerm(substantiveText, term));
+    const minimumMatches = expectation.minimumTopicTermMatches ?? 1;
+    if (matchingTerms.length < minimumMatches) {
+      return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page does not contain enough topic-specific terms to support the mapped topic', pageTitle, substantiveText };
+    }
+
+    return { isValid: true, pageTitle, substantiveText };
+  }
+
   /**
    * Validates candidate document structure before allowing candidate registration.
    */
@@ -215,7 +289,7 @@ export class ExternalSourceValidator {
         return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `IRAS guidance must point to iras.gov.sg or sso.agc.gov.sg, found '${host}'` };
       }
     } else if (authority === 'ACRA') {
-      if (host !== 'acra.gov.sg' && host !== 'www.acra.gov.sg' && host !== 'sso.agc.gov.sg') {
+      if (host !== 'acra.gov.sg' && host !== 'www.acra.gov.sg' && host !== 'asc.acra.gov.sg' && host !== 'sso.agc.gov.sg') {
         return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `ACRA directives must point to acra.gov.sg or sso.agc.gov.sg, found '${host}'` };
       }
     } else if (authority === 'MOM') {

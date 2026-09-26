@@ -16,22 +16,24 @@ const response = appendStatutorySourceFooter(
 );
 assert.match(response, new RegExp(section14.canonicalUrl.replace(/[.?]/g, '\\$&')));
 assert.ok(capitalAllowanceGuide);
-assert.match(response, new RegExp(capitalAllowanceGuide.replace(/[.?]/g, '\\$&')));
+assert.doesNotMatch(response, new RegExp(capitalAllowanceGuide.replace(/[.?]/g, '\\$&')),
+  'Supplementary IRAS guidance is not linked unless it has its own verified source record');
+assert.doesNotMatch(response, /Companies Act 1967/, 'Fuzzy keyword matches must not add unrelated legislation');
 
 const leaveResponse = appendStatutorySourceFooter('What is the annual leave entitlement under Section 88A of the Employment Act?', {});
 assert.match(leaveResponse, /https:\/\/sso\.agc\.gov\.sg\/Act\/EmA1968\?ProvIds=P110-#pr88A-/);
 
 const irasPathWithParentheses = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax';
 const sanitizedIrasLink = sanitizeStatutoryLinks(`[IRAS input-tax guidance](${irasPathWithParentheses})`);
-assert.match(sanitizedIrasLink, /goods-services-tax-%28gst%29\/claiming-gst-%28input-tax%29/);
-assert.doesNotMatch(sanitizedIrasLink, /\]\(https:\/\/www\.iras\.gov\.sg\/taxes\/goods-services-tax-\(gst\)\)/);
+assert.equal(sanitizedIrasLink, 'IRAS input-tax guidance', 'An official host alone does not verify an unregistered page URL');
 
 const masSfoFaq = 'https://ask.gov.sg/mas/questions/clx8ktis900dbryozeeumiiux?from=relatedquestions';
-assert.equal(getSafeOfficialUrl(masSfoFaq, 'MAS SFO FAQ', '', 'MAS'), masSfoFaq);
+assert.equal(getSafeOfficialUrl(masSfoFaq, 'MAS SFO FAQ', '', 'MAS'), masSfoFaq,
+  'The explicitly verified MAS FAQ URL remains available without promoting its content status');
 const faqResponse = appendStatutorySourceFooter('The SFO FAQ applies.', {
   statutoryAdvisory: [{ authority: 'MAS', statuteOrAct: 'MAS SFO FAQ', sectionOrSchedule: 'Licensing exemption', topic: 'SFO', officialUrl: masSfoFaq }]
 });
-assert.match(faqResponse, new RegExp(masSfoFaq.replace(/[.?]/g, '\\$&')));
-assert.match(faqResponse, /Official agency FAQ via Ask\.gov\.sg — guidance/);
+assert.match(faqResponse, /ask\.gov\.sg\/mas\/questions\/clx8ktis900dbryozeeumiiux/i,
+  'The verified MAS FAQ URL should be linked from the answer footer');
 assert.doesNotMatch(faqResponse, /Companies Act 1967/);
 console.log('PASS | Source records consistently provide canonical provisions and optional official guidance');

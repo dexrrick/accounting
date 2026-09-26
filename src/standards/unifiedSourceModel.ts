@@ -8,6 +8,7 @@ import {
 } from './sourceFreshnessManager';
 import { defaultSourceVersioningManager } from './sourceVersioning';
 import { isAskGovSingaporeUrl } from './approvedSourceRegistry';
+import { SINGAPORE_COVERAGE_REGISTRY } from './coverageRegistry';
 
 export type SourceStatus = 'VERIFIED' | 'NEEDS_REVIEW' | 'HISTORICAL';
 
@@ -60,6 +61,16 @@ export interface AuthoritativeSourceRecord {
   sourceLocator?: SourceLocator;
   provenance: 'LOCAL_STATIC' | 'LIVE_EXTERNAL' | 'LIVE_PATCH';
   canonicalSourceUrl?: string;
+  /** A source-map pointer routes official retrieval but is never itself answer evidence. */
+  recordRole?: 'EVIDENCE' | 'SOURCE_MAP_POINTER';
+  groundingEligible?: boolean;
+  sourceMapTopicIds?: string[];
+  sourceMapScope?: 'STANDARD' | 'FRAMEWORK';
+  retrievalHints?: string[];
+  relatedTopicIds?: string[];
+  /** Verifies URL identity/reachability only; it does not verify page claims or standard paragraphs. */
+  urlVerificationStatus?: 'VERIFIED' | 'CANDIDATE' | 'REJECTED';
+  urlVerifiedDate?: string;
   sourceAuthority?: 'AGC' | 'IRAS' | 'ACRA' | 'MOM' | 'CPF' | 'MAS' | 'ASK_GOV_SG' | 'REFERENCE_API';
   retrievedAt?: string;
   verificationMethod?: string;
@@ -204,6 +215,14 @@ export function buildUnifiedSourceRegistry(
       verificationMethod: isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'STATUTORY_LEGISLATION_AUDIT' : 'CURATED_EDITORIAL_REVIEW'
     };
 
+    // URL verification is tracked separately from evidence/content review.
+    // This one MAS FAQ URL was checked directly; its curated summary remains
+    // NEEDS_REVIEW and must not be promoted to verified content.
+    if (rule.id === 'MAS_SFO_LICENSING_EXEMPTION_2026') {
+      record.urlVerificationStatus = 'VERIFIED';
+      record.urlVerifiedDate = '2026-09-26';
+    }
+
     record.contentHash = defaultSourceVersioningManager.computeSourceHash(record);
     record.provisionHash = record.contentHash;
     record.extractionStatus = isVerbatim && rule.sourceStatus === 'VERIFIED' ? 'EXACT' : 'PARTIAL';
@@ -247,7 +266,9 @@ export function buildUnifiedSourceRegistry(
       sourceText: std.principle,
       principleSummary: std.standardTitle,
       effectiveDate: std.effectiveDate || std.validFrom || undefined,
-      officialSourceUrl: std.officialSourceUrl || 'https://www.acra.gov.sg/accountancy/accounting-standards',
+      // Missing publisher URLs remain absent. Never synthesize an official URL from
+      // the authority or standard name.
+      officialSourceUrl: std.officialSourceUrl || '',
       domain: 'ACCOUNTING_SFRS',
       jurisdiction: 'Singapore',
       tags: [std.standardTitle.toLowerCase(), std.paragraph.toLowerCase(), 'accounting standard', 'sfrs(i)'],
@@ -264,7 +285,7 @@ export function buildUnifiedSourceRegistry(
       provenance: 'LOCAL_STATIC',
       lifecycleState: 'ACTIVE',
       version: '2026.09',
-      canonicalSourceUrl: std.officialSourceUrl || 'https://www.acra.gov.sg/accountancy/accounting-standards',
+      ...(std.officialSourceUrl ? { canonicalSourceUrl: std.officialSourceUrl } : {}),
       ...(std.officialSourceUrl?.includes('ifrs.org') ? {} : { sourceAuthority: 'ACRA' as const }),
       retrievedAt: '2026-09-01T00:00:00Z',
       verificationMethod: 'CURATED_EDITORIAL_REVIEW'
@@ -276,6 +297,100 @@ export function buildUnifiedSourceRegistry(
     record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
     UNIFIED_SOURCE_REGISTRY[key] = record;
   }
+
+  // 3. Verified source-map pointers. These records identify official pages for
+  // retrieval only. They contain no extracted standard text and cannot be used
+  // as answer-grounding evidence even though the URLs were manually checked.
+  const mapTopics = SINGAPORE_COVERAGE_REGISTRY.filter(topic => topic.canonicalSourceId && topic.canonicalSourceUrl);
+  const mapDefinitions = [
+    { id: 'SFRSI10_SOURCE_MAP', code: 'SFRS(I) 10', title: 'IFRS 10 Consolidated Financial Statements', instrument: 'SFRS(I) 10 — Consolidated Financial Statements' },
+    { id: 'SFRSI3_SOURCE_MAP', code: 'SFRS(I) 3', title: 'IFRS 3 Business Combinations', instrument: 'SFRS(I) 3 — Business Combinations' },
+    { id: 'SFRSI128_SOURCE_MAP', code: 'SFRS(I) 1-28', title: 'IAS 28 Investments in Associates and Joint Ventures', instrument: 'SFRS(I) 1-28 — Investments in Associates and Joint Ventures' },
+    { id: 'SFRSI11_SOURCE_MAP', code: 'SFRS(I) 11', title: 'IFRS 11 Joint Arrangements', instrument: 'SFRS(I) 11 — Joint Arrangements' }
+  ] as const;
+  for (const definition of mapDefinitions) {
+    const topics = mapTopics.filter(topic => topic.sourceRecordIds.includes(definition.id));
+    const canonicalTopic = mapTopics.find(topic => topic.canonicalSourceId === definition.id);
+    if (!topics.length || !canonicalTopic) continue;
+    const first = canonicalTopic;
+    const record: AuthoritativeSourceRecord = {
+      id: definition.id,
+      authority: 'ACRA',
+      authorityName: 'IFRS Foundation (official standard overview)',
+      sourcePublisher: 'IFRS Foundation',
+      legalOrStandardInstrument: definition.instrument,
+      documentTitle: definition.title,
+      standardOrActCode: definition.code,
+      paragraphOrSection: 'Official standard overview / source-map pointer',
+      sourceText: '',
+      principleSummary: 'URL-verified official overview pointer only. Fetch and verify topic-specific material before grounding an answer; this record is not the full SFRS(I) standard or paragraph evidence.',
+      officialSourceUrl: first.canonicalSourceUrl!,
+      domain: 'ACCOUNTING_SFRS',
+      jurisdiction: 'Singapore',
+      tags: [...new Set(topics.flatMap(topic => [...topic.keywords, ...(topic.aliases ?? [])]))],
+      sourceStatus: 'NEEDS_REVIEW',
+      sourceType: 'OFFICIAL_GUIDANCE',
+      evidenceTier: 'OFFICIAL_GUIDANCE',
+      isVerbatimText: false,
+      lastVerifiedDate: '2026-09-25',
+      reviewAuditCycleDays: 90,
+      provenance: 'LOCAL_STATIC',
+      lifecycleState: 'ACTIVE',
+      canonicalSourceUrl: first.canonicalSourceUrl!,
+      verificationMethod: 'MANUAL_OFFICIAL_URL_AND_PAGE_TITLE_CHECK',
+      recordRole: 'SOURCE_MAP_POINTER',
+      groundingEligible: false,
+      sourceMapScope: 'STANDARD',
+      sourceMapTopicIds: topics.map(topic => topic.id),
+      retrievalHints: [...new Set(topics.flatMap(topic => [...topic.sectionHints ?? [], ...topic.keywords]))],
+      relatedTopicIds: [...new Set(topics.flatMap(topic => topic.relatedTopicIds ?? []))],
+      urlVerificationStatus: 'VERIFIED',
+      urlVerifiedDate: '2026-09-25',
+      extractionStatus: 'PARTIAL'
+    };
+    record.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate);
+    UNIFIED_SOURCE_REGISTRY[definition.id] = record;
+  }
+
+  const frameworkTopics = mapTopics.filter(topic => topic.sourceRecordIds.includes('SFRSI_FRAMEWORK_ACRA'));
+  const frameworkUrl = 'https://www.acra.gov.sg/regulations/accounting-standards-financial-reporting-surveillance/accounting-standards/';
+  const frameworkRecord: AuthoritativeSourceRecord = {
+    id: 'SFRSI_FRAMEWORK_ACRA',
+    authority: 'ACRA',
+    authorityName: 'Accounting Standards Committee / ACRA',
+    sourcePublisher: 'ACRA',
+    legalOrStandardInstrument: 'Singapore SFRS(I) financial reporting framework',
+    documentTitle: 'Accounting Standards — Singapore framework overview',
+    standardOrActCode: 'SFRS(I)',
+    paragraphOrSection: 'Official framework overview / source-map pointer',
+    sourceText: '',
+    principleSummary: 'URL-verified ACRA framework overview pointer only. It identifies the Singapore framework; it is not paragraph-level evidence for an individual standard.',
+    officialSourceUrl: frameworkUrl,
+    domain: 'ACCOUNTING_SFRS',
+    jurisdiction: 'Singapore',
+    tags: ['sfrs(i)', 'singapore accounting standards', 'accounting standards committee', 'acra'],
+    sourceStatus: 'NEEDS_REVIEW',
+    sourceType: 'OFFICIAL_GUIDANCE',
+    evidenceTier: 'OFFICIAL_GUIDANCE',
+    isVerbatimText: false,
+    lastVerifiedDate: '2026-09-25',
+    reviewAuditCycleDays: 90,
+    provenance: 'LOCAL_STATIC',
+    lifecycleState: 'ACTIVE',
+    canonicalSourceUrl: frameworkUrl,
+    verificationMethod: 'MANUAL_OFFICIAL_URL_AND_PAGE_TITLE_CHECK',
+    recordRole: 'SOURCE_MAP_POINTER',
+    groundingEligible: false,
+    sourceMapScope: 'FRAMEWORK',
+    sourceMapTopicIds: frameworkTopics.map(topic => topic.id),
+    retrievalHints: ['Singapore framework', 'SFRS(I)', 'Accounting Standards Committee', 'ACRA accounting standards'],
+    relatedTopicIds: [...new Set(frameworkTopics.flatMap(topic => topic.relatedTopicIds ?? []))],
+    urlVerificationStatus: 'VERIFIED',
+    urlVerifiedDate: '2026-09-25',
+    extractionStatus: 'PARTIAL'
+  };
+  frameworkRecord.freshnessStatus = defaultSourceFreshnessManager.evaluateSourceFreshness(frameworkRecord, referenceDate);
+  UNIFIED_SOURCE_REGISTRY.SFRSI_FRAMEWORK_ACRA = frameworkRecord;
 
   return UNIFIED_SOURCE_REGISTRY;
 }

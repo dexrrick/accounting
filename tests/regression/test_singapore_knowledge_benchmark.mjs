@@ -4,12 +4,21 @@ import { BENCHMARK_DIMENSIONS, runSingaporeBenchmark } from '../evaluation/singa
 import { GROUNDING_SOURCE_MAX_RESULTS } from '../../src/services/groundingContextBuilder.ts';
 
 const fixture = JSON.parse(await readFile(new URL('../evaluation/singapore/gemini-seed.json', import.meta.url), 'utf8'));
-const reviewedFixture = JSON.parse(await readFile(new URL('../evaluation/singapore/reviewed-knowledge.json', import.meta.url), 'utf8'));
+const reviewedKnowledgeFixture = JSON.parse(await readFile(new URL('../evaluation/singapore/reviewed-knowledge.json', import.meta.url), 'utf8'));
+const consolidationFixture = JSON.parse(await readFile(new URL('../evaluation/singapore/consolidation-source-map.json', import.meta.url), 'utf8'));
+const reviewedFixture = { ...reviewedKnowledgeFixture, cases: [...reviewedKnowledgeFixture.cases, ...consolidationFixture.cases] };
 const ids = fixture.cases.map(testCase => testCase.id);
 assert.equal(new Set(ids).size, ids.length, 'Benchmark case IDs must be unique');
 assert.ok(fixture.cases.every(testCase => Array.isArray(testCase.expected.domainIds)), 'Each fixture case must provide reviewed fine-grained domain labels, including empty labels for controls');
 assert.ok(fixture.cases.some(testCase => testCase.provenance === 'gemini-seed-negative' && testCase.expected.authorities.length === 0), 'Include nonstatutory MOM ambiguity controls');
 assert.ok(fixture.cases.some(testCase => testCase.id === 'mas-iras-section-13o' && testCase.expected.authorities.length === 2), 'Include an explicit multi-authority 13O sentinel');
+assert.equal(new Set(reviewedFixture.cases.map(testCase => testCase.id)).size, reviewedFixture.cases.length, 'Reviewed and pending source-map benchmark case IDs must be unique');
+assert.equal(consolidationFixture.cases.length, 14, 'Add cross-standard and unmapped-source cases for this phase');
+assert.ok(consolidationFixture.cases.every(testCase => testCase.reviewedOracle.review.status === 'PENDING_REVIEW'), 'New answer oracles must stay unscored pending independent review');
+assert.ok(consolidationFixture.cases.every(testCase => testCase.routingOracle?.review?.status === 'INDEPENDENTLY_VERIFIED'), 'Routing labels and pointer identities use their independent review gate');
+assert.ok(consolidationFixture.cases.every(testCase => testCase.answerPathOracle?.review?.status === 'PENDING_REVIEW'), 'Answer-path outcomes must remain pending independent review');
+assert.ok(consolidationFixture.cases.every(testCase => Array.isArray(testCase.routingOracle.requiredTopicIds) && !Array.isArray(testCase.routingOracle.topicIds)), 'New source-map cases must use required-topic containment labels rather than exact topic arrays');
+assert.ok(consolidationFixture.cases.every(testCase => Array.isArray(testCase.routingOracle.allowedTopicIds) && Array.isArray(testCase.routingOracle.forbiddenTopicIds)), 'Reviewed source-map routing must define closed topic allow/forbid constraints');
 
 const report = await runSingaporeBenchmark();
 assert.equal(report.totalCases, fixture.cases.length);
@@ -17,6 +26,29 @@ assert.deepEqual(Object.keys(report.summary), BENCHMARK_DIMENSIONS);
 for (const result of report.results) {
   assert.deepEqual(Object.keys(result.dimensions), BENCHMARK_DIMENSIONS, `${result.id} must report every benchmark dimension`);
 }
+
+const pendingPhaseReport = await runSingaporeBenchmark({
+  fixturesData: reviewedFixture,
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => undefined
+});
+for (const testCase of consolidationFixture.cases) {
+  const result = pendingPhaseReport.results.find(item => item.id === testCase.id);
+  assert.ok(result, `Reviewed benchmark report must include ${testCase.id}`);
+  for (const dimension of ['authorityRouting', 'domainRouting', 'topicRouting', 'multiAuthorityHandling', 'classification', 'sourceSelection']) {
+    assert.notEqual(result.dimensions[dimension].status, 'NOT_EVALUATED', `${testCase.id} ${dimension} must use the independent routing review gate`);
+  }
+  for (const dimension of ['sourceRetrieval', 'answerCorrectness', 'calculationCorrectness', 'citationCorrectness', 'missingFactBehaviour', 'effectiveDateCorrectness', 'retrieval', 'grounding', 'answerPath', 'substantiveConclusion', 'citation', 'missingFacts', 'effectiveDate']) {
+    assert.equal(result.dimensions[dimension].status, 'NOT_EVALUATED', `${testCase.id} ${dimension} must remain unscored until answer-path/outcome review`);
+  }
+}
+const explicitReviewedReport = await runSingaporeBenchmark({
+  fixturesPath: 'tests/evaluation/singapore/reviewed-knowledge.json',
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => undefined
+});
+assert.equal(explicitReviewedReport.totalCases, reviewedFixture.cases.length, 'Running the reviewed suite should include the supplemental consolidation source-map cases');
+assert.ok(explicitReviewedReport.supplementalFixtures.includes('consolidation-source-map.json'));
 
 let capturedRetrievalQuery;
 const sourceHarness = {
@@ -49,6 +81,105 @@ assert.equal(capturedRetrievalQuery.domain, 'IRAS_GST');
 assert.deepEqual(capturedRetrievalQuery.authorities, ['IRAS']);
 assert.ok(capturedRetrievalQuery.topicIds.includes('gst_compulsory_registration'));
 assert.equal(capturedRetrievalQuery.maxResults, GROUNDING_SOURCE_MAX_RESULTS, 'Benchmark retrieval limit must match production grounding');
+
+const requiredTopicPass = await runSingaporeBenchmark({
+  fixturesData: { cases: [{
+    id: 'required-topics-allow-extra-legacy-labels',
+    provenance: 'test-only-topic-routing-contract',
+    question: 'IRAS GST compulsory registration and taxable turnover',
+    expected: { requiredTopicIds: ['gst_compulsory_registration'] }
+  }] },
+  sourceRetriever: { async retrieveSources() { return []; } }
+});
+assert.equal(requiredTopicPass.results[0].dimensions.topicRouting.status, 'PASS', 'Required-topic routing accepts extra classifier labels');
+assert.ok(requiredTopicPass.results[0].dimensions.topicRouting.actual.includes('iras-gst-turnover-tests'), 'The containment contract should tolerate additional legacy or related labels');
+const requiredTopicMissing = await runSingaporeBenchmark({
+  fixturesData: { cases: [{
+    id: 'required-topics-detect-missing-label',
+    provenance: 'test-only-topic-routing-contract',
+    question: 'IRAS GST compulsory registration and taxable turnover',
+    expected: { requiredTopicIds: ['gst_compulsory_registration', 'test-only-unrouted-topic'] }
+  }] },
+  sourceRetriever: { async retrieveSources() { return []; } }
+});
+assert.equal(requiredTopicMissing.results[0].dimensions.topicRouting.status, 'FAIL', 'Required-topic routing fails when a required label is absent');
+assert.deepEqual(requiredTopicMissing.results[0].dimensions.topicRouting.missing, ['test-only-unrouted-topic']);
+
+const routingReview = { status: 'INDEPENDENTLY_VERIFIED', reviewer: 'routing harness reviewer', reviewedAt: '2026-09-25' };
+const routeOnlyCase = {
+  id: 'routing-reviewed-answer-pending',
+  provenance: 'test-only-independent-review-gates',
+  question: 'IRAS GST compulsory registration and taxable turnover',
+  routingOracle: {
+    review: routingReview,
+    requiredTopicIds: ['gst_compulsory_registration'],
+    allowedTopicIds: ['gst_compulsory_registration', 'iras-gst-turnover-tests'],
+    forbiddenTopicIds: ['sfrsi3-goodwill'],
+    sourceSelection: { expectedSourceMapIds: ['SFRSI10_SOURCE_MAP'] }
+  },
+  answerPathOracle: { review: { status: 'PENDING_REVIEW' }, answerPath: { expectedMode: 'MAPPED_SOURCE' } },
+  reviewedOracle: { review: { status: 'PENDING_REVIEW' } }
+};
+const routeOnlyAnswer = {
+  messageText: 'Unreviewed answer text.',
+  sourceMapFallbackTrace: {
+    path: 'MAPPED_SOURCE',
+    sourceMapIds: ['SFRSI10_SOURCE_MAP'],
+    selectedRecordIds: ['FETCHED_IFRS10_PAGE'],
+    finalVerifiedUrls: ['https://www.ifrs.org/issued-standards/list-of-standards/ifrs-10-consolidated-financial-statements/'],
+    candidateOnly: true
+  },
+  groundingEvidence: [{ recordId: 'FETCHED_IFRS10_PAGE', lifecycleState: 'CANDIDATE', groundingEligible: true }],
+  scenarioState: { directGroups: [] }
+};
+const routeOnlyReport = await runSingaporeBenchmark({
+  fixturesData: { cases: [routeOnlyCase] },
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => routeOnlyAnswer
+});
+const routeOnlyDimensions = routeOnlyReport.results[0].dimensions;
+assert.equal(routeOnlyDimensions.topicRouting.status, 'PASS', 'A separately reviewed routing oracle may score topic routing while answer review is pending');
+assert.equal(routeOnlyDimensions.sourceSelection.status, 'PASS', 'A separately reviewed source-map selection oracle may score from the production route trace');
+assert.equal(routeOnlyDimensions.answerPath.status, 'NOT_EVALUATED', 'Answer-path expectations need their own independent review gate');
+assert.equal(routeOnlyDimensions.sourceSelection.scope, 'SOURCE_MAP_POINTER_IDENTITY_ONLY', 'Source-map pointer selection is not a claim that a source was fetched or used for grounding');
+for (const dimension of ['sourceRetrieval', 'retrieval', 'grounding', 'answerCorrectness', 'substantiveConclusion', 'citation', 'missingFacts', 'effectiveDate']) {
+  assert.equal(routeOnlyDimensions[dimension].status, 'NOT_EVALUATED', `${dimension} must remain unscored while its answer evidence/oracle is pending`);
+}
+assert.equal(routeOnlyReport.results[0].caseContext.routingReviewEligible, true);
+assert.equal(routeOnlyReport.results[0].caseContext.answerReviewEligible, false);
+
+const unexpectedTopicCase = {
+  ...routeOnlyCase,
+  id: 'routing-reviewed-unexpected-topic-rejected',
+  routingOracle: {
+    review: routingReview,
+    requiredTopicIds: ['gst_compulsory_registration'],
+    allowedTopicIds: ['gst_compulsory_registration']
+  }
+};
+const unexpectedTopicReport = await runSingaporeBenchmark({
+  fixturesData: { cases: [unexpectedTopicCase] },
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => routeOnlyAnswer
+});
+assert.equal(unexpectedTopicReport.results[0].dimensions.topicRouting.status, 'FAIL', 'The allowed-topic contract must reject extra unrelated classifier labels');
+assert.ok(unexpectedTopicReport.results[0].dimensions.topicRouting.unexpected.includes('iras-gst-turnover-tests'));
+
+const forbiddenTopicReport = await runSingaporeBenchmark({
+  fixturesData: { cases: [{
+    ...routeOnlyCase,
+    id: 'routing-reviewed-forbidden-topic-rejected',
+    routingOracle: {
+      review: routingReview,
+      requiredTopicIds: ['gst_compulsory_registration'],
+      forbiddenTopicIds: ['iras-gst-turnover-tests']
+    }
+  }] },
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => routeOnlyAnswer
+});
+assert.equal(forbiddenTopicReport.results[0].dimensions.topicRouting.status, 'FAIL', 'The forbidden-topic contract must reject explicitly excluded labels');
+assert.deepEqual(forbiddenTopicReport.results[0].dimensions.topicRouting.forbidden, ['iras-gst-turnover-tests']);
 
 const sourceUrl = 'https://example.gov.sg/standard';
 const reviewedCase = (id, reviewedOracle) => ({
@@ -86,6 +217,187 @@ const harnessCase = reviewedCase('end-to-end-good', {
 const harnessSourceRetriever = {
   async retrieveSources() { return [{ id: 'REVIEWED_STANDARD_SOURCE' }]; }
 };
+
+const sourceMapPathCase = reviewedCase('source-map-path-dimensions', {
+  claims: [{
+    id: 'retrieved-conclusion',
+    conclusion: 'The answer uses retrieved official evidence.',
+    sources: [{ recordId: 'FETCHED_IFRS10_PAGE' }],
+    assertions: [{ path: 'messageText', op: 'includes', value: 'retrieved official evidence' }]
+  }],
+  sourceSelection: { expectedSourceMapIds: ['SFRSI10_SOURCE_MAP'] },
+  retrieval: {
+    requiredRecordIds: ['FETCHED_IFRS10_PAGE'],
+    expectedFinalUrls: [sourceUrl],
+    requireSuccessfulFetch: true
+  },
+  grounding: { requiredSourceIds: ['FETCHED_IFRS10_PAGE'], allowValidatedCandidateEvidence: true },
+  answerPath: { expectedMode: 'MAPPED_SOURCE' },
+  citations: { requireVerifiedLiveUrls: true, required: [{ claimId: 'retrieved-conclusion', officialSourceUrl: sourceUrl, standard: 'IFRS 10' }] }
+});
+const verifiedCandidateAnswer = {
+  messageText: `The answer uses retrieved official evidence. [IFRS 10](${sourceUrl})`,
+  sourceMapFallbackTrace: {
+    path: 'MAPPED_SOURCE',
+    sourceMapIds: ['SFRSI10_SOURCE_MAP'],
+    selectedRecordIds: ['FETCHED_IFRS10_PAGE'],
+    finalVerifiedUrls: [sourceUrl],
+    candidateOnly: true
+  },
+  groundingEvidence: [{
+    recordId: 'FETCHED_IFRS10_PAGE',
+    lifecycleState: 'CANDIDATE',
+    groundingEligible: true,
+    provenance: 'OFFICIAL_SOURCE_LIVE_FETCH',
+    officialSourceUrl: sourceUrl,
+    finalUrl: sourceUrl,
+    fetchStatus: 'SUCCESS',
+    topicMatched: true,
+    titleMatched: true,
+    contentMatched: true,
+    candidateOnly: true
+  }],
+  scenarioState: { directGroups: [] }
+};
+const sourceMapPathReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [sourceMapPathCase] },
+  sourceRetriever: { async retrieveSources() { return [{ id: 'UNRELATED_CANDIDATE' }]; } },
+  answerFunction: async () => verifiedCandidateAnswer
+});
+const sourceMapPathDimensions = sourceMapPathReport.results[0].dimensions;
+assert.equal(sourceMapPathDimensions.sourceSelection.status, 'PASS', 'Source-map selection must use the answer route trace, not unrelated retriever candidates');
+assert.equal(sourceMapPathDimensions.retrieval.status, 'PASS', 'Only fetched record IDs and verified final URLs satisfy answer-path retrieval');
+assert.equal(sourceMapPathDimensions.grounding.status, 'PASS', 'A live-validated official page may ground an answer while its source lifecycle remains CANDIDATE');
+assert.equal(sourceMapPathDimensions.answerPath.status, 'PASS');
+assert.equal(sourceMapPathDimensions.substantiveConclusion.status, 'PASS');
+assert.equal(sourceMapPathDimensions.citation.status, 'PASS', 'Live citation must match a final URL verified by the answer route');
+
+const traceOnlyGroundingReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [sourceMapPathCase] },
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => ({
+    ...verifiedCandidateAnswer,
+    groundingEvidence: undefined,
+    sourceMapFallbackTrace: {
+      ...verifiedCandidateAnswer.sourceMapFallbackTrace,
+      selectedEvidence: verifiedCandidateAnswer.groundingEvidence
+    }
+  })
+});
+assert.equal(traceOnlyGroundingReport.results[0].dimensions.grounding.status, 'FAIL',
+  'Evidence present only in a source-map selection trace must not count as answer grounding');
+
+const ifrs10OfficialUrl = 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-10-consolidated-financial-statements/';
+const localKnowledgeCase = reviewedCase('local-curated-rule-path', {
+  claims: [{
+    id: 'locally-supported-conclusion',
+    conclusion: 'The validated local rule resolves the control assessment.',
+    sources: [{ recordId: 'SFRSI10_LOCAL_CONTROL_RULE', officialSourceUrl: ifrs10OfficialUrl }],
+    assertions: [{ path: 'messageText', op: 'includes', value: 'validated local rule resolves the control assessment' }]
+  }],
+  sourceSelection: { expectedSourceMapIds: [] },
+  grounding: { requiredSourceIds: ['SFRSI10_LOCAL_CONTROL_RULE'] },
+  answerPath: { expectedMode: 'NOT_NEEDED' },
+  citations: { required: [{ claimId: 'locally-supported-conclusion', officialSourceUrl: ifrs10OfficialUrl, standard: 'IFRS 10' }] }
+});
+const localKnowledgeReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [localKnowledgeCase] },
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => ({
+    messageText: `The validated local rule resolves the control assessment. [IFRS 10](${ifrs10OfficialUrl})`,
+    sourceMapFallbackTrace: { path: 'NOT_NEEDED', sourceMapIds: [], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: false },
+    groundingEvidence: [{ recordId: 'SFRSI10_LOCAL_CONTROL_RULE', lifecycleState: 'ACTIVE', groundingEligible: true, provenance: 'VALIDATED_LOCAL_KNOWLEDGE' }],
+    scenarioState: { directGroups: [] }
+  })
+});
+assert.equal(localKnowledgeReport.results[0].dimensions.answerPath.status, 'PASS', 'A validated local knowledge answer should not need source-map fallback');
+assert.equal(localKnowledgeReport.results[0].dimensions.grounding.status, 'PASS');
+assert.equal(localKnowledgeReport.results[0].dimensions.substantiveConclusion.status, 'PASS');
+assert.equal(localKnowledgeReport.results[0].dimensions.citation.status, 'PASS');
+
+const officialCitationCase = {
+  ...sourceMapPathCase,
+  reviewedOracle: {
+    ...sourceMapPathCase.reviewedOracle,
+    retrieval: { expectedFinalUrls: [ifrs10OfficialUrl], requireSuccessfulFetch: true },
+    citations: {
+      requireVerifiedLiveUrls: true,
+      required: [{ claimId: 'retrieved-conclusion', officialSourceUrl: ifrs10OfficialUrl, standard: 'IFRS 10' }]
+    }
+  }
+};
+const genericRedirectReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [officialCitationCase] },
+  sourceRetriever: { async retrieveSources() { return [{ id: 'UNRELATED_CANDIDATE' }]; } },
+  answerFunction: async () => ({
+    ...verifiedCandidateAnswer,
+    messageText: 'The answer uses retrieved official evidence. [IFRS 10](https://www.ifrs.org/)',
+    sourceMapFallbackTrace: {
+      ...verifiedCandidateAnswer.sourceMapFallbackTrace,
+      finalVerifiedUrls: [ifrs10OfficialUrl]
+    },
+    groundingEvidence: [{ ...verifiedCandidateAnswer.groundingEvidence[0], finalUrl: ifrs10OfficialUrl, officialSourceUrl: ifrs10OfficialUrl }]
+  })
+});
+assert.equal(genericRedirectReport.results[0].dimensions.retrieval.status, 'PASS', 'A verified redirect must report the resolved topic-specific page');
+assert.equal(genericRedirectReport.results[0].dimensions.citation.status, 'FAIL', 'A generic homepage redirect must not satisfy a topic-specific citation');
+
+const fabricatedCitationReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [officialCitationCase] },
+  sourceRetriever: { async retrieveSources() { return [{ id: 'UNRELATED_CANDIDATE' }]; } },
+  answerFunction: async () => ({
+    ...verifiedCandidateAnswer,
+    messageText: 'The answer uses retrieved official evidence. [IFRS 10](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-10-made-up/)',
+    sourceMapFallbackTrace: {
+      ...verifiedCandidateAnswer.sourceMapFallbackTrace,
+      finalVerifiedUrls: [ifrs10OfficialUrl]
+    },
+    groundingEvidence: [{ ...verifiedCandidateAnswer.groundingEvidence[0], finalUrl: ifrs10OfficialUrl, officialSourceUrl: ifrs10OfficialUrl }]
+  })
+});
+assert.equal(fabricatedCitationReport.results[0].dimensions.citation.status, 'FAIL', 'An unverified plausible-looking official URL must be rejected');
+
+const noMapDiscoveryCase = reviewedCase('source-discovery-fails-closed', {
+  claims: [{ id: 'no-source', conclusion: 'No verified source is available.', sources: [{ recordId: 'NONE' }], assertions: [{ path: 'messageText', op: 'includes', value: 'could not verify' }] }],
+  sourceSelection: { expectedSourceMapIds: [] },
+  answerPath: { expectedMode: 'NO_VERIFIED_MAP' },
+  citations: { forbidUnsupported: true }
+});
+const noMapReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [noMapDiscoveryCase] },
+  sourceRetriever: { async retrieveSources() { return []; } },
+  answerFunction: async () => ({
+    messageText: 'I could not verify an official source for this topic.',
+    sourceMapFallbackTrace: { path: 'NO_VERIFIED_MAP', sourceMapIds: [], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: true },
+    scenarioState: { directGroups: [] }
+  })
+});
+assert.equal(noMapReport.results[0].dimensions.answerPath.status, 'PASS', 'An unmapped topic should report the fail-closed path when no approved search is available');
+assert.equal(noMapReport.results[0].dimensions.citation.status, 'PASS', 'Fail-closed discovery must not manufacture a citation');
+
+const candidateOnlyReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [sourceMapPathCase] },
+  sourceRetriever: { async retrieveSources() { return [{ id: 'FETCHED_IFRS10_PAGE' }]; } },
+  answerFunction: async () => ({ messageText: 'Wrong conclusion; the official source does not support this.', scenarioState: { directGroups: [] } })
+});
+assert.equal(candidateOnlyReport.results[0].dimensions.sourceRetrieval.status, 'PASS', 'Independent candidate retrieval keeps its legacy score');
+assert.equal(candidateOnlyReport.results[0].dimensions.grounding.status, 'FAIL', 'Candidate retrieval alone must fail answer grounding');
+assert.equal(candidateOnlyReport.results[0].dimensions.retrieval.status, 'FAIL', 'Candidate retrieval alone must not satisfy answer-path fetch expectations');
+assert.equal(candidateOnlyReport.results[0].dimensions.answerPath.status, 'FAIL', 'A reviewed path expectation must fail when answer trace is absent');
+assert.equal(candidateOnlyReport.results[0].dimensions.substantiveConclusion.status, 'FAIL', 'Candidate retrieval success must not turn a wrong conclusion into a correct answer');
+assert.equal(candidateOnlyReport.results[0].dimensions.citation.status, 'FAIL', 'A plausible citation must fail when its live URL was not verified');
+
+const brokenLivePathReport = await runSingaporeBenchmark({
+  fixturesData: { schemaVersion: 1, cases: [sourceMapPathCase] },
+  sourceRetriever: { async retrieveSources() { return [{ id: 'FETCHED_IFRS10_PAGE' }]; } },
+  answerFunction: async () => ({
+    messageText: `The answer uses retrieved official evidence. [IFRS 10](${sourceUrl})`,
+    sourceMapFallbackTrace: { path: 'MAPPED_SOURCE_REJECTED', sourceMapIds: ['SFRSI10_SOURCE_MAP'], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: true },
+    scenarioState: { directGroups: [] }
+  })
+});
+assert.equal(brokenLivePathReport.results[0].dimensions.retrieval.status, 'FAIL', 'A failed live fetch must not score as answer-path retrieval');
+assert.equal(brokenLivePathReport.results[0].dimensions.citation.status, 'FAIL', 'A citation must fail when retrieval did not verify the final URL');
 async function runReviewedAnswerCase(caseId, messageText) {
   const testCase = reviewedFixture.cases.find(item => item.id === caseId);
   assert.ok(testCase, `Reviewed fixture must contain ${caseId}`);

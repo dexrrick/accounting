@@ -11,7 +11,8 @@ import {
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
   postProcessAIResponse,
-  type GroundedReasoningContext
+  type GroundedReasoningContext,
+  type SourceMapFallbackTrace
 } from './groundingContextBuilder';
 import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
@@ -21,13 +22,17 @@ import { startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
+import { UNIFIED_SOURCE_REGISTRY } from '../standards/unifiedSourceModel';
 import { answerSfrsi9KnowledgeQuery } from './sfrsi9AnswerService';
+import { answerConsolidationKnowledgeQuery } from './consolidationKnowledgeService';
 
 export interface GeminiResponse {
   messageText: string;
   scenarioState: AccountingScenarioState;
   clarifications?: MissingFieldInfo[];
   imageAnalysisFailed?: boolean;
+  /** Routing/retrieval trace only; this does not itself establish answer grounding. */
+  sourceMapFallbackTrace?: SourceMapFallbackTrace;
 }
 
 export interface OutputPreference {
@@ -554,6 +559,16 @@ export async function processAccountingQuery(
       profiler.logSummary();
       return attachAmendmentProvenance(standardsAnswer);
     }
+    // The reviewed SFRS(I) 9 pack keeps first priority. These selective
+    // consolidation rules run next, before transaction parsing, and only use
+    // URLs from explicitly verified source-map records.
+    const consolidationAnswer = answerConsolidationKnowledgeQuery(userInput, standard);
+    if (consolidationAnswer) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance(consolidationAnswer);
+    }
   }
   const tDet0 = Date.now();
   const deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
@@ -732,6 +747,7 @@ export function renderStructuredOfflineResponse(
   apiErrorMessage: string | null = null,
   groundedContext?: GroundedReasoningContext
 ): GeminiResponse {
+  const renderResponse = (): GeminiResponse => {
   const std1 = standard === 'SFRS_I' ? 'SFRS(I) 1-1' : 'IAS 1';
   const std9 = standard === 'SFRS_I' ? 'SFRS(I) 9' : 'IFRS 9';
   const std16 = standard === 'SFRS_I' ? 'SFRS(I) 16' : 'IFRS 16';
@@ -754,7 +770,9 @@ export function renderStructuredOfflineResponse(
       `Measure the liability as the temporary difference multiplied by the applicable tax rate expected when it reverses. In later periods, reverse it as accounting depreciation reduces the carrying amount relative to the tax base.\n\n` +
       `**Conceptual entries:** Dr Deferred Tax Expense; Cr Deferred Tax Liability on recognition. On reversal: Dr Deferred Tax Liability; Cr Deferred Tax Income. Current tax from the deduction is accounted for separately.\n\n` +
       `No amounts were provided for the asset carrying amount, tax base, or applicable tax rate, so no numerical journal has been created.\n\n` +
-      `**Standard:** [${citation.standard}, ${citation.paragraph}](${citation.officialSourceUrl}) — ${citation.title}.`;
+      `**Standard:** ${citation.officialSourceUrl
+        ? `[${citation.standard}, ${citation.paragraph}](${citation.officialSourceUrl})`
+        : `${citation.standard}, ${citation.paragraph}`} — ${citation.title}.`;
     return { messageText: finalizeMessage(replyText, parsed), scenarioState: parsed };
   }
 
@@ -971,7 +989,20 @@ export function renderStructuredOfflineResponse(
     const cleanTitle = rawTitle.replace(/^(?:Statutory\s*Directives?:\s*)+/i, '');
     const act = adv?.statuteOrAct || 'Singapore Statutes';
     const section = adv?.sectionOrSchedule || '';
-    const url = adv?.officialUrl || 'https://sso.agc.gov.sg';
+    const normalizeSourceLabel = (value: string | undefined) => (value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const normalizedAct = normalizeSourceLabel(adv?.statuteOrAct);
+    const normalizedSection = normalizeSourceLabel(adv?.sectionOrSchedule);
+    const verifiedAdvSource = adv?.officialUrl
+      ? Object.values(UNIFIED_SOURCE_REGISTRY).find(record =>
+        Boolean(normalizedAct && normalizedSection) &&
+        record.officialSourceUrl === adv.officialUrl &&
+        record.sourceStatus === 'VERIFIED' &&
+        record.lifecycleState === 'ACTIVE' &&
+        record.isVerbatimText &&
+        (normalizeSourceLabel(record.documentTitle).includes(normalizedAct) || normalizeSourceLabel(record.legalOrStandardInstrument).includes(normalizedAct)) &&
+        normalizeSourceLabel(record.paragraphOrSection).includes(normalizedSection))
+      : undefined;
+    const url = verifiedAdvSource?.officialSourceUrl;
 
     let replyText = `### Statutory Directive: ${cleanTitle}\n\n` +
       `**Governing Authority**: **${authority}** | **Legislation**: **${act} (${section})**\n\n` +
@@ -989,7 +1020,9 @@ export function renderStructuredOfflineResponse(
 
     replyText += `\n---\n\n` +
       `#### 3. Official Statutory Source & Verification\n` +
-      `* Verified against [${act} ${section}](${url}) on **Singapore Statutes Online (SSO)** / Official Regulatory Directory.\n` +
+      (verifiedAdvSource
+        ? `* Verified against [${act} ${section}](${url}) using the registered official source record.\n`
+        : `* No matching verified official source record was available for ${act} ${section}; no authoritative URL is shown.\n`) +
       `* Review the **Statutory Citations & "Why"** tab for full legal references and citations.`;
 
     return {
@@ -1313,6 +1346,12 @@ export function renderStructuredOfflineResponse(
     messageText: finalizeMessage(fallbackText, parsed),
     scenarioState: parsed
   };
+  };
+
+  const response = renderResponse();
+  return groundedContext?.sourceMapFallbackTrace
+    ? { ...response, sourceMapFallbackTrace: groundedContext.sourceMapFallbackTrace }
+    : response;
 }
 
 export async function callGeminiAPI(

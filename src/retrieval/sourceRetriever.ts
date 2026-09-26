@@ -38,6 +38,17 @@ export interface ISourceRetriever {
   findSourcesByStandardOrAct(standardOrActCode: string, paragraphOrSection?: string): AuthoritativeSourceRecord[];
 }
 
+/** Source-map pointers route queries but are never answer evidence. */
+export function isAnswerGroundingEligibleSource(record: AuthoritativeSourceRecord): boolean {
+  const metadata = record as AuthoritativeSourceRecord & { recordRole?: string; groundingEligible?: boolean };
+  return metadata.recordRole !== 'SOURCE_MAP_POINTER' &&
+    metadata.groundingEligible !== false &&
+    record.lifecycleState !== 'CANDIDATE' &&
+    record.lifecycleState !== 'STAGED' &&
+    record.lifecycleState !== 'REJECTED' &&
+    (record.sourceStatus as string) !== 'REJECTED';
+}
+
 /**
  * Deterministic In-Memory Source Retriever.
  * Extensible for future vector or external API integrations without breaking consumers.
@@ -76,6 +87,7 @@ export class InMemorySourceRetriever implements ISourceRetriever {
       : null;
 
     return this.sources.filter((s) => {
+      if (!isAnswerGroundingEligibleSource(s)) return false;
       const sCodeClean = s.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
       const sTitleClean = s.documentTitle.toLowerCase().replace(/[\s\-_()]/g, '');
       const sInstClean = (s.legalOrStandardInstrument || '').toLowerCase().replace(/[\s\-_()]/g, '');
@@ -136,6 +148,7 @@ export class InMemorySourceRetriever implements ISourceRetriever {
     const hasDomainHint = Boolean(domain && domain !== 'GENERAL');
 
     for (const record of this.sources) {
+      if (!isAnswerGroundingEligibleSource(record)) continue;
       // When both hints are explicit, treat them as joint eligibility
       // constraints. A source from a different domain must not remain eligible
       // merely because it shares an authority (for example, ACRA corporate law

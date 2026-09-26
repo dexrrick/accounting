@@ -68,6 +68,8 @@ export interface SingaporeCoverageTopic {
   requiredChecks: CoverageCheck[];
   /** Search metadata consumed by classification and retrieval. */
   keywords: string[];
+  /** Narrow query-only patterns for realistic phrasing that cannot be represented as stable lexical phrases. */
+  queryPatterns?: string[];
   /** Phrase-level negatives prevent a keyword hit from misclassifying nearby concepts. */
   exclusionKeywords: string[];
   /** Shared concept ID for legacy/new topic aliases that should count once in ranking. */
@@ -78,6 +80,22 @@ export interface SingaporeCoverageTopic {
   semanticCriteriaKey?: string;
   /** Original broad Phase 7 pack(s) this granular topic is replacing. */
   legacyPackIds?: string[];
+  /** Source-map metadata routes retrieval; it does not prove paragraph-level coverage. */
+  subdomain?: string;
+  shortDescription?: string;
+  aliases?: string[];
+  canonicalSourceId?: string;
+  canonicalSourceUrl?: string;
+  pageTitle?: string;
+  paragraphHints?: string[];
+  sectionHints?: string[];
+  relatedTopicIds?: string[];
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  lastVerifiedDate?: string;
+  lastSuccessfulFetch?: string;
+  contentFingerprint?: string;
+  lifecycleState?: 'ACTIVE' | 'CANDIDATE' | 'STAGED' | 'REJECTED';
 }
 
 const fullTopicPackChecks: CoverageCheck[] = [
@@ -100,6 +118,7 @@ interface TopicSpec {
   title: string;
   domainId: SingaporeKnowledgeDomain;
   keywords?: string[];
+  queryPatterns?: string[];
   exclusionKeywords?: string[];
   canonicalConceptId?: string;
   priority?: CoveragePriority;
@@ -110,6 +129,21 @@ interface TopicSpec {
   sectionMatch?: string;
   semanticCriteriaKey?: string;
   legacyPackIds?: string[];
+  subdomain?: string;
+  shortDescription?: string;
+  aliases?: string[];
+  canonicalSourceId?: string;
+  canonicalSourceUrl?: string;
+  pageTitle?: string;
+  paragraphHints?: string[];
+  sectionHints?: string[];
+  relatedTopicIds?: string[];
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  lastVerifiedDate?: string;
+  lastSuccessfulFetch?: string;
+  contentFingerprint?: string;
+  lifecycleState?: 'ACTIVE' | 'CANDIDATE' | 'STAGED' | 'REJECTED';
 }
 
 function topic(spec: TopicSpec): SingaporeCoverageTopic {
@@ -125,12 +159,28 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
     sourceRecordIds: spec.sourceRecordIds ?? [],
     requiredChecks: [...fullTopicPackChecks],
     keywords: spec.keywords ?? [],
+    ...(spec.queryPatterns ? { queryPatterns: [...spec.queryPatterns] } : {}),
     exclusionKeywords: spec.exclusionKeywords ?? [],
     ...(spec.canonicalConceptId ? { canonicalConceptId: spec.canonicalConceptId } : {}),
     ...(spec.actOrStandard ? { actOrStandard: spec.actOrStandard } : {}),
     ...(spec.sectionMatch ? { sectionMatch: spec.sectionMatch } : {}),
     ...(spec.semanticCriteriaKey ? { semanticCriteriaKey: spec.semanticCriteriaKey } : {}),
-    ...(spec.legacyPackIds ? { legacyPackIds: spec.legacyPackIds } : {})
+    ...(spec.legacyPackIds ? { legacyPackIds: spec.legacyPackIds } : {}),
+    ...(spec.subdomain ? { subdomain: spec.subdomain } : {}),
+    ...(spec.shortDescription ? { shortDescription: spec.shortDescription } : {}),
+    ...(spec.aliases ? { aliases: [...spec.aliases] } : {}),
+    ...(spec.canonicalSourceId ? { canonicalSourceId: spec.canonicalSourceId } : {}),
+    ...(spec.canonicalSourceUrl ? { canonicalSourceUrl: spec.canonicalSourceUrl } : {}),
+    ...(spec.pageTitle ? { pageTitle: spec.pageTitle } : {}),
+    ...(spec.paragraphHints ? { paragraphHints: [...spec.paragraphHints] } : {}),
+    ...(spec.sectionHints ? { sectionHints: [...spec.sectionHints] } : {}),
+    ...(spec.relatedTopicIds ? { relatedTopicIds: [...spec.relatedTopicIds] } : {}),
+    ...(spec.effectiveFrom ? { effectiveFrom: spec.effectiveFrom } : {}),
+    ...(spec.effectiveTo ? { effectiveTo: spec.effectiveTo } : {}),
+    ...(spec.lastVerifiedDate ? { lastVerifiedDate: spec.lastVerifiedDate } : {}),
+    ...(spec.lastSuccessfulFetch ? { lastSuccessfulFetch: spec.lastSuccessfulFetch } : {}),
+    ...(spec.contentFingerprint ? { contentFingerprint: spec.contentFingerprint } : {}),
+    ...(spec.lifecycleState ? { lifecycleState: spec.lifecycleState } : {})
   };
 }
 
@@ -175,15 +225,15 @@ const topicSpecs: TopicSpec[] = [
   { id: 'sfrsi_expected-credit-losses', title: 'Expected Credit Losses', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['expected credit loss', 'ecl', 'loss allowance', 'simplified approach', 'financial instrument impairment'], actOrStandard: 'SFRS(I) 9', sourceRecordIds: ['IFRS9_ECL_GENERAL', 'SFRSI9_ADOPTION'] },
   { id: 'sfrsi_revenue_recognition', title: 'Revenue Recognition and Contract Balances', domainId: 'ACCOUNTING_SFRS', priority: 'P1', status: 'PLANNED', keywords: ['revenue recognition', 'contract asset', 'contract liability', 'performance obligation', 'sfrs(i) 15', 'ifrs 15'], actOrStandard: 'SFRS(I) 15', sourceRecordIds: ['SFRS_I_15_REVENUE'], legacyPackIds: ['revenue-recognition'] },
   { id: 'sfrsi_lease_subsequent-measurement', title: 'Lease Subsequent Measurement and Modifications', domainId: 'ACCOUNTING_SFRS', priority: 'P1', status: 'PLANNED', keywords: ['lease subsequent measurement', 'lease modification', 'lease remeasurement', 'rou depreciation'], actOrStandard: 'SFRS(I) 16', sourceRecordIds: ['IFRS16_SUBSEQUENT_MEASUREMENT'], legacyPackIds: ['lease-accounting'] },
-  { id: 'sfrsi_associates', title: 'Investments in Associates', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['investment in an associate', 'investment in associate', 'investments in associates', 'accounting for associates', 'significant influence', 'equity method associate', 'sfrs(i) 1-28', 'ias 28'] },
-  { id: 'sfrsi_joint-ventures', title: 'Joint Arrangements and Joint Ventures', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['joint venture', 'joint operation', 'joint arrangement', 'sfrs(i) 1-11', 'ifrs 11'] },
-  { id: 'sfrsi_subsidiaries-consolidation', title: 'Subsidiaries and Consolidated Financial Statements', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['account for a subsidiary', 'subsidiary accounting', 'subsidiary consolidation', 'subsidiary be consolidated', 'subsidiary should be consolidated', 'consolidate a subsidiary', 'consolidate my subsidiary', 'consolidate subsidiaries', 'consolidation accounting', 'control of an investee', 'consolidated financial statements', 'sfrs(i) 10', 'ifrs 10'] },
-  { id: 'sfrsi_business-combinations', title: 'Business Combinations', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['business combination', 'acquisition method', 'acquisition date', 'sfrs(i) 3', 'ifrs 3'] },
+  { id: 'sfrsi_associates', title: 'Investments in Associates', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['investment in an associate', 'investment in associate', 'investments in associates', 'accounting for associates', 'significant influence', 'equity method associate', 'sfrs(i) 1-28', 'ias 28'], status: 'PARTIAL', sourceRecordIds: ['SFRSI128_SOURCE_MAP', 'SFRSI_FRAMEWORK_ACRA'] },
+  { id: 'sfrsi_joint-ventures', title: 'Joint Arrangements and Joint Ventures', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['joint venture', 'joint operation', 'joint arrangement', 'sfrs(i) 1-11', 'ifrs 11'], status: 'PARTIAL', sourceRecordIds: ['SFRSI11_SOURCE_MAP', 'SFRSI_FRAMEWORK_ACRA'] },
+  { id: 'sfrsi_subsidiaries-consolidation', title: 'Subsidiaries and Consolidated Financial Statements', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['account for a subsidiary', 'subsidiary accounting', 'subsidiary consolidation', 'subsidiary be consolidated', 'subsidiary should be consolidated', 'consolidate a subsidiary', 'consolidate my subsidiary', 'consolidate subsidiaries', 'consolidation accounting', 'control of an investee', 'consolidated financial statements', 'sfrs(i) 10', 'ifrs 10'], status: 'PARTIAL', sourceRecordIds: ['SFRSI10_SOURCE_MAP', 'SFRSI_FRAMEWORK_ACRA'] },
+  { id: 'sfrsi_business-combinations', title: 'Business Combinations', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['business combination', 'acquisition method', 'acquisition date', 'sfrs(i) 3', 'ifrs 3'], status: 'PARTIAL', sourceRecordIds: ['SFRSI3_SOURCE_MAP', 'SFRSI_FRAMEWORK_ACRA'] },
   { id: 'sfrsi_step-acquisitions', title: 'Step Acquisitions', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['step acquisition', 'previously held interest', 'remeasure previously held', 'associate to subsidiary'] },
   { id: 'sfrsi_loss-of-control', title: 'Disposal and Loss of Control', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['loss of control', 'deconsolidation', 'disposal of subsidiary', 'retained interest'] },
   { id: 'sfrsi_non-controlling-interests', title: 'Non-controlling Interests', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['non-controlling interest', 'nci', 'minority interest'] },
   { id: 'sfrsi_goodwill', title: 'Goodwill Recognition and Measurement', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['goodwill recognition', 'goodwill measurement', 'goodwill be measured', 'measure goodwill', 'goodwill be recognized', 'goodwill be recognised', 'recognize goodwill', 'recognise goodwill', 'goodwill impairment', 'bargain purchase', 'business combination goodwill'] },
-  { id: 'sfrsi_held-for-sale', title: 'Non-current Assets Held for Sale', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['held for sale', 'disposal group', 'sfrs(i) 5', 'ifrs 5'] },
+  { id: 'sfrsi_held-for-sale', title: 'Non-current Assets Held for Sale', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['held for sale', 'disposal group', 'sfrs(i) 5', 'ifrs 5'], aliases: ['IFRS 5 Non-current Assets Held for Sale and Discontinued Operations'], actOrStandard: 'SFRS(I) 5', pageTitle: 'IFRS 5 Non-current Assets Held for Sale and Discontinued Operations' },
   { id: 'sfrsi_fair-value-measurement', title: 'Fair Value Measurement', domainId: 'ACCOUNTING_SFRS', priority: 'P1', keywords: ['fair value measurement', 'valuation technique', 'level 1 input', 'level 2 input', 'level 3 input', 'sfrs(i) 13', 'ifrs 13'] },
   { id: 'sfrsi_share-based-payments', title: 'Share-based Payment', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['share-based payment', 'share based payment', 'share option expense', 'equity-settled award', 'ifrs 2'] },
   { id: 'sfrsi_treasury-shares', title: 'Treasury Shares and Own Equity Transactions', domainId: 'ACCOUNTING_SFRS', priority: 'P2', keywords: ['treasury shares', 'repurchase own shares', 'own equity transaction', 'sfrs(i) 1-32'] },
@@ -369,7 +419,155 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-crs-fatca-self-certification', title: 'Entity Self-certification', domainId: 'IRAS_CRS_FATCA', priority: 'P3', keywords: ['entity self-certification', 'crs self-certification', 'fatca self-certification'] }
 ];
 
-export const SINGAPORE_COVERAGE_REGISTRY: SingaporeCoverageTopic[] = topicSpecs.map(topic);
+const sourceMapStandards = {
+  sfrsi10: {
+    instrument: 'SFRS(I) 10 — Consolidated Financial Statements',
+    sourceId: 'SFRSI10_SOURCE_MAP',
+    url: 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-10-consolidated-financial-statements/',
+    pageTitle: 'IFRS 10 Consolidated Financial Statements',
+    subdomain: 'Consolidation and control'
+  },
+  sfrsi3: {
+    instrument: 'SFRS(I) 3 — Business Combinations',
+    sourceId: 'SFRSI3_SOURCE_MAP',
+    url: 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-3-business-combinations/',
+    pageTitle: 'IFRS 3 Business Combinations',
+    subdomain: 'Business combinations'
+  },
+  sfrsi128: {
+    instrument: 'SFRS(I) 1-28 — Investments in Associates and Joint Ventures',
+    sourceId: 'SFRSI128_SOURCE_MAP',
+    url: 'https://www.ifrs.org/issued-standards/list-of-standards/ias-28-investments-in-associates-and-joint-ventures/',
+    pageTitle: 'IAS 28 Investments in Associates and Joint Ventures',
+    subdomain: 'Associates and equity accounting'
+  },
+  sfrsi11: {
+    instrument: 'SFRS(I) 11 — Joint Arrangements',
+    sourceId: 'SFRSI11_SOURCE_MAP',
+    url: 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-11-joint-arrangements/',
+    pageTitle: 'IFRS 11 Joint Arrangements',
+    subdomain: 'Joint arrangements'
+  }
+} as const;
+
+interface MappedTopicDefinition {
+  id: string;
+  title: string;
+  keywords: string[];
+  queryPatterns?: string[];
+  related?: string[];
+  standards?: string[];
+}
+
+function mappedTopic(standardKey: keyof typeof sourceMapStandards, definition: MappedTopicDefinition): TopicSpec {
+  const source = sourceMapStandards[standardKey];
+  const standards = definition.standards ?? [standardKey];
+  const sources = standards.map(key => sourceMapStandards[key as keyof typeof sourceMapStandards]);
+  return {
+    id: definition.id,
+    title: definition.title,
+    domainId: 'ACCOUNTING_SFRS',
+    priority: 'P1',
+    status: 'PARTIAL',
+    // Short titles such as "goodwill" and "control" are retrieval aliases,
+    // but too broad as classification triggers in unrelated regulatory questions.
+    keywords: [...new Set(definition.keywords)],
+    ...(definition.queryPatterns ? { queryPatterns: [...definition.queryPatterns] } : {}),
+    aliases: [...new Set([definition.title, ...definition.keywords])],
+    authorities: ['ACRA'],
+    sourceRecordIds: [...new Set([...sources.map(item => item.sourceId), 'SFRSI_FRAMEWORK_ACRA'])],
+    actOrStandard: standards.map(key => sourceMapStandards[key as keyof typeof sourceMapStandards].instrument).join('; '),
+    subdomain: source.subdomain,
+    shortDescription: `Routes ${definition.title} questions to an official standard overview. The mapped page is not paragraph-level SFRS(I) text.`,
+    canonicalSourceId: source.sourceId,
+    canonicalSourceUrl: source.url,
+    pageTitle: source.pageTitle,
+    paragraphHints: [],
+    sectionHints: [definition.title, ...definition.keywords],
+    relatedTopicIds: definition.related ?? [],
+    lastVerifiedDate: '2026-09-25',
+    lifecycleState: 'ACTIVE'
+  };
+}
+
+// Cross-standard transition topics require an affirmative purchase of an
+// additional interest followed by obtaining control. This avoids treating
+// missing-fact wording such as "no additional shares were acquired" as a step
+// acquisition merely because it mentions the equity method.
+const EQUITY_ACCOUNTED_CONTROL_ACQUISITION_PATTERN = String.raw`(?=[\s\S]*\b(?:equity[- ]accounted|equity method|associate)\b)(?=[\s\S]*\b(?:acquir\w*|bought|purchas\w*)\b[\s\S]{0,90}\b(?:another|additional|further)\b[\s\S]{0,40}(?:\b\d+(?:\.\d+)?\s*%(?!\w)|\bshares?\b|\binterest\b|\bstake\b))(?=[\s\S]*\b(?:obtain\w*|gain\w*|achiev\w*)\s+control\b)(?![\s\S]*\b(?:no|not|never|without)\b[\s\S]{0,40}\b(?:obtain\w*|gain\w*|achiev\w*)\s+control\b)`;
+
+const consolidationTopicSpecs: TopicSpec[] = [
+  // SFRS(I) 10 — granular routing topics; hints are descriptive only and contain no invented paragraph numbers.
+  ...[
+    { id: 'sfrsi10-control', title: 'Control', keywords: ['control of an investee', 'control assessment', 'investor controls investee'], queryPatterns: [String.raw`\b(?:retain|retaining)\b[\s\S]{0,50}\bcontrol\b`, String.raw`\bcontrols?\s+(?:the\s+)?investee\b`, String.raw`\bpotential\s+voting\s+rights?\b`, String.raw`\bobtained\s+control\b`], related: ['sfrsi10-power', 'sfrsi10-variable-returns', 'sfrsi10-ability-to-affect-returns'] },
+    { id: 'sfrsi10-power', title: 'Power', keywords: ['relevant activities', 'power over investee', 'decision making rights'], queryPatterns: [String.raw`\bdirects?\s+the\s+relevant\s+operating\s+decisions\b`, String.raw`\bpotential\s+voting\s+rights?\b`, String.raw`\bpower\s+over\s+the\s+investee\b`], related: ['sfrsi10-control', 'sfrsi10-potential-voting-rights'] },
+    { id: 'sfrsi10-variable-returns', title: 'Variable returns', keywords: ['exposure to variable returns', 'returns from investee'], related: ['sfrsi10-control', 'sfrsi10-ability-to-affect-returns'] },
+    { id: 'sfrsi10-ability-to-affect-returns', title: 'Ability to affect returns', keywords: ['link between power and returns', 'use power to affect returns'], related: ['sfrsi10-control', 'sfrsi10-power', 'sfrsi10-variable-returns'] },
+    { id: 'sfrsi10-de-facto-control', title: 'De facto control', keywords: ['less than majority voting rights', 'practical ability to direct', 'dispersed other shareholders'], queryPatterns: [String.raw`\bremaining\s+shares\s+(?:are\s+)?widely\s+dispersed\b`], related: ['sfrsi10-control', 'sfrsi10-power'] },
+    { id: 'sfrsi10-potential-voting-rights', title: 'Potential voting rights', keywords: ['options', 'convertible instruments', 'substantive potential voting rights'], queryPatterns: [String.raw`\bpotential\s+voting\s+rights?\b`, String.raw`\boption\s+to\s+acquire\s+another\s+\d+(?:\.\d+)?\s*%`], related: ['sfrsi10-control', 'sfrsi10-power'] },
+    { id: 'sfrsi10-acquisition-control-date', title: 'Acquisition and control date', keywords: ['date control is obtained', 'when control begins', 'acquisition date control'], queryPatterns: [String.raw`\bability to direct relevant activities\b`], related: ['sfrsi3-acquisition-date', 'sfrsi-associate-to-subsidiary', 'sfrsi-step-acquisition'] },
+    { id: 'sfrsi10-consolidation', title: 'Consolidation', keywords: ['consolidated financial statements', 'consolidate subsidiary', 'consolidation procedures'], queryPatterns: [String.raw`\binvestee be consolidated\b`], related: ['sfrsi10-control', 'sfrsi10-nci', 'sfrsi10-intragroup-eliminations'] },
+    { id: 'sfrsi10-nci', title: 'Non-controlling interests', keywords: ['non controlling interest', 'non-controlling interest', 'minority interest'], related: ['sfrsi3-nci', 'sfrsi10-ownership-changes', 'sfrsi10-loss-of-control'] },
+    { id: 'sfrsi10-ownership-changes', title: 'Changes in ownership interests', keywords: ['partial disposal without loss of control', 'ownership change while retaining control', 'non-controlling interest change'], queryPatterns: [String.raw`\bownership\s+change\s+presented\b`, String.raw`\b(?:sell|sells|sold|dispose|disposes|disposed)\b[\s\S]{0,100}\b(?:retain|retaining)\b[\s\S]{0,50}\bcontrol\b`], related: ['sfrsi10-nci', 'sfrsi10-loss-of-control'] },
+    { id: 'sfrsi10-loss-of-control', title: 'Loss of control', keywords: ['disposal of subsidiary', 'deconsolidation', 'retained interest after loss of control'], queryPatterns: [String.raw`\b(?:sell|sells|sold|dispose|disposes|disposed)\b[\s\S]{0,100}\b(?:lose|loss of)\s+control\b`], related: ['sfrsi10-ownership-changes', 'sfrsi128-significant-influence', 'sfrsi128-equity-method'] },
+    { id: 'sfrsi10-intragroup-eliminations', title: 'Intra-group eliminations', keywords: ['intragroup balances', 'intra-group transactions', 'unrealised profits in consolidation'], related: ['sfrsi10-consolidation'] }
+  ].map(item => mappedTopic('sfrsi10', item)),
+
+  // SFRS(I) 3 — acquisition method routing; no paragraph-level claims are encoded here.
+  ...[
+    { id: 'sfrsi3-business-combination', title: 'Identifying a business combination', keywords: ['acquired set is a business', 'business or asset acquisition', 'definition of a business'], related: ['sfrsi3-acquisition-method'] },
+    { id: 'sfrsi3-acquisition-method', title: 'Acquisition method', keywords: ['accounting for business combination', 'acquisition accounting'], queryPatterns: [String.raw`(?=[\s\S]*\bdefinition of a business\b)(?=[\s\S]*\bequity method\b)(?=[\s\S]*\b(?:acquir\w*|obtain\w*\s+control)\b)`], related: ['sfrsi3-acquirer', 'sfrsi3-acquisition-date', 'sfrsi3-identifiable-net-assets', 'sfrsi3-goodwill'] },
+    { id: 'sfrsi3-acquirer', title: 'Acquirer', keywords: ['identify the acquirer', 'accounting acquirer'], related: ['sfrsi10-control', 'sfrsi3-acquisition-date'] },
+    { id: 'sfrsi3-acquisition-date', title: 'Acquisition date', keywords: ['date acquirer obtains control', 'business combination date'], queryPatterns: [String.raw`\bacquisition-date measurements?\b`], related: ['sfrsi10-acquisition-control-date', 'sfrsi3-acquirer'] },
+    { id: 'sfrsi3-consideration', title: 'Consideration transferred', keywords: ['consideration transferred', 'purchase consideration', 'contingent payment'], queryPatterns: [String.raw`\bconsideration transferred\b`], related: ['sfrsi3-goodwill', 'sfrsi3-contingent-consideration'] },
+    { id: 'sfrsi3-identifiable-net-assets', title: 'Identifiable net assets', keywords: ['identifiable assets acquired', 'liabilities assumed', 'acquisition-date fair values'], queryPatterns: [String.raw`\bidentifiable net assets\b`, String.raw`\bacquisition-date measurements?\b`], related: ['sfrsi3-goodwill', 'sfrsi3-bargain-purchase'] },
+    { id: 'sfrsi3-nci', title: 'Non-controlling interests', keywords: ['measure nci', 'non controlling interests at acquisition'], queryPatterns: [String.raw`(?=[\s\S]*\bnon[- ]controlling interests?\b)(?=[\s\S]*\b(?:business combination|acquisition(?:[- ]date)?|at acquisition|acquired control|acquisition accounting)\b)`], related: ['sfrsi10-nci', 'sfrsi3-goodwill'] },
+    { id: 'sfrsi3-goodwill', title: 'Goodwill', keywords: ['calculate goodwill', 'goodwill on acquisition', 'goodwill calculation'], queryPatterns: [String.raw`\bhow much goodwill\b`, String.raw`\bacquisition-date measurements?\b`], related: ['sfrsi3-consideration', 'sfrsi3-identifiable-net-assets', 'sfrsi3-nci', 'sfrsi3-bargain-purchase'] },
+    { id: 'sfrsi3-bargain-purchase', title: 'Bargain purchase', keywords: ['bargain purchase gain', 'negative goodwill'], related: ['sfrsi3-identifiable-net-assets', 'sfrsi3-goodwill'] },
+    { id: 'sfrsi3-acquisition-costs', title: 'Acquisition-related costs', keywords: ['acquisition costs', 'deal fees', 'advisory and legal costs business combination'], related: ['sfrsi3-acquisition-method'] },
+    { id: 'sfrsi3-contingent-consideration', title: 'Contingent consideration', keywords: ['earn-out', 'contingent consideration payable'], related: ['sfrsi3-consideration', 'sfrsi3-measurement-period'] },
+    { id: 'sfrsi3-step-acquisition', title: 'Step acquisition', keywords: ['previously held equity interest', 'associate becomes subsidiary', 'remeasure existing interest'], queryPatterns: [
+      EQUITY_ACCOUNTED_CONTROL_ACQUISITION_PATTERN,
+      String.raw`(?=[\s\S]*\b(?:goodwill|bargain purchase)\b)(?=[\s\S]*\b(?:not provided|missing|unknown|not specified)\b)(?=[\s\S]*\b(?:fair value of any )?previously held (?:equity )?interest\b)`
+    ], related: ['sfrsi10-control', 'sfrsi128-to-subsidiary', 'sfrsi-associate-to-subsidiary'] },
+    { id: 'sfrsi3-measurement-period', title: 'Measurement period', keywords: ['provisional acquisition accounting', 'measurement period adjustment'], related: ['sfrsi3-acquisition-date', 'sfrsi3-identifiable-net-assets'] }
+  ].map(item => mappedTopic('sfrsi3', item)),
+
+  // SFRS(I) 1-28 — investment-in-associate topics.
+  ...[
+    { id: 'sfrsi128-significant-influence', title: 'Significant influence', keywords: ['ability to participate in financial and operating policy decisions', 'influence over investee', 'associate assessment'], queryPatterns: [String.raw`\bparticipate\s+in\s+decisions\s+about\s+(?:its\s+)?financial\s+and\s+operating\s+policies\b`, String.raw`\b20\s*%\s+threshold\s+conclusive\b`, String.raw`\bdo\s+not\s+participate\s+in\s+policy\s+decisions\b`, String.raw`\bcannot\s+obtain\s+the\s+information\s+needed\s+to\s+influence\b`, String.raw`\bsignificant influence over (?:an )?investee\b`, String.raw`\bboard representation\b[\s\S]{0,100}\bparticipation in policy decisions\b`], related: ['sfrsi128-20-percent-presumption', 'sfrsi128-equity-method'] },
+    { id: 'sfrsi128-20-percent-presumption', title: '20% significant-influence presumption', keywords: ['20 percent voting power', '20% ownership', 'below 20 percent influence', 'over 20 percent without influence'], queryPatterns: [String.raw`\bbelow\s+20\s*%(?!\w)`, String.raw`\b(?:ownership|holding)\b[\s\S]{0,30}\bbelow\s+20\s*%(?!\w)`, String.raw`\b20\s*%\s+threshold\s+conclusive\b`], related: ['sfrsi128-significant-influence'] },
+    { id: 'sfrsi128-equity-method', title: 'Equity method', keywords: ['equity accounting', 'associate accounting method'], queryPatterns: [String.raw`\b(?:applied|apply|applying)\s+(?:the\s+)?equity method\b`, String.raw`\bequity[- ]accounted\b`], related: ['sfrsi128-share-of-profit-oci', 'sfrsi128-distributions', 'sfrsi128-losses'] },
+    { id: 'sfrsi128-share-of-profit-oci', title: 'Share of profit and OCI', keywords: ['share of associate profit', 'share of associate other comprehensive income', 'associate OCI'], related: ['sfrsi128-equity-method', 'sfrsi128-losses'] },
+    { id: 'sfrsi128-distributions', title: 'Distributions received', keywords: ['dividend from associate', 'associate distribution'], related: ['sfrsi128-equity-method'] },
+    { id: 'sfrsi128-losses', title: 'Share of losses', keywords: ['associate losses', 'equity method losses', 'net investment in associate'], related: ['sfrsi128-equity-method', 'sfrsi128-impairment'] },
+    { id: 'sfrsi128-impairment', title: 'Impairment interaction', keywords: ['impairment of associate investment', 'impairment equity method investment'], related: ['sfrsi128-losses', 'sfrsi128-disposal'] },
+    { id: 'sfrsi128-disposal', title: 'Disposal of an associate', keywords: ['sell associate investment', 'partial disposal associate'], related: ['sfrsi128-cessation-influence', 'sfrsi10-loss-of-control'] },
+    { id: 'sfrsi128-cessation-influence', title: 'Cessation of significant influence', keywords: ['cease to be associate', 'loss of significant influence'], related: ['sfrsi128-disposal', 'sfrsi10-control'] },
+    { id: 'sfrsi128-to-subsidiary', title: 'Associate becomes subsidiary', keywords: ['associate becomes a subsidiary', 'associate to subsidiary', 'obtain control of associate'], queryPatterns: [EQUITY_ACCOUNTED_CONTROL_ACQUISITION_PATTERN], related: ['sfrsi-associate-to-subsidiary', 'sfrsi3-step-acquisition', 'sfrsi10-acquisition-control-date'], standards: ['sfrsi128', 'sfrsi10', 'sfrsi3'] }
+  ].map(item => mappedTopic('sfrsi128', item)),
+
+  // SFRS(I) 11 — arrangement classification and accounting.
+  ...[
+    { id: 'sfrsi11-joint-control', title: 'Joint control', keywords: ['contractually agreed sharing of control', 'shared control arrangement'], queryPatterns: [String.raw`\bunanimously consent to relevant decisions\b`, String.raw`\bshare unanimous control\b`], related: ['sfrsi11-unanimous-consent', 'sfrsi11-joint-operation', 'sfrsi11-joint-venture'] },
+    { id: 'sfrsi11-unanimous-consent', title: 'Unanimous consent', keywords: ['unanimous consent of parties', 'decisions about relevant activities'], queryPatterns: [String.raw`\bunanimously consent to relevant decisions\b`], related: ['sfrsi11-joint-control'] },
+    { id: 'sfrsi11-joint-operation', title: 'Joint operation', keywords: ['joint operation', 'joint operator', 'account for joint operation'], related: ['sfrsi11-rights-to-assets', 'sfrsi11-obligations-for-liabilities', 'sfrsi11-accounting-treatment'] },
+    { id: 'sfrsi11-joint-venture', title: 'Joint venture', keywords: ['joint venture', 'joint venturer', 'account for joint venture'], related: ['sfrsi11-rights-to-net-assets', 'sfrsi11-accounting-treatment'] },
+    { id: 'sfrsi11-rights-to-assets', title: 'Rights to assets', keywords: ['direct rights to assets', 'rights to individual assets joint arrangement'], queryPatterns: [String.raw`\bdirect rights to specified assets\b`], related: ['sfrsi11-joint-operation'] },
+    { id: 'sfrsi11-obligations-for-liabilities', title: 'Obligations for liabilities', keywords: ['direct obligations for liabilities', 'responsible for liabilities joint arrangement'], queryPatterns: [String.raw`\bdirect obligations for specified liabilities\b`], related: ['sfrsi11-joint-operation'] },
+    { id: 'sfrsi11-rights-to-net-assets', title: 'Rights to net assets', keywords: ['rights to net assets of arrangement', 'separate vehicle rights net assets'], queryPatterns: [String.raw`\brights? to (?:the )?vehicle(?:'s|’s) net assets\b`], related: ['sfrsi11-joint-venture'] },
+    { id: 'sfrsi11-accounting-treatment', title: 'Accounting treatment', keywords: ['recognition of joint operation assets liabilities revenue expenses', 'equity method joint venture'], queryPatterns: [String.raw`\bjoint (?:operation|venture)\b[\s\S]{0,150}\baccount(?:ing|ed for)\b`], related: ['sfrsi11-joint-operation', 'sfrsi11-joint-venture', 'sfrsi128-equity-method'] }
+  ].map(item => mappedTopic('sfrsi11', item)),
+
+  // Explicit cross-standard routing keys for transitions and questions spanning more than one standard.
+  mappedTopic('sfrsi10', { id: 'sfrsi-associate-to-subsidiary', title: 'Associate-to-subsidiary transition', keywords: ['associate becomes subsidiary during the year', 'associate converted to subsidiary', 'equity-accounted investment acquired additional interest and obtained control', 'equity-accounted; acquired', 'equity-accounted and acquired additional shares', 'additional shares obtained control', 'previously equity-accounted investment obtains control'], queryPatterns: [EQUITY_ACCOUNTED_CONTROL_ACQUISITION_PATTERN], related: ['sfrsi128-to-subsidiary', 'sfrsi3-step-acquisition', 'sfrsi10-acquisition-control-date'], standards: ['sfrsi128', 'sfrsi3', 'sfrsi10'] }),
+  mappedTopic('sfrsi3', { id: 'sfrsi-step-acquisition', title: 'Step acquisition across reporting dates', keywords: ['step acquisition', 'increase an existing investment until control', 'equity-accounted holding acquired further interest to obtain control', 'equity-accounted; acquired'], related: ['sfrsi3-step-acquisition', 'sfrsi10-acquisition-control-date', 'sfrsi128-cessation-influence'], standards: ['sfrsi3', 'sfrsi10'] }),
+  mappedTopic('sfrsi10', { id: 'sfrsi-loss-of-control', title: 'Loss of control on disposal', keywords: ['disposal resulting in loss of control', 'sell subsidiary and retain an interest'], related: ['sfrsi10-loss-of-control', 'sfrsi128-significant-influence'], standards: ['sfrsi10'] }),
+  mappedTopic('sfrsi3', { id: 'sfrsi-goodwill-bargain-purchase', title: 'Goodwill or bargain purchase', keywords: ['goodwill or bargain purchase', 'goodwill with missing facts', 'bargain purchase in acquisition'], related: ['sfrsi3-goodwill', 'sfrsi3-bargain-purchase', 'sfrsi3-identifiable-net-assets'], standards: ['sfrsi3'] }),
+  mappedTopic('sfrsi11', { id: 'sfrsi-joint-arrangement-classification', title: 'Joint operation versus joint venture', keywords: ['joint operation versus joint venture', 'classify joint arrangement', 'rights and obligations arrangement'], related: ['sfrsi11-joint-operation', 'sfrsi11-joint-venture', 'sfrsi11-joint-control'], standards: ['sfrsi11'] })
+];
+
+export const SINGAPORE_COVERAGE_REGISTRY: SingaporeCoverageTopic[] = [...topicSpecs, ...consolidationTopicSpecs].map(topic);
 
 export const LEGACY_COVERAGE_PACK_MAPPINGS: Record<string, string[]> = Object.fromEntries(
   [...new Set(SINGAPORE_COVERAGE_REGISTRY.flatMap(item => item.legacyPackIds ?? []))].map(packId => [

@@ -1,8 +1,8 @@
 import type { StandardCitation, StatutoryAuthority } from '../types/accounting';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { defaultSourceRetriever, type ISourceRetriever } from '../retrieval/sourceRetriever';
+import { defaultSourceRetriever, isAnswerGroundingEligibleSource, type ISourceRetriever } from '../retrieval/sourceRetriever';
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
-import { isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
+import { isApprovedSingaporeSourceUrl, isVerifiedLegacyStandardUrl } from '../standards/approvedSourceRegistry';
 
 export type CitationVerificationStatus =
   | 'VERIFIED_PRIMARY_SOURCE'
@@ -49,15 +49,99 @@ export class CitationVerifier {
       .replace(/[§\s\-_(),.&]/g, '');
   }
 
-  private normalizeUrlForComparison(urlStr: string): string {
+  private normalizeExactUrl(urlStr: string): string {
     try {
       const parsed = new URL(urlStr.trim());
-      const host = parsed.host.toLowerCase().replace(/^www\./, '');
-      const pathname = parsed.pathname.toLowerCase().replace(/\/+$/, '');
-      return `${host}${pathname}`;
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+      const path = decodeURIComponent(parsed.pathname).toLowerCase().replace(/\/+$/, '');
+      return `${host}${path}${parsed.search}${parsed.hash}`;
     } catch {
-      return urlStr.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/+$/, '');
+      return '';
     }
+  }
+
+  private isTopicSpecificSourceUrl(url: string): boolean {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+      const path = parsed.pathname.toLowerCase().replace(/\/+$/, '');
+      if (path === '' || path === '/irashome') return false;
+      if (host === 'acra.gov.sg' && /\/accountancy\/accounting-standards$/.test(path)) return false;
+      if (host === 'acra.gov.sg' && /\/accounting-standards$/.test(path)) return false;
+      if (host === 'asc.acra.gov.sg' && /\/singapore-financial-reporting-standards-international(?:\/archives(?:\/.*)?)?$/.test(path)) return false;
+      if (host === 'ifrs.org' && /\/issued-standards\/list-of-standards$/.test(path)) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private isQualifiedLiveEvidence(record: AuthoritativeSourceRecord): boolean {
+    const metadata = record as unknown as { recordRole?: string; groundingEligible?: boolean; urlVerificationStatus?: string };
+    return metadata.recordRole === 'DISCOVERED_EVIDENCE' &&
+      metadata.groundingEligible === true &&
+      metadata.urlVerificationStatus === 'VERIFIED' &&
+      record.provenance === 'LIVE_EXTERNAL' &&
+      record.lifecycleState === 'CANDIDATE' &&
+      record.sourceStatus === 'NEEDS_REVIEW' &&
+      record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED' &&
+      Boolean(record.officialSourceUrl);
+  }
+
+  private isRegisteredUrlVerified(record: AuthoritativeSourceRecord): boolean {
+    const metadata = record as unknown as { urlVerificationStatus?: string };
+    return record.sourceStatus === 'VERIFIED' || metadata.urlVerificationStatus === 'VERIFIED' ||
+      isVerifiedLegacyStandardUrl(record.officialSourceUrl, record.standardOrActCode);
+  }
+
+  private verifyLiveCandidateCitation(
+    citation: StandardCitation,
+    record: AuthoritativeSourceRecord,
+    expectedAuthority?: StatutoryAuthority,
+    retrievedEvidenceScope?: AuthoritativeSourceRecord[]
+  ): CitationVerificationResult {
+    const authorityMatches = !citation.authority || citation.authority === record.authority ||
+      ((citation.authority === 'ASC' || citation.authority === 'ACRA') && record.authority === 'ACRA');
+    const expectedMatches = !expectedAuthority || expectedAuthority === record.authority ||
+      ((expectedAuthority === 'ASC' || expectedAuthority === 'ACRA') && record.authority === 'ACRA');
+    const exactUrl = this.normalizeExactUrl(citation.officialSourceUrl || '') === this.normalizeExactUrl(record.officialSourceUrl);
+    const inScope = Boolean(retrievedEvidenceScope?.includes(record));
+    const urlApproved = isApprovedSingaporeSourceUrl(record.officialSourceUrl);
+    const topicSpecific = this.isTopicSpecificSourceUrl(record.officialSourceUrl);
+    if (!authorityMatches || !expectedMatches) {
+      return {
+        citation,
+        status: 'AUTHORITY_MISMATCH',
+        isValid: false,
+        isStructurallyValid: false,
+        isAuthoritativePrimarySource: false,
+        matchedRecord: record,
+        reason: 'Live source authority does not match the citation authority.',
+        structuralVerificationOnly: true
+      };
+    }
+    if (!exactUrl || !urlApproved || !topicSpecific || !inScope) {
+      return {
+        citation,
+        status: 'UNVERIFIED',
+        isValid: false,
+        isStructurallyValid: false,
+        isAuthoritativePrimarySource: false,
+        matchedRecord: record,
+        reason: 'Live candidate citation must match the final approved URL and fetched, topic-verified evidence in this answer context.',
+        structuralVerificationOnly: true
+      };
+    }
+    return {
+      citation,
+      status: 'SOURCE_NEEDS_REVIEW',
+      isValid: true,
+      isStructurallyValid: true,
+      isAuthoritativePrimarySource: false,
+      matchedRecord: record,
+      reason: `Official page ${record.documentTitle} was fetched and matched the mapped topic; it remains a CANDIDATE source and is not locally validated evidence.`,
+      structuralVerificationOnly: true
+    };
   }
 
   /**
@@ -74,9 +158,33 @@ export class CitationVerifier {
     const rawPara = citation.paragraph || '';
     const rawUrl = citation.officialSourceUrl || '';
 
+    if (!rawUrl.trim()) {
+      return {
+        citation,
+        status: 'NON_CANONICAL_URL',
+        isValid: false,
+        isStructurallyValid: false,
+        isAuthoritativePrimarySource: false,
+        reason: 'Citation has no source URL; citation URLs must come from a registered or live-verified source record.',
+        structuralVerificationOnly: true
+      };
+    }
+
     // 1. Check if source standard or statute exists in verified repository
-    const matchedRecords = this.retriever.findSourcesByStandardOrAct(rawStd);
+    const matchedRecords = this.retriever.findSourcesByStandardOrAct(rawStd).filter(isAnswerGroundingEligibleSource);
+    const liveCandidates = (retrievedEvidenceScope || []).filter(record => this.isQualifiedLiveEvidence(record));
+    const liveSectionMatch = liveCandidates.find(record => {
+      const code = record.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
+      const requested = rawStd.toLowerCase().replace(/[\s\-_()]/g, '');
+      const codeMatches = code.includes(requested) || requested.includes(code) || record.documentTitle.toLowerCase().includes(rawStd.toLowerCase());
+      const paragraphMatches = this.normalizeSection(record.paragraphOrSection) === this.normalizeSection(rawPara);
+      const sameUrl = this.normalizeExactUrl(record.officialSourceUrl) === this.normalizeExactUrl(rawUrl);
+      return codeMatches && paragraphMatches && sameUrl;
+    });
     if (!matchedRecords || matchedRecords.length === 0) {
+      if (liveSectionMatch) {
+        return this.verifyLiveCandidateCitation(citation, liveSectionMatch, expectedAuthority, retrievedEvidenceScope);
+      }
       return {
         citation,
         status: 'SOURCE_NOT_FOUND',
@@ -96,6 +204,9 @@ export class CitationVerifier {
     });
 
     if (sectionCandidates.length === 0) {
+      if (liveSectionMatch) {
+        return this.verifyLiveCandidateCitation(citation, liveSectionMatch, expectedAuthority, retrievedEvidenceScope);
+      }
       return {
         citation,
         status: 'PARAGRAPH_NOT_FOUND',
@@ -204,8 +315,8 @@ export class CitationVerifier {
 
     // Canonical exact path comparison against matchedRecord.officialSourceUrl
     if (rawUrl && matchedRecord.officialSourceUrl) {
-      const normCite = this.normalizeUrlForComparison(rawUrl);
-      const normRec = this.normalizeUrlForComparison(matchedRecord.officialSourceUrl);
+      const normCite = this.normalizeExactUrl(rawUrl);
+      const normRec = this.normalizeExactUrl(matchedRecord.officialSourceUrl);
       if (normCite !== normRec) {
         return {
           citation,
@@ -218,6 +329,32 @@ export class CitationVerifier {
           structuralVerificationOnly: true
         };
       }
+    }
+
+    if (!matchedRecord.officialSourceUrl || !this.isRegisteredUrlVerified(matchedRecord)) {
+      return {
+        citation,
+        status: 'NON_CANONICAL_URL',
+        isValid: false,
+        isStructurallyValid: false,
+        isAuthoritativePrimarySource: false,
+        matchedRecord,
+        reason: 'Matched source record has no independently verified URL provenance.',
+        structuralVerificationOnly: true
+      };
+    }
+
+    if (rawPara.trim() && !this.isTopicSpecificSourceUrl(matchedRecord.officialSourceUrl)) {
+      return {
+        citation,
+        status: 'NON_CANONICAL_URL',
+        isValid: false,
+        isStructurallyValid: false,
+        isAuthoritativePrimarySource: false,
+        matchedRecord,
+        reason: `Registered URL '${matchedRecord.officialSourceUrl}' is a generic portal and does not identify the cited topic or section.`,
+        structuralVerificationOnly: true
+      };
     }
 
     // 5. Retrieved Evidence Scope check: Citation must be supported by the retrieved evidence in context

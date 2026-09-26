@@ -432,6 +432,7 @@ export function getCitation(ruleKey: keyof typeof STANDARDS_REPOSITORY, standard
     paragraph: rule.paragraph,
     title: rule.standardTitle,
     text: rule.principle,
-    officialSourceUrl: rule.officialSourceUrl || (standardMode === 'SFRS_I' ? 'https://www.acra.gov.sg/accountancy/accounting-standards' : 'https://www.ifrs.org')
+    // A rule without a recorded source must not acquire a plausible-looking URL.
+    officialSourceUrl: rule.officialSourceUrl
   };
 }

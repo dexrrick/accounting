@@ -18,7 +18,7 @@ import type { SingaporeStatuteRule } from './types';export const IRAS_STATUTE_RU
       'Must not be capital in nature (e.g. initial setup costs, asset purchases).',
       'Must not be prohibited under Section 15 of the Income Tax Act.'
     ],
-    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P16-#pr22-',
+    canonicalUrl: 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-',
     tags: ['tax deduction', 'deductible expenses', 'section 14', 'business expenses', 'p&l deduction'],
     sourceStatus: 'VERIFIED',
     sourceType: 'AUTHORITATIVE_SOURCE',

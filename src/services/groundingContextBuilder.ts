@@ -13,14 +13,19 @@ import { classifyQuestion } from '../classification/questionClassifier';
 import type { ProviderSettings } from '../types/provider';
 import { defaultTransactionUnderstandingService, type TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
+import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
+import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
 import { extractAccountingContext } from './conversationAccountingState';
+import { isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
+import { OfficialSitemapDiscoveryAdapter } from '../retrieval/officialSitemapDiscovery';
+
+const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 
 /**
  * Provider-neutral structured reasoning context.
@@ -37,6 +42,81 @@ export interface GroundedReasoningContext {
   applicationRules: string[];
   currentInformationRequired: boolean;
   semanticUnderstanding?: TransactionUnderstanding;
+  sourceMapFallbackTrace?: SourceMapFallbackTrace;
+}
+
+export interface SourceMapFallbackAttempt {
+  topicId: string;
+  sourceMapId?: string;
+  fetchStatus: string;
+  finalUrl?: string;
+  pageTitle?: string;
+  titleMatched: boolean;
+  contentMatched: boolean;
+  error?: string;
+}
+
+export interface SourceMapFallbackTrace {
+  path: 'NOT_NEEDED' | 'MAPPED_SOURCE' | 'DISCOVERED_SOURCE' | 'MAPPED_SOURCE_REJECTED' | 'NO_VERIFIED_MAP';
+  sourceMapIds: string[];
+  selectedRecordIds: string[];
+  finalVerifiedUrls: string[];
+  candidateOnly: boolean;
+  attempts: SourceMapFallbackAttempt[];
+}
+
+export interface GroundingEvidenceTrace {
+  recordId: string;
+  lifecycleState?: string;
+  groundingEligible: boolean;
+  provenance: string;
+  officialSourceUrl?: string;
+  fetchStatus?: string;
+  finalUrl?: string;
+  topicMatched?: boolean;
+  titleMatched?: boolean;
+  contentMatched?: boolean;
+  candidateOnly: boolean;
+}
+
+interface MappedCoverageTopic extends SingaporeCoverageTopic {
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  relatedTopicIds?: string[];
+  paragraphHints?: string[];
+  sectionHints?: string[];
+  aliases?: string[];
+  canonicalSourceId?: string;
+  canonicalSourceUrl?: string;
+  pageTitle?: string;
+}
+
+interface SourceMapPointer extends AuthoritativeSourceRecord {
+  recordRole?: 'EVIDENCE' | 'SOURCE_MAP_POINTER';
+  groundingEligible?: boolean;
+  sourceMapTopicIds?: string[];
+  sourceMapScope?: 'STANDARD' | 'FRAMEWORK';
+  retrievalHints?: string[];
+  urlVerificationStatus?: 'VERIFIED' | 'CANDIDATE' | 'REJECTED';
+}
+
+export interface OfficialSourceDiscoveryRequest {
+  query: string;
+  topicId: string;
+  topicTitle: string;
+  standardOrAct: string;
+  approvedHosts: readonly string[];
+}
+
+/** Trusted official-domain search adapter. Candidate URLs are always fetched and validated before use. */
+export interface OfficialSourceDiscoveryAdapter {
+  discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+}
+
+export interface MappedFallbackOptions {
+  webRetriever?: ControlledWebRetriever;
+  fetchOptions?: Omit<ControlledFetchOptions, 'topicValidation'>;
+  discoveryAdapter?: OfficialSourceDiscoveryAdapter;
 }
 
 /** Maximum number of source records requested by production grounding. */
@@ -90,6 +170,353 @@ export function buildClassificationRetrievalHints(
     authorities: authorities.length > 0 ? authorities : undefined,
     topicIds: classification.topicIds
   };
+}
+
+function normalizeEvidenceText(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+const TOPIC_TERM_STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the']);
+
+function normalizeTopicTerm(text: string): string {
+  return normalizeEvidenceText(text)
+    .split(/\s+/)
+    .filter(token => token && !TOPIC_TERM_STOPWORDS.has(token))
+    .join(' ');
+}
+
+function containsTopicTerm(text: string, term: string): boolean {
+  const normalizedText = normalizeTopicTerm(text);
+  const normalizedTerm = normalizeTopicTerm(term);
+  return Boolean(normalizedTerm && ` ${normalizedText} `.includes(` ${normalizedTerm} `));
+}
+
+function isRelatedTopicRelevant(topic: MappedCoverageTopic, query: string): boolean {
+  const q = normalizeEvidenceText(query);
+  const phrases = [topic.title, ...(topic.aliases || []), ...topic.keywords]
+    .map(normalizeEvidenceText)
+    .filter(value => value.length > 3);
+  if (phrases.some(phrase => q.includes(phrase))) return true;
+
+  // Related-topic expansion is supplementary routing. Require a focused
+  // topic pattern rather than a small token overlap: generic words such as
+  // "control", "acquisition", or "interest" otherwise pull unrelated
+  // standards into the source selection.
+  return (topic.queryPatterns || []).some(pattern => {
+    try {
+      return new RegExp(pattern, 'i').test(query);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function isAssociateToSubsidiaryTransitionQuestion(query: string): boolean {
+  const hasAssociateContext = /\b(?:associate|equity[\s-]*accounted|previously held|existing investment)\b/i.test(query);
+  const hasAdditionalAcquisition = /\b(?:acquir\w*|purchas\w*|additional|further|increas\w*)\b/i.test(query);
+  const hasControlTransition = /\b(?:control|subsidiar\w*)\b/i.test(query);
+  return hasAssociateContext && hasAdditionalAcquisition && hasControlTransition;
+}
+
+function getTopicStandardIdentifiers(topic: MappedCoverageTopic, pointer?: SourceMapPointer): string[] {
+  const instruments = [pointer?.standardOrActCode, pointer?.documentTitle, topic.pageTitle, topic.actOrStandard]
+    .filter((value): value is string => Boolean(value));
+  const identifiers = new Set<string>();
+  for (const instrument of instruments) {
+    for (const match of instrument.matchAll(/\b(?:SFRS\s*\(\s*I\s*\)|IFRS|IAS)\s*\d+(?:\s*[-/]\s*\d+)?/gi)) {
+      identifiers.add(match[0].replace(/\s+/g, ' ').trim());
+    }
+  }
+  if (pointer?.standardOrActCode) identifiers.add(pointer.standardOrActCode);
+  return [...identifiers];
+}
+
+function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
+  const allTerms = [...new Set([
+    topic.title,
+    ...(topic.aliases || []),
+    ...topic.keywords,
+    ...(topic.paragraphHints || []),
+    ...(topic.sectionHints || [])
+  ].filter(term => term.trim().length > 2))];
+  // A generic one-word title such as "control" or "goodwill" is not enough
+  // to validate a live overview for a specific subtopic. Require a focused
+  // topic phrase whenever one is available.
+  const focusedTerms = allTerms.filter(term => normalizeEvidenceText(term).split(/\s+/).filter(Boolean).length >= 2);
+  return focusedTerms.length > 0 ? focusedTerms : allTerms;
+}
+
+function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000): string {
+  const text = pageText.trim();
+  if (text.length <= maxChars) return text;
+  const sentences = text.split(/(?<=[.!?])\s+|\n+/).map(sentence => sentence.trim()).filter(Boolean);
+  const normalizedTerms = terms.map(normalizeTopicTerm).filter(term => term.length > 2);
+  const matches = sentences
+    .map((sentence, index) => ({ sentence, index }))
+    .filter(item => normalizedTerms.some(term => containsTopicTerm(item.sentence, term)));
+  if (matches.length === 0) return '';
+
+  const chosen = new Map<number, string>();
+  for (const match of matches) {
+    for (const index of [match.index - 1, match.index, match.index + 1]) {
+      const sentence = sentences[index];
+      if (sentence) chosen.set(index, sentence);
+    }
+  }
+  let output = '';
+  for (const [, sentence] of [...chosen.entries()].sort((a, b) => a[0] - b[0])) {
+    if (output.length + sentence.length + 1 > maxChars) break;
+    output += `${output ? ' ' : ''}${sentence}`;
+  }
+  return output;
+}
+
+function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
+  return topic.domainId === 'ACCOUNTING_SFRS' ? [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS] : [];
+}
+
+function makeLiveCandidateEvidence(
+  topic: MappedCoverageTopic,
+  pointer: SourceMapPointer | undefined,
+  pageTitle: string,
+  url: string,
+  excerpt: string,
+  contentHash: string | undefined,
+  retrievedAt: string
+): AuthoritativeSourceRecord {
+  const currentDate = new Date().toISOString().slice(0, 10);
+  const host = new URL(url).hostname.toLowerCase();
+  const discoveredPublisher = host === 'ifrs.org' || host === 'www.ifrs.org'
+    ? 'IFRS Foundation'
+    : host === 'asc.acra.gov.sg'
+      ? 'Accounting Standards Committee / ACRA'
+      : host === 'acra.gov.sg' || host === 'www.acra.gov.sg'
+        ? 'ACRA'
+        : 'Official source';
+  const record = {
+    id: `LIVE_TOPIC_${topic.id}_${contentHash?.slice(0, 12) || Date.now()}`,
+    authority: (pointer?.authority || topic.authorities[0] || 'ACRA') as StatutoryAuthority,
+    // The final URL may belong to a different approved publisher than the
+    // mapped pointer. Keep the framework authority in `authority`, and use the
+    // final page publisher for names presented to the answer/citation paths.
+    authorityName: discoveredPublisher,
+    // A verified redirect can cross approved first-party hosts. Attribute the
+    // citation to the publisher of the final fetched URL, never the original
+    // source-map pointer's host.
+    sourcePublisher: discoveredPublisher,
+    legalOrStandardInstrument: pointer?.legalOrStandardInstrument || topic.actOrStandard || topic.title,
+    documentTitle: pageTitle,
+    standardOrActCode: pointer?.standardOrActCode || topic.actOrStandard || 'SFRS(I)',
+    paragraphOrSection: topic.paragraphHints?.[0] || topic.sectionHints?.[0] || topic.title,
+    sourceText: excerpt,
+    principleSummary: topic.shortDescription || topic.title,
+    effectiveDate: topic.effectiveFrom,
+    validFrom: topic.effectiveFrom,
+    validTo: topic.effectiveTo,
+    officialSourceUrl: url,
+    domain: (pointer?.domain || topic.legacyDomains[0] || 'ACCOUNTING_SFRS') as QueryDomain,
+    jurisdiction: 'Singapore',
+    tags: [...new Set([topic.id, topic.title, ...topic.keywords, ...(topic.aliases || [])])],
+    sourceStatus: 'NEEDS_REVIEW' as const,
+    sourceType: 'OFFICIAL_GUIDANCE' as const,
+    evidenceTier: 'OFFICIAL_GUIDANCE' as const,
+    isVerbatimText: false,
+    lastVerifiedDate: currentDate,
+    provenance: 'LIVE_EXTERNAL' as const,
+    canonicalSourceUrl: url,
+    sourceAuthority: 'ACRA' as const,
+    retrievedAt,
+    verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
+    extractionStatus: 'PARTIAL' as const,
+    documentHash: contentHash,
+    contentHash,
+    lifecycleState: 'CANDIDATE' as const,
+    recordRole: 'DISCOVERED_EVIDENCE' as const,
+    groundingEligible: true,
+    urlVerificationStatus: 'VERIFIED' as const,
+    urlVerifiedDate: currentDate,
+    sourceLocator: { heading: pageTitle, document: pageTitle, sourceType: 'HTML' as const }
+  } as unknown as AuthoritativeSourceRecord;
+  return record;
+}
+
+/**
+ * Resolves partial/missing coverage through verified source-map pointers, then
+ * optionally through a trusted official-domain discovery adapter. It never
+ * registers or promotes fetched records: successful fetches remain CANDIDATE.
+ */
+export async function resolveMappedOfficialSourceFallback(
+  topicIds: readonly string[],
+  query: string,
+  retriever: ISourceRetriever,
+  options: MappedFallbackOptions = {}
+): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace }> {
+  const webRetriever = options.webRetriever || defaultControlledWebRetriever;
+  const discoveryAdapter = options.discoveryAdapter || new OfficialSitemapDiscoveryAdapter(webRetriever, options.fetchOptions);
+  const directTopics = getCoverageTopicsByIds(topicIds).map(topic => topic as MappedCoverageTopic);
+  const expandedTopics = new Map(directTopics.map(topic => [topic.id, topic]));
+  for (const directTopic of directTopics) {
+    for (const relatedId of directTopic.relatedTopicIds || []) {
+      const related = getCoverageTopicsByIds([relatedId])[0] as MappedCoverageTopic | undefined;
+      if (related && isRelatedTopicRelevant(related, query)) expandedTopics.set(related.id, related);
+    }
+  }
+  if (isAssociateToSubsidiaryTransitionQuestion(query)) {
+    // Cross-standard transition routing is deliberately gated on all three
+    // signals: an associate/equity-accounted holding, a further acquisition,
+    // and control/subsidiary wording. Resolve the IDs through the coverage
+    // registry so source IDs remain explicit data, never URL-derived guesses.
+    for (const transitionTopicId of [
+      'sfrsi-associate-to-subsidiary',
+      'sfrsi128-to-subsidiary',
+      'sfrsi3-step-acquisition',
+      'sfrsi10-acquisition-control-date'
+    ]) {
+      const transitionTopic = getCoverageTopicsByIds([transitionTopicId])[0] as MappedCoverageTopic | undefined;
+      if (transitionTopic) expandedTopics.set(transitionTopic.id, transitionTopic);
+    }
+  }
+
+  const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'VALIDATED' && topic.status !== 'HISTORICAL');
+  if (topicsRequiringFallback.length === 0) {
+    return { records: [], trace: { path: 'NOT_NEEDED', sourceMapIds: [], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: false, attempts: [] } };
+  }
+
+  const records: AuthoritativeSourceRecord[] = [];
+  const attempts: SourceMapFallbackAttempt[] = [];
+  const sourceMapIds = new Set<string>();
+  const finalVerifiedUrls = new Set<string>();
+  const discoveredEvidenceIds = new Set<string>();
+
+  const tryFetch = async (topic: MappedCoverageTopic, candidateUrl: string, pointer?: SourceMapPointer): Promise<AuthoritativeSourceRecord | undefined> => {
+    const expectation = {
+      standardIdentifiers: getTopicStandardIdentifiers(topic, pointer),
+      expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim())].filter((value): value is string => Boolean(value)),
+      topicTerms: getTopicContentTerms(topic),
+      minimumTopicTermMatches: 1
+    };
+    const result = await webRetriever.fetchOfficialSource(candidateUrl, {
+      ...options.fetchOptions,
+      topicValidation: expectation
+    });
+    const attempt: SourceMapFallbackAttempt = {
+      topicId: topic.id,
+      sourceMapId: pointer?.id,
+      fetchStatus: result.status,
+      finalUrl: result.finalUrl,
+      pageTitle: result.pageTitle,
+      titleMatched: result.titleMatched === true,
+      contentMatched: result.contentMatched === true,
+      error: result.error
+    };
+    attempts.push(attempt);
+    let finalHost = '';
+    try { finalHost = new URL(result.finalUrl || '').hostname.toLowerCase(); } catch { /* rejected below */ }
+    if (result.status !== 'SUCCESS' || !result.content || !result.finalUrl || !result.topicMatched ||
+        !isApprovedSingaporeSourceUrl(result.finalUrl) || !approvedHostsForTopic(topic).includes(finalHost)) return undefined;
+
+    const excerpt = selectRelevantFetchedText(result.substantiveText || result.content, expectation.topicTerms);
+    if (!excerpt || !expectation.topicTerms.some(term => containsTopicTerm(excerpt, term))) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Validated page did not yield a relevant topic section for grounding.';
+      return undefined;
+    }
+    const record = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);
+    records.push(record);
+    finalVerifiedUrls.add(result.finalUrl);
+    return record;
+  };
+
+  for (const topic of topicsRequiringFallback) {
+    const pointers = [...new Set(topic.sourceRecordIds)]
+      .map(id => retriever.getSourceById(id) as SourceMapPointer | undefined)
+      .filter((record): record is SourceMapPointer => Boolean(
+        record && record.recordRole === 'SOURCE_MAP_POINTER' && record.groundingEligible === false &&
+        record.lifecycleState === 'ACTIVE' && record.urlVerificationStatus === 'VERIFIED' &&
+        record.sourceMapTopicIds?.includes(topic.id) &&
+        // A framework overview can route framework-level questions only. It
+        // cannot be used as a substitute for one of this registry's narrow
+        // mapped standard topics.
+        record.sourceMapScope !== 'FRAMEWORK'
+      ));
+    for (const pointer of pointers) {
+      sourceMapIds.add(pointer.id);
+      if (!isApprovedSingaporeSourceUrl(pointer.officialSourceUrl)) {
+        attempts.push({ topicId: topic.id, sourceMapId: pointer.id, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false, error: 'Mapped URL is outside approved official sources.' });
+        continue;
+      }
+      await tryFetch(topic, pointer.officialSourceUrl, pointer);
+    }
+
+    const succeededForTopic = records.some(record => record.tags.includes(topic.id));
+    if (succeededForTopic) continue;
+    const approvedHosts = approvedHostsForTopic(topic);
+    if (approvedHosts.length === 0) continue;
+    let discoveredCandidates: string[] = [];
+    try {
+      discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates({
+      query,
+      topicId: topic.id,
+      topicTitle: topic.title,
+      standardOrAct: topic.actOrStandard || topic.title,
+      approvedHosts
+      });
+    } catch {
+      // First-party discovery is optional and fail-closed. Mapped retrieval
+      // results already collected remain available if the sitemap is down.
+      discoveredCandidates = [];
+    }
+    for (const candidateUrl of discoveredCandidates.slice(0, 4)) {
+      let host = '';
+      try { host = new URL(candidateUrl).hostname.toLowerCase(); } catch { /* reject below */ }
+      if (!approvedHosts.includes(host as typeof approvedHosts[number])) {
+        attempts.push({ topicId: topic.id, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false, error: 'Discovery candidate was not from the restricted official-domain set.' });
+        continue;
+      }
+      const beforeCount = records.length;
+      await tryFetch(topic, candidateUrl);
+      if (records.length > beforeCount) {
+        discoveredEvidenceIds.add(records[records.length - 1].id);
+        break;
+      }
+    }
+  }
+
+  const anyMappedAttempt = sourceMapIds.size > 0;
+  const path: SourceMapFallbackTrace['path'] = records.length > 0
+    ? (discoveredEvidenceIds.size > 0 ? 'DISCOVERED_SOURCE' : 'MAPPED_SOURCE')
+    : anyMappedAttempt
+      ? 'MAPPED_SOURCE_REJECTED'
+      : 'NO_VERIFIED_MAP';
+  return {
+    records,
+    trace: {
+      path,
+      sourceMapIds: [...sourceMapIds],
+      selectedRecordIds: records.map(record => record.id),
+      finalVerifiedUrls: [...finalVerifiedUrls],
+      candidateOnly: records.length > 0,
+      attempts
+    }
+  };
+}
+
+export function buildGroundingEvidenceTrace(context: GroundedReasoningContext): GroundingEvidenceTrace[] {
+  const records = [...context.primaryEvidence, ...context.officialGuidance, ...context.curatedSummaries];
+  return records.map(record => {
+    const metadata = record as unknown as { groundingEligible?: boolean; recordRole?: string };
+    const isCandidate = record.lifecycleState === 'CANDIDATE';
+    return {
+      recordId: record.id,
+      lifecycleState: record.lifecycleState,
+      groundingEligible: metadata.groundingEligible !== false && metadata.recordRole !== 'SOURCE_MAP_POINTER',
+      provenance: record.provenance,
+      officialSourceUrl: record.officialSourceUrl,
+      ...(isCandidate ? { fetchStatus: 'SUCCESS', finalUrl: record.officialSourceUrl, topicMatched: true, titleMatched: true, contentMatched: true } : {}),
+      candidateOnly: isCandidate
+    };
+  });
 }
 
 /**
@@ -212,7 +639,8 @@ export async function buildGroundedReasoningContext(
   userInput: string,
   currentScenario?: AccountingScenarioState | null,
   retriever: ISourceRetriever = defaultAdvancedSourceRetriever,
-  providerOrApiKey?: ProviderSettings | string
+  providerOrApiKey?: ProviderSettings | string,
+  retrievalOptions: MappedFallbackOptions = {}
 ): Promise<GroundedReasoningContext> {
   // 1. Semantic Transaction Understanding & Question Classification
   const conversationContext = extractAccountingContext(currentScenario);
@@ -227,12 +655,19 @@ export async function buildGroundedReasoningContext(
 
   // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
   const retrievalHints = buildClassificationRetrievalHints(classification);
-  const retrieved = await retriever.retrieveSources({
+  const localRetrieved = await retriever.retrieveSources({
     query: userInput,
     ...retrievalHints,
     maxResults: GROUNDING_SOURCE_MAX_RESULTS,
     semanticContext: semanticUnderstanding
   });
+  const initiallyMatchedCoverage = getCoverageTopicsByIds(retrievalHints.topicIds || []) as MappedCoverageTopic[];
+  const localRetrievedIds = new Set(localRetrieved.map(record => record.id));
+  const fallbackTopicIds = initiallyMatchedCoverage
+    .filter(topic => topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
+    .map(topic => topic.id);
+  const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, retrievalOptions);
+  const retrieved = [...localRetrieved, ...mappedFallback.records];
 
   // 3. Four-Tier Evidence Sorting based explicitly on evidenceTier
   const primaryEvidence: AuthoritativeSourceRecord[] = [];
@@ -304,7 +739,8 @@ export async function buildGroundedReasoningContext(
     curatedSummaries,
     applicationRules,
     currentInformationRequired: classification.currentInformationRequired,
-    semanticUnderstanding
+    semanticUnderstanding,
+    sourceMapFallbackTrace: mappedFallback.trace
   };
 }
 
@@ -327,10 +763,12 @@ Your primary directive is to provide correct, authoritative, and traceable infor
 EVIDENCE-FIRST REASONING PRINCIPLES (MANDATORY SAFEGUARDS)
 ================================================================================
 1. EVIDENCE GROUNDING: Use the supplied evidence for authoritative legal and accounting claims.
-2. ANTI-FABRICATION: You must NEVER invent standards, paragraph numbers, statutory sections, rates, thresholds, deadlines, or citations.
-3. CURATED SUMMARY STATUS: Never treat a curated summary as verified primary-source text.
-4. APPLICATION RULES: Never treat an application/calculation rule as statutory authority.
-5. STRICT SEPARATION: Clearly distinguish in your reasoning and output:
+2. ANSWER PRIORITY: Apply validated local rules and evidence first. Use live-fetched candidate pages only to fill an identified local coverage gap; they may supplement but must not override validated local knowledge.
+3. LIVE CANDIDATE LIMIT: A live-fetched candidate page supports only what its fetched, topic-matched text actually says. An overview page does not establish paragraph-level requirements, detailed calculations, or other facts absent from that page.
+4. ANTI-FABRICATION: You must NEVER invent standards, paragraph numbers, statutory sections, rates, thresholds, deadlines, or citations.
+5. CURATED SUMMARY STATUS: Never treat a curated summary as verified primary-source text.
+6. APPLICATION RULES: Never treat an application/calculation rule as statutory authority.
+7. STRICT SEPARATION: Clearly distinguish in your reasoning and output:
    - User Facts: Stated explicitly by the user.
    - Missing Facts: Required to confirm accounting treatment but omitted by user.
    - Assumptions: Introduced SOLELY for illustrative calculations; never silently convert a missing fact into an established fact.
@@ -338,14 +776,14 @@ EVIDENCE-FIRST REASONING PRINCIPLES (MANDATORY SAFEGUARDS)
    - Professional Analysis: Applying the evidence to facts.
    - Conclusion: Recommended accounting or tax treatment.
    - Illustrative Journal Entry: Presented ONLY if facts and recognition criteria support it (or marked strictly conditional).
-6. TIME-SENSITIVITY & UNCERTAINTY HANDLING:
+8. TIME-SENSITIVITY & UNCERTAINTY HANDLING:
    When current information is required but available evidence is insufficient or unverified, state:
    "I couldn't verify the applicable current source from the available evidence."
    Do not silently answer from unverified model memory.
-7. CITATION INTEGRITY: Do not invent a citation merely because the user asks for one. Tie citations strictly to verified records.
-8. INCOMPLETE EVIDENCE: If evidence conflicts or is incomplete, state the limitation instead of guessing.
-9. CONCEPTUAL EXPLANATIONS: General model knowledge may be used for explanatory context, but must NOT be presented as verified authoritative evidence or given fabricated citations.
-10. SIMPLE-QUESTION DEFAULT: For a short request to define or explain a term, answer the question directly even when no repository record is retrieved. Give a concise general explanation, explicitly label it as general explanatory context, and do not invent a statute, regulator, section, rate, threshold, deadline, eligibility condition, or source link. Do NOT respond only with "I couldn't verify the applicable current source from the available evidence." That wording is reserved for a request that actually requires a current legal, regulatory, tax, rate, threshold, deadline, or eligibility conclusion.
+9. CITATION INTEGRITY: Do not invent a citation merely because the user asks for one. Tie citations strictly to verified records.
+10. INCOMPLETE EVIDENCE: If evidence conflicts or is incomplete, state the limitation instead of guessing.
+11. CONCEPTUAL EXPLANATIONS: General model knowledge may be used for explanatory context, but must NOT be presented as verified authoritative evidence or given fabricated citations.
+12. SIMPLE-QUESTION DEFAULT: For a short request to define or explain a term, answer the question directly even when no repository record is retrieved. Give a concise general explanation, explicitly label it as general explanatory context, and do not invent a statute, regulator, section, rate, threshold, deadline, eligibility condition, or source link. Do NOT respond only with "I couldn't verify the applicable current source from the available evidence." That wording is reserved for a request that actually requires a current legal, regulatory, tax, rate, threshold, deadline, or eligibility conclusion.
 
 ================================================================================
 GROUNDED REASONING CONTEXT SUPPLIED TO YOU
@@ -428,10 +866,14 @@ GROUNDED REASONING CONTEXT SUPPLIED TO YOU
   prompt += `\n[5. OFFICIAL / CURATED GUIDANCE]\n`;
   if (context.officialGuidance.length > 0) {
     for (const g of context.officialGuidance) {
-      prompt += `### Guidance: ${g.documentTitle} (${g.paragraphOrSection})\n`;
+      const gMetadata = g as unknown as { recordRole?: string; lifecycleState?: string; sourceText?: string };
+      const isLiveCandidate = gMetadata.recordRole === 'DISCOVERED_EVIDENCE' && gMetadata.lifecycleState === 'CANDIDATE';
+      prompt += `### Guidance: ${g.documentTitle} (${g.paragraphOrSection})${isLiveCandidate ? ' [LIVE-FETCHED CANDIDATE — NOT LOCALLY VALIDATED]' : ''}\n`;
       prompt += `Authority: ${g.authorityName} | Publisher: ${g.sourcePublisher}\n`;
       prompt += `Summary: ${g.principleSummary}\n`;
-      prompt += `Guidance Text: ${g.sourceText}\n\n`;
+      prompt += isLiveCandidate
+        ? `Fetched page text (topic-matched overview only; do not infer detailed paragraph requirements or calculations absent from this text): ${g.sourceText}\n\n`
+        : `Guidance Text: ${g.sourceText}\n\n`;
     }
   } else {
     prompt += `• No specific administrative guidance documents retrieved.\n`;
@@ -589,6 +1031,8 @@ export function postProcessAIResponse(
 ): {
   messageText: string;
   scenarioState: AccountingScenarioState;
+  sourceMapFallbackTrace?: SourceMapFallbackTrace;
+  groundingEvidence?: GroundingEvidenceTrace[];
 } {
   // If parsed is a compact decision (has directAnswer, treatment, decision, requiredAccounts, or lacks directGroups and messageText),
   // delegate to assembleDeterministicResponse which compiles the complete verified markdown, journal entries, and scenario state.
@@ -686,25 +1130,25 @@ export function postProcessAIResponse(
       const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
       // Post-generation citation verification on all citations in this group
-      const verifiedCitations: StandardCitation[] = (grp.citations || []).map((cite: any) => {
+      const verifiedCitations: StandardCitation[] = (grp.citations || []).flatMap((cite: any) => {
         const verification = defaultCitationVerifier.verifyCitation(cite, cite.authority, retrievedEvidenceScope);
-        const safeUrl = verification.matchedRecord?.officialSourceUrl ||
-          getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority) ||
-          cite.officialSourceUrl;
+        if (!verification.isValid || !verification.matchedRecord?.officialSourceUrl) return [];
+        const safeUrl = verification.matchedRecord.officialSourceUrl;
 
-        return {
+        return [{
           standard: cite.standard || '',
           paragraph: cite.paragraph || '',
           title: cite.title || '',
           text: cite.text || '',
-          authority: cite.authority,
+          authority: verification.matchedRecord.authority,
+          sourcePublisher: verification.matchedRecord.sourcePublisher,
           officialSourceUrl: safeUrl,
           verificationStatus: verification.status,
           isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
           isStructurallyValid: verification.isStructurallyValid,
           verificationReason: verification.reason,
           structuralVerificationOnly: true
-        };
+        }];
       });
 
       return {
@@ -745,7 +1189,7 @@ export function postProcessAIResponse(
   // Verify and normalize statutory advisories
   const statutoryAdvisory = (parsed.statutoryAdvisory || deterministicScenario?.statutoryAdvisory || currentScenario?.statutoryAdvisory || []).map((adv: any) => ({
     ...adv,
-    officialUrl: getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority) || adv.officialUrl
+    officialUrl: getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority, retrievedEvidenceScope) || undefined
   }));
 
   // Uncertainty handling & conditional conclusions
@@ -810,7 +1254,9 @@ export function postProcessAIResponse(
   };
 
   return {
-    messageText: appendStatutorySourceFooter(parsed.messageText || '', scenarioState),
-    scenarioState
+    messageText: appendStatutorySourceFooter(parsed.messageText || '', scenarioState, retrievedEvidenceScope),
+    scenarioState,
+    sourceMapFallbackTrace: groundedContext.sourceMapFallbackTrace,
+    groundingEvidence: buildGroundingEvidenceTrace(groundedContext)
   };
 }

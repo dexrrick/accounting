@@ -8,7 +8,7 @@ import type {
   ExplicitAssumption,
   JournalAuthorityStatus
 } from '../types/accounting';
-import type { GroundedReasoningContext } from '../services/groundingContextBuilder';
+import type { GroundedReasoningContext, GroundingEvidenceTrace, SourceMapFallbackTrace } from '../services/groundingContextBuilder';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
@@ -21,6 +21,31 @@ import {
 } from '../services/conversationAccountingState';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { hasSemanticRoutingConflict } from '../services/semanticScenarioResolver';
+
+function buildResponseGroundingEvidenceTrace(context: GroundedReasoningContext): GroundingEvidenceTrace[] {
+  const records = [...context.primaryEvidence, ...context.officialGuidance, ...context.curatedSummaries];
+  return records.map(record => {
+    const metadata = record as unknown as { groundingEligible?: boolean; recordRole?: string };
+    const liveCandidate = metadata.recordRole === 'DISCOVERED_EVIDENCE' &&
+      record.provenance === 'LIVE_EXTERNAL' && record.lifecycleState === 'CANDIDATE' &&
+      record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED';
+    return {
+      recordId: record.id,
+      lifecycleState: record.lifecycleState,
+      groundingEligible: metadata.groundingEligible !== false && metadata.recordRole !== 'SOURCE_MAP_POINTER',
+      provenance: record.provenance,
+      officialSourceUrl: record.officialSourceUrl,
+      ...(liveCandidate ? {
+        fetchStatus: 'SUCCESS',
+        finalUrl: record.officialSourceUrl,
+        topicMatched: true,
+        titleMatched: true,
+        contentMatched: true
+      } : {}),
+      candidateOnly: record.lifecycleState === 'CANDIDATE'
+    };
+  });
+}
 
 export interface CompactStatutoryDecision {
   directAnswer?: string;
@@ -85,6 +110,8 @@ export function assembleDeterministicResponse(
 ): {
   messageText: string;
   scenarioState: AccountingScenarioState;
+  sourceMapFallbackTrace?: SourceMapFallbackTrace;
+  groundingEvidence?: GroundingEvidenceTrace[];
 } {
   const userInput = typeof userInputOrScenario === 'string'
     ? userInputOrScenario
@@ -157,17 +184,17 @@ export function assembleDeterministicResponse(
       cite.authority as any,
       retrievedEvidenceScope
     );
+    if (!verification.isValid || !verification.matchedRecord?.officialSourceUrl) continue;
 
-    const safeUrl = verification.matchedRecord?.officialSourceUrl ||
-      getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority as any) ||
-      cite.officialSourceUrl;
+    const safeUrl = verification.matchedRecord.officialSourceUrl;
 
     verifiedCitations.push({
       standard: cite.standard || '',
       paragraph: cite.paragraph || '',
       title: (cite as any).title || verification.matchedRecord?.documentTitle || `${cite.standard} ${cite.paragraph}`,
       text: (cite as any).text || verification.matchedRecord?.sourceText || '',
-      authority: (cite.authority || verification.matchedRecord?.authorityName || 'SSO') as any,
+      authority: (verification.matchedRecord.authority || 'SSO') as any,
+      sourcePublisher: verification.matchedRecord.sourcePublisher,
       officialSourceUrl: safeUrl,
       verificationStatus: verification.status,
       isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
@@ -501,6 +528,17 @@ export function assembleDeterministicResponse(
     });
   }
 
+  const safeStatutoryAdvisory = statutoryAdvisory.map(advisory => ({
+    ...advisory,
+    officialUrl: getSafeOfficialUrl(
+      advisory.officialUrl,
+      advisory.statuteOrAct,
+      advisory.sectionOrSchedule,
+      advisory.authority,
+      retrievedEvidenceScope
+    )
+  }));
+
   // 5. Assemble Key Parameters
   const keyParameters: { label: string; value: string; badge?: string; highlight?: boolean }[] = [];
 
@@ -659,7 +697,11 @@ export function assembleDeterministicResponse(
       if (verifiedCitations.length > 0) {
         messageText += `\n---\n\n#### 4. Official Statutory Sources & Verification\n`;
         for (const c of verifiedCitations) {
-          messageText += `* **${c.standard} ${c.paragraph}** (${c.authority}): [${c.title}](${c.officialSourceUrl || 'https://sso.agc.gov.sg'})\n`;
+          const sourceLabel = c.sourcePublisher && c.sourcePublisher === 'IFRS Foundation' && c.authority === 'ACRA'
+            ? 'IFRS Foundation; Singapore framework authority: ACRA / ASC'
+            : (c.sourcePublisher || c.authority);
+          const label = `**${c.standard} ${c.paragraph}** (${sourceLabel}): ${c.title}`;
+          messageText += c.officialSourceUrl ? `* ${label} ([official source](${c.officialSourceUrl}))\n` : `* ${label}\n`;
         }
       }
 
@@ -876,7 +918,7 @@ export function assembleDeterministicResponse(
     directGroups,
     committedDirectGroups,
     projectedGroups,
-    statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
+    statutoryAdvisory: safeStatutoryAdvisory.length > 0 ? safeStatutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: missingFacts.length > 0 ? missingFacts : undefined,
     ownershipContext: deterministicScenario?.ownershipContext || groundedContext.semanticUnderstanding?.ownershipContext || currentScenario?.ownershipContext,
@@ -890,7 +932,9 @@ export function assembleDeterministicResponse(
   };
 
   return {
-    messageText: appendStatutorySourceFooter(messageText, scenarioState),
-    scenarioState
+    messageText: appendStatutorySourceFooter(messageText, scenarioState, retrievedEvidenceScope),
+    scenarioState,
+    sourceMapFallbackTrace: groundedContext.sourceMapFallbackTrace,
+    groundingEvidence: buildResponseGroundingEvidenceTrace(groundedContext)
   };
 }

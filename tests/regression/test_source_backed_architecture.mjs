@@ -137,8 +137,9 @@ async function runPhase1Tests() {
   // -------------------------------------------------------------
   console.log('\n[3. CITATION VERIFICATION]');
 
-  // 3A. PROOF 3 & 4: Curated SFRS summary can never become VERIFIED_PRIMARY_SOURCE
-  // AND a citation can be structurally valid but still SOURCE_NEEDS_REVIEW
+  // 3A. A generic ACRA framework page cannot be cited as evidence for a
+  // paragraph-specific curated SFRS(I) summary, even when the summary itself
+  // exists locally and remains NEEDS_REVIEW.
   const summaryCitation = {
     standard: 'SFRS(I) 1-38',
     paragraph: '§57',
@@ -148,20 +149,23 @@ async function runPhase1Tests() {
     authority: 'ACRA'
   };
   const v1 = defaultCitationVerifier.verifyCitation(summaryCitation, 'ACRA');
-  assert.strictEqual(v1.isStructurallyValid, true, 'Citation must be structurally valid (standard, para, authority, URL exist)');
-  assert.strictEqual(v1.status, 'SOURCE_NEEDS_REVIEW', 'Structurally valid curated citation must return SOURCE_NEEDS_REVIEW');
-  assert.strictEqual(v1.isAuthoritativePrimarySource, false, 'Curated SFRS summary can never become VERIFIED_PRIMARY_SOURCE');
-  assert.notStrictEqual(v1.status, 'VERIFIED_PRIMARY_SOURCE', 'Curated summary CANNOT masquerade as VERIFIED_PRIMARY_SOURCE');
+  assert.strictEqual(v1.isValid, false, 'A generic framework pointer is not valid for a narrow paragraph citation');
+  assert.strictEqual(v1.isStructurallyValid, false, 'Generic ACRA URL must fail structural verification for this specific citation');
+  assert.strictEqual(v1.status, 'NON_CANONICAL_URL', 'Generic framework URL is rejected as non-canonical for a specific topic');
+  assert.strictEqual(v1.isAuthoritativePrimarySource, false, 'A rejected curated citation cannot be a primary source');
   assert.strictEqual(v1.structuralVerificationOnly, true, 'Must state structural verification only');
-  console.log('✓ 3A. Proved: Structurally valid citation correctly returned SOURCE_NEEDS_REVIEW (cannot become VERIFIED_PRIMARY_SOURCE)');
+  console.log('✓ 3A. Proved: Generic ACRA framework pointer cannot be cited for a specific SFRS(I) paragraph');
 
   // 3B. Primary Statutory Provision (ITA 1947 Section 14(1))
+  const verifiedSection14 = defaultSourceRetriever.findSourcesByStandardOrAct('Income Tax Act 1947')
+    .find(record => record.paragraphOrSection === 'Section 14(1)' && record.sourceStatus === 'VERIFIED');
+  assert.ok(verifiedSection14, 'The verified Section 14(1) record must be available');
   const primaryCitation = {
     standard: 'Income Tax Act 1947',
     paragraph: 'Section 14(1)',
     title: 'General Deduction',
     text: 'Wholly and exclusively incurred in the production of income',
-    officialSourceUrl: 'https://sso.agc.gov.sg/Act/ITA1947#pr14-',
+    officialSourceUrl: verifiedSection14.officialSourceUrl,
     authority: 'IRAS'
   };
   const vPrimary = defaultCitationVerifier.verifyCitation(primaryCitation, 'IRAS');
@@ -173,12 +177,12 @@ async function runPhase1Tests() {
 
   // 3C. Invalid Paragraph on Valid Source
   const invalidParaCitation = {
-    standard: 'SFRS(I) 1-38',
-    paragraph: '§9999',
+    standard: 'Income Tax Act 1947',
+    paragraph: 'Section 9999Z',
     title: 'Fabricated Paragraph',
     text: 'Fabricated text',
-    officialSourceUrl: 'https://www.acra.gov.sg/accountancy/accounting-standards',
-    authority: 'ACRA'
+    officialSourceUrl: verifiedSection14.officialSourceUrl,
+    authority: 'IRAS'
   };
   const v2 = defaultCitationVerifier.verifyCitation(invalidParaCitation);
   assert.strictEqual(v2.isValid, false, 'Invalid paragraph must fail');
@@ -245,21 +249,25 @@ async function runPhase1Tests() {
   assert.strictEqual(v6.status, 'NON_CANONICAL_URL', 'Status must be NON_CANONICAL_URL');
   console.log('✓ 3G. Mismatched canonical statute URL path correctly rejected');
 
-  // 3H. PROOF 4: Citation to curated statute with official SSO URL returns SOURCE_NEEDS_REVIEW
+  // 3H. Exact independently URL-verified official guidance may be cited as
+  // SOURCE_NEEDS_REVIEW, but it does not become primary statutory evidence.
+  const masSfoRecord = defaultSourceRetriever.getSourceById('MAS_SFO_LICENSING_EXEMPTION_2026');
+  assert.ok(masSfoRecord, 'MAS SFO FAQ record must exist');
+  assert.strictEqual(masSfoRecord.urlVerificationStatus, 'VERIFIED', 'The cited MAS FAQ URL has separate verification metadata');
   const acraCitation = {
-    standard: 'Companies Act 1967',
-    paragraph: 'Section 205C',
-    title: 'Small Company Audit Exemption Criteria',
-    text: 'Fulfills at least 2 of 3 criteria for past 2 FYs',
-    officialSourceUrl: 'https://sso.agc.gov.sg/Act/CoA1967#pr205C-',
-    authority: 'ACRA'
+    standard: masSfoRecord.standardOrActCode,
+    paragraph: masSfoRecord.paragraphOrSection,
+    title: masSfoRecord.documentTitle,
+    text: masSfoRecord.principleSummary,
+    officialSourceUrl: masSfoRecord.officialSourceUrl,
+    authority: masSfoRecord.authority
   };
-  const vAcra = defaultCitationVerifier.verifyCitation(acraCitation, 'ACRA');
-  assert.strictEqual(vAcra.isStructurallyValid, true, 'Citation with official SSO URL is structurally valid');
-  assert.strictEqual(vAcra.status, 'SOURCE_NEEDS_REVIEW', 'Curated summary statute must return SOURCE_NEEDS_REVIEW despite official SSO URL');
-  assert.strictEqual(vAcra.isAuthoritativePrimarySource, false, 'Curated summary is NOT an authoritative primary source');
-  assert.notStrictEqual(vAcra.status, 'VERIFIED_PRIMARY_SOURCE', 'Curated summary statute cannot be VERIFIED_PRIMARY_SOURCE');
-  console.log('✓ 3H. Proved: Official SSO URL alone on curated summary returns SOURCE_NEEDS_REVIEW (not VERIFIED_PRIMARY_SOURCE)');
+  const vMas = defaultCitationVerifier.verifyCitation(acraCitation, 'MAS');
+  assert.strictEqual(vMas.isStructurallyValid, true, 'Citation with exact independently verified official URL is structurally valid');
+  assert.strictEqual(vMas.status, 'SOURCE_NEEDS_REVIEW', 'Official guidance still requires content review');
+  assert.strictEqual(vMas.isAuthoritativePrimarySource, false, 'Official guidance is not primary statutory text');
+  assert.notStrictEqual(vMas.status, 'VERIFIED_PRIMARY_SOURCE', 'Official guidance cannot be VERIFIED_PRIMARY_SOURCE');
+  console.log('✓ 3H. Proved: Exact URL-verified official guidance returns SOURCE_NEEDS_REVIEW, not VERIFIED_PRIMARY_SOURCE');
 
   // -------------------------------------------------------------
   // 4. CAPITALISATION & ASSUMPTION TESTS

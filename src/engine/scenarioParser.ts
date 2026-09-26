@@ -29,7 +29,7 @@ export function isStatutoryInquiry(query: string): boolean {
     q.includes('ordinary wage') ||
     q.includes('aw ceiling') ||
     q.includes('skills development levy') ||
-    q.includes('sdl') ||
+    /\b(?:sdl|sute|pte|eis)\b/i.test(q) ||
     q.includes('cpf rate') ||
     q.includes('cpf contribution') ||
     q.includes('senior worker') ||
@@ -39,8 +39,6 @@ export function isStatutoryInquiry(query: string): boolean {
     q.includes('section 14') ||
     q.includes('section 15') ||
     q.includes('15(1)(k)') ||
-    q.includes('sute') ||
-    q.includes('pte') ||
     q.includes('form c-s') ||
     q.includes('form c') ||
     q.includes('corporate tax rate') ||
@@ -68,7 +66,6 @@ export function isStatutoryInquiry(query: string): boolean {
     q.includes('public holiday') ||
     q.includes('employment act') ||
     q.includes('enterprise innovation') ||
-    q.includes('eis') ||
     q.includes('r&d deduction') ||
     q.includes('turnover') ||
     q.includes('exchange control') ||

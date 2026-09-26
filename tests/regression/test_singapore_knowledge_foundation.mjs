@@ -11,7 +11,7 @@ import { QueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
 import { buildGroundedReasoningContext } from '../../src/services/groundingContextBuilder.ts';
 
 const topicIds = SINGAPORE_COVERAGE_REGISTRY.map(topic => topic.id);
-assert.ok(topicIds.length >= 150 && topicIds.length <= 250, `Registry should start with 150-250 topics; found ${topicIds.length}`);
+assert.ok(topicIds.length >= 150 && topicIds.length <= 300, `Registry should contain 150-300 topics after the consolidation source-map extension; found ${topicIds.length}`);
 assert.equal(new Set(topicIds).size, topicIds.length, 'Canonical topic IDs must be unique');
 
 const sourceIds = new Set(getAllAuthoritativeSources().map(source => source.id));
@@ -94,6 +94,42 @@ const warrantyProvision = classifyQuestion('Should we recognize a warranty provi
 assert.ok(warrantyProvision.topicIds.includes('sfrsi_provisions-contingencies'), 'Accounting warranty provisions remain recognizable');
 const investmentInAssociate = classifyQuestion('How do we account for an investment in an associate?');
 assert.ok(investmentInAssociate.topicIds.includes('sfrsi_associates'), 'Accounting for an investment in an associate remains recognizable');
+
+// Consolidation source-map routing: keep governance facts in accounting
+// assessment questions from adding unrelated ACRA company-law coverage.
+for (const [query, requiredTopicIds] of [
+  [
+    'Our group owns 80% of a subsidiary and sells 15 percentage points, retaining 65% and control. How is the ownership change presented, and is a gain or loss recognised in profit or loss?',
+    ['sfrsi10-control', 'sfrsi10-ownership-changes']
+  ],
+  [
+    'Our company owns 48% of an investee. Management says it controls the investee because the remaining shares are widely dispersed, but the facts also say another investor appoints most directors and directs the relevant operating decisions. Does our company control it?',
+    ['sfrsi10-control', 'sfrsi10-power', 'sfrsi10-de-facto-control']
+  ],
+  [
+    'We own 15% of an investee, appoint one director, and participate in decisions about its financial and operating policies. Can significant influence exist despite our ownership being below 20%?',
+    ['sfrsi128-significant-influence', 'sfrsi128-20-percent-presumption']
+  ],
+  [
+    'We own 25% of an investee, but have no board representation, do not participate in policy decisions, have no material transactions or management interchange, and cannot obtain the information needed to influence it. Is the 20% threshold conclusive?',
+    ['sfrsi128-significant-influence', 'sfrsi128-20-percent-presumption']
+  ],
+  [
+    'We hold 45% of an investee and have an option to acquire another 10%. The option is exercisable now, but we have not provided its terms, practical barriers, or the other shareholders\' rights. Do the potential voting rights give us power over the investee?',
+    ['sfrsi10-potential-voting-rights', 'sfrsi10-power', 'sfrsi10-control']
+  ]
+]) {
+  const result = classifyQuestion(query);
+  for (const topicId of requiredTopicIds) {
+    assert.ok(result.topicIds.includes(topicId), `Consolidation question routes to ${topicId}: ${query}`);
+  }
+  assert.equal(result.primaryDomain, 'ACCOUNTING', `Consolidation question remains an accounting query: ${query}`);
+  assert.deepEqual(result.authorities, ['ACRA'], `Accounting standard routing has ACRA as its sole authority: ${query}`);
+  assert.ok(result.domains.includes('ACCOUNTING_SFRS'), `Consolidation question routes to SFRS(I): ${query}`);
+  assert.ok(!result.domains.includes('ACRA_COMPANIES'), `Investee accounting facts do not add company-law coverage: ${query}`);
+  assert.equal(result.multiAuthority, false, `Consolidation question stays single-authority: ${query}`);
+}
+
 const subsidiaryAccounting = classifyQuestion('How do I account for a subsidiary?');
 assert.ok(subsidiaryAccounting.topicIds.includes('sfrsi_subsidiaries-consolidation'));
 const goodwillMeasurement = classifyQuestion('How should goodwill be measured?');

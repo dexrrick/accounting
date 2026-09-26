@@ -1,6 +1,7 @@
 import { SINGAPORE_STATUTORY_REPOSITORY, querySingaporeStatutes } from '../standards/singaporeStatutesKnowledge';
+import { getAllAuthoritativeSources, type AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import type { StatutoryAuthority } from '../types/accounting';
-import { isAskGovSingaporeUrl } from '../standards/approvedSourceRegistry';
+import { isAskGovSingaporeUrl, isApprovedSingaporeSourceUrl, isVerifiedLegacyStandardUrl } from '../standards/approvedSourceRegistry';
 
 /**
  * Mapping of Singapore Legislation Shortcodes to SSO Act Identifiers
@@ -39,53 +40,101 @@ export const ACT_CODE_TO_SSO: Record<string, { ssoCode: string; title: string }>
 // official source for an SFRS(I) citation; it is intentionally not ACRA's
 // general accounting-standards landing page.
 export const SFRSI_2025_COLLECTION_URL = 'https://asc.acra.gov.sg/singapore-financial-reporting-standards-international/archives/effective-for-annual-reporting-period-beginning-on-1-january-2025';
+
+type SourceRecordMetadata = { recordRole?: string; groundingEligible?: boolean; urlVerificationStatus?: string };
+
+function normalizeRegisteredUrl(rawUrl: string): string {
+  try {
+    const parsed = new URL(rawUrl);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+    const path = decodeURIComponent(parsed.pathname).toLowerCase().replace(/\/+$/, '');
+    return `${host}${path}${parsed.search}${parsed.hash}`;
+  } catch {
+    return '';
+  }
+}
+
+function isUsableSourceRecord(record: AuthoritativeSourceRecord): boolean {
+  const metadata = record as unknown as SourceRecordMetadata;
+  return metadata.recordRole !== 'SOURCE_MAP_POINTER' &&
+    metadata.groundingEligible !== false &&
+    record.lifecycleState !== 'CANDIDATE' &&
+    record.lifecycleState !== 'STAGED' &&
+    record.lifecycleState !== 'REJECTED' &&
+    (record.sourceStatus as string) !== 'REJECTED' &&
+    (record.sourceStatus === 'VERIFIED' || metadata.urlVerificationStatus === 'VERIFIED' || isVerifiedLegacyStandardUrl(record.officialSourceUrl, record.standardOrActCode)) &&
+    Boolean(record.officialSourceUrl);
+}
+
+function normalizeTopicText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function sectionMatches(recordSection: string, requestedSection: string): boolean {
+  if (!requestedSection.trim()) return false;
+  const clean = (value: string) => value.toLowerCase().replace(/\b(?:section|sec|paragraph|para|regulation|reg|schedule|sch|clause)\b/gi, '').replace(/[^a-z0-9]/g, '');
+  const recordValue = clean(recordSection);
+  const requestedValue = clean(requestedSection);
+  return Boolean(recordValue && requestedValue && (recordValue === requestedValue || recordValue.startsWith(requestedValue) || requestedValue.startsWith(recordValue)));
+}
+
+function getUsableRegisteredRecords(verifiedEvidence: readonly AuthoritativeSourceRecord[] = []): AuthoritativeSourceRecord[] {
+  const local = getAllAuthoritativeSources().filter(isUsableSourceRecord);
+  const qualifiedLive = verifiedEvidence.filter(record => {
+    const metadata = record as unknown as SourceRecordMetadata;
+    return metadata.recordRole === 'DISCOVERED_EVIDENCE' &&
+      metadata.groundingEligible === true &&
+      metadata.urlVerificationStatus === 'VERIFIED' &&
+      record.provenance === 'LIVE_EXTERNAL' &&
+      record.lifecycleState === 'CANDIDATE' &&
+      record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED' &&
+      Boolean(record.officialSourceUrl);
+  });
+  return [...qualifiedLive, ...local];
+}
+
+function findRegisteredRuleUrl(
+  statuteOrAct?: string,
+  sectionOrSchedule?: string
+): string {
+  if (!statuteOrAct) return '';
+  const instrument = normalizeTopicText(statuteOrAct);
+  const rules = Object.values(SINGAPORE_STATUTORY_REPOSITORY);
+  const matchingRule = rules.find(rule => {
+    const ruleNames = [rule.actTitle, rule.actCode, rule.ruleTitle].map(normalizeTopicText);
+    const named = ruleNames.some(name => name && (instrument.includes(name) || name.includes(instrument)));
+    return rule.sourceStatus === 'VERIFIED' && named && (!sectionOrSchedule || sectionMatches(rule.sectionOrSchedule, sectionOrSchedule));
+  });
+  return matchingRule?.canonicalUrl || '';
+}
+
+function isRuleExplicitlyIdentified(rule: (typeof SINGAPORE_STATUTORY_REPOSITORY)[string], text: string): boolean {
+  const normalizeForPhrase = (value: string) => normalizeTopicText(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(token => token.length > 4 && token.endsWith('s') ? token.slice(0, -1) : token)
+    .join(' ');
+  const normalizedText = normalizeForPhrase(text);
+  const explicitTerms = [rule.actTitle, rule.ruleTitle, rule.sectionOrSchedule, ...rule.tags]
+    .filter((term): term is string => Boolean(term))
+    .map(normalizeForPhrase)
+    .filter(term => term.length >= 8 && term.split(/\s+/).filter(Boolean).length >= 2);
+  return explicitTerms.some(term => normalizedText.includes(term));
+}
 /**
- * Generates an official Singapore Statutes Online (SSO) canonical permalink.
- * Format on sso.agc.gov.sg is https://sso.agc.gov.sg/Act/{ActCode}#pr{SectionNumber}-
+ * Looks up an exact SSO URL already stored for the requested Act section.
+ * It never constructs a URL when the registry has no matching source record.
  */
 export function buildSsoUrl(actCode: string, sectionNumber?: string): string {
   const normCode = actCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  let ssoCode: string | undefined;
-
-  // Check VCCA before Companies Act aliases such as "CA", which are also
-  // substrings of "VCCA2018" and would otherwise route to CoA1967.
-  if (normCode === 'VCCA' || normCode === 'VCCA2018' || actCode.toLowerCase().includes('variable capital companies')) {
-    ssoCode = 'VCCA2018';
-  } else if (actCode.toLowerCase().includes('coa') || actCode.toLowerCase().includes('companies') || actCode === 'CA' || actCode === 'CA1967') {
-    ssoCode = 'CoA1967';
-  } else {
-    for (const [k, v] of Object.entries(ACT_CODE_TO_SSO)) {
-      if (normCode.includes(k)) {
-        ssoCode = v.ssoCode;
-        break;
-      }
-    }
-  }
-
-  if (!ssoCode) return 'https://sso.agc.gov.sg';
-
-  if (!sectionNumber) {
-    return `https://sso.agc.gov.sg/Act/${ssoCode}`;
-  }
-
-  // Extract clean section digits / alphanumeric (e.g. "14(1)" -> "14", "205C" -> "205C", "19A" -> "19A")
-  const secMatch = sectionNumber.match(/(\d+[A-Za-z]*)/);
-  const secClean = secMatch ? secMatch[1] : '';
-
-  // Prefer a curated canonical permalink whenever the statutory registry has
-  // one for this Act and provision. This treats every registered provision
-  // consistently and accommodates SSO provision-id URLs where necessary.
-  const registeredRule = Object.values(SINGAPORE_STATUTORY_REPOSITORY).find((rule) => {
-    const ruleSection = rule.sectionOrSchedule.match(/(\d+[A-Za-z]*)/)?.[1];
+  const mapped = Object.entries(ACT_CODE_TO_SSO).find(([key]) => normCode === key || normCode.includes(key));
+  const wantedCode = mapped?.[1].ssoCode || normCode;
+  const matchingRule = Object.values(SINGAPORE_STATUTORY_REPOSITORY).find(rule => {
     const ruleCode = rule.actCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const ruleSsoCode = Object.entries(ACT_CODE_TO_SSO).find(([key]) => ruleCode.includes(key))?.[1].ssoCode || rule.actCode;
-    return ruleSsoCode.toUpperCase() === ssoCode.toUpperCase() && ruleSection === secClean;
+    const ruleMapped = Object.entries(ACT_CODE_TO_SSO).find(([key]) => ruleCode.includes(key))?.[1].ssoCode || ruleCode;
+    return wantedCode === ruleMapped && (!sectionNumber || sectionMatches(rule.sectionOrSchedule, sectionNumber));
   });
-  if (registeredRule) return registeredRule.canonicalUrl;
-
-  return secClean 
-    ? `https://sso.agc.gov.sg/Act/${ssoCode}#pr${secClean}-` 
-    : `https://sso.agc.gov.sg/Act/${ssoCode}`;
+  return matchingRule?.canonicalUrl || '';
 }
 
 /** Resolve any legacy SSO fragment through the verified registry equivalent. */
@@ -103,122 +152,51 @@ export function canonicalizeSsoUrl(url: string): string {
         return false;
       }
     });
-    return matchingRule?.canonicalUrl || url;
+    return matchingRule?.canonicalUrl || '';
   } catch {
     return url;
   }
 }
 
 /**
- * Safely resolves any official URL (whether from static knowledge or dynamic AI response)
- * into a guaranteed 200 OK link. Replaces dead deep-links with canonical SSO permalinks.
+ * Resolves a URL only when it exactly matches a URL with trusted registry or
+ * live-validation provenance. This synchronous helper does not fetch URLs;
+ * live retrieval performs reachability and topic checks before adding evidence.
  */
 export function getSafeOfficialUrl(
   rawUrl?: string,
   statuteOrAct?: string,
   sectionOrSchedule?: string,
-  authority?: string
+  authority?: string,
+  verifiedEvidence: readonly AuthoritativeSourceRecord[] = []
 ): string {
   const url = (rawUrl || '').trim();
 
-  // An Ask.gov.sg FAQ is an official agency guidance source. Preserve its
-  // exact FAQ URL: replacing it with an Act page would hide the source the
-  // answer actually relied upon.
-  if (isAskGovSingaporeUrl(url)) return url;
+  const records = getUsableRegisteredRecords(verifiedEvidence);
+  const rawNormalized = normalizeRegisteredUrl(url);
+  if (rawNormalized) {
+    const exact = records.find(record => normalizeRegisteredUrl(record.officialSourceUrl) === rawNormalized);
+    if (exact && isApprovedSingaporeSourceUrl(exact.officialSourceUrl)) return exact.officialSourceUrl;
 
-  // 1. Intercept known dead deep-links on IRAS and MAS
-  if (url.includes('tax-rates-and-tax-exemption-schemes')) {
-    return SINGAPORE_STATUTORY_REPOSITORY.ITA_SUTE_PTE_TAX_EXEMPTION.canonicalUrl;
-  }
-  if (url.includes('filing-your-corporate-income-tax-return')) {
-    return SINGAPORE_STATUTORY_REPOSITORY.IRAS_FORM_CS_LITE_CRITERIA.canonicalUrl;
-  }
-  if (url.includes('monetary-authority-of-singapore-act')) {
-    return 'https://sso.agc.gov.sg/Act/MASA1970';
   }
 
-  // 1b. Correct mistaken Currency Act (CA1967) links intended for Companies Act
-  if (url.includes('/Act/CA1967')) {
-    return url.replace('/Act/CA1967', '/Act/CoA1967');
+  // When a model supplies a known instrument and section, resolve only to an
+  // exact URL already stored in the source registry. No URL is constructed.
+  if (statuteOrAct && sectionOrSchedule) {
+    const requestedInstrument = normalizeTopicText(statuteOrAct);
+    const requestedAuthority = authority?.toUpperCase();
+    const matchingRecord = records.find(record => {
+      const identity = normalizeTopicText(`${record.standardOrActCode} ${record.legalOrStandardInstrument} ${record.documentTitle}`);
+      const instrumentMatches = identity.includes(requestedInstrument) || requestedInstrument.includes(normalizeTopicText(record.standardOrActCode));
+      const authorityMatches = !requestedAuthority || record.authority.toUpperCase() === requestedAuthority || (requestedAuthority === 'ASC' && record.authority === 'ACRA');
+      return instrumentMatches && authorityMatches && sectionMatches(record.paragraphOrSection, sectionOrSchedule);
+    });
+    if (matchingRecord && isApprovedSingaporeSourceUrl(matchingRecord.officialSourceUrl)) return matchingRecord.officialSourceUrl;
+
+    const registeredRuleUrl = findRegisteredRuleUrl(statuteOrAct, sectionOrSchedule);
+    if (registeredRuleUrl && isApprovedSingaporeSourceUrl(registeredRuleUrl)) return registeredRuleUrl;
   }
 
-  // 2. Resolve the cited instrument first. This deliberately takes precedence
-  // over a generic agency or SSO URL, so the user lands on the cited Act and
-  // section rather than a directory.
-  const act = (statuteOrAct || '').toLowerCase();
-  const sec = sectionOrSchedule || '';
-
-  // Preserve a supplied section-specific SSO source. Agency guidance can be
-  // added separately; it must not replace the cited legislation.
-  if (url.startsWith('https://sso.agc.gov.sg/Act/') || url.startsWith('https://sso.agc.gov.sg/SL/')) {
-    return canonicalizeSsoUrl(url);
-  }
-
-  if (act.includes('variable capital companies') || act.includes('vcc act') || act.includes('vcca2018')) {
-    return buildSsoUrl('VCCA2018', sec);
-  }
-  if (act.includes('income tax') || act.includes('ita') || act.includes('corporate tax')) {
-    return buildSsoUrl('ITA1947', sec);
-  }
-  if (act.includes('companies act') || act.includes('ca1967') || act.includes('coa1967') || act.includes('audit')) {
-    return buildSsoUrl('CoA1967', sec);
-  }
-  if (act.includes('goods and services') || act.includes('gst')) {
-    return buildSsoUrl('GSTA1993', sec);
-  }
-  if (act.includes('provident fund') || act.includes('cpf')) {
-    return buildSsoUrl('CPFA1953', sec);
-  }
-  if (act.includes('employment act') || act.includes('ea1968') || act.includes('mom')) {
-    return buildSsoUrl('EmA1968', sec);
-  }
-  if (act.includes('monetary authority') || act.includes('mas') || act.includes('exchange control')) {
-    return 'https://sso.agc.gov.sg/Act/MASA1970';
-  }
-  if (act.includes('payment services') || act.includes('psa')) {
-    return buildSsoUrl('PSA2019', sec);
-  }
-  if (/(?:sfrs\(i\)|sfrs|ifrs|ias)\s*(?:\d|1-)/i.test(statuteOrAct || '')) {
-    return SFRSI_2025_COLLECTION_URL;
-  }
-
-  // 3. Check whether the raw URL is a source page, rather than a generic
-  // agency directory. Generic directories are withheld below.
-  if (url.includes('asc.gov.sg')) {
-    return url.includes('/singapore-financial-reporting-standards-international/')
-      ? url
-      : SFRSI_2025_COLLECTION_URL;
-  }
-
-  if (
-    url.startsWith('https://www.iras.gov.sg') ||
-    url.startsWith('https://www.acra.gov.sg') ||
-    url.startsWith('https://www.cpf.gov.sg') ||
-    url.startsWith('https://www.mom.gov.sg') ||
-    url.startsWith('https://www.mas.gov.sg') ||
-    url.startsWith('https://www.ifrs.org')
-  ) {
-    try {
-      const parsedUrl = new URL(url);
-      // An agency root is not a source for a specific conclusion.
-      if (parsedUrl.pathname === '/' || /^\/irashome\/?$/i.test(parsedUrl.pathname)) return '';
-    } catch {
-      return '';
-    }
-    return url;
-  }
-
-  // 4. Authority-only fallbacks may be an agency home page, not evidence for a
-  // particular proposition. Show a section of the governing Act where that is
-  // unambiguous; otherwise return no link instead of a misleading directory.
-  const auth = (authority || '').toUpperCase();
-  if (auth === 'CPF' && /\d/.test(sec)) return buildSsoUrl('CPFA1953', sec);
-  if (auth === 'MOM' && /\d/.test(sec)) return buildSsoUrl('EmA1968', sec);
-  if (auth === 'MAS' && /\d/.test(sec)) return buildSsoUrl('MASA1970', sec);
-  if (auth === 'ASC') return SFRSI_2025_COLLECTION_URL;
-
-  // A source may be absent, but an official-looking generic link must not be
-  // presented as support for a specific accounting or compliance conclusion.
   return '';
 }
 
@@ -285,11 +263,27 @@ export function getAuthorityBadgeInfo(authority?: StatutoryAuthority | string): 
 }
 
 /**
- * Sanitizes markdown text by checking markdown URLs.
- * If a URL is a fabricated / hallucinated non-working URL or generic search link,
- * replaces it with a guaranteed canonical permalink from our registry or SSO.
+ * Sanitizes markdown and bare URLs against exact registry or answer-scoped
+ * live-validation provenance. Unsupported URLs are removed or rendered as
+ * plain anchor text.
  */
-export function sanitizeStatutoryLinks(markdownText: string): string {
+function getRegisteredUrlForAnchor(anchorText: string, verifiedEvidence: readonly AuthoritativeSourceRecord[]): string {
+  const anchor = normalizeTopicText(anchorText);
+  const rule = Object.values(SINGAPORE_STATUTORY_REPOSITORY).find(candidate => {
+    const section = normalizeTopicText(candidate.sectionOrSchedule);
+    const actTokens = normalizeTopicText(candidate.actTitle).split(/\s+/).filter(token => token.length > 2 && !/^\d{4}$/.test(token));
+    const identifiesAct = actTokens.filter(token => anchor.includes(token)).length >= Math.min(2, actTokens.length);
+    const sectionTokens = section.split(/\s+/).filter(token => token.length > 0);
+    const identifiesSection = sectionTokens.some(token => anchor.includes(token));
+    return identifiesAct && identifiesSection;
+  });
+  if (rule) {
+    return getSafeOfficialUrl(undefined, rule.actTitle, rule.sectionOrSchedule, rule.authority, verifiedEvidence);
+  }
+  return '';
+}
+
+export function sanitizeStatutoryLinks(markdownText: string, verifiedEvidence: readonly AuthoritativeSourceRecord[] = []): string {
   if (!markdownText) return '';
 
   // Parentheses are valid URL-path characters and are used by IRAS (for
@@ -302,52 +296,18 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
   // 1. Isolate all existing markdown links so text replacements never corrupt their anchors or urls
   const linkPlaceholders: string[] = [];
   let sanitized = markdownText.replace(/\[([^\]]+)\]\((https?:\/\/\S+)\)/g, (_match, anchorText, url) => {
-    const lowerUrl = url.toLowerCase();
-    const lowerAnchor = anchorText.toLowerCase();
-
-    // Intercept known dead deep-links and mistyped act codes
-    let cleanUrl = canonicalizeSsoUrl(url);
-    if (cleanUrl.toLowerCase().includes('/act/ca1967')) {
-      cleanUrl = cleanUrl.replace(/\/act\/ca1967/gi, '/Act/CoA1967');
-    } else if (lowerUrl.includes('tax-rates-and-tax-exemption-schemes')) {
-      cleanUrl = SINGAPORE_STATUTORY_REPOSITORY.ITA_SUTE_PTE_TAX_EXEMPTION.canonicalUrl;
-    } else if (lowerUrl.includes('filing-your-corporate-income-tax-return')) {
-      cleanUrl = SINGAPORE_STATUTORY_REPOSITORY.IRAS_FORM_CS_LITE_CRITERIA.canonicalUrl;
-    } else if (lowerUrl.includes('monetary-authority-of-singapore-act')) {
-      cleanUrl = 'https://sso.agc.gov.sg/Act/MASA1970';
-    } else if (lowerUrl.includes('asc.gov.sg')) {
-      cleanUrl = 'https://www.acra.gov.sg/accountancy/accounting-standards';
-    } else if (
-      !lowerUrl.startsWith('https://sso.agc.gov.sg') &&
-      !lowerUrl.startsWith('https://www.iras.gov.sg') &&
-      !lowerUrl.startsWith('https://www.acra.gov.sg') &&
-      !lowerUrl.startsWith('https://www.cpf.gov.sg') &&
-      !lowerUrl.startsWith('https://www.mom.gov.sg') &&
-      !lowerUrl.startsWith('https://www.mas.gov.sg') &&
-      !lowerUrl.startsWith('https://ask.gov.sg') &&
-      !lowerUrl.startsWith('https://www.ifrs.org')
-    ) {
-      // Re-anchor unknown domain URLs to canonical sources
-      for (const rule of Object.values(SINGAPORE_STATUTORY_REPOSITORY)) {
-        if (
-          lowerAnchor.includes(rule.sectionOrSchedule.toLowerCase()) ||
-          lowerAnchor.includes(rule.actTitle.toLowerCase()) ||
-          lowerAnchor.includes(rule.ruleTitle.toLowerCase())
-        ) {
-          cleanUrl = rule.canonicalUrl;
-          break;
-        }
-      }
-    }
+    const cleanUrl = getSafeOfficialUrl(url, undefined, undefined, undefined, verifiedEvidence) || getRegisteredUrlForAnchor(anchorText, verifiedEvidence);
 
     const placeholder = `___MD_LINK_${linkPlaceholders.length}___`;
-    linkPlaceholders.push(`[${anchorText}](${toMarkdownSafeUrl(cleanUrl)})`);
+    linkPlaceholders.push(cleanUrl ? `[${anchorText}](${toMarkdownSafeUrl(cleanUrl)})` : anchorText);
     return placeholder;
   });
 
   const addLink = (anchor: string, linkUrl: string): string => {
+    const safeUrl = getSafeOfficialUrl(linkUrl, undefined, undefined, undefined, verifiedEvidence);
+    if (!safeUrl) return anchor;
     const placeholder = `___MD_LINK_${linkPlaceholders.length}___`;
-    linkPlaceholders.push(`[${anchor}](${toMarkdownSafeUrl(linkUrl)})`);
+    linkPlaceholders.push(`[${anchor}](${toMarkdownSafeUrl(safeUrl)})`);
     return placeholder;
   };
 
@@ -405,6 +365,16 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
     () => addLink('Employment Act 1968', 'https://sso.agc.gov.sg/Act/EmA1968')
   );
 
+  // Remove bare URLs unless they resolve to an exact trusted source record.
+  // Markdown destinations were already isolated above, so this only handles
+  // free-form model text and never upgrades a guessed URL into a citation.
+  sanitized = sanitized.replace(/https?:\/\/[^\s<>"']+/gi, rawUrl => {
+    const trailingPunctuation = rawUrl.match(/[),.;!?]+$/)?.[0] || '';
+    const candidateUrl = trailingPunctuation ? rawUrl.slice(0, -trailingPunctuation.length) : rawUrl;
+    const safeUrl = getSafeOfficialUrl(candidateUrl, undefined, undefined, undefined, verifiedEvidence);
+    return `${safeUrl ? toMarkdownSafeUrl(safeUrl) : ''}${trailingPunctuation}`;
+  });
+
   // 3. Restore all original/cleaned markdown links
   sanitized = sanitized.replace(/___MD_LINK_(\d+)___/g, (_, idx) => linkPlaceholders[parseInt(idx, 10)] || '');
 
@@ -412,11 +382,13 @@ export function sanitizeStatutoryLinks(markdownText: string): string {
 }
 
 /**
- * Ensures EVERY response ends with a verified, clickable government source link.
+ * Appends source links only when the response has matching verified source
+ * records; otherwise it sanitizes existing links and leaves citations unlinked.
  */
 export function appendStatutorySourceFooter(
   messageText: string,
-  scenarioState?: any
+  scenarioState?: any,
+  verifiedEvidence: readonly AuthoritativeSourceRecord[] = []
 ): string {
   if (!messageText) return '';
 
@@ -425,7 +397,7 @@ export function appendStatutorySourceFooter(
     messageText.includes('Official Statutory & Regulatory Verification Sources') ||
     messageText.includes('Official Verification Sources')
   ) {
-    return sanitizeStatutoryLinks(messageText);
+    return sanitizeStatutoryLinks(messageText, verifiedEvidence);
   }
 
   const links: { title: string; url: string; authority?: string; isAskGov?: boolean }[] = [];
@@ -441,7 +413,7 @@ export function appendStatutorySourceFooter(
       );
       if (isGenericDirective && !adv.officialUrl) continue;
 
-      const safeUrl = getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority);
+      const safeUrl = getSafeOfficialUrl(adv.officialUrl, adv.statuteOrAct, adv.sectionOrSchedule, adv.authority, verifiedEvidence);
       if (safeUrl && !links.some((l) => l.url === safeUrl)) {
         links.push({
           title: `${adv.statuteOrAct} — ${adv.sectionOrSchedule}`,
@@ -457,7 +429,7 @@ export function appendStatutorySourceFooter(
   if (scenarioState?.directGroups) {
     for (const grp of scenarioState.directGroups) {
       for (const cite of grp.citations || []) {
-        const safeUrl = getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority);
+        const safeUrl = getSafeOfficialUrl(cite.officialSourceUrl, cite.standard, cite.paragraph, cite.authority, verifiedEvidence);
         if (safeUrl && !links.some((l) => l.url === safeUrl)) {
           links.push({
             title: `${cite.standard} ${cite.paragraph || ''}`.trim(),
@@ -471,7 +443,8 @@ export function appendStatutorySourceFooter(
   }
 
   const addContextualLink = (title: string, url: string, authority: string) => {
-    if (!links.some((link) => link.url === url)) links.push({ title, url, authority, isAskGov: isAskGovSingaporeUrl(url) });
+    const safeUrl = getSafeOfficialUrl(url, undefined, undefined, authority, verifiedEvidence);
+    if (safeUrl && !links.some((link) => link.url === safeUrl)) links.push({ title, url: safeUrl, authority, isAskGov: isAskGovSingaporeUrl(safeUrl) });
   };
 
   // Infer sources from the free-form answer only when no actual advisory or
@@ -479,67 +452,29 @@ export function appendStatutorySourceFooter(
   // (for example, "tax" or "Section 14") can add unrelated legislation to a
   // MAS/VCC response and falsely imply it supports the conclusion.
   if (links.length === 0) {
-    const matchedRules = querySingaporeStatutes(messageText).slice(0, 3);
+    const matchedRules = querySingaporeStatutes(messageText)
+      .filter(rule => rule.sourceStatus === 'VERIFIED' && isRuleExplicitlyIdentified(rule, messageText))
+      .slice(0, 3);
     for (const rule of matchedRules) {
       addContextualLink(`${rule.actTitle} — ${rule.sectionOrSchedule}`, rule.canonicalUrl, rule.authority);
-      for (const source of rule.supplementaryOfficialSources || []) {
-        addContextualLink(source.title, source.url, source.authority);
-      }
     }
   }
 
-  // 3. Fallback keyword extraction if links empty
-  if (links.length === 0) {
-    const lower = messageText.toLowerCase();
-    if (lower.includes('income tax') || lower.includes('section 14') || lower.includes('section 15') || lower.includes('motor car') || lower.includes('passenger car')) {
-      links.push({
-        title: 'Income Tax Act 1947',
-        url: 'https://sso.agc.gov.sg/Act/ITA1947',
-        authority: 'IRAS'
-      });
-    }
-    if (lower.includes('companies act') || lower.includes('205c') || lower.includes('audit')) {
-      links.push({
-        title: 'Companies Act 1967 (Section 205C)',
-        url: buildSsoUrl('CoA1967', '205C'),
-        authority: 'ACRA'
-      });
-    }
-    if (lower.includes('gst') || lower.includes('goods and services') || lower.includes('regulation 26')) {
-      links.push({
-        title: 'Goods and Services Tax Act 1993',
-        url: 'https://sso.agc.gov.sg/Act/GSTA1993',
-        authority: 'IRAS'
-      });
-    }
-    if (lower.includes('cpf') || lower.includes('ordinary wage')) {
-      links.push({
-        title: 'Central Provident Fund Act 1953',
-        url: 'https://sso.agc.gov.sg/Act/CPFA1953',
-        authority: 'CPF'
-      });
-    }
-    if (lower.includes('lease') || lower.includes('ifrs 16') || lower.includes('sfrs(i) 16')) {
-      links.push({
-        title: 'SFRS(I) 16 Leases (ACRA Accounting Standards)',
-        url: 'https://www.acra.gov.sg/accountancy/accounting-standards',
-        authority: 'ACRA'
-      });
-    }
-    if (links.length === 0) {
-      links.push({
-        title: 'Singapore Financial Reporting Standards [SFRS(I)] (ACRA)',
-        url: 'https://www.acra.gov.sg/accountancy/accounting-standards',
-        authority: 'ACRA'
-      });
-    }
-  }
+  if (links.length === 0) return sanitizeStatutoryLinks(messageText, verifiedEvidence);
 
   const sourceItems = links
-    .map((l) => `* 🔗 [**${l.title}**](${l.url}) ${l.isAskGov ? '*(Official agency FAQ via Ask.gov.sg — guidance)*' : l.authority ? `*(${l.authority} / Verified Official Source)*` : ''}`)
+    .map((l) => {
+      const candidate = verifiedEvidence.some(record => record.officialSourceUrl === l.url && record.lifecycleState === 'CANDIDATE');
+      const label = l.isAskGov
+        ? '*(Official agency FAQ via Ask.gov.sg — guidance)*'
+        : candidate
+          ? '*(Official page live-fetched for this answer — candidate evidence, not locally validated)*'
+          : l.authority ? `*(${l.authority} / Registered Official Source)*` : '';
+      return `* 🔗 [**${l.title}**](${l.url}) ${label}`;
+    })
     .join('\n');
 
   const footerBlock = `\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n${sourceItems}\n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*`;
 
-  return sanitizeStatutoryLinks(messageText + footerBlock);
+  return sanitizeStatutoryLinks(messageText + footerBlock, verifiedEvidence);
 }

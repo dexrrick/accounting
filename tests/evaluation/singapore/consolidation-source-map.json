@@ -1,0 +1,1263 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Cross-standard routing and source-map pointer-identity oracles are independently reviewed. Answer-path, live retrieval, grounding, citation, substantive conclusion, missing-fact, and effective-date outcomes remain pending separate review.",
+  "cases": [
+    {
+      "id": "consolidation-associate-becomes-subsidiary",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We held 30% of an investee and applied the equity method. On 1 October we acquired another 35% and obtained control. The investee meets the definition of a business. How should we account for the investment from that date and at year end?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi10-control",
+          "sfrsi128-equity-method",
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-step-acquisition",
+          "sfrsi3-business-combination",
+          "sfrsi3-acquisition-method"
+        ],
+        "allowedTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi10-control",
+          "sfrsi128-equity-method",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-step-acquisition"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-significant-influence",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI10_SOURCE_MAP",
+            "SFRSI128_SOURCE_MAP",
+            "SFRSI3_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NOT_NEEDED"
+        }
+      }
+    },
+    {
+      "id": "consolidation-step-acquisition-goodwill",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We already had significant influence over an investee and equity-accounted for it. This year we bought additional shares and obtained control. What should be considered in the step acquisition and goodwill calculation?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi10-control",
+          "sfrsi128-significant-influence",
+          "sfrsi128-equity-method",
+          "sfrsi128-to-subsidiary",
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi3-step-acquisition",
+          "sfrsi3-goodwill"
+        ],
+        "allowedTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-control",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-goodwill",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_step-acquisitions"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI10_SOURCE_MAP",
+            "SFRSI128_SOURCE_MAP",
+            "SFRSI3_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NOT_NEEDED"
+        }
+      }
+    },
+    {
+      "id": "consolidation-partial-disposal-retain-control",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "Our group owns 80% of a subsidiary and sells 15 percentage points, retaining 65% and control. How is the ownership change presented, and is a gain or loss recognised in profit or loss?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi10-control",
+          "sfrsi10-ownership-changes"
+        ],
+        "allowedTopicIds": [
+          "sfrsi10-control",
+          "sfrsi10-ownership-changes",
+          "sfrsi_loss-of-control"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI10_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      }
+    },
+    {
+      "id": "consolidation-loss-of-control-retained-influence",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We own 80% of a subsidiary and sell enough shares to lose control, retaining 30% with board representation and participation in policy decisions. How should the loss of control and retained interest be accounted for?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "retrieval": {
+          "expectedFinalUrls": [
+            "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-10-consolidated-financial-statements/",
+            "https://www.ifrs.org/issued-standards/list-of-standards/ias-28-investments-in-associates-and-joint-ventures/"
+          ]
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi10-loss-of-control",
+          "sfrsi128-significant-influence"
+        ],
+        "allowedTopicIds": [
+          "sfrsi10-loss-of-control",
+          "sfrsi128-significant-influence",
+          "sfrsi_associates",
+          "sfrsi_loss-of-control"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI10_SOURCE_MAP",
+            "SFRSI128_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      }
+    },
+    {
+      "id": "consolidation-48-percent-contradictory-control-facts",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "Our company owns 48% of an investee. Management says it controls the investee because the remaining shares are widely dispersed, but the facts also say another investor appoints most directors and directs the relevant operating decisions. Does our company control it?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi10-control",
+          "sfrsi10-power",
+          "sfrsi10-de-facto-control"
+        ],
+        "allowedTopicIds": [
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-power",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI10_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NOT_NEEDED"
+        }
+      }
+    },
+    {
+      "id": "investment-significant-influence-below-20-percent",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We own 15% of an investee, appoint one director, and participate in decisions about its financial and operating policies. Can significant influence exist despite our ownership being below 20%?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi128-significant-influence",
+          "sfrsi128-20-percent-presumption"
+        ],
+        "allowedTopicIds": [
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-significant-influence",
+          "sfrsi_associates"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-equity-method",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI128_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NOT_NEEDED"
+        }
+      }
+    },
+    {
+      "id": "investment-above-20-percent-without-influence",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We own 25% of an investee, but have no board representation, do not participate in policy decisions, have no material transactions or management interchange, and cannot obtain the information needed to influence it. Is the 20% threshold conclusive?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi128-significant-influence",
+          "sfrsi128-20-percent-presumption"
+        ],
+        "allowedTopicIds": [
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-significant-influence",
+          "sfrsi_associates"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-equity-method",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI128_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NOT_NEEDED"
+        }
+      }
+    },
+    {
+      "id": "joint-arrangement-rights-and-obligations",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "Two parties must unanimously consent to relevant decisions. The contract gives each party direct rights to specified assets and direct obligations for specified liabilities. Is this a joint operation or a joint venture, and what accounting follows?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "retrieval": {
+          "expectedFinalUrls": [
+            "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-11-joint-arrangements/"
+          ]
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi11-joint-control",
+          "sfrsi11-unanimous-consent",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-accounting-treatment"
+        ],
+        "allowedTopicIds": [
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi_joint-ventures"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI11_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      }
+    },
+    {
+      "id": "consolidation-acquisition-date-versus-year-end",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We signed an acquisition agreement in September, obtained the required approvals and the ability to direct relevant activities on 15 November, and have a 31 December year end. From which date should the investee be consolidated, and which acquisition-date measurements are relevant?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "retrieval": {
+          "expectedFinalUrls": [
+            "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-10-consolidated-financial-statements/",
+            "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-3-business-combinations/"
+          ]
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-goodwill"
+        ],
+        "allowedTopicIds": [
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-power",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi_business-combinations"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI10_SOURCE_MAP",
+            "SFRSI3_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      }
+    },
+    {
+      "id": "consolidation-goodwill-missing-measurement-facts",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We acquired control of a business. How much goodwill should we recognise? We have not provided the consideration transferred, fair value of any previously held interest, acquisition-date identifiable net assets, or how non-controlling interests are measured.",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "retrieval": {
+          "expectedFinalUrls": [
+            "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-3-business-combinations/"
+          ]
+        },
+        "missingFacts": {
+          "reviewStatus": "PENDING_REVIEW",
+          "factIds": [
+            "consideration",
+            "previously-held-interest",
+            "identifiable-net-assets",
+            "nci-measurement"
+          ]
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi3-goodwill",
+          "sfrsi3-consideration",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition"
+        ],
+        "allowedTopicIds": [
+          "sfrsi10-nci",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI3_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      }
+    },
+    {
+      "id": "joint-arrangement-rights-to-net-assets",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "Two parties share unanimous control through a separate vehicle. The contract gives them rights to the vehicle's net assets only, with no direct rights to specific assets or obligations for its liabilities. Is this a joint venture or a joint operation, and how should the interest be accounted for?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "retrieval": {
+          "expectedFinalUrls": [
+            "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-11-joint-arrangements/"
+          ]
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-venture",
+          "sfrsi11-joint-operation",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-accounting-treatment"
+        ],
+        "allowedTopicIds": [
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi_joint-ventures"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI11_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      }
+    },
+    {
+      "id": "consolidation-potential-voting-rights-missing-facts",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "We hold 45% of an investee and have an option to acquire another 10%. The option is exercisable now, but we have not provided its terms, practical barriers, or the other shareholders' rights. Do the potential voting rights give us power over the investee?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "missingFacts": {
+          "reviewStatus": "PENDING_REVIEW",
+          "factIds": [
+            "option-terms",
+            "practical-barriers",
+            "other-shareholder-rights"
+          ]
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi10-control"
+        ],
+        "allowedTopicIds": [
+          "sfrsi10-control",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI10_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NOT_NEEDED"
+        }
+      }
+    },
+    {
+      "id": "business-combination-amendment-effective-date",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "Our Singapore entity acquired a business on 1 February 2020 for a financial year beginning 1 January 2020. Which version of the SFRS(I) 3 definition of a business applies, and from what effective date?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "retrieval": {
+          "expectedFinalUrls": [
+            "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-3-business-combinations/"
+          ]
+        },
+        "effectiveDate": {
+          "reviewStatus": "PENDING_REVIEW",
+          "effectiveDateRequired": true
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi3-business-combination"
+        ],
+        "allowedTopicIds": [
+          "sfrsi3-business-combination",
+          "sfrsi_business-combinations"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_held-for-sale",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": [
+            "SFRSI3_SOURCE_MAP"
+          ]
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "MAPPED_SOURCE"
+        }
+      }
+    },
+    {
+      "id": "accounting-standard-unmapped-topic-discovery-fails-closed",
+      "provenance": "routing-independently-reviewed-answer-pending",
+      "question": "Under SFRS(I) 5, what conditions must be met before a disposal group is classified as held for sale?",
+      "reviewedOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        }
+      },
+      "routingOracle": {
+        "review": {
+          "status": "INDEPENDENTLY_VERIFIED",
+          "reviewer": "review_benchmark_oracles",
+          "reviewedAt": "2026-09-26"
+        },
+        "authorities": [
+          "ACRA"
+        ],
+        "domainIds": [
+          "ACCOUNTING_SFRS"
+        ],
+        "multiAuthority": false,
+        "requiredTopicIds": [
+          "sfrsi_held-for-sale"
+        ],
+        "allowedTopicIds": [
+          "sfrsi_held-for-sale"
+        ],
+        "forbiddenTopicIds": [
+          "sfrsi-associate-to-subsidiary",
+          "sfrsi-step-acquisition",
+          "sfrsi10-acquisition-control-date",
+          "sfrsi10-consolidation",
+          "sfrsi10-control",
+          "sfrsi10-de-facto-control",
+          "sfrsi10-loss-of-control",
+          "sfrsi10-nci",
+          "sfrsi10-ownership-changes",
+          "sfrsi10-potential-voting-rights",
+          "sfrsi10-power",
+          "sfrsi11-accounting-treatment",
+          "sfrsi11-joint-control",
+          "sfrsi11-joint-operation",
+          "sfrsi11-joint-venture",
+          "sfrsi11-obligations-for-liabilities",
+          "sfrsi11-rights-to-assets",
+          "sfrsi11-rights-to-net-assets",
+          "sfrsi11-unanimous-consent",
+          "sfrsi128-20-percent-presumption",
+          "sfrsi128-equity-method",
+          "sfrsi128-significant-influence",
+          "sfrsi128-to-subsidiary",
+          "sfrsi3-acquisition-date",
+          "sfrsi3-acquisition-method",
+          "sfrsi3-business-combination",
+          "sfrsi3-consideration",
+          "sfrsi3-goodwill",
+          "sfrsi3-identifiable-net-assets",
+          "sfrsi3-nci",
+          "sfrsi3-step-acquisition",
+          "sfrsi_associates",
+          "sfrsi_business-combinations",
+          "sfrsi_joint-ventures",
+          "sfrsi_loss-of-control",
+          "sfrsi_non-controlling-interests",
+          "sfrsi_step-acquisitions",
+          "sfrsi_subsidiaries-consolidation"
+        ],
+        "sourceSelection": {
+          "expectedSourceMapIds": []
+        }
+      },
+      "answerPathOracle": {
+        "review": {
+          "status": "PENDING_REVIEW"
+        },
+        "answerPath": {
+          "expectedMode": "NO_VERIFIED_MAP"
+        }
+      }
+    }
+  ]
+}

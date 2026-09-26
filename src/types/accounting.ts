@@ -45,6 +45,8 @@ export interface StandardCitation {
   text: string;
   officialSourceUrl?: string;
   authority?: StatutoryAuthority;
+  /** Publisher of the cited page, distinct from the Singapore framework/routing authority. */
+  sourcePublisher?: string;
   verificationStatus?: string;
   isAuthoritativePrimarySource?: boolean;
   isStructurallyValid?: boolean;

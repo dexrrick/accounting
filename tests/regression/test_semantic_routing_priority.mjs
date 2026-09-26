@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { hasSemanticRoutingConflict, resolveSemanticScenario } from '../../src/services/semanticScenarioResolver.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
-import { buildSsoUrl, getSafeOfficialUrl, SFRSI_2025_COLLECTION_URL } from '../../src/utils/statutoryLinkResolver.ts';
+import { buildSsoUrl, getSafeOfficialUrl } from '../../src/utils/statutoryLinkResolver.ts';
+import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
 
 console.log('=== RUNNING SEMANTIC ROUTING PRIORITY SUITE ===\n');
 
@@ -23,13 +24,13 @@ const reportingQuestion = classifyQuestion('Is restatement needed for financial 
 assert.equal(reportingQuestion.primaryDomain, 'ACCOUNTING');
 assert.equal(reportingQuestion.taxAnalysisRequired, false);
 assert.ok(reportingQuestion.authorities.includes('ACRA'));
-assert.equal(buildSsoUrl('unrecognised instrument'), 'https://sso.agc.gov.sg', 'unknown legislation must not default to the Income Tax Act');
-assert.equal(getSafeOfficialUrl('https://sso.agc.gov.sg', 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), 'https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P16-#pr22-');
+assert.equal(buildSsoUrl('unrecognised instrument'), '', 'unknown legislation must not receive a generic or invented official citation');
+assert.equal(getSafeOfficialUrl('https://sso.agc.gov.sg', 'Income Tax Act 1947', 'Section 14(1)', 'IRAS'), SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC14_GENERAL_DEDUCTION.canonicalUrl);
 assert.equal(getSafeOfficialUrl('', 'Central Provident Fund Act 1953', 'Section 7', 'CPF'), 'https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-');
-assert.equal(getSafeOfficialUrl('', 'Central Provident Fund Act 1953', 'Contribution rates', 'CPF'), 'https://sso.agc.gov.sg/Act/CPFA1953');
+assert.equal(getSafeOfficialUrl('', 'Central Provident Fund Act 1953', 'Contribution rates', 'CPF'), '', 'unspecific provision labels must not receive a generic Act URL');
 assert.equal(getSafeOfficialUrl('', 'Employment Act 1968', 'Section 88A annual leave', 'MOM'), 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr88A-');
-assert.equal(getSafeOfficialUrl('', 'Goods and Services Tax Act 1993', 'GST registration threshold', 'IRAS'), 'https://sso.agc.gov.sg/Act/GSTA1993');
-assert.equal(getSafeOfficialUrl('', 'SFRS(I) 1-1 Presentation of Financial Statements', 'Paragraph 41', 'ASC'), SFRSI_2025_COLLECTION_URL);
+assert.equal(getSafeOfficialUrl('', 'Goods and Services Tax Act 1993', 'GST registration threshold', 'IRAS'), '', 'unmatched GST provision labels must not receive a generic Act URL');
+assert.equal(getSafeOfficialUrl('', 'SFRS(I) 1-1 Presentation of Financial Statements', 'Paragraph 41', 'ASC'), '', 'a collection page does not verify a specific paragraph');
 assert.equal(getSafeOfficialUrl('https://www.iras.gov.sg', 'Singapore Statutory Directives', 'General', 'IRAS'), '', 'generic agency pages must not be passed off as a source');
 
 console.log('✓ validated AI semantics override conflicting keyword routing; reporting reclassification routes to accounting; unknown legislation does not become tax law.');

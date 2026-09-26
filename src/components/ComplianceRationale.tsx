@@ -321,8 +321,13 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-[9px] px-2 py-0.5 rounded-md border font-medium ${badge.badgeClass}`}>
-                          {badge.label}
+                          {cite.sourcePublisher || badge.label}
                         </span>
+                        {cite.sourcePublisher === 'IFRS Foundation' && cite.authority === 'ACRA' && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-md border font-medium bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                            Singapore framework authority: ACRA / ASC
+                          </span>
+                        )}
                         <span className="font-semibold text-slate-900 dark:text-slate-200 font-mono text-xs">
                           {cite.standard} {cite.paragraph}
                         </span>

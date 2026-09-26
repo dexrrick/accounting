@@ -21,6 +21,8 @@ export interface QueryTopic {
   id: string;
   name: string;
   keywords: string[];
+  /** Narrow query-only patterns for natural phrasings that need more than lexical aliases. */
+  queryPatterns?: string[];
   exclusionKeywords?: string[];
   canonicalConceptId?: string;
   domainId: SingaporeKnowledgeDomain;
@@ -51,6 +53,7 @@ export class QueryTopicResolver {
     id: metadata.id,
     name: metadata.title,
     keywords: metadata.keywords,
+    queryPatterns: metadata.queryPatterns,
     exclusionKeywords: metadata.exclusionKeywords,
     domainId: metadata.domainId,
     authorities: metadata.authorities,
@@ -144,7 +147,8 @@ export class QueryTopicResolver {
       // 3. Supporting Lexical Matching
       const hasLexicalMatch =
         !(topic.exclusionKeywords ?? []).some((phrase) => qLower.includes(phrase.toLowerCase())) &&
-        topic.keywords.some((kw) => keywordMatches(qLower, kw));
+        (topic.keywords.some((kw) => keywordMatches(qLower, kw)) ||
+          (topic.queryPatterns ?? []).some((pattern) => new RegExp(pattern, 'i').test(query)));
 
       // 4. Topic Resolution & Attribution
       if (hasSemanticMatch && hasLexicalMatch) {
