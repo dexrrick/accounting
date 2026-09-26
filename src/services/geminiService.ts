@@ -26,6 +26,8 @@ import { getCitation } from '../standards/standardsKnowledge';
 import { UNIFIED_SOURCE_REGISTRY } from '../standards/unifiedSourceModel';
 import { answerSfrsi9KnowledgeQuery } from './sfrsi9AnswerService';
 import { answerConsolidationKnowledgeQuery } from './consolidationKnowledgeService';
+import { renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
+import { classifyQuestion } from '../classification/questionClassifier';
 
 export interface GeminiResponse {
   messageText: string;
@@ -507,6 +509,16 @@ export async function processAccountingQuery(
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
   const journalRequested = Boolean(outputPreference?.journal || /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput));
+  const irasEvidenceRequired = usesIrasEvidencePolicy(classifyQuestion(userInput), userInput);
+  const governedOfflineResponse = async (scenario: AccountingScenarioState): Promise<GeminiResponse> => {
+    if (!irasEvidenceRequired) return renderStructuredOfflineResponse(scenario, standard);
+    const context = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey);
+    diagnostics?.onGroundedContext?.(context);
+    return renderIrasEvidenceResponse(
+      { treatment: scenario.accountingTreatmentSummary }, context, userInput, scenario, standard,
+      context.evidenceQuality?.eligibleRecords.some(record => record.provenance !== 'LIVE_EXTERNAL') ? 'LOCAL' : 'BLOCKED'
+    );
+  };
   if (journalRequested && !hasImages) {
     let aiCandidate: AccountingEventSequence | undefined;
     let aiExtractionRequired = false;
@@ -514,8 +526,8 @@ export async function processAccountingQuery(
     try {
       const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
       const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
-      aiExtractionRequired = Boolean(outputPreference?.journal && apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
-      if (apiKey?.trim() && apiKey.trim().length > 10) {
+      aiExtractionRequired = Boolean(!irasEvidenceRequired && outputPreference?.journal && apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
+      if (!irasEvidenceRequired && apiKey?.trim() && apiKey.trim().length > 10) {
         const extractionStarted = performance.now();
         try {
           aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
@@ -546,13 +558,18 @@ export async function processAccountingQuery(
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
       if (resolution.clarifications.length) {
+        if (irasEvidenceRequired) {
+          const response = await governedOfflineResponse(sequenceScenario);
+          return attachAmendmentProvenance({ ...response, clarifications: resolution.clarifications,
+            messageText: `${response.messageText}\n\n${resolution.clarifications.map(item => item.prompt).join('\n')}` });
+        }
         return attachAmendmentProvenance({
           messageText: `### Clarification Required for Event Sequence\n\n${resolution.clarifications[0].prompt}`,
           scenarioState: sequenceScenario,
           clarifications: resolution.clarifications
         });
       }
-      return attachAmendmentProvenance(renderStructuredOfflineResponse(sequenceScenario, standard));
+      return attachAmendmentProvenance(await governedOfflineResponse(sequenceScenario));
     }
   }
   // Serve reviewed SFRS(I) 9 knowledge queries before transaction parsing.
@@ -603,13 +620,18 @@ export async function processAccountingQuery(
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
-      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+      return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
     }
     const clarification: MissingFieldInfo = materialClarification || {
       fieldKey: 'journalFacts', fieldName: 'Journal-entry facts',
       prompt: 'Please provide the transaction amount, what was received or incurred, and whether it was paid immediately or remains payable.',
       whyNeeded: 'A balanced journal cannot be generated safely until both sides and their measurement are established.'
     };
+    if (irasEvidenceRequired) {
+      const response = await governedOfflineResponse({ ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] });
+      return attachAmendmentProvenance({ ...response, clarifications: [clarification],
+        messageText: `${response.messageText}\n\n${clarification.prompt}` });
+    }
     return attachAmendmentProvenance({
       messageText: `### Clarification Required for Double Entry\n\n${clarification.prompt}`,
       scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
@@ -622,6 +644,7 @@ export async function processAccountingQuery(
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
     profiler.logSummary();
+    if (irasEvidenceRequired) return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
     return attachAmendmentProvenance({
       messageText: `### Clarification Required\n\n${materialClarification.prompt}`,
       scenarioState: deterministicScenario,
@@ -648,8 +671,25 @@ export async function processAccountingQuery(
   diagnostics?.onGroundedContext?.(groundedContext);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
+  // Evidence quality is a pre-generation decision, not a warning added after a
+  // model has already manufactured a tax answer. Local knowledge remains first.
+  if (groundedContext.evidenceQuality) {
+    const quality = groundedContext.evidenceQuality;
+    const accountingRequested = groundedContext.classification.accountingAnalysisRequired || groundedContext.classification.journalEntryRequired;
+    const localCoversQuestion = quality.eligibleRecords.length > 0 && quality.uncoveredTopicIds.length === 0 &&
+      quality.eligibleRecords.every(record => record.provenance !== 'LIVE_EXTERNAL');
+    if (!accountingRequested && (localCoversQuestion || quality.status === 'INSUFFICIENT')) {
+      profiler.recordFirstVisibleResponse();
+      profiler.logSummary();
+      return attachAmendmentProvenance(renderIrasEvidenceResponse(
+        {}, groundedContext, userInput, deterministicScenario, standard,
+        localCoversQuestion ? 'LOCAL' : 'BLOCKED'
+      ));
+    }
+  }
+
   // 3. Evaluate Fast-Path Bypass (ONLY for explicit deterministic fixtures)
-  if (isFixture) {
+  if (isFixture && !groundedContext.evidenceQuality) {
     const fastPathCheck = evaluateFastPathEligibility(userInput, deterministicScenario, groundedContext);
     if (fastPathCheck.canBypass) {
       profiler.recordFirstVisibleResponse();
@@ -739,6 +779,12 @@ export async function processAccountingQuery(
   // 5. Fallback structured offline response rendered from deterministic state
   profiler.recordFallback();
   profiler.recordFirstVisibleResponse();
+  if (groundedContext.evidenceQuality) {
+    const response = renderIrasEvidenceResponse({ treatment: deterministicScenario.accountingTreatmentSummary }, groundedContext, userInput, deterministicScenario, standard,
+      apiErrorMessage ? 'PROVIDER_FAILURE' : 'BLOCKED');
+    profiler.logSummary();
+    return attachAmendmentProvenance(response);
+  }
   const fallbackResponse = attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage, groundedContext));
   fallbackResponse.imageAnalysisFailed = hasImages && Boolean(apiErrorMessage);
   profiler.logSummary();
@@ -1392,6 +1438,7 @@ export async function callGeminiAPI(
   // Filter out system welcome messages and raw processing error cards; limit to last 4 turns
   const conversationTurns = (chatHistory || [])
     .filter((m) => m.id !== 'welcome-msg' && m.text && !m.text.startsWith('⚠️ **Processing Error**'))
+    .filter(m => !context.evidenceQuality || m.sender === 'user')
     .slice(-4);
 
   for (const m of conversationTurns) {
@@ -1421,7 +1468,7 @@ export async function callGeminiAPI(
 Transaction Title: ${currentScenario.transactionTitle || 'N/A'}
 Functional Currency: ${currentScenario.functionalCurrency || 'SGD'}
 Active Parameters:
-${JSON.stringify(currentScenario.keyParameters || [], null, 2)}
+${JSON.stringify(context.evidenceQuality ? [] : currentScenario.keyParameters || [], null, 2)}
 Active Double Entry Journal Groups:
 ${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
 ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (do not re-examine an image unless the user asks):\n${formatImageEvidenceForAccounting(currentScenario.imageEvidence)}` : ''}

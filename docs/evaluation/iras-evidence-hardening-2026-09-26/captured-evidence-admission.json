@@ -1,0 +1,1562 @@
+{
+  "kind": "OFFLINE_REPLAY_OF_CAPTURED_REAL_EVIDENCE",
+  "newLiveProviderRun": false,
+  "newLiveRetrieval": false,
+  "originalLivePhaseComplete": false,
+  "limitations": [
+    "Measures admission of previously selected records, not a new retrieval ranking run.",
+    "Old human relevance labels are reused only where evidence text is unchanged.",
+    "Mechanical candidate provenance is reconstructed from original successful fetch/canonical/hash traces.",
+    "A verified exact quotation is not a verified application conclusion."
+  ],
+  "summary": {
+    "cases": 19,
+    "before": {
+      "IRRELEVANT": 87,
+      "RELEVANT": 27,
+      "PARTIALLY_RELEVANT": 17
+    },
+    "after": {
+      "RELEVANT": 13,
+      "PARTIALLY_RELEVANT": 10
+    },
+    "gateStatuses": {
+      "LIMITED": 7,
+      "RETRIEVED_SUFFICIENT": 3,
+      "LOCAL_SUFFICIENT": 4,
+      "INSUFFICIENT": 5
+    }
+  },
+  "cases": [
+    {
+      "caseId": "gst-customer-supplier-meals",
+      "gateStatus": "LIMITED",
+      "coveredTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "uncoveredTopicIds": [
+        "iras-gst-entertainment"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-input-tax_c090bb2b4242",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-input-tax_28b1dd80ca78",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-input-tax_c090bb2b4242",
+          "relevance": "RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-input-tax_28b1dd80ca78",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_c090bb2b4242",
+          "LIVE_TOPIC_iras-gst-input-tax_28b1dd80ca78"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "gst-passenger-car-input-tax",
+      "gateStatus": "LIMITED",
+      "coveredTopicIds": [
+        "iras-gst-blocked-input-tax"
+      ],
+      "uncoveredTopicIds": [
+        "iras-gst-motor-vehicles"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_RATE_9_PERCENT",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-blocked-input-tax_c090bb2b4242",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-blocked-input-tax_c090bb2b4242",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_RATE_9_PERCENT",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_c090bb2b4242"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "gst-overseas-services-zero-rated-or-out-of-scope",
+      "gateStatus": "RETRIEVED_SUFFICIENT",
+      "coveredTopicIds": [
+        "iras-gst-zero-rating",
+        "iras-gst-out-of-scope-supplies"
+      ],
+      "uncoveredTopicIds": [],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "GST_SEC14_REVERSE_CHARGE",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-zero-rating_9ab3448418bd",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-out-of-scope-supplies_4eb12e46fe85",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-zero-rating_9ab3448418bd",
+          "relevance": "RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-gst-out-of-scope-supplies_4eb12e46fe85",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "GST_SEC14_REVERSE_CHARGE",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-gst-zero-rating_9ab3448418bd",
+          "LIVE_TOPIC_iras-gst-out-of-scope-supplies_4eb12e46fe85"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "gst-invoice-december-2022-payment-january-2023",
+      "gateStatus": "LOCAL_SUFFICIENT",
+      "coveredTopicIds": [
+        "iras-gst-standard-rated-supplies",
+        "iras-gst-time-of-supply"
+      ],
+      "uncoveredTopicIds": [],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "GST_RATE_7_PERCENT",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_RATE_8_PERCENT_2023",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "GST_RATE_7_PERCENT",
+          "relevance": "RELEVANT",
+          "sourceStatus": "HISTORICAL",
+          "provenance": "LOCAL_STATIC"
+        },
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "RELEVANT",
+          "sourceStatus": "VERIFIED",
+          "provenance": "LOCAL_STATIC"
+        },
+        {
+          "recordId": "GST_RATE_8_PERCENT_2023",
+          "relevance": "RELEVANT",
+          "sourceStatus": "HISTORICAL",
+          "provenance": "LOCAL_STATIC"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REMISSION_QUALIFYING_FUNDS",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "GST_RATE_7_PERCENT",
+          "GST_SEC11_TIME_OF_SUPPLY"
+        ],
+        "rejected": [
+          {
+            "reason": "SOURCE_NOT_IN_EFFECT_ON_TARGET_DATE"
+          }
+        ]
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-business-expense-deductibility-missing-facts",
+      "gateStatus": "RETRIEVED_SUFFICIENT",
+      "coveredTopicIds": [
+        "iras-cit-deductibility"
+      ],
+      "uncoveredTopicIds": [],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-deductibility_3396ce29f0f1",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14C_EIS_INNOVATION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "CPF_EMPLOYER_TAX_DEDUCTIBILITY",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-deductibility_3396ce29f0f1",
+          "relevance": "RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic."
+        },
+        {
+          "recordId": "ITA_SEC14C_EIS_INNOVATION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "CPF_EMPLOYER_TAX_DEDUCTIBILITY",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-cit-deductibility_3396ce29f0f1"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-renovation-immediate-deduction-missing-period",
+      "gateStatus": "RETRIEVED_SUFFICIENT",
+      "coveredTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-renovation-refurbishment"
+      ],
+      "uncoveredTopicIds": [],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-deductibility_3396ce29f0f1",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-renovation-refurbishment_01153281158f",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "relevance": "RELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-deductibility_3396ce29f0f1",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-renovation-refurbishment_01153281158f",
+          "relevance": "RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic."
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-cit-deductibility_3396ce29f0f1",
+          "LIVE_TOPIC_iras-cit-renovation-refurbishment_01153281158f"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-renovation-section-14n-ya2024",
+      "gateStatus": "LIMITED",
+      "coveredTopicIds": [
+        "iras-cit-renovation-refurbishment"
+      ],
+      "uncoveredTopicIds": [
+        "iras-cit-deductibility"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC19_19A_CAPITAL_ALLOWANCES",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025",
+          "relevance": "RELEVANT",
+          "sourceStatus": "HISTORICAL",
+          "provenance": "LOCAL_STATIC"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC19_19A_CAPITAL_ALLOWANCES",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-renovation-section-14n-ya2026",
+      "gateStatus": "INSUFFICIENT",
+      "coveredTopicIds": [],
+      "uncoveredTopicIds": [
+        "iras-cit-renovation-refurbishment"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-renovation-refurbishment_01153281158f",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-renovation-refurbishment_01153281158f",
+          "reason": "Live candidate lacks a matching successful URL/topic/content retrieval trace or verified provenance."
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-passenger-car-expense-and-capital-allowance",
+      "gateStatus": "LIMITED",
+      "coveredTopicIds": [
+        "iras-capital-allowances"
+      ],
+      "uncoveredTopicIds": [
+        "iras-cit-disallowed-expenses"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-capital-allowances_394021858b28",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC19_19A_CAPITAL_ALLOWANCES",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14C_EIS_INNOVATION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-capital-allowances_394021858b28",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC19_19A_CAPITAL_ALLOWANCES",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC14C_EIS_INNOVATION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-capital-allowances_394021858b28"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-prior-year-loss-carry-forward",
+      "gateStatus": "INSUFFICIENT",
+      "coveredTopicIds": [],
+      "uncoveredTopicIds": [
+        "iras-cit-loss-carry-forward",
+        "iras-substantial-shareholding-test"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "wht-overseas-interest-payment",
+      "gateStatus": "LIMITED",
+      "coveredTopicIds": [
+        "iras-withholding-tax"
+      ],
+      "uncoveredTopicIds": [
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_87b0000fc501",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_c68048a19205",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SUTE_PTE_TAX_EXEMPTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_87b0000fc501",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_c68048a19205",
+          "relevance": "RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SUTE_PTE_TAX_EXEMPTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-withholding-tax_87b0000fc501",
+          "LIVE_TOPIC_iras-withholding-tax_c68048a19205"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "wht-overseas-related-management-fee",
+      "gateStatus": "LIMITED",
+      "coveredTopicIds": [
+        "iras-withholding-tax"
+      ],
+      "uncoveredTopicIds": [
+        "iras-withholding-tax-management-fees"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_87b0000fc501",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_c68048a19205",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SUTE_PTE_TAX_EXEMPTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14C_EIS_INNOVATION",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_87b0000fc501",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-withholding-tax_c68048a19205",
+          "relevance": "RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SUTE_PTE_TAX_EXEMPTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC14C_EIS_INNOVATION",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-withholding-tax_87b0000fc501",
+          "LIVE_TOPIC_iras-withholding-tax_c68048a19205"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "employer-tax-clearance-ir21",
+      "gateStatus": "INSUFFICIENT",
+      "coveredTopicIds": [],
+      "uncoveredTopicIds": [
+        "iras-employer-ir21"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC19_19A_CAPITAL_ALLOWANCES",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SUTE_PTE_TAX_EXEMPTION",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC19_19A_CAPITAL_ALLOWANCES",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SUTE_PTE_TAX_EXEMPTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "employer-bonus-reporting-timing",
+      "gateStatus": "LIMITED",
+      "coveredTopicIds": [
+        "iras-ais-employment-income"
+      ],
+      "uncoveredTopicIds": [
+        "iras-employee-bonus-timing"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-ais-employment-income_2cfcae7c97d0",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "LIVE_TOPIC_iras-ais-employment-income_2cfcae7c97d0",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "NEEDS_REVIEW",
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "LIVE_TOPIC_iras-ais-employment-income_2cfcae7c97d0"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "gst-historical-standard-rated-supply-2023",
+      "gateStatus": "LOCAL_SUFFICIENT",
+      "coveredTopicIds": [
+        "iras-gst-standard-rated-supplies",
+        "iras-gst-time-of-supply"
+      ],
+      "uncoveredTopicIds": [],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_RATE_8_PERCENT_2023",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "VERIFIED",
+          "provenance": "LOCAL_STATIC"
+        },
+        {
+          "recordId": "GST_RATE_8_PERCENT_2023",
+          "relevance": "RELEVANT",
+          "sourceStatus": "HISTORICAL",
+          "provenance": "LOCAL_STATIC"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC21_ZERO_RATED_EXPORTS",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "GST_SEC11_TIME_OF_SUPPLY",
+          "GST_RATE_8_PERCENT_2023"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "gst-historical-standard-rated-supply-2024",
+      "gateStatus": "LOCAL_SUFFICIENT",
+      "coveredTopicIds": [
+        "iras-gst-standard-rated-supplies",
+        "iras-gst-time-of-supply"
+      ],
+      "uncoveredTopicIds": [],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "GST_RATE_9_PERCENT",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "GST_SEC14_REVERSE_CHARGE",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "GST_SEC11_TIME_OF_SUPPLY",
+          "relevance": "PARTIALLY_RELEVANT",
+          "sourceStatus": "VERIFIED",
+          "provenance": "LOCAL_STATIC"
+        },
+        {
+          "recordId": "GST_RATE_9_PERCENT",
+          "relevance": "RELEVANT",
+          "sourceStatus": "VERIFIED",
+          "provenance": "LOCAL_STATIC"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "GST_REGISTRATION_COMPULSORY_THRESHOLD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REG82_90_BAD_DEBT_RELIEF",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "GST_SEC14_REVERSE_CHARGE",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "GST_SEC11_TIME_OF_SUPPLY",
+          "GST_RATE_9_PERCENT"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-section-13w-pre-2026-disposal",
+      "gateStatus": "LOCAL_SUFFICIENT",
+      "coveredTopicIds": [
+        "iras-section-13w"
+      ],
+      "uncoveredTopicIds": [],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR",
+          "relevance": "RELEVANT",
+          "sourceStatus": "HISTORICAL",
+          "provenance": "LOCAL_STATIC"
+        }
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC37_LOSS_CARRY_FORWARD",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"
+        ],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-section-13w-post-2026-disposal",
+      "gateStatus": "INSUFFICIENT",
+      "coveredTopicIds": [],
+      "uncoveredTopicIds": [
+        "iras-section-13w"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "IFRS9_DEBT_CLASSIFICATION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "IAS21_INITIAL_FOREIGN_CURRENCY",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [],
+      "rejectedRecords": [
+        {
+          "recordId": "ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE",
+          "reason": "Non-IRAS record is outside the governed IRAS evidence scope."
+        },
+        {
+          "recordId": "ITA_SEC37E_LOSS_CARRY_BACK",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "IFRS9_DEBT_CLASSIFICATION",
+          "reason": "Non-IRAS record is outside the governed IRAS evidence scope."
+        },
+        {
+          "recordId": "IAS21_INITIAL_FOREIGN_CURRENCY",
+          "reason": "Non-IRAS record is outside the governed IRAS evidence scope."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    },
+    {
+      "caseId": "cit-form-cs-lite-foreign-tax-credit-ya2026",
+      "gateStatus": "INSUFFICIENT",
+      "coveredTopicIds": [],
+      "uncoveredTopicIds": [
+        "iras-cit-returns",
+        "iras-foreign-tax-credit"
+      ],
+      "missingFacts": [],
+      "baselineRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-returns_b5d1561b6ecc",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-foreign-tax-credit_54b179cb3fc6",
+          "relevance": "PARTIALLY_RELEVANT"
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "relevance": "RELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "relevance": "IRRELEVANT"
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "relevance": "IRRELEVANT"
+        }
+      ],
+      "admittedRecords": [],
+      "rejectedRecords": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-cit-returns_b5d1561b6ecc",
+          "reason": "Live candidate lacks a matching successful URL/topic/content retrieval trace or verified provenance."
+        },
+        {
+          "recordId": "LIVE_TOPIC_iras-foreign-tax-credit_54b179cb3fc6",
+          "reason": "Live candidate lacks a matching successful URL/topic/content retrieval trace or verified provenance."
+        },
+        {
+          "recordId": "IRAS_FORM_CS_LITE_CRITERIA",
+          "reason": "Local record is not VERIFIED/HISTORICAL or is outside its validated lifecycle/date scope."
+        },
+        {
+          "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC13W_EQUITY_DISPOSAL_2026",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+          "reason": "No registry topic association with distinctive matching source text."
+        },
+        {
+          "recordId": "ITA_SEC14N_RENOVATION_REFURBISHMENT",
+          "reason": "No registry topic association with distinctive matching source text."
+        }
+      ],
+      "exactQuoteCheck": {
+        "acceptedRecordIds": [],
+        "rejected": []
+      },
+      "conclusion": "OFFLINE_ADMISSION_AUDIT_ONLY; no new Gemini answer or live retrieval was generated."
+    }
+  ]
+}

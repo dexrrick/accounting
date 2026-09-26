@@ -39,13 +39,11 @@ async function runTests() {
     'SFRS_I'
   );
   assert(carRes.scenarioState.queryIntent === 'HYBRID', 'Must be classified as HYBRID');
-  assert(carRes.messageText.includes('Regulation 27'), 'Must cite GST Regulation 27 for a passenger car.');
-  assert(carRes.messageText.includes('15(1)(k)'), 'Must cite Section 15(1)(k) of the Income Tax Act');
-  assert.match(carRes.messageText, /assumes an ordinary Singapore-registered S-plate private passenger car.*with no applicable exception/i);
-  assert.match(carRes.messageText, /qualifying private-hire or instructional vehicles.*different income-tax treatment/i);
-  assert.match(carRes.messageText, /Taxi running expenses are a separate exception.*12 November 2018.*authorised purpose under Section 14ZA\(8\)/i);
-  assert.match(carRes.messageText, /That taxi rule does not itself extend to private-hire cars/i);
-  assert.match(carRes.messageText, /GST input-tax recovery must be assessed separately/i);
+  assert(carRes.messageText.includes('Regulation 27'), 'Admitted GST motor-car evidence remains visible.');
+  assert.doesNotMatch(carRes.messageText, /15\(1\)\(k\)|Section 14ZA\(8\)/i,
+    'Unadmitted income-tax rules must not leak into the GST answer.');
+  assert.match(carRes.messageText, /cannot establish the tax treatment|information still needed/i);
+  assert.equal(carRes.scenarioState.isComplete, false, 'Missing GST-specific facts remain unresolved.');
   assert.doesNotMatch(carRes.messageText, /no tax deduction or Section 19\/19A Capital Allowances are granted on passenger motor cars/i);
   assert.doesNotMatch(carRes.messageText, /Petrol, parking, road tax, and maintenance expenses.*also non-deductible/i);
   assert(carRes.scenarioState.directGroups?.length === 1, 'Must have 1 journal group');
@@ -56,8 +54,8 @@ async function runTests() {
   // Verify GST input tax is NOT claimed in journal
   const gstLine = grp.lines.find(l => l.accountCode === '1190');
   assert(!gstLine, 'Input GST line must NOT exist because it is blocked under Regulation 27');
-  const blockedCarAdvisory = carRes.scenarioState.statutoryAdvisory.find(advisory => advisory.sectionOrSchedule === 'Regulation 26 & 27');
-  assert.equal(blockedCarAdvisory?.isGstClaimable, false, 'An explicit company passenger-car fast path retains its own-use GST block.');
+  assert.ok(carRes.scenarioState.statutoryAdvisory.every(advisory => advisory.officialUrl?.startsWith('https://www.iras.gov.sg/')),
+    'Only verified IRAS citations may be emitted by the evidence-bound answer.');
   console.log('✓ Passenger Car Hybrid Entry verified successfully.\n');
 
   const thirdPartyReplacementCar = await parseAccountingQuery(
@@ -125,9 +123,12 @@ async function runTests() {
   assert(capRes.messageText.includes('SFRS(I) 1-38'), 'Must cite SFRS(I) 1-38');
   assert(capRes.messageText.includes('54'), 'Must mention §54 research phase expensing');
   assert(capRes.messageText.includes('57'), 'Must mention §57 6 capitalisation criteria');
-  assert(capRes.messageText.includes('Enterprise Innovation Scheme') || capRes.messageText.includes('EIS'), 'Must mention EIS or Section 14C');
+  assert.doesNotMatch(capRes.messageText, /Enterprise Innovation Scheme|\bEIS\b|Section 14C/i,
+    'Tax incentives without admitted supporting evidence must be withheld.');
   assert(capRes.scenarioState.accountingTreatmentSummary, 'accountingTreatmentSummary must be populated');
-  assert(capRes.scenarioState.singaporeTaxTreatmentSummary, 'singaporeTaxTreatmentSummary must be populated');
+  assert.equal(capRes.scenarioState.singaporeTaxTreatmentSummary, undefined,
+    'The old deterministic tax summary must not bypass IRAS evidence admission.');
+  assert.equal(capRes.scenarioState.isComplete, false, 'Accounting criteria and tax evidence gaps remain unresolved.');
   console.log('✓ Software Development Capitalisation query verified.\n');
 
   // TEST 8: GST Compulsory Registration Threshold
@@ -139,7 +140,7 @@ async function runTests() {
   );
   assert(gstRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
   assert(gstRes.messageText.includes('1,000,000') || gstRes.messageText.includes('1 million'), 'Must cite $1M threshold');
-  assert(gstRes.messageText.includes('Retrospective') || gstRes.messageText.includes('Prospective'), 'Must cite registration tests');
+  assert.match(gstRes.messageText, /retrospective|prospective/i, 'Admitted registration evidence must mention its tests');
   console.log('✓ GST Compulsory Registration query verified.\n');
 
   // TEST 9: MOM Statutory Leave Entitlements

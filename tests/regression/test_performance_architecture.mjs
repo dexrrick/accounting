@@ -78,8 +78,14 @@ async function runTests() {
     const context = await buildGroundedReasoningContext(t.query);
     const systemPrompt = formatGroundedSystemPrompt(context, 'SFRS_I');
 
-    // Verify system prompt contains intent-tailored compact decision instructions
-    if (context.classification.intent === 'STATUTORY_ADVISORY') {
+    // IRAS prompts use a stricter source-quote contract; other workflows keep
+    // their intent-tailored compact decision schemas.
+    if (context.evidenceQuality) {
+      assert(systemPrompt.includes('[IRAS_EVIDENCE_BOUND_ANSWER]'), `${t.id} IRAS prompt must use the evidence-bound answer policy`);
+      assert(systemPrompt.includes('"taxClaims"'), `${t.id} IRAS prompt must define source-quoted tax claims`);
+      assert(systemPrompt.includes('"recordId"'), `${t.id} IRAS prompt must bind each quote to a supplied source record`);
+      assert(!systemPrompt.includes('"directAnswer"'), `${t.id} IRAS prompt must not invite unsupported freeform tax conclusions`);
+    } else if (context.classification.intent === 'STATUTORY_ADVISORY') {
       assert(systemPrompt.includes('COMPACT STATUTORY DECISION SCHEMA'), `${t.id} prompt must request compact statutory schema`);
       assert(systemPrompt.includes('"directAnswer"'), `${t.id} prompt must define directAnswer field`);
     } else if (context.classification.intent === 'TRANSACTION' || context.classification.journalEntryRequired) {

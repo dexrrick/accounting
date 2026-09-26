@@ -201,10 +201,11 @@ assert.ok(managementWht.missingFacts.some(fact => /physically performed/i.test(f
 assert.ok(managementWht.missingFacts.some(fact => /Payment or deemed-payment date/i.test(fact)));
 
 // The targeted meal-GST response guard must cover both response contracts:
-// freeform prose and the compact statutory answer used by the production path.
+// legacy freeform prose and compact responses. The evidence-policy production
+// contract has separate end-to-end tests in test_iras_evidence_pipeline.mjs.
 const mealQuery = exactPhraseCases[0].query;
 const mealMap = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_GST_INPUT_TAX_SOURCE_MAP');
-const mealGrounding = await buildGroundedReasoningContext(
+const policyMealGrounding = await buildGroundedReasoningContext(
   mealQuery,
   null,
   defaultSourceRetriever,
@@ -215,6 +216,8 @@ const mealGrounding = await buildGroundedReasoningContext(
     fetchOptions: { useCache: false, customFetch: async () => htmlResponse(htmlForMap(mealMap)) }
   }
 );
+const mealGrounding = { ...policyMealGrounding, evidenceQuality: undefined };
+assert.ok(policyMealGrounding.evidenceQuality, 'Production context always supplies the IRAS evidence gate.');
 const unconditionalMealClaim = 'GST is always claimable for every customer or supplier meal, regardless of purpose or records.';
 const freeformMealResponse = postProcessAIResponse(
   { messageText: unconditionalMealClaim, directGroups: [] },

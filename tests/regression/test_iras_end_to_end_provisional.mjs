@@ -229,6 +229,11 @@ const mechanicsContext = await buildGroundedReasoningContext(
     fetchOptions: { useCache: false, customFetch: async url => syntheticIrasResponse(url) }
   }
 );
+assert.ok(mechanicsContext.evidenceQuality, 'The real context builder attaches the evidence-quality assessment.');
+// This is a unit test of the legacy sentence-level meal guard using an
+// explicitly synthetic retrieval fixture. Keep the new evidence policy
+// exercised by the real production context and its dedicated integration test.
+const legacyMealGuardContext = { ...mechanicsContext, evidenceQuality: undefined };
 const mechanicsEvidence = [
   ...mechanicsContext.primaryEvidence,
   ...mechanicsContext.officialGuidance,
@@ -256,7 +261,7 @@ const fabricatedCitation = {
 const processed = postProcessAIResponse({
   messageText: unsupportedTaxClaim,
   directGroups: [{ id: 'provisional-e2e', title: 'GST meal query', lines: [], citations: [validCandidateCitation, fabricatedCitation] }]
-}, null, mechanicsQuestion, mechanicsContext);
+}, null, mechanicsQuestion, legacyMealGuardContext);
 const processedGroup = processed.scenarioState.directGroups?.[0];
 assert.ok(!processed.messageText.includes(unsupportedTaxClaim),
   'The narrow meal-GST guard must remove this unconditional claim, even when a candidate citation is present.');

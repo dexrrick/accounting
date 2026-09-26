@@ -234,10 +234,13 @@ const captureRetriever = {
   findSourcesByStandardOrAct() { return []; }
 };
 await buildGroundedReasoningContext('What are the MAS and IRAS considerations for section 13O?', null, captureRetriever);
-assert.equal(capturedRetrieval.domain, undefined, 'Multi-authority retrieval must not be restricted to one coarse source domain');
-assert.deepEqual([...capturedRetrieval.authorities].sort(), ['IRAS', 'MAS']);
+assert.equal(capturedRetrieval.domain, undefined, 'The governed IRAS query does not use a coarse domain filter');
+assert.deepEqual([...capturedRetrieval.authorities].sort(), ['IRAS'],
+  'The evidence-bound IRAS response retrieves only the authority it verifies');
 assert.ok(capturedRetrieval.topicIds.includes('iras-fund-tax-incentives-13o'));
-assert.ok(capturedRetrieval.topicIds.includes('mas-family-office-13o'));
+assert.ok(!capturedRetrieval.topicIds.includes('mas-family-office-13o'));
+assert.deepEqual(classifyQuestion('What are the MAS and IRAS considerations for section 13O?').authorities.sort(), ['IRAS','MAS'],
+  'Classification still retains both authorities for downstream routing and disclosure');
 
 const financialStatementQuery = 'How should we present financial statements?';
 assert.equal(classifyQuestion(financialStatementQuery).primaryDomain, 'ACCOUNTING');

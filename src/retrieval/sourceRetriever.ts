@@ -6,6 +6,7 @@ import {
 } from '../standards/unifiedSourceModel';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
+import { evaluateEvidenceQuality, isIrasEvidenceRequest } from './evidenceQualityGate';
 
 export interface SourceRetrievalQuery {
   query: string;
@@ -250,8 +251,21 @@ export class InMemorySourceRetriever implements ISourceRetriever {
 
     // Sort descending by score
     scored.sort((a, b) => b.score - a.score);
-
-    return scored.slice(0, maxResults).map((s) => s.record);
+    const rankedRecords = scored.map(item => item.record);
+    if (retrievalQuery.topicIds !== undefined && isIrasEvidenceRequest(retrievalQuery)) {
+      const assessment = evaluateEvidenceQuality({
+        query,
+        topicIds: retrievalQuery.topicIds || [],
+        records: rankedRecords,
+        missingFacts: [],
+        domain,
+        authorities,
+        targetDate: explicitTargetDate,
+        referenceDate
+      });
+      return assessment.eligibleRecords.slice(0, maxResults);
+    }
+    return rankedRecords.slice(0, maxResults);
   }
 }
 

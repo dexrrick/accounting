@@ -12,6 +12,7 @@ import { DeterministicReranker, defaultDeterministicReranker } from './determini
 import { QueryTopicResolver, defaultQueryTopicResolver } from './queryTopicResolver';
 import { RetrievalTelemetryRecorder, type RetrievalTelemetry } from './retrievalTelemetry';
 import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
+import { evaluateEvidenceQuality, isIrasEvidenceRequest } from './evidenceQualityGate';
 
 /**
  * Advanced Hybrid Source Retriever.
@@ -268,6 +269,19 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
       }
     }
 
+    if (retrievalQuery.topicIds !== undefined && isIrasEvidenceRequest(retrievalQuery)) {
+      const assessment = evaluateEvidenceQuality({
+        query: retrievalQuery.query,
+        topicIds: retrievalQuery.topicIds || [],
+        records,
+        missingFacts: [],
+        domain: retrievalQuery.domain,
+        authorities: retrievalQuery.authorities,
+        targetDate: retrievalQuery.targetDate,
+        referenceDate: retrievalQuery.referenceDate
+      });
+      return assessment.eligibleRecords.slice(0, retrievalQuery.maxResults || 6);
+    }
     return records.slice(0, retrievalQuery.maxResults || 6);
   }
 }

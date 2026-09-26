@@ -155,6 +155,9 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
     primaryEvidence: taxContext.primaryEvidence,
     curatedSummaries: sfrsContext.curatedSummaries
   };
+  assert.ok(testEvidenceContext.evidenceQuality,
+    'The production context carries its evidence-quality decision; this legacy citation-unit test isolates URL/citation structure below.');
+  const legacyCitationTestContext = { ...testEvidenceContext, evidenceQuality: undefined };
 
   const mockAiOutputWithCitations = {
     scenarioType: 'UNIVERSAL',
@@ -229,7 +232,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
     ]
   };
 
-  const processedAi = postProcessAIResponse(mockAiOutputWithCitations, null, 'test query', testEvidenceContext);
+  const processedAi = postProcessAIResponse(mockAiOutputWithCitations, null, 'test query', legacyCitationTestContext);
   const resultCitations = processedAi.scenarioState.directGroups[0].citations;
   const submittedCitations = mockAiOutputWithCitations.directGroups[0].citations;
 
@@ -296,7 +299,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
       }
     ]
   };
-  const processedUnbal = postProcessAIResponse(unbalancedAiOutput, null, 'sale entry', taxContext);
+  const processedUnbal = postProcessAIResponse(unbalancedAiOutput, null, 'sale entry', legacyCitationTestContext);
   const unbalGrp = processedUnbal.scenarioState.directGroups[0];
   assert.strictEqual(unbalGrp.totalDebit, 500, 'Total debit must be 500');
   assert.strictEqual(unbalGrp.totalCredit, 400, 'Total credit must be 400');
@@ -319,7 +322,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
       }
     ]
   };
-  const processedDiscount = postProcessAIResponse(invalidTradeDiscountExpenseOutput, null, 'equipment with trade discount', taxContext);
+  const processedDiscount = postProcessAIResponse(invalidTradeDiscountExpenseOutput, null, 'equipment with trade discount', legacyCitationTestContext);
   const discLines = processedDiscount.scenarioState.directGroups[0].lines;
   assert(!discLines.some(l => l.accountName.includes('Trade Discount Expense')), 'Expense line for trade discount must be stripped');
   console.log('✓ 5B. Trade discount rule enforced: trade discount expense line removed per SFRS(I) 1-16 §16(a)');
@@ -346,7 +349,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
 
   // 6B. parseAccountingAIResponse enforces identical citation verification and guardrails
   const rawAiJson = JSON.stringify(mockAiOutputWithCitations);
-  const azureParsed = parseAccountingAIResponse(rawAiJson, null, 'test query', testEvidenceContext);
+  const azureParsed = parseAccountingAIResponse(rawAiJson, null, 'test query', legacyCitationTestContext);
   const azureCitations = azureParsed.scenarioState.directGroups[0].citations;
   assert.deepEqual(azureCitations, [], 'Azure parsing must also withhold every citation whose URL lacks verified provenance');
   assert.strictEqual(azureParsed.scenarioState.directGroups[0].isBalanced, true,
@@ -633,8 +636,8 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   const taxProcessed = postProcessAIResponse(taxAIOutput, null, taxQuery, taxCtx);
   const taxCite = taxAIOutput.directGroups[0].citations[0];
   const taxVerification = defaultCitationVerifier.verifyCitation(taxCite);
-  assert.strictEqual(taxProcessed.scenarioState.directGroups[0].citations.length, 0,
-    'Section 14(1) content must not be emitted as a citation with an unverified URL');
+  assert.strictEqual(taxProcessed.scenarioState.directGroups.length, 0,
+    'A tax-only answer must not emit a model-generated empty journal or its unverified citation');
   assert.strictEqual(taxVerification.structuralVerificationOnly, true,
     'Citation verifier must retain its structural-verification boundary');
   assert.strictEqual(taxVerification.status, 'NON_CANONICAL_URL',

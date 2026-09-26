@@ -26,6 +26,8 @@ import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '..
 import { OfficialSitemapDiscoveryAdapter } from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 import { defaultExternalSourceValidator } from '../retrieval/externalSourceValidator';
+import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
+import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
@@ -35,6 +37,7 @@ const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.ag
  * Shared identically across Gemini, OpenAI, and Azure OpenAI adapters.
  */
 export interface GroundedReasoningContext {
+  evidenceQuality?: EvidenceQualityAssessment;
   classification: QuestionClassificationResult;
   userFacts: string[];
   missingFacts: string[];
@@ -317,18 +320,29 @@ function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
   return focusedTerms.length > 0 ? focusedTerms : allTerms;
 }
 
-function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000): string {
+function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = ''): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
   const sentences = text.split(/(?<=[.!?])\s+|\n+/).map(sentence => sentence.trim()).filter(Boolean);
   const normalizedTerms = terms.map(normalizeTopicTerm).filter(term => term.length > 2);
+  const genericTerms = new Set(['the', 'and', 'for', 'can', 'with', 'from', 'what', 'which', 'under', 'this', 'that', 'are', 'our', 'claim', 'claimed', 'tax', 'gst', 'input', 'company', 'singapore']);
+  const queryTerms = [...new Set(normalizeTopicTerm(query).split(/\s+/).filter(term => term.length >= 3 && !genericTerms.has(term)))];
   const matches = sentences
-    .map((sentence, index) => ({ sentence, index }))
-    .filter(item => normalizedTerms.some(term => containsTopicTerm(item.sentence, term)));
+    .map((sentence, index) => ({ sentence, index,
+      score: queryTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 5 : 0), 0) +
+        normalizedTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0)
+    }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
   if (matches.length === 0) return '';
 
   const chosen = new Map<number, string>();
+  let used = 0;
   for (const match of matches) {
+    const window = [match.index - 1, match.index, match.index + 1].filter(index => sentences[index] && !chosen.has(index));
+    const size = window.reduce((sum, index) => sum + sentences[index].length + 1, 0);
+    if (used + size > maxChars) continue;
+    used += size;
     for (const index of [match.index - 1, match.index, match.index + 1]) {
       const sentence = sentences[index];
       if (sentence) chosen.set(index, sentence);
@@ -548,7 +562,7 @@ export async function resolveMappedOfficialSourceFallback(
       return undefined;
     }
 
-    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', expectation.topicTerms);
+    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', expectation.topicTerms, 5_000, query);
     if (!excerpt || !expectation.topicTerms.some(term => containsTopicTerm(excerpt, term))) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
@@ -790,21 +804,30 @@ export async function buildGroundedReasoningContext(
   retrievalOptions: MappedFallbackOptions = {}
 ): Promise<GroundedReasoningContext> {
   // 1. Semantic Transaction Understanding & Question Classification
+  const classification = classifyQuestion(userInput);
+  const irasPolicy = usesIrasEvidencePolicy(classification, userInput);
   const conversationContext = extractAccountingContext(currentScenario);
   const semanticUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
     userInput,
     currentScenario?.functionalCurrency || 'SGD',
     'SG',
-    providerOrApiKey,
+    irasPolicy ? undefined : providerOrApiKey,
     conversationContext
   );
-  const classification = classifyQuestion(userInput);
 
   // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
   const retrievalHints = buildClassificationRetrievalHints(classification);
+  // The governed response covers IRAS evidence only. Keep mixed-domain
+  // classification for the answer, but rank local candidates inside the IRAS
+  // topic/authority scope before the retriever applies its result limit.
+  const irasTopicIds = getCoverageTopicsByIds(retrievalHints.topicIds || [])
+    .filter(topic => topic.domainId.startsWith('IRAS_')).map(topic => topic.id);
+  const localRetrievalHints = irasPolicy
+    ? { ...retrievalHints, domain: undefined, authorities: ['IRAS' as const], topicIds: irasTopicIds }
+    : retrievalHints;
   const localRetrieved = await retriever.retrieveSources({
     query: userInput,
-    ...retrievalHints,
+    ...localRetrievalHints,
     maxResults: GROUNDING_SOURCE_MAX_RESULTS,
     semanticContext: semanticUnderstanding
   });
@@ -813,12 +836,24 @@ export async function buildGroundedReasoningContext(
     ...getExplicitlyLinkedGstRateRecords(userInput, localRetrieved, retriever)
   ];
   const initiallyMatchedCoverage = getCoverageTopicsByIds(retrievalHints.topicIds || []) as MappedCoverageTopic[];
+  const localQuality = irasPolicy ? evaluateEvidenceQuality({
+    query: userInput, topicIds: retrievalHints.topicIds || [], records: contextualLocalRetrieved,
+    missingFacts: classification.missingFacts
+  }) : undefined;
   const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
   const fallbackTopicIds = initiallyMatchedCoverage
-    .filter(topic => topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
+    .filter(topic => !irasPolicy || topic.id.startsWith('iras-'))
+    .filter(topic => localQuality && topic.id.startsWith('iras-')
+      ? localQuality.uncoveredTopicIds.includes(topic.id)
+      : topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
     .map(topic => topic.id);
   const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, retrievalOptions);
-  const retrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
+  const allRetrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
+  const evidenceQuality = irasPolicy ? evaluateEvidenceQuality({
+    query: userInput, topicIds: retrievalHints.topicIds || [], records: allRetrieved,
+    missingFacts: classification.missingFacts, sourceMapFallbackTrace: mappedFallback.trace
+  }) : undefined;
+  const retrieved = evidenceQuality ? evidenceQuality.eligibleRecords : allRetrieved;
 
   // 3. Four-Tier Evidence Sorting based explicitly on evidenceTier
   const primaryEvidence: AuthoritativeSourceRecord[] = [];
@@ -891,6 +926,7 @@ export async function buildGroundedReasoningContext(
     applicationRules,
     currentInformationRequired: classification.currentInformationRequired,
     semanticUnderstanding,
+    evidenceQuality,
     sourceMapFallbackTrace: mappedFallback.trace
   };
 }
@@ -903,6 +939,7 @@ export function formatGroundedSystemPrompt(
   context: GroundedReasoningContext,
   standard: AccountingStandard
 ): string {
+  if (context.evidenceQuality) return formatIrasEvidencePrompt(context);
   const stdLabel = standard === 'SFRS_I'
     ? 'Singapore Financial Reporting Standards (International) [SFRS(I)]'
     : 'International Financial Reporting Standards [IFRS]';
@@ -1185,6 +1222,9 @@ export function postProcessAIResponse(
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
   groundingEvidence?: GroundingEvidenceTrace[];
 } {
+  if (groundedContext.evidenceQuality) {
+    return renderIrasEvidenceResponse(parsed, groundedContext, userInput, deterministicScenario || null, standard);
+  }
   // If parsed is a compact decision (has directAnswer, treatment, decision, requiredAccounts, or lacks directGroups and messageText),
   // delegate to assembleDeterministicResponse which compiles the complete verified markdown, journal entries, and scenario state.
   const isCompactPayload = Boolean(

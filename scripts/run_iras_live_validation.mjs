@@ -198,6 +198,10 @@ function collectContext(context) {
     currentInformationRequired: context.currentInformationRequired,
     semanticUnderstanding: context.semanticUnderstanding,
     sourceMapFallbackTrace: context.sourceMapFallbackTrace,
+    evidenceQuality: context.evidenceQuality ? {
+      ...context.evidenceQuality,
+      eligibleRecords: context.evidenceQuality.eligibleRecords.map(compactEvidence)
+    } : undefined,
     sourceMapIdsSelected: context.sourceMapFallbackTrace?.sourceMapIds || [],
     selectedRecordIds: context.sourceMapFallbackTrace?.selectedRecordIds || [],
     finalVerifiedUrls: context.sourceMapFallbackTrace?.finalVerifiedUrls || [],
@@ -350,7 +354,7 @@ function createFetchObserver(secret) {
         transportError: undefined,
         request: requestBody ? safeValue(requestBody, secret) : undefined,
         stage: requestBody?.systemInstruction?.parts?.some(part =>
-          typeof part?.text === 'string' && part.text.includes('[4. AUTHORITATIVE PRIMARY SOURCE EVIDENCE')
+          typeof part?.text === 'string' && (part.text.includes('[4. AUTHORITATIVE PRIMARY SOURCE EVIDENCE') || part.text.includes('[IRAS_EVIDENCE_BOUND_ANSWER]'))
         ) ? 'answer-generation' : 'semantic-extraction-or-other',
         rawCandidateText: '',
         responseJsonValid: undefined,

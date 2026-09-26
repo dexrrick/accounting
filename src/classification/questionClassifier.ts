@@ -360,6 +360,9 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:our|my|this|we|company|paid|paying|claim\w*|file)\b/i.test(q);
   if (asksAboutSpecificTaxCase && hasTax && /\b(?:deductib\w*|deduct\w*|tax deduction)\b/i.test(q) &&
       /\b(?:expense|cost|payment|fee|meal|entertainment|renovat\w*|fit.out|machinery|equipment|car|vehicle|asset)\b/i.test(q)) {
+    if (!/\b(?:nature of|description of|purchased|acquired|incurred for)\b/i.test(q)) {
+      missingFacts.push('Nature of the expense and what was acquired or supplied');
+    }
     if (!/\b(?:business purpose|for the business|for our business|wholly and exclusively|private use|personal use)\b/i.test(q)) {
       missingFacts.push('Business purpose and any private element of the expense');
     }
@@ -368,6 +371,9 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     }
     if (!/\b(?:invoice|receipt|supporting documents?|records?)\b/i.test(q)) {
       missingFacts.push('Invoices, receipts or other records supporting the expense and business purpose');
+    }
+    if (!/\b(?:basis period|year of assessment|\bya\s*20\d{2})\b/i.test(q)) {
+      missingFacts.push('Relevant basis period and Year of Assessment');
     }
   }
   // Section 14N eligibility depends on the actual work and YA-specific
@@ -389,6 +395,10 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
         !/\b(?:cap utilization|cap used|election made|elected under section 14n)\b/i.test(q)) {
       missingFacts.push('Prior Section 14N claims, cap utilization and any election made');
     }
+    const requestedYa = Number(/\b(?:ya|year of assessment)\s*(20\d{2})\b/i.exec(q)?.[1]);
+    if (requestedYa >= 2025 && !/\b(?:commenc\w*|started trading|operated throughout|trade began)\b/i.test(q)) {
+      missingFacts.push('Trade or business commencement and operation throughout the applicable cap period');
+    }
   }
   if (/\b(?:renovat\w*|refurbish\w*|section 14n)\b/i.test(q) &&
       /\b(?:ya|year of assessment)\s*(20\d{2})\b/i.test(q) &&
@@ -408,23 +418,51 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     if (!/\b(?:business use|private use|personal use|tax invoice)\b/i.test(q) && /\b(?:input tax|input gst|claim\w*|recover\w*)\b/i.test(q)) {
       missingFacts.push('Business or private use and supporting tax invoice for the GST claim');
     }
-    if (/\b(?:meals?|dining|entertainment)\b/i.test(q)) {
+    if (/\b(?:meals?|lunch|dinner|dining|entertainment)\b/i.test(q)) {
       if (!/\b(?:business purpose|purpose of (?:the )?meal)\b/i.test(q)) missingFacts.push('Business purpose of the meal or entertainment');
       if (!/\b(?:attendees?|who attended|relationship to (?:the )?company)\b/i.test(q)) missingFacts.push('Who attended and their relationship to the company');
     }
     if (/\b(?:passenger\s+(?:motor\s+)?car|s-plate|motor car)\b/i.test(q) && /\b(?:claim|recover|input tax|input gst)\b/i.test(q)) {
       missingFacts.push('Vehicle registration/use details and whether a specific motor-car exception applies');
+      if (!/\b(?:owned|leased|hired|registered under)\b/i.test(q)) missingFacts.push('Vehicle ownership or hire/lease arrangement');
     }
-    if (/\bservice\w*\b/i.test(q) && /\b(?:overseas|zero.rate|out.of.scope)\b/i.test(q)) {
+    if (/\bservice\w*\b/i.test(q) && /\b(?:overseas|zero.rated?|out.of.scope)\b/i.test(q)) {
       if (!/\b(?:type|nature|what kind) of service\b/i.test(q)) missingFacts.push('Nature of the services supplied');
       if (!/\b(?:customer|recipient|client)\b/i.test(q)) missingFacts.push('Customer/recipient location and status');
       if (!/\b(?:place of supply|where (?:the )?service|performed in|performed outside)\b/i.test(q)) missingFacts.push('Where the services are performed and the applicable place-of-supply facts');
+      if (!/\b(?:section 21\(3\)|qualifying service category|supporting evidence)\b/i.test(q)) {
+        missingFacts.push('Which qualifying service category applies and the supporting contractual evidence');
+      }
     }
+  }
+  if (asksAboutSpecificTaxCase && hasGst && /\bservices?\b/i.test(q) &&
+      /\b(?:overseas|zero.rated?|out.of.scope)\b/i.test(q) &&
+      !missingFacts.some(fact => /services supplied|place.of.supply/i.test(fact))) {
+    missingFacts.push('Nature of the services, customer location, and where the service is performed or received');
+    missingFacts.push('Which qualifying service category applies and the supporting contractual evidence');
+  }
+  if (!isPureConceptualQuery && /\bsection\s*13w\b/i.test(q) && /\b(?:dispos\w*|shares?|equity|gains?)\b/i.test(q)) {
+    if (!/\b(?:rights|voting|participating|redeemable)\b/i.test(q)) missingFacts.push('Rights and classification of the shares being disposed of');
+    if (!/\b\d+(?:\.\d+)?\s*%\b/.test(q) || !/\b(?:months?|years?|continuous holding period)\b/i.test(q)) {
+      missingFacts.push('Ownership percentages and continuous holding dates for the company and any eligible group entities');
+    }
+    if (/\bgroup\b/i.test(q) && !/\b(?:group relationship|aggregation basis|subsidiary relationship)\b/i.test(q)) {
+      missingFacts.push('Eligible group relationship and basis for aggregating the holdings');
+    }
+    if (!/\b(?:property holding|excluded investee|exclusion)\b/i.test(q)) missingFacts.push('Investee activities and any applicable exclusions');
+    if (!/\b(?:capital gain|revenue gain|trading)\b/i.test(q)) missingFacts.push('Whether the disposal gain is capital or revenue in nature');
+  }
+  if (!isPureConceptualQuery && /\bform\s*c-s\s*\(?lite\)?\b/i.test(q) &&
+      /\bforeign tax credit\b/i.test(q)) {
+    missingFacts.push('Whether the company actually claims a foreign tax credit for this return');
+    missingFacts.push('All other eligibility conditions for the stated Year of Assessment and return form');
   }
   if (asksAboutSpecificTaxCase && hasTax && /\b(?:prior|previous|preceding|last)[\s-]+(?:financial\s+|basis\s+|tax\s+)?(?:year|ya)\b/i.test(q) && /\bloss(?:es)?\b/i.test(q)) {
     if (!/\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(q)) missingFacts.push('Year of Assessment in which the loss arose and the YA in which it would be used');
     if (!/\b(?:shareholding|shareholders?|ownership change|same shareholders?)\b/i.test(q)) missingFacts.push('Whether the required shareholding continuity test is met');
     if (!/\b(?:same business|business continuity|continuity of business)\b/i.test(q)) missingFacts.push('Whether the company continues the same business, where the statutory test requires it');
+    if (!/\b(?:trade loss|capital allowance|donation)\b/i.test(q)) missingFacts.push('Whether the unutilised amount is a trade loss, capital allowance or another item');
+    if (!/\b(?:amount|utilis\w*|utiliz\w*)\b/i.test(q)) missingFacts.push('Amount available after any prior utilisation');
   }
   if (hasGst && /\b2022\b/i.test(q) && /\b2023\b/i.test(q) && /\b(?:invoice|payment|gst rate)\b/i.test(q)) {
     if (!/\b(?:goods|services)\b/i.test(q)) missingFacts.push('Whether the supply is goods or services');
