@@ -89,7 +89,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 
 ### Feedback delivery
 
-The footer's **Send feedback** form compiles the user's description, the last 12 chat messages, a safe scenario summary, browser/app details, and the latest request telemetry. It deliberately excludes API keys.
+The footer's **Send feedback** form compiles the user's description, the last 12 chat messages, a safe scenario summary, browser/app details, the latest request telemetry, and build metadata (`app.version`, `app.gitCommit`, and `app.buildTime`). It deliberately excludes API keys and environment variables. The dialog shows the short build version for quick reference.
 
 To deliver reports, deploy a secure endpoint (for example, a serverless function or Formspree endpoint) that accepts a JSON `POST` and emails it to your support inbox. Set its URL at build time:
 
@@ -98,6 +98,8 @@ VITE_FEEDBACK_ENDPOINT=https://your-feedback-endpoint.example/submit
 ```
 
 The email recipient belongs in that endpoint's secure configuration, not in frontend code. The form also has **Copy report** so a user can preserve the diagnostic payload if delivery is unavailable.
+
+Production builds resolve the commit from `APP_GIT_COMMIT`, then `VITE_GIT_COMMIT`, then GitHub Actions' `GITHUB_SHA`, and finally `git rev-parse HEAD`; if none is available, the build reports `unknown`. The included CI workflow passes `${{ github.sha }}` as `APP_GIT_COMMIT`. A deployment host that builds directly from Git can rely on the Git fallback or set `APP_GIT_COMMIT` to its full commit SHA. The build timestamp is generated when Vite loads its configuration.
 
 Vite substitutes `VITE_*` values when it builds the browser bundle; adding a GitHub variable does not alter an already-deployed site. For GitHub Actions builds, set the repository variable `VITE_FEEDBACK_ENDPOINT` (or a secret with that name); the included CI workflow passes it to Vite. If the site is deployed through Vercel, Netlify, Cloudflare Pages, or another host connected to GitHub, add the same build-time variable in that host's project settings and redeploy.
 

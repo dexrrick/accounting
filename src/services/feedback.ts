@@ -1,6 +1,7 @@
 import type { AccountingScenarioState, ChatMessage } from '../types/accounting';
 import type { ProviderSettings } from '../types/provider';
 import type { OutputPreference } from './geminiService';
+import { appBuildInfo } from '../buildInfo';
 
 export interface FeedbackReport {
   description: string;
@@ -8,7 +9,7 @@ export interface FeedbackReport {
   createdAt: string;
   pageUrl: string;
   userAgent: string;
-  app: { theme: 'light' | 'dark'; fontSize: string; activeProvider: string; model: string; shareStructureEnabled: boolean };
+  app: { version: string; gitCommit: string; buildTime: string; theme: 'light' | 'dark'; fontSize: string; activeProvider: string; model: string; shareStructureEnabled: boolean };
   conversation: Array<{ sender: string; timestamp: string; text: string }>;
   attachments: { imagesAttached: number; imageTypes: string[] };
   scenario?: Record<string, unknown>;
@@ -59,7 +60,7 @@ export const compileFeedbackReport = (input: {
     pageUrl: window.location.href,
     userAgent: navigator.userAgent,
     // Provider names/models are useful for diagnosis. API keys are deliberately never included.
-    app: { theme: input.theme, fontSize: input.fontSize, activeProvider: active, model, shareStructureEnabled: Boolean(input.outputPreference.shareStructure) },
+    app: { version: appBuildInfo.version, gitCommit: appBuildInfo.gitCommit, buildTime: appBuildInfo.buildTime, theme: input.theme, fontSize: input.fontSize, activeProvider: active, model, shareStructureEnabled: Boolean(input.outputPreference.shareStructure) },
     conversation: input.messages.slice(-12).map(({ sender, timestamp, text, fullText }) => ({
       sender,
       timestamp,

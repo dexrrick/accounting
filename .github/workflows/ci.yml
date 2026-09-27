@@ -33,6 +33,7 @@ jobs:
 
       - name: Production Build (TypeScript & Vite)
         env:
+          APP_GIT_COMMIT: ${{ github.sha }}
           # Prefer a GitHub Actions repository variable. A secret also works for existing setups.
           VITE_FEEDBACK_ENDPOINT: ${{ vars.VITE_FEEDBACK_ENDPOINT || secrets.VITE_FEEDBACK_ENDPOINT }}
         run: npm run build

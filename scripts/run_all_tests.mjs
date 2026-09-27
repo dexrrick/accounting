@@ -24,6 +24,7 @@ const testSuites = [
   { name: 'Authority and Domain Conjunctive Retrieval', file: 'test_retrieval_authority_domain_conjunction.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Labelled Retrieval Quality Evaluation', file: 'test_retrieval_quality_evaluation.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Provider Boundary Safety', file: 'test_provider_boundary_safety.mjs', layer: 'provider-resilience', tier: 'smoke' },
+  { name: 'Feedback Build Metadata', file: 'test_feedback_build_metadata.mjs', layer: 'ux-resilience', tier: 'smoke' },
   { name: 'Official Source Failure Safety', file: 'test_official_source_failure_safety.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Phase 7 Coverage Registry', file: 'test_phase7_coverage_registry.mjs', layer: 'coverage-governance', tier: 'full' },
   { name: 'Singapore Knowledge Routing Benchmark', file: 'test_singapore_knowledge_benchmark.mjs', layer: 'coverage-governance', tier: 'smoke' },
