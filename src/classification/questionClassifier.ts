@@ -32,6 +32,52 @@ export interface QuestionClassificationResult {
   reasoning: string;
 }
 
+function normalizeJurisdictionName(value: string): string {
+  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+const TAX_JURISDICTION_NAMES: ReadonlySet<string> = (() => {
+  const names = new Set<string>();
+  if (typeof Intl.DisplayNames === 'function') {
+    const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    for (const first of alphabet) {
+      for (const second of alphabet) {
+        const code = `${first}${second}`;
+        const name = displayNames.of(code);
+        // Invalid two-letter codes fall back to themselves. Keep only actual
+        // region names and compare complete one-to-five-word complements.
+        if (name && name.toUpperCase() !== code) names.add(normalizeJurisdictionName(name));
+      }
+    }
+  }
+  for (const alias of [
+    'US', 'U.S.', 'USA', 'U.S.A.', 'UK', 'U.K.', 'Britain', 'Great Britain',
+    'UAE', 'Republic of Korea', 'South Korea', 'North Korea', 'Republic of China'
+  ]) names.add(normalizeJurisdictionName(alias));
+  return names;
+})();
+
+function hasForeignJurisdictionTarget(complement: string): boolean {
+  const words = normalizeJurisdictionName(complement).split(' ').filter(Boolean);
+  while (words.length && ['a', 'an', 'the'].includes(words[0])) words.shift();
+  if (words.length === 0) return false;
+
+  const explicitForeignTarget = /^(?:foreign|overseas|abroad|host)\s+(?:country|jurisdiction|territory|tax authority)$/.test(words.join(' ')) ||
+    /^another\s+(?:country|jurisdiction|territory)$/.test(words.join(' '));
+  if (explicitForeignTarget) return true;
+
+  // Match the complete jurisdiction name at the beginning of the complement,
+  // allowing a short following phrase such as "for the services".
+  for (let length = 1; length <= Math.min(5, words.length); length += 1) {
+    const name = words.slice(0, length).join(' ');
+    if (name.includes('singapore')) return false;
+    if (TAX_JURISDICTION_NAMES.has(name)) return true;
+  }
+  return false;
+}
+
 /**
  * Deterministic Question Classifier for Singapore Accounting & Statutory domains.
  * Accurately detects multi-authority questions, time-sensitivity, and missing facts.
@@ -55,8 +101,16 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:in|into|under|to|for)\s+singapore\b/i.test(query) ||
     /\bsingapore(?:an)?\s+(?:income\s+)?tax\b/i.test(query)
   );
-  const explicitlyForeignTaxTarget = taxOutcomeContext &&
-    /\b(?:taxable|taxed|tax treatment|tax liability|subject to tax)\b[^.!?]{0,100}\b(?:in|under|by)\s+(?:the\s+)?(?:foreign|host|another|overseas|[a-z][a-z-]{2,})\b/i.test(query);
+  // Suppress IRAS only when the tax outcome is directly tied to an explicit
+  // foreign jurisdiction. Do not let a later preposition in an accounting
+  // clause (for example, "accounting treatment in the financial statements")
+  // get attached to an earlier mention of tax treatment.
+  const foreignTaxTargetCandidates = [...query.matchAll(
+    /\b(?:taxable|taxed|subject\s+to\s+tax|tax\s+(?:treatment|liability))\s+(?:in|under|by)\s+(?:(?:the|a|an)\s+)?([a-z][a-z-]*(?:\s+[a-z][a-z-]*){0,5})/gi
+  )];
+  const explicitlyForeignTaxTarget = taxOutcomeContext && foreignTaxTargetCandidates.some(match =>
+    hasForeignJurisdictionTarget(match[1] || '')
+  );
   const foreignTaxOnlyContext = explicitlyForeignTaxTarget && !requestsSingaporeTaxTreatment && !/\biras\b/i.test(query);
   const employerComplianceContext = /\b(?:employer|payroll|ir8a|ir21|ais submission|report employee|withhold monies)\b/i.test(query);
   const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(q) ||

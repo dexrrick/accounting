@@ -120,7 +120,10 @@ assert.doesNotMatch(mixed.messageText,/always claimable|30 November/);
 assert.deepEqual(mixed.scenarioState.directGroups[0].lines.map(line=>[line.accountName,line.debit,line.credit]),journal.lines.map(line=>[line.accountName,line.debit,line.credit]));
 const actualMixedContext=await buildGroundedReasoningContext(mixedQuery,null,{
   retrieveSources:async()=>[],getSourceById:()=>undefined,findSourcesByStandardOrAct:()=>[]
-},undefined,{discoveryAdapter:{discoverOfficialSourceCandidates:async()=>[]}});
+},undefined,{
+  discoveryAdapter:{discoverOfficialSourceCandidates:async()=>[]},
+  officialDomainSearchAdapter:{searchOfficialDomainCandidates:async()=>[],getLastSearchTrace:()=>[]}
+});
 const proposedAccounting=renderIrasEvidenceResponse({
   treatment:'Entertainment is an operating expense, recorded at the total amount paid including GST if claimable.',
   requiredAccounts:[
@@ -147,6 +150,64 @@ try {
   assert.equal(fetchCalls,0,'Local answer must precede Gemini semantic extraction and source retrieval');
   assert.match(local.messageText,/8%/);
   assert.doesNotMatch(local.messageText,/Income Tax Act|Offline Mode/);
+  const local2024=await processAccountingQuery(dated2024Case.question,null,'SFRS_I',{activeProvider:'gemini',gemini:{apiKey:'non-secret-test-placeholder',model:'gemini-3.5-flash-lite'}});
+  assert.equal(fetchCalls,0,'The dated 2024 local calculation also resolves before any network call');
+  assert.match(local2024.messageText,/9%/);
+  assert.match(local2024.messageText,/SGD 90\.00/);
+
+  const noNetworkFallback={
+    discoveryAdapter:{discoverOfficialSourceCandidates:async()=>[]},
+    officialDomainSearchAdapter:{searchOfficialDomainCandidates:async()=>[],getLastSearchTrace:()=>[]}
+  };
+  const localGstContext=async queryText=>{
+    const localRecords=/2024/.test(queryText)?[rate2024]:[rate,timing];
+    return buildGroundedReasoningContext(queryText,null,{
+      retrieveSources:async()=>localRecords,
+      getSourceById:id=>UNIFIED_SOURCE_REGISTRY[id],
+      findSourcesByStandardOrAct:()=>localRecords
+    },undefined,noNetworkFallback);
+  };
+  for (const calculationQuery of [
+    query,
+    query.replace('SGD 1,000', 'SGD 1,000.50'),
+    query.replace('What are output GST and the invoice total?', 'Calculate output GST and invoice total.'),
+    query.replace('What are output GST and the invoice total?', 'How much output GST should the supplier charge, and what is the total invoice amount?')
+  ]) {
+    const calculationContext=await localGstContext(calculationQuery);
+    assert.equal(calculationContext.evidenceQuality.status,'LOCAL_SUFFICIENT',
+      'A complete standalone output GST/invoice-total calculation is covered by the admitted dated local rate.');
+    assert.deepEqual(calculationContext.evidenceQuality.uncoveredTopicIds,[]);
+  }
+
+  const compositeQuery=query.replace('What are output GST and the invoice total?',
+    'What are output GST and the invoice total, and should the supplier register for GST?');
+  const compositeContext=await localGstContext(compositeQuery);
+  assert.equal(compositeContext.evidenceQuality.status,'LIMITED',
+    'A calculable amount does not satisfy the separate supplier-registration question.');
+  assert.ok(compositeContext.evidenceQuality.uncoveredTopicIds.some(id=>id.startsWith('iras-authority-query-')));
+  const earlierCompositeContext=await localGstContext(
+    `Should the supplier register for GST? ${query}`
+  );
+  assert.equal(earlierCompositeContext.evidenceQuality.status,'LIMITED',
+    'An unsupported request before the arithmetic question remains in the full-query scope.');
+  assert.ok(earlierCompositeContext.evidenceQuality.uncoveredTopicIds.some(id=>id.startsWith('iras-authority-query-')));
+  for (const extraRequest of ['Summarise GST filing obligations.', 'List any GST return obligations.']) {
+    const extraRequestContext=await localGstContext(`${extraRequest} ${query}`);
+    assert.equal(extraRequestContext.evidenceQuality.status,'LIMITED',
+      'Unknown imperative content before a calculation request must remain in the full-query scope.');
+    assert.ok(extraRequestContext.evidenceQuality.uncoveredTopicIds.some(id=>id.startsWith('iras-authority-query-')));
+  }
+
+  const missingRegistrationQuery=query.replace('A GST-registered Singapore supplier','A Singapore supplier');
+  const missingRegistrationContext=await localGstContext(missingRegistrationQuery);
+  assert.notEqual(missingRegistrationContext.evidenceQuality.status,'LOCAL_SUFFICIENT',
+    'The calculator shortcut requires an explicitly GST-registered supplier.');
+
+  const conflictingDatesQuery='A GST-registered Singapore supplier made a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2023; the invoice was issued on 2 July 2023 and payment was received on 1 July 2023. What are output GST and the invoice total?';
+  const conflictingDatesContext=await localGstContext(conflictingDatesQuery);
+  assert.notEqual(conflictingDatesContext.evidenceQuality.status,'LOCAL_SUFFICIENT',
+    'Conflicting supply, invoice and payment dates do not qualify for deterministic calculation coverage.');
+
   let gateObserved=false;
   globalThis.fetch=async(input)=>{
     if(String(input).includes('generativelanguage.googleapis.com')) assert.ok(gateObserved,'Mixed journal requests must evaluate evidence before a provider call');

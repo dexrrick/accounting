@@ -238,4 +238,19 @@ assert.ok(section13wMixed.authorities.includes('IRAS'));
 assert.ok(section13wMixed.authorities.includes('ACRA'));
 assert.equal(section13wMixed.multiAuthority, true, 'An explicit Section 13W accounting question must remain mixed.');
 
+const foreignEmployeeTax = classifyQuestion('A Singapore company sends its employee to Japan. Is the employee’s salary taxable in Japan?');
+assert.ok(!foreignEmployeeTax.authorities.includes('IRAS'), 'A direct foreign-country tax question remains outside Singapore IRAS routing.');
+const lowercaseForeignTax = classifyQuestion('Is the employee salary taxable in japan?');
+assert.ok(!lowercaseForeignTax.authorities.includes('IRAS'), 'Foreign-country matching does not depend on title-case country spelling.');
+const multiwordForeignTax = classifyQuestion('Is the employee salary taxable in Hong Kong?');
+assert.ok(!multiwordForeignTax.authorities.includes('IRAS'), 'A complete multiword jurisdiction name is recognized as a foreign target.');
+const sentenceInitialForeignTax = classifyQuestion('Tax treatment in Japan for an employee salary.');
+assert.ok(!sentenceInitialForeignTax.authorities.includes('IRAS'), 'A sentence-initial direct foreign tax target remains foreign-only.');
+const singaporeEmployeeTax = classifyQuestion('Is the employee salary taxable in Singapore?');
+assert.ok(singaporeEmployeeTax.authorities.includes('IRAS'), 'An explicit Singapore tax target remains routed to IRAS.');
+const financialStatementTaxLanguage = classifyQuestion('Explain the tax treatment in the financial statements for the disposal of preference shares.');
+assert.ok(financialStatementTaxLanguage.authorities.includes('IRAS'), 'A reporting context is not misread as a foreign tax jurisdiction.');
+const fullTaxedForeignIncome = classifyQuestion('Is foreign-sourced income taxed in full?');
+assert.ok(fullTaxedForeignIncome.authorities.includes('IRAS'), 'The ordinary complement "in full" is not mistaken for a foreign jurisdiction.');
+
 console.log('PASS | IRAS case questions identify material tax facts without burdening conceptual queries');

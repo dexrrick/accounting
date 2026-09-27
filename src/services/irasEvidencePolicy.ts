@@ -13,7 +13,7 @@ import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegis
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
   const explicitTaxQuestion = Boolean(query?.split(/[.!?\n;]+/).some(clause =>
     /\b(?:gst|tax|iras|ir21|ir8a|withholding|deduct\w*|claim\w*|capital allowances?|section\s+(?:13w|14n)|zero[ -]rated|out[ -]of[ -]scope)\b/i.test(clause) &&
-    /\b(?:can|whether|what|how|when|which|should|does|do we|is (?:it|this|the)|are (?:we|these)|explain|advise|assess|determine|confirm|eligib\w*)\b/i.test(clause)
+    /\b(?:can|whether|what|how|when|which|should|does|do we|is (?:it|this|the)|are (?:we|these)|explain|advise|assess|determine|confirm|calculate|compute|work\s+out|eligib\w*)\b/i.test(clause)
   ));
   if (!classification.authorities.includes('IRAS') && !explicitTaxQuestion) return false;
   // A journal using an explicitly stated GST amount is not a request to make

@@ -32,6 +32,7 @@ import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targ
 import { defaultExternalSourceValidator } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
+import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
@@ -214,6 +215,99 @@ function provisionalIrasDiscoveryTopic(query: string): MappedCoverageTopic {
     shortDescription: `Transient ${populationContext} routing context derived from the complete user query; not reviewed knowledge.`
   } as unknown as MappedCoverageTopic;
   return topic;
+}
+
+/**
+ * The query-only evidence scope may be closed by the deterministic GST
+ * calculator only when the sole requested outcome is the output GST and
+ * invoice total. The calculator separately verifies the stated facts and the
+ * admitted dated Section 16 rate record.
+ */
+function isStandaloneOutputGstCalculationRequest(query: string): boolean {
+  const text = query.normalize('NFC').trim();
+  const requestStart = /\b(?:what|which|when|where|why|how|whether|if|can|could|should|do|does|did|will|would|explain|advise|assess|determine|confirm|calculate|compute|work\s+out)\b/i.exec(text);
+  if (!requestStart || requestStart.index === undefined) return false;
+
+  // Positively account for every clause before the request. This lets the
+  // calculator facts pass without maintaining a growing list of forbidden
+  // verbs or silently discarding arbitrary preceding text.
+  const rawPrefix = text.slice(0, requestStart.index).trim();
+  if (rawPrefix.includes('?')) return false;
+  const prefix = rawPrefix.replace(/[.!]+$/g, '');
+  // Keep decimal points in amounts such as SGD 1,000.50 intact.
+  const factClauses = prefix.split(/[;]|(?<!\d)\.(?!\d)|[!\n]+/).map(clause => clause.trim()).filter(Boolean);
+  if (factClauses.length !== 2 || !isSupportedStandardRatedSupplyFact(factClauses[0]) ||
+      !isSupportedAlignedInvoicePaymentFact(factClauses[1])) return false;
+
+  const request = text.slice(requestStart.index).trim().replace(/[?.!]+$/g, '').replace(/\s+/g, ' ').toLowerCase();
+  const outputTax = '(?:output\\s+(?:gst|tax)(?:\\s+amount)?|gst\\s+amount)';
+  const invoiceTotal = '(?:invoice\\s+total|total\\s+invoice\\s+amount)';
+  const article = '(?:the\\s+)?';
+  const calculationRequests = [
+    new RegExp(`^what\\s+(?:is|are)\\s+${article}${outputTax}(?:\\s+and\\s+${article}${invoiceTotal})?$`, 'i'),
+    new RegExp(`^what\\s+(?:is|are)\\s+${article}${invoiceTotal}(?:\\s+and\\s+${article}${outputTax})?$`, 'i'),
+    new RegExp(`^(?:calculate|compute|work\\s+out|determine)\\s+${article}${outputTax}(?:\\s+and\\s+${article}${invoiceTotal})?$`, 'i'),
+    new RegExp(`^how\\s+much\\s+(?:output\\s+)?(?:gst|tax)(?:\\s+amount)?(?:\\s+(?:should|must)\\s+(?:we|i|the\\s+supplier)\\s+(?:charge|collect))?(?:,?\\s+and\\s+what\\s+(?:is|are)\\s+${article}${invoiceTotal})?$`, 'i')
+  ];
+  // The whole request tail must consist of supported calculator outputs.
+  // Additional requested concepts before or after them keep the full-query
+  // provisional scope uncovered.
+  return calculationRequests.some(pattern => pattern.test(request));
+}
+
+function isSupportedStandardRatedSupplyFact(clause: string): boolean {
+  const amount = '(?:SGD\\s*|S\\$\\s*)(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d{1,2})?';
+  const month = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)';
+  const date = `(?:\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\/\\d{1,2}\\/\\d{4}|\\d{1,2}\\s+${month}\\s+\\d{4}|${month}\\s+\\d{1,2},?\\s+\\d{4})`;
+  return new RegExp(
+    `^(?:a\\s+|the\\s+)?GST[ -]registered(?:\\s+Singapore)?\\s+supplier\\s+(?:made|makes|supplied|provided)\\s+(?:a\\s+)?(?:standard[ -]rated\\s+(?:domestic\\s+)?|domestic\\s+standard[ -]rated\\s+)(?:taxable\\s+)?supply\\s+(?:for|of)\\s+${amount}\\s+tax[ -]exclusive\\s+(?:on|dated)\\s+${date}$`,
+    'i'
+  ).test(clause);
+}
+
+function isSupportedAlignedInvoicePaymentFact(clause: string): boolean {
+  const sameDate = '(?:that|this|same|the same)\\s+(?:date|day)';
+  const invoiceAndPayment = new RegExp(
+    `^(?:the\\s+)?invoice\\s+and\\s+(?:the\\s+)?payment\\s+(?:(?:both\\s+)?were(?:\\s+made)?|occurred|took\\s+place)\\s+(?:on\\s+)?${sameDate}$`,
+    'i'
+  );
+  const issuedAndPaid = new RegExp(
+    `^(?:the\\s+)?invoice\\s+(?:was\\s+)?(?:issued|dated)\\s+(?:on\\s+)?${sameDate}\\s+and\\s+(?:the\\s+)?payment\\s+(?:was\\s+)?(?:made|paid|received)\\s+(?:on\\s+)?${sameDate}$`,
+    'i'
+  );
+  return invoiceAndPayment.test(clause) || issuedAndPaid.test(clause);
+}
+
+function applyStandaloneGstCalculationCoverage(
+  query: string,
+  assessment: EvidenceQualityAssessment,
+  missingFacts: string[]
+): EvidenceQualityAssessment {
+  const uncoveredProvisionalIds = assessment.uncoveredTopicIds.filter(id => id.startsWith('iras-authority-query-'));
+  if (uncoveredProvisionalIds.length !== 1 || !isStandaloneOutputGstCalculationRequest(query) ||
+      !computeVerifiedStandardGst(query, assessment.eligibleRecords, assessment.targetDate, missingFacts)) {
+    return assessment;
+  }
+
+  const covered = new Set(uncoveredProvisionalIds);
+  const uncoveredTopicIds = assessment.uncoveredTopicIds.filter(id => !covered.has(id));
+  const uncoveredConceptGroups = assessment.uncoveredConceptGroups
+    ? Object.fromEntries(Object.entries(assessment.uncoveredConceptGroups).filter(([id]) => !covered.has(id)))
+    : undefined;
+  const status: EvidenceQualityAssessment['status'] = assessment.missingFacts.length > 0 || uncoveredTopicIds.length > 0
+    ? 'LIMITED'
+    : assessment.eligibleRecords.every(record => record.provenance === 'LOCAL_STATIC')
+      ? 'LOCAL_SUFFICIENT'
+      : 'RETRIEVED_SUFFICIENT';
+  return {
+    ...assessment,
+    status,
+    coveredTopicIds: [...assessment.coveredTopicIds, ...uncoveredProvisionalIds],
+    uncoveredTopicIds,
+    ...(uncoveredConceptGroups && Object.keys(uncoveredConceptGroups).length > 0
+      ? { uncoveredConceptGroups }
+      : { uncoveredConceptGroups: undefined })
+  };
 }
 
 interface CachedDiscoveryAdapters {
@@ -1003,14 +1097,16 @@ export async function resolveMappedOfficialSourceFallback(
     if (topics.length === 0) return false;
     const registeredTopics = topics.filter(topic => !topic.id.startsWith('iras-authority-query-'));
     const provisional = topics.filter(topic => topic.id.startsWith('iras-authority-query-'));
-    if (registeredTopics.length > 0 && registeredTopics.every(topic => !topic.domainId.startsWith('IRAS_'))) {
-      return registeredTopics.every(topic => records.some(record => record.tags.includes(topic.id) &&
+    const irasTopics = registeredTopics.filter(topic => topic.domainId.startsWith('IRAS_'));
+    const nonIrasTopics = registeredTopics.filter(topic => !topic.domainId.startsWith('IRAS_'));
+    const nonIrasCovered = nonIrasTopics.every(topic => records.some(record => record.tags.includes(topic.id) &&
         attempts.some(attempt => attempt.topicId === topic.id && attempt.fetchStatus === 'SUCCESS' &&
           attempt.titleMatched && attempt.contentMatched && attempt.finalUrl === record.canonicalSourceUrl)));
-    }
+    if (!nonIrasCovered) return false;
+    if (irasTopics.length === 0 && provisional.length === 0) return registeredTopics.length > 0;
     const assessment = evaluateEvidenceQuality({
       query,
-      topicIds: registeredTopics.map(topic => topic.id),
+      topicIds: irasTopics.map(topic => topic.id),
       provisionalTopics: provisional,
       records,
       missingFacts: [],
@@ -1022,7 +1118,7 @@ export async function resolveMappedOfficialSourceFallback(
   const topicCovered = (topic: MappedCoverageTopic): boolean => hasAdequateCoverage([topic]);
   const registeredCoverageAssessment = () => evaluateEvidenceQuality({
     query,
-    topicIds: topicsRequiringFallback.map(topic => topic.id),
+    topicIds: topicsRequiringFallback.filter(topic => topic.domainId.startsWith('IRAS_')).map(topic => topic.id),
     provisionalTopics: [],
     records,
     missingFacts: [],
@@ -1031,10 +1127,12 @@ export async function resolveMappedOfficialSourceFallback(
   });
   const unresolvedRegisteredTopics = (): MappedCoverageTopic[] => {
     const uncovered = new Set(registeredCoverageAssessment().uncoveredTopicIds);
-    return topicsRequiringFallback.filter(topic => uncovered.has(topic.id));
+    return topicsRequiringFallback.filter(topic => topic.domainId.startsWith('IRAS_')
+      ? uncovered.has(topic.id)
+      : !hasAdequateCoverage([topic]));
   };
   const registeredCoverageAdequate = (): boolean => topicsRequiringFallback.length > 0 &&
-    registeredCoverageAssessment().uncoveredTopicIds.length === 0;
+    unresolvedRegisteredTopics().length === 0;
 
   // Stage 1: try every applicable reviewed map before beginning any discovery.
   for (const { topic, applicablePointers, historicalIrasQuery } of topicWork) {
@@ -1432,12 +1530,12 @@ export async function buildGroundedReasoningContext(
     ...getExplicitlyLinkedGstRateRecords(userInput, localRetrieved, retriever)
   ];
   const initiallyMatchedCoverage = getCoverageTopicsByIds(evidenceTopicIds) as MappedCoverageTopic[];
-  const localQuality = irasPolicy ? evaluateEvidenceQuality({
+  const localQuality = irasPolicy ? applyStandaloneGstCalculationCoverage(userInput, evaluateEvidenceQuality({
     query: userInput, topicIds: evidenceTopicIds, records: contextualLocalRetrieved,
     missingFacts: classification.missingFacts,
     provisionalTopics: authorityDiscoveryContext ? [authorityDiscoveryContext] : undefined,
     authorities: ['IRAS']
-  }) : undefined;
+  }), classification.missingFacts) : undefined;
   const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
   const fallbackTopicIds = initiallyMatchedCoverage
     .filter(topic => !irasPolicy || topic.id.startsWith('iras-'))
@@ -1453,12 +1551,12 @@ export async function buildGroundedReasoningContext(
     localEvidenceAdequate: localQuality ? localQuality.uncoveredTopicIds.length === 0 && localQuality.eligibleRecords.length > 0 : false
   });
   const allRetrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
-  const evidenceQuality = irasPolicy ? evaluateEvidenceQuality({
+  const evidenceQuality = irasPolicy ? applyStandaloneGstCalculationCoverage(userInput, evaluateEvidenceQuality({
     query: userInput, topicIds: evidenceTopicIds, records: allRetrieved,
     missingFacts: classification.missingFacts, sourceMapFallbackTrace: mappedFallback.trace,
     provisionalTopics: mappedFallback.provisionalTopics.length ? mappedFallback.provisionalTopics : authorityDiscoveryContext ? [authorityDiscoveryContext] : undefined,
     authorities: ['IRAS']
-  }) : undefined;
+  }), classification.missingFacts) : undefined;
   const retrieved = evidenceQuality ? evidenceQuality.eligibleRecords : allRetrieved;
 
   // 3. Four-Tier Evidence Sorting based explicitly on evidenceTier
