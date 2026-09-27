@@ -32,6 +32,40 @@ function isVisibleListItemBlock(text: string): boolean {
   return /^(?:\|\s*)*[•◦▪](?:\s|$)/.test(text);
 }
 
+function isKnownNavigationLabel(text: string): boolean {
+  return /^(?:on this page|share)\s*:?$/i.test(text.trim());
+}
+
+function isFallbackEvidenceParagraph(text: string): boolean {
+  const trimmed = text.trim();
+  // The HTML text extractor preserves headings and list markers as separate
+  // blocks. Source-only fallback should quote complete prose, never those
+  // navigation, heading, or list fragments.
+  return !isKnownNavigationLabel(trimmed) && !isVisibleListItemBlock(trimmed) &&
+    !/^\d+[.)]\s/.test(trimmed) && /[.!?]["')\]]?$/.test(trimmed);
+}
+
+function isMappedTopicFallbackOpening(text: string, tags: string[]): boolean {
+  const normalized = text.trim();
+  if (tags.includes('iras-employer-ir21')) {
+    // Select the mapped page's general rule opening; FAQs and dated examples
+    // often repeat the same terms but do not establish this user's facts.
+    return /^Generally,\s+when your non[\s-]+Singapore Citizen employee\b/i.test(normalized);
+  }
+  if (tags.includes('iras-employee-bonus-timing')) {
+    // These are conservative selection anchors only. The returned text stays
+    // unchanged and must still pass exact-source verification. Example-bound
+    // YA outcomes (including an attached "However" advance passage) stay out.
+    return [
+      /^For contractual bonus,/i,
+      /^If the employer['’]s obligation to pay bonus is contingent upon conditions to be met in the future,/i,
+      /^For discretionary bonuses that subsequently become legally binding,/i,
+      /^On the other hand,\s+non[\s-]contractual bonus\b/i
+    ].some(pattern => pattern.test(normalized));
+  }
+  return true;
+}
+
 function normalizedFallbackTerms(value: string): string[] {
   return value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(word => {
     if (word.endsWith('ies') && word.length > 5) return `${word.slice(0, -3)}y`;
@@ -54,10 +88,17 @@ function selectEvidenceOnlyQuotes(context: GroundedReasoningContext, query: stri
   const selected: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number }> = [];
 
   records.forEach((record, recordOrder) => {
+    const liveExtractionCandidate = record.provenance === 'LIVE_EXTERNAL';
     const sourceBlocks = record.sourceText.split(/\r?\n[\t ]*\r?\n+/).map(text => text.trim()).filter(Boolean);
     const paragraphs: string[] = [];
     for (let index = 0; index < sourceBlocks.length;) {
       const block = sourceBlocks[index];
+      // These two page controls are known navigation labels, not colon-ended
+      // rule introductions. Skip the label and keep evaluating later prose.
+      if (liveExtractionCandidate && isKnownNavigationLabel(block)) {
+        index += 1;
+        continue;
+      }
       if (!/:$/.test(block)) {
         paragraphs.push(block);
         index += 1;
@@ -83,7 +124,8 @@ function selectEvidenceOnlyQuotes(context: GroundedReasoningContext, query: stri
       }
       const text = paragraphs.slice(paragraphOrder, attachedEnd + 1).join(' ');
       const maximumLength = attachedEnd > paragraphOrder ? 3_200 : 1_600;
-      if (text.length < 40 || text.length > maximumLength) {
+      if ((liveExtractionCandidate && text.length < 40) || text.length > maximumLength ||
+          (liveExtractionCandidate && !paragraphs.slice(paragraphOrder, attachedEnd + 1).every(isFallbackEvidenceParagraph))) {
         paragraphOrder = attachedEnd + 1;
         continue;
       }
@@ -91,6 +133,16 @@ function selectEvidenceOnlyQuotes(context: GroundedReasoningContext, query: stri
       const topicMatches = [...topicTerms].filter(term => words.has(term)).length;
       const queryMatches = [...queryTerms].filter(term => words.has(term)).length;
       let score = topicMatches * 2 + queryMatches * 3;
+      const mappedTopicOpening = !liveExtractionCandidate || isMappedTopicFallbackOpening(text, record.tags);
+      if (!mappedTopicOpening) {
+        paragraphOrder = attachedEnd + 1;
+        continue;
+      }
+      // An explicit mapped-topic opening is itself sufficient to qualify for
+      // this bounded source-only fallback even if query wording differs.
+      if (!liveExtractionCandidate || record.tags.includes('iras-employer-ir21') || record.tags.includes('iras-employee-bonus-timing')) {
+        score = Math.max(score, 1);
+      }
       if (bonusTimingRequested) {
         if (/\bcontractual\b/i.test(text)) score += 3;
         if (/\bnon[ -]contractual\b/i.test(text)) score += 4;
@@ -209,9 +261,23 @@ export function renderIrasEvidenceResponse(
   const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE' || mode === 'PROVIDER_NO_CLAIMS'
     ? selectEvidenceOnlyQuotes(context, query)
     : parsed.taxClaims;
-  const verification = verifyEvidenceClaims(inputClaims, quality.eligibleRecords, {
+  let verification = verifyEvidenceClaims(inputClaims, quality.eligibleRecords, {
     missingFacts: context.missingFacts, targetDate: quality.targetDate
   });
+  let answerPath = mode === 'LOCAL' ? 'VALIDATED_LOCAL' : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode;
+  if (mode === 'PROVIDER' && verification.accepted.length === 0) {
+    const sourceOnlyClaims = selectEvidenceOnlyQuotes(context, query);
+    const sourceOnlyVerification = verifyEvidenceClaims(sourceOnlyClaims, quality.eligibleRecords, {
+      missingFacts: context.missingFacts, targetDate: quality.targetDate
+    });
+    verification = {
+      accepted: sourceOnlyVerification.accepted,
+      // Keep the provider rejection visible for diagnostics even when an
+      // independently selected source quotation supplies a safe fallback.
+      rejected: [...verification.rejected, ...sourceOnlyVerification.rejected]
+    };
+    answerPath = 'PROVIDER_CLAIMS_REJECTED';
+  }
   const calculation = computeVerifiedStandardGst(query, quality.eligibleRecords, quality.targetDate, unresolvedGstFacts(context));
   const applicationConclusions = quality.uncoveredTopicIds.length === 0
     ? evaluateIrasApplications(query, quality.eligibleRecords, quality.targetDate)
@@ -238,6 +304,7 @@ export function renderIrasEvidenceResponse(
   }
   if (mode === 'PROVIDER_FAILURE') lines.push('The provider could not complete the answer. The available source evidence is shown below.');
   if (mode === 'PROVIDER_NO_CLAIMS') lines.push('The provider returned no verifiable tax claims. Only complete source paragraphs that passed claim verification are shown below.');
+  if (answerPath === 'PROVIDER_CLAIMS_REJECTED') lines.push('The provider claims did not pass verification. Independently selected source quotations are shown below if they also pass the evidence checks.');
   if (quality.status === 'INSUFFICIENT' || quality.uncoveredTopicIds.length > 0) {
     lines.push('The available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.');
   }
@@ -306,7 +373,7 @@ export function renderIrasEvidenceResponse(
     evidenceQuality: quality, claimVerification: verification,
     calculation: calculation ? { ...calculation, verification: 'DETERMINISTIC_SOURCE_BACKED_CALCULATION' } : undefined,
     applicationConclusions,
-    answerPath: mode === 'LOCAL' ? 'VALIDATED_LOCAL' : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode,
+    answerPath,
     providerStatus
   };
 }

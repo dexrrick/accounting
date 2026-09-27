@@ -358,6 +358,36 @@ const completeAttachedSpan = verifyEvidenceClaims(
 assert.equal(completeAttachedSpan.accepted.length, 1,
   'An exact contiguous span including recognized attached paragraphs remains verifiable.');
 
+const overseasServicesRule = 'Services performed completely outside Singapore may only be zero-rated if it falls within the list of services described in section 21(3)(i). Consultancy services do not fall within the list of services.';
+const firstOverseasException = '• If your services are directly in connection with land or building located outside Singapore, you may zero-rate your services under section 21(3)(e).';
+const secondOverseasException = '• If your services are directly in connection with goods located outside Singapore at the time services are performed, you may zero-rate your services under section 21(3)(f).';
+const overseasExceptionRecord = makeLocalRecord({
+  sourceText: [overseasServicesRule, 'Exceptions:', firstOverseasException, secondOverseasException].join('\n\n')
+});
+const overseasRuleWithoutExceptions = verifyEvidenceClaims(
+  [makeClaim(overseasServicesRule, 'IRAS_LOCAL_VERIFIED')],
+  [overseasExceptionRecord],
+  { missingFacts: [] }
+);
+assert.equal(overseasRuleWithoutExceptions.rejected[0].reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION',
+  'A zero-rating paragraph cannot be quoted without its following Exceptions block.');
+
+const bareExceptionsLabel = verifyEvidenceClaims(
+  [makeClaim('Exceptions:', 'IRAS_LOCAL_VERIFIED')],
+  [makeLocalRecord({ sourceText: 'Exceptions:' })],
+  { missingFacts: [] }
+);
+assert.equal(bareExceptionsLabel.rejected[0].reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION',
+  'A colon-ended Exceptions label is not independently quotable.');
+
+const ruleWithUnsupportedExceptionsLabel = verifyEvidenceClaims(
+  [makeClaim(`${overseasServicesRule} Exceptions:`, 'IRAS_LOCAL_VERIFIED')],
+  [makeLocalRecord({ sourceText: `${overseasServicesRule}\n\nExceptions:` })],
+  { missingFacts: [] }
+);
+assert.equal(ruleWithUnsupportedExceptionsLabel.rejected[0].reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION',
+  'A rule plus an Exceptions label without its supporting list remains incomplete.');
+
 const unrelatedIfRule = 'A complete standalone rule requires a valid invoice for each claim.';
 const unrelatedIfParagraph = 'If the company requests a separate review, the application checks that request independently.';
 const unrelatedIfRecord = makeLocalRecord({ sourceText: `${unrelatedIfRule}\n\n${unrelatedIfParagraph}` });

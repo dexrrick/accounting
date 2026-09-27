@@ -27,7 +27,7 @@ export interface VerifyEvidenceClaimsOptions {
 }
 
 const APPLICATION_SOURCE_TYPES = new Set(['APPLICATION_RULE']);
-const ATTACHED_QUALIFICATION_START = /^(?:however\b|except\b|provided\b|unless\b|but\b|subject to\b|notwithstanding\b|nevertheless\b|in contrast\b)/i;
+const ATTACHED_QUALIFICATION_START = /^(?:however\b|except(?:ions?)?\b|provided\b|unless\b|but\b|subject to\b|notwithstanding\b|nevertheless\b|in contrast\b)/i;
 const COMMON_ABBREVIATIONS = /\b(?:e\.g|i\.e|etc|mr|mrs|ms|dr|prof|no|nos|sec|secs|s|para|paras|art|arts|pt|ltd|pte|co)\.$/i;
 
 function normalizeEvidenceText(value: string): string {
@@ -36,6 +36,11 @@ function normalizeEvidenceText(value: string): string {
 
 export function startsAttachedEvidenceQualification(value: string): boolean {
   return ATTACHED_QUALIFICATION_START.test(normalizeEvidenceText(value));
+}
+
+function isIncompleteColonEndedQuote(value: string): boolean {
+  const normalized = normalizeEvidenceText(value);
+  return /:$/.test(normalized) || /^exceptions?$/i.test(normalized);
 }
 
 function normalizeApprovedHttpsUrl(value: unknown): string | undefined {
@@ -161,6 +166,7 @@ function quoteIsWholeSourceSpan(sourceText: string, quote: string): 'MATCH' | 'N
     .map(paragraph => paragraph.trim())
     .filter(Boolean);
   const normalizedQuote = normalizeEvidenceText(quote);
+  if (isIncompleteColonEndedQuote(normalizedQuote)) return 'OMITS_ATTACHED_QUALIFICATION';
 
   for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {
     const paragraph = paragraphs[paragraphIndex];
