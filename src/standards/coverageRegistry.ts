@@ -70,6 +70,8 @@ export interface SingaporeCoverageTopic {
   keywords: string[];
   /** Narrow query-only patterns for realistic phrasing that cannot be represented as stable lexical phrases. */
   queryPatterns?: string[];
+  /** Exact body phrases required before mapped source content can cover this topic. */
+  requiredContentTerms?: string[];
   /** Phrase-level negatives prevent a keyword hit from misclassifying nearby concepts. */
   exclusionKeywords: string[];
   /** Shared concept ID for legacy/new topic aliases that should count once in ranking. */
@@ -124,6 +126,7 @@ interface TopicSpec {
   domainId: SingaporeKnowledgeDomain;
   keywords?: string[];
   queryPatterns?: string[];
+  requiredContentTerms?: string[];
   exclusionKeywords?: string[];
   canonicalConceptId?: string;
   priority?: CoveragePriority;
@@ -169,6 +172,7 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
     requiredChecks: [...fullTopicPackChecks],
     keywords: spec.keywords ?? [],
     ...(spec.queryPatterns ? { queryPatterns: [...spec.queryPatterns] } : {}),
+    ...(spec.requiredContentTerms ? { requiredContentTerms: [...spec.requiredContentTerms] } : {}),
     exclusionKeywords: spec.exclusionKeywords ?? [],
     ...(spec.canonicalConceptId ? { canonicalConceptId: spec.canonicalConceptId } : {}),
     ...(spec.actOrStandard ? { actOrStandard: spec.actOrStandard } : {}),
@@ -502,8 +506,8 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-gst-trade-ins', title: 'GST Treatment of Trade-ins', domainId: 'IRAS_GST', priority: 'P2', keywords: ['trade-in gst', 'trade in gst', 'trade-in transaction'] },
   { id: 'iras-gst-reimbursements', title: 'Reimbursements and Disbursements', domainId: 'IRAS_GST', priority: 'P2', keywords: ['gst reimbursement', 'gst disbursement', 'reimbursements and disbursements'] },
   { id: 'iras-gst-employee-expenses', title: 'GST on Employee Expenses', domainId: 'IRAS_GST', priority: 'P2', keywords: ['employee expense gst', 'staff expense input tax', 'employee reimbursement gst'] },
-  { id: 'iras-gst-entertainment', title: 'GST on Entertainment and Meals', domainId: 'IRAS_GST', priority: 'P2', keywords: ['entertainment input tax', 'meals gst claim', 'business entertainment gst'], queryPatterns: [String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:meals?|dining|entertainment)\b[\s\S]{0,100}\b(?:customers?|clients?|suppliers?|business)\b`, String.raw`\b(?:meals?|dining|entertainment)\b[\s\S]{0,140}\b(?:customers?|clients?|suppliers?|business)\b[\s\S]{0,100}\b(?:gst|input tax|input gst)\b`] },
-  { id: 'iras-gst-motor-vehicles', title: 'GST on Motor Vehicles', domainId: 'IRAS_GST', priority: 'P1', keywords: ['motor vehicle gst', 'motor car input tax', 'car gst claim'], queryPatterns: [String.raw`\b(?:passenger\s+(?:motor\s+)?car|s-plate)\b[\s\S]{0,140}\b(?:gst|input tax|input gst)\b`, String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:passenger\s+(?:motor\s+)?car|s-plate)\b`], aliases: ['Purchase and Sale of Motor Vehicles', 'motor vehicle input tax'], actOrStandard: 'Goods and Services Tax (General) Regulations', sectionMatch: 'Regulation 25(1) and 27', sourceRecordIds: ['GST_REG26_BLOCKED_INPUT_TAX'] },
+  { id: 'iras-gst-entertainment', title: 'GST on Entertainment and Meals', domainId: 'IRAS_GST', priority: 'P2', keywords: ['entertainment input tax', 'meals gst claim', 'business entertainment gst'], requiredContentTerms: ['entertainment expenses', 'name of person entertained', 'purpose of entertainment'], queryPatterns: [String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:meals?|dining|entertainment)\b[\s\S]{0,100}\b(?:customers?|clients?|suppliers?|business)\b`, String.raw`\b(?:meals?|dining|entertainment)\b[\s\S]{0,140}\b(?:customers?|clients?|suppliers?|business)\b[\s\S]{0,100}\b(?:gst|input tax|input gst)\b`] },
+  { id: 'iras-gst-motor-vehicles', title: 'GST on Motor Vehicles', domainId: 'IRAS_GST', priority: 'P1', keywords: ['motor vehicle gst', 'motor car input tax', 'car gst claim'], queryPatterns: [String.raw`\b(?:passenger\s+(?:motor\s+)?car|s-plate)\b[\s\S]{0,140}\b(?:gst|input tax|input gst)\b`, String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:passenger\s+(?:motor\s+)?car|s-plate)\b`], aliases: ['Purchase and Sale of Motor Vehicles', 'motor vehicle input tax'], actOrStandard: 'Goods and Services Tax (General) Regulations', sectionMatch: 'Regulation 25(1) and 27' },
   { id: 'iras-gst-export-documentation', title: 'Export Documentation and Zero-rating Evidence', domainId: 'IRAS_GST', priority: 'P1', keywords: ['export documentation gst', 'export evidence', 'proof of export', 'documentation criteria', 'exported goods', 'cross-border digital services'] },
   { id: 'iras-gst-groups', title: 'GST Group Registration', domainId: 'IRAS_GST', priority: 'P2', keywords: ['gst group', 'gst group registration', 'group registration gst'] },
   { id: 'iras-gst-qualifying-funds', title: 'GST Remission for Qualifying Funds', domainId: 'IRAS_GST', priority: 'P2', keywords: ['qualifying fund gst', 'fund gst remission', 'gst remission fund'] },

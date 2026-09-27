@@ -205,6 +205,8 @@ assert.ok(managementWht.missingFacts.some(fact => /Payment or deemed-payment dat
 // contract has separate end-to-end tests in test_iras_evidence_pipeline.mjs.
 const mealQuery = exactPhraseCases[0].query;
 const mealMap = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_GST_INPUT_TAX_SOURCE_MAP');
+const mealPageHtml = htmlForMap(mealMap).replace('</main>',
+  '<table><tr><td>Entertainment expenses</td><td>Subject to the conditions for input tax claim, these claims are allowed if you have the supporting tax invoice addressed to you. Keep information on entertainment details such as name of person entertained and purpose of entertainment.</td></tr></table></main>');
 const policyMealGrounding = await buildGroundedReasoningContext(
   mealQuery,
   null,
@@ -213,7 +215,7 @@ const policyMealGrounding = await buildGroundedReasoningContext(
   {
     discoveryAdapter: { discoverOfficialSourceCandidates: async () => [] },
     webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
-    fetchOptions: { useCache: false, customFetch: async () => htmlResponse(htmlForMap(mealMap)) }
+    fetchOptions: { useCache: false, customFetch: async () => htmlResponse(mealPageHtml) }
   }
 );
 const mealGrounding = { ...policyMealGrounding, evidenceQuality: undefined };

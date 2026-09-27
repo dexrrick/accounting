@@ -1,5 +1,7 @@
 # IRAS evidence hardening: final continuation — 26/09/2026
 
+Further extraction, binding, and live-benchmark work is recorded in the [27/09/2026 continuation](iras_evidence_continuation_2026-09-27.md). This report preserves the 26/09/2026 baseline.
+
 **Overall status: LIVE_FAIL.** All 19 IRAS benchmark questions and the mixed customer-meal journal question were rerun through the production pipeline. Real Gemini requests and controlled IRAS retrieval were made where each case's path required them. The [sanitized 20-case capture](iras-live-2026-09-26/iras-e2e-captures-complete.jsonl) is the final run. It contains the classification, selected records, source-map attempts, actual fetches, provider attempts, final answer, citations, missing facts, dates, calculations and journal lines for each case. The fixture's provisional oracle and earlier reports remain separate; a safe abstention is not scored as a substantive answer.
 
 ## Implementation and independent review

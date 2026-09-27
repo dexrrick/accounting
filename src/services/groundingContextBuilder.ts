@@ -197,6 +197,11 @@ function containsTopicTerm(text: string, term: string): boolean {
   return Boolean(normalizedTerm && ` ${normalizedText} `.includes(` ${normalizedTerm} `));
 }
 
+function containsRequiredContentTermsInOneBlock(text: string, terms: string[]): boolean {
+  if (terms.length === 0) return true;
+  return text.split(/\n{2,}/).some(block => terms.every(term => containsTopicTerm(block, term)));
+}
+
 function isRelatedTopicRelevant(topic: MappedCoverageTopic, query: string): boolean {
   const q = normalizeEvidenceText(query);
   const phrases = [topic.title, ...(topic.aliases || []), ...topic.keywords]
@@ -313,6 +318,7 @@ function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
     topic.title,
     ...(topic.aliases || []),
     ...topic.keywords,
+    ...(topic.requiredContentTerms || []),
     ...(topic.paragraphHints || []),
     ...(topic.sectionHints || [])
   ].filter(term => term.trim().length > 2))];
@@ -326,40 +332,60 @@ function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
 export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = ''): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
-  const sentences = text.split(/(?<=[.!?])\s+|\n+/).map(sentence => sentence.trim()).filter(Boolean);
+  const sentences: Array<{ text: string; paragraphIndex: number }> = [];
+  let paragraphIndex = 0;
+  for (const part of text.split(/((?<=[.!?])\s+|\n+)/)) {
+    if (!part) continue;
+    if (/^\s+$/.test(part)) {
+      if (/\n/.test(part)) paragraphIndex++;
+      continue;
+    }
+    const sentence = part.trim();
+    if (sentence) sentences.push({ text: sentence, paragraphIndex });
+  }
   const normalizedTerms = terms.map(normalizeTopicTerm).filter(term => term.length > 2);
   const genericTerms = new Set(['the', 'and', 'for', 'can', 'with', 'from', 'what', 'which', 'under', 'this', 'that', 'are', 'our', 'claim', 'claimed', 'tax', 'gst', 'input', 'company', 'singapore']);
   const queryTerms = [...new Set(normalizeTopicTerm(query).split(/\s+/).filter(term => term.length >= 3 && !genericTerms.has(term)))];
   const matches = sentences
-    .map((sentence, index) => ({ sentence, index,
-      score: queryTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 5 : 0), 0) +
-        normalizedTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0)
+    .map(({ text: sentence, paragraphIndex }, index) => ({ sentence, paragraphIndex, index,
+      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0),
+      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0)
     }))
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.index - b.index);
+    .filter(item => item.topicMatches > 0 || item.queryMatches > 0)
+    // Keep at least one exact topic phrase in the excerpt even when generic
+    // query terms occur more often elsewhere on a long page.
+    .sort((a, b) => b.topicMatches - a.topicMatches || b.queryMatches - a.queryMatches || a.index - b.index);
   if (matches.length === 0) return '';
 
-  const chosen = new Map<number, string>();
-  let used = 0;
+  const chosen = new Map<number, { text: string; paragraphIndex: number }>();
+  const renderChosen = (segments: Map<number, { text: string; paragraphIndex: number }>): string => {
+    let output = '';
+    let previousIndex: number | undefined;
+    let previousParagraph: number | undefined;
+    for (const [index, segment] of [...segments.entries()].sort((a, b) => a[0] - b[0])) {
+      const separator = output
+        ? index === previousIndex! + 1 && segment.paragraphIndex === previousParagraph ? ' ' : '\n\n'
+        : '';
+      output += `${separator}${segment.text}`;
+      previousIndex = index;
+      previousParagraph = segment.paragraphIndex;
+    }
+    return output;
+  };
+
   for (const match of matches) {
-    const window = [match.index - 1, match.index, match.index + 1].filter(index => sentences[index] && !chosen.has(index));
-    const size = window.reduce((sum, index) => sum + sentences[index].length + 1, 0);
-    if (used + size > maxChars) continue;
-    used += size;
-    for (const index of [match.index - 1, match.index, match.index + 1]) {
+    // Try the matched sentence first. Context is added only when it fits, so
+    // high-volume surrounding prose cannot crowd a topic phrase out.
+    const window = [match.index, match.index - 1, match.index + 1];
+    for (const index of window) {
       const sentence = sentences[index];
-      if (sentence) chosen.set(index, sentence);
+      if (!sentence || chosen.has(index)) continue;
+      const proposed = new Map(chosen);
+      proposed.set(index, sentence);
+      if (renderChosen(proposed).length <= maxChars) chosen.set(index, sentence);
     }
   }
-  let output = '';
-  let previousIndex: number | undefined;
-  for (const [index, sentence] of [...chosen.entries()].sort((a, b) => a[0] - b[0])) {
-    const separator = output ? index === previousIndex! + 1 ? ' ' : '\n\n' : '';
-    if (output.length + sentence.length + separator.length > maxChars) break;
-    output += `${separator}${sentence}`;
-    previousIndex = index;
-  }
-  return output;
+  return renderChosen(chosen);
 }
 
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
@@ -568,11 +594,16 @@ export async function resolveMappedOfficialSourceFallback(
       return undefined;
     }
 
-    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', expectation.topicTerms, 5_000, query);
-    if (!excerpt || !expectation.topicTerms.some(term => containsTopicTerm(excerpt, term))) {
+    const requiredContentTerms = topic.requiredContentTerms || [];
+    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', [...expectation.topicTerms, ...requiredContentTerms], 5_000, query);
+    const requiredContentPresent = containsRequiredContentTermsInOneBlock(contentValidation.substantiveText || '', requiredContentTerms) &&
+      containsRequiredContentTermsInOneBlock(excerpt, requiredContentTerms);
+    if (!excerpt || !expectation.topicTerms.some(term => containsTopicTerm(excerpt, term)) || !requiredContentPresent) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
-      attempt.error = 'Validated page did not yield a relevant topic section for grounding.';
+      attempt.error = requiredContentPresent
+        ? 'Validated page did not yield a relevant topic section for grounding.'
+        : 'Fetched page does not contain all required topic-specific section phrases for grounding.';
       return undefined;
     }
     const record = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);

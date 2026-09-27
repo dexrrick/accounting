@@ -177,6 +177,77 @@ const confirmedSection14nAssessment = gate(confirmedSection14nQuery,
 assert.deepEqual(confirmedSection14nAssessment.eligibleRecords.map(record => record.id), [sec14nCurrentReviewed.id],
   'A stated 31 December 2024 FYE places the cost in the calendar basis period for YA 2025.');
 
+const section14Topic = 'cit_section_14';
+const generalDeduction = UNIFIED_SOURCE_REGISTRY.ITA_SEC14_GENERAL_DEDUCTION;
+assert.ok(generalDeduction, 'The curated Section 14 general-deduction record is present in the unified registry.');
+const genericExpenseQuery = 'Can a generic corporate expense be deducted for income tax?';
+const genericExpenseAssessment = gate(genericExpenseQuery, [section14Topic], [generalDeduction], { domain: 'IRAS_TAX' });
+assert.equal(genericExpenseAssessment.status, 'LOCAL_SUFFICIENT',
+  'A mapped, reviewed Section 14 source supports a general corporate-expense query without needing live evidence.');
+assert.deepEqual(genericExpenseAssessment.eligibleRecords.map(record => record.id), [generalDeduction.id]);
+
+const inMemorySection14 = await new InMemorySourceRetriever([generalDeduction]).retrieveSources({
+  query: genericExpenseQuery,
+  domain: 'IRAS_TAX',
+  authorities: ['IRAS'],
+  topicIds: [section14Topic],
+  maxResults: 1,
+  referenceDate: '2026-09-26'
+});
+assert.deepEqual(inMemorySection14.map(record => record.id), [generalDeduction.id],
+  'The local retriever returns the bound Section 14 record directly, without requiring a live retrieval trace.');
+
+const clonedReviewedSection14 = { ...generalDeduction };
+assert.equal(gate(genericExpenseQuery, [section14Topic], [clonedReviewedSection14], { domain: 'IRAS_TAX' }).status,
+  'LOCAL_SUFFICIENT', 'A faithful copy of the reviewed registry record keeps its explicit binding.');
+
+// A registry ID alone cannot launder substituted text into reviewed evidence.
+const genericBoundSection14 = {
+  ...generalDeduction,
+  sourceText: 'This corporate charge is governed by the applicable rules for the company.'
+};
+const boundGenericAssessment = gate(genericExpenseQuery, [section14Topic], [genericBoundSection14], { domain: 'IRAS_TAX' });
+assert.equal(boundGenericAssessment.status, 'INSUFFICIENT',
+  'A bound record with substituted content cannot borrow the canonical review.');
+assert.equal(boundGenericAssessment.rejectedRecords[0].code, 'BOUND_LOCAL_RECORD_MISMATCH');
+for (const altered of [
+  { isVerbatimText: !generalDeduction.isVerbatimText },
+  { sourceType: 'CURATED_SUMMARY' },
+  { urlVerificationStatus: generalDeduction.urlVerificationStatus === 'VERIFIED' ? 'CANDIDATE' : 'VERIFIED' },
+  { documentTitle: 'Unrelated official document' }
+]) {
+  const assessment = gate(genericExpenseQuery, [section14Topic], [{ ...generalDeduction, ...altered }], { domain: 'IRAS_TAX' });
+  assert.equal(assessment.status, 'INSUFFICIENT',
+    'Evidence semantics and URL provenance must match the reviewed local registry record.');
+  assert.equal(assessment.rejectedRecords[0].code, 'BOUND_LOCAL_RECORD_MISMATCH');
+}
+
+const unboundGenericSection14 = { ...genericBoundSection14, id: 'ITA_SEC14_GENERAL_DEDUCTION_UNBOUND' };
+const unboundGenericAssessment = gate(genericExpenseQuery, [section14Topic], [unboundGenericSection14], { domain: 'IRAS_TAX' });
+assert.equal(unboundGenericAssessment.status, 'INSUFFICIENT',
+  'A generic local record without the coverage sourceRecordIds binding still needs distinctive text matching.');
+assert.equal(unboundGenericAssessment.rejectedRecords[0].code, 'TOPIC_TEXT_NOT_DISTINCTIVE');
+
+for (const [id, overrides, expectedCode] of [
+  ['ITA_SEC14_BOUND_NEEDS_REVIEW', { sourceStatus: 'NEEDS_REVIEW' }, 'LOCAL_SOURCE_NOT_VERIFIED'],
+  ['ITA_SEC14_BOUND_STAGED', { lifecycleState: 'STAGED' }, 'SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE'],
+  ['ITA_SEC14_BOUND_WRONG_PROVENANCE', { provenance: 'LIVE_PATCH' }, 'SOURCE_PROVENANCE_NOT_ALLOWED'],
+  ['ITA_SEC14_BOUND_OUT_OF_DATE', { validFrom: '2027-01-01' }, 'SOURCE_NOT_IN_EFFECT_ON_TARGET_DATE'],
+  ['ITA_SEC14_BOUND_OVERDUE', { lastVerifiedDate: '2020-01-01', reviewAuditCycleDays: 30 }, 'LOCAL_SOURCE_REVIEW_AUDIT_OVERDUE'],
+  ['ITA_SEC14_BOUND_WRONG_AUTHORITY', { authority: 'ACRA' }, 'TOPIC_AUTHORITY_DOMAIN_MISMATCH'],
+  ['ITA_SEC14_BOUND_WRONG_DOMAIN', { domain: 'IRAS_GST' }, 'TOPIC_AUTHORITY_DOMAIN_MISMATCH'],
+  ['ITA_SEC14_BOUND_NOT_GROUNDING', { groundingEligible: false }, 'SOURCE_MAP_POINTER_NOT_EVIDENCE']
+]) {
+  const ineligibleBoundRecord = { ...generalDeduction, ...overrides };
+  const assessment = gate(genericExpenseQuery, [section14Topic], [ineligibleBoundRecord], {
+    domain: 'IRAS_TAX', targetDate: '2026-09-26'
+  });
+  assert.equal(assessment.eligibleRecords.some(record => record.id === ineligibleBoundRecord.id), false,
+    `${id} cannot use the sourceRecordIds binding to bypass eligibility.`);
+  assert.equal(assessment.rejectedRecords[0]?.code, expectedCode,
+    `${id} preserves the specific rejection from the ordinary safeguards.`);
+}
+
 const gst2023 = UNIFIED_SOURCE_REGISTRY.GST_RATE_8_PERCENT_2023;
 const gstTimeOfSupply = UNIFIED_SOURCE_REGISTRY.GST_SEC11_TIME_OF_SUPPLY;
 result = gate(

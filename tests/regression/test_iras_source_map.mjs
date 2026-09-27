@@ -185,8 +185,13 @@ async function run() {
     'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/purchase-and-sale-of-motor-vehicles');
   assert.equal(motorVehiclesDefinition.pageTitle, 'Purchase and Sale of Motor Vehicles');
   assert.deepEqual(motorVehiclesDefinition.topicIds, ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles']);
-  assert.ok(!getCoverageTopicById('iras-gst-motor-vehicles').sourceRecordIds.includes('IRAS_GST_INPUT_TAX_SOURCE_MAP'),
-    'Motor-vehicle treatment is routed to its specific page instead of the generic input-tax page.');
+  const motorVehiclesTopic = getCoverageTopicById('iras-gst-motor-vehicles');
+  assert.ok(motorVehiclesTopic.sourceRecordIds.includes('IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP'),
+    'Motor-vehicle questions route to the dedicated IRAS page.');
+  assert.ok(!motorVehiclesTopic.sourceRecordIds.includes('IRAS_GST_INPUT_TAX_SOURCE_MAP'),
+    'Motor-vehicle treatment is not routed to the generic input-tax page.');
+  assert.ok(!motorVehiclesTopic.sourceRecordIds.includes('GST_REG26_BLOCKED_INPUT_TAX'),
+    'The generic blocked-input record does not establish motor-specific treatment without mapped evidence.');
   assert.equal(getCoverageTopicById('iras-gst-motor-vehicles').sectionMatch, 'Regulation 25(1) and 27');
   assert.equal(getCoverageTopicById('iras-gst-blocked-input-tax').sectionMatch, '26 and 27');
   assert.ok(ir21Definition);
@@ -278,17 +283,65 @@ async function run() {
   assert.equal(motorVehicles.trace.sourceMapIds[0], 'IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP');
   assert.equal(motorVehicles.records[0].officialSourceUrl, motorVehiclesDefinition.canonicalSourceUrl);
 
+  const inputTaxDefinition = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_GST_INPUT_TAX_SOURCE_MAP');
+  assert.ok(inputTaxDefinition);
+  const genericInputTax = await fetchMappedPage(
+    ['iras-gst-input-tax'],
+    'What conditions apply to an input tax claim?',
+    inputTaxDefinition,
+    'IRAS | Conditions for Claiming Input Tax',
+    '<p>An input tax claim can be made only if you are GST-registered and the goods or services are used for the purpose of your business.</p><p>Local purchases must be supported by valid tax invoices addressed to you.</p>'
+  );
+  assert.equal(genericInputTax.trace.path, 'MAPPED_SOURCE', 'The shared input-tax map continues to validate generic input-tax conditions.');
+  assert.equal(genericInputTax.trace.sourceMapIds[0], 'IRAS_GST_INPUT_TAX_SOURCE_MAP');
+
+  const entertainmentContent = '<p>Other common expenses</p><table><tr><td>Entertainment expenses</td><td>Subject to the conditions for input tax claim, these claims are allowed if you have the supporting tax invoice addressed to you or the simplified tax invoice if the purchase value is not more than $1,000. Keep alternative documentary payment evidence and information on entertainment details, such as name of person entertained and purpose of entertainment. This concession is applicable only to expenses on food and drinks.</td></tr></table>';
+  const entertainmentEvidence = await fetchMappedPage(
+    ['iras-gst-entertainment'],
+    'Can we claim GST for customer entertainment expenses?',
+    inputTaxDefinition,
+    'IRAS | Conditions for Claiming Input Tax',
+    entertainmentContent
+  );
+  assert.equal(entertainmentEvidence.trace.path, 'MAPPED_SOURCE', 'The shared input-tax map validates entertainment when its specific section and detail are present.');
+  assert.equal(entertainmentEvidence.trace.sourceMapIds[0], 'IRAS_GST_INPUT_TAX_SOURCE_MAP');
+
+  const genericOnlyEntertainment = await fetchMappedPage(
+    ['iras-gst-entertainment'],
+    'Can we claim GST for customer entertainment expenses?',
+    inputTaxDefinition,
+    'IRAS | Conditions for Claiming Input Tax',
+    '<p>Entertainment input tax is subject to the same conditions for claiming input tax: GST registration, business use, and a valid tax invoice.</p>'
+  );
+  assert.equal(genericOnlyEntertainment.records.length, 0, 'Generic input-tax conditions cannot validate the entertainment topic by themselves.');
+  assert.equal(genericOnlyEntertainment.trace.attempts[0].fetchStatus, 'TOPIC_MISMATCH');
+
+  const distributedEntertainmentTerms = await fetchMappedPage(
+    ['iras-gst-entertainment'],
+    'Can we claim GST for customer entertainment expenses?',
+    inputTaxDefinition,
+    'IRAS | Conditions for Claiming Input Tax',
+    '<p>Entertainment expenses may have specific input-tax conditions.</p><p>Keep the name of person entertained in the records.</p><p>Document the purpose of entertainment separately.</p>'
+  );
+  assert.equal(distributedEntertainmentTerms.records.length, 0, 'Entertainment markers scattered across separate sections cannot be combined into topic evidence.');
+  assert.equal(distributedEntertainmentTerms.trace.attempts[0].fetchStatus, 'TOPIC_MISMATCH');
+
+  const repetitiveIr21Boilerplate = Array.from({ length: 24 }, (_, index) =>
+    `<p>When an employee departs Singapore, an employer should check the employee departure record, payroll notes, and travel details before the next reporting step. Repeated reference ${index + 1}: confirm the records for the employee's departure.</p>`
+  ).join('');
   const ir21 = await fetchMappedPage(
     ['iras-employer-ir21'],
-    'When must we file Form IR21 before an employee leaves Singapore?',
+    'What records should the employer check when an employee departs Singapore?',
     ir21Definition,
     'IRAS | Tax Clearance for Employees',
-    '<p>IRAS Tax Clearance for Employees requires the employer to file Form IR21 at least one month before the employee ceases work, starts an overseas posting, or leaves Singapore for over three months.</p><p>The employer must withhold monies when aware of the impending cessation, and listed scenarios do not require tax clearance.</p>'
+    `${repetitiveIr21Boilerplate}<h2>Tax Clearance for Employees</h2><p>If tax clearance is required, the employer must file Form IR21 at least one month before the employee ceases work, starts an overseas posting, or leaves Singapore for more than three months.</p><p>The employer must withhold monies when aware of the impending cessation, and listed scenarios do not require tax clearance.</p>`
   );
   assert.equal(ir21.trace.path, 'MAPPED_SOURCE');
   assert.equal(ir21.trace.sourceMapIds[0], 'IRAS_IR21_SOURCE_MAP');
   assert.equal(ir21.records[0].documentTitle, 'IRAS | Tax Clearance for Employees');
   assert.equal(ir21.records[0].officialSourceUrl, ir21Definition.canonicalSourceUrl);
+  assert.match(ir21.records[0].sourceText, /Tax Clearance for Employees/, 'The excerpt retains the validated topic phrase despite earlier query-heavy text.');
+  assert.match(ir21.records[0].sourceText, /\n\n/, 'The selected excerpt keeps a paragraph boundary between distinct source passages.');
 
   const bonusActualTitle = 'IRAS | Employment Income (Salary, bonus, director\'s fee)';
   const encodedBonusFinalUrl = bonusTimingDefinition.canonicalSourceUrl.replace("director's", 'director%27s');

@@ -1,5 +1,5 @@
 import type { QueryDomain, StatutoryAuthority } from '../types/accounting';
-import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import { UNIFIED_SOURCE_REGISTRY, type AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import { getCoverageTopicById, getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
@@ -96,6 +96,19 @@ function metadataAssociatesRecord(record: AuthoritativeSourceRecord, topic: NonN
     const distinctive = words(phrase).filter(word => word.length >= 4 && !GENERIC_TOPIC_WORDS.has(word));
     return distinctive.length >= 2 && distinctive.filter(word => recordTagWords.has(word)).length >= 2;
   });
+}
+
+function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): boolean {
+  const canonical = UNIFIED_SOURCE_REGISTRY[record.id];
+  if (!canonical || canonical.provenance !== 'LOCAL_STATIC') return false;
+  // A bound ID is an association only when the evidence payload is the reviewed
+  // registry record. Compare all recorded authority, content, citation and
+  // review metadata; freshnessStatus is recomputed for the request date.
+  const candidateFields = record as unknown as Record<string, unknown>;
+  const canonicalFields = canonical as unknown as Record<string, unknown>;
+  const fields = new Set([...Object.keys(candidateFields), ...Object.keys(canonicalFields)]);
+  fields.delete('freshnessStatus');
+  return [...fields].every(field => JSON.stringify(candidateFields[field]) === JSON.stringify(canonicalFields[field]));
 }
 
 function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: NonNullable<ReturnType<typeof getCoverageTopicById>>): boolean {
@@ -328,6 +341,13 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     for (const topic of targetTopics) {
       const associated = metadataAssociatesRecord(record, topic);
       if (!associated) continue;
+      const explicitlyBoundLocal = record.provenance === 'LOCAL_STATIC' && topic.sourceRecordIds.includes(record.id);
+      if (explicitlyBoundLocal &&
+          (!topic.authorities.includes(record.authority) || !topic.legacyDomains.includes(record.domain))) {
+        rejectedCode = 'TOPIC_AUTHORITY_DOMAIN_MISMATCH';
+        rejectedReason = 'Explicitly bound local evidence must still match the coverage topic authority and source domain.';
+        continue;
+      }
       const rateYears = transitionYears.length === 2 ? transitionYears : [Number(relevanceDate.slice(0, 4))];
       const transitionContext = transitionYears.length === 2 && record.sourceStatus !== 'NEEDS_REVIEW' &&
         record.provenance === 'LOCAL_STATIC' && isStandardGstRateContext(record, topic, transitionYears) &&
@@ -342,7 +362,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
         Boolean(record.provenance === 'LOCAL_STATIC' && transitionTargetDate && !transitionEligibilityRejection);
       const live = !local && !eligibilityRejection &&
         isVerifiedLiveCandidate(record, topic.id, targetDate, input.sourceMapFallbackTrace);
-      const topicTextMatches = distinctiveTextMatches(record, topic) || transitionContext ||
+      const topicTextMatches = distinctiveTextMatches(record, topic) || explicitlyBoundLocal || transitionContext ||
         (topic.domainId === 'IRAS_GST' && isStandardGstRateContext(record, topic, rateYears));
       if (!local && !live) {
         rejectedCode = eligibilityRejection || transitionEligibilityRejection ||
@@ -352,6 +372,11 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
           : record.provenance === 'LIVE_EXTERNAL'
             ? 'Live candidate lacks a matching successful URL/topic/content retrieval trace or verified provenance.'
             : 'Record provenance or lifecycle is not eligible for IRAS evidence.';
+        continue;
+      }
+      if (explicitlyBoundLocal && !matchesReviewedLocalRegistryRecord(record)) {
+        rejectedCode = 'BOUND_LOCAL_RECORD_MISMATCH';
+        rejectedReason = 'Explicit source-record binding requires the reviewed local registry content and provenance.';
         continue;
       }
       if (!topicTextMatches) {

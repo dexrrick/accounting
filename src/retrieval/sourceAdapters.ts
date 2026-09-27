@@ -32,14 +32,16 @@ export interface FxObservation {
  * Helper to clean HTML markup, decode entities, and normalize whitespace without truncation.
  */
 export function cleanHtmlText(htmlSnippet: string): string {
+  const blockBoundary = '\uE000';
+  const cellBoundary = '\uE001';
+  const lineBoundary = '\uE002';
+
   return htmlSnippet
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<\/tr>/gi, '\n')
-    .replace(/<\/td>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, lineBoundary)
+    .replace(/<\/?(?:h[1-6]|p|div|section|li|ul|ol|tr|table)\b[^>]*>/gi, blockBoundary)
+    .replace(/<t[dh]\b[^>]*>/gi, cellBoundary)
     .replace(/<[^>]+>/g, '')
     .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
@@ -49,6 +51,13 @@ export function cleanHtmlText(htmlSnippet: string): string {
     .replace(/&nbsp;/g, ' ')
     .replace(/&sect;/g, '§')
     .replace(/\s+/g, ' ')
+    .replaceAll(blockBoundary, '\n\n')
+    .replaceAll(lineBoundary, '\n')
+    .replaceAll(cellBoundary, ' | ')
+    .replace(/ *\n */g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\n\n\| /g, '\n\n')
+    .replace(/\|\n\n/g, '\n\n')
     .trim();
 }
 

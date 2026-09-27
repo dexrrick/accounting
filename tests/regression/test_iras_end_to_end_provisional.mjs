@@ -47,8 +47,11 @@ function syntheticIrasResponse(url) {
   const title = definition.pageTitle.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
   const bodyText = `${definition.shortDescription} ${relatedTopicText}`
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const entertainmentSection = definition.id === 'IRAS_GST_INPUT_TAX_SOURCE_MAP'
+    ? '<table><tr><td>Entertainment expenses</td><td>Subject to the conditions for input tax claim, these claims are allowed if you have a supporting tax invoice addressed to you. Keep information on entertainment details such as name of person entertained and purpose of entertainment.</td></tr></table>'
+    : '';
   return new Response(
-    `<html><head><title>${title}</title></head><body><main><h1>${title}</h1><p>IRAS ${bodyText}</p></main></body></html>`,
+    `<html><head><title>${title}</title></head><body><main><h1>${title}</h1><p>IRAS ${bodyText}</p>${entertainmentSection}</main></body></html>`,
     { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } }
   );
 }
