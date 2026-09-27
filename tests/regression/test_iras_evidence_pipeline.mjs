@@ -7,6 +7,7 @@ import { formatGroundedSystemPrompt, postProcessAIResponse, buildGroundedReasoni
 import { renderIrasEvidenceResponse, usesIrasEvidencePolicy } from '../../src/services/irasEvidencePolicy.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import { IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistry.ts';
 
 const fixture = JSON.parse(await readFile(new URL('../evaluation/singapore/iras-answer-e2e.json', import.meta.url), 'utf8'));
 const datedCase = fixture.cases.find(item => item.id === 'gst-historical-standard-rated-supply-2023');
@@ -135,4 +136,116 @@ try {
   },undefined,{discoveryAdapter:{discoverOfficialSourceCandidates:async()=>[]}});
   assert.equal(insufficient.evidenceQuality.status,'INSUFFICIENT');
 } finally {globalThis.fetch=originalFetch;}
+
+const ir21Map = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_IR21_SOURCE_MAP');
+const bonusMap = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP');
+const aisMap = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_AIS_IR8A_SOURCE_MAP');
+assert.ok(ir21Map && bonusMap && aisMap);
+const ir21LeadIn = 'If tax clearance is required for your employee, you must file the Form IR21 at least one month before:';
+const ir21ListItemOne = 'The employee stops work in Singapore.';
+const ir21NestedListItemOne = 'The employer must file Form IR21 and withhold all monies when the employee stops work, starts an overseas posting, or plans to leave Singapore for an extended period. This nested detail is not an independent requirement.';
+const ir21NestedListItemTwo = 'A nested posting detail.';
+const ir21ListItemTwo = 'The employee goes on an overseas posting or plans to leave Singapore for more than three months.';
+const ir21Overview = 'Generally, when your non-Singapore Citizen employee ceases employment with you in Singapore, goes on an overseas posting or plans to leave Singapore for more than three months, you must notify IRAS at least one month in advance and withhold all monies due to the employee.';
+const bonusExamplesLeadIn = 'Examples of a contractual bonus are:';
+const bonusExampleItemOne = 'Example A.';
+const bonusExampleItemTwo = 'Example B.';
+const bonusContractual = 'For contractual bonus, you are entitled to such bonus in the year specified in the contract or bonus plan. This is usually the year in which you render service.';
+const bonusExampleText = 'The illustration below uses a notional payment date to demonstrate the example.';
+const bonusContingent = 'If the employer’s obligation to pay bonus is contingent upon conditions to be met in the future, you will only become entitled to the bonus when these conditions are met.';
+const bonusAdvance = 'However, if such bonuses are paid in advance before the conditions are met, the bonuses are taxable at the time of payment.';
+const bonusNonContractual = 'On the other hand, non-contractual bonus means the employer can withdraw or cancel it at any time before the actual payment of the bonus without legal consequences. It is taxable when the employee becomes entitled to the payment. Generally, this bonus is taxed based on the date on which the bonus is paid.';
+const ir8aDeadline = 'Employers specified under paragraph 4 of the gazette must submit their employees’ income information to IRAS electronically by 1 Mar of the year after the year the income is derived by the employee.';
+const pageHtml = (title, paragraphs) => `<html><head><title>IRAS | ${title}</title></head><body><main><h1>IRAS | ${title}</h1>${paragraphs.map(text => `<p>${text}</p>`).join('')}</main></body></html>`;
+
+// A provider HTTP 200 with no Gemini candidate is a provider failure, not an
+// evidence failure. The application shows only bounded, verified source
+// paragraphs and keeps the missing IR21 facts visible.
+globalThis.fetch = async input => {
+  const url = String(input);
+  if (url === ir21Map.canonicalSourceUrl) {
+    const ir21Html = `<html><head><title>IRAS | ${ir21Map.pageTitle}</title></head><body><main>
+      <h1>IRAS | ${ir21Map.pageTitle}</h1><p>${ir21Overview}</p><h2>When to File the Form IR21</h2>
+      <p>${ir21LeadIn}</p><ul><li><p>${ir21ListItemOne}</p><ul><li><section><div><h3>${ir21NestedListItemOne}</h3></div></section></li><li><p>${ir21NestedListItemTwo}</p></li></ul></li><li><p>${ir21ListItemTwo}</p></li></ul>
+      </main></body></html>`;
+    return new Response(ir21Html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+  }
+  if (url.includes('streamGenerateContent')) return new Response('', { status: 200 });
+  throw new Error(`Unexpected provider or source request: ${url}`);
+};
+try {
+  const ir21Fallback = await processAccountingQuery('When do we need to file IR21?', null, 'SFRS_I', {
+    activeProvider: 'gemini',
+    gemini: { apiKey: 'test-placeholder-key', model: 'gemini-3.5-flash-lite' }
+  });
+  assert.equal(ir21Fallback.providerStatus, 'FAILED');
+  assert.equal(ir21Fallback.answerPath, 'PROVIDER_FAILURE');
+  assert.equal(ir21Fallback.evidenceQuality.status, 'LIMITED', 'Evidence coverage is reported independently from provider failure.');
+  assert.ok(ir21Fallback.claimVerification.accepted.some(claim => claim.text === ir21Overview));
+  assert.ok(!ir21Fallback.claimVerification.accepted.some(claim => claim.text === ir21LeadIn));
+  assert.ok(!ir21Fallback.claimVerification.accepted.some(claim => [ir21ListItemOne, ir21NestedListItemOne, ir21NestedListItemTwo, ir21ListItemTwo].includes(claim.text)),
+    'Neither parent nor nested list items are promoted as standalone rules after a colon-ended lead-in.');
+  assert.match(ir21Fallback.messageText, /provider could not complete/i);
+  assert.match(ir21Fallback.messageText, /at least one month in advance/);
+  assert.doesNotMatch(ir21Fallback.messageText, /at least one month before:/i, 'A colon-ended lead-in is not shown without its complete list.');
+  assert.doesNotMatch(ir21Fallback.messageText, /The employee stops work in Singapore|nested departure detail|nested posting detail|The employee goes on an overseas posting/i,
+    'No parent or nested IR21 list item is presented without its lead-in and full list.');
+  assert.match(ir21Fallback.messageText, /Employee citizenship or permanent-resident status/);
+  assert.doesNotMatch(ir21Fallback.messageText, /IR21 is always required/i);
+
+  // A successful provider response with an empty taxClaims array uses the
+  // same exact-quotation fallback for the mapped bonus and IR8A pages. It
+  // retains the source's distinct bonus timing passages and missing facts.
+  const bonusQuestion = 'Employee received a bonus in April for June payroll. When should it be reported?';
+  globalThis.fetch = async input => {
+    const url = String(input);
+    if (url === bonusMap.canonicalSourceUrl) {
+      const bonusHtml = `<html><head><title>IRAS | ${bonusMap.pageTitle}</title></head><body><main>
+        <h1>IRAS | ${bonusMap.pageTitle}</h1><p>Taxes on bonuses</p>
+        <p>The bonus you have received from your employment is taxable. Bonuses may be contractual or non-contractual.</p>
+        <p>${bonusExamplesLeadIn}</p><ul><li><p>${bonusExampleItemOne}</p></li><li><p>${bonusExampleItemTwo}</p></li></ul>
+        <p>${bonusContractual}</p><h2>Example 1</h2><p>${bonusExampleText}</p>
+        <p>${bonusContingent}</p><p>${bonusAdvance}</p><p>${bonusNonContractual}</p>
+        </main></body></html>`;
+      return new Response(bonusHtml, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
+    if (url === aisMap.canonicalSourceUrl) {
+      return new Response(pageHtml(aisMap.pageTitle, [
+        'Auto-Inclusion Scheme (AIS) for Employment Income', ir8aDeadline
+      ]), { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    }
+    if (url.includes('streamGenerateContent')) {
+      const event = { candidates: [{ content: { parts: [{ text: JSON.stringify({ taxClaims: [] }) }] } }] };
+      return new Response(`data: ${JSON.stringify(event)}\n\n`, { status: 200, headers: { 'content-type': 'text/event-stream' } });
+    }
+    throw new Error(`Unexpected provider or source request: ${url}`);
+  };
+  const bonusFallback = await processAccountingQuery(bonusQuestion, null, 'SFRS_I', {
+    activeProvider: 'gemini',
+    gemini: { apiKey: 'test-placeholder-key', model: 'gemini-3.5-flash-lite' }
+  });
+  assert.equal(bonusFallback.providerStatus, 'SUCCEEDED');
+  assert.equal(bonusFallback.answerPath, 'PROVIDER_NO_CLAIMS');
+  const acceptedBonusClaims = bonusFallback.claimVerification.accepted.map(claim => claim.text);
+  const completeConditionAndAdvance = `${bonusContingent} ${bonusAdvance}`;
+  for (const rule of [bonusContractual, completeConditionAndAdvance, bonusNonContractual, ir8aDeadline]) {
+    assert.ok(acceptedBonusClaims.includes(rule), `The exact fetched source paragraph is admitted: ${rule.slice(0, 64)}`);
+  }
+  assert.ok(!acceptedBonusClaims.includes(bonusExamplesLeadIn));
+  assert.ok(!acceptedBonusClaims.some(claim => claim.includes(bonusExampleItemOne) || claim.includes(bonusExampleItemTwo)),
+    'Example list entries are kept with their list rather than exposed as independent rules.');
+  assert.ok(!acceptedBonusClaims.includes(`${bonusContractual} ${bonusContingent}`),
+    'The intervening example keeps the contractual paragraph separate from a later conditional passage.');
+  assert.ok(!acceptedBonusClaims.includes(bonusExampleText), 'A non-rule example paragraph is not presented as a tax rule.');
+  assert.match(bonusFallback.messageText, /contractual bonus/i);
+  assert.match(bonusFallback.messageText, /non-contractual bonus/i);
+  assert.match(bonusFallback.messageText, /paid in advance/i);
+  assert.match(bonusFallback.messageText, /no verifiable tax claims/i);
+  for (const missingFact of classifyQuestion(bonusQuestion).missingFacts) {
+    assert.ok(bonusFallback.scenarioState.missingFacts.includes(missingFact));
+  }
+  assert.ok(!bonusFallback.messageText.includes('The June payroll determines the taxable year'),
+    'The response does not infer timing from payroll labels or missing dates.');
+} finally {globalThis.fetch=originalFetch;}
+
 console.log('IRAS evidence policy pipeline regressions passed.');

@@ -751,7 +751,8 @@ async function run() {
     else ratesTopic.effectiveTo = originalEffectiveTo;
   }
 
-  // SSO sitemap discovery is bounded alongside IRAS, skips the redundant bare IRAS host, and keeps fetched pages candidate-only.
+  // The published IRAS HTML sitemap is the primary discovery index; only a
+  // separately fetched and topic-validated IRAS page becomes candidate text.
   const irasDiscoveryCalls = [];
   const directNoPointerRetriever = {
     getSourceById: () => undefined,
@@ -760,17 +761,9 @@ async function run() {
   };
   const irasDiscoveryFetch = async url => {
     irasDiscoveryCalls.push(url);
-    if (url.endsWith('/robots.txt')) {
-      const host = new URL(url).hostname;
-      return new Response(host === 'www.iras.gov.sg'
-        ? 'User-agent: *\nSitemap: https://www.iras.gov.sg/sitemap.xml'
-        : 'User-agent: *\nSitemap: https://sso.agc.gov.sg/sitemap.xml',
-      { status: 200, headers: { 'content-type': 'text/plain' } });
+    if (url === 'https://www.iras.gov.sg/sitemap') {
+      return htmlResponse(`<html><body><main><a href="${ratesUrl}">${ratesDefinition.pageTitle}</a></main></body></html>`);
     }
-    if (url === 'https://www.iras.gov.sg/sitemap.xml') {
-      return htmlResponse(`<urlset><url><loc>${ratesUrl}</loc></url></urlset>`);
-    }
-    if (url === 'https://sso.agc.gov.sg/sitemap.xml') return htmlResponse('<urlset></urlset>');
     if (url === ratesUrl) return htmlResponse(ratesHtml);
     return new Response('not found', { status: 404 });
   };
@@ -785,9 +778,9 @@ async function run() {
   );
   assert.equal(discoveredRates.trace.path, 'DISCOVERED_SOURCE');
   assert.deepEqual(discoveredRates.trace.sourceMapIds, []);
-  assert.ok(irasDiscoveryCalls.includes('https://www.iras.gov.sg/robots.txt'));
-  assert.ok(irasDiscoveryCalls.includes('https://www.iras.gov.sg/sitemap.xml'));
-  assert.ok(irasDiscoveryCalls.includes('https://sso.agc.gov.sg/robots.txt'), 'SSO remains in the two-host discovery budget.');
+  assert.equal(irasDiscoveryCalls[0], 'https://www.iras.gov.sg/sitemap');
+  assert.ok(!irasDiscoveryCalls.some(url => url.startsWith('https://sso.agc.gov.sg/')), 'IRAS sitemap discovery does not ingest another authority.');
+  assert.ok(!irasDiscoveryCalls.includes('https://www.iras.gov.sg/robots.txt'));
   assert.equal(irasDiscoveryCalls.some(url => url.startsWith('https://iras.gov.sg/')), false, 'The bare IRAS alias is removed when www IRAS is approved.');
   const discoveredCandidate = discoveredRates.records.find(record => record.tags.includes('iras-cit-tax-rate'));
   assert.ok(discoveredCandidate);

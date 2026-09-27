@@ -34,6 +34,11 @@ export interface GeminiResponse {
   scenarioState: AccountingScenarioState;
   clarifications?: MissingFieldInfo[];
   imageAnalysisFailed?: boolean;
+  /** Provider completion is separate from the independent IRAS evidence gate. */
+  providerStatus?: 'SUCCEEDED' | 'FAILED' | 'NOT_ATTEMPTED';
+  answerPath?: string;
+  evidenceQuality?: GroundedReasoningContext['evidenceQuality'];
+  claimVerification?: { accepted: unknown[]; rejected: unknown[] };
   /** Routing/retrieval trace only; this does not itself establish answer grounding. */
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
 }

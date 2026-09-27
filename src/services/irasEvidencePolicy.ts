@@ -1,8 +1,9 @@
 import type { AccountingScenarioState, AccountingStandard, JournalEntryGroup } from '../types/accounting';
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
 import type { GroundedReasoningContext } from './groundingContextBuilder';
+import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
-import { verifyEvidenceClaims } from '../verification/claimEvidenceVerifier';
+import { startsAttachedEvidenceQualification, verifyEvidenceClaims } from '../verification/claimEvidenceVerifier';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import { evaluateIrasApplications } from '../engine/irasApplicationEvaluator';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
@@ -19,6 +20,97 @@ export function usesIrasEvidencePolicy(classification: QuestionClassificationRes
   return explicitTaxQuestion || !query || (classification.taxAnalysisRequired &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     /\?|\b(?:explain|advise|assess|determine|report)\b/i.test(query));
+}
+
+const FALLBACK_QUOTE_STOPWORDS = new Set([
+  'about', 'after', 'also', 'and', 'are', 'been', 'before', 'being', 'but', 'can', 'could', 'does', 'for', 'from',
+  'has', 'have', 'how', 'into', 'its', 'may', 'need', 'not', 'our', 'should', 'that', 'the', 'their', 'there',
+  'these', 'this', 'those', 'through', 'under', 'was', 'were', 'what', 'when', 'where', 'which', 'who', 'with', 'would'
+]);
+
+function isVisibleListItemBlock(text: string): boolean {
+  return /^(?:\|\s*)*[•◦▪](?:\s|$)/.test(text);
+}
+
+function normalizedFallbackTerms(value: string): string[] {
+  return value.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(word => {
+    if (word.endsWith('ies') && word.length > 5) return `${word.slice(0, -3)}y`;
+    if (word.endsWith('es') && word.length > 5) return word.slice(0, -2);
+    if (word.endsWith('s') && word.length > 4) return word.slice(0, -1);
+    if (word.endsWith('ing') && word.length > 6) return word.slice(0, -3);
+    if (word.endsWith('ed') && word.length > 5) return word.slice(0, -2);
+    return word;
+  });
+}
+
+function selectEvidenceOnlyQuotes(context: GroundedReasoningContext, query: string): Array<{ text: string; quote: string; recordId: string; kind: 'RULE' }> {
+  const topics = getCoverageTopicsByIds(context.classification.topicIds);
+  const topicTerms = new Set(normalizedFallbackTerms(topics.flatMap(topic => [topic.title, ...topic.keywords, ...(topic.aliases || [])]).join(' '))
+    .filter(term => term.length >= 4 && !FALLBACK_QUOTE_STOPWORDS.has(term)));
+  const queryTerms = new Set(normalizedFallbackTerms(query)
+    .filter(term => term.length >= 4 && !FALLBACK_QUOTE_STOPWORDS.has(term)));
+  const bonusTimingRequested = context.classification.topicIds.includes('iras-employee-bonus-timing');
+  const records = context.evidenceQuality?.eligibleRecords || [];
+  const selected: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number }> = [];
+
+  records.forEach((record, recordOrder) => {
+    const sourceBlocks = record.sourceText.split(/\r?\n[\t ]*\r?\n+/).map(text => text.trim()).filter(Boolean);
+    const paragraphs: string[] = [];
+    for (let index = 0; index < sourceBlocks.length;) {
+      const block = sourceBlocks[index];
+      if (!/:$/.test(block)) {
+        paragraphs.push(block);
+        index += 1;
+        continue;
+      }
+
+      // Never quote a colon-ended introduction without its list. Visible list
+      // markers from HTML extraction let us skip the complete associated list
+      // and continue with later source paragraphs. If boundaries are absent,
+      // stop using this record after the introduction rather than guessing.
+      index += 1;
+      if (sourceBlocks[index] && isVisibleListItemBlock(sourceBlocks[index])) {
+        while (index < sourceBlocks.length && isVisibleListItemBlock(sourceBlocks[index])) index += 1;
+        continue;
+      }
+      break;
+    }
+    const candidates: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number }> = [];
+    for (let paragraphOrder = 0; paragraphOrder < paragraphs.length;) {
+      let attachedEnd = paragraphOrder;
+      while (attachedEnd + 1 < paragraphs.length && startsAttachedEvidenceQualification(paragraphs[attachedEnd + 1])) {
+        attachedEnd += 1;
+      }
+      const text = paragraphs.slice(paragraphOrder, attachedEnd + 1).join(' ');
+      const maximumLength = attachedEnd > paragraphOrder ? 3_200 : 1_600;
+      if (text.length < 40 || text.length > maximumLength) {
+        paragraphOrder = attachedEnd + 1;
+        continue;
+      }
+      const words = new Set(normalizedFallbackTerms(text));
+      const topicMatches = [...topicTerms].filter(term => words.has(term)).length;
+      const queryMatches = [...queryTerms].filter(term => words.has(term)).length;
+      let score = topicMatches * 2 + queryMatches * 3;
+      if (bonusTimingRequested) {
+        if (/\bcontractual\b/i.test(text)) score += 3;
+        if (/\bnon[ -]contractual\b/i.test(text)) score += 4;
+        if (/\badvance\b|\bcontingent\b/i.test(text)) score += 4;
+        if (/\b(?:1\s*mar|form ir8a|auto.inclusion scheme|ais)\b/i.test(text)) score += 3;
+      }
+      if (score > 0) candidates.push({ text, quote: text, recordId: record.id, kind: 'RULE', score, recordOrder, paragraphOrder });
+      paragraphOrder = attachedEnd + 1;
+    }
+    const topicLimit = bonusTimingRequested
+      ? record.tags.includes('iras-ais-employment-income') ? 3 : 6
+      : 5;
+    selected.push(...candidates.sort((a, b) => b.score - a.score || a.paragraphOrder - b.paragraphOrder).slice(0, topicLimit));
+  });
+
+  // Keep source order for readable excerpts after ranking and apply one total
+  // bound so a provider outage cannot turn a short answer into a full-page dump.
+  return selected.sort((a, b) => a.recordOrder - b.recordOrder || a.paragraphOrder - b.paragraphOrder)
+    .slice(0, bonusTimingRequested ? 9 : 5)
+    .map(({ text, quote, recordId, kind }) => ({ text, quote, recordId, kind }));
 }
 
 export function formatIrasEvidencePrompt(context: GroundedReasoningContext): string {
@@ -110,12 +202,12 @@ export function renderIrasEvidenceResponse(
   parsedValue: unknown, context: GroundedReasoningContext, query: string,
   deterministicScenario: AccountingScenarioState | null = null,
   standard: AccountingStandard = 'SFRS_I',
-  mode: 'PROVIDER' | 'LOCAL' | 'BLOCKED' | 'PROVIDER_FAILURE' = 'PROVIDER'
+  mode: 'PROVIDER' | 'LOCAL' | 'BLOCKED' | 'PROVIDER_FAILURE' | 'PROVIDER_NO_CLAIMS' = 'PROVIDER'
 ) {
   const parsed = parsedValue && typeof parsedValue === 'object' ? parsedValue as Record<string, unknown> : {};
   const quality = context.evidenceQuality!;
-  const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE'
-    ? quality.eligibleRecords.map(record => ({ text: record.sourceText, quote: record.sourceText, recordId: record.id, kind: 'RULE' }))
+  const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE' || mode === 'PROVIDER_NO_CLAIMS'
+    ? selectEvidenceOnlyQuotes(context, query)
     : parsed.taxClaims;
   const verification = verifyEvidenceClaims(inputClaims, quality.eligibleRecords, {
     missingFacts: context.missingFacts, targetDate: quality.targetDate
@@ -125,6 +217,9 @@ export function renderIrasEvidenceResponse(
     ? evaluateIrasApplications(query, quality.eligibleRecords, quality.targetDate)
     : [];
   const { treatment, groups } = accountingGroups(parsed, context, query, deterministicScenario, standard);
+  const providerStatus: 'SUCCEEDED' | 'FAILED' | 'NOT_ATTEMPTED' =
+    mode === 'PROVIDER_FAILURE' ? 'FAILED'
+      : mode === 'PROVIDER' || mode === 'PROVIDER_NO_CLAIMS' ? 'SUCCEEDED' : 'NOT_ATTEMPTED';
   const lines: string[] = [];
   if (calculation) {
     const record = quality.eligibleRecords.find(item => item.id === calculation.sourceRecordId)!;
@@ -142,6 +237,7 @@ export function renderIrasEvidenceResponse(
     }
   }
   if (mode === 'PROVIDER_FAILURE') lines.push('The provider could not complete the answer. The available source evidence is shown below.');
+  if (mode === 'PROVIDER_NO_CLAIMS') lines.push('The provider returned no verifiable tax claims. Only complete source paragraphs that passed claim verification are shown below.');
   if (quality.status === 'INSUFFICIENT' || quality.uncoveredTopicIds.length > 0) {
     lines.push('The available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.');
   }
@@ -210,6 +306,7 @@ export function renderIrasEvidenceResponse(
     evidenceQuality: quality, claimVerification: verification,
     calculation: calculation ? { ...calculation, verification: 'DETERMINISTIC_SOURCE_BACKED_CALCULATION' } : undefined,
     applicationConclusions,
-    answerPath: mode === 'LOCAL' ? 'VALIDATED_LOCAL' : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode
+    answerPath: mode === 'LOCAL' ? 'VALIDATED_LOCAL' : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode,
+    providerStatus
   };
 }

@@ -9,7 +9,10 @@ import { querySingaporeStatutes, SINGAPORE_STATUTORY_REPOSITORY } from '../../sr
 import { hasVerifiedSourceUrlProvenance, isVerifiedLegacyStandardUrl } from '../../src/standards/approvedSourceRegistry.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
+import { OfficialSitemapDiscoveryAdapter } from '../../src/retrieval/officialSitemapDiscovery.ts';
 import { assembleDeterministicResponse } from '../../src/engine/responseAssembler.ts';
+import { IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistry.ts';
+import { evaluateEvidenceQuality } from '../../src/retrieval/evidenceQualityGate.ts';
 
 const ifrs10Url = 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-10-consolidated-financial-statements/';
 const ifrs5Url = 'https://www.ifrs.org/issued-standards/list-of-standards/ifrs-5-non-current-assets-held-for-sale-and-discontinued-operations/';
@@ -443,6 +446,150 @@ async function run() {
   );
   assert.equal(unavailableDiscovery.records.length, 0);
   assert.equal(unavailableDiscovery.trace.path, 'NO_VERIFIED_MAP');
+
+  // IRAS's published HTML sitemap is discovery metadata only. A listed URL
+  // becomes evidence only after its own page is fetched and topic-validated.
+  const ir21ReplacementUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/employers/tax-clearance-for-employees';
+  const ir21SitemapUrl = 'https://www.iras.gov.sg/sitemap';
+  const ir21PageTitle = 'IRAS | Tax Clearance for Employees';
+  const ir21PageHtml = `<html><head><title>${ir21PageTitle}</title></head><body><main>
+    <h1>Tax Clearance for Employees</h1>
+    <p>Generally, when your non-Singapore Citizen employee ceases employment with you in Singapore, goes on an overseas posting or plans to leave Singapore for more than three months, you must notify IRAS at least one month in advance and withhold all monies due to the employee.</p>
+    <h2>When to File the Form IR21</h2>
+    <p>If tax clearance is required for your employee, you must file the Form IR21 at least one month before the employee ceases to work for you in Singapore.</p>
+  </main></body></html>`;
+  const ir21SitemapHtml = `<html><body><main>
+    <a href="${ir21ReplacementUrl}">Tax Clearance for Employees</a>
+    <a href="https://example.com/tax-clearance-for-employees">Tax Clearance for Employees</a>
+    <a href="/sitemap">Sitemap</a>
+    <a href="/taxes/goods-services-tax/gst-filing">GST Filing</a>
+  </main></body></html>`;
+  const ir21Map = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_IR21_SOURCE_MAP');
+  assert.ok(ir21Map);
+  const ir21NoMapCalls = [];
+  const ir21NoMapFetch = async url => {
+    ir21NoMapCalls.push(url);
+    if (url === ir21SitemapUrl) return htmlResponse(ir21SitemapHtml);
+    if (url === ir21ReplacementUrl) return htmlResponse(ir21PageHtml);
+    return new Response('not found', { status: 404 });
+  };
+  const ir21NoMapWeb = new ControlledWebRetriever(undefined, new SourceCache());
+  const ir21NoMapAdapter = new OfficialSitemapDiscoveryAdapter(ir21NoMapWeb, { timeoutMs: 100, customFetch: ir21NoMapFetch });
+  const ir21DiscoveredWithoutMap = await resolveMappedOfficialSourceFallback(
+    ['iras-employer-ir21'],
+    'When do we need to file IR21?',
+    noPointerRetriever,
+    {
+      webRetriever: ir21NoMapWeb,
+      discoveryAdapter: ir21NoMapAdapter,
+      fetchOptions: { useCache: false, customFetch: ir21NoMapFetch }
+    }
+  );
+  assert.equal(ir21DiscoveredWithoutMap.trace.path, 'DISCOVERED_SOURCE');
+  assert.deepEqual(ir21DiscoveredWithoutMap.trace.sourceMapIds, [], 'The sitemap can discover an IRAS page when no source-map pointer is available.');
+  assert.equal(ir21NoMapCalls[0], ir21SitemapUrl, 'The published IRAS /sitemap page is the first discovery request.');
+  assert.ok(!ir21NoMapCalls.includes('https://www.iras.gov.sg/robots.txt'));
+  assert.equal(ir21DiscoveredWithoutMap.records[0].officialSourceUrl, ir21ReplacementUrl);
+  assert.equal(ir21DiscoveredWithoutMap.records[0].lifecycleState, 'CANDIDATE');
+  const indexEntry = ir21NoMapAdapter.getIndexedCandidates().find(entry => entry.canonicalUrl === ir21ReplacementUrl);
+  assert.equal(indexEntry.authority, 'IRAS');
+  assert.equal(indexEntry.pageTitle, 'Tax Clearance for Employees');
+  assert.ok(indexEntry.hierarchy.length > 0);
+  assert.match(indexEntry.normalizedPath, /tax-clearance-for-employees/);
+  assert.ok(indexEntry.topicHints.includes('clearance'));
+  assert.equal(Object.hasOwn(indexEntry, 'sourceText'), false, 'The discovery index stores URL metadata, never tax-page content.');
+  assert.equal(Object.hasOwn(indexEntry, 'sourceMapIds'), false, 'Query routing does not imply a candidate-specific source-map relationship.');
+  assert.ok(!ir21NoMapAdapter.getIndexedCandidates().some(entry => entry.canonicalUrl.startsWith('https://example.com/')),
+    'Off-domain sitemap links are discarded before candidate ranking.');
+
+  const cachedDiscoveryCalls = [];
+  const cachedDiscoveryFetch = async url => {
+    cachedDiscoveryCalls.push(url);
+    if (url === ir21SitemapUrl) return htmlResponse(ir21SitemapHtml);
+    if (url === ir21ReplacementUrl) return htmlResponse(ir21PageHtml);
+    return new Response('not found', { status: 404 });
+  };
+  const sharedWebRetriever = new ControlledWebRetriever(undefined, new SourceCache());
+  const cachedDiscoveryOptions = {
+    webRetriever: sharedWebRetriever,
+    fetchOptions: { useCache: false, customFetch: cachedDiscoveryFetch }
+  };
+  await resolveMappedOfficialSourceFallback(['iras-employer-ir21'], 'When do we need to file IR21?', noPointerRetriever, cachedDiscoveryOptions);
+  await resolveMappedOfficialSourceFallback(['iras-employer-ir21'], 'When do we need to file IR21?', noPointerRetriever, cachedDiscoveryOptions);
+  assert.equal(cachedDiscoveryCalls.filter(url => url === ir21SitemapUrl).length, 1,
+    'The default adapter retains sitemap index/cache metadata across requests for the same web retriever.');
+
+  const sitemapOnly = await resolveMappedOfficialSourceFallback(
+    ['iras-employer-ir21'], 'When do we need to file IR21?', noPointerRetriever,
+    {
+      webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+      fetchOptions: {
+        useCache: false,
+        customFetch: async url => url === ir21SitemapUrl ? htmlResponse(ir21SitemapHtml) : new Response('not found', { status: 404 })
+      }
+    }
+  );
+  assert.equal(sitemapOnly.records.length, 0, 'Sitemap membership without a fetched substantive page creates no evidence record.');
+  assert.equal(sitemapOnly.trace.attempts.find(attempt => attempt.fetchStatus === 'HTTP_ERROR')?.fetchStatus, 'HTTP_ERROR');
+  const sitemapOnlyQuality = evaluateEvidenceQuality({
+    query: 'When do we need to file IR21?', topicIds: ['iras-employer-ir21'], records: [], missingFacts: [],
+    sourceMapFallbackTrace: sitemapOnly.trace
+  });
+  assert.equal(sitemapOnlyQuality.status, 'INSUFFICIENT', 'An index URL alone cannot support an IRAS claim.');
+
+  const ir21TopicMismatch = await resolveMappedOfficialSourceFallback(
+    ['iras-employer-ir21'], 'When do we need to file IR21?', noPointerRetriever,
+    {
+      webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+      fetchOptions: {
+        useCache: false,
+        customFetch: async url => url === ir21SitemapUrl
+          ? htmlResponse(ir21SitemapHtml)
+          : url === ir21ReplacementUrl
+            ? htmlResponse('<html><head><title>Tax Clearance for Employees</title></head><main><h1>Tax Clearance for Employees</h1><p>General employer information and tax services.</p></main></html>')
+            : new Response('not found', { status: 404 })
+      }
+    }
+  );
+  assert.equal(ir21TopicMismatch.records.length, 0, 'A relevant sitemap label cannot make an unrelated fetched page evidence.');
+  assert.ok(ir21TopicMismatch.trace.attempts.some(attempt => attempt.fetchStatus === 'TOPIC_MISMATCH'));
+
+  const ir21RedirectRejected = await resolveMappedOfficialSourceFallback(
+    ['iras-employer-ir21'], 'When do we need to file IR21?', noPointerRetriever,
+    {
+      webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+      fetchOptions: {
+        useCache: false,
+        customFetch: async url => url === ir21SitemapUrl
+          ? htmlResponse(ir21SitemapHtml)
+          : url === ir21ReplacementUrl
+            ? new Response(null, { status: 302, headers: { location: 'https://example.com/tax-clearance-for-employees' } })
+            : new Response('not found', { status: 404 })
+      }
+    }
+  );
+  assert.equal(ir21RedirectRejected.records.length, 0, 'A candidate is rejected if its final redirect leaves the approved domain.');
+  assert.ok(ir21RedirectRejected.trace.attempts.some(attempt => attempt.fetchStatus === 'REDIRECT_REJECTED'));
+
+  const staleMapDiscovery = await resolveMappedOfficialSourceFallback(
+    ['iras-employer-ir21'], 'When do we need to file IR21?', defaultSourceRetriever,
+    {
+      webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+      fetchOptions: {
+        useCache: false,
+        customFetch: async url => url === ir21Map.canonicalSourceUrl
+          ? new Response('stale mapped route', { status: 404 })
+          : url === ir21SitemapUrl
+            ? htmlResponse(ir21SitemapHtml)
+            : url === ir21ReplacementUrl
+              ? htmlResponse(ir21PageHtml)
+              : new Response('not found', { status: 404 })
+      }
+    }
+  );
+  assert.equal(staleMapDiscovery.trace.path, 'DISCOVERED_SOURCE', 'Sitemap lookup can resolve a stale mapped IRAS route after the mapped fetch fails.');
+  assert.ok(staleMapDiscovery.trace.sourceMapIds.includes(ir21Map.id), 'The existing source-map attempt remains in the routing trace.');
+  assert.ok(staleMapDiscovery.trace.attempts.some(attempt => attempt.sourceMapId === ir21Map.id && attempt.fetchStatus === 'HTTP_ERROR'));
 
   // Previously equity-accounted associate becomes a subsidiary after a further purchase.
   // The explicit transition relation selects SFRS(I) 1-28, 10 and 3 source maps.

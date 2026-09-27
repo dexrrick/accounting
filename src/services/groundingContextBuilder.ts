@@ -112,6 +112,10 @@ export interface OfficialSourceDiscoveryRequest {
   topicTitle: string;
   standardOrAct: string;
   approvedHosts: readonly string[];
+  /** Coverage-registry labels used only to rank discovery metadata. */
+  topicHints?: readonly string[];
+  /** Reviewed map titles help identify a moved page; they never establish evidence. */
+  expectedTitles?: readonly string[];
 }
 
 /** Trusted official-domain search adapter. Candidate URLs are always fetched and validated before use. */
@@ -123,6 +127,45 @@ export interface MappedFallbackOptions {
   webRetriever?: ControlledWebRetriever;
   fetchOptions?: Omit<ControlledFetchOptions, 'topicValidation'>;
   discoveryAdapter?: OfficialSourceDiscoveryAdapter;
+}
+
+interface CachedDiscoveryAdapters {
+  defaultAdapter?: OfficialSourceDiscoveryAdapter;
+  adaptersByCustomFetch: WeakMap<Function, Map<number | undefined, OfficialSourceDiscoveryAdapter>>;
+}
+
+const discoveryAdaptersByRetriever = new WeakMap<ControlledWebRetriever, CachedDiscoveryAdapters>();
+
+function getDefaultDiscoveryAdapter(
+  webRetriever: ControlledWebRetriever,
+  fetchOptions?: MappedFallbackOptions['fetchOptions']
+): OfficialSourceDiscoveryAdapter {
+  let cached = discoveryAdaptersByRetriever.get(webRetriever);
+  if (!cached) {
+    cached = { adaptersByCustomFetch: new WeakMap() };
+    discoveryAdaptersByRetriever.set(webRetriever, cached);
+  }
+
+  const customFetch = fetchOptions?.customFetch;
+  if (customFetch) {
+    let adaptersByTimeout = cached.adaptersByCustomFetch.get(customFetch);
+    if (!adaptersByTimeout) {
+      adaptersByTimeout = new Map();
+      cached.adaptersByCustomFetch.set(customFetch, adaptersByTimeout);
+    }
+    const timeoutMs = fetchOptions.timeoutMs;
+    let adapter = adaptersByTimeout.get(timeoutMs);
+    if (!adapter) {
+      adapter = new OfficialSitemapDiscoveryAdapter(webRetriever, fetchOptions);
+      adaptersByTimeout.set(timeoutMs, adapter);
+    }
+    return adapter;
+  }
+
+  if (!cached.defaultAdapter) {
+    cached.defaultAdapter = new OfficialSitemapDiscoveryAdapter(webRetriever, fetchOptions);
+  }
+  return cached.defaultAdapter;
 }
 
 /** Maximum number of source records requested by production grounding. */
@@ -394,6 +437,14 @@ function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   return [];
 }
 
+function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
+  // This phase indexes IRAS guidance only. A known source-map route may still
+  // redirect to an already approved statutory host, but sitemap discovery does
+  // not ingest SSO or any additional Singapore authority.
+  if (topic.domainId.startsWith('IRAS_')) return ['www.iras.gov.sg', 'iras.gov.sg'];
+  return approvedHostsForTopic(topic);
+}
+
 const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)[\s-]+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
 
 /** A present-day tax page cannot establish a prior period without pointer-level validity dates. */
@@ -503,7 +554,7 @@ export async function resolveMappedOfficialSourceFallback(
   options: MappedFallbackOptions = {}
 ): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace }> {
   const webRetriever = options.webRetriever || defaultControlledWebRetriever;
-  const discoveryAdapter = options.discoveryAdapter || new OfficialSitemapDiscoveryAdapter(webRetriever, options.fetchOptions);
+  const discoveryAdapter = options.discoveryAdapter || getDefaultDiscoveryAdapter(webRetriever, options.fetchOptions);
   const directTopics = getCoverageTopicsByIds(topicIds).map(topic => topic as MappedCoverageTopic);
   const expandedTopics = new Map(directTopics.map(topic => [topic.id, topic]));
   for (const directTopic of directTopics) {
@@ -649,16 +700,18 @@ export async function resolveMappedOfficialSourceFallback(
     if (succeededForTopic) continue;
     // Discovered pages have no reviewed period-specific validity metadata.
     if (historicalIrasQuery) continue;
-    const approvedHosts = approvedHostsForTopic(topic);
+    const approvedHosts = discoveryHostsForTopic(topic);
     if (approvedHosts.length === 0) continue;
     let discoveredCandidates: string[] = [];
     try {
       discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates({
-      query,
-      topicId: topic.id,
-      topicTitle: topic.title,
-      standardOrAct: topic.actOrStandard || topic.title,
-      approvedHosts
+        query,
+        topicId: topic.id,
+        topicTitle: topic.title,
+        standardOrAct: topic.actOrStandard || topic.title,
+        approvedHosts,
+        topicHints: [...(topic.aliases || []), ...topic.keywords],
+        expectedTitles: pointers.map(pointer => pointer.documentTitle)
       });
     } catch {
       // First-party discovery is optional and fail-closed. Mapped retrieval
@@ -1260,7 +1313,15 @@ export function postProcessAIResponse(
   groundingEvidence?: GroundingEvidenceTrace[];
 } {
   if (groundedContext.evidenceQuality) {
-    return renderIrasEvidenceResponse(parsed, groundedContext, userInput, deterministicScenario || null, standard);
+    const taxClaimsWereOmitted = parsed?.taxClaims === undefined ||
+      (Array.isArray(parsed.taxClaims) && parsed.taxClaims.length === 0);
+    const evidenceOnlyFallbackTopic = groundedContext.classification.topicIds.some(topicId =>
+      topicId === 'iras-employer-ir21' || topicId === 'iras-employee-bonus-timing'
+    );
+    const canShowVerifiedSourceParagraphs = taxClaimsWereOmitted && evidenceOnlyFallbackTopic &&
+      groundedContext.evidenceQuality.eligibleRecords.length > 0;
+    return renderIrasEvidenceResponse(parsed, groundedContext, userInput, deterministicScenario || null, standard,
+      canShowVerifiedSourceParagraphs ? 'PROVIDER_NO_CLAIMS' : 'PROVIDER');
   }
   // If parsed is a compact decision (has directAnswer, treatment, decision, requiredAccounts, or lacks directGroups and messageText),
   // delegate to assembleDeterministicResponse which compiles the complete verified markdown, journal entries, and scenario state.

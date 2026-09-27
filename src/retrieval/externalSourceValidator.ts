@@ -67,6 +67,71 @@ export interface TopicContentValidationResult extends ExternalValidationResult {
   substantiveText?: string;
 }
 
+/** Flatten balanced HTML list items into visible, individually marked blocks. */
+function preserveListItemBoundaries(markup: string): string {
+  // These are the same elements that cleanHtmlText turns into paragraph
+  // boundaries. Consume them here so an item's marker stays attached to its
+  // text even when the source nests headings, sections, or table rows inside
+  // the list item. Table cells are consumed too: cleanHtmlText otherwise adds
+  // an inline separator which can split formatting around the item marker.
+  const structuralTag = /<\/?(?:ul|ol|li|h[1-6]|p|div|section|tr|table|td|th)\b[^>]*>/gi;
+  const containers: string[] = [];
+  const itemContainerDepths: number[] = [];
+  let output = '';
+  let cursor = 0;
+  let malformed = false;
+  const markerForCurrentItem = () => {
+    const depth = itemContainerDepths.length;
+    return depth === 1 ? '• ' : depth === 2 ? '◦ ' : '▪ ';
+  };
+
+  for (const match of markup.matchAll(structuralTag)) {
+    const tag = match[0];
+    const tagName = tag.match(/^<\/?(ul|ol|li|h[1-6]|p|div|section|tr|table|td|th)\b/i)?.[1]?.toLowerCase();
+    if (!tagName) continue;
+    const closing = /^<\//.test(tag);
+    const index = match.index ?? 0;
+    output += markup.slice(cursor, index);
+
+    if (tagName === 'ul' || tagName === 'ol') {
+      if (closing) {
+        if (itemContainerDepths.some(depth => depth >= containers.length)) malformed = true;
+        if (containers.pop() !== tagName) malformed = true;
+        output += tag;
+        if (itemContainerDepths.length > 0) output += `<p>${markerForCurrentItem()}`;
+      } else {
+        containers.push(tagName);
+        output += tag;
+      }
+    } else if (tagName === 'li') {
+      if (closing) {
+        if (itemContainerDepths.length === 0 || itemContainerDepths[itemContainerDepths.length - 1] !== containers.length) malformed = true;
+        else itemContainerDepths.pop();
+        output += '</p>';
+      } else {
+        if (containers.length === 0 || (itemContainerDepths.length > 0 && containers.length <= itemContainerDepths[itemContainerDepths.length - 1])) malformed = true;
+        itemContainerDepths.push(containers.length);
+        output += `<p>${markerForCurrentItem()}`;
+      }
+    } else if (itemContainerDepths.length > 0) {
+      // Keep the same block and cell boundaries as cleanHtmlText. Prefix each
+      // resulting text block with its active list depth so none of the blocks
+      // can escape a colon-ended list skip as an unmarked paragraph.
+      output += tag;
+      if (!closing || !['td', 'th'].includes(tagName)) output += markerForCurrentItem();
+    } else {
+      output += tag;
+    }
+    cursor = index + tag.length;
+  }
+  output += markup.slice(cursor);
+
+  // Malformed list nesting makes item boundaries unknowable. Fail closed at
+  // page validation rather than allowing unmarked child text into evidence.
+  if (malformed || containers.length > 0 || itemContainerDepths.length > 0) return '';
+  return output;
+}
+
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
 function extractVisiblePageText(rawDocument: string): string {
   const withoutChrome = rawDocument
@@ -75,7 +140,12 @@ function extractVisiblePageText(rawDocument: string): string {
     .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
   const contentMatch = withoutChrome.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
-  return cleanHtmlText(contentMatch?.[1] || bodyMatch?.[1] || withoutChrome);
+  const visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
+  // Keep nested list-item identity after HTML cleanup so evidence-only fallback
+  // can exclude a dangling introduction and every child item. Bullet markers
+  // are visible list formatting, not added tax-rule text.
+  const listAwareMarkup = preserveListItemBoundaries(visibleMarkup);
+  return cleanHtmlText(listAwareMarkup);
 }
 
 const TOPIC_TERM_STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the']);

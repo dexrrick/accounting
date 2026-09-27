@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { cleanHtmlText } from '../../src/retrieval/sourceAdapters.ts';
+import { ExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 import { selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 
@@ -56,6 +57,22 @@ const structureExample = cleanHtmlText('<h2>Heading</h2><p>Paragraph with <stron
 assert.equal(structureExample,
   'Heading\n\nParagraph with inline bold text.\n\nNext block\n\nFirst item\n\nSecond item\n\nA | B\n\nLine one\nLine two',
   'HTML cleanup preserves structural blocks, table cells, and explicit line breaks without adding line breaks for inline tags.');
+
+const nestedListText = new ExternalSourceValidator().validateTopicContent(
+  '<html><head><title>Tax Clearance for Employees</title></head><body><main><h1>Tax Clearance for Employees</h1>' +
+  '<p>IR21 clearance requires employers to file before the employee leaves Singapore.</p>' +
+  '<p>If tax clearance is required, file Form IR21 before:</p><ul><li><section><div><h3>' +
+  'The employer must file Form IR21 and withhold all monies when the employee stops work, starts an overseas posting, or plans to leave Singapore for an extended period. This nested detail is not an independent requirement.' +
+  '</h3></div><table><tr><td>First table cell contains a separate employee departure detail.</td><td>Second table cell contains another separate departure condition.</td></tr>' +
+  '<tr><td>First cell on the next row gives another departure timing.</td><td>Second cell on the next row gives a further timing example.</td></tr></table></section></li></ul></main></body></html>',
+  { standardIdentifiers: ['IR21'], expectedTitles: ['Tax Clearance for Employees'], topicTerms: ['Form IR21'] }
+).substantiveText || '';
+assert.match(nestedListText, /\n\n•\s+The employer must file Form IR21/,
+  'A long item nested in div/section/heading retains a separate paragraph boundary and its list marker.');
+assert.match(nestedListText, /\|\s*•\s+Second table cell contains another separate departure condition\./,
+  'Table cell separators remain intact and each cell carries the active list marker.');
+assert.match(nestedListText, /\n\n•\s+\|\s*•\s+First cell on the next row gives another departure timing\./,
+  'Table rows retain separate block boundaries with list markers.');
 
 for (const sourceCase of sourceCases) {
   const sourceText = cleanHtmlText(sourceCase.html);

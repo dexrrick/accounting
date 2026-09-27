@@ -34,6 +34,10 @@ function normalizeEvidenceText(value: string): string {
   return value.normalize('NFC').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+export function startsAttachedEvidenceQualification(value: string): boolean {
+  return ATTACHED_QUALIFICATION_START.test(normalizeEvidenceText(value));
+}
+
 function normalizeApprovedHttpsUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.trim() === '') return undefined;
   const raw = value.trim();
@@ -162,10 +166,27 @@ function quoteIsWholeSourceSpan(sourceText: string, quote: string): 'MATCH' | 'N
     const paragraph = paragraphs[paragraphIndex];
     if (normalizeEvidenceText(paragraph) === normalizedQuote) {
       const nextParagraph = paragraphs[paragraphIndex + 1];
-      if (nextParagraph && ATTACHED_QUALIFICATION_START.test(normalizeEvidenceText(nextParagraph))) {
+      if (nextParagraph && startsAttachedEvidenceQualification(nextParagraph)) {
         return 'OMITS_ATTACHED_QUALIFICATION';
       }
       return 'MATCH';
+    }
+
+    // A rule paragraph followed by an attached qualifier can be cited only as
+    // the complete, contiguous source span. This admits exact multi-paragraph
+    // quotes without permitting summaries or omission of the qualifier.
+    if (paragraphIndex + 1 < paragraphs.length && startsAttachedEvidenceQualification(paragraphs[paragraphIndex + 1])) {
+      let attachedEnd = paragraphIndex + 1;
+      while (attachedEnd + 1 < paragraphs.length && startsAttachedEvidenceQualification(paragraphs[attachedEnd + 1])) {
+        attachedEnd += 1;
+      }
+      let attachedSpan = normalizeEvidenceText(paragraph);
+      for (let end = paragraphIndex + 1; end <= attachedEnd; end += 1) {
+        attachedSpan += ` ${normalizeEvidenceText(paragraphs[end])}`;
+        if (attachedSpan === normalizedQuote) {
+          return end === attachedEnd ? 'MATCH' : 'OMITS_ATTACHED_QUALIFICATION';
+        }
+      }
     }
 
     const sentences = splitParagraphIntoSentences(paragraph);
@@ -176,7 +197,7 @@ function quoteIsWholeSourceSpan(sourceText: string, quote: string): 'MATCH' | 'N
         const normalizedSpan = normalizeEvidenceText(span);
         if (normalizedSpan === normalizedQuote) {
           const nextSentence = sentences[end + 1] || paragraphs[paragraphIndex + 1];
-          if (nextSentence && ATTACHED_QUALIFICATION_START.test(normalizeEvidenceText(nextSentence))) {
+          if (nextSentence && startsAttachedEvidenceQualification(nextSentence)) {
             return 'OMITS_ATTACHED_QUALIFICATION';
           }
           return 'MATCH';

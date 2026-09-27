@@ -337,6 +337,52 @@ const completeQualification = verifyEvidenceClaims(
 );
 assert.equal(completeQualification.accepted.length, 1, 'The complete paragraph with its attached exception remains quotable.');
 
+const attachedMultiParagraphText = [
+  'Input tax may be claimed for qualifying business entertainment.',
+  'However, special exclusions apply to specified costs.',
+  'In contrast, ordinary office supplies may be claimed when all normal conditions are met.'
+].join('\n\n');
+const attachedMultiParagraphRecord = makeLocalRecord({ sourceText: attachedMultiParagraphText });
+const incompleteAttachedSpan = verifyEvidenceClaims(
+  [makeClaim(attachedMultiParagraphText.split('\n\n').slice(0, 2).join(' '), 'IRAS_LOCAL_VERIFIED')],
+  [attachedMultiParagraphRecord],
+  { missingFacts: [] }
+);
+assert.equal(incompleteAttachedSpan.rejected[0].reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION',
+  'A contiguous quote cannot stop before a further recognized attached qualification.');
+const completeAttachedSpan = verifyEvidenceClaims(
+  [makeClaim(attachedMultiParagraphText.replace(/\n\n/g, ' '), 'IRAS_LOCAL_VERIFIED')],
+  [attachedMultiParagraphRecord],
+  { missingFacts: [] }
+);
+assert.equal(completeAttachedSpan.accepted.length, 1,
+  'An exact contiguous span including recognized attached paragraphs remains verifiable.');
+
+const unrelatedIfRule = 'A complete standalone rule requires a valid invoice for each claim.';
+const unrelatedIfParagraph = 'If the company requests a separate review, the application checks that request independently.';
+const unrelatedIfRecord = makeLocalRecord({ sourceText: `${unrelatedIfRule}\n\n${unrelatedIfParagraph}` });
+const unrelatedIfRuleOnly = verifyEvidenceClaims(
+  [makeClaim(unrelatedIfRule, 'IRAS_LOCAL_VERIFIED')],
+  [unrelatedIfRecord],
+  { missingFacts: [] }
+);
+assert.equal(unrelatedIfRuleOnly.accepted.length, 1,
+  'An otherwise complete rule remains standalone when an unrelated later paragraph happens to begin with If.');
+const unrelatedIfMerged = verifyEvidenceClaims(
+  [makeClaim(`${unrelatedIfRule} ${unrelatedIfParagraph}`, 'IRAS_LOCAL_VERIFIED')],
+  [unrelatedIfRecord],
+  { missingFacts: [] }
+);
+assert.equal(unrelatedIfMerged.rejected[0].reason, 'QUOTE_NOT_WHOLE_SENTENCE_OR_PARAGRAPH',
+  'A following If paragraph is not merged into an unrelated source rule.');
+const unrelatedIfStandalone = verifyEvidenceClaims(
+  [makeClaim(unrelatedIfParagraph, 'IRAS_LOCAL_VERIFIED')],
+  [unrelatedIfRecord],
+  { missingFacts: [] }
+);
+assert.equal(unrelatedIfStandalone.accepted.length, 1,
+  'The following If paragraph remains independently quotable when complete.');
+
 const ellipsisQuote = verifyEvidenceClaims(
   [makeClaim('A GST-registered business may claim input tax... taxable supplies.', 'IRAS_LOCAL_VERIFIED')],
   [makeLocalRecord()],

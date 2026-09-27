@@ -8,9 +8,20 @@ const MAX_CANDIDATES = 2;
 const SITEMAP_CACHE_MS = 15 * 60 * 1000;
 const UNAVAILABLE_CACHE_MS = 30 * 1000;
 
+export interface OfficialSourceIndexEntry {
+  authority: string;
+  canonicalUrl: string;
+  pageTitle?: string;
+  hierarchy: string[];
+  normalizedPath: string;
+  topicHints: string[];
+  discoverySourceUrl: string;
+  discoveredAt: string;
+}
+
 interface SitemapCacheEntry {
   expiresAt: number;
-  urls: string[];
+  entries: OfficialSourceIndexEntry[];
 }
 
 function readLocValues(xml: string): string[] {
@@ -33,6 +44,88 @@ function readLocValues(xml: string): string[] {
   return [...new Set(values)];
 }
 
+function decodeHtmlEntities(value: string): string {
+  const decodeCodePoint = (raw: string, radix: number, original: string): string => {
+    const codePoint = Number.parseInt(raw, radix);
+    if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff || (codePoint >= 0xd800 && codePoint <= 0xdfff)) {
+      return original;
+    }
+    return String.fromCodePoint(codePoint);
+  };
+  return value
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#(\d+);/g, (match, decimal: string) => decodeCodePoint(decimal, 10, match))
+    .replace(/&#x([\da-f]+);/gi, (match, hex: string) => decodeCodePoint(hex, 16, match));
+}
+
+function normalizedPath(url: URL): string {
+  return decodeURIComponent(url.pathname).toLowerCase().replace(/\/+$/, '') || '/';
+}
+
+function inferAuthority(host: string): string {
+  if (host === 'iras.gov.sg' || host === 'www.iras.gov.sg') return 'IRAS';
+  if (host === 'ifrs.org' || host === 'www.ifrs.org') return 'IFRS Foundation';
+  if (host === 'sso.agc.gov.sg') return 'AGC';
+  if (host === 'acra.gov.sg' || host === 'www.acra.gov.sg' || host === 'asc.acra.gov.sg') return 'ACRA';
+  return 'OFFICIAL';
+}
+
+function makeIndexEntry(
+  rawUrl: string,
+  discoverySourceUrl: string,
+  pageTitle?: string,
+  hierarchy: string[] = []
+): OfficialSourceIndexEntry | undefined {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return undefined;
+    const path = normalizedPath(parsed);
+    const pathHierarchy = path.split('/').filter(Boolean);
+    const title = pageTitle?.trim() || undefined;
+    const hints = [...new Set(`${title || ''} ${hierarchy.join(' ')} ${pathHierarchy.join(' ')}`
+      .toLowerCase().split(/[^a-z0-9]+/).filter(token => token.length >= 4))];
+    return {
+      authority: inferAuthority(parsed.hostname.toLowerCase()),
+      canonicalUrl: parsed.toString(),
+      pageTitle: title,
+      hierarchy: [...hierarchy.filter(Boolean), ...pathHierarchy],
+      normalizedPath: path,
+      topicHints: hints,
+      discoverySourceUrl,
+      discoveredAt: new Date().toISOString()
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+function readHtmlSitemapEntries(html: string, sitemapUrl: string, approvedHosts: readonly string[]): OfficialSourceIndexEntry[] {
+  const entries: OfficialSourceIndexEntry[] = [];
+  const allowed = new Set(approvedHosts.map(host => host.toLowerCase()));
+  const anchorPattern = /<a\b([^>]*)\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))([^>]*)>([\s\S]*?)<\/a\s*>/gi;
+  for (const match of html.matchAll(anchorPattern)) {
+    const rawHref = match[2] || match[3] || match[4] || '';
+    const pageTitle = decodeHtmlEntities((match[6] || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
+    if (!rawHref || !pageTitle) continue;
+    try {
+      const candidate = new URL(decodeHtmlEntities(rawHref), sitemapUrl);
+      if (candidate.protocol !== 'https:' || !allowed.has(candidate.hostname.toLowerCase()) ||
+          /^\/(?:sitemap|sitemap\.xml)\/?$/i.test(candidate.pathname)) continue;
+      const pathHierarchy = candidate.pathname.split('/').filter(Boolean).slice(0, -1);
+      const entry = makeIndexEntry(candidate.toString(), sitemapUrl, pageTitle, pathHierarchy);
+      if (entry) entries.push(entry);
+    } catch {
+      // Malformed and off-domain page links are discovery noise, never evidence.
+    }
+  }
+  return [...new Map(entries.map(entry => [entry.canonicalUrl, entry])).values()];
+}
+
 function standardPathTokens(standardOrAct: string): string[] {
   const tokens = new Set<string>();
   for (const match of standardOrAct.matchAll(/\b(SFRS\s*\(\s*I\s*\)|IFRS|IAS)\s*(\d+(?:\s*[-/]\s*\d+)?)\b/gi)) {
@@ -51,17 +144,25 @@ function standardPathTokens(standardOrAct: string): string[] {
   return [...tokens];
 }
 
-function candidateScore(url: string, request: OfficialSourceDiscoveryRequest): number {
-  const candidate = new URL(url);
-  const path = candidate.pathname.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+function normalizeWords(text: string): string[] {
+  return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean).map(word => {
+    if (word.endsWith('ies') && word.length > 5) return `${word.slice(0, -3)}y`;
+    if (word.endsWith('es') && word.length > 5) return word.slice(0, -2);
+    if (word.endsWith('s') && word.length > 4) return word.slice(0, -1);
+    return word;
+  });
+}
+
+function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSourceDiscoveryRequest): number {
+  const searchable = `${entry.pageTitle || ''} ${entry.hierarchy.join(' ')} ${entry.normalizedPath} ${entry.topicHints.join(' ')}`;
+  const path = searchable.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
   const standards = standardPathTokens(request.standardOrAct);
   const matchedStandard = standards.some(token => path.replace(/[^a-z0-9]+/g, '').includes(token.replace(/[^a-z0-9]+/g, '')));
   if (matchedStandard) {
-    const topicWords = `${request.topicTitle} ${request.query}`
-      .toLowerCase()
-      .split(/[^a-z0-9]+/)
+    const topicWords = normalizeWords(`${request.topicTitle} ${(request.topicHints || []).join(' ')} ${request.query}`)
       .filter(word => word.length >= 5);
-    const matchedTopicWords = new Set(topicWords.filter(word => path.includes(word)));
+    const candidateWords = new Set(normalizeWords(searchable));
+    const matchedTopicWords = new Set(topicWords.filter(word => candidateWords.has(word)));
     return 10 + matchedTopicWords.size;
   }
 
@@ -76,31 +177,38 @@ function candidateScore(url: string, request: OfficialSourceDiscoveryRequest): n
     'company', 'companies', 'business', 'businesses', 'the', 'and', 'for', 'from',
     'with', 'under', 'into', 'what', 'when', 'where', 'does', 'should', 'can', 'are'
   ]);
-  const topicTitleWords = request.topicTitle
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
+  const candidateWords = new Set(normalizeWords(searchable));
+  const expectedTitleWords = normalizeWords((request.expectedTitles || []).join(' '))
     .filter(word => word.length >= 4 && !stopWords.has(word));
-  const queryWords = request.query
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
+  const topicTitleWords = normalizeWords(`${request.topicTitle} ${(request.topicHints || []).join(' ')}`)
+    .filter(word => word.length >= 4 && !stopWords.has(word));
+  const queryWords = normalizeWords(request.query)
     .filter(word => word.length >= 5 && !stopWords.has(word));
-  const matchedTitleWords = new Set(topicTitleWords.filter(word => path.includes(word)));
-  const matchedQueryWords = new Set(queryWords.filter(word => path.includes(word)));
+  const matchedExpectedTitleWords = new Set(expectedTitleWords.filter(word => candidateWords.has(word)));
+  const matchedTitleWords = new Set(topicTitleWords.filter(word => candidateWords.has(word)));
+  const matchedQueryWords = new Set(queryWords.filter(word => candidateWords.has(word)));
+  const expectedTitleMatch = matchedExpectedTitleWords.size >= 2 || [...matchedExpectedTitleWords].some(word => word.length >= 9);
   const distinctiveTitleMatch = [...matchedTitleWords].some(word => word.length >= 9);
-  if (matchedTitleWords.size < 2 && !distinctiveTitleMatch && matchedQueryWords.size < 2) return 0;
-  return 20 + matchedTitleWords.size * 4 + matchedQueryWords.size;
+  const matchedSpecificHint = (request.topicHints || []).some(hint => {
+    const hintWords = normalizeWords(hint).filter(word => word.length >= 5 && !stopWords.has(word));
+    const titleWords = new Set(normalizeWords(entry.pageTitle || ''));
+    return hintWords.length > 0 && hintWords.some(word => titleWords.has(word));
+  });
+  if (!expectedTitleMatch && !distinctiveTitleMatch && matchedTitleWords.size < 2 && matchedQueryWords.size < 2 && !matchedSpecificHint) return 0;
+  return 20 + matchedExpectedTitleWords.size * 6 + matchedTitleWords.size * 4 + matchedQueryWords.size + (matchedSpecificHint ? 3 : 0);
 }
 
 /**
- * Bounded first-party discovery using each approved host's robots.txt and only
- * sitemap locations named by that file. Every discovered candidate is later
- * fetched and topic-validated by resolveMappedOfficialSourceFallback.
- * Unavailable robots/sitemap endpoints fail closed and return no candidates.
+ * Bounded, first-party URL discovery. IRAS pages are indexed from its published
+ * HTML sitemap first; other approved hosts continue to use robots.txt sitemap
+ * locations. Index membership is routing metadata only. Every candidate is
+ * separately fetched and topic-validated before it can become evidence.
  */
 export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryAdapter {
   private readonly retriever: ControlledWebRetriever;
   private readonly fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response> };
   private readonly sitemapCache = new Map<string, SitemapCacheEntry>();
+  private readonly candidateIndex = new Map<string, OfficialSourceIndexEntry>();
 
   constructor(
     retriever: ControlledWebRetriever,
@@ -110,16 +218,43 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     this.fetchOptions = { timeoutMs: 1200, ...fetchOptions };
   }
 
-  private async getSitemapUrls(host: string, approvedHosts: readonly string[]): Promise<string[]> {
+  /** Read-only metadata snapshot for deterministic diagnostics and focused tests. */
+  public getIndexedCandidates(): OfficialSourceIndexEntry[] {
+    return [...this.candidateIndex.values()].map(entry => ({ ...entry, hierarchy: [...entry.hierarchy], topicHints: [...entry.topicHints] }));
+  }
+
+  private async getSitemapEntries(host: string, approvedHosts: readonly string[]): Promise<OfficialSourceIndexEntry[]> {
     const cached = this.sitemapCache.get(host);
-    if (cached && cached.expiresAt > Date.now()) return cached.urls;
+    if (cached && cached.expiresAt > Date.now()) return cached.entries;
+
+    const isIrasHost = host === 'iras.gov.sg' || host === 'www.iras.gov.sg';
+    if (isIrasHost) {
+      const sitemapUrl = 'https://www.iras.gov.sg/sitemap';
+      const irasHosts = new Set<string>(approvedHosts.filter(item => item === 'iras.gov.sg' || item === 'www.iras.gov.sg'));
+      const sitemap = await this.retriever.fetchOfficialSource(sitemapUrl, {
+        ...this.fetchOptions,
+        useCache: false
+      });
+      const finalHost = (() => {
+        try { return new URL(sitemap.finalUrl || '').hostname.toLowerCase(); } catch { return ''; }
+      })();
+      if (sitemap.status === 'SUCCESS' && sitemap.content && irasHosts.has(finalHost)) {
+        const entries = readHtmlSitemapEntries(sitemap.content, sitemap.finalUrl || sitemapUrl, [...irasHosts]);
+        if (entries.length > 0) {
+          this.sitemapCache.set(host, { expiresAt: Date.now() + SITEMAP_CACHE_MS, entries });
+          return entries;
+        }
+      }
+      // Retain the earlier first-party sitemap mechanism as an availability
+      // fallback. It is still index metadata and never substantive evidence.
+    }
 
     const robots = await this.retriever.fetchOfficialSource(`https://${host}/robots.txt`, {
       ...this.fetchOptions,
       useCache: false
     });
     if (robots.status !== 'SUCCESS' || !robots.content) {
-      this.sitemapCache.set(host, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, urls: [] });
+      this.sitemapCache.set(host, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, entries: [] });
       return [];
     }
 
@@ -137,11 +272,11 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       })
       .slice(0, MAX_SITEMAPS_PER_HOST);
     if (sitemapUrls.length === 0) {
-      this.sitemapCache.set(host, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, urls: [] });
+      this.sitemapCache.set(host, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, entries: [] });
       return [];
     }
 
-    const discovered = new Set<string>();
+    const discovered = new Map<string, OfficialSourceIndexEntry>();
     for (const sitemapUrl of sitemapUrls) {
       const sitemap = await this.retriever.fetchOfficialSource(sitemapUrl, {
         ...this.fetchOptions,
@@ -171,19 +306,22 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       for (const location of locations) {
         try {
           const parsed = new URL(location);
-          if (allowedHosts.has(parsed.hostname.toLowerCase())) discovered.add(parsed.toString());
+          if (parsed.protocol === 'https:' && allowedHosts.has(parsed.hostname.toLowerCase())) {
+            const entry = makeIndexEntry(parsed.toString(), sitemapUrl);
+            if (entry) discovered.set(entry.canonicalUrl, entry);
+          }
         } catch {
           // readLocValues already filters invalid URLs; keep this boundary defensive.
         }
       }
     }
 
-    const urls = [...discovered];
+    const entries = [...discovered.values()];
     this.sitemapCache.set(host, {
-      expiresAt: Date.now() + (urls.length > 0 ? SITEMAP_CACHE_MS : UNAVAILABLE_CACHE_MS),
-      urls
+      expiresAt: Date.now() + (entries.length > 0 ? SITEMAP_CACHE_MS : UNAVAILABLE_CACHE_MS),
+      entries
     });
-    return urls;
+    return entries;
   }
 
   public async discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]> {
@@ -195,20 +333,24 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       return true;
     });
     const preferredHosts = distinctHosts.sort((a, b) => {
-      const score = (host: string) => host === 'www.ifrs.org' ? 0 : host === 'ifrs.org' ? 1 : host === 'asc.acra.gov.sg' ? 2 : host === 'sso.agc.gov.sg' ? 3 : host === 'www.iras.gov.sg' ? 4 : host === 'iras.gov.sg' ? 5 : 6;
+      const score = (host: string) => host === 'www.ifrs.org' ? 0 : host === 'ifrs.org' ? 1 : host === 'www.iras.gov.sg' ? 2 : host === 'iras.gov.sg' ? 3 : host === 'asc.acra.gov.sg' ? 4 : host === 'sso.agc.gov.sg' ? 5 : 6;
       return score(a) - score(b);
     }).slice(0, MAX_HOSTS_PER_SEARCH);
-    const candidates = new Set<string>();
+    const candidates = new Map<string, OfficialSourceIndexEntry>();
 
     for (const host of preferredHosts) {
-      const sitemapUrls = await this.getSitemapUrls(host, approvedHosts);
-      for (const url of sitemapUrls) {
-        if (candidateScore(url, request) > 0) candidates.add(url);
+      const entries = await this.getSitemapEntries(host, approvedHosts);
+      for (const entry of entries) {
+        if (candidateScore(entry, request) > 0) {
+          candidates.set(entry.canonicalUrl, entry);
+          this.candidateIndex.set(entry.canonicalUrl, entry);
+        }
       }
     }
 
-    return [...candidates]
+    return [...candidates.values()]
       .sort((a, b) => candidateScore(b, request) - candidateScore(a, request))
-      .slice(0, MAX_CANDIDATES);
+      .slice(0, MAX_CANDIDATES)
+      .map(entry => entry.canonicalUrl);
   }
 }
