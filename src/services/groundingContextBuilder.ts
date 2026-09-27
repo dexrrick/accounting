@@ -23,7 +23,11 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { assembleDeterministicResponse, guardUnconditionalMealInputTaxClaim, hasUnresolvedMealInputTaxEligibility } from '../engine/responseAssembler';
 import { extractAccountingContext } from './conversationAccountingState';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
-import { OfficialSitemapDiscoveryAdapter } from '../retrieval/officialSitemapDiscovery';
+import {
+  getOfficialSourceDiscoveryProviderConfig,
+  OfficialDomainSearchAdapter as DefaultOfficialDomainSearchAdapter,
+  OfficialSitemapDiscoveryAdapter
+} from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 import { defaultExternalSourceValidator } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
@@ -54,11 +58,16 @@ export interface GroundedReasoningContext {
 export interface SourceMapFallbackAttempt {
   topicId: string;
   sourceMapId?: string;
+  candidateUrl?: string;
+  /** Official fetched page whose explicit anchor exposed a child candidate. */
+  discoverySourceUrl?: string;
   fetchStatus: string;
   finalUrl?: string;
   pageTitle?: string;
   titleMatched: boolean;
   contentMatched: boolean;
+  discoveryStage?: 'MAPPED_SOURCE' | 'SITEMAP_DISCOVERY' | 'OFFICIAL_DOMAIN_SEARCH';
+  searchQueryVariant?: 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3';
   error?: string;
 }
 
@@ -69,6 +78,7 @@ export interface SourceMapFallbackTrace {
   finalVerifiedUrls: string[];
   candidateOnly: boolean;
   attempts: SourceMapFallbackAttempt[];
+  stages?: Array<{ stage: 'LOCAL_VERIFIED' | 'MAPPED_SOURCE' | 'SITEMAP_DISCOVERY' | 'OFFICIAL_DOMAIN_SEARCH' | 'INSUFFICIENT'; status: 'SUFFICIENT' | 'ATTEMPTED' | 'EXHAUSTED' | 'SKIPPED'; reason: string }>;
 }
 
 export interface GroundingEvidenceTrace {
@@ -108,6 +118,7 @@ interface SourceMapPointer extends AuthoritativeSourceRecord {
 
 export interface OfficialSourceDiscoveryRequest {
   query: string;
+  authority?: string;
   topicId: string;
   topicTitle: string;
   standardOrAct: string;
@@ -116,17 +127,93 @@ export interface OfficialSourceDiscoveryRequest {
   topicHints?: readonly string[];
   /** Reviewed map titles help identify a moved page; they never establish evidence. */
   expectedTitles?: readonly string[];
+  /** Authority configuration for sitemap discovery; URLs remain metadata only. */
+  sitemapUrls?: readonly string[];
+  preferredHosts?: readonly string[];
+  /** Exact approved hostname used to scope official-domain search. */
+  searchSite?: string;
+  searchEndpoint?: string;
+  searchRedirectHost?: string;
+  searchRedirectParameter?: string;
+  lexicalDiscovery?: boolean;
+  authorityLevelFallback?: boolean;
+  maxCandidates?: number;
 }
 
 /** Trusted official-domain search adapter. Candidate URLs are always fetched and validated before use. */
 export interface OfficialSourceDiscoveryAdapter {
   discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  getCandidateTitle?(url: string): string | undefined;
+}
+
+/** Search returns candidate URLs only; every candidate is independently fetched and validated. */
+export interface OfficialDomainSearchAdapter {
+  searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  getCandidateTitle?(url: string): string | undefined;
+  getCandidateQueryVariant?(url: string): 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3' | undefined;
+  getLastSearchTrace?(): Array<{ variant: 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3'; candidateUrls: string[]; status: 'RESULTS' | 'NO_CANDIDATES'; reason?: string }>;
 }
 
 export interface MappedFallbackOptions {
   webRetriever?: ControlledWebRetriever;
   fetchOptions?: Omit<ControlledFetchOptions, 'topicValidation'>;
   discoveryAdapter?: OfficialSourceDiscoveryAdapter;
+  officialDomainSearchAdapter?: OfficialDomainSearchAdapter;
+  /** Permit a transient authority-level query scope when no reviewed topic matches. */
+  authorityLevelDiscovery?: boolean;
+  /** The caller already found adequate reviewed local evidence. */
+  localEvidenceAdequate?: boolean;
+}
+
+const AUTHORITY_QUERY_STOPWORDS = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'can', 'did', 'do', 'does', 'for', 'from', 'has', 'have',
+  'how', 'i', 'if', 'in', 'is', 'it', 'me', 'my', 'of', 'on', 'or', 'our', 'should', 'the', 'their', 'there',
+  'these', 'this', 'to', 'under', 'was', 'we', 'what', 'when', 'where', 'which', 'while', 'who', 'will', 'with'
+]);
+
+function provisionalIrasDiscoveryTopic(query: string): MappedCoverageTopic {
+  const lower = query.toLowerCase();
+  // Select the taxpayer from the requested income/tax subject, not from a
+  // background mention of an employee or an employer. Corporate income must
+  // be attributed to the entity by an explicit subject phrase or income verb.
+  const companyIncomeTarget = /\b(?:branch profits?|company profits?|company income|business income)\b/.test(lower) ||
+    /\b(?:company|companies|corporation|business)\b.{0,60}\b(?:remit\w*|derive\w*|receive\w*|earn\w*|generate\w*|source\w*)\b.{0,60}\b(?:income|profits?)\b|\b(?:income|profits?)\b.{0,60}\b(?:of|from|received by|derived by|remitted by)\s+(?:a\s+)?(?:company|corporation|business)\b/.test(lower);
+  const corporateTaxTarget = /\b(?:corporate income tax|corporate tax|company tax|business income tax)\b/.test(lower) ||
+    companyIncomeTarget &&
+    /\b(?:tax|taxable|exempt|chargeable|remit|relief)\b/.test(lower);
+  const individual = !corporateTaxTarget &&
+    /\b(?:individual|employee|employment income|salary|wages|tax resident|secondment|overseas posting)\b/.test(lower);
+  const domainId = individual ? 'IRAS_INDIVIDUAL_TAX'
+    : corporateTaxTarget ? 'IRAS_CORPORATE_TAX'
+      : /\b(?:gst|goods and services tax)\b/.test(lower) ? 'IRAS_GST'
+        : /\b(?:company|companies|corporate|business|withholding tax|wht)\b/.test(lower) ? 'IRAS_CORPORATE_TAX' : 'IRAS_INDIVIDUAL_TAX';
+  const populationContext = individual ? 'individual employee' : domainId === 'IRAS_CORPORATE_TAX' ? 'company' : 'taxpayer';
+  const normalized = normalizeEvidenceText(query);
+  const queryWords = [...new Set(normalized.split(' ').filter(word => word.length >= 4 && !AUTHORITY_QUERY_STOPWORDS.has(word)))];
+  const phrases = new Set<string>();
+  for (let index = 0; index < queryWords.length; index++) {
+    phrases.add(queryWords[index]);
+    if (queryWords[index + 1]) phrases.add(`${queryWords[index]} ${queryWords[index + 1]}`);
+  }
+  const meaningful = [...phrases].filter(phrase => phrase.length >= 7).slice(0, 32);
+  const idSuffix = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'question';
+  const topic = {
+    id: `iras-authority-query-${idSuffix}`,
+    title: `IRAS ${populationContext} guidance for ${query.slice(0, 140)}`,
+    domainId,
+    priority: 'P1',
+    status: 'MISSING',
+    authorities: ['IRAS'],
+    legacyDomains: [domainId === 'IRAS_GST' ? 'IRAS_GST' : 'IRAS_TAX'],
+    sourceRecordIds: [],
+    requiredChecks: ['SOURCE_PROVENANCE', 'RETRIEVAL_EVALUATION', 'TEMPORAL_VALIDITY'],
+    keywords: meaningful,
+    exclusionKeywords: [],
+    aliases: [],
+    actOrStandard: 'IRAS official guidance',
+    shortDescription: `Transient ${populationContext} routing context derived from the complete user query; not reviewed knowledge.`
+  } as unknown as MappedCoverageTopic;
+  return topic;
 }
 
 interface CachedDiscoveryAdapters {
@@ -166,6 +253,13 @@ function getDefaultDiscoveryAdapter(
     cached.defaultAdapter = new OfficialSitemapDiscoveryAdapter(webRetriever, fetchOptions);
   }
   return cached.defaultAdapter;
+}
+
+function getDefaultOfficialDomainSearchAdapter(
+  webRetriever: ControlledWebRetriever,
+  fetchOptions?: MappedFallbackOptions['fetchOptions']
+): OfficialDomainSearchAdapter {
+  return new DefaultOfficialDomainSearchAdapter(webRetriever, fetchOptions);
 }
 
 /** Maximum number of source records requested by production grounding. */
@@ -277,6 +371,82 @@ function isSourceMapRelevantToQuery(pointer: SourceMapPointer, query: string): b
   return true;
 }
 
+function irasCandidateDomainMismatch(query: string, topic: MappedCoverageTopic, candidateUrl: string): string | undefined {
+  let path = '';
+  try {
+    const candidate = new URL(candidateUrl);
+    if (candidate.protocol === 'https:' && isApprovedSingaporeSourceUrl(candidate.toString())) {
+      path = decodeURIComponent(candidate.pathname).toLowerCase();
+    }
+  } catch { /* an invalid URL is rejected by the surrounding URL/provenance gates */ }
+  if (!path) return undefined;
+  const pageIsIndividualIncomeTaxRoute = /^\/taxes\/individual-income-tax(?:\/|$)/.test(path);
+  const pageIsCorporateIncomeTaxRoute = /^\/taxes\/corporate-income-tax(?:\/|$)/.test(path);
+  const pageIsGstRoute = /^\/taxes\/(?:goods-services-tax(?:-\(gst\))?|gst)(?:\/|$)/.test(path);
+  const pageIsWithholdingTaxRoute = /^\/taxes\/withholding-tax(?:\/|$)/.test(path);
+  const pageIsPropertyTaxRoute = /^\/taxes\/property-tax(?:\/|$)/.test(path);
+  const pageIsStampDutyRoute = /^\/taxes\/stamp-duty(?:\/|$)/.test(path);
+  const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
+  if (pageIsGstRoute && topic.domainId !== 'IRAS_GST') {
+    return 'The fetched IRAS page is in the GST domain, which does not match the unresolved tax topic.';
+  }
+  if (topic.domainId === 'IRAS_CORPORATE_TAX' && pageIsIndividualIncomeTaxRoute) {
+    return 'The fetched IRAS page is in the individual income-tax domain, which does not match the corporate-tax topic.';
+  }
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && pageIsCorporateIncomeTaxRoute) {
+    return 'The fetched IRAS page is in the corporate income-tax domain, which does not match the individual-tax topic.';
+  }
+  if (topic.domainId === 'IRAS_CORPORATE_TAX' && pageIsWithholdingTaxRoute && !queryExplicitlyConcernsWithholdingTax) {
+    return 'The fetched IRAS page is in the withholding-tax domain, which does not match the corporate-income topic.';
+  }
+  if ((topic.domainId === 'IRAS_CORPORATE_TAX' || topic.domainId === 'IRAS_INDIVIDUAL_TAX') &&
+      (pageIsPropertyTaxRoute || pageIsStampDutyRoute)) {
+    return 'The fetched IRAS page is in a different tax domain from the unresolved income-tax topic.';
+  }
+  return undefined;
+}
+
+function candidateMatchesIrasPopulation(query: string, topic: MappedCoverageTopic, pageTitle: string, pageText: string, candidateUrl: string): boolean {
+  const text = `${pageTitle}\n${pageText}`.toLowerCase();
+  let path = '';
+  try {
+    const candidate = new URL(candidateUrl);
+    if (candidate.protocol === 'https:' && isApprovedSingaporeSourceUrl(candidate.toString())) {
+      path = decodeURIComponent(candidate.pathname).toLowerCase();
+    }
+  } catch { /* an invalid URL is rejected by the surrounding URL/provenance gates */ }
+  const queryIsEmployee = /\b(?:employee|employment income|salary|wages|secondment|overseas posting)\b/i.test(query);
+  const queryIsEmployer = /\b(?:employer|payroll|ir8a|ir21|withhold monies)\b/i.test(query);
+  const queryIsNonResidentRecipient = /\bnon[ -]resident\b/i.test(query) && /\b(?:recipient|consultant|professional|royalt(?:y|ies)|interest payment|service fee)\b/i.test(query);
+  const pageIsIndividualIncomeTaxRoute = /^\/taxes\/individual-income-tax(?:\/|$)/.test(path);
+  const pageIsEmployerRoute = /\/employers(?:\/|$)/.test(path);
+  const pageIsWithholdingTaxRoute = /^\/taxes\/withholding-tax(?:\/|$)/.test(path);
+  const pageHasEmployeeContext = /\b(?:employee|employees|employment|employment income|salary|wages)\b/i.test(text);
+  const pageHasIndividualContext = /\b(?:individual|personal income|individual income tax|tax resident|resident individual|taxpayer)\b/i.test(text) ||
+    (pageIsIndividualIncomeTaxRoute && !pageIsEmployerRoute);
+  const pageHasEmployerContext = /\b(?:employer|payroll|ir8a|ir21|employee)\b/i.test(text);
+  const pageHasRecipientContext = /\b(?:non[ -]resident|consultant|professional|recipient|royalt(?:y|ies)|interest payment|service fee)\b/i.test(text);
+  const pageTitleIsCorporate = /\b(?:companies receiving|corporate income tax|company tax|corporate tax|business income)\b/i.test(pageTitle);
+  const pageIsCorporateTaxRoute = /^\/taxes\/corporate-income-tax(?:\/|$)/.test(path);
+  const topicRequiresEmploymentPage = topic.id === 'iras-individual-overseas-employment' ||
+    topic.id === 'iras-individual-foreign-employment-income';
+  const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
+  // Individual residence and foreign-tax-credit guidance can apply to an
+  // employment query without repeating employee wording on every page. Require
+  // employment-specific page content only for the employment topics themselves.
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && queryIsEmployee && topicRequiresEmploymentPage &&
+      (!pageHasEmployeeContext || pageIsEmployerRoute)) return false;
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && !queryIsEmployee && !pageHasIndividualContext) return false;
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && queryIsEmployer && !pageHasEmployerContext) return false;
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && !queryIsEmployer && pageIsEmployerRoute) return false;
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && pageIsCorporateTaxRoute) return false;
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && pageIsWithholdingTaxRoute && !queryExplicitlyConcernsWithholdingTax) return false;
+  if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && pageTitleIsCorporate && !pageHasIndividualContext && !pageHasEmployeeContext) return false;
+  if (topic.domainId === 'IRAS_EMPLOYER_TAX' && queryIsEmployer && !pageHasEmployerContext) return false;
+  if (topic.domainId === 'IRAS_CORPORATE_TAX' && queryIsNonResidentRecipient && !pageHasRecipientContext) return false;
+  return true;
+}
+
 function isLocalGstRateRecord(record: AuthoritativeSourceRecord): boolean {
   return record.authority === 'IRAS' &&
     record.domain === 'IRAS_GST' &&
@@ -369,7 +539,70 @@ function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
   // to validate a live overview for a specific subtopic. Require a focused
   // topic phrase whenever one is available.
   const focusedTerms = allTerms.filter(term => normalizeEvidenceText(term).split(/\s+/).filter(Boolean).length >= 2);
+  // Authority-level scopes are built from the complete user query, not from
+  // reviewed topic labels. Keep distinctive single query terms as well as
+  // phrases so a valid official page is not rejected just because its wording
+  // does not preserve the query's adjacent word order.
+  if (topic.id.startsWith('iras-authority-query-')) return allTerms;
   return focusedTerms.length > 0 ? focusedTerms : allTerms;
+}
+
+interface LinkedOfficialCandidate {
+  url: string;
+  title?: string;
+  discoverySourceUrl: string;
+}
+
+function rankRelevantOfficialPageLinks(
+  links: readonly { href: string; text: string }[],
+  parentUrl: string,
+  topic: MappedCoverageTopic,
+  query: string,
+  approvedHosts: readonly string[]
+): LinkedOfficialCandidate[] {
+  let parent: URL;
+  try { parent = new URL(parentUrl); } catch { return []; }
+  if (parent.protocol !== 'https:' || !approvedHosts.includes(parent.hostname.toLowerCase())) return [];
+  const stopWords = new Set(['iras', 'singapore', 'tax', 'taxes', 'income', 'individual', 'employee', 'employment', 'official', 'guidance', 'the', 'and', 'for', 'from', 'with', 'under', 'what', 'when', 'how']);
+  const hints = [topic.title, ...(topic.aliases || []), ...topic.keywords, ...(topic.requiredContentTerms || [])];
+  const hintWords = new Set(normalizeEvidenceText(`${hints.join(' ')} ${query}`).split(' ')
+    .filter(word => word.length >= 4 && !stopWords.has(word)));
+  const candidates = new Map<string, { title?: string; score: number }>();
+  for (const link of links) {
+    let candidate: URL;
+    try { candidate = new URL(link.href, parent); } catch { continue; }
+    if (candidate.protocol !== 'https:' || candidate.username || candidate.password ||
+        !approvedHosts.includes(candidate.hostname.toLowerCase())) continue;
+    candidate.hash = '';
+    if (candidate.toString() === parent.toString()) continue;
+    const searchable = normalizeEvidenceText(`${candidate.pathname} ${link.text}`);
+    const phraseMatch = hints.some(hint => {
+      const phrase = normalizeEvidenceText(hint);
+      return phrase.split(' ').length >= 2 && phrase.length >= 9 && searchable.includes(phrase);
+    });
+    const overlap = [...hintWords].filter(word => searchable.split(' ').includes(word)).length;
+    if (!phraseMatch && overlap < 2) continue;
+    const score = (phraseMatch ? 100 : 0) + overlap;
+    const url = candidate.toString();
+    const current = candidates.get(url);
+    if (!current || score > current.score) candidates.set(url, { title: link.text.trim() || undefined, score });
+  }
+  return [...candidates.entries()]
+    .sort((a, b) => b[1].score - a[1].score || a[0].localeCompare(b[0]))
+    .slice(0, 4)
+    .map(([url, candidate]) => ({ url, title: candidate.title, discoverySourceUrl: parent.toString() }));
+}
+
+function candidateTitlePhrases(title: string | undefined): string[] {
+  if (!title) return [];
+  const stopwords = new Set(['iras', 'tax', 'the', 'and', 'for', 'from', 'my', 'want', 'know', 'to', 'on', 'of']);
+  const words = normalizeEvidenceText(title).split(' ').filter(word => word && !stopwords.has(word));
+  const phrases = new Set<string>();
+  for (let index = 0; index < words.length; index++) {
+    if (words[index + 1]) phrases.add(`${words[index]} ${words[index + 1]}`);
+    if (words[index + 1] && words[index + 2]) phrases.add(`${words[index]} ${words[index + 1]} ${words[index + 2]}`);
+  }
+  return [...phrases].slice(-12);
 }
 
 export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = ''): string {
@@ -438,10 +671,8 @@ function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
 }
 
 function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
-  // This phase indexes IRAS guidance only. A known source-map route may still
-  // redirect to an already approved statutory host, but sitemap discovery does
-  // not ingest SSO or any additional Singapore authority.
-  if (topic.domainId.startsWith('IRAS_')) return ['www.iras.gov.sg', 'iras.gov.sg'];
+  const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+  if (providerConfig) return [...providerConfig.approvedHosts];
   return approvedHostsForTopic(topic);
 }
 
@@ -518,7 +749,10 @@ function makeLiveCandidateEvidence(
     officialSourceUrl: url,
     domain: (pointer?.domain || topic.legacyDomains[0] || 'ACCOUNTING_SFRS') as QueryDomain,
     jurisdiction: 'Singapore',
-    tags: [...new Set([topic.id, topic.title, ...topic.keywords, ...(topic.aliases || [])])],
+    // A discovered record is associated only with the topic whose page and
+    // excerpt were actually validated. Registry keywords are routing hints,
+    // not cross-topic evidence associations.
+    tags: [topic.id],
     sourceStatus: 'NEEDS_REVIEW' as const,
     sourceType: 'OFFICIAL_GUIDANCE' as const,
     evidenceTier: 'OFFICIAL_GUIDANCE' as const,
@@ -552,7 +786,7 @@ export async function resolveMappedOfficialSourceFallback(
   query: string,
   retriever: ISourceRetriever,
   options: MappedFallbackOptions = {}
-): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace }> {
+): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace; provisionalTopics: MappedCoverageTopic[] }> {
   const webRetriever = options.webRetriever || defaultControlledWebRetriever;
   const discoveryAdapter = options.discoveryAdapter || getDefaultDiscoveryAdapter(webRetriever, options.fetchOptions);
   const directTopics = getCoverageTopicsByIds(topicIds).map(topic => topic as MappedCoverageTopic);
@@ -579,19 +813,6 @@ export async function resolveMappedOfficialSourceFallback(
     }
   }
 
-  // The caller has already checked whether adequate local evidence was found.
-  // An explicitly requested fallback topic can therefore be VALIDATED in the
-  // coverage catalog while still lacking a matching local record for this query.
-  const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'HISTORICAL');
-  if (topicsRequiringFallback.length === 0) {
-    return { records: [], trace: { path: 'NOT_NEEDED', sourceMapIds: [], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: false, attempts: [] } };
-  }
-
-  const records: AuthoritativeSourceRecord[] = [];
-  const attempts: SourceMapFallbackAttempt[] = [];
-  const sourceMapIds = new Set<string>();
-  const finalVerifiedUrls = new Set<string>();
-  const discoveredEvidenceIds = new Set<string>();
   const targetDateResolution = defaultTargetDateResolver.resolveTargetDate(query);
   const targetDate = targetDateResolution.targetDate;
   const currentSingaporeYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
@@ -599,8 +820,64 @@ export async function resolveMappedOfficialSourceFallback(
     /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(targetDateResolution.rawMatchedText || '') &&
     targetDate?.slice(0, 4) === currentSingaporeYear;
   const targetIsHistorical = targetDateResolution.isHistorical === true && !currentYearYaProxy;
+  const registeredIrasTopics = [...expandedTopics.values()].filter(topic => topic.domainId.startsWith('IRAS_'));
+  const historicalIrasScopeRequested = targetIsHistorical || registeredIrasTopics.some(topic =>
+    topic.status === 'HISTORICAL' || isUndatedHistoricalIrasRequest(topic, query)
+  ) || (registeredIrasTopics.length === 0 && UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query));
 
-  const tryFetch = async (topic: MappedCoverageTopic, candidateUrl: string, pointer?: SourceMapPointer): Promise<AuthoritativeSourceRecord | undefined> => {
+  // Determine historical scope before constructing a provisional topic. An
+  // unmatched historical question cannot use a query-only context to bypass
+  // the period-vetted source-map requirement.
+  const authorityFallbackPermitted = options.authorityLevelDiscovery === true &&
+    !options.localEvidenceAdequate && !historicalIrasScopeRequested;
+  const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'HISTORICAL');
+  const authorityDiscoveryTopic = authorityFallbackPermitted ? provisionalIrasDiscoveryTopic(query) : undefined;
+  const provisionalTopics: MappedCoverageTopic[] = authorityDiscoveryTopic && topicsRequiringFallback.length === 0
+    ? [authorityDiscoveryTopic]
+    : [];
+
+  if (topicsRequiringFallback.length === 0 && !authorityDiscoveryTopic) {
+    const historicalBlocked = options.authorityLevelDiscovery === true && !options.localEvidenceAdequate && historicalIrasScopeRequested;
+    if (historicalBlocked) {
+      return { records: [], provisionalTopics: [], trace: {
+        path: 'NO_VERIFIED_MAP', sourceMapIds: [], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: false,
+        attempts: [{ topicId: 'iras-authority-query-historical-unresolved', fetchStatus: 'HISTORICAL_SCOPE_UNVERIFIED', titleMatched: false, contentMatched: false,
+          error: 'No registered topic or period-vetted source-map pointer establishes the requested historical IRAS scope; live discovery is not permitted.' }],
+        stages: [
+          { stage: 'LOCAL_VERIFIED', status: 'EXHAUSTED', reason: 'Local reviewed evidence was insufficient for this unmatched historical request.' },
+          { stage: 'MAPPED_SOURCE', status: 'SKIPPED', reason: 'No matched topic provides an applicable period-vetted source-map pointer.' },
+          { stage: 'SITEMAP_DISCOVERY', status: 'SKIPPED', reason: 'Sitemap discovery cannot establish historical scope without a vetted period-specific pointer.' },
+          { stage: 'OFFICIAL_DOMAIN_SEARCH', status: 'SKIPPED', reason: 'Online discovery cannot establish historical scope without a vetted period-specific pointer.' },
+          { stage: 'INSUFFICIENT', status: 'EXHAUSTED', reason: 'Permitted historical IRAS evidence routes were exhausted without an applicable vetted source.' }
+        ]
+      } };
+    }
+    return { records: [], provisionalTopics, trace: { path: 'NOT_NEEDED', sourceMapIds: [], selectedRecordIds: [], finalVerifiedUrls: [], candidateOnly: false, attempts: [], stages: [
+      { stage: 'LOCAL_VERIFIED', status: options.localEvidenceAdequate ? 'SUFFICIENT' : 'SKIPPED', reason: options.localEvidenceAdequate ? 'Reviewed local evidence covers the matched topics.' : 'No fallback was requested for a routed topic.' },
+      { stage: 'MAPPED_SOURCE', status: 'SKIPPED', reason: 'A source-map fetch was not needed.' },
+      { stage: 'SITEMAP_DISCOVERY', status: 'SKIPPED', reason: 'Sitemap discovery was not needed.' },
+      { stage: 'OFFICIAL_DOMAIN_SEARCH', status: 'SKIPPED', reason: 'Official-domain search was not needed.' }
+    ] } };
+  }
+
+  const records: AuthoritativeSourceRecord[] = [];
+  const attempts: SourceMapFallbackAttempt[] = [];
+  const sourceMapIds = new Set<string>();
+  const finalVerifiedUrls = new Set<string>();
+  const discoveredEvidenceIds = new Set<string>();
+  const sitemapLinkedCandidates = new Map<string, LinkedOfficialCandidate[]>();
+  let mappedStageAttempted = false;
+  let sitemapStageAttempted = false;
+  let onlineSearchStageAttempted = false;
+
+  const tryFetch = async (
+    topic: MappedCoverageTopic,
+    candidateUrl: string,
+    pointer?: SourceMapPointer,
+    discoveryStage: SourceMapFallbackAttempt['discoveryStage'] = 'SITEMAP_DISCOVERY',
+    discoveredPageTitle?: string,
+    discoverySourceUrl?: string
+  ): Promise<AuthoritativeSourceRecord | undefined> => {
     const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
     const focusedIrasTitles = irasDiscovery
       ? [topic.title, ...(topic.aliases || []), ...topic.keywords]
@@ -608,10 +885,12 @@ export async function resolveMappedOfficialSourceFallback(
       : [];
     const expectation = {
       standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : [])],
-      expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedIrasTitles]
+      expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedIrasTitles,
+        discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
       topicTerms: getTopicContentTerms(topic),
-      minimumTopicTermMatches: 1
+      minimumTopicTermMatches: topic.id.startsWith('iras-authority-query-') ||
+        topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1
     };
     const result = await webRetriever.fetchOfficialSource(candidateUrl, {
       ...options.fetchOptions,
@@ -620,14 +899,21 @@ export async function resolveMappedOfficialSourceFallback(
     const attempt: SourceMapFallbackAttempt = {
       topicId: topic.id,
       sourceMapId: pointer?.id,
+      candidateUrl,
+      discoverySourceUrl,
       fetchStatus: result.status,
       finalUrl: result.finalUrl,
       pageTitle: result.pageTitle,
       titleMatched: result.titleMatched === true,
       contentMatched: result.contentMatched === true,
+      discoveryStage: pointer ? 'MAPPED_SOURCE' : discoveryStage,
       error: result.error
     };
     attempts.push(attempt);
+    if (discoveryStage === 'SITEMAP_DISCOVERY' && !pointer && result.finalUrl && result.discoveredLinks?.length) {
+      const linked = rankRelevantOfficialPageLinks(result.discoveredLinks, result.finalUrl, topic, query, approvedHostsForTopic(topic));
+      if (linked.length > 0) sitemapLinkedCandidates.set(`${topic.id}|${candidateUrl}`, linked);
+    }
     let finalHost = '';
     try { finalHost = new URL(result.finalUrl || '').hostname.toLowerCase(); } catch { /* rejected below */ }
     if (result.status !== 'SUCCESS' || !result.content || !result.finalUrl || !result.topicMatched ||
@@ -645,11 +931,30 @@ export async function resolveMappedOfficialSourceFallback(
       return undefined;
     }
 
+    const domainMismatch = topic.domainId.startsWith('IRAS_')
+      ? irasCandidateDomainMismatch(query, topic, result.finalUrl)
+      : undefined;
+    if (domainMismatch) {
+      attempt.fetchStatus = 'DOMAIN_MISMATCH';
+      attempt.titleMatched = false;
+      attempt.contentMatched = false;
+      attempt.error = domainMismatch;
+      return undefined;
+    }
+    if (topic.domainId.startsWith('IRAS_') && !candidateMatchesIrasPopulation(query, topic, result.pageTitle || '', contentValidation.substantiveText || '', result.finalUrl)) {
+      attempt.fetchStatus = 'POPULATION_MISMATCH';
+      attempt.titleMatched = false;
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched IRAS guidance addresses a different taxpayer or recipient population than the query.';
+      return undefined;
+    }
+
     const requiredContentTerms = topic.requiredContentTerms || [];
     const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', [...expectation.topicTerms, ...requiredContentTerms], 5_000, query);
     const requiredContentPresent = containsRequiredContentTermsInOneBlock(contentValidation.substantiveText || '', requiredContentTerms) &&
       containsRequiredContentTermsInOneBlock(excerpt, requiredContentTerms);
-    if (!excerpt || !expectation.topicTerms.some(term => containsTopicTerm(excerpt, term)) || !requiredContentPresent) {
+    const excerptTopicMatches = expectation.topicTerms.filter(term => containsTopicTerm(excerpt, term)).length;
+    if (!excerpt || excerptTopicMatches < (expectation.minimumTopicTermMatches ?? 1) || !requiredContentPresent) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = requiredContentPresent
@@ -659,11 +964,12 @@ export async function resolveMappedOfficialSourceFallback(
     }
     const record = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);
     records.push(record);
+    if (!pointer) discoveredEvidenceIds.add(record.id);
     finalVerifiedUrls.add(result.finalUrl);
     return record;
   };
 
-  for (const topic of topicsRequiringFallback) {
+  const topicWork = topicsRequiringFallback.map(topic => {
     const pointers = [...new Set(topic.sourceRecordIds)]
       .map(id => retriever.getSourceById(id) as SourceMapPointer | undefined)
       .filter((record): record is SourceMapPointer => Boolean(
@@ -682,6 +988,57 @@ export async function resolveMappedOfficialSourceFallback(
       targetIsHistorical
     );
     const applicablePointers = pointers.filter(pointer => hasVerifiedHistoricalIrasScope(topic, pointer, targetDate, targetIsHistorical, query));
+    return { topic, pointers, applicablePointers, historicalIrasQuery };
+  });
+
+  const currentTrace = (): SourceMapFallbackTrace => ({
+    path: records.length ? (discoveredEvidenceIds.size ? 'DISCOVERED_SOURCE' : 'MAPPED_SOURCE') : sourceMapIds.size ? 'MAPPED_SOURCE_REJECTED' : 'NO_VERIFIED_MAP',
+    sourceMapIds: [...sourceMapIds],
+    selectedRecordIds: records.map(record => record.id),
+    finalVerifiedUrls: [...finalVerifiedUrls],
+    candidateOnly: records.length > 0,
+    attempts
+  });
+  const hasAdequateCoverage = (topics: readonly MappedCoverageTopic[]): boolean => {
+    if (topics.length === 0) return false;
+    const registeredTopics = topics.filter(topic => !topic.id.startsWith('iras-authority-query-'));
+    const provisional = topics.filter(topic => topic.id.startsWith('iras-authority-query-'));
+    if (registeredTopics.length > 0 && registeredTopics.every(topic => !topic.domainId.startsWith('IRAS_'))) {
+      return registeredTopics.every(topic => records.some(record => record.tags.includes(topic.id) &&
+        attempts.some(attempt => attempt.topicId === topic.id && attempt.fetchStatus === 'SUCCESS' &&
+          attempt.titleMatched && attempt.contentMatched && attempt.finalUrl === record.canonicalSourceUrl)));
+    }
+    const assessment = evaluateEvidenceQuality({
+      query,
+      topicIds: registeredTopics.map(topic => topic.id),
+      provisionalTopics: provisional,
+      records,
+      missingFacts: [],
+      authorities: ['IRAS'],
+      sourceMapFallbackTrace: currentTrace()
+    });
+    return assessment.uncoveredTopicIds.length === 0 && assessment.eligibleRecords.length > 0;
+  };
+  const topicCovered = (topic: MappedCoverageTopic): boolean => hasAdequateCoverage([topic]);
+  const registeredCoverageAssessment = () => evaluateEvidenceQuality({
+    query,
+    topicIds: topicsRequiringFallback.map(topic => topic.id),
+    provisionalTopics: [],
+    records,
+    missingFacts: [],
+    authorities: ['IRAS'],
+    sourceMapFallbackTrace: currentTrace()
+  });
+  const unresolvedRegisteredTopics = (): MappedCoverageTopic[] => {
+    const uncovered = new Set(registeredCoverageAssessment().uncoveredTopicIds);
+    return topicsRequiringFallback.filter(topic => uncovered.has(topic.id));
+  };
+  const registeredCoverageAdequate = (): boolean => topicsRequiringFallback.length > 0 &&
+    registeredCoverageAssessment().uncoveredTopicIds.length === 0;
+
+  // Stage 1: try every applicable reviewed map before beginning any discovery.
+  for (const { topic, applicablePointers, historicalIrasQuery } of topicWork) {
+    mappedStageAttempted ||= applicablePointers.length > 0;
     if (historicalIrasQuery && applicablePointers.length === 0) {
       attempts.push({ topicId: topic.id, fetchStatus: 'HISTORICAL_SCOPE_UNVERIFIED', titleMatched: false, contentMatched: false,
         error: 'No reviewed source-map pointer validity window covers the requested historical tax period.' });
@@ -693,44 +1050,173 @@ export async function resolveMappedOfficialSourceFallback(
         attempts.push({ topicId: topic.id, sourceMapId: pointer.id, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false, error: 'Mapped URL is outside approved official sources.' });
         continue;
       }
-      await tryFetch(topic, pointer.officialSourceUrl, pointer);
+      await tryFetch(topic, pointer.officialSourceUrl, pointer, 'MAPPED_SOURCE');
     }
+  }
+  const mappedCoverageAdequate = registeredCoverageAdequate();
 
-    const succeededForTopic = records.some(record => record.tags.includes(topic.id));
-    if (succeededForTopic) continue;
+  const sitemapTopics = (): MappedCoverageTopic[] => {
+    if (registeredCoverageAdequate()) return [];
+    if (topicsRequiringFallback.length > 0) return unresolvedRegisteredTopics();
+    return authorityDiscoveryTopic && !topicCovered(authorityDiscoveryTopic) ? [authorityDiscoveryTopic] : [];
+  };
+  const discoverSitemapForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
+    const work = topicWork.find(item => item.topic.id === topic.id);
     // Discovered pages have no reviewed period-specific validity metadata.
-    if (historicalIrasQuery) continue;
+    if (work?.historicalIrasQuery) return;
     const approvedHosts = discoveryHostsForTopic(topic);
-    if (approvedHosts.length === 0) continue;
+    if (approvedHosts.length === 0) return;
+    const expectedPointers = work?.pointers || [];
+    const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
     let discoveredCandidates: string[] = [];
     try {
+      sitemapStageAttempted = true;
       discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates({
         query,
+        authority: topic.authorities[0],
         topicId: topic.id,
         topicTitle: topic.title,
         standardOrAct: topic.actOrStandard || topic.title,
         approvedHosts,
         topicHints: [...(topic.aliases || []), ...topic.keywords],
-        expectedTitles: pointers.map(pointer => pointer.documentTitle)
+        expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
+        sitemapUrls: providerConfig?.sitemapUrls,
+        preferredHosts: providerConfig?.preferredHosts,
+        searchSite: providerConfig?.searchSite,
+        searchEndpoint: providerConfig?.searchEndpoint,
+        searchRedirectHost: providerConfig?.searchRedirectHost,
+        searchRedirectParameter: providerConfig?.searchRedirectParameter,
+        lexicalDiscovery: providerConfig?.lexicalDiscovery,
+        authorityLevelFallback: isAuthorityQuery,
+        maxCandidates: 4
       });
     } catch {
       // First-party discovery is optional and fail-closed. Mapped retrieval
       // results already collected remain available if the sitemap is down.
       discoveredCandidates = [];
     }
-    for (const candidateUrl of discoveredCandidates.slice(0, 4)) {
+    const candidateQueue: Array<LinkedOfficialCandidate & { depth: number }> = discoveredCandidates.slice(0, 4)
+      .map(url => ({ url, title: discoveryAdapter.getCandidateTitle?.(url), discoverySourceUrl: '', depth: 0 }));
+    const queuedUrls = new Set(candidateQueue.map(candidate => candidate.url));
+    let linkedCandidateFetches = 0;
+    let candidateFetches = 0;
+    while (candidateQueue.length > 0 && candidateFetches < 12) {
+      const candidate = candidateQueue.shift()!;
+      const candidateUrl = candidate.url;
       let host = '';
-      try { host = new URL(candidateUrl).hostname.toLowerCase(); } catch { /* reject below */ }
-      if (!approvedHosts.includes(host as typeof approvedHosts[number])) {
+      let protocol = '';
+      try { const parsed = new URL(candidateUrl); host = parsed.hostname.toLowerCase(); protocol = parsed.protocol; } catch { /* reject below */ }
+      if (protocol !== 'https:' || !approvedHosts.includes(host as typeof approvedHosts[number])) {
         attempts.push({ topicId: topic.id, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false, error: 'Discovery candidate was not from the restricted official-domain set.' });
         continue;
       }
-      const beforeCount = records.length;
-      await tryFetch(topic, candidateUrl);
-      if (records.length > beforeCount) {
-        discoveredEvidenceIds.add(records[records.length - 1].id);
-        break;
+      candidateFetches++;
+      const candidateRecord = await tryFetch(topic, candidateUrl, undefined, 'SITEMAP_DISCOVERY', candidate.title, candidate.discoverySourceUrl || undefined);
+      // Stop as soon as this independently fetched page satisfies the routed
+      // evidence scope. Related links are discovery aids, not a reason to
+      // continue fetching after the request is already adequately covered.
+      if (candidateRecord && topicCovered(topic)) break;
+      // This is one bounded parent-to-leaf expansion. A fetched child that
+      // supplies adequate topical evidence ends this route without crawling
+      // that leaf's own related-content links.
+      const children = candidate.depth >= 1 || linkedCandidateFetches >= 8
+        ? []
+        : sitemapLinkedCandidates.get(`${topic.id}|${candidateUrl}`) || [];
+      for (const child of children) {
+        if (linkedCandidateFetches >= 8 || queuedUrls.has(child.url)) continue;
+        queuedUrls.add(child.url);
+        candidateQueue.unshift({ ...child, depth: candidate.depth + 1 });
+        linkedCandidateFetches++;
       }
+      // A fetched index page that lacks adequate content has already queued
+      // its bounded explicit first-party leaves above.
+    }
+  };
+
+  // Stage 2: discover from official indexes for each topic that remains
+  // uncovered after the complete mapped-source pass.
+  for (const topic of sitemapTopics()) await discoverSitemapForTopic(topic, false);
+
+  // A provisional authority-level query supplements registered scopes after
+  // their sitemap routes. It remains a separate topic and cannot cover them.
+  if (authorityDiscoveryTopic && topicsRequiringFallback.length > 0 && unresolvedRegisteredTopics().length > 0) {
+    provisionalTopics.push(authorityDiscoveryTopic);
+    if (!topicCovered(authorityDiscoveryTopic)) await discoverSitemapForTopic(authorityDiscoveryTopic, true);
+  }
+  const sitemapCoverageAdequate = topicsRequiringFallback.length > 0
+    ? registeredCoverageAdequate()
+    : Boolean(authorityDiscoveryTopic && topicCovered(authorityDiscoveryTopic));
+
+  const discoverOnlineForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
+    const work = topicWork.find(item => item.topic.id === topic.id);
+    if (work?.historicalIrasQuery || topicCovered(topic)) return;
+    const approvedHosts = discoveryHostsForTopic(topic);
+    const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+    if (!providerConfig?.searchSite || !approvedHosts.includes(providerConfig.searchSite)) return;
+    const expectedPointers = work?.pointers || [];
+    const officialDomainSearchAdapter = options.officialDomainSearchAdapter || getDefaultOfficialDomainSearchAdapter(webRetriever, options.fetchOptions);
+    let searchCandidates: string[] = [];
+    try {
+      onlineSearchStageAttempted = true;
+      searchCandidates = await officialDomainSearchAdapter.searchOfficialDomainCandidates({
+        query,
+        authority: topic.authorities[0],
+        topicId: topic.id,
+        topicTitle: topic.title,
+        standardOrAct: topic.actOrStandard || topic.title,
+        approvedHosts,
+        topicHints: [...(topic.aliases || []), ...topic.keywords],
+        expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
+        searchSite: providerConfig.searchSite,
+        searchEndpoint: providerConfig.searchEndpoint,
+        searchRedirectHost: providerConfig.searchRedirectHost,
+        searchRedirectParameter: providerConfig.searchRedirectParameter,
+        lexicalDiscovery: providerConfig.lexicalDiscovery,
+        authorityLevelFallback: isAuthorityQuery,
+        maxCandidates: 4
+      });
+    } catch {
+      searchCandidates = [];
+    }
+    for (const searchTrace of officialDomainSearchAdapter.getLastSearchTrace?.() || []) {
+      if (searchTrace.status === 'NO_CANDIDATES') {
+        attempts.push({ topicId: topic.id, fetchStatus: 'NO_CANDIDATES', titleMatched: false, contentMatched: false,
+          discoveryStage: 'OFFICIAL_DOMAIN_SEARCH', searchQueryVariant: searchTrace.variant,
+          error: searchTrace.reason || 'The restricted query variant produced no approved official URL candidates.' });
+      }
+    }
+    for (const candidateUrl of searchCandidates.slice(0, 4)) {
+      let host = '';
+      let protocol = '';
+      try {
+        const parsed = new URL(candidateUrl);
+        host = parsed.hostname.toLowerCase();
+        protocol = parsed.protocol;
+      } catch { /* reject below */ }
+      if (protocol !== 'https:' || !approvedHosts.includes(host as typeof approvedHosts[number])) {
+        attempts.push({ topicId: topic.id, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false,
+          discoveryStage: 'OFFICIAL_DOMAIN_SEARCH', searchQueryVariant: officialDomainSearchAdapter.getCandidateQueryVariant?.(candidateUrl),
+          error: 'Online search candidate was not an HTTPS URL on an approved authority hostname.' });
+        continue;
+      }
+      const candidateRecord = await tryFetch(topic, candidateUrl, undefined, 'OFFICIAL_DOMAIN_SEARCH', officialDomainSearchAdapter.getCandidateTitle?.(candidateUrl));
+      const candidateAttempt = attempts[attempts.length - 1];
+      if (candidateAttempt?.candidateUrl === candidateUrl && candidateAttempt.discoveryStage === 'OFFICIAL_DOMAIN_SEARCH') {
+        candidateAttempt.searchQueryVariant = officialDomainSearchAdapter.getCandidateQueryVariant?.(candidateUrl);
+      }
+      if (candidateRecord && topicCovered(topic)) break;
+    }
+  };
+
+  // Stage 3 is reached only after all applicable sitemap candidates have been
+  // attempted and at least one required scope remains uncovered.
+  if (!registeredCoverageAdequate()) {
+    const unresolved = topicsRequiringFallback.length > 0
+      ? unresolvedRegisteredTopics()
+      : authorityDiscoveryTopic && !topicCovered(authorityDiscoveryTopic) ? [authorityDiscoveryTopic] : [];
+    for (const topic of unresolved) await discoverOnlineForTopic(topic, topic.id.startsWith('iras-authority-query-'));
+    if (authorityDiscoveryTopic && topicsRequiringFallback.length > 0 && unresolvedRegisteredTopics().length > 0 && !topicCovered(authorityDiscoveryTopic)) {
+      await discoverOnlineForTopic(authorityDiscoveryTopic, true);
     }
   }
 
@@ -740,15 +1226,27 @@ export async function resolveMappedOfficialSourceFallback(
     : anyMappedAttempt
       ? 'MAPPED_SOURCE_REJECTED'
       : 'NO_VERIFIED_MAP';
+  const finalCoverageAdequate = topicsRequiringFallback.length > 0
+    ? registeredCoverageAdequate()
+    : Boolean(authorityDiscoveryTopic && topicCovered(authorityDiscoveryTopic));
+  const stages: NonNullable<SourceMapFallbackTrace['stages']> = [
+    { stage: 'LOCAL_VERIFIED', status: options.localEvidenceAdequate ? 'SUFFICIENT' : 'EXHAUSTED', reason: options.localEvidenceAdequate ? 'Reviewed local evidence covered the routed request; live discovery was not needed.' : 'Local retrieval was insufficient for at least one routed topic.' },
+    { stage: 'MAPPED_SOURCE', status: mappedCoverageAdequate ? 'SUFFICIENT' : mappedStageAttempted ? 'EXHAUSTED' : 'SKIPPED', reason: mappedStageAttempted ? 'Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic.' : 'No applicable reviewed source-map pointer was available.' },
+    { stage: 'SITEMAP_DISCOVERY', status: sitemapCoverageAdequate && sitemapStageAttempted ? 'SUFFICIENT' : sitemapStageAttempted ? 'EXHAUSTED' : 'SKIPPED', reason: sitemapStageAttempted ? 'Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope.' : 'Sitemap discovery was not attempted for this request.' },
+    { stage: 'OFFICIAL_DOMAIN_SEARCH', status: finalCoverageAdequate && onlineSearchStageAttempted ? 'SUFFICIENT' : onlineSearchStageAttempted ? 'EXHAUSTED' : 'SKIPPED', reason: onlineSearchStageAttempted ? 'Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery.' : 'Official-domain search was not attempted for this request.' },
+    ...(!finalCoverageAdequate ? [{ stage: 'INSUFFICIENT' as const, status: 'EXHAUSTED' as const, reason: 'Permitted official-source routes were exhausted without evidence covering every required topic scope.' }] : [])
+  ];
   return {
     records,
+    provisionalTopics: provisionalTopics.filter(topic => records.some(record => record.tags.includes(topic.id))),
     trace: {
       path,
       sourceMapIds: [...sourceMapIds],
       selectedRecordIds: records.map(record => record.id),
       finalVerifiedUrls: [...finalVerifiedUrls],
       candidateOnly: records.length > 0,
-      attempts
+      attempts,
+      stages
     }
   };
 }
@@ -910,8 +1408,16 @@ export async function buildGroundedReasoningContext(
   // The governed response covers IRAS evidence only. Keep mixed-domain
   // classification for the answer, but rank local candidates inside the IRAS
   // topic/authority scope before the retriever applies its result limit.
-  const irasTopicIds = getCoverageTopicsByIds(retrievalHints.topicIds || [])
+  const evidenceTopicIds = getCoverageTopicsByIds(retrievalHints.topicIds || [])
+    .filter(topic => !topic.routingOnly).map(topic => topic.id);
+  const irasTopicIds = getCoverageTopicsByIds(evidenceTopicIds)
     .filter(topic => topic.domainId.startsWith('IRAS_')).map(topic => topic.id);
+  // Keep a transient full-query scope beside any registered routing topics.
+  // The registry is a routing aid: a lexical topic hit can cover one concept
+  // while the rest of the user's IRAS question still needs discovery.
+  const authorityDiscoveryContext = irasPolicy
+    ? provisionalIrasDiscoveryTopic(userInput)
+    : undefined;
   const localRetrievalHints = irasPolicy
     ? { ...retrievalHints, domain: undefined, authorities: ['IRAS' as const], topicIds: irasTopicIds }
     : retrievalHints;
@@ -925,10 +1431,12 @@ export async function buildGroundedReasoningContext(
     ...localRetrieved,
     ...getExplicitlyLinkedGstRateRecords(userInput, localRetrieved, retriever)
   ];
-  const initiallyMatchedCoverage = getCoverageTopicsByIds(retrievalHints.topicIds || []) as MappedCoverageTopic[];
+  const initiallyMatchedCoverage = getCoverageTopicsByIds(evidenceTopicIds) as MappedCoverageTopic[];
   const localQuality = irasPolicy ? evaluateEvidenceQuality({
-    query: userInput, topicIds: retrievalHints.topicIds || [], records: contextualLocalRetrieved,
-    missingFacts: classification.missingFacts
+    query: userInput, topicIds: evidenceTopicIds, records: contextualLocalRetrieved,
+    missingFacts: classification.missingFacts,
+    provisionalTopics: authorityDiscoveryContext ? [authorityDiscoveryContext] : undefined,
+    authorities: ['IRAS']
   }) : undefined;
   const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
   const fallbackTopicIds = initiallyMatchedCoverage
@@ -937,11 +1445,19 @@ export async function buildGroundedReasoningContext(
       ? localQuality.uncoveredTopicIds.includes(topic.id)
       : topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
     .map(topic => topic.id);
-  const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, retrievalOptions);
+  const needsAuthorityFallback = Boolean(irasPolicy && localQuality &&
+    (localQuality.status === 'INSUFFICIENT' || localQuality.uncoveredTopicIds.length > 0));
+  const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, {
+    ...retrievalOptions,
+    authorityLevelDiscovery: retrievalOptions.authorityLevelDiscovery ?? needsAuthorityFallback,
+    localEvidenceAdequate: localQuality ? localQuality.uncoveredTopicIds.length === 0 && localQuality.eligibleRecords.length > 0 : false
+  });
   const allRetrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
   const evidenceQuality = irasPolicy ? evaluateEvidenceQuality({
-    query: userInput, topicIds: retrievalHints.topicIds || [], records: allRetrieved,
-    missingFacts: classification.missingFacts, sourceMapFallbackTrace: mappedFallback.trace
+    query: userInput, topicIds: evidenceTopicIds, records: allRetrieved,
+    missingFacts: classification.missingFacts, sourceMapFallbackTrace: mappedFallback.trace,
+    provisionalTopics: mappedFallback.provisionalTopics.length ? mappedFallback.provisionalTopics : authorityDiscoveryContext ? [authorityDiscoveryContext] : undefined,
+    authorities: ['IRAS']
   }) : undefined;
   const retrieved = evidenceQuality ? evidenceQuality.eligibleRecords : allRetrieved;
 
@@ -1315,11 +1831,7 @@ export function postProcessAIResponse(
   if (groundedContext.evidenceQuality) {
     const taxClaimsWereOmitted = parsed?.taxClaims === undefined ||
       (Array.isArray(parsed.taxClaims) && parsed.taxClaims.length === 0);
-    const evidenceOnlyFallbackTopic = groundedContext.classification.topicIds.some(topicId =>
-      topicId === 'iras-employer-ir21' || topicId === 'iras-employee-bonus-timing'
-    );
-    const canShowVerifiedSourceParagraphs = taxClaimsWereOmitted && evidenceOnlyFallbackTopic &&
-      groundedContext.evidenceQuality.eligibleRecords.length > 0;
+    const canShowVerifiedSourceParagraphs = taxClaimsWereOmitted && groundedContext.evidenceQuality.eligibleRecords.length > 0;
     return renderIrasEvidenceResponse(parsed, groundedContext, userInput, deterministicScenario || null, standard,
       canShowVerifiedSourceParagraphs ? 'PROVIDER_NO_CLAIMS' : 'PROVIDER');
   }

@@ -1,7 +1,7 @@
 import type { QueryDomain, StatutoryAuthority } from '../types/accounting';
 import { UNIFIED_SOURCE_REGISTRY, type AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
-import { getCoverageTopicById, getCoverageTopicsByIds } from '../standards/coverageRegistry';
+import { getCoverageTopicById, getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { findRecordEligibilityRejection } from '../verification/claimEvidenceVerifier';
@@ -38,6 +38,8 @@ export interface EvidenceQualityInput {
   /** Routing hints let a no-topic IRAS query fail closed. */
   domain?: QueryDomain;
   authorities?: StatutoryAuthority[];
+  /** Query-scoped discovery scope; never persisted as reviewed registry knowledge. */
+  provisionalTopics?: SingaporeCoverageTopic[];
 }
 
 export interface EvidenceQualityAssessment {
@@ -46,6 +48,8 @@ export interface EvidenceQualityAssessment {
   rejectedRecords: Array<{ recordId: string; code: string; reason: string }>;
   coveredTopicIds: string[];
   uncoveredTopicIds: string[];
+  /** Material query concepts that still lack source-text support for transient authority scopes. */
+  uncoveredConceptGroups?: Record<string, string[][]>;
   missingFacts: string[];
   targetDate?: string;
   targetDateConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -81,7 +85,11 @@ function recordTopicAssociations(record: AuthoritativeSourceRecord): Set<string>
   ]);
 }
 
-function metadataAssociatesRecord(record: AuthoritativeSourceRecord, topic: NonNullable<ReturnType<typeof getCoverageTopicById>>): boolean {
+function metadataAssociatesRecord(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic): boolean {
+  // Live discovery records are bound to the one topic whose page, population,
+  // and excerpt were validated. Registry keywords remain routing metadata and
+  // must not backfill associations to other topics.
+  if (record.provenance === 'LIVE_EXTERNAL') return recordTopicAssociations(record).has(topic.id);
   if (topic.sourceRecordIds.includes(record.id)) return true;
   const associations = recordTopicAssociations(record);
   if (associations.has(topic.id) || (topic.relatedTopicIds || []).some(id => associations.has(id))) return true;
@@ -111,10 +119,27 @@ function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): 
   return [...fields].every(field => JSON.stringify(candidateFields[field]) === JSON.stringify(canonicalFields[field]));
 }
 
-function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: NonNullable<ReturnType<typeof getCoverageTopicById>>): boolean {
+function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic, query: string): boolean {
   const text = normalizeText(record.sourceText || '');
   if (text.length < 24) return false;
+  if (topic.id === 'iras-individual-foreign-tax-credit') {
+    // DTA and general double-tax guidance may mention the same income being
+    // taxed twice, but that does not establish the separate FTC conditions.
+    // Require the actual source text to state the credit and its core gates.
+    return /\bforeign tax credit\b/.test(text) &&
+      /\bsame income\b/.test(text) &&
+      /\b(?:tax has been paid|tax is paid|tax paid|tax has been paid or is payable|tax is payable|paid or payable|paid or is payable)\b/.test(text) &&
+      /\bincome is taxable in singapore\b/.test(text) &&
+      /\btax resident in singapore\b/.test(text);
+  }
   const textWords = new Set(words(text));
+  if (topic.id.startsWith('iras-authority-query-')) {
+    // Authority-level topics have no reviewed phrase. A page may support one
+    // material clause, but a couple of incidental query words cannot establish
+    // coverage for the entire request. Full coverage is aggregated by concept
+    // group below; sitemap/search metadata never participates.
+    return queryMaterialConceptGroups(query).some(group => supportsQueryConceptGroup(textWords, group));
+  }
   const registryPhrases = [topic.title, ...topic.keywords, ...(topic.aliases || [])];
   for (const phrase of registryPhrases) {
     const normalizedPhrase = normalizeText(phrase);
@@ -124,9 +149,120 @@ function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: NonNul
     if (distinctivePhraseWords.length > 0 && phraseWords.length >= 2 && phraseWords.every(word => textWords.has(word))) return true;
     const distinctive = [...new Set(words(phrase).filter(word => word.length >= 4 && !GENERIC_TOPIC_WORDS.has(word)))];
     const overlap = distinctive.filter(word => textWords.has(word));
-    if (overlap.length >= 2 || overlap.some(word => word.length >= 8)) return true;
+    if (overlap.length >= 2 || (record.provenance !== 'LIVE_EXTERNAL' && overlap.some(word => word.length >= 8))) return true;
   }
   return false;
+}
+
+const QUERY_CONTEXT_STOP_WORDS = new Set([
+  'a', 'an', 'are', 'as', 'at', 'be', 'been', 'being', 'but', 'by', 'can', 'could', 'did', 'do', 'does',
+  'during', 'each', 'for', 'from', 'has', 'have', 'how', 'i', 'if', 'in', 'into', 'is', 'it', 'may', 'might',
+  'must', 'of', 'on', 'or', 'should', 'that', 'their', 'them', 'there', 'these', 'this', 'those',
+  'to', 'was', 'were', 'what', 'when', 'where', 'which', 'who', 'while', 'why', 'will', 'with', 'would',
+  'then', 'also', 'whether'
+]);
+const QUERY_CONTEXT_SHORT_TOPIC_WORDS = new Set(['tax', 'gst', 'wht', 'cpf', 'dta', 'mas', 'mom', 'sso', 'vat']);
+
+function requestedQueryText(query: string): string {
+  // Users often add background facts first, then clarify the actual issue with
+  // a discourse marker. Treat only that explicit requested outcome as a
+  // required concept; the background remains available to routing/population
+  // validation but does not have to be repeated in every cited rule.
+  const focus = /\b(?:but\s+)?(?:i\s+am\s+asking(?:\s+specifically)?|i['’]m\s+asking(?:\s+specifically)?|the\s+question\s+is|what\s+i\s+need\s+to\s+know\s+is|i\s+(?:only\s+)?want\s+to\s+know)\b[\s,:-]*(?:(?:whether|if|what|how|when|which|why)\b\s*)?([\s\S]+)$/i.exec(query);
+  if (focus?.[1]?.trim()) return focus[1].trim();
+  // Conditional fact clauses often precede the actual tax question (for
+  // example, a residency/employment scenario followed by “under what
+  // conditions ...”). Keep the requested rule concepts in the evidence scope;
+  // the user's facts remain in the full query for application and caveats.
+  const requestedRule = /\b(?:under\s+what\s+conditions|whether)\b/i.exec(query);
+  return requestedRule && requestedRule.index > 0 ? query.slice(requestedRule.index).trim() : query;
+}
+
+function queryMaterialConceptGroups(query: string): string[][] {
+  const requestedText = requestedQueryText(query);
+  const clauses = requestedText.split(/[,;.!?]|\b(?:and|or|while|whereas|but)\b/gi);
+  return clauses.map(clause => [...new Set(words(clause)
+    .map(word => word === 'oversea' || word === 'abroad' ? 'foreign'
+      : word === 'remitted' || word === 'remittance' ? 'remit' : word)
+    .filter(word => (word.length >= 4 || QUERY_CONTEXT_SHORT_TOPIC_WORDS.has(word)) && !QUERY_CONTEXT_STOP_WORDS.has(word)))])
+    .filter(group => group.length >= 2 || (group.length === 1 && group[0].length >= 6));
+}
+
+function queryConceptVariants(term: string): string[] {
+  if (term === 'foreign') return ['foreign', 'oversea', 'abroad', 'outside'];
+  if (term === 'source' || term === 'sourced') return ['source', 'sourced', 'derive', 'derived'];
+  if (term === 'remit') return ['remit', 'remitted', 'remittance'];
+  if (term === 'physically') return ['physically', 'physical', 'wholly', 'outside', 'overseas'];
+  if (term === 'working') return ['working', 'work', 'worked', 'employment', 'services', 'duties', 'rendered'];
+  if (term === 'supporting') return ['supporting', 'support', 'supported', 'appropriate'];
+  if (term === 'employee') return ['employee', 'employer'];
+  if (term === 'personal') return ['personal', 'individual'];
+  if (term === 'condition') return ['condition', 'qualify', 'qualification', 'criteria', 'require'];
+  if (term === 'exclusion') return ['exclusion', 'exclude', 'excluded', 'cannot'];
+  if (term === 'apply') return ['apply', 'applicable', 'eligibility', 'eligible', 'qualify', 'qualification', 'qualifying'];
+  if (term === 'required') return ['required', 'require', 'must', 'necessary'];
+  if (term === 'met') return ['met', 'meet', 'hold', 'acquire', 'satisfy', 'satisfied'];
+  if (term === 'claim') return ['claim', 'claimed', 'claiming', 'claims'];
+  if (term === 'taxable') return ['taxable', 'chargeable', 'tax', 'liable', 'subject'];
+  if (term === 'eligible') return ['eligible', 'eligibility', 'qualify', 'qualification', 'entitled', 'claim'];
+  return [term];
+}
+
+function supportsQueryConceptGroup(textWords: ReadonlySet<string>, group: readonly string[]): boolean {
+  const matches = group.filter(term => queryConceptVariants(term).some(variant => textWords.has(variant))).length;
+  const minimumMatches = group.length <= 2 ? group.length : Math.max(3, Math.ceil(group.length * 0.5));
+  return matches >= minimumMatches;
+}
+
+function isGovernmentEmploymentScopedRelief(
+  record: AuthoritativeSourceRecord,
+  topic: SingaporeCoverageTopic,
+  query: string
+): boolean {
+  const registeredReliefTopic = ['iras-individual-foreign-tax-credit', 'iras-individual-double-tax-agreements'].includes(topic.id);
+  const provisionalReliefQuery = topic.id.startsWith('iras-authority-query-') &&
+    /\b(?:foreign tax credit|double tax(?:ation)? relief|double tax(?:ation)? agreement|dtr|dtas?|taxed twice)\b/i.test(query);
+  if (!registeredReliefTopic && !provisionalReliefQuery) return false;
+  const blocks = (record.sourceText || '').split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean);
+  const reliefBlocks = blocks.map((block, index) => ({ block, index })).filter(({ block }) =>
+    /\b(?:double taxation relief|double tax relief|foreign tax credit|tax remission|taxed twice)\b/i.test(block)
+  );
+  if (reliefBlocks.length === 0) return false;
+
+  const scopes = reliefBlocks.map(({ index }) => {
+    let outsideHeading = -1;
+    let governmentParent = -1;
+    let generalReliefHeading = -1;
+    for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+      if (outsideHeading < 0 && /^[a-z]\.\s*tax treatment outside singapore$/i.test(blocks[cursor].replace(/^[•◦▪]\s*/, ''))) {
+        outsideHeading = cursor;
+      }
+      if (/^[•◦▪]?\s*you are employed outside of singapore on behalf of the government of singapore\.?$/i.test(blocks[cursor])) {
+        governmentParent = cursor;
+        break;
+      }
+      if (generalReliefHeading < 0 && (
+        /^(?:individual\s+)?(?:foreign tax credit|double tax(?:ation)? relief|claim(?:ing)? (?:foreign tax credit|double tax relief)|double taxation agreements?|tax treaty|dta)\b/i.test(blocks[cursor]) ||
+        /^(?:avoidance of double taxation agreements?\s*\(dtas?\)|benefits under dtas?|tax residents of singapore)$/i.test(blocks[cursor])
+      )) {
+        generalReliefHeading = cursor;
+      }
+      // A new scenario heading ends the context inherited by this passage.
+      if (cursor < index && /^[•◦▪]\s*(?:you are|if you are|when you are)\b/i.test(blocks[cursor])) break;
+    }
+    if (governmentParent >= 0 && outsideHeading > governmentParent) return 'GOVERNMENT' as const;
+    if (generalReliefHeading >= 0) return 'GENERAL' as const;
+    return 'UNPARSEABLE' as const;
+  });
+
+  // This gate admits records, not individual source blocks. If any co-located
+  // relief passage is scoped to Government employment, the whole record must
+  // stay out of an unspecified/private-employment answer; claim verification
+  // cannot constrain later claims to only the general block.
+  const governmentQuery = /\b(?:government of singapore|singapore government|public sector|civil service|public officer|government employee)\b/i.test(query);
+  if (scopes.includes('GOVERNMENT')) return !governmentQuery;
+  if (scopes.includes('GENERAL')) return false;
+  return scopes.includes('UNPARSEABLE');
 }
 
 type IrasRequestHints = Pick<EvidenceQualityInput, 'domain' | 'authorities' | 'query'> & { topicIds?: string[] };
@@ -233,7 +369,7 @@ function explicitGstRateTransitionYears(query: string): number[] {
   return years.length === 2 && years[1] === years[0] + 1 ? years : [];
 }
 
-function isStandardGstRateContext(record: AuthoritativeSourceRecord, topic: NonNullable<ReturnType<typeof getCoverageTopicById>>, years: number[]): boolean {
+function isStandardGstRateContext(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic, years: number[]): boolean {
   const topicVocabulary = normalizeText([topic.id, topic.title, ...topic.keywords].join(' '));
   const standardRateTopic = /standard rated|standard rate/.test(topicVocabulary);
   const recordTagText = normalizeText((record.tags || []).join(' '));
@@ -271,7 +407,10 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     : defaultTargetDateResolver.resolveTargetDate(input.query, referenceDate);
   const targetDate = resolvedTarget.targetDate;
   const relevanceDate = targetDate || referenceDate;
-  const targetTopics = getCoverageTopicsByIds(input.topicIds || []).filter(topic => topic.domainId.startsWith('IRAS_'));
+  const targetTopics = [...new Map([
+    ...getCoverageTopicsByIds(input.topicIds || []).filter(topic => topic.domainId.startsWith('IRAS_')),
+    ...(input.provisionalTopics || []).filter(topic => topic.domainId.startsWith('IRAS_'))
+  ].map(topic => [topic.id, topic])).values()];
   const uniqueRecords = [...new Map((input.records || []).map(record => [record.id, record])).values()];
   const rejectedRecords: EvidenceQualityAssessment['rejectedRecords'] = [];
   const eligibleById = new Map<string, AuthoritativeSourceRecord>();
@@ -341,6 +480,11 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     for (const topic of targetTopics) {
       const associated = metadataAssociatesRecord(record, topic);
       if (!associated) continue;
+      if (record.provenance === 'LIVE_EXTERNAL' && isGovernmentEmploymentScopedRelief(record, topic, input.query)) {
+        rejectedCode = 'TOPIC_SCOPE_MISMATCH';
+        rejectedReason = 'The retrieved relief passage is scoped to Government of Singapore employment, which the query did not establish.';
+        continue;
+      }
       const explicitlyBoundLocal = record.provenance === 'LOCAL_STATIC' && topic.sourceRecordIds.includes(record.id);
       if (explicitlyBoundLocal &&
           (!topic.authorities.includes(record.authority) || !topic.legacyDomains.includes(record.domain))) {
@@ -362,7 +506,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
         Boolean(record.provenance === 'LOCAL_STATIC' && transitionTargetDate && !transitionEligibilityRejection);
       const live = !local && !eligibilityRejection &&
         isVerifiedLiveCandidate(record, topic.id, targetDate, input.sourceMapFallbackTrace);
-      const topicTextMatches = distinctiveTextMatches(record, topic) || explicitlyBoundLocal || transitionContext ||
+      const topicTextMatches = distinctiveTextMatches(record, topic, input.query) || explicitlyBoundLocal || transitionContext ||
         (topic.domainId === 'IRAS_GST' && isStandardGstRateContext(record, topic, rateYears));
       if (!local && !live) {
         rejectedCode = eligibilityRejection || transitionEligibilityRejection ||
@@ -386,17 +530,52 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       }
       accepted = true;
       eligibleById.set(record.id, record);
-      covered.add(topic.id);
-      if (local) localByTopic.add(topic.id);
-      else liveByTopic.add(topic.id);
+      if (!topic.id.startsWith('iras-authority-query-')) {
+        covered.add(topic.id);
+        if (local) localByTopic.add(topic.id);
+        else liveByTopic.add(topic.id);
+      }
     }
     if (!accepted) reject(record.id, rejectedCode, rejectedReason);
+  }
+
+  const uncoveredConceptGroups: Record<string, string[][]> = {};
+  for (const topic of targetTopics.filter(candidate => candidate.id.startsWith('iras-authority-query-'))) {
+    const groups = queryMaterialConceptGroups(input.query);
+    const conceptRecords = [...eligibleById.values()].filter(record => {
+      if (recordTopicAssociations(record).has(topic.id)) return true;
+      return getCoverageTopicsByIds([...recordTopicAssociations(record)])
+        .some(associatedTopic => associatedTopic.domainId === topic.domainId);
+    });
+    const combinedConceptWords = new Set(conceptRecords.flatMap(record => words(record.sourceText || '')));
+    const supportingGroupIndexes = groups.map((group, index) =>
+      supportsQueryConceptGroup(combinedConceptWords, group) ? index : -1
+    ).filter(index => index >= 0);
+    const missingGroups = groups.filter((_, index) => !supportingGroupIndexes.includes(index));
+    if (groups.length === 0 || missingGroups.length > 0) {
+      uncoveredConceptGroups[topic.id] = groups.length === 0
+        ? [['No material query concept could be resolved']]
+        : missingGroups;
+      continue;
+    }
+    covered.add(topic.id);
+    const localConceptWords = new Set(conceptRecords.filter(record => record.provenance === 'LOCAL_STATIC')
+      .flatMap(record => words(record.sourceText || '')));
+    const everyGroupHasLocalSupport = groups.every(group => supportsQueryConceptGroup(localConceptWords, group));
+    if (everyGroupHasLocalSupport) localByTopic.add(topic.id);
+    else liveByTopic.add(topic.id);
   }
 
   // Keep a live candidate only for a gap not already covered by validated local
   // content. This mirrors the existing local-first/fallback source lifecycle.
   const relevantLiveOnlyForGap = [...eligibleById.values()].filter(record => {
     if (record.provenance !== 'LIVE_EXTERNAL') return true;
+    // Authority-query records can be useful for an independently supported
+    // concept even while other requested concepts remain uncovered. Keep the
+    // validated partial source available to a conditional answer; it does not
+    // mark the provisional request sufficient and therefore cannot stop the
+    // resolver's remaining discovery stages.
+    if (targetTopics.some(topic => topic.id.startsWith('iras-authority-query-') && metadataAssociatesRecord(record, topic))) return true;
     const relatedTopics = targetTopics.filter(topic =>
       metadataAssociatesRecord(record, topic) && covered.has(topic.id) && !localByTopic.has(topic.id)
     );
@@ -420,6 +599,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     rejectedRecords,
     coveredTopicIds: targetTopics.map(topic => topic.id).filter(id => covered.has(id)),
     uncoveredTopicIds,
+    ...(Object.keys(uncoveredConceptGroups).length > 0 ? { uncoveredConceptGroups } : {}),
     missingFacts: [...input.missingFacts],
     targetDate: resolvedTarget.targetDate,
     targetDateConfidence: resolvedTarget.confidence

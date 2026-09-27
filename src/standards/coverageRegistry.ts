@@ -74,6 +74,8 @@ export interface SingaporeCoverageTopic {
   requiredContentTerms?: string[];
   /** Phrase-level negatives prevent a keyword hit from misclassifying nearby concepts. */
   exclusionKeywords: string[];
+  /** Broad taxonomy entries can help route discovery without being required evidence coverage. */
+  routingOnly?: boolean;
   /** Shared concept ID for legacy/new topic aliases that should count once in ranking. */
   canonicalConceptId?: string;
   actOrStandard?: string;
@@ -128,6 +130,7 @@ interface TopicSpec {
   queryPatterns?: string[];
   requiredContentTerms?: string[];
   exclusionKeywords?: string[];
+  routingOnly?: boolean;
   canonicalConceptId?: string;
   priority?: CoveragePriority;
   status?: CoverageStatus;
@@ -174,6 +177,7 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
     ...(spec.queryPatterns ? { queryPatterns: [...spec.queryPatterns] } : {}),
     ...(spec.requiredContentTerms ? { requiredContentTerms: [...spec.requiredContentTerms] } : {}),
     exclusionKeywords: spec.exclusionKeywords ?? [],
+    ...(spec.routingOnly ? { routingOnly: true } : {}),
     ...(spec.canonicalConceptId ? { canonicalConceptId: spec.canonicalConceptId } : {}),
     ...(spec.actOrStandard ? { actOrStandard: spec.actOrStandard } : {}),
     ...(spec.sectionMatch ? { sectionMatch: spec.sectionMatch } : {}),
@@ -520,8 +524,13 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-employee-bonus-timing', title: 'Tax Timing of Employment Bonuses', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P1', keywords: ['employment bonus tax timing', 'when bonus is taxable', 'bonus entitlement year of assessment', 'contractual bonus tax'], queryPatterns: [String.raw`\bbonus\b[\s\S]{0,140}\b(?:report\w*|payroll|ir8a|taxable|year of assessment)\b`, String.raw`\b(?:report\w*|payroll|ir8a|taxable|year of assessment)\b[\s\S]{0,140}\bbonus\b`], aliases: ['Taxes on Bonuses', 'Contractual Bonus', 'Non-contractual Bonus'] },
   { id: 'iras-directors-fees', title: 'Directors’ Fees for Tax Reporting', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P2', keywords: ['directors fees tax', 'director fee reporting', 'directors’ fees'] },
   { id: 'iras-stock-options', title: 'Employee Stock Options and Share Benefits', domainId: 'IRAS_EMPLOYER_TAX', priority: 'P2', keywords: ['employee stock option tax', 'stock options employment income', 'share award tax'] },
-  { id: 'iras-individual-tax-residency', title: 'Individual Tax Residency and Days of Presence', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['tax residency', 'tax resident individual', '183-day', '183 day', 'non-resident employment income'] },
-  { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
+  { id: 'iras-individual-tax-residency', title: 'Individual Tax Residency and Days of Presence', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['tax residency', 'tax resident individual', 'singapore tax resident', 'tax resident in singapore', '183-day', '183 day', 'non-resident employment income'] },
+  { id: 'iras-individual-overseas-employment', title: 'Individual Tax Treatment of Working Outside Singapore', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['working outside singapore', 'overseas employment individual', 'employee posted overseas', 'overseas employment income', 'overseas secondment tax', 'overseas employment'], aliases: ['Overseas employment', 'Working outside Singapore'], queryPatterns: [String.raw`\b(?:work(?:ing)?|employment|secondment|posted)\b[\s\S]{0,100}\b(?:overseas|outside singapore|abroad)\b`] },
+  { id: 'iras-individual-foreign-employment-income', title: 'Individual Foreign-sourced Employment Income', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual foreign-sourced employment income', 'foreign sourced employment income', 'foreign employment income individual', 'foreign-sourced income', 'foreign sourced income', 'employment services rendered overseas', 'income from overseas employment'], aliases: ['Taxable overseas employment income', 'Overseas employment'], queryPatterns: [String.raw`\b(?:work(?:ing)?|employment|secondment|posted)\b[\s\S]{0,100}\b(?:overseas|outside singapore|abroad)\b`] },
+  { id: 'iras-individual-foreign-tax-credit', title: 'Individual Foreign Tax Credit and Double Tax Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual foreign tax credit', 'foreign tax credit individual', 'foreign tax credit', 'claim foreign tax credit individual', 'double taxation relief', 'double tax relief individual', 'taxed in the foreign country', 'taxed twice on the same income'], aliases: ['Claiming foreign tax credit'] },
+  { id: 'iras-individual-double-tax-agreements', title: 'Individual Double Tax Agreement Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual double tax agreement', 'individual dta relief', 'employment income dta exemption', 'dependent services treaty relief', 'double taxation relief individual', 'individual double taxation relief', 'double taxation agreements'], aliases: ['Claiming exemptions under Avoidance of Double Taxation Agreements', 'Double Taxation Agreements (DTA)'], queryPatterns: [String.raw`\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b[\s\S]{0,100}\b(?:relief|exemption|employment|income|foreign|overseas)\b`, String.raw`\b(?:relief|exemption|employment|income|foreign|overseas)\b[\s\S]{0,100}\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b`] },
+  { id: 'iras-individual-certificate-of-residence', title: 'Certificate of Residence for Individuals', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['individual certificate of residence', 'apply for certificate of residence', 'certificate of residence individual', 'cor for dta benefits'], aliases: ['Apply for COR'], queryPatterns: [String.raw`\b(?:certificate of residence|\bcor\b)[\s\S]{0,80}\b(?:dta|treaty|individual|tax resident)\b`] },
+  { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
   { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'] },
   { id: 'iras-property-tax-annual-value', title: 'Property Tax and Annual Value', domainId: 'IRAS_PROPERTY_TAX', priority: 'P1', keywords: ['property tax', 'annual value', 'owner-occupied property tax', 'non-owner-occupied property tax'] },
   { id: 'iras-stamp-duty-bsd', title: 'Buyer’s Stamp Duty', domainId: 'IRAS_STAMP_DUTY', priority: 'P1', keywords: ['bsd', 'buyers stamp duty', 'buyer’s stamp duty', 'buyer stamp duty'] },

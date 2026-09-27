@@ -42,6 +42,7 @@ const testSuites = [
   { name: 'Official Tax Source Links', file: 'test_official_tax_source_links.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Missing Fact Guards', file: 'test_iras_missing_fact_guards.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS Verified Source Map and Fallback', file: 'test_iras_source_map.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS Authority-level Discovery Progression', file: 'test_iras_authority_discovery.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS End-to-End Routing and Retrieval', file: 'test_iras_e2e_routing.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Evidence Quality Gate and Ranking', file: 'test_iras_evidence_quality_gate.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Claim-to-Evidence Verification', file: 'test_iras_claim_evidence_verifier.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

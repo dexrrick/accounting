@@ -5,6 +5,7 @@ import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.
 import { evaluateEvidenceQuality } from '../../src/retrieval/evidenceQualityGate.ts';
 import { formatGroundedSystemPrompt, postProcessAIResponse, buildGroundedReasoningContext } from '../../src/services/groundingContextBuilder.ts';
 import { renderIrasEvidenceResponse, usesIrasEvidencePolicy } from '../../src/services/irasEvidencePolicy.ts';
+import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistry.ts';
@@ -245,6 +246,286 @@ try {
   assert.doesNotMatch(ir21Fallback.messageText, /IR21 is always required/i);
 
   const ir21LiveRecord = ir21GroundedContext.evidenceQuality.eligibleRecords.find(record => record.id === ir21SourceRecordId);
+  const dtrQuote = 'Should your gains from your employment be taxed in the foreign country, you may apply for double taxation relief or tax remission in Singapore, to avoid being taxed twice on the same income.';
+  const dtrSourceText = [
+    '• You are employed outside of Singapore on behalf of the Government of Singapore.',
+    'a. Tax treatment in Singapore',
+    'As a Singapore citizen or tax resident in Singapore, the income from your employment exercised outside Singapore on behalf of Singapore government is deemed to have been derived from Singapore.',
+    'b. Tax treatment outside Singapore',
+    dtrQuote
+  ].join('\n\n');
+  const dtrUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore';
+  const dtrRecord = {
+    ...ir21LiveRecord,
+    id: 'IRAS_DTR_SCOPE_TEST',
+    documentTitle: 'IRAS | Working Outside Singapore',
+    legalOrStandardInstrument: 'IRAS individual income tax guidance',
+    officialSourceUrl: dtrUrl,
+    canonicalSourceUrl: dtrUrl,
+    sourceText: dtrSourceText,
+    tags: ['iras-individual-double-tax-agreements', 'iras-individual-foreign-tax-credit']
+  };
+  const dtrQuestion = 'What double taxation relief is available for a Singapore tax resident whose private employer seconds them overseas and whose salary is taxed there?';
+  const dtrClassification = classifyQuestion(dtrQuestion);
+  const dtrTrace = {
+    path: 'DISCOVERED_SOURCE', sourceMapIds: [], selectedRecordIds: [dtrRecord.id], finalVerifiedUrls: [dtrUrl], candidateOnly: true,
+    attempts: [{ topicId: 'iras-individual-double-tax-agreements', fetchStatus: 'SUCCESS', finalUrl: dtrUrl, titleMatched: true, contentMatched: true }]
+  };
+  const dtrQuality = evaluateEvidenceQuality({ query: dtrQuestion, topicIds: dtrClassification.topicIds,
+    records: [dtrRecord], missingFacts: dtrClassification.missingFacts, sourceMapFallbackTrace: dtrTrace });
+  assert.ok(!dtrQuality.eligibleRecords.some(record => record.id === dtrRecord.id),
+    'Government-only DTR guidance cannot cover an unspecified or private-employer secondment.');
+  assert.equal(dtrQuality.rejectedRecords.find(record => record.recordId === dtrRecord.id)?.code, 'TOPIC_SCOPE_MISMATCH',
+    `Unexpected DTR scope rejection result: ${JSON.stringify({ eligible: dtrQuality.eligibleRecords.map(record => record.id), rejected: dtrQuality.rejectedRecords })}`);
+  const privateDtrContext = {
+    ...ir21GroundedContext,
+    classification: dtrClassification,
+    userFacts: [dtrQuestion],
+    missingFacts: dtrClassification.missingFacts,
+    primaryEvidence: [dtrRecord],
+    evidenceQuality: dtrQuality,
+    sourceMapFallbackTrace: dtrTrace
+  };
+  const privateDtrResponse = renderIrasEvidenceResponse({ taxClaims: [{ text: dtrQuote, quote: dtrQuote, recordId: dtrRecord.id, kind: 'RULE' }] },
+    privateDtrContext, dtrQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(!privateDtrResponse.messageText.includes(dtrQuote), 'Rejected Government-only relief is not presented as a private-employer rule.');
+
+  const governmentDtrQuestion = 'What double taxation relief is available to a Singapore tax resident employed overseas on behalf of the Government of Singapore whose income is taxed there?';
+  const governmentDtrClassification = classifyQuestion(governmentDtrQuestion);
+  const governmentDtrQuality = evaluateEvidenceQuality({ query: governmentDtrQuestion, topicIds: governmentDtrClassification.topicIds,
+    records: [dtrRecord], missingFacts: governmentDtrClassification.missingFacts, sourceMapFallbackTrace: dtrTrace });
+  assert.ok(governmentDtrQuality.eligibleRecords.some(record => record.id === dtrRecord.id),
+    `The explicit Government-employment query may use the scoped DTR passage: ${JSON.stringify(governmentDtrQuality.rejectedRecords)}`);
+  const dtrContext = {
+    ...ir21GroundedContext,
+    classification: governmentDtrClassification,
+    userFacts: [governmentDtrQuestion],
+    missingFacts: governmentDtrClassification.missingFacts,
+    primaryEvidence: [dtrRecord],
+    evidenceQuality: governmentDtrQuality,
+    sourceMapFallbackTrace: dtrTrace
+  };
+  const dtrResponse = renderIrasEvidenceResponse({ taxClaims: [{ text: dtrQuote, quote: dtrQuote, recordId: dtrRecord.id, kind: 'RULE' }] },
+    dtrContext, governmentDtrQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(dtrResponse.claimVerification.accepted.some(claim => claim.text === dtrQuote), 'The exact DTR sentence still passes claim verification.');
+  const dtrScopeLine = 'Scope: “You are employed outside of Singapore on behalf of the Government of Singapore” — “b. Tax treatment outside Singapore”.';
+  assert.ok(dtrResponse.messageText.includes(dtrScopeLine), 'The rendered quotation preserves its parent Government-employment item and subsection heading.');
+  assert.ok(dtrResponse.messageText.includes('it does not establish double-tax relief for a private-employer secondment'));
+  assert.ok(dtrResponse.messageText.indexOf(dtrScopeLine) < dtrResponse.messageText.indexOf(dtrQuote), 'Scope is shown before the DTR quotation.');
+  const unscopedDtrRecord = { ...dtrRecord, sourceText: dtrQuote };
+  const unscopedDtrQuality = evaluateEvidenceQuality({ query: governmentDtrQuestion, topicIds: governmentDtrClassification.topicIds,
+    records: [unscopedDtrRecord], missingFacts: governmentDtrClassification.missingFacts, sourceMapFallbackTrace: dtrTrace });
+  const unscopedDtrResponse = renderIrasEvidenceResponse({ taxClaims: [{ text: dtrQuote, quote: dtrQuote, recordId: unscopedDtrRecord.id, kind: 'RULE' }] },
+    { ...dtrContext, evidenceQuality: unscopedDtrQuality, primaryEvidence: [unscopedDtrRecord] }, governmentDtrQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(unscopedDtrQuality.rejectedRecords.some(record => record.recordId === unscopedDtrRecord.id && record.code === 'TOPIC_SCOPE_MISMATCH'),
+    'An isolated relief sentence without parseable Government-employment context fails evidence admission.');
+  assert.ok(!unscopedDtrResponse.claimVerification.accepted.some(claim => claim.text === dtrQuote),
+    'Claim verification cannot admit a quotation whose source passage failed scope validation.');
+  assert.ok(!unscopedDtrResponse.messageText.includes(dtrQuote), 'An isolated Government-only DTR sentence is not rendered without its source context.');
+
+  const secondmentQuestion = 'If a Singapore tax resident earns employment income while physically working overseas on a temporary secondment, under what conditions is that foreign-sourced income taxable in Singapore or eligible for double taxation relief?';
+  const secondmentClassification = {
+    ...classifyQuestion(secondmentQuestion),
+    topicIds: ['iras-individual-overseas-employment', 'iras-individual-foreign-tax-credit', 'iras-individual-double-tax-agreements']
+  };
+  const secondmentUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore';
+  const ftcUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-residency-and-tax-rates/claiming-foreign-tax-credit';
+  const individualDtaUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-residency-and-tax-rates/claiming-exemptions-under-Avoidance-of-Double-Taxation-Agreements-(DTAs)';
+  const overseasQuote = 'If you are contracted to be based overseas to render your full employment services wholly outside Singapore, you are not liable to tax in Singapore as your employment income is sourced outside Singapore. It does not matter where and how you are being paid.';
+  const incidentalQuote = 'For example, when a regional sales manager employed by a Singapore company based in Singapore is required to travel overseas frequently to oversee operations in regional countries, the travel is incidental to his Singapore employment. His employment income, including income attributable to services rendered overseas, is fully taxable in Singapore.';
+  const ftcQuote = 'If you are a Singapore tax resident, you may claim foreign tax credit if you have been taxed twice on the same income.';
+  const ftcConditionsQuote = [
+    'Conditions for claiming FTC',
+    'Anyone claiming FTC must satisfy all of the following conditions:',
+    '• The individual must be a tax resident in Singapore for the relevant basis year;',
+    '• Tax has been paid or is payable on the same income in the foreign country; and',
+    '• The income is taxable in Singapore.'
+  ].join('\n\n');
+  const taxableOverseasIncomeQuote = [
+    'Overseas income is taxable in Singapore when:',
+    '• Your overseas employment is incidental to your Singapore employment. That is, as part of your work here, you have to travel overseas.',
+    'Example: Overseas services incidental to Singapore employment',
+    incidentalQuote,
+    '• You work in Singapore for a foreign employer.',
+    '• Your overseas employment income is for services rendered in Singapore.',
+    '• You have a trade / business in Singapore and you are carrying on a trade / business overseas which is incidental to your Singapore trade.',
+    '• You have received the income in Singapore through a partnership in Singapore, unless the income qualifies for exemption*.',
+    '• You received service income from overseas, unless the income qualifies for exemption*.',
+    '* Please refer to the guide on Tax Exemption for Foreign-Sourced Income (Fifth Edition) (PDF, 278KB) for details.',
+    '• You are employed outside of Singapore on behalf of the Government of Singapore.'
+  ].join('\n\n');
+  const individualDtaQuote = 'Under the Avoidance of Double Taxation Agreements (DTAs), you may be protected from being taxed twice on the same income, depending on the provisions of the DTA.';
+  const secondmentRecords = [
+    {
+      ...ir21LiveRecord,
+      id: 'LIVE_SECONDMENT_OVERSEAS_WORK',
+      documentTitle: 'IRAS | Working Outside Singapore',
+      legalOrStandardInstrument: 'Individual Tax Treatment of Working Outside Singapore',
+      officialSourceUrl: secondmentUrl,
+      canonicalSourceUrl: secondmentUrl,
+      sourceText: [
+        'Overseas employment', overseasQuote,
+        'Taxable overseas income', taxableOverseasIncomeQuote,
+        'a. Tax treatment in Singapore',
+        'As a Singapore citizen or tax resident in Singapore, the income from your employment exercised outside Singapore on behalf of Singapore government is deemed to have been derived from Singapore.',
+        'All your gains from such employment (including overseas allowances) are taxable in Singapore.',
+        'b. Tax treatment outside Singapore', dtrQuote,
+        'Reporting taxable overseas income', 'You need to declare the taxable overseas income under employment income or trade income in your tax return.'
+      ].join('\n\n'),
+      tags: ['iras-individual-overseas-employment']
+    },
+    {
+      ...ir21LiveRecord,
+      id: 'LIVE_SECONDMENT_FTC',
+      documentTitle: 'IRAS | Claiming foreign tax credit',
+      legalOrStandardInstrument: 'Individual Foreign Tax Credit and Double Tax Relief',
+      officialSourceUrl: ftcUrl,
+      canonicalSourceUrl: ftcUrl,
+      sourceText: [
+        'Claiming foreign tax credit', ftcQuote,
+        'Double taxation on foreign income',
+        'Singapore tax residents may claim foreign tax credit (FTC) when filing their Income Tax Returns in Singapore to avoid paying income taxes on the same income which was taxed in the foreign country and in Singapore.',
+        'Conditions for claiming FTC',
+        'Anyone claiming FTC must satisfy all of the following conditions:',
+        '• The individual must be a tax resident in Singapore for the relevant basis year;',
+        '• Tax has been paid or is payable on the same income in the foreign country; and',
+        '• The income is taxable in Singapore.'
+      ].join('\n\n'),
+      tags: ['iras-individual-foreign-tax-credit']
+    },
+    {
+      ...ir21LiveRecord,
+      id: 'LIVE_SECONDMENT_DTA',
+      documentTitle: 'IRAS | Claiming exemptions under Avoidance of Double Taxation Agreements (DTAs)',
+      legalOrStandardInstrument: 'Individual Double Tax Agreement Relief',
+      officialSourceUrl: individualDtaUrl,
+      canonicalSourceUrl: individualDtaUrl,
+      sourceText: [
+        'Claiming exemptions under Avoidance of Double Taxation Agreements (DTAs)',
+        individualDtaQuote,
+        'Avoidance of Double Taxation Agreements (DTAs)',
+        'Double taxation occurs when the same income is being taxed twice - once in the jurisdiction where the income is derived and another time in the jurisdiction where it is received.',
+        'Benefits under DTAs',
+        'Depending on the provisions of the DTA, you may be eligible for tax exemption on income for personal services, teachers, researchers, artistes, athletes, students, trainees, etc.',
+        'Exemption on short-term Singapore employment income',
+        "The DTA article for 'Dependent Personal Services' provides the source rules for income from employment. The source state is usually where the services are provided or employment is exercised.",
+        'Tax residents of Singapore',
+        'If you derive income from a foreign country/jurisdiction, you may be subject to tax there. However, you may claim DTA benefits that entitles a Singapore tax resident to enjoy a reduced tax rate or tax exemption in that jurisdiction.'
+      ].join('\n\n'),
+      tags: ['iras-individual-double-tax-agreements']
+    }
+  ];
+  const secondmentTrace = {
+    path: 'DISCOVERED_SOURCE', sourceMapIds: [], selectedRecordIds: secondmentRecords.map(record => record.id),
+    finalVerifiedUrls: secondmentRecords.map(record => record.canonicalSourceUrl), candidateOnly: true,
+    attempts: secondmentRecords.map((record, index) => ({
+      topicId: secondmentClassification.topicIds[index], fetchStatus: 'SUCCESS', finalUrl: record.canonicalSourceUrl,
+      titleMatched: true, contentMatched: true, discoveryStage: 'OFFICIAL_DOMAIN_SEARCH'
+    }))
+  };
+  const secondmentMissingFacts = [
+    'Whether overseas travel was incidental to employment by a Singapore employer or duties were genuinely performed for foreign employment',
+    'Whether foreign tax was paid or is payable on the same income',
+    'The foreign jurisdiction, applicable DTA and relevant Year of Assessment'
+  ];
+  const secondmentQuality = evaluateEvidenceQuality({
+    query: secondmentQuestion, topicIds: secondmentClassification.topicIds, records: secondmentRecords,
+    missingFacts: secondmentMissingFacts, authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: secondmentTrace
+  });
+  assert.equal(secondmentQuality.status, 'LIMITED', 'Missing application facts keep evidence-backed conditions conditional.');
+  assert.deepEqual(secondmentQuality.uncoveredTopicIds, []);
+  const ftcConditionsVerification = verifyEvidenceClaims([{ text: ftcConditionsQuote, quote: ftcConditionsQuote,
+    recordId: secondmentRecords[1].id, kind: 'RULE' }], secondmentQuality.eligibleRecords,
+  { missingFacts: secondmentMissingFacts, targetDate: secondmentQuality.targetDate });
+  assert.equal(ftcConditionsVerification.accepted.length, 1,
+    'The complete FTC heading and all three exact source conditions pass quotation verification as a whole list.');
+  const partialFtcConditionsQuote = ftcConditionsQuote.split('\n\n').slice(0, 4).join('\n\n');
+  const partialFtcConditionsVerification = verifyEvidenceClaims([{ text: partialFtcConditionsQuote, quote: partialFtcConditionsQuote,
+    recordId: secondmentRecords[1].id, kind: 'RULE' }], secondmentQuality.eligibleRecords,
+  { missingFacts: secondmentMissingFacts, targetDate: secondmentQuality.targetDate });
+  assert.equal(partialFtcConditionsVerification.accepted.length, 0,
+    'A truncated FTC conditions list is not accepted as a complete source span.');
+  const ftcProviderListWithoutHeading = ftcConditionsQuote.split('\n\n').slice(1).join('\n\n');
+  const ftcProviderListVerification = verifyEvidenceClaims([{ text: ftcProviderListWithoutHeading, quote: ftcProviderListWithoutHeading,
+    recordId: secondmentRecords[1].id, kind: 'RULE' }], secondmentQuality.eligibleRecords,
+  { missingFacts: secondmentMissingFacts, targetDate: secondmentQuality.targetDate });
+  assert.equal(ftcProviderListVerification.accepted.length, 1,
+    'A provider may quote the complete conditions introduction and all three exact items without repeating the preceding heading.');
+  const completeOverseasListVerification = verifyEvidenceClaims([{ text: taxableOverseasIncomeQuote, quote: taxableOverseasIncomeQuote,
+    recordId: secondmentRecords[0].id, kind: 'RULE' }], secondmentQuality.eligibleRecords,
+  { missingFacts: secondmentMissingFacts, targetDate: secondmentQuality.targetDate });
+  assert.equal(completeOverseasListVerification.accepted.length, 1,
+    'The complete taxable-overseas-income list is verifiable as one exact source span, including all list items and the example.');
+  const secondmentContext = {
+    ...ir21GroundedContext,
+    classification: secondmentClassification,
+    userFacts: [secondmentQuestion],
+    missingFacts: secondmentMissingFacts,
+    primaryEvidence: secondmentRecords,
+    evidenceQuality: secondmentQuality,
+    sourceMapFallbackTrace: secondmentTrace
+  };
+  const providerWithFtcConditionsOnly = renderIrasEvidenceResponse({ taxClaims: [{ text: ftcProviderListWithoutHeading,
+    quote: ftcProviderListWithoutHeading, recordId: secondmentRecords[1].id, kind: 'RULE' }] }, secondmentContext,
+  secondmentQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(providerWithFtcConditionsOnly.claimVerification.accepted.filter(claim =>
+    claim.recordId === secondmentRecords[1].id && /anyone claiming ftc must satisfy all/i.test(claim.text)).length, 1,
+  'A complete provider list without its heading covers FTC conditions and does not trigger a duplicate heading-prefixed supplement.');
+  const secondmentPrompt = formatGroundedSystemPrompt(secondmentContext, 'SFRS_I');
+  assert.ok(secondmentPrompt.includes('return the complete exact source passage even if the user\'s facts do not establish whether those conditions are met'));
+  assert.ok(secondmentPrompt.includes(ftcQuote) && secondmentPrompt.includes(individualDtaQuote),
+    'The provider receives the independently admitted FTC and individual DTA passages as source text.');
+  const verifiedSecondmentResponse = renderIrasEvidenceResponse({ taxClaims: [
+    { text: overseasQuote, quote: overseasQuote, recordId: secondmentRecords[0].id, kind: 'RULE' },
+    { text: ftcQuote, quote: ftcQuote, recordId: secondmentRecords[1].id, kind: 'RULE' },
+    { text: individualDtaQuote, quote: individualDtaQuote, recordId: secondmentRecords[2].id, kind: 'RULE' }
+  ] }, secondmentContext, secondmentQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(verifiedSecondmentResponse.claimVerification.rejected.length, 0);
+  assert.ok([secondmentRecords[0], secondmentRecords[1], secondmentRecords[2]].every(record =>
+    verifiedSecondmentResponse.claimVerification.accepted.some(claim => claim.recordId === record.id)));
+  assert.ok(verifiedSecondmentResponse.messageText.includes('Information still needed to complete the question'),
+    'The applicable conditions remain unresolved in the rendered answer when material application facts are missing.');
+  assert.ok(verifiedSecondmentResponse.messageText.includes(ftcUrl) && verifiedSecondmentResponse.messageText.includes(individualDtaUrl));
+  assert.notEqual(secondmentRecords[1].canonicalSourceUrl, secondmentRecords[2].canonicalSourceUrl,
+    'The FTC and DTA concepts are supported by separate fetched official pages.');
+  assert.ok(secondmentQuality.coveredTopicIds.includes('iras-individual-foreign-tax-credit'),
+    'The FTC record is admitted only when its source text contains the credit and core eligibility conditions.');
+  const partialSecondmentResponse = renderIrasEvidenceResponse({ taxClaims: [
+    { text: overseasQuote, quote: overseasQuote, recordId: secondmentRecords[0].id, kind: 'RULE' }
+  ] }, secondmentContext, secondmentQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(partialSecondmentResponse.claimVerification.rejected.length, 0);
+  assert.ok([secondmentRecords[0], secondmentRecords[1], secondmentRecords[2]].every(record =>
+    partialSecondmentResponse.claimVerification.accepted.some(claim => claim.recordId === record.id)),
+    'A valid partial provider response is supplemented with one bounded, independently verified passage for each covered but omitted concept.');
+  assert.ok(partialSecondmentResponse.messageText.includes(individualDtaQuote));
+  assert.ok(partialSecondmentResponse.claimVerification.accepted.some(claim => claim.text === ftcConditionsQuote),
+    'An FTC intro quote alone does not represent the topic; partial provider output is supplemented with the complete conditions list.');
+  assert.ok(partialSecondmentResponse.claimVerification.accepted.some(claim => claim.text === taxableOverseasIncomeQuote),
+    'Partial provider output receives the complete taxable-overseas-income conditions list when it omits the incidentality distinction.');
+  assert.ok(partialSecondmentResponse.claimVerification.accepted.some(claim => claim.text === overseasQuote),
+    'The exact wholly-overseas employment rule is separately preserved alongside the incidentality conditions.');
+  const governmentDtrOnlyResponse = renderIrasEvidenceResponse({ taxClaims: [
+    { text: dtrQuote, quote: dtrQuote, recordId: secondmentRecords[0].id, kind: 'RULE' }
+  ] }, secondmentContext, secondmentQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(!governmentDtrOnlyResponse.messageText.includes(dtrQuote),
+    'A Government-only DTR quote is omitted from an unspecified/private secondment answer even when the larger page was admitted for overseas employment.');
+  assert.ok(governmentDtrOnlyResponse.claimVerification.rejected.some(claim => claim.reason === 'GOVERNMENT_EMPLOYMENT_SCOPE_NOT_ESTABLISHED'));
+  const secondmentNoClaimFallback = renderIrasEvidenceResponse({ taxClaims: [] }, secondmentContext,
+    secondmentQuestion, null, 'SFRS_I', 'PROVIDER_NO_CLAIMS');
+  const fallbackTexts = secondmentNoClaimFallback.claimVerification.accepted.map(claim => claim.text);
+  assert.ok(fallbackTexts.includes(ftcConditionsQuote) && fallbackTexts.includes(individualDtaQuote) &&
+    fallbackTexts.includes(taxableOverseasIncomeQuote) && fallbackTexts.includes(overseasQuote),
+    'No-claim fallback includes complete FTC, DTA, wholly-overseas and incidental-employment passages instead of spending its excerpt budget on earlier source pages.');
+  assert.ok(!fallbackTexts.includes(dtrQuote) && !secondmentNoClaimFallback.messageText.includes('Scope: “You are employed outside of Singapore on behalf of the Government of Singapore”'),
+    'No-claim fallback omits the Government-only DTR subsection and its scope note; the complete taxable-income list may still name Government employment as one distinct condition.');
+  assert.ok(secondmentNoClaimFallback.messageText.includes('Whether foreign tax was paid or is payable on the same income'),
+    'Unresolved facts remain visible instead of turning conditional evidence into an unconditional conclusion.');
+  const genericNoClaimDispatch = postProcessAIResponse({ taxClaims: [] }, null, secondmentQuestion, secondmentContext, null, 'SFRS_I');
+  assert.equal(genericNoClaimDispatch.answerPath, 'PROVIDER_NO_CLAIMS', 'Any IRAS advisory with admitted evidence can use verified source-only fallback when the provider returns no claims.');
+  const rejectedClaimDispatch = postProcessAIResponse({ taxClaims: [{ text: 'An unsupported tax conclusion.', quote: 'An unsupported tax conclusion.', recordId: secondmentRecords[0].id, kind: 'RULE' }] },
+    null, secondmentQuestion, secondmentContext, null, 'SFRS_I');
+  assert.equal(rejectedClaimDispatch.answerPath, 'PROVIDER_CLAIMS_REJECTED', 'A nonempty but unverifiable provider response remains distinct from an empty claim response.');
+
   const unknownColonRecord = {
     ...ir21LiveRecord,
     tags: ir21LiveRecord.tags.filter(tag => tag !== 'iras-employer-ir21'),

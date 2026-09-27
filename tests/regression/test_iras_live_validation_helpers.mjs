@@ -31,6 +31,17 @@ assert.deepEqual(
   'A successful response with topic validation failure is not treated as retrieved evidence.'
 );
 assert.deepEqual(
+  classifyRetrieval({
+    sourceMapFallbackTrace: { attempts: [{ fetchStatus: 'TOPIC_MISMATCH' }, { fetchStatus: 'SUCCESS' }] },
+    evidenceQuality: { status: 'RETRIEVED_SUFFICIENT', eligibleRecords: [{ id: 'verified-live-page' }], uncoveredTopicIds: [] }
+  }, [
+    { httpStatus: 404, status: 'HTTP_ERROR' },
+    { httpStatus: 200, status: 'HTTP_SUCCESS' }
+  ]),
+  { retrievalStatus: 'SUCCESS', retrievalTransportStatus: 'PARTIAL' },
+  'A rejected early candidate remains in the trace, but final sufficient evidence determines terminal retrieval status.'
+);
+assert.deepEqual(
   classifyRetrieval(null, [{ status: 'NETWORK_ERROR' }]),
   { retrievalStatus: 'BLOCKED_BY_NETWORK', retrievalTransportStatus: 'BLOCKED_BY_NETWORK' }
 );

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "suite": "Unseen live IRAS discovery evaluation",
+  "purpose": "Questions outside the existing 20-case live benchmark, used to assess registry-independent official-source discovery. Results require manual substantive and claim-level review.",
+  "cases": [
+    {
+      "id": "overseas-employment-secondment-dtr",
+      "workflow": "Individual employment income / cross-border / double taxation relief",
+      "question": "If a Singapore tax resident earns employment income while physically working overseas on a temporary secondment, under what conditions is that foreign-sourced income taxable in Singapore or eligible for double taxation relief?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "foreign-bank-interest-individual",
+      "workflow": "Individual income tax / foreign income",
+      "question": "I am an individual living in Singapore and received interest from a bank account overseas. When would Singapore tax that interest, and what facts should I check?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "employer-overseas-employee-cessation",
+      "workflow": "Employment compliance / employee leaving Singapore",
+      "question": "What must a Singapore employer do for tax when a foreign employee is leaving Singapore permanently, and when may the employer release the employee's final pay?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "company-overseas-consultant-withholding",
+      "workflow": "Corporate tax / withholding tax / cross-border services",
+      "question": "A Singapore company pays an overseas consultant for work partly performed in Singapore and partly performed abroad. When could withholding tax apply, and what details determine the amount or exemption?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "imported-cloud-services-reverse-charge",
+      "workflow": "GST / imported services / reverse charge",
+      "question": "A Singapore GST-registered business buys cloud hosting from a foreign supplier. When does reverse charge apply, and how does full input tax recovery affect the outcome?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "company-tax-estimated-chargeable-income",
+      "workflow": "Corporate filing and compliance",
+      "question": "When does a Singapore company have to file its Estimated Chargeable Income after its financial year end, and what exemptions or filing conditions should it check?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "individual-tax-residency-short-stay",
+      "workflow": "Individual tax residency / presence period",
+      "question": "How does IRAS determine whether an employee who spends part of the year in Singapore is a Singapore tax resident, and which dates or employment arrangements matter?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "foreign-branch-profit-remittance-company",
+      "workflow": "Corporate tax / foreign income exemption",
+      "question": "A Singapore company remits profits from an overseas branch into Singapore. What conditions determine whether those branch profits are exempt or taxable here?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "individual-dta-employment-relief",
+      "workflow": "Individual relief / double tax agreement",
+      "question": "If the same employment income is taxed in Singapore and the country where I worked, how do I check whether a tax treaty or foreign tax credit can relieve the double tax?",
+      "outputPreference": { "journal": false, "statutory": false }
+    },
+    {
+      "id": "course-fee-relief-individual",
+      "workflow": "Individual income tax / personal relief",
+      "question": "Can an employee claim personal tax relief for professional course fees paid during the year, and what conditions and exclusions apply?",
+      "outputPreference": { "journal": false, "statutory": false }
+    }
+  ]
+}

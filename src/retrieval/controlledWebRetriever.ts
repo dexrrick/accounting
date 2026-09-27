@@ -43,8 +43,40 @@ export interface ControlledFetchResult {
   titleMatched?: boolean;
   contentMatched?: boolean;
   substantiveText?: string;
+  /** Explicit HTML anchor targets from this fetched page; discovery metadata only. */
+  discoveredLinks?: Array<{ href: string; text: string }>;
   etag?: string;
   lastModified?: string;
+}
+
+function extractExplicitAnchorLinks(html: string): Array<{ href: string; text: string }> {
+  const links: Array<{ href: string; text: string }> = [];
+  const withoutChrome = html
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<(script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+  const mainContent = withoutChrome.match(/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i)?.[1];
+  const articleContent = withoutChrome.match(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i)?.[1];
+  const bodyContent = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i)?.[1];
+  // IRAS pages can have hundreds of header/footer anchors before their actual
+  // guidance links. Scope discovery to the content region before applying the
+  // cap, so chrome cannot crowd substantive first-party navigation out.
+  const contentMarkup = mainContent || articleContent || bodyContent || withoutChrome;
+  const decode = (value: string): string => value
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .trim();
+  const anchorPattern = /<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi;
+  for (const match of contentMarkup.matchAll(anchorPattern)) {
+    const hrefMatch = /(?:^|\s)href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(match[1]);
+    const href = decode(hrefMatch?.[1] || hrefMatch?.[2] || hrefMatch?.[3] || '');
+    if (!href) continue;
+    const text = decode((match[2] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')).slice(0, 500);
+    links.push({ href, text });
+    if (links.length >= 200) break;
+  }
+  return links;
 }
 
 /**
@@ -181,7 +213,8 @@ export class ControlledWebRetriever {
             topicMatched: false,
             titleMatched: false,
             contentMatched: false,
-            substantiveText: topicCheck.substantiveText
+            substantiveText: topicCheck.substantiveText,
+            discoveredLinks: extractExplicitAnchorLinks(cached.rawContent)
           };
         }
         this.cache.touch(url, ttlMs);
@@ -199,6 +232,7 @@ export class ControlledWebRetriever {
           titleMatched: options.topicValidation ? true : undefined,
           contentMatched: options.topicValidation ? true : undefined,
           substantiveText: topicCheck?.substantiveText,
+          discoveredLinks: extractExplicitAnchorLinks(cached.rawContent),
           etag: cached.etag,
           lastModified: cached.lastModified
         };
@@ -309,7 +343,8 @@ export class ControlledWebRetriever {
             topicMatched: false,
             titleMatched: false,
             contentMatched: false,
-            substantiveText: topicCheck.substantiveText
+            substantiveText: topicCheck.substantiveText,
+            discoveredLinks: extractExplicitAnchorLinks(text)
           };
         }
       }
@@ -363,6 +398,7 @@ export class ControlledWebRetriever {
         titleMatched: options.topicValidation ? true : undefined,
         contentMatched: options.topicValidation ? true : undefined,
         substantiveText: options.topicValidation ? this.validator.validateTopicContent(text, options.topicValidation).substantiveText : undefined,
+        discoveredLinks: extractExplicitAnchorLinks(text),
         etag,
         lastModified
       };

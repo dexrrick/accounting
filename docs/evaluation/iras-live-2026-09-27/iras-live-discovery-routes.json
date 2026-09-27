@@ -1,0 +1,213 @@
+{
+  "evaluatedAt": "2026-09-27T11:45:59.181Z",
+  "query": "IRAS working outside Singapore overseas employment income",
+  "classification": {
+    "primaryDomain": "TAX",
+    "authorities": [
+      "IRAS"
+    ],
+    "topicIds": [
+      "iras-individual-overseas-employment",
+      "iras-individual-foreign-employment-income"
+    ]
+  },
+  "sourceMapIds": [],
+  "trace": {
+    "path": "DISCOVERED_SOURCE",
+    "sourceMapIds": [],
+    "selectedRecordIds": [
+      "LIVE_TOPIC_iras-authority-query-iras-working-outside-singapore-overseas-employme_8d8ed7dff820"
+    ],
+    "finalVerifiedUrls": [
+      "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore"
+    ],
+    "candidateOnly": true,
+    "attempts": [
+      {
+        "topicId": "iras-authority-query-iras-working-outside-singapore-overseas-employme",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore",
+        "pageTitle": "IRAS | Working Outside Singapore",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+        "searchQueryVariant": "TOPIC_HINT_3"
+      }
+    ],
+    "stages": [
+      {
+        "stage": "LOCAL_VERIFIED",
+        "status": "EXHAUSTED",
+        "reason": "Local retrieval was insufficient for at least one routed topic."
+      },
+      {
+        "stage": "MAPPED_SOURCE",
+        "status": "SKIPPED",
+        "reason": "No applicable reviewed source-map pointer was available."
+      },
+      {
+        "stage": "SITEMAP_DISCOVERY",
+        "status": "EXHAUSTED",
+        "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+      },
+      {
+        "stage": "OFFICIAL_DOMAIN_SEARCH",
+        "status": "SUFFICIENT",
+        "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+      }
+    ]
+  },
+  "liveSitemapFetched": true,
+  "sitemapCandidateUrls": [
+    "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad",
+    "https://www.iras.gov.sg/taxes/individual-income-tax/employers/filing-employee-earnings-(ir8a-appendix-8a-appendix-8b-ir8s)",
+    "https://www.iras.gov.sg/taxes/individual-income-tax/employers/auto-inclusion-scheme-(ais)-for-employment-income",
+    "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/scenario-based-faqs-for-working-in-singapore-and-abroad"
+  ],
+  "onlineSearchFetched": true,
+  "searchResponseDiagnostics": [
+    {
+      "host": "html.duckduckgo.com",
+      "status": 202,
+      "contentType": "text/html; charset=UTF-8",
+      "bodyLength": 14271,
+      "untrustedMetadataPreview": "--> DuckDuckGo DuckDuckGo Unfortunately, bots use DuckDuckGo too. Please complete the following challenge to confirm this search was made by a human. Select all squares containing a duck: Submit Images not loading? Please email the followin"
+    },
+    {
+      "host": "r.jina.ai",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "bodyLength": 17755,
+      "untrustedMetadataPreview": "Title: site:iras.gov.sg IRAS working outside Singapore overseas employment income at DuckDuckGo URL Source: [URL] Markdown Content: []([URL]) []([URL] \"DuckDuckGo\") ## [IRAS | Working Outside Singapore]([URL]) [![Image 1]([URL])]([URL])[www"
+    },
+    {
+      "host": "html.duckduckgo.com",
+      "status": 202,
+      "contentType": "text/html; charset=UTF-8",
+      "bodyLength": 14339,
+      "untrustedMetadataPreview": "--> DuckDuckGo DuckDuckGo Unfortunately, bots use DuckDuckGo too. Please complete the following challenge to confirm this search was made by a human. Select all squares containing a duck: Submit Images not loading? Please email the followin"
+    },
+    {
+      "host": "r.jina.ai",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "bodyLength": 17562,
+      "untrustedMetadataPreview": "Title: site:iras.gov.sg iras individual employee guidance working outside singapore oversea employment income at DuckDuckGo URL Source: [URL] Markdown Content: []([URL]) []([URL] \"DuckDuckGo\") ## [IRAS | Working Outside Singapore]([URL]) [!"
+    },
+    {
+      "host": "html.duckduckgo.com",
+      "status": 202,
+      "contentType": "text/html; charset=UTF-8",
+      "bodyLength": 14193,
+      "untrustedMetadataPreview": "--> DuckDuckGo DuckDuckGo Unfortunately, bots use DuckDuckGo too. Please complete the following challenge to confirm this search was made by a human. Select all squares containing a duck: Submit Images not loading? Please email the followin"
+    },
+    {
+      "host": "r.jina.ai",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "bodyLength": 15436,
+      "untrustedMetadataPreview": "Title: site:iras.gov.sg working outside at DuckDuckGo URL Source: [URL] Markdown Content: []([URL]) []([URL] \"DuckDuckGo\") ## [IRAS | Working Outside Singapore]([URL]) [![Image 1]([URL])]([URL])[www.iras.gov.sg/taxes/individual-income-tax/e"
+    },
+    {
+      "host": "html.duckduckgo.com",
+      "status": 202,
+      "contentType": "text/html; charset=UTF-8",
+      "bodyLength": 14203,
+      "untrustedMetadataPreview": "--> DuckDuckGo DuckDuckGo Unfortunately, bots use DuckDuckGo too. Please complete the following challenge to confirm this search was made by a human. Select all squares containing a duck: Submit Images not loading? Please email the followin"
+    },
+    {
+      "host": "r.jina.ai",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "bodyLength": 18166,
+      "untrustedMetadataPreview": "Title: site:iras.gov.sg oversea employment at DuckDuckGo URL Source: [URL] Markdown Content: []([URL]) []([URL] \"DuckDuckGo\") ## [IRAS | Working Outside Singapore]([URL]) [![Image 1]([URL])]([URL])[www.iras.gov.sg/taxes/individual-income-ta"
+    }
+  ],
+  "searchCandidateTitles": [
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore",
+      "title": "IRAS | Working Outside Singapore"
+    }
+  ],
+  "fetchedPageUrls": [
+    "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore"
+  ],
+  "requestedUrls": [
+    {
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET"
+    },
+    {
+      "url": "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+IRAS+working+outside+Singapore+overseas+employment+income",
+      "method": "GET"
+    },
+    {
+      "url": "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20IRAS%20working%20outside%20Singapore%20overseas%20employment%20income",
+      "method": "GET"
+    },
+    {
+      "url": "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+individual+employee+guidance+working+outside+singapore+oversea+employment+income",
+      "method": "GET"
+    },
+    {
+      "url": "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20individual%20employee%20guidance%20working%20outside%20singapore%20oversea%20employment%20income",
+      "method": "GET"
+    },
+    {
+      "url": "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+working+outside",
+      "method": "GET"
+    },
+    {
+      "url": "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20working%20outside",
+      "method": "GET"
+    },
+    {
+      "url": "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+oversea+employment",
+      "method": "GET"
+    },
+    {
+      "url": "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20oversea%20employment",
+      "method": "GET"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore",
+      "method": "GET"
+    }
+  ],
+  "evidenceAdmission": {
+    "status": "RETRIEVED_SUFFICIENT",
+    "eligibleRecordIds": [
+      "LIVE_TOPIC_iras-authority-query-iras-working-outside-singapore-overseas-employme_8d8ed7dff820"
+    ],
+    "rejectedRecords": []
+  },
+  "evidence": [
+    {
+      "id": "LIVE_TOPIC_iras-authority-query-iras-working-outside-singapore-overseas-employme_8d8ed7dff820",
+      "title": "IRAS | Working Outside Singapore",
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore",
+      "sourceText": "I want to know the tax treatment on working outside Singapore\n\nShare:\n\n•\n\n•\n\n•\n\n•\n\n•\n\n•\n\nTax treatment of income from overseas employment.\n\nOn this page:\n\nOverseas employment\n\nIf you are contracted to be based overseas to render your full employment services wholly outside Singapore, you are not liable to tax in Singapore as your employment income is sourced outside Singapore. It does not matter where and how you are being paid.\n\nYour employer will have to refer to reporting employee earnings (IR8A, Appendix 8A, Appendix 8B) on the need to prepare the Form IR8A.\n\nFor employers participating in the Auto-Inclusion Scheme, they would need to transmit this income information to IRAS electronically.\n\nRendering services in Singapore as part of your overseas employment\n\nIf you render your employment services in Singapore as part of your overseas employment, your income attributable to services rendered in Singapore is subject to tax in Singapore as follows:\n\n• Employment exercised in Singapore for not more than 60 days in a calendar year\nYour employment income will be exempt from tax.\n\n• Employment exercised in Singapore for 61 to 182 days in a calendar year\nYou will be regarded as a non-resident. Your employment income will be taxed at either a flat rate of 15% (no personal reliefs would be granted) or progressive resident rates, whichever gives rise to a higher tax.\n\nYour employer will have to seek tax clearance when you cease employment in Singapore.\n\n• Employment exercised in Singapore for 183 days or more in a calendar year\nYou will be regarded as a tax resident. Your employment income, after deduction of tax reliefs, will be taxed at progressive resident rates.\n\nYour employer will have to seek tax clearance when you cease employment in Singapore.\n\nOverseas income\n\nGenerally, overseas income received in Singapore on or after 1 Jan 2004 is not taxable. These include overseas income paid into a Singapore bank account.\n\nYou do not need to declare overseas income that is not taxable.\n\nTaxable overseas income\n\nOverseas income is taxable in Singapore when:\n\n• Your overseas employment is incidental to your Singapore employment. That is, as part of your work here, you have to travel overseas.\n\nExample: Overseas services incidental to Singapore employment\n\nFor example, when a regional sales manager employed by a Singapore company based in Singapore is required to travel overseas frequently to oversee operations in regional countries, the travel is incidental to his Singapore employment. His employment income, including income attributable to services rendered overseas, is fully taxable in Singapore.\n\n• You work in Singapore for a foreign employer.\n\n• Your overseas employment income is for services rendered in Singapore.\n\n• You have a trade / business in Singapore and you are carrying on a trade / business overseas which is incidental to your Singapore trade.\n\n• You have received the income in Singapore through a partnership in Singapore, unless the income qualifies for exemption*.\n\n• You received service income from overseas, unless the income qualifies for exemption*.\n\n*Please refer to the guide on Tax Exemption for Foreign-Sourced Income (Fifth Edition) (PDF, 278KB) for details.\n\n• You are employed outside of Singapore on behalf of the Government of Singapore.\n\na. Tax treatment in Singapore\n\nAs a Singapore citizen or tax resident in Singapore, the income from your employment exercised outside Singapore on behalf of Singapore government is deemed to have been derived from Singapore.\n\nAll your gains from such employment (including overseas allowances) are taxable in Singapore.\n\nYour employer will send your employment income details (including all allowances paid to you while you are working outside Singapore) to IRAS electronically.\n\nThe tax on overseas allowances will be remitted if applications for tax remission are approved by Ministry of Finance (MOF).\n\nb. Tax treatment outside Singapore\n\nGenerally, your gains from such employment will not be taxed outside Singapore.\n\nYour gains from such employment are exempt from tax in the foreign country where you worked if there is:\n\n• Double Taxation Agreements (DTA) between Singapore and the foreign country; or\n\n• Provision for reciprocal exemption by Singapore and foreign governments.\n\nShould your gains from your employment be taxed in the foreign country, you may apply for double taxation relief or tax remission in Singapore, to avoid being taxed twice on the same income.\n\nPlease approach your employer for clarification on application for tax remission.\n\nReporting taxable overseas income\n\nYou need to declare the taxable overseas income under ' employment income ' or ' trade income ' (whichever is applicable) in your tax return.\n\nFor details, please refer to how to file your tax return.\n\nRelated Content\n\nPages\n\nI want to know the tax treatment on working in Singapore",
+      "provenance": "LIVE_EXTERNAL",
+      "isVerbatimText": false
+    }
+  ],
+  "providerCalls": 0,
+  "claimVerification": {
+    "accepted": [
+      {
+        "text": "If you are contracted to be based overseas to render your full employment services wholly outside Singapore, you are not liable to tax in Singapore as your employment income is sourced outside Singapore. It does not matter where and how you are being paid.",
+        "recordId": "LIVE_TOPIC_iras-authority-query-iras-working-outside-singapore-overseas-employme_8d8ed7dff820",
+        "quote": "If you are contracted to be based overseas to render your full employment services wholly outside Singapore, you are not liable to tax in Singapore as your employment income is sourced outside Singapore. It does not matter where and how you are being paid.",
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore",
+        "supportKind": "EXACT_SOURCE_QUOTE"
+      }
+    ],
+    "rejected": []
+  },
+  "finalCitations": [
+    "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore"
+  ],
+  "finalAnswer": "Evidence admitted from an independently fetched IRAS page; answer generation is evaluated in the production Gemini run.",
+  "abstentionAppropriate": false
+}

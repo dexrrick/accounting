@@ -43,6 +43,62 @@ function isIncompleteColonEndedQuote(value: string): boolean {
   return /:$/.test(normalized) || /^exceptions?$/i.test(normalized);
 }
 
+function isCompleteIndividualFtcConditionsQuote(sourceText: string, quote: string): boolean {
+  const blocks = sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  const normalizedQuote = normalizeEvidenceText(quote);
+  for (let introIndex = 0; introIndex + 3 < blocks.length; introIndex += 1) {
+    if (!/^anyone claiming ftc must satisfy all of the following conditions:$/i.test(blocks[introIndex])) continue;
+    const hasHeading = introIndex > 0 && /^conditions for claiming (?:foreign tax credit|ftc)$/i.test(blocks[introIndex - 1]);
+    const quoteStart = hasHeading ? introIndex - 1 : introIndex;
+    const conditionItems: string[] = [];
+    let cursor = introIndex + 1;
+    while (cursor < blocks.length && /^(?:\|\s*)*[•◦▪](?:\s|$)/.test(blocks[cursor])) {
+      conditionItems.push(blocks[cursor].replace(/^(?:\|\s*)*[•◦▪]\s*/, ''));
+      cursor += 1;
+    }
+    if (conditionItems.length !== 3) continue;
+    const combinedConditions = conditionItems.join(' ').toLowerCase();
+    const hasResidencyCondition = /tax resident in singapore/.test(conditionItems[0].toLowerCase());
+    const hasForeignTaxPaidCondition = /tax has been paid or is payable on the same income in the foreign country/i.test(combinedConditions);
+    const hasSingaporeTaxabilityCondition = /income is taxable in singapore/i.test(combinedConditions);
+    if (!hasResidencyCondition || !hasForeignTaxPaidCondition || !hasSingaporeTaxabilityCondition) continue;
+
+    let attachedEnd = cursor - 1;
+    while (attachedEnd + 1 < blocks.length && startsAttachedEvidenceQualification(blocks[attachedEnd + 1])) attachedEnd += 1;
+    const completeQuote = normalizeEvidenceText(blocks.slice(quoteStart, attachedEnd + 1).join(' '));
+    const completeListOnlyQuote = normalizeEvidenceText(blocks.slice(introIndex, attachedEnd + 1).join(' '));
+    if (completeQuote === normalizedQuote || completeListOnlyQuote === normalizedQuote) return true;
+  }
+  return false;
+}
+
+function isCompleteIndividualOverseasIncomeListQuote(sourceText: string, quote: string): boolean {
+  const blocks = sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  const normalizedQuote = normalizeEvidenceText(quote);
+  const startIndex = blocks.findIndex(block => /^overseas income is taxable in singapore when:$/i.test(block));
+  if (startIndex < 0) return false;
+  const endIndex = blocks.findIndex((block, index) => index > startIndex && /^a\. tax treatment in singapore$/i.test(block));
+  if (endIndex < 0) return false;
+  const section = blocks.slice(startIndex, endIndex);
+  const bullets = section.filter(block => /^(?:\|\s*)*[•◦▪](?:\s|$)/.test(block));
+  const text = section.join(' ').toLowerCase();
+  if (bullets.length < 6 ||
+      !/overseas employment is incidental to (?:your|his|her) singapore employment/.test(text) ||
+      !/you are employed outside of singapore on behalf of the government of singapore/.test(text) ||
+      !/services rendered in singapore/.test(text)) return false;
+  return normalizeEvidenceText(section.join(' ')) === normalizedQuote;
+}
+
 function normalizeApprovedHttpsUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.trim() === '') return undefined;
   const raw = value.trim();
@@ -166,6 +222,8 @@ function quoteIsWholeSourceSpan(sourceText: string, quote: string): 'MATCH' | 'N
     .map(paragraph => paragraph.trim())
     .filter(Boolean);
   const normalizedQuote = normalizeEvidenceText(quote);
+  if (isCompleteIndividualFtcConditionsQuote(sourceText, quote)) return 'MATCH';
+  if (isCompleteIndividualOverseasIncomeListQuote(sourceText, quote)) return 'MATCH';
   if (isIncompleteColonEndedQuote(normalizedQuote)) return 'OMITS_ATTACHED_QUALIFICATION';
 
   for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {

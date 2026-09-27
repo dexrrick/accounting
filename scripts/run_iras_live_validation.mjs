@@ -17,6 +17,7 @@ import { defaultExternalSourceValidator } from '../src/retrieval/externalSourceV
 
 const MODEL = 'gemini-3.5-flash-lite';
 const FIXTURE_PATH = path.resolve('tests/evaluation/singapore/iras-answer-e2e.json');
+const UNSEEN_FIXTURE_PATH = path.resolve('tests/evaluation/singapore/iras-unseen-live.json');
 const DEFAULT_OUTPUT = path.resolve('docs/evaluation/iras-live-2026-09-26/iras-e2e-captures.jsonl');
 const MIXED_MEAL_CASE = {
   id: 'mixed-customer-meal-journal',
@@ -32,6 +33,7 @@ function parseArgs(argv) {
   const options = {};
   for (const argument of argv) {
     if (argument === '--resume') options.resume = true;
+    else if (argument === '--unseen') options.unseen = true;
     else if (argument.startsWith('--case=')) options.caseId = argument.slice('--case='.length);
     else if (argument.startsWith('--out=')) options.outputPath = path.resolve(argument.slice('--out='.length));
     else throw new Error(`Unknown argument: ${argument}`);
@@ -472,7 +474,12 @@ function classifyRetrieval(context, sourceFetches) {
 
   // Fetch success is only transport evidence. Relevance and claim support remain for independent review.
   let retrievalStatus = 'NOT_EVALUATED';
-  if (transportFailures > 0) retrievalStatus = 'BLOCKED_BY_NETWORK';
+  const quality = context?.evidenceQuality;
+  const finalEvidenceAdequate = Boolean(quality &&
+    ['LOCAL_SUFFICIENT', 'RETRIEVED_SUFFICIENT', 'LIMITED'].includes(quality.status) &&
+    quality.eligibleRecords?.length > 0 && quality.uncoveredTopicIds?.length === 0);
+  if (finalEvidenceAdequate) retrievalStatus = 'SUCCESS';
+  else if (transportFailures > 0) retrievalStatus = 'BLOCKED_BY_NETWORK';
   else if (retrievalTransportStatus === 'BLOCKED_BY_SOURCE' || hasValidatorFailure) retrievalStatus = 'BLOCKED_BY_SOURCE';
   else if (retrievalTransportStatus === 'PARTIAL') retrievalStatus = 'BLOCKED_BY_SOURCE';
   return { retrievalStatus, retrievalTransportStatus };
@@ -533,9 +540,10 @@ async function main() {
     return;
   }
   const apiKey = geminiKey.trim();
-  const fixture = JSON.parse(await readFile(FIXTURE_PATH, 'utf8'));
+  const fixturePath = options.unseen ? UNSEEN_FIXTURE_PATH : FIXTURE_PATH;
+  const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
   const reviewedCases = fixture.cases || [];
-  if (reviewedCases.length !== 19) throw new Error(`Expected 19 benchmark cases; found ${reviewedCases.length}.`);
+  if (!options.unseen && reviewedCases.length !== 19) throw new Error(`Expected 19 benchmark cases; found ${reviewedCases.length}.`);
   let cases = reviewedCases.map(testCase => ({
     id: testCase.id,
     question: testCase.question,
@@ -546,7 +554,9 @@ async function main() {
   if (options.caseId) cases = cases.filter(testCase => testCase.id === options.caseId);
   if (options.caseId && cases.length === 0) throw new Error(`Unknown benchmark case ID: ${options.caseId}`);
 
-  const outputPath = options.outputPath || DEFAULT_OUTPUT;
+  const outputPath = options.outputPath || (options.unseen
+    ? path.resolve('docs/evaluation/iras-live-2026-09-27/iras-unseen-live-captures.jsonl')
+    : DEFAULT_OUTPUT);
   await mkdir(path.dirname(outputPath), { recursive: true });
   let completedIds = new Set();
   let hasMetadata = false;
@@ -572,8 +582,9 @@ async function main() {
     recordType: 'run-metadata',
     schemaVersion: 2,
     startedAt: new Date().toISOString(),
-    fixture: path.relative(process.cwd(), FIXTURE_PATH),
-    benchmarkCaseCount: 19,
+    fixture: path.relative(process.cwd(), fixturePath),
+    benchmarkCaseCount: reviewedCases.length,
+    suite: options.unseen ? 'unseen-live-discovery' : 'existing-benchmark',
     includedMixedMealCase: cases.some(testCase => testCase.id === MIXED_MEAL_CASE.id),
     provider: 'Gemini',
     model: MODEL,

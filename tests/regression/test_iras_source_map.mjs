@@ -551,6 +551,7 @@ async function run() {
     ['iras-cit-tax-rate'], ratesQuery, defaultSourceRetriever,
     {
       discoveryAdapter: emptyDiscovery,
+      officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => [] },
       webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
       fetchOptions: { useCache: false, customFetch: async () => { genericFetchCount += 1; return htmlResponse(genericHtml); } }
     }
@@ -578,6 +579,7 @@ async function run() {
     ['iras-cit-tax-rate'], ratesQuery, staleRetriever,
     {
       discoveryAdapter: emptyDiscovery,
+      officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => [] },
       webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
       fetchOptions: { useCache: false, customFetch: async () => { staleFetchCount += 1; return htmlResponse(ratesHtml); } }
     }
@@ -640,6 +642,7 @@ async function run() {
       ['iras-cit-tax-rate'], 'What corporate income tax rate applies for YA 2026?', defaultSourceRetriever,
       {
         discoveryAdapter: emptyDiscovery,
+        officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => [] },
         webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
         fetchOptions: { useCache: false, customFetch: async () => { currentYaFetchCount += 1; return htmlResponse(ratesHtml); } }
       }
@@ -652,6 +655,7 @@ async function run() {
       ['iras-cit-tax-rate'], 'What corporate income tax rate applies before the annual filing deadline this year?', defaultSourceRetriever,
       {
         discoveryAdapter: emptyDiscovery,
+        officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => [] },
         webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
         fetchOptions: { useCache: false, customFetch: async () => { currentBeforeDeadlineFetchCount += 1; return htmlResponse(ratesHtml); } }
       }
@@ -688,6 +692,26 @@ async function run() {
     assert.equal(unmappedHistoricalFetchCount, 0, 'A past-year unmapped topic is declined before discovery or fetch.');
     assert.equal(unmappedHistorical.trace.attempts[0].fetchStatus, 'HISTORICAL_SCOPE_UNVERIFIED');
     assert.equal(unmappedHistorical.records.length, 0);
+
+    let unmatchedHistoricalDiscoveryCount = 0;
+    let unmatchedHistoricalSearchCount = 0;
+    const unmatchedHistoricalQuery = 'What was IRAS guidance for overseas employment income in YA 2018?';
+    const unmatchedHistoricalAuthority = await resolveMappedOfficialSourceFallback(
+      [], unmatchedHistoricalQuery, unmappedHistoricalRetriever,
+      {
+        authorityLevelDiscovery: true,
+        webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+        discoveryAdapter: { discoverOfficialSourceCandidates: async () => { unmatchedHistoricalDiscoveryCount += 1; return [ratesUrl]; } },
+        officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => { unmatchedHistoricalSearchCount += 1; return [ratesUrl]; } },
+        fetchOptions: { useCache: false, customFetch: async () => { throw new Error('Unmatched historical scope must not fetch live evidence.'); } }
+      }
+    );
+    assert.equal(unmatchedHistoricalDiscoveryCount, 0, 'An unmatched historical IRAS query cannot bypass period checks through a provisional topic.');
+    assert.equal(unmatchedHistoricalSearchCount, 0, 'Official-domain search cannot establish an unmatched historical scope.');
+    assert.equal(unmatchedHistoricalAuthority.provisionalTopics.length, 0, 'Historical queries do not create provisional current-guidance scopes.');
+    assert.equal(unmatchedHistoricalAuthority.trace.attempts[0]?.fetchStatus, 'HISTORICAL_SCOPE_UNVERIFIED');
+    assert.ok(unmatchedHistoricalAuthority.trace.stages?.some(stage => stage.stage === 'SITEMAP_DISCOVERY' && stage.status === 'SKIPPED'));
+    assert.ok(unmatchedHistoricalAuthority.trace.stages?.some(stage => stage.stage === 'OFFICIAL_DOMAIN_SEARCH' && stage.status === 'SKIPPED'));
 
     const verifiedRatesPointer = defaultSourceRetriever.getSourceById(ratesDefinition.id);
     const periodPointerRetriever = {

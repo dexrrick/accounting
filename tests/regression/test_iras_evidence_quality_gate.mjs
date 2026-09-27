@@ -4,6 +4,7 @@ import { evaluateEvidenceQuality } from '../../src/retrieval/evidenceQualityGate
 import { findRecordEligibilityRejection, verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 import { InMemorySourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { AdvancedSourceRetriever } from '../../src/retrieval/advancedSourceRetriever.ts';
+import { getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
 
 const mealTopic = 'iras-gst-entertainment';
 const standardRateTopic = 'iras-gst-standard-rated-supplies';
@@ -80,6 +81,94 @@ assert.equal(result.status, 'INSUFFICIENT', 'False topic tags cannot substitute 
 assert.equal(result.rejectedRecords[0].reason, 'Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic.');
 assert.equal(result.rejectedRecords[0].code, 'TOPIC_TEXT_NOT_DISTINCTIVE',
   'Topic diagnostics retain a stable rejection code alongside their readable reason.');
+
+const branchIncomeQuery = 'Can foreign branch profits be remitted without tax in Singapore?';
+const provisionalBranchTopic = {
+  id: 'iras-authority-query-foreign-branch-profit-remit',
+  title: 'Transient IRAS corporate income-tax query',
+  domainId: 'IRAS_CORPORATE_TAX',
+  priority: 'P1',
+  status: 'MISSING',
+  authorities: ['IRAS'],
+  legacyDomains: ['IRAS_TAX'],
+  sourceRecordIds: [],
+  requiredChecks: [],
+  keywords: ['foreign branch profits remittance'],
+  aliases: [],
+  exclusionKeywords: []
+};
+const incidentalBranchText = makeRecord({
+  id: 'INCIDENTAL_BRANCH_WORDS_ONLY',
+  domain: 'IRAS_TAX',
+  sourceText: 'Foreign profits of the company are subject to the applicable rules in Singapore.',
+  tags: [provisionalBranchTopic.id],
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax'
+});
+const branchConceptGate = evaluateEvidenceQuality({
+  query: branchIncomeQuery,
+  topicIds: [],
+  provisionalTopics: [provisionalBranchTopic],
+  records: [incidentalBranchText],
+  missingFacts: [],
+  authorities: ['IRAS'],
+  domain: 'IRAS_TAX',
+  referenceDate: '2026-09-26'
+});
+assert.equal(branchConceptGate.status, 'INSUFFICIENT',
+  `Two incidental query words cannot cover a foreign-branch remittance concept. ${JSON.stringify({ covered: branchConceptGate.coveredTopicIds, uncovered: branchConceptGate.uncoveredConceptGroups, eligible: branchConceptGate.eligibleRecords.map(record => record.sourceText) })}`);
+assert.ok(branchConceptGate.uncoveredConceptGroups?.[provisionalBranchTopic.id]?.some(group =>
+  group.includes('branch') && group.includes('remit') && group.includes('tax')
+), 'The unresolved material concepts, including the short topical term tax, remain traceable after source-text evaluation.');
+
+const twoConceptQuery = 'When does foreign tax apply, and how does double taxation relief work?';
+const twoConceptTopic = { ...provisionalBranchTopic, id: 'iras-authority-query-foreign-tax-double-tax-relief' };
+const oneConceptOnly = makeRecord({
+  id: 'ONE_OF_TWO_QUERY_CONCEPTS',
+  domain: 'IRAS_TAX',
+  sourceText: 'Foreign tax applies to some residents under the applicable conditions.',
+  tags: [twoConceptTopic.id],
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax'
+});
+const twoConceptGate = evaluateEvidenceQuality({
+  query: twoConceptQuery,
+  topicIds: [],
+  provisionalTopics: [twoConceptTopic],
+  records: [oneConceptOnly],
+  missingFacts: [],
+  authorities: ['IRAS'],
+  domain: 'IRAS_TAX',
+  referenceDate: '2026-09-26'
+});
+assert.equal(twoConceptGate.status, 'LIMITED',
+  'Two matching terms support only the foreign-tax clause; a separate requested DTR concept remains open.');
+assert.ok(twoConceptGate.uncoveredConceptGroups?.[twoConceptTopic.id]?.some(group =>
+  group.includes('double') && group.includes('taxation')
+), 'The uncovered second material clause is reported for later discovery.');
+assert.ok(twoConceptGate.eligibleRecords.some(record => record.id === oneConceptOnly.id),
+  'A separately admitted page can support one complete material clause without making the entire multi-concept request sufficient.');
+
+const completeBranchText = makeRecord({
+  id: 'COMPLETE_BRANCH_REMITTANCE_CONCEPT',
+  domain: 'IRAS_TAX',
+  sourceText: 'A company may remit profits from a foreign branch under the applicable tax rules.',
+  tags: [provisionalBranchTopic.id],
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax'
+});
+const completeBranchConceptGate = evaluateEvidenceQuality({
+  query: branchIncomeQuery,
+  topicIds: [],
+  provisionalTopics: [provisionalBranchTopic],
+  records: [completeBranchText],
+  missingFacts: [],
+  authorities: ['IRAS'],
+  domain: 'IRAS_TAX',
+  referenceDate: '2026-09-26'
+});
+assert.ok(completeBranchConceptGate.coveredTopicIds.includes(provisionalBranchTopic.id),
+  'A page with substantive support across the material concepts covers the transient discovery scope.');
 
 const needsReview = makeRecord({ id: 'MEAL_NEEDS_REVIEW', sourceStatus: 'NEEDS_REVIEW' });
 assert.equal(gate(mealQuery, [mealTopic], [needsReview]).status, 'INSUFFICIENT',
@@ -294,6 +383,205 @@ const successfulTrace = {
 result = gate(mealQuery, [mealTopic], [liveCandidate], { sourceMapFallbackTrace: successfulTrace });
 assert.equal(result.status, 'RETRIEVED_SUFFICIENT', 'Live evidence qualifies only with matched successful URL/topic/content trace.');
 assert.deepEqual(result.eligibleRecords.map(record => record.id), [liveCandidate.id]);
+
+const individualOverseasTopic = 'iras-individual-overseas-employment';
+const genericEmploymentLive = {
+  ...liveCandidate,
+  id: 'LIVE_GENERIC_EMPLOYMENT_WORD',
+  tags: [individualOverseasTopic],
+  sourceText: 'Employment terms depend on the contract and relevant tax rules.',
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not'
+};
+const genericEmploymentTrace = {
+  ...successfulTrace,
+  selectedRecordIds: [genericEmploymentLive.id],
+  finalVerifiedUrls: [genericEmploymentLive.canonicalSourceUrl],
+  attempts: [{ ...successfulTrace.attempts[0], topicId: individualOverseasTopic, finalUrl: genericEmploymentLive.canonicalSourceUrl }]
+};
+result = evaluateEvidenceQuality({ query: 'How is overseas employment income treated for an individual?', topicIds: [individualOverseasTopic],
+  records: [genericEmploymentLive], missingFacts: [], authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: genericEmploymentTrace });
+assert.equal(result.status, 'INSUFFICIENT', 'One generic live word cannot cover a registered overseas-employment topic.');
+assert.equal(result.rejectedRecords[0]?.code, 'TOPIC_TEXT_NOT_DISTINCTIVE');
+
+const dtrTopic = 'iras-individual-double-tax-agreements';
+const dtrUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore';
+const dtrQuote = 'Should your gains from your employment be taxed in the foreign country, you may apply for double taxation relief or tax remission in Singapore, to avoid being taxed twice on the same income.';
+const governmentDtrLive = {
+  ...liveCandidate,
+  id: 'LIVE_GOVERNMENT_SCOPED_DTR',
+  tags: [dtrTopic],
+  sourceText: [
+    '• You are employed outside of Singapore on behalf of the Government of Singapore.',
+    'a. Tax treatment in Singapore',
+    'As a Singapore citizen or tax resident in Singapore, the income from your employment exercised outside Singapore on behalf of Singapore government is deemed to have been derived from Singapore.',
+    'b. Tax treatment outside Singapore',
+    dtrQuote
+  ].join('\n\n'),
+  officialSourceUrl: dtrUrl,
+  canonicalSourceUrl: dtrUrl,
+  domain: 'IRAS_TAX'
+};
+const governmentDtrTrace = {
+  ...successfulTrace,
+  selectedRecordIds: [governmentDtrLive.id],
+  finalVerifiedUrls: [dtrUrl],
+  attempts: [{ ...successfulTrace.attempts[0], topicId: dtrTopic, finalUrl: dtrUrl }]
+};
+result = evaluateEvidenceQuality({
+  query: 'A Singapore tax resident employee is seconded overseas by a private employer. Can the same income receive double tax relief (DTR)?',
+  topicIds: [dtrTopic], records: [governmentDtrLive], missingFacts: [], authorities: ['IRAS'], domain: 'IRAS_TAX',
+  sourceMapFallbackTrace: governmentDtrTrace
+});
+assert.equal(result.status, 'INSUFFICIENT', 'A Government-only relief passage cannot cover a non-government individual DTA question.');
+assert.equal(result.rejectedRecords[0]?.code, 'TOPIC_SCOPE_MISMATCH');
+const governmentQuestionQuality = evaluateEvidenceQuality({
+  query: 'I am employed outside Singapore on behalf of the Government of Singapore; what double tax relief applies?',
+  topicIds: [dtrTopic], records: [governmentDtrLive], missingFacts: [], authorities: ['IRAS'], domain: 'IRAS_TAX',
+  sourceMapFallbackTrace: governmentDtrTrace
+});
+assert.equal(governmentQuestionQuality.status, 'RETRIEVED_SUFFICIENT', 'The same passage remains usable when the query establishes its Government-employment scope.');
+
+const provisionalDtrTopic = {
+  ...getCoverageTopicById(dtrTopic),
+  id: 'iras-authority-query-private-secondment-dtr',
+  sourceRecordIds: [],
+  keywords: ['private employee double tax relief']
+};
+const provisionalGovernmentDtrLive = { ...governmentDtrLive, tags: [provisionalDtrTopic.id] };
+const provisionalGovernmentDtrTrace = {
+  ...governmentDtrTrace,
+  selectedRecordIds: [provisionalGovernmentDtrLive.id],
+  attempts: [{ ...governmentDtrTrace.attempts[0], topicId: provisionalDtrTopic.id }]
+};
+const provisionalGovernmentDtrQuality = evaluateEvidenceQuality({
+  query: 'A Singapore tax resident employee is seconded overseas by a private employer. Can the same income receive double tax relief (DTR)?',
+  topicIds: [], provisionalTopics: [provisionalDtrTopic], records: [provisionalGovernmentDtrLive], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: provisionalGovernmentDtrTrace
+});
+assert.equal(provisionalGovernmentDtrQuality.status, 'INSUFFICIENT',
+  'Government-only DTR evidence associated only with a provisional authority-query scope cannot cover a private or unspecified employment query.');
+assert.equal(provisionalGovernmentDtrQuality.rejectedRecords[0]?.code, 'TOPIC_SCOPE_MISMATCH');
+
+const mixedGovernmentAndGeneralDtrLive = {
+  ...governmentDtrLive,
+  id: 'LIVE_MIXED_GENERAL_AND_GOVERNMENT_DTR',
+  sourceText: [
+    'Benefits under DTAs',
+    'Depending on the applicable DTA provisions, a Singapore tax resident may be eligible for relief from double taxation on the same income.',
+    '• You are employed outside of Singapore on behalf of the Government of Singapore.',
+    'a. Tax treatment in Singapore',
+    'Employment income for duties exercised outside Singapore on behalf of the Government of Singapore is deemed derived from Singapore.',
+    'b. Tax treatment outside Singapore',
+    dtrQuote
+  ].join('\n\n')
+};
+const mixedGovernmentAndGeneralDtrTrace = {
+  ...governmentDtrTrace,
+  selectedRecordIds: [mixedGovernmentAndGeneralDtrLive.id],
+  attempts: [{ ...governmentDtrTrace.attempts[0], topicId: dtrTopic }]
+};
+const mixedGovernmentAndGeneralDtrQuality = evaluateEvidenceQuality({
+  query: 'A Singapore tax resident employee is seconded overseas by a private employer. Can the same income receive double tax relief?',
+  topicIds: [dtrTopic], records: [mixedGovernmentAndGeneralDtrLive], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: mixedGovernmentAndGeneralDtrTrace
+});
+assert.equal(mixedGovernmentAndGeneralDtrQuality.status, 'INSUFFICIENT',
+  'A general DTA passage does not admit a co-located record that also contains Government-scoped relief for a private-employment query.');
+assert.equal(mixedGovernmentAndGeneralDtrQuality.rejectedRecords[0]?.code, 'TOPIC_SCOPE_MISMATCH');
+
+const individualDtaUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-residency-and-tax-rates/claiming-exemptions-under-Avoidance-of-Double-Taxation-Agreements-(DTAs)';
+const individualDtaPageLive = {
+  ...liveCandidate,
+  id: 'LIVE_INDIVIDUAL_DTA_PAGE',
+  tags: [dtrTopic],
+  sourceText: [
+    'Claiming exemptions Under Avoidance of Double Taxation Agreements (DTAs)',
+    'Under the Avoidance of Double Taxation Agreements (DTAs), you may be protected from being taxed twice on the same income, depending on the provisions of the DTA.',
+    'On this page:',
+    'Avoidance of Double Taxation Agreements (DTAs)',
+    'Double taxation occurs when the same income is being taxed twice - once in the jurisdiction where the income is derived and another time in the jurisdiction where it is received. Jurisdictions enter into DTAs to mitigate the effects of double taxation.',
+    'Benefits under DTAs',
+    'Depending on the provisions of the DTA, you may be eligible for tax exemption on income for personal services, teachers, researchers, artistes, athletes, students, trainees, etc. As the specific provisions in each DTA differ, please refer to the relevant DTA for guidance when interpreting and applying it to your situation.',
+    'Exemption on short-term Singapore employment income',
+    "The DTA article for 'Dependent Personal Services' provides the source rules for income from employment. The source state is usually where the services are provided or employment is exercised. For short-term employment and to facilitate the movement of qualified personnel, exemption of tax is granted by the source state. These conditions apply in most DTAs: the employment is exercised in the Source State for less than a specified period (typically 183 days in any 12-month period); and the employer is not a resident of the Source State; and the income is not paid or borne by a permanent establishment or fixed base of the employer in the Source State.",
+    'Tax residents of Singapore',
+    'If you derive income from a foreign country/jurisdiction, you may be subject to tax there. However, you may claim DTA benefits that entitles a Singapore tax resident to enjoy a reduced tax rate or tax exemption in that jurisdiction. To enjoy this benefit, you need to submit the COR to the foreign tax authority to prove that you are a Singapore tax resident.'
+  ].join('\n\n'),
+  officialSourceUrl: individualDtaUrl,
+  canonicalSourceUrl: individualDtaUrl,
+  domain: 'IRAS_TAX'
+};
+const individualDtaTrace = {
+  path: 'DISCOVERED_SOURCE',
+  selectedRecordIds: [individualDtaPageLive.id],
+  finalVerifiedUrls: [individualDtaUrl],
+  attempts: [{ topicId: dtrTopic, fetchStatus: 'SUCCESS', finalUrl: individualDtaUrl, titleMatched: true, contentMatched: true, discoveryStage: 'OFFICIAL_DOMAIN_SEARCH' }]
+};
+const individualDtaQuality = evaluateEvidenceQuality({
+  query: 'If a Singapore tax resident earns employment income while physically working overseas on a temporary secondment, under what conditions is that foreign-sourced income eligible for double taxation relief?',
+  topicIds: [dtrTopic], records: [individualDtaPageLive], missingFacts: [], authorities: ['IRAS'], domain: 'IRAS_TAX',
+  sourceMapFallbackTrace: individualDtaTrace
+});
+assert.equal(individualDtaQuality.status, 'RETRIEVED_SUFFICIENT', 'Explicit DTA headings in fetched source text establish general individual DTA scope without relying on URL or title metadata.');
+assert.deepEqual(individualDtaQuality.eligibleRecords.map(record => record.id), [individualDtaPageLive.id]);
+assert.equal(individualDtaQuality.rejectedRecords.length, 0);
+
+const dtaOnlySource = {
+  ...liveCandidate,
+  id: 'LIVE_DTA_ONLY_FOR_FTC_REQUEST',
+  tags: [dtrTopic],
+  sourceText: 'Individual double tax agreement relief applies under the relevant treaty conditions. The agreement sets the applicable exemption.'
+};
+const dtaOnlyTrace = { ...successfulTrace, selectedRecordIds: [dtaOnlySource.id], attempts: [{ ...successfulTrace.attempts[0], topicId: dtrTopic }] };
+result = evaluateEvidenceQuality({ query: 'Can an individual claim a foreign tax credit?', topicIds: ['iras-individual-foreign-tax-credit'],
+  records: [dtaOnlySource], missingFacts: [], authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: dtaOnlyTrace });
+assert.equal(result.status, 'INSUFFICIENT', 'A DTA-only discovered page cannot cover the separate individual foreign-tax-credit topic.');
+assert.ok(result.rejectedRecords.some(item => item.code === 'TOPIC_ASSOCIATION_NOT_FOUND'));
+
+const dtaPageMisassociatedAsFtc = {
+  ...individualDtaPageLive,
+  id: 'LIVE_INDIVIDUAL_DTA_PAGE_MISASSOCIATED_AS_FTC',
+  tags: ['iras-individual-foreign-tax-credit']
+};
+const dtaAsFtcTrace = {
+  ...individualDtaTrace,
+  selectedRecordIds: [dtaPageMisassociatedAsFtc.id],
+  attempts: [{ ...individualDtaTrace.attempts[0], topicId: 'iras-individual-foreign-tax-credit' }]
+};
+result = evaluateEvidenceQuality({ query: 'Can a Singapore tax resident claim a foreign tax credit?',
+  topicIds: ['iras-individual-foreign-tax-credit'], records: [dtaPageMisassociatedAsFtc], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: dtaAsFtcTrace });
+assert.equal(result.status, 'INSUFFICIENT', 'A DTA page cannot satisfy FTC merely because its discovery record was tagged FTC.');
+assert.ok(result.rejectedRecords.some(item => item.code === 'TOPIC_TEXT_NOT_DISTINCTIVE'));
+
+const individualFtcPageLive = {
+  ...dtaPageMisassociatedAsFtc,
+  id: 'LIVE_INDIVIDUAL_FTC_PAGE',
+  sourceText: [
+    'Claiming foreign tax credit',
+    'If you are a Singapore tax resident, you may claim foreign tax credit if you have been taxed twice on the same income.',
+    'Conditions for claiming FTC',
+    '• The individual must be a tax resident in Singapore for the relevant basis year;',
+    '• Tax has been paid or is payable on the same income in the foreign country; and',
+    '• The income is taxable in Singapore.'
+  ].join('\n\n'),
+  tags: ['iras-individual-foreign-tax-credit'],
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-residency-and-tax-rates/claiming-foreign-tax-credit',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-residency-and-tax-rates/claiming-foreign-tax-credit'
+};
+const individualFtcTrace = {
+  ...individualDtaTrace,
+  selectedRecordIds: [individualFtcPageLive.id],
+  finalVerifiedUrls: [individualFtcPageLive.canonicalSourceUrl],
+  attempts: [{ ...individualDtaTrace.attempts[0], topicId: 'iras-individual-foreign-tax-credit', finalUrl: individualFtcPageLive.canonicalSourceUrl }]
+};
+result = evaluateEvidenceQuality({ query: 'Can a Singapore tax resident claim a foreign tax credit?',
+  topicIds: ['iras-individual-foreign-tax-credit'], records: [individualFtcPageLive], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: individualFtcTrace });
+assert.equal(result.status, 'RETRIEVED_SUFFICIENT', 'FTC coverage requires the source text to state the credit and its core eligibility conditions.');
+assert.deepEqual(result.eligibleRecords.map(record => record.id), [individualFtcPageLive.id]);
+
 const historicalLive = { ...liveCandidate, validFrom: '2023-01-01', validTo: '2023-12-31' };
 assert.equal(gate(mealQuery + ' In 2023?', [mealTopic], [historicalLive], { targetDate: '2023-06-01', sourceMapFallbackTrace: successfulTrace }).status, 'INSUFFICIENT',
   'A current fetched page cannot inherit historical proof from a source-map pointer.');

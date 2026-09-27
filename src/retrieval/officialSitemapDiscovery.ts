@@ -4,9 +4,46 @@ import type { OfficialSourceDiscoveryAdapter, OfficialSourceDiscoveryRequest } f
 const MAX_HOSTS_PER_SEARCH = 2;
 const MAX_SITEMAPS_PER_HOST = 1;
 const MAX_INDEX_CHILD_SITEMAPS = 2;
-const MAX_CANDIDATES = 2;
+const MAX_CANDIDATES = 4;
+// Reserve a fetch slot for each bounded search variant so a broad full-query
+// result page cannot consume the entire retrieval cap before topic hints run.
+const MAX_CANDIDATES_PER_SEARCH_VARIANT = 1;
 const SITEMAP_CACHE_MS = 15 * 60 * 1000;
 const UNAVAILABLE_CACHE_MS = 30 * 1000;
+
+export interface OfficialSourceDiscoveryProviderConfig {
+  authority: string;
+  approvedHosts: readonly string[];
+  sitemapUrls?: readonly string[];
+  preferredHosts?: readonly string[];
+  /** Host used in the restricted `site:` query; it must be an approved host. */
+  searchSite?: string;
+  searchEndpoint?: string;
+  searchRedirectHost?: string;
+  searchRedirectParameter?: string;
+  lexicalDiscovery: boolean;
+}
+
+/** Discovery configuration is provider data; IRAS is the sole configured provider in this phase. */
+export const OFFICIAL_SOURCE_DISCOVERY_PROVIDERS: Readonly<Record<string, OfficialSourceDiscoveryProviderConfig>> = Object.freeze({
+  IRAS: Object.freeze({
+    authority: 'IRAS',
+    approvedHosts: Object.freeze(['www.iras.gov.sg', 'iras.gov.sg']),
+    sitemapUrls: Object.freeze(['https://www.iras.gov.sg/sitemap']),
+    preferredHosts: Object.freeze(['www.iras.gov.sg', 'iras.gov.sg']),
+    searchSite: 'iras.gov.sg',
+    searchEndpoint: 'https://html.duckduckgo.com/html/',
+    searchRedirectHost: 'duckduckgo.com',
+    searchRedirectParameter: 'uddg',
+    lexicalDiscovery: true
+  })
+});
+
+export function getOfficialSourceDiscoveryProviderConfig(authority?: string): OfficialSourceDiscoveryProviderConfig | undefined {
+  return authority && Object.prototype.hasOwnProperty.call(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS, authority)
+    ? OFFICIAL_SOURCE_DISCOVERY_PROVIDERS[authority]
+    : undefined;
+}
 
 export interface OfficialSourceIndexEntry {
   authority: string;
@@ -79,18 +116,23 @@ function makeIndexEntry(
   rawUrl: string,
   discoverySourceUrl: string,
   pageTitle?: string,
-  hierarchy: string[] = []
+  hierarchy: string[] = [],
+  authority?: string
 ): OfficialSourceIndexEntry | undefined {
   try {
     const parsed = new URL(rawUrl);
     if (parsed.protocol !== 'https:' || parsed.username || parsed.password) return undefined;
     const path = normalizedPath(parsed);
     const pathHierarchy = path.split('/').filter(Boolean);
-    const title = pageTitle?.trim() || undefined;
+    // Sitemap entries sometimes omit anchor labels. Derive a ranking/validation
+    // hint from the path slug; the fetched HTML title and body must still pass
+    // the normal content validator before a page can become evidence.
+    const slugTitle = pathHierarchy.at(-1)?.replace(/[-_]+/g, ' ');
+    const title = pageTitle?.trim() || slugTitle || undefined;
     const hints = [...new Set(`${title || ''} ${hierarchy.join(' ')} ${pathHierarchy.join(' ')}`
       .toLowerCase().split(/[^a-z0-9]+/).filter(token => token.length >= 4))];
     return {
-      authority: inferAuthority(parsed.hostname.toLowerCase()),
+      authority: authority || inferAuthority(parsed.hostname.toLowerCase()),
       canonicalUrl: parsed.toString(),
       pageTitle: title,
       hierarchy: [...hierarchy.filter(Boolean), ...pathHierarchy],
@@ -104,7 +146,7 @@ function makeIndexEntry(
   }
 }
 
-function readHtmlSitemapEntries(html: string, sitemapUrl: string, approvedHosts: readonly string[]): OfficialSourceIndexEntry[] {
+function readHtmlSitemapEntries(html: string, sitemapUrl: string, approvedHosts: readonly string[], authority?: string): OfficialSourceIndexEntry[] {
   const entries: OfficialSourceIndexEntry[] = [];
   const allowed = new Set(approvedHosts.map(host => host.toLowerCase()));
   const anchorPattern = /<a\b([^>]*)\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))([^>]*)>([\s\S]*?)<\/a\s*>/gi;
@@ -117,7 +159,7 @@ function readHtmlSitemapEntries(html: string, sitemapUrl: string, approvedHosts:
       if (candidate.protocol !== 'https:' || !allowed.has(candidate.hostname.toLowerCase()) ||
           /^\/(?:sitemap|sitemap\.xml)\/?$/i.test(candidate.pathname)) continue;
       const pathHierarchy = candidate.pathname.split('/').filter(Boolean).slice(0, -1);
-      const entry = makeIndexEntry(candidate.toString(), sitemapUrl, pageTitle, pathHierarchy);
+      const entry = makeIndexEntry(candidate.toString(), sitemapUrl, pageTitle, pathHierarchy, authority);
       if (entry) entries.push(entry);
     } catch {
       // Malformed and off-domain page links are discovery noise, never evidence.
@@ -156,22 +198,23 @@ function normalizeWords(text: string): string[] {
 function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSourceDiscoveryRequest): number {
   const searchable = `${entry.pageTitle || ''} ${entry.hierarchy.join(' ')} ${entry.normalizedPath} ${entry.topicHints.join(' ')}`;
   const path = searchable.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  const topicPhrases = [request.topicTitle, ...(request.topicHints || [])]
+    .map(value => value.trim().replace(/\s+/g, ' '))
+    .filter(Boolean);
   const standards = standardPathTokens(request.standardOrAct);
   const matchedStandard = standards.some(token => path.replace(/[^a-z0-9]+/g, '').includes(token.replace(/[^a-z0-9]+/g, '')));
   if (matchedStandard) {
-    const topicWords = normalizeWords(`${request.topicTitle} ${(request.topicHints || []).join(' ')} ${request.query}`)
+    const topicWords = normalizeWords(`${request.query} ${topicPhrases.join(' ')}`)
       .filter(word => word.length >= 5);
     const candidateWords = new Set(normalizeWords(searchable));
     const matchedTopicWords = new Set(topicWords.filter(word => candidateWords.has(word)));
     return 10 + matchedTopicWords.size;
   }
 
-  const irasDiscovery = request.approvedHosts.some(host => ['iras.gov.sg', 'www.iras.gov.sg', 'sso.agc.gov.sg'].includes(host.toLowerCase()));
-  if (!irasDiscovery) return 0;
+  if (!request.lexicalDiscovery) return 0;
 
-  // IRAS and SSO sitemap routes do not encode IFRS/IAS standard IDs in their
-  // path. Score only topic-specific lexical overlap and reject broad landing
-  // pages that happen to share generic words such as "tax", "GST" or "income".
+  // Provider-configured non-standard authorities can opt into topic-specific
+  // lexical discovery. Sitemap membership remains ranking metadata only.
   const stopWords = new Set([
     'iras', 'singapore', 'tax', 'taxes', 'income', 'gst', 'goods', 'services',
     'company', 'companies', 'business', 'businesses', 'the', 'and', 'for', 'from',
@@ -182,7 +225,7 @@ function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSource
     .filter(word => word.length >= 4 && !stopWords.has(word));
   const topicTitleWords = normalizeWords(`${request.topicTitle} ${(request.topicHints || []).join(' ')}`)
     .filter(word => word.length >= 4 && !stopWords.has(word));
-  const queryWords = normalizeWords(request.query)
+  const queryWords = normalizeWords(`${request.query} ${topicPhrases.join(' ')}`)
     .filter(word => word.length >= 5 && !stopWords.has(word));
   const matchedExpectedTitleWords = new Set(expectedTitleWords.filter(word => candidateWords.has(word)));
   const matchedTitleWords = new Set(topicTitleWords.filter(word => candidateWords.has(word)));
@@ -192,17 +235,25 @@ function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSource
   const matchedSpecificHint = (request.topicHints || []).some(hint => {
     const hintWords = normalizeWords(hint).filter(word => word.length >= 5 && !stopWords.has(word));
     const titleWords = new Set(normalizeWords(entry.pageTitle || ''));
-    return hintWords.length > 0 && hintWords.some(word => titleWords.has(word));
+    return hintWords.length >= 2 && hintWords.every(word => titleWords.has(word));
   });
-  if (!expectedTitleMatch && !distinctiveTitleMatch && matchedTitleWords.size < 2 && matchedQueryWords.size < 2 && !matchedSpecificHint) return 0;
-  return 20 + matchedExpectedTitleWords.size * 6 + matchedTitleWords.size * 4 + matchedQueryWords.size + (matchedSpecificHint ? 3 : 0);
+  const matchedTopicPhrase = topicPhrases.some(phrase => {
+    const phraseWords = normalizeWords(phrase).filter(word => word.length >= 4 && !stopWords.has(word));
+    return phraseWords.length >= 2 && phraseWords.every(word => candidateWords.has(word));
+  });
+  const authorityQueryMatch = request.authorityLevelFallback &&
+    [...matchedQueryWords].some(word => word.length >= 7);
+  if (!expectedTitleMatch && !distinctiveTitleMatch && matchedTitleWords.size < 2 && matchedQueryWords.size < 2 &&
+      !matchedSpecificHint && !matchedTopicPhrase && !authorityQueryMatch) return 0;
+  return 20 + matchedExpectedTitleWords.size * 6 + matchedTitleWords.size * 4 + matchedQueryWords.size +
+    (matchedSpecificHint ? 8 : 0) + (matchedTopicPhrase ? 8 : 0);
 }
 
 /**
- * Bounded, first-party URL discovery. IRAS pages are indexed from its published
- * HTML sitemap first; other approved hosts continue to use robots.txt sitemap
- * locations. Index membership is routing metadata only. Every candidate is
- * separately fetched and topic-validated before it can become evidence.
+ * Bounded, first-party URL discovery. Configured provider sitemap URLs are
+ * tried first; other approved hosts use robots.txt sitemap locations. Index
+ * membership is routing metadata only. Every candidate is separately fetched
+ * and topic-validated before it can become evidence.
  */
 export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryAdapter {
   private readonly retriever: ControlledWebRetriever;
@@ -223,14 +274,67 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     return [...this.candidateIndex.values()].map(entry => ({ ...entry, hierarchy: [...entry.hierarchy], topicHints: [...entry.topicHints] }));
   }
 
-  private async getSitemapEntries(host: string, approvedHosts: readonly string[]): Promise<OfficialSourceIndexEntry[]> {
-    const cached = this.sitemapCache.get(host);
+  public getCandidateTitle(url: string): string | undefined {
+    return this.candidateIndex.get(url)?.pageTitle;
+  }
+
+  private async readConfiguredSitemapEntries(
+    content: string,
+    sitemapUrl: string,
+    approvedHosts: readonly string[],
+    authority?: string
+  ): Promise<OfficialSourceIndexEntry[]> {
+    if (!/<(?:urlset|sitemapindex)\b/i.test(content)) {
+      return readHtmlSitemapEntries(content, sitemapUrl, approvedHosts, authority);
+    }
+
+    const allowedHosts = new Set(approvedHosts.map(host => host.toLowerCase()));
+    const locations: Array<{ url: string; sourceUrl: string }> = [];
+    if (/<sitemapindex\b/i.test(content)) {
+      const childSitemaps = readLocValues(content).filter(url => {
+        try { return allowedHosts.has(new URL(url).hostname.toLowerCase()); } catch { return false; }
+      }).slice(0, MAX_INDEX_CHILD_SITEMAPS);
+      for (const childSitemapUrl of childSitemaps) {
+        const childSitemap = await this.retriever.fetchOfficialSource(childSitemapUrl, {
+          ...this.fetchOptions,
+          useCache: false
+        });
+        let finalHost = '';
+        try { finalHost = new URL(childSitemap.finalUrl || '').hostname.toLowerCase(); } catch { /* reject below */ }
+        if (childSitemap.status === 'SUCCESS' && childSitemap.content && allowedHosts.has(finalHost)) {
+          locations.push(...readLocValues(childSitemap.content).map(url => ({ url, sourceUrl: childSitemap.finalUrl || childSitemapUrl })));
+        }
+      }
+    } else {
+      locations.push(...readLocValues(content).map(url => ({ url, sourceUrl: sitemapUrl })));
+    }
+
+    const entries = new Map<string, OfficialSourceIndexEntry>();
+    for (const location of locations) {
+      try {
+        const url = new URL(location.url);
+        if (url.protocol !== 'https:' || !allowedHosts.has(url.hostname.toLowerCase())) continue;
+        const entry = makeIndexEntry(url.toString(), location.sourceUrl, undefined, [], authority);
+        if (entry) entries.set(entry.canonicalUrl, entry);
+      } catch { /* Ignore malformed or unapproved XML locations. */ }
+    }
+    return [...entries.values()];
+  }
+
+  private async getSitemapEntries(host: string, approvedHosts: readonly string[], request: OfficialSourceDiscoveryRequest): Promise<OfficialSourceIndexEntry[]> {
+    const allowedHosts = new Set(approvedHosts.map(item => item.toLowerCase()));
+    const configuredSitemaps = (request.sitemapUrls || []).flatMap(value => {
+      try {
+        const url = new URL(value);
+        return url.protocol === 'https:' && allowedHosts.has(url.hostname.toLowerCase()) ? [url.toString()] : [];
+      } catch { return []; }
+    }).slice(0, MAX_SITEMAPS_PER_HOST);
+    const cacheKey = `${request.authority || 'OFFICIAL'}|${host.toLowerCase()}|${configuredSitemaps.join('|')}`;
+    const cached = this.sitemapCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) return cached.entries;
 
-    const isIrasHost = host === 'iras.gov.sg' || host === 'www.iras.gov.sg';
-    if (isIrasHost) {
-      const sitemapUrl = 'https://www.iras.gov.sg/sitemap';
-      const irasHosts = new Set<string>(approvedHosts.filter(item => item === 'iras.gov.sg' || item === 'www.iras.gov.sg'));
+    if (configuredSitemaps.length > 0 && allowedHosts.has(host.toLowerCase())) {
+      for (const sitemapUrl of configuredSitemaps) {
       const sitemap = await this.retriever.fetchOfficialSource(sitemapUrl, {
         ...this.fetchOptions,
         useCache: false
@@ -238,15 +342,17 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       const finalHost = (() => {
         try { return new URL(sitemap.finalUrl || '').hostname.toLowerCase(); } catch { return ''; }
       })();
-      if (sitemap.status === 'SUCCESS' && sitemap.content && irasHosts.has(finalHost)) {
-        const entries = readHtmlSitemapEntries(sitemap.content, sitemap.finalUrl || sitemapUrl, [...irasHosts]);
+      if (sitemap.status === 'SUCCESS' && sitemap.content && allowedHosts.has(finalHost)) {
+        const entries = await this.readConfiguredSitemapEntries(
+          sitemap.content, sitemap.finalUrl || sitemapUrl, [...allowedHosts], request.authority
+        );
         if (entries.length > 0) {
-          this.sitemapCache.set(host, { expiresAt: Date.now() + SITEMAP_CACHE_MS, entries });
+          this.sitemapCache.set(cacheKey, { expiresAt: Date.now() + SITEMAP_CACHE_MS, entries });
           return entries;
         }
       }
-      // Retain the earlier first-party sitemap mechanism as an availability
-      // fallback. It is still index metadata and never substantive evidence.
+      }
+      // Fall through to robots.txt when an authority sitemap is unavailable.
     }
 
     const robots = await this.retriever.fetchOfficialSource(`https://${host}/robots.txt`, {
@@ -254,11 +360,10 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       useCache: false
     });
     if (robots.status !== 'SUCCESS' || !robots.content) {
-      this.sitemapCache.set(host, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, entries: [] });
+      this.sitemapCache.set(cacheKey, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, entries: [] });
       return [];
     }
 
-    const allowedHosts = new Set(approvedHosts.map(item => item.toLowerCase()));
     const sitemapUrls = robots.content.split(/\r?\n/)
       .map(line => line.match(/^\s*sitemap:\s*(\S+)\s*$/i)?.[1])
       .filter((value): value is string => Boolean(value))
@@ -272,7 +377,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       })
       .slice(0, MAX_SITEMAPS_PER_HOST);
     if (sitemapUrls.length === 0) {
-      this.sitemapCache.set(host, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, entries: [] });
+      this.sitemapCache.set(cacheKey, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, entries: [] });
       return [];
     }
 
@@ -307,7 +412,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
         try {
           const parsed = new URL(location);
           if (parsed.protocol === 'https:' && allowedHosts.has(parsed.hostname.toLowerCase())) {
-            const entry = makeIndexEntry(parsed.toString(), sitemapUrl);
+            const entry = makeIndexEntry(parsed.toString(), sitemapUrl, undefined, [], request.authority);
             if (entry) discovered.set(entry.canonicalUrl, entry);
           }
         } catch {
@@ -317,7 +422,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     }
 
     const entries = [...discovered.values()];
-    this.sitemapCache.set(host, {
+    this.sitemapCache.set(cacheKey, {
       expiresAt: Date.now() + (entries.length > 0 ? SITEMAP_CACHE_MS : UNAVAILABLE_CACHE_MS),
       entries
     });
@@ -327,19 +432,21 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
   public async discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]> {
     const approvedHosts = [...new Set(request.approvedHosts.map(host => host.toLowerCase()))];
     const distinctHosts = approvedHosts.filter(host => {
-      if (host === 'ifrs.org' && approvedHosts.includes('www.ifrs.org')) return false;
-      if (host === 'acra.gov.sg' && approvedHosts.includes('www.acra.gov.sg')) return false;
-      if (host === 'iras.gov.sg' && approvedHosts.includes('www.iras.gov.sg')) return false;
+      if (!host.startsWith('www.') && approvedHosts.includes(`www.${host}`)) return false;
       return true;
     });
+    const configuredOrder = request.preferredHosts?.map(host => host.toLowerCase()) || [];
     const preferredHosts = distinctHosts.sort((a, b) => {
-      const score = (host: string) => host === 'www.ifrs.org' ? 0 : host === 'ifrs.org' ? 1 : host === 'www.iras.gov.sg' ? 2 : host === 'iras.gov.sg' ? 3 : host === 'asc.acra.gov.sg' ? 4 : host === 'sso.agc.gov.sg' ? 5 : 6;
+      const aIndex = configuredOrder.indexOf(a);
+      const bIndex = configuredOrder.indexOf(b);
+      if (aIndex >= 0 || bIndex >= 0) return (aIndex < 0 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex < 0 ? Number.MAX_SAFE_INTEGER : bIndex);
+      const score = (host: string) => host === 'www.ifrs.org' ? 0 : host === 'ifrs.org' ? 1 : host === 'asc.acra.gov.sg' ? 2 : 3;
       return score(a) - score(b);
     }).slice(0, MAX_HOSTS_PER_SEARCH);
     const candidates = new Map<string, OfficialSourceIndexEntry>();
 
     for (const host of preferredHosts) {
-      const entries = await this.getSitemapEntries(host, approvedHosts);
+      const entries = await this.getSitemapEntries(host, approvedHosts, request);
       for (const entry of entries) {
         if (candidateScore(entry, request) > 0) {
           candidates.set(entry.canonicalUrl, entry);
@@ -350,7 +457,261 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
 
     return [...candidates.values()]
       .sort((a, b) => candidateScore(b, request) - candidateScore(a, request))
-      .slice(0, MAX_CANDIDATES)
+      .slice(0, Math.min(MAX_CANDIDATES, request.maxCandidates || MAX_CANDIDATES))
       .map(entry => entry.canonicalUrl);
+  }
+}
+
+/**
+ * Last-resort URL discovery against a restricted first-party site query.
+ * Search HTML and snippets are discovery metadata only. Returned URLs are
+ * independently fetched and topic-validated by the grounding pipeline.
+ */
+export class OfficialDomainSearchAdapter {
+  private readonly fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response> };
+  private readonly candidateTitles = new Map<string, string>();
+  private readonly candidateQueryVariants = new Map<string, 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3'>();
+  private lastSearchTrace: Array<{ variant: 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3'; candidateUrls: string[]; status: 'RESULTS' | 'NO_CANDIDATES'; reason?: string }> = [];
+
+  constructor(
+    _retriever: ControlledWebRetriever,
+    fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response> } = {}
+  ) {
+    this.fetchOptions = { timeoutMs: 3000, ...fetchOptions };
+  }
+
+  public getCandidateTitle(url: string): string | undefined {
+    return this.candidateTitles.get(url);
+  }
+
+  public getCandidateQueryVariant(url: string): 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3' | undefined {
+    return this.candidateQueryVariants.get(url);
+  }
+
+  public getLastSearchTrace(): Array<{ variant: 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3'; candidateUrls: string[]; status: 'RESULTS' | 'NO_CANDIDATES'; reason?: string }> {
+    return this.lastSearchTrace.map(trace => ({ ...trace, candidateUrls: [...trace.candidateUrls] }));
+  }
+
+  private buildSearchQueries(request: OfficialSourceDiscoveryRequest, searchSite: string): { queries: string[]; context?: string } {
+    const genericContextWords = new Set([
+      'iras', 'singapore', 'individual', 'employee', 'employer', 'company', 'corporate', 'business',
+      'official', 'guidance', 'tax', 'income', 'the', 'and', 'for', 'from', 'with', 'under'
+    ]);
+    const queryWords = new Set(normalizeWords(request.query).filter(word => !genericContextWords.has(word)));
+    const candidates = [...(request.topicHints || []), request.topicTitle]
+      .map(value => value.trim().replace(/\s+/g, ' ').replace(/"/g, ''))
+      .filter(Boolean)
+      .map((phrase, index) => ({
+        phrase,
+        index,
+        tokenCount: normalizeWords(phrase).length,
+        allWords: [...new Set(normalizeWords(phrase))],
+        words: [...new Set(normalizeWords(phrase).filter(word => !genericContextWords.has(word)))],
+      }))
+      .filter(candidate => candidate.words.length >= 2);
+    const rankedHints = [...candidates].sort((a, b) =>
+      this.searchHintScore(b.words, queryWords) - this.searchHintScore(a.words, queryWords) ||
+      b.words.filter(word => !queryWords.has(word)).length - a.words.filter(word => !queryWords.has(word)).length ||
+      a.index - b.index || a.tokenCount - b.tokenCount
+    );
+    const selectedHints: typeof rankedHints = [];
+    for (const candidate of rankedHints) {
+      const words = new Set(candidate.words);
+      const overlapsExisting = selectedHints.some(selected => {
+        const selectedWords = new Set(selected.words);
+        const intersection = [...words].filter(word => selectedWords.has(word)).length;
+        const union = new Set([...words, ...selectedWords]).size;
+        return union > 0 && intersection / union >= 0.8;
+      });
+      if (!overlapsExisting) selectedHints.push(candidate);
+      if (selectedHints.length >= 3) break;
+    }
+    // Preserve the full user query as the first attempt. Later variants use
+    // compact registry phrases without exact-phrase quoting, which lets search
+    // engines tolerate punctuation, inflection, and page-title variants.
+    const fullQuery = `site:${searchSite} ${request.query.trim()}`;
+    const topicQueries = selectedHints.map(candidate => {
+      const stopwords = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'from', 'in', 'of', 'on', 'or', 'the', 'to', 'under', 'with']);
+      const searchTerms = candidate.allWords.filter(word => !stopwords.has(word));
+      return `site:${searchSite} ${searchTerms.join(' ')}`;
+    });
+    return {
+      queries: [...new Set([fullQuery, ...topicQueries])].slice(0, 4),
+      context: selectedHints[0]?.phrase
+    };
+  }
+
+  private searchHintScore(words: readonly string[], queryWords: ReadonlySet<string>): number {
+    const newWords = words.filter(word => !queryWords.has(word)).length;
+    const queryOverlap = words.filter(word => queryWords.has(word)).length;
+    const hasEmployment = words.some(word => ['employment', 'employee', 'employees'].includes(word));
+    const hasCrossBorder = words.some(word => ['foreign', 'overseas', 'abroad', 'outside', 'sourced'].includes(word));
+    const hasTreaty = words.some(word => ['dta', 'treaty', 'agreement', 'agreements', 'exemption', 'relief'].includes(word));
+    const topicSpecificPairBoost = Number(hasEmployment && hasCrossBorder) * 100 + Number(hasEmployment && hasTreaty) * 100;
+    return topicSpecificPairBoost + newWords * 5 + queryOverlap * 2;
+  }
+
+  public async searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]> {
+    const approvedHosts = new Set(request.approvedHosts.map(host => host.toLowerCase()));
+    if (request.lexicalDiscovery !== true || !request.searchSite || !request.searchEndpoint ||
+        !request.searchRedirectHost || !request.searchRedirectParameter) return [];
+    let searchSite = '';
+    try {
+      const configuredSite = new URL(`https://${request.searchSite}`);
+      if (configuredSite.protocol !== 'https:' || configuredSite.username || configuredSite.password ||
+          configuredSite.pathname !== '/' || configuredSite.search || configuredSite.hash) return [];
+      searchSite = configuredSite.hostname.toLowerCase();
+    } catch { return []; }
+    if (!approvedHosts.has(searchSite)) return [];
+
+    let endpoint: URL;
+    let redirectHostname = '';
+    try {
+      endpoint = new URL(request.searchEndpoint);
+      const configuredRedirectHost = new URL(`https://${request.searchRedirectHost}`);
+      if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.hash || endpoint.search ||
+          configuredRedirectHost.pathname !== '/' || configuredRedirectHost.username || configuredRedirectHost.password ||
+          configuredRedirectHost.search || configuredRedirectHost.hash || !/^[a-z][a-z\d_-]*$/i.test(request.searchRedirectParameter)) return [];
+      redirectHostname = configuredRedirectHost.hostname.toLowerCase();
+    } catch { return []; }
+
+    const customFetch = this.fetchOptions.customFetch || (globalThis.fetch ? globalThis.fetch.bind(globalThis) : undefined);
+    if (!customFetch) return [];
+    const { queries, context } = this.buildSearchQueries(request, searchSite);
+    const candidateLimit = Math.min(request.maxCandidates || MAX_CANDIDATES, MAX_CANDIDATES);
+    this.lastSearchTrace = [];
+    this.candidateQueryVariants.clear();
+    const found = new Map<string, string>();
+    const contextWords = new Set(normalizeWords(context || request.topicTitle)
+      .filter(word => word.length >= 4 && !['iras', 'singapore', 'individual', 'employee', 'employer', 'official', 'guidance', 'tax', 'income'].includes(word)));
+
+    // Search the complete question first, then relax to one topic-specific
+    // phrase if needed. Both variants stay restricted to the configured site;
+    // result titles/snippets remain metadata and pages still require a fetch.
+    for (const [queryIndex, searchQuery] of queries.entries()) {
+      if (found.size >= candidateLimit) break;
+      const variant = queryIndex === 0 ? 'FULL_QUERY' as const : `TOPIC_HINT_${queryIndex}` as 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3';
+      const queryCandidateUrls = new Set<string>();
+      const variantCandidates = new Map<string, string>();
+      const traceReason = 'No approved official HTTPS URL candidates were returned for this restricted query variant.';
+      endpoint.searchParams.set('q', searchQuery);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.fetchOptions.timeoutMs);
+      try {
+        let html = '';
+        let searchHost = endpoint.hostname;
+        const directResponse = await customFetch(endpoint.toString(), {
+          method: 'GET', signal: controller.signal, redirect: 'manual', headers: { Accept: 'text/html' }
+        });
+        if (directResponse.ok && directResponse.status === 200) html = await directResponse.text();
+        if (!html) {
+          // Some environments rate-limit direct HTML search. A text-rendering
+          // proxy may expose the same restricted query as Markdown; its output
+          // remains untrusted metadata and only approved-host URLs are retained.
+          const proxy = new URL(`https://r.jina.ai/http://${endpoint.host}${endpoint.pathname}?q=${encodeURIComponent(searchQuery)}`);
+          const proxyResponse = await customFetch(proxy.toString(), {
+            method: 'GET', signal: controller.signal, redirect: 'manual', headers: { Accept: 'text/plain' }
+          });
+          if (!proxyResponse.ok || proxyResponse.status >= 300) continue;
+          if (proxyResponse.url) {
+            try {
+              const finalUrl = new URL(proxyResponse.url);
+              if (finalUrl.origin !== proxy.origin) continue;
+            } catch { continue; }
+          }
+          searchHost = proxy.hostname;
+          html = await proxyResponse.text();
+        } else if (directResponse.url) {
+          try {
+            const finalUrl = new URL(directResponse.url);
+            if (finalUrl.origin !== endpoint.origin) continue;
+          } catch { continue; }
+        }
+        const candidates: Array<{ href: string; title: string }> = [];
+        const anchorPattern = /<a\b([^>]*)\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))([^>]*)>([\s\S]*?)<\/a\s*>/gi;
+        for (const match of html.matchAll(anchorPattern)) {
+          candidates.push({
+            href: decodeHtmlEntities(match[2] || match[3] || match[4] || ''),
+            title: decodeHtmlEntities((match[6] || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()
+          });
+        }
+        if (searchHost === 'r.jina.ai') {
+          // DDG's Jina-rendered Markdown wraps URLs that may contain literal
+          // parentheses (for example `(DTAs)`) and appends tracking parameters.
+          // Capture the whole Markdown target, then only unwrap the configured
+          // `uddg` parameter below; tracking parameters never supply a URL.
+          for (const match of html.matchAll(/^## \[([^\]]*)\]\((https?:\/\/[^\r\n]+)\)$/gm)) {
+            candidates.push({ href: match[2], title: match[1].replace(/\*\*/g, '').trim() });
+          }
+        }
+        for (const candidate of candidates) {
+          if (!candidate.href) continue;
+          let resultUrl: URL;
+          try {
+            const link = new URL(candidate.href, endpoint);
+            if (link.hostname.toLowerCase() === redirectHostname &&
+                (link.protocol === 'https:' || link.protocol === 'http:') && !link.username && !link.password && !link.port) {
+              const wrapped = link.searchParams.get(request.searchRedirectParameter);
+              if (!wrapped) continue;
+              resultUrl = new URL(wrapped);
+            } else {
+              resultUrl = link;
+            }
+          } catch { continue; }
+          if (resultUrl.protocol !== 'https:' || resultUrl.username || resultUrl.password || !approvedHosts.has(resultUrl.hostname.toLowerCase())) continue;
+          resultUrl.hash = '';
+          const canonicalUrl = resultUrl.toString();
+          queryCandidateUrls.add(canonicalUrl);
+          if (!variantCandidates.has(canonicalUrl) || candidate.title) variantCandidates.set(canonicalUrl, candidate.title);
+        }
+      } catch {
+        // A failed/empty full-query attempt must not prevent the bounded topic
+        // query from running.
+      } finally {
+        clearTimeout(timeoutId);
+        const rankByContext = (entries: Array<[string, string]>) => entries.sort(([urlA, titleA], [urlB, titleB]) => {
+          const score = (url: string, title: string) => {
+            const candidateWords = new Set(normalizeWords(`${title} ${url}`));
+            return [...contextWords].filter(word => candidateWords.has(word)).length;
+          };
+          return score(urlB, titleB) - score(urlA, titleA);
+        });
+        const selectedVariantCandidates = rankByContext([...variantCandidates.entries()])
+          .slice(0, Math.min(MAX_CANDIDATES_PER_SEARCH_VARIANT, candidateLimit - found.size));
+        for (const [candidateUrl, title] of selectedVariantCandidates) {
+          if (!found.has(candidateUrl)) {
+            this.candidateQueryVariants.set(candidateUrl, variant);
+            found.set(candidateUrl, title);
+            this.candidateTitles.set(candidateUrl, title);
+          } else if (variant !== 'FULL_QUERY') {
+            // If a topic-specific query independently finds the same page,
+            // retain that stronger discovery route for fetch ordering.
+            this.candidateQueryVariants.set(candidateUrl, variant);
+          }
+        }
+        this.lastSearchTrace.push({
+          variant,
+          candidateUrls: [...queryCandidateUrls],
+          status: queryCandidateUrls.size ? 'RESULTS' : 'NO_CANDIDATES',
+          ...(queryCandidateUrls.size ? {} : { reason: traceReason })
+        });
+      }
+    }
+    const rankedCandidates = [...found.entries()].sort(([urlA, titleA], [urlB, titleB]) => {
+      const score = (url: string, title: string) => {
+        const candidateWords = new Set(normalizeWords(`${title} ${url}`));
+        return [...contextWords].filter(word => candidateWords.has(word)).length;
+      };
+      const variantPriority = (url: string) => {
+        const variant = this.candidateQueryVariants.get(url);
+        if (variant === 'FULL_QUERY') return 4;
+        return variant ? Number(variant.slice(-1)) - 1 : 3;
+      };
+      const priorityDifference = variantPriority(urlA) - variantPriority(urlB);
+      if (priorityDifference !== 0) return priorityDifference;
+      return score(urlB, titleB) - score(urlA, titleA);
+    });
+    for (const [url, title] of rankedCandidates) this.candidateTitles.set(url, title);
+    return rankedCandidates.slice(0, candidateLimit).map(([url]) => url);
   }
 }

@@ -123,7 +123,7 @@ for (const testCase of exactPhraseCases) {
         }
       }
     );
-    assert.ok(testCase.topics.some(topicId => fallback.records.some(record => record.tags.includes(topicId))), `Reviewed IRAS content is selected for: ${testCase.query}`);
+    assert.ok(testCase.topics.some(topicId => fallback.records.some(record => record.tags.includes(topicId))), `Reviewed IRAS content is selected for: ${testCase.query}; trace=${JSON.stringify(fallback.trace)}`);
     for (const mapId of expectedMapIds) assert.ok(fallback.trace.sourceMapIds.includes(mapId), `${mapId} is actually fetched for: ${testCase.query}`);
     for (const mapId of testCase.disallowedMaps || []) assert.ok(!fallback.trace.sourceMapIds.includes(mapId), `${mapId} is excluded for: ${testCase.query}`);
   }
@@ -140,6 +140,69 @@ for (const query of unrelatedControls) {
   assert.ok(!classification.topicIds.includes('iras-gst-entertainment'), `Unrelated query does not route to meal GST: ${query}`);
   assert.ok(!classification.topicIds.includes('iras-gst-motor-vehicles'), `Unrelated query does not route to motor-vehicle GST: ${query}`);
 }
+const individualOverseasEmploymentQuery = 'If a Singapore tax resident earns employment income while physically working overseas on a temporary secondment, under what conditions is that foreign-sourced income taxable in Singapore or eligible for double taxation relief?';
+const individualOverseasEmploymentRouting = classifyQuestion(individualOverseasEmploymentQuery);
+assert.ok(individualOverseasEmploymentRouting.authorities.includes('IRAS'));
+assert.ok(individualOverseasEmploymentRouting.topicIds.includes('iras-individual-overseas-employment'));
+assert.ok(individualOverseasEmploymentRouting.topicIds.includes('iras-individual-foreign-employment-income'));
+assert.ok(individualOverseasEmploymentRouting.topicIds.includes('iras-individual-foreign-tax-credit'));
+assert.ok(individualOverseasEmploymentRouting.topicIds.includes('iras-individual-double-tax-agreements'));
+assert.ok(individualOverseasEmploymentRouting.topicIds.includes('iras-individual-tax-residency'));
+assert.ok(!individualOverseasEmploymentRouting.topicIds.includes('iras-foreign-sourced-income'), 'An individual employee question cannot route to the corporate foreign-income topic.');
+assert.ok(!individualOverseasEmploymentRouting.topicIds.includes('iras-foreign-tax-credit'), 'An individual employee question cannot route to the corporate foreign-tax-credit topic.');
+assert.ok(!individualOverseasEmploymentRouting.topicIds.includes('iras-double-tax-agreements'), 'An individual employee question cannot route to the corporate DTA topic.');
+const unregisteredSingaporeBranchIncomeQuery = 'A Singapore company remits profits from an overseas branch into Singapore. What conditions determine whether those branch profits are exempt or taxable here?';
+const unregisteredSingaporeBranchIncomeRouting = classifyQuestion(unregisteredSingaporeBranchIncomeQuery);
+assert.equal(unregisteredSingaporeBranchIncomeRouting.primaryDomain, 'TAX');
+assert.ok(unregisteredSingaporeBranchIncomeRouting.authorities.includes('IRAS'),
+  'An unregistered Singapore income-taxability question must still route to IRAS discovery.');
+assert.ok(unregisteredSingaporeBranchIncomeRouting.domains.includes('IRAS_CORPORATE_TAX'),
+  'Explicit company population routes to corporate-tax discovery context.');
+assert.deepEqual(unregisteredSingaporeBranchIncomeRouting.topicIds, [],
+  'Authority-level IRAS discovery does not require a benchmark-specific registered topic.');
+const mixedGstBranchIncomeRouting = classifyQuestion('A Singapore company remits profits from an overseas branch into Singapore. The company is also GST registered, but I am asking specifically whether the branch profits are exempt or taxable as corporate income.');
+assert.equal(mixedGstBranchIncomeRouting.primaryDomain, 'TAX',
+  'An explicit corporate income-tax outcome keeps precedence when GST registration is only mixed-query context.');
+assert.ok(mixedGstBranchIncomeRouting.domains.includes('IRAS_CORPORATE_TAX'));
+assert.ok(mixedGstBranchIncomeRouting.domains.includes('IRAS_GST'),
+  'The mentioned GST context can remain represented without replacing the explicit corporate income-tax domain.');
+assert.ok(mixedGstBranchIncomeRouting.authorities.includes('IRAS'));
+const pureGstCompanyRouting = classifyQuestion('A Singapore company is GST registered and sells goods locally. Must it charge GST on those sales?');
+assert.equal(pureGstCompanyRouting.primaryDomain, 'GST', 'A pure GST question remains GST-first.');
+assert.ok(!pureGstCompanyRouting.domains.includes('IRAS_CORPORATE_TAX'),
+  'An entity mention in a GST question alone does not add corporate income-tax scope.');
+const foreignJurisdictionBranchIncomeRouting = classifyQuestion('A UK company remits profits from an overseas branch into the UK. Are those profits exempt from tax there?');
+assert.ok(!foreignJurisdictionBranchIncomeRouting.authorities.includes('IRAS'),
+  'Taxability in a non-Singapore jurisdiction does not infer IRAS authority.');
+assert.ok(!foreignJurisdictionBranchIncomeRouting.domains.some(domain => domain.startsWith('IRAS_')));
+const SingaporeEmployerForeignTaxRouting = classifyQuestion('A Singapore company sends its employee to Japan. Is the employee’s salary taxable in Japan?');
+assert.ok(!SingaporeEmployerForeignTaxRouting.authorities.includes('IRAS'),
+  'Singapore as the employer location does not override an explicit foreign-country taxability question.');
+const employeeAtCompanyRouting = classifyQuestion('A Singapore company employs an employee working overseas. Is that employee’s employment income taxable in Singapore or eligible for foreign tax relief?');
+assert.ok(employeeAtCompanyRouting.topicIds.some(id => id.startsWith('iras-individual-')));
+assert.ok(!employeeAtCompanyRouting.topicIds.some(id => ['iras-foreign-sourced-income', 'iras-foreign-tax-credit', 'iras-double-tax-agreements'].includes(id)),
+  'Employer/company wording does not route the employee’s own income into corporate foreign-income topics.');
+const explicitMasTaxIncentiveRouting = classifyQuestion('What MAS fund incentive tax exemption applies to a Singapore fund manager?');
+assert.ok(explicitMasTaxIncentiveRouting.authorities.includes('MAS'));
+assert.ok(!explicitMasTaxIncentiveRouting.authorities.includes('IRAS'),
+  'A Singapore tax-exemption phrase explicitly framed as a MAS fund-incentive question does not infer IRAS authority.');
+for (const query of [
+  'Can a Singapore company claim an exemption for foreign-sourced income?',
+  'When can our company claim foreign tax credit for foreign income?',
+  'Does the company qualify for double tax agreement relief on foreign profits?'
+]) {
+  const corporateRouting = classifyQuestion(query);
+  assert.ok(corporateRouting.topicIds.some(id => ['iras-foreign-sourced-income', 'iras-foreign-tax-credit', 'iras-double-tax-agreements'].includes(id)), `Corporate foreign-income guidance remains available: ${query}`);
+  assert.ok(!corporateRouting.topicIds.some(id => id.startsWith('iras-individual-')), `Corporate question does not route to individual-tax guidance: ${query}`);
+}
+const ambiguousNonResidentWht = classifyQuestion('Does withholding tax apply to a payment to a non-resident recipient?');
+assert.ok(ambiguousNonResidentWht.topicIds.includes('iras-withholding-tax'),
+  'A bare non-resident recipient does not imply the individual income-tax population; WHT coverage remains available.');
+const ambiguousNonResidentWhtMaps = getCoverageTopicById('iras-withholding-tax').sourceRecordIds;
+assert.ok(ambiguousNonResidentWhtMaps.includes('IRAS_WHT_RATES_SOURCE_MAP'));
+assert.ok(ambiguousNonResidentWhtMaps.includes('IRAS_WHT_SCOPE_SOURCE_MAP'));
+assert.ok(!ambiguousNonResidentWht.topicIds.some(id => id.startsWith('iras-individual-')),
+  'Do not route a WHT recipient query into individual DTR/foreign-income topics without explicit individual context.');
 assert.ok(!classifyQuestion('How should the company record accounting depreciation on a delivery vehicle?').topicIds.includes('iras-cit-disallowed-expenses'));
 assert.ok(!classifyQuestion('What is the accounting treatment for renovation costs?').topicIds.includes('iras-cit-renovation-refurbishment'));
 assert.ok(!classifyQuestion('When should an employee bonus accrual be booked?').topicIds.includes('iras-employee-bonus-timing'));

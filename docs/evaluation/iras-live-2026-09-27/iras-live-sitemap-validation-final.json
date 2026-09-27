@@ -1,0 +1,433 @@
+{
+  "evaluatedAt": "2026-09-27T14:13:46.990Z",
+  "query": "Is foreign income received in Singapore taxable under individual income tax?",
+  "classification": {
+    "primaryDomain": "TAX",
+    "authorities": [
+      "IRAS"
+    ],
+    "topicIds": []
+  },
+  "sourceMapIds": [],
+  "trace": {
+    "path": "DISCOVERED_SOURCE",
+    "sourceMapIds": [],
+    "selectedRecordIds": [
+      "LIVE_TOPIC_iras-authority-query-is-foreign-income-received-in-singapore-taxable-_7e4c061f7c7c"
+    ],
+    "finalVerifiedUrls": [
+      "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not"
+    ],
+    "candidateOnly": true,
+    "attempts": [
+      {
+        "topicId": "iras-authority-query-is-foreign-income-received-in-singapore-taxable-",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not",
+        "pageTitle": "IRAS | What is taxable, what is not",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "SITEMAP_DISCOVERY"
+      }
+    ],
+    "stages": [
+      {
+        "stage": "LOCAL_VERIFIED",
+        "status": "EXHAUSTED",
+        "reason": "Local retrieval was insufficient for at least one routed topic."
+      },
+      {
+        "stage": "MAPPED_SOURCE",
+        "status": "SKIPPED",
+        "reason": "No applicable reviewed source-map pointer was available."
+      },
+      {
+        "stage": "SITEMAP_DISCOVERY",
+        "status": "SUFFICIENT",
+        "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+      },
+      {
+        "stage": "OFFICIAL_DOMAIN_SEARCH",
+        "status": "SKIPPED",
+        "reason": "Official-domain search was not attempted for this request."
+      }
+    ]
+  },
+  "liveSitemapFetched": true,
+  "indexedPageCount": 88,
+  "topicalSitemapEntries": [
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax",
+      "title": "Individual Income Tax"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax",
+      "title": "Basics of Individual Income Tax"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/managing-mytax-portal-account",
+      "title": "Managing myTax Portal account"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/understanding-my-income-tax-filing",
+      "title": "Understanding my Income Tax filing"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-residency-and-tax-rates",
+      "title": "Tax residency and tax rates"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not",
+      "title": "What is taxable, what is not"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+      "title": "Tax reliefs, rebates and deductions"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/receive-tax-bill-pay-tax-check-refunds",
+      "title": "Receive tax bill, pay tax, check refunds"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/consequences-of-non-compliance",
+      "title": "Consequences of non-compliance"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/voluntary-disclosure-of-errors-for-reduced-penalties",
+      "title": "Voluntary disclosure of errors for reduced penalties"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/report-tax-evasion",
+      "title": "Report tax evasion"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees",
+      "title": "Employees"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/basic-guide-for-new-individual-taxpayers",
+      "title": "Basic guide for new individual taxpayers"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/understanding-my-income-tax-filing",
+      "title": "Understanding my Income Tax filing"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-residency-and-tax-rates",
+      "title": "Tax residency and tax rates"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/what-is-taxable-what-is-not",
+      "title": "What is taxable, what is not"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+      "title": "Tax reliefs, rebates & deductions"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/receive-tax-bill-pay-tax-check-refunds",
+      "title": "Receive tax bill, pay tax, check refunds"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad",
+      "title": "Scenario-based FAQs for working in Singapore and abroad"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/special-tax-schemes",
+      "title": "Special tax schemes"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/consequences-of-non-compliance",
+      "title": "Consequences of non-compliance"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/voluntary-disclosure-of-errors-for-reduced-penalties",
+      "title": "Voluntary disclosure of errors for reduced penalties"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships",
+      "title": "Self-Employed Individuals including Platform Workers and Partnerships"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/am-i-a-self-employed-person",
+      "title": "Am I a self-employed individual?"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-obligations-of-self-employed-persons",
+      "title": "Tax obligations of self-employed individuals"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/am-i-a-platform-worker",
+      "title": "Am I a platform worker?"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-obligations-of-platform-workers",
+      "title": "Tax obligations of platform workers"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-obligations-of-partnerships",
+      "title": "Tax obligations of partnerships"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-obligations-by-industry-trade-or-profession",
+      "title": "Tax obligations by industry, trade or profession"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/keeping-proper-records-and-accounts",
+      "title": "Keeping proper records and accounts"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/understanding-tax-filing-and-payment",
+      "title": "Understanding tax filing and payment"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/calculating-my-business-income",
+      "title": "Calculating my business income"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/business-expenses-and-deductions",
+      "title": "Business expenses and deductions"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/consequences-of-non-compliance",
+      "title": "Consequences of non-compliance"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/voluntary-disclosure-of-errors-for-reduced-penalties",
+      "title": "Voluntary disclosure of errors for reduced penalties"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/report-tax-evasion",
+      "title": "Report tax evasion"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/businesses-involved-in-the-beverage-container-return-scheme-(bcrs",
+      "title": "Businesses involved in the Beverage Container Return Scheme (BCRS)"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/non-residents",
+      "title": "Non-Residents"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers",
+      "title": "Employers"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/filing-employee-earnings-(ir8a-appendix-8a-appendix-8b-ir8s)",
+      "title": "Filing Employee Earnings (IR8A, Appendix 8A, Appendix 8B, IR8S)"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/information-to-share-with-employees",
+      "title": "Information to share with employees"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/auto-inclusion-scheme-(ais)-for-employment-income",
+      "title": "Auto Inclusion Scheme (AIS) for Employment Income"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment",
+      "title": "Understanding the Tax Treatment"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/retrenchment-exercise-in-the-company",
+      "title": "Retrenchment Exercise in the Company"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/tax-clearance-for-foreign-spr-employees-(ir21)",
+      "title": "Tax Clearance for Foreign & SPR Employees (IR21)"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employers/digital-services",
+      "title": "Digital Services"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation",
+      "title": "My Situation"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-have-retired",
+      "title": "I have retired"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-have-been-retrenched",
+      "title": "I have been retrenched"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-have-a-newborn",
+      "title": "I have a newborn"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-am-affected-by-covid-19",
+      "title": "I am affected by COVID-19"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-have-other-side-or-personal-income",
+      "title": "I have other side or personal income"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-am-starting-a-new-business",
+      "title": "I am starting a new business"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-have-rented-out-my-property",
+      "title": "I have rented out my property"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-received-an-audit-letter",
+      "title": "I received an audit letter"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/my-family-member-has-passed-away",
+      "title": "My family member has passed away"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/scenario-based-faqs-for-working-in-singapore-and-abroad",
+      "title": "Scenario-based FAQs for working in Singapore and abroad"
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax",
+      "title": "Individual Income Tax"
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/angel-investors-tax-deduction-scheme-(aitd)",
+      "title": "Angel Investors Tax Deduction Scheme (AITD)"
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/not-ordinarily-resident-(nor)-scheme",
+      "title": "Not Ordinarily Resident (NOR) Scheme"
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+      "title": "SRS contributions and tax relief"
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/tax-on-srs-withdrawals",
+      "title": "Tax on SRS withdrawals"
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/withholding-tax-on-srs",
+      "title": "Withholding Tax on SRS"
+    },
+    {
+      "url": "https://www.iras.gov.sg/digital-services/others/singpass-foreign-user-account-(sfa)-for-foreign-individuals",
+      "title": "Singpass Foreign user Account (SFA) for Foreign Individuals"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes",
+      "title": "Special tax schemes"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/managing-mytax-portal-account",
+      "title": "Managing myTax Portal Account"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/report-tax-evasion",
+      "title": "Report tax evasion"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-obligations-of-foreigners-ceasing-business-or-leaving-singapore-permanently",
+      "title": "Tax obligations of foreigners ceasing business or leaving Singapore permanently"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/managing-mytax-portal-account",
+      "title": "Managing myTax Portal Account"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/understanding-my-income-tax-filing",
+      "title": "Understanding my Income Tax filing"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-residency-and-tax-rates",
+      "title": "Tax residency and tax rates"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-reliefs-rebates-deductions",
+      "title": "Tax reliefs, rebates & deductions"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/receive-tax-bill-pay-tax-check-refunds",
+      "title": "Receive tax bill, pay tax, check refunds"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/what-is-taxable-what-is-not",
+      "title": "I have other side or personal income"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/special-tax-schemes",
+      "title": "Special tax schemes"
+    },
+    {
+      "url": "https://www.iras.gov.sg/contact-us/individual-income-tax",
+      "title": "Individual Income Tax"
+    },
+    {
+      "url": "https://www.iras.gov.sg/quick-links/forms/non-resident-individuals",
+      "title": "Non-Resident Individuals"
+    },
+    {
+      "url": "https://www.iras.gov.sg/quick-links/payments/giro-individual-income-tax",
+      "title": "Individual Income Tax"
+    },
+    {
+      "url": "https://www.iras.gov.sg/quick-links/tax-agents/bulk-request-for-extension-of-time-to-file-individual-income-tax-returns-for-ya-2026",
+      "title": "Bulk request for extension of time to file individual income tax returns for YA 2026"
+    },
+    {
+      "url": "https://www.iras.gov.sg/quick-links/tax-rates/individual-income-tax-rates",
+      "title": "Individual Income Tax Rates"
+    }
+  ],
+  "sitemapCandidateUrls": [
+    "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not"
+  ],
+  "independentlyFetchedUrls": [
+    "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not"
+  ],
+  "onlineSearchAttempted": false,
+  "requestedUrls": [
+    {
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not",
+      "method": "GET"
+    }
+  ],
+  "evidenceAdmission": {
+    "status": "RETRIEVED_SUFFICIENT",
+    "eligibleRecordIds": [
+      "LIVE_TOPIC_iras-authority-query-is-foreign-income-received-in-singapore-taxable-_7e4c061f7c7c"
+    ],
+    "rejectedRecords": []
+  },
+  "rejectedEvidenceDetails": [],
+  "evidence": [
+    {
+      "id": "LIVE_TOPIC_iras-authority-query-is-foreign-income-received-in-singapore-taxable-_7e4c061f7c7c",
+      "title": "IRAS | What is taxable, what is not",
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not",
+      "sourceText": "What is taxable, what is not\n\nGenerally, income earned in or derived from Singapore is chargeable to income tax, while overseas income received in Singapore is not taxable, except in some circumstances.\n\nIncome from employment\n\nEmployment income\n\nTypes of employment income and benefits-in-kind (to be computed by your employer)\n\n• Salary, bonus, director's fee, commission and others\n\n• Gains from the exercise of stock options\n\n• Income received from overseas\n\n• Pension\n\n• Retirement benefits\n\n• Retrenchment benefits",
+      "provenance": "LIVE_EXTERNAL"
+    }
+  ],
+  "providerCalls": 0,
+  "claimVerification": {
+    "accepted": [
+      {
+        "text": "Generally, income earned in or derived from Singapore is chargeable to income tax, while overseas income received in Singapore is not taxable, except in some circumstances.",
+        "recordId": "LIVE_TOPIC_iras-authority-query-is-foreign-income-received-in-singapore-taxable-_7e4c061f7c7c",
+        "quote": "Generally, income earned in or derived from Singapore is chargeable to income tax, while overseas income received in Singapore is not taxable, except in some circumstances.",
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not",
+        "supportKind": "EXACT_SOURCE_QUOTE"
+      }
+    ],
+    "rejected": []
+  },
+  "finalCitations": [
+    "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not"
+  ],
+  "finalAnswer": "Evidence admitted from an independently fetched page discovered through the live IRAS sitemap.",
+  "abstentionAppropriate": false
+}

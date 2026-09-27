@@ -41,6 +41,24 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
   const allTopicIds = decomposition.topics.map(topic => topic.id);
   const allTopicMetadata = getCoverageTopicsByIds(allTopicIds);
+  // Lexical aliases such as "foreign-sourced income" are shared by corporate
+  // and individual tax guidance. Use explicit population signals to prevent a
+  // corporate topic from winning solely because those words overlap.
+  const individualTaxContext = /\b(?:individual|personally|my (?:income|salary|tax)|i (?:earn|receive)|singapore tax resident|tax resident in singapore|employee|employment income|salary|wages|secondment|overseas posting|non[ -]resident individual|non[ -]resident employee)\b/i.test(query);
+  // A company or employer can be mentioned in an individual employee query.
+  // Treat it as the taxpayer only where the query is not framed around an
+  // individual's employment, or the company is explicitly the income/tax subject.
+  const corporateTaxContext = /\b(?:corporate tax|company tax|form c(?:-s|\b)|business income|trade or business|company profits?|branch profits?|company income)\b/i.test(query) ||
+    (/\b(?:company|companies|corporation)\b/i.test(query) && !individualTaxContext);
+  const taxOutcomeContext = /\b(?:tax(?:able|ed|ability|ation)?|exempt(?:ion)?|chargeable)\b/i.test(query);
+  const requestsSingaporeTaxTreatment = taxOutcomeContext && (
+    /\b(?:in|into|under|to|for)\s+singapore\b/i.test(query) ||
+    /\bsingapore(?:an)?\s+(?:income\s+)?tax\b/i.test(query)
+  );
+  const explicitlyForeignTaxTarget = taxOutcomeContext &&
+    /\b(?:taxable|taxed|tax treatment|tax liability|subject to tax)\b[^.!?]{0,100}\b(?:in|under|by)\s+(?:the\s+)?(?:foreign|host|another|overseas|[a-z][a-z-]{2,})\b/i.test(query);
+  const foreignTaxOnlyContext = explicitlyForeignTaxTarget && !requestsSingaporeTaxTreatment && !/\biras\b/i.test(query);
+  const employerComplianceContext = /\b(?:employer|payroll|ir8a|ir21|ais submission|report employee|withhold monies)\b/i.test(query);
   const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(q) ||
     /\bdouble entr\w*/i.test(q);
   const taxCreditWithoutAccountingIntent = /\b(?:foreign tax credit|tax credit|double tax relief foreign tax credit)\b/i.test(q) && !explicitAccountingIntent;
@@ -58,6 +76,10 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     !explicitAccountingIntent &&
     !/\b(?:acra|companies act|share class rights|allotment|annual return|corporate filing)\b/i.test(q);
   const topicMetadata = allTopicMetadata.filter(topic =>
+    !(foreignTaxOnlyContext && topic.domainId.startsWith('IRAS_')) &&
+    !(individualTaxContext && !corporateTaxContext && topic.domainId === 'IRAS_CORPORATE_TAX') &&
+    !(corporateTaxContext && !individualTaxContext && topic.domainId === 'IRAS_INDIVIDUAL_TAX') &&
+    !(individualTaxContext && !employerComplianceContext && topic.domainId === 'IRAS_EMPLOYER_TAX' && /\b(?:foreign|overseas|cross[ -]border|tax resident|double tax|tax credit)\b/i.test(query)) &&
     !(passengerCarTaxOnlyContext && topic.domainId.startsWith('ACCOUNTING_')) &&
     !(employmentTaxAssessmentContext && topic.domainId.startsWith('ACRA_')) &&
     !(withholdingDueDateOnlyContext && topic.id === 'iras-withholding-tax') &&
@@ -105,8 +127,27 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   const hasTaxAcronym = /\b(ir21|ir8a|ir8s|ais|absd|bsd|tpd|crs|fatca|eci)\b/i.test(q);
   const hasNonGstTaxTopic = topicMetadata.some(topic => topic.domainId.startsWith('IRAS_') && topic.domainId !== 'IRAS_GST');
+  // An explicit Singapore jurisdiction and tax-outcome question can route to
+  // IRAS even when no canonical topic matches. Do not infer Singapore tax
+  // authority from taxability language alone on a foreign-jurisdiction query
+  // or one explicitly framed under another regulator's remit.
+  const explicitOtherAuthorityContext =
+    /\b(?:mas|mom|cpf|acra|singapore customs|monetary authority of singapore|central provident fund|ministry of manpower)\b/i.test(q) &&
+    !/\b(?:iras|income tax|corporate tax|individual income tax|withholding tax|personal income tax)\b/i.test(q);
+  const singaporeTaxOutcomeContext =
+    requestsSingaporeTaxTreatment &&
+    !/\b(?:gst|goods and services tax)\b/i.test(q) &&
+    !explicitOtherAuthorityContext;
+  // Mixed questions can mention GST registration as background while asking
+  // for a separate Singapore income-tax result. Require both a Singapore tax
+  // outcome and an income-tax population/subject signal so a company's mere
+  // appearance in a GST question cannot route it to corporate income tax.
+  const explicitSingaporeIncomeTaxOutcome = requestsSingaporeTaxTreatment &&
+    !foreignTaxOnlyContext &&
+    !explicitOtherAuthorityContext &&
+    /\b(?:income tax|corporate tax|company tax|personal tax|individual tax|foreign[- ]sourced income|employment income|salary|wages|branch profits?|business income|company profits?|company income|tax residenc\w*|tax resident|foreign tax credit|double tax(?:ation)? relief|double tax agreement)\b/i.test(q);
 
-  const hasTax =
+  const hasTax = !foreignTaxOnlyContext && (
     q.includes('tax deduct') ||
     q.includes('deductib') ||
     q.includes('corporate tax') ||
@@ -123,9 +164,11 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('enterprise innovation') ||
     q.includes('add-back') ||
     q.includes('tax treatment') ||
+    singaporeTaxOutcomeContext ||
+    explicitSingaporeIncomeTaxOutcome ||
     q.includes('withholding tax') ||
     hasTaxAcronym ||
-    hasNonGstTaxTopic;
+    hasNonGstTaxTopic);
 
   const hasGst =
     /\bgst\b/i.test(q) ||
@@ -249,6 +292,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   if (hasTax) {
     if (/\b(ir21|ir8a|ir8s|ais|benefits-in-kind|benefits in kind)\b/i.test(q)) addDomainIfMissing('IRAS_EMPLOYER_TAX');
     else if (/\b(personal tax|individual tax|tax residency|tax resident|183[- ]day|personal relief)\b/i.test(q)) addDomainIfMissing('IRAS_INDIVIDUAL_TAX');
+    else if (singaporeTaxOutcomeContext || explicitSingaporeIncomeTaxOutcome) addDomainIfMissing(corporateTaxContext ? 'IRAS_CORPORATE_TAX' : 'IRAS_INDIVIDUAL_TAX');
     else if (/\b(property tax|annual value)\b/i.test(q)) addDomainIfMissing('IRAS_PROPERTY_TAX');
     else if (/\b(stamp duty|bsd|absd|ssd)\b/i.test(q)) addDomainIfMissing('IRAS_STAMP_DUTY');
     else if (/\b(crs|fatca)\b/i.test(q)) addDomainIfMissing('IRAS_CRS_FATCA');
@@ -262,7 +306,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     primaryDomain = 'MIXED';
   } else if (hasAccounting) {
     primaryDomain = 'ACCOUNTING';
-  } else if (hasTax && (!hasGst || hasNonGstTaxTopic || /\b(corporate tax|income tax|withholding tax|tax deduct|deductib|capital allowance|sute|form c|eci)\b/i.test(q))) {
+  } else if (hasTax && (!hasGst || hasNonGstTaxTopic || explicitSingaporeIncomeTaxOutcome || /\b(corporate tax|income tax|withholding tax|tax deduct|deductib|capital allowance|sute|form c|eci)\b/i.test(q))) {
     primaryDomain = 'TAX';
   } else if (hasGst) {
     primaryDomain = 'GST';
