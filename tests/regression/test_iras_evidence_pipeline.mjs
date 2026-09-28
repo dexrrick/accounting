@@ -599,9 +599,47 @@ try {
     'The evidence panel does not label source-review instructions as the answer.');
   assert.equal(panelMarkup.split('Claiming foreign tax credit').length - 1, 1,
     'The FTC source title is shown once instead of repeated claim cards.');
-  assert.match(panelMarkup, /<details class="group/);
-  assert.doesNotMatch(panelMarkup, /<details[^>]* open/,
-    'Raw source passages are in collapsed evidence details.');
+  const visibleEvidenceSection = panelMarkup.match(/<section[^>]*aria-label="IRAS verified evidence presentation"[^>]*>([\s\S]*?)<\/section>/)?.[1] || '';
+  assert.ok(visibleEvidenceSection, 'The IRAS source groups are rendered in the evidence panel.');
+  assert.doesNotMatch(visibleEvidenceSection, /<details|Show evidence|Expand a section|expand to inspect/i,
+    'Admitted passages are immediately visible and no longer carry collapsed-evidence instructions.');
+  assert.ok(visibleEvidenceSection.includes(overseasQuote) && visibleEvidenceSection.includes(ftcQuote) && visibleEvidenceSection.includes(individualDtaQuote),
+    'Each admitted passage is visible exactly as provided by the presentation projection.');
+  assert.ok([secondmentUrl, ftcUrl, individualDtaUrl].every(url => visibleEvidenceSection.includes(url)),
+    'Each canonical source group keeps its official source link.');
+  assert.equal((visibleEvidenceSection.match(/Official source/g) || []).length, 3,
+    'Each canonical source group has one official-source link.');
+  assert.doesNotMatch(visibleEvidenceSection, /Verified source wording|Record(?:s)?:\s*LIVE_SECONDMENT_/,
+    'Internal record IDs and the misleading verified-wording label are hidden.');
+  assert.ok(secondmentPresentation.sourceGroups.every(group => group.passages.every(passage => passage.claimReferences.length > 0)),
+    'All claim references remain available in the presentation model.');
+  assert.ok(secondmentPresentation.sourceGroups.every(group => group.passages.some(passage => passage.text)),
+    'Grouped source passages are preserved independently of their UI labels.');
+
+  const syntheticTopicRecordId = 'LIVE_TOPIC_SECONDMENT_SUMMARY';
+  const reviewedSummaryPresentation = {
+    ...secondmentPresentation,
+    sourceGroups: [{
+      ...secondmentPresentation.sourceGroups[0],
+      passages: [{
+        ...secondmentPresentation.sourceGroups[0].passages[0],
+        supportKind: 'REVIEWED_EDITORIAL_SUMMARY',
+        claimReferences: secondmentPresentation.sourceGroups[0].passages[0].claimReferences.map(reference => ({
+          ...reference, recordId: syntheticTopicRecordId, supportKind: 'REVIEWED_EDITORIAL_SUMMARY'
+        }))
+      }]
+    }]
+  };
+  assert.ok(reviewedSummaryPresentation.sourceGroups[0].passages[0].claimReferences.some(reference =>
+    reference.recordId === syntheticTopicRecordId), 'The full LIVE_TOPIC record ID remains in the internal claim references.');
+  const reviewedSummaryMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: reviewedSummaryPresentation
+  }));
+  assert.match(reviewedSummaryMarkup, /Reviewed local summary \(non-verbatim\)/);
+  assert.ok(reviewedSummaryMarkup.includes(overseasQuote), 'The reviewed summary passage is rendered exactly as admitted.');
+  assert.doesNotMatch(reviewedSummaryMarkup, /Verified source wording|Record(?:s)?:\s*LIVE_SECONDMENT_|LIVE_TOPIC_/,
+    'Reviewed summaries retain an accurate label without exposing internal record IDs.');
 
   const sameTitleRecords = secondmentQuality.eligibleRecords.map(record => ({
     ...record,
@@ -615,6 +653,15 @@ try {
   secondmentQuestion, null, 'SFRS_I', 'PROVIDER');
   assert.equal(sameTitleResponse.scenarioState.irasEvidencePresentation.sourceGroups.length, 3,
     'Different canonical pages stay separate even when their display titles are identical.');
+  const sameTitleMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: sameTitleResponse.scenarioState.irasEvidencePresentation
+  }));
+  const sameTitleEvidenceSection = sameTitleMarkup.match(/<section[^>]*aria-label="IRAS verified evidence presentation"[^>]*>([\s\S]*?)<\/section>/)?.[1] || '';
+  assert.equal(sameTitleEvidenceSection.split('Shared page title').length - 1, 3,
+    'The evidence panel renders one heading for each canonical URL, even when their titles match.');
+  assert.ok([secondmentUrl, ftcUrl, individualDtaUrl].every(url => sameTitleEvidenceSection.includes(url)),
+    'Identically titled evidence groups retain their distinct official links in the panel.');
 
   const duplicatePassageResponse = renderIrasEvidenceResponse({ taxClaims: [
     { text: overseasQuote, quote: overseasQuote, recordId: secondmentRecords[0].id, kind: 'RULE' },

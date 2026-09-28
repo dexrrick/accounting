@@ -197,7 +197,6 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {currentIrasPresentation && (
         <section className="order-4 px-5 space-y-4" aria-label="IRAS verified evidence presentation">
-          <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{currentIrasPresentation.overview}</p>
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
               <Scale className="w-4 h-4 text-slate-400" />
@@ -214,29 +213,24 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     </a>
                   )}
                 </div>
-                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{group.summary}</p>
-                <details className="group rounded-lg border border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538]">
-                  <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-semibold text-ynab-blue dark:text-blue-400">
-                    Show evidence ({group.passages.length})
-                  </summary>
-                  <ol className="space-y-3 border-t border-slate-200 dark:border-[#2B374E] p-3">
-                    {group.passages.map((passage, index) => (
-                      <li key={`${group.key}-${index}`} className="min-w-0 space-y-1.5">
-                        <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-relaxed text-slate-800 dark:text-slate-200">{passage.text}</p>
-                        <p className="break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
-                          {passage.supportKind === 'REVIEWED_EDITORIAL_SUMMARY' ? 'Reviewed local summary (non-verbatim)' : 'Verified source wording'}
-                          {' · Record'}{passage.claimReferences.length === 1 ? '' : 's'}: {passage.claimReferences.map(reference => reference.recordId).join(', ')}
+                <div className="space-y-3">
+                  {group.passages.map((passage, index) => (
+                    <div key={`${group.key}-${index}`} className="min-w-0 border-l-2 border-slate-300 dark:border-slate-600 pl-3 py-1">
+                      <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-relaxed text-slate-800 dark:text-slate-200">{passage.text}</p>
+                      {passage.supportKind === 'REVIEWED_EDITORIAL_SUMMARY' && (
+                        <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
+                          Reviewed local summary (non-verbatim)
                         </p>
-                        {passage.claimReferences.some(reference => reference.validFrom || reference.validTo) && (
-                          <p className="break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
-                            Applicability: {passage.claimReferences.map(reference => `${reference.validFrom ? formatSingaporeDate(reference.validFrom) : 'unknown'} to ${reference.validTo ? formatSingaporeDate(reference.validTo) : 'open-ended'}`).join('; ')}
-                          </p>
-                        )}
-                        {!group.canonicalUrl && <p className="text-[10px] text-slate-500 dark:text-slate-400">No independently verified page URL is available for this passage.</p>}
-                      </li>
-                    ))}
-                  </ol>
-                </details>
+                      )}
+                      {passage.claimReferences.some(reference => reference.validFrom || reference.validTo) && (
+                        <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
+                          Applicability: {passage.claimReferences.map(reference => `${reference.validFrom ? formatSingaporeDate(reference.validFrom) : 'unknown'} to ${reference.validTo ? formatSingaporeDate(reference.validTo) : 'open-ended'}`).join('; ')}
+                        </p>
+                      )}
+                      {!group.canonicalUrl && <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">No independently verified page URL is available for this passage.</p>}
+                    </div>
+                  ))}
+                </div>
               </article>
             ))}
           </div>
