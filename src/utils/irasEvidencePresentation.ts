@@ -267,9 +267,10 @@ export function createIrasEvidencePresentation(input: IrasEvidencePresentationIn
       ruleUnits.set(key, existing);
     }
   }
+  const calculationLead = input.calculationLead?.replace(/\s*\[([^\]]+)\]\(<https:[^>]+>\)/g, ' ($1)');
   const lines = [`${domainLabel} — verified guidance`];
-  if (input.calculationLead) {
-    lines.push('', input.calculationLead.replace(/\s*\[([^\]]+)\]\(<https:[^>]+>\)/g, ' ($1)'));
+  if (calculationLead) {
+    lines.push('', calculationLead);
   }
   if (ruleUnits.size > 0) lines.push('', 'The admitted rules relevant to the question are:');
   for (const unit of ruleUnits.values()) {
@@ -302,8 +303,10 @@ export function createIrasEvidencePresentation(input: IrasEvidencePresentationIn
     domainLabel,
     status,
     chatAnswer: lines.join('\n'),
+    ...(calculationLead ? { calculationLead } : {}),
     overview,
     applicationStatus: safeChatCaveat(input, status),
+    factsToConfirm: allKnownFacts(input),
     sourceGroups
   };
 }

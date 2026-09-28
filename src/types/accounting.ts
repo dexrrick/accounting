@@ -101,8 +101,12 @@ export interface IrasEvidencePresentation {
   domainLabel: string;
   status: IrasEvidencePresentationStatus;
   chatAnswer: string;
+  /** Deterministic calculation lead retained for the compact chat preview. */
+  calculationLead?: string;
   overview: string;
   applicationStatus: string;
+  /** Material missing facts and existing prompts for the presentation-only status detail. */
+  factsToConfirm?: string[];
   sourceGroups: IrasPresentationSourceGroup[];
 }
 

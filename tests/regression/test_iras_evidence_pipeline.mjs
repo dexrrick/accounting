@@ -79,6 +79,8 @@ assert.ok(!bad.claimVerification.accepted.some(claim => /15%|17%|30 November|VCC
   'Source-only fallback cannot admit an unsupported provider proposition.');
 const good = postProcessAIResponse({taxClaims:[{text:rate.sourceText,quote:rate.sourceText,recordId:rate.id,kind:'RULE'}]},null,query,context);
 assert.match(good.messageText,/8%/);
+assert.match(createChatPreview(good.messageText, good.scenarioState), /Output GST:.*8%.*80/,
+  'The concise IRAS preview preserves its existing verified GST calculation lead.');
 assert.match(good.messageText,/Goods and Services Tax Act 1993/);
 assert.doesNotMatch(good.messageText,/Income Tax Act/);
 assert.doesNotMatch(good.messageText,/\]\(<https:/,
@@ -424,6 +426,7 @@ try {
     '• You are employed outside of Singapore on behalf of the Government of Singapore.'
   ].join('\n\n');
   const individualDtaQuote = 'Under the Avoidance of Double Taxation Agreements (DTAs), you may be protected from being taxed twice on the same income, depending on the provisions of the DTA.';
+  const foreignDtaBenefitsQuote = 'If you derive income from a foreign country/jurisdiction, you may be subject to tax there. However, you may claim DTA benefits that entitles a Singapore tax resident to enjoy a reduced tax rate or tax exemption in that jurisdiction.';
   const secondmentRecords = [
     {
       ...ir21LiveRecord,
@@ -564,24 +567,53 @@ try {
   assert.equal(secondmentPresentation.sourceGroups.length, 3, 'Passages are grouped by the three canonical official pages.');
   assert.deepEqual(secondmentPresentation.sourceGroups.map(group => group.canonicalUrl).sort(), [secondmentUrl, ftcUrl, individualDtaUrl].sort());
   const secondmentPreview = createChatPreview(verifiedSecondmentResponse.messageText, verifiedSecondmentResponse.scenarioState);
-  assert.match(secondmentPreview, /^IRAS Individual Income Tax — verified guidance/);
-  assert.ok(secondmentPreview.includes(overseasQuote) && secondmentPreview.includes('Your overseas employment is incidental to your Singapore employment.'),
-    'The useful chat answer retains complete overseas-employment rules and qualifications.');
+  assert.match(secondmentPreview, /Singapore employment is fully taxable \[1\]/);
+  assert.match(secondmentPreview, /A foreign tax credit requires Singapore tax residency for the relevant basis year, foreign tax paid or payable on the same income, and the income to be taxable in Singapore \[2\]/);
+  assert.match(secondmentPreview, /DTA (?:protection from double taxation depends on the applicable agreement's provisions|benefits for a reduced rate or exemption in that jurisdiction) \[3\]/);
+  assert.ok(secondmentPreview.includes('wholly outside Singapore') && secondmentPreview.includes('overseas travel incidental'),
+    'The concise chat answer preserves both supported overseas-employment outcomes.');
+  assert.ok(secondmentPreview.includes('Singapore tax residency for the relevant basis year') &&
+    secondmentPreview.includes('foreign tax paid or payable on the same income') &&
+    secondmentPreview.includes('income to be taxable in Singapore'),
+    'The concise FTC summary preserves every admitted condition.');
+  assert.equal(secondmentPreview.split(/(?<=[.!?])\s+/).length, 3,
+    'The supported secondment synthesis is three concise sentences rather than the full source digest.');
+  assert.ok(secondmentPreview.length < 800 && secondmentPreview.length < verifiedSecondmentResponse.messageText.length / 2,
+    'The visible answer is substantially shorter while the underlying complete response remains available.');
+  const allFtcConditions = [
+    'The individual must be a tax resident in Singapore for the relevant basis year',
+    'Tax has been paid or is payable on the same income in the foreign country',
+    'The income is taxable in Singapore'
+  ];
+  assert.ok(secondmentPresentation.chatAnswer.includes(overseasQuote) && secondmentPresentation.chatAnswer.includes(individualDtaQuote) &&
+    allFtcConditions.every(condition => secondmentPresentation.chatAnswer.toLowerCase().includes(condition.toLowerCase())),
+    'The full presentation digest retains the admitted overseas, FTC-condition and DTA wording.');
+  assert.ok(verifiedSecondmentResponse.messageText.includes(overseasQuote) &&
+    allFtcConditions.every(condition => verifiedSecondmentResponse.messageText.toLowerCase().includes(condition.toLowerCase())),
+    'The original complete verified response retains each FTC condition for consumers that need it.');
+  const productionStyleDtaPresentation = createIrasEvidencePresentation({
+    query: secondmentQuestion,
+    classification: secondmentClassification,
+    quality: secondmentQuality,
+    acceptedClaims: [
+      ...verifiedSecondmentResponse.claimVerification.accepted,
+      { text: foreignDtaBenefitsQuote, quote: foreignDtaBenefitsQuote, recordId: secondmentRecords[2].id,
+        canonicalUrl: individualDtaUrl, supportKind: 'EXACT_SOURCE_QUOTE' }
+    ],
+    missingFacts: secondmentContext.missingFacts,
+    applicationConclusions: [],
+    hasVerifiedCalculation: false,
+    hasApplicationUncertainty: true
+  });
+  const productionStyleDtaPreview = createChatPreview(verifiedSecondmentResponse.messageText, {
+    ...verifiedSecondmentResponse.scenarioState, irasEvidencePresentation: productionStyleDtaPresentation
+  });
+  assert.match(productionStyleDtaPreview, /may claim DTA benefits for a reduced rate or exemption in that jurisdiction \[3\]/,
+    'A production-style admitted DTA benefits sentence drives the concise conclusion.');
   assert.ok(secondmentPresentation.sourceGroups[0].passages.some(passage => passage.text === taxableOverseasIncomeQuote && passage.text.includes(incidentalQuote)),
     'The original example remains untouched inside the complete collapsed source passage.');
-  for (const condition of [
-    'Anyone claiming FTC must satisfy all of the following conditions:',
-    'The individual must be a tax resident in Singapore for the relevant basis year;',
-    'Tax has been paid or is payable on the same income in the foreign country; and',
-    'The income is taxable in Singapore.'
-  ]) assert.ok(secondmentPreview.includes(condition), `The complete FTC conditions remain in chat: ${condition}`);
-  assert.ok(secondmentPreview.includes(individualDtaQuote),
-    'The chat answer includes DTA guidance instead of stopping at an evidence heading.');
   assert.ok(['[1]', '[2]', '[3]'].every(reference => secondmentPreview.includes(reference)),
-    'Each displayed rule unit retains its source-group reference.');
-  assert.equal(secondmentPreview.split(ftcQuote).length - 1, 1,
-    'The complete FTC source statement is displayed once while the raw evidence remains available in source details.');
-  assert.ok(secondmentPreview.length > 350, 'The useful answer is not cut off before its FTC and DTA topics.');
+    'Each synthesized sentence retains its source-group reference.');
   assert.ok(secondmentPreview.length < verifiedSecondmentResponse.messageText.length,
     'The main chat uses a concise extractive synthesis while the complete source passages remain in evidence details.');
   assert.doesNotMatch(secondmentPreview, /Admitted source evidence and reviewed summaries|Information still needed to complete the question/);
@@ -593,6 +625,13 @@ try {
   }));
   assert.match(panelMarkup, /IRAS Individual Income Tax/);
   assert.match(panelMarkup, /Conditional — Facts Required/);
+  assert.equal(panelMarkup.split('Conditional — Facts Required').length - 1, 1,
+    'The conditional status appears only in the top badge, not as a duplicate lower status card.');
+  assert.match(panelMarkup, /Facts to confirm/);
+  assert.ok(panelMarkup.includes(secondmentPresentation.factsToConfirm?.[0] || 'foreign tax'),
+    'The lower panel detail is limited to specific facts to confirm.');
+  assert.doesNotMatch(panelMarkup, /APPLICATION STATUS|Application status:/i,
+    'The panel does not repeat a generic application-status label.');
   assert.doesNotMatch(panelMarkup, /Evidence Incomplete — Review Required/,
     'Conditional application facts do not get mislabeled as incomplete evidence.');
   assert.doesNotMatch(panelMarkup, /Answer \/ treatment/,
@@ -615,6 +654,15 @@ try {
     'All claim references remain available in the presentation model.');
   assert.ok(secondmentPresentation.sourceGroups.every(group => group.passages.some(passage => passage.text)),
     'Grouped source passages are preserved independently of their UI labels.');
+
+  const insufficientPanelMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: dtrQuestion,
+    irasEvidencePresentation: privateDtrResponse.scenarioState.irasEvidencePresentation
+  }));
+  assert.equal(insufficientPanelMarkup.split('Evidence Incomplete — Review Required').length - 1, 1,
+    'Insufficient evidence is labeled once in the top badge.');
+  assert.match(insufficientPanelMarkup, /Evidence gap/);
+  assert.doesNotMatch(insufficientPanelMarkup, /APPLICATION STATUS|Application status:/i);
 
   const syntheticTopicRecordId = 'LIVE_TOPIC_SECONDMENT_SUMMARY';
   const reviewedSummaryPresentation = {
@@ -688,6 +736,68 @@ try {
     'Main chat omits a complete Example block only when its exact same-scope passage is separately admitted.');
   assert.ok(duplicateExamplePresentation.sourceGroups[0].passages.some(passage => passage.text === incidentalQuote),
     'The separately admitted example remains untouched in grouped source details.');
+  const reviewedOnlyPreview = createChatPreview(duplicateExamplePresentation.chatAnswer, {
+    ...verifiedSecondmentResponse.scenarioState, irasEvidencePresentation: {
+      ...duplicateExamplePresentation,
+      sourceGroups: duplicateExamplePresentation.sourceGroups.map(group => ({
+        ...group,
+        passages: group.passages.map(passage => ({ ...passage, supportKind: 'REVIEWED_EDITORIAL_SUMMARY' }))
+      }))
+    }
+  });
+  assert.match(reviewedOnlyPreview, /facts not established here/);
+  assert.doesNotMatch(reviewedOnlyPreview, /fully taxable in Singapore/,
+    'Reviewed local summaries alone do not become a direct IRAS conclusion in the concise chat.');
+  const duplicateExampleMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: duplicateExamplePresentation
+  }));
+  assert.equal(duplicateExampleMarkup.split(incidentalQuote).length - 1, 1,
+    'A shorter exact quote contained in a longer same-source passage is hidden in the UI, while both claims remain internally available.');
+  assert.equal(duplicateExamplePresentation.sourceGroups[0].passages.length, 2);
+
+  const longExamplePassage = duplicateExamplePresentation.sourceGroups[0].passages.find(passage => passage.text === taxableOverseasIncomeQuote);
+  const shortExamplePassage = duplicateExamplePresentation.sourceGroups[0].passages.find(passage => passage.text === incidentalQuote);
+  const reviewedAndExactOverlap = {
+    ...duplicateExamplePresentation,
+    sourceGroups: [{
+      ...duplicateExamplePresentation.sourceGroups[0],
+      passages: [
+        {
+          ...longExamplePassage,
+          supportKind: 'REVIEWED_EDITORIAL_SUMMARY',
+          claimReferences: longExamplePassage.claimReferences.map(reference => ({ ...reference, supportKind: 'REVIEWED_EDITORIAL_SUMMARY' }))
+        },
+        shortExamplePassage
+      ]
+    }]
+  };
+  const reviewedAndExactMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: reviewedAndExactOverlap
+  }));
+  assert.equal(reviewedAndExactMarkup.split(incidentalQuote).length - 1, 2,
+    'A reviewed summary does not suppress overlapping exact source wording.');
+
+  const crossSourceOverlap = {
+    ...duplicateExamplePresentation,
+    sourceGroups: [
+      duplicateExamplePresentation.sourceGroups[0],
+      {
+        key: `url:${ftcUrl}`,
+        title: 'Other official source',
+        canonicalUrl: ftcUrl,
+        summary: '',
+        passages: [shortExamplePassage]
+      }
+    ]
+  };
+  const crossSourceOverlapMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: crossSourceOverlap
+  }));
+  assert.equal(crossSourceOverlapMarkup.split(incidentalQuote).length - 1, 2,
+    'Overlapping wording from a different canonical source remains separately visible.');
 
   const whitespaceVariant = overseasQuote.replace('you are contracted', 'you  are contracted');
   const caseVariant = overseasQuote.replace('If you are contracted', 'if you are contracted');
@@ -749,6 +859,8 @@ try {
   }));
   assert.match(historicalPanelMarkup, /Applicability: 01\/01\/2020 to 31\/12\/2020/);
   assert.match(historicalPanelMarkup, /Applicability: 01\/01\/2021 to 31\/12\/2021/);
+  assert.equal(historicalPanelMarkup.split(overseasQuote).length - 1, 2,
+    'Identical historical passages remain separately visible when their recorded scopes differ.');
   assert.match(historicalPanelMarkup, /overflow-wrap:anywhere/,
     'Evidence passages and record identifiers wrap within the mobile source details.');
   const coveredWithoutCalculation = {
@@ -760,6 +872,13 @@ try {
   };
   assert.equal(createIrasEvidencePresentation(coveredWithoutCalculation).status, 'VERIFIED',
     'Covered evidence with no facts or stated application uncertainty can be verified without a calculation.');
+  const verifiedPanelMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: createIrasEvidencePresentation(coveredWithoutCalculation)
+  }));
+  assert.match(verifiedPanelMarkup, /Verified Evidence/);
+  assert.doesNotMatch(verifiedPanelMarkup, /Facts to confirm|Evidence gap|APPLICATION STATUS|Application status:/i,
+    'Verified evidence has no redundant bottom status detail.');
   const qualityFactPresentation = createIrasEvidencePresentation({
     ...coveredWithoutCalculation,
     quality: { ...coveredWithoutCalculation.quality, missingFacts: ['Confirm the foreign tax payment status'] }
@@ -817,10 +936,10 @@ try {
     secondmentQuestion, null, 'SFRS_I', 'PROVIDER_NO_CLAIMS');
   const fallbackTexts = secondmentNoClaimFallback.claimVerification.accepted.map(claim => claim.text);
   const fallbackPreview = createChatPreview(secondmentNoClaimFallback.messageText, secondmentNoClaimFallback.scenarioState);
-  assert.ok(fallbackPreview.includes('Your overseas employment is incidental to your Singapore employment.') &&
-    fallbackPreview.includes('Anyone claiming FTC must satisfy all of the following conditions:') &&
-    fallbackPreview.includes(individualDtaQuote),
-    'Provider claim failures still produce a readable answer from verified fallback claims.');
+  assert.ok(fallbackPreview.includes('overseas travel incidental') &&
+    fallbackPreview.includes('A foreign tax credit requires Singapore tax residency') &&
+    /DTA (?:protection from double taxation depends|benefits for a reduced rate)/.test(fallbackPreview),
+    'Provider claim failures still produce a concise answer from verified fallback claims.');
   assert.ok(fallbackTexts.includes(ftcConditionsQuote) && fallbackTexts.includes(individualDtaQuote) &&
     fallbackTexts.includes(taxableOverseasIncomeQuote) && fallbackTexts.includes(overseasQuote),
     'No-claim fallback includes complete FTC, DTA, wholly-overseas and incidental-employment passages instead of spending its excerpt budget on earlier source pages.');

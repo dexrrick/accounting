@@ -1,4 +1,4 @@
-import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption, IrasEvidencePresentation } from '../types/accounting';
+import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption, IrasEvidencePresentation, IrasPresentationPassage, IrasPresentationSourceGroup } from '../types/accounting';
 import React from 'react';
 import { ShieldCheck, ExternalLink, Scale, FileText, Calendar, AlertTriangle, Building, Landmark, Info } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
@@ -25,6 +25,46 @@ interface ComplianceRationaleProps {
   queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
 }
 
+function irasStatusDetail(presentation: IrasEvidencePresentation | undefined): { title: string; text: string } | undefined {
+  if (!presentation) return undefined;
+  const factsToConfirm = presentation.factsToConfirm || [];
+  if (presentation.status === 'CONDITIONAL' && factsToConfirm.length > 0) {
+    return { title: 'Facts to confirm', text: factsToConfirm.join('; ') };
+  }
+  if (presentation.status === 'INSUFFICIENT') {
+    const reason = presentation.applicationStatus
+      .replace(/^Evidence Incomplete\s*[—-]\s*Review Required\.?\s*/i, '')
+      .trim();
+    return { title: 'Evidence gap', text: reason || 'The available verified sources do not cover every required topic.' };
+  }
+  return undefined;
+}
+
+function normalizedPassageText(text: string): string {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function passageScopeKey(passage: IrasPresentationPassage): string {
+  const sourceScopes = passage.claimReferences
+    .map(reference => [reference.provenance, reference.validFrom || '', reference.validTo || ''].join('|'))
+    .sort();
+  return [passage.supportKind, ...sourceScopes].join('\n');
+}
+
+function visiblePassages(group: IrasPresentationSourceGroup): IrasPresentationPassage[] {
+  if (!group.canonicalUrl) return group.passages;
+  return group.passages.filter(passage => {
+    const candidate = normalizedPassageText(passage.text);
+    if (!candidate) return true;
+    const scope = passageScopeKey(passage);
+    return !group.passages.some(other => {
+      if (other === passage || passageScopeKey(other) !== scope) return false;
+      const containingText = normalizedPassageText(other.text);
+      return containingText.length > candidate.length && containingText.includes(candidate);
+    });
+  });
+}
+
 export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   citations,
   advisories = [],
@@ -42,6 +82,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 }) => {
   const currentIrasPresentation = hasCurrentIrasEvidencePresentation(irasEvidencePresentation, rawQuery, primaryDomain, queryIntent)
     ? irasEvidencePresentation : undefined;
+  const irasDetail = irasStatusDetail(currentIrasPresentation);
   const evidenceIncomplete = currentIrasPresentation
     ? currentIrasPresentation.status === 'INSUFFICIENT'
     : citations.length === 0 || Boolean(uncertaintyDisclaimer);
@@ -214,7 +255,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                   )}
                 </div>
                 <div className="space-y-3">
-                  {group.passages.map((passage, index) => (
+                  {visiblePassages(group).map((passage, index) => (
                     <div key={`${group.key}-${index}`} className="min-w-0 border-l-2 border-slate-300 dark:border-slate-600 pl-3 py-1">
                       <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-relaxed text-slate-800 dark:text-slate-200">{passage.text}</p>
                       {passage.supportKind === 'REVIEWED_EDITORIAL_SUMMARY' && (
@@ -234,10 +275,12 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               </article>
             ))}
           </div>
-          <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30 p-4 space-y-1.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">Application status</h4>
-            <p className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">{currentIrasPresentation.applicationStatus}</p>
-          </div>
+          {irasDetail && (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30 p-4 space-y-1.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">{irasDetail.title}</h4>
+              <p className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">{irasDetail.text}</p>
+            </div>
+          )}
         </section>
       )}
 
