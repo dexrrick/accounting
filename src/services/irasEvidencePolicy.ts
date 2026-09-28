@@ -8,6 +8,7 @@ import { startsAttachedEvidenceQualification, verifyEvidenceClaims } from '../ve
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import { evaluateIrasApplications } from '../engine/irasApplicationEvaluator';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
+import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
@@ -584,6 +585,18 @@ export function renderIrasEvidenceResponse(
   } else if (quality.status !== 'INSUFFICIENT') {
     lines.push('No generated tax claim passed claim-to-evidence verification. A supported conclusion could not be established.');
   }
+  const irasEvidencePresentation = createIrasEvidencePresentation({
+    query,
+    classification: context.classification,
+    quality,
+    acceptedClaims: presentationClaims,
+    missingFacts: context.missingFacts,
+    existingFactPrompts: deterministicScenario?.missingFields?.map(field => field.prompt) || [],
+    applicationConclusions,
+    hasVerifiedCalculation: Boolean(calculation),
+    hasApplicationUncertainty: !calculation && applicationConclusions.length === 0,
+    calculationLead: calculation ? lines.find(line => line.startsWith('Output GST:')) : undefined
+  });
   const missingFacts = [...context.missingFacts];
   const scenarioState: AccountingScenarioState = {
     scenarioType: treatment || groups.length ? (deterministicScenario?.scenarioType || 'UNIVERSAL') : 'SINGAPORE_STATUTORY_ADVISORY',
@@ -596,6 +609,7 @@ export function renderIrasEvidenceResponse(
     missingFields: deterministicScenario?.missingFields || [],
     accountingTreatmentSummary: treatment || undefined,
     directGroups: groups, keyParameters: [],
+    irasEvidencePresentation,
     uncertaintyDisclaimer: missingFacts.length ? `Required facts remain unresolved: ${missingFacts.join('; ')}.` : calculation ? undefined : 'Only the admitted source evidence and reviewed summaries have been checked; their application is not independently established.',
     // Do not spread model/current/offline state: unsupported metadata is not evidence.
     statutoryAdvisory: presentationClaims.map(claim => ({

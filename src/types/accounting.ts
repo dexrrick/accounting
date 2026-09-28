@@ -69,6 +69,43 @@ export interface StatutoryAdvisoryInfo {
   isGstClaimable?: boolean;
 }
 
+export type IrasEvidencePresentationStatus = 'INSUFFICIENT' | 'CONDITIONAL' | 'VERIFIED';
+
+export interface IrasPresentationClaimReference {
+  recordId: string;
+  canonicalUrl?: string;
+  provenance: string;
+  supportKind: 'EXACT_SOURCE_QUOTE' | 'REVIEWED_EDITORIAL_SUMMARY';
+  validFrom?: string;
+  validTo?: string;
+}
+
+export interface IrasPresentationPassage {
+  text: string;
+  supportKind: 'EXACT_SOURCE_QUOTE' | 'REVIEWED_EDITORIAL_SUMMARY';
+  claimReferences: IrasPresentationClaimReference[];
+}
+
+export interface IrasPresentationSourceGroup {
+  /** Canonical URL identity, or record/provenance/scope identity when no link is verified. */
+  key: string;
+  title: string;
+  canonicalUrl?: string;
+  summary: string;
+  passages: IrasPresentationPassage[];
+}
+
+export interface IrasEvidencePresentation {
+  /** Exact raw question that produced this projection; prevents stale follow-up reuse. */
+  query: string;
+  domainLabel: string;
+  status: IrasEvidencePresentationStatus;
+  chatAnswer: string;
+  overview: string;
+  applicationStatus: string;
+  sourceGroups: IrasPresentationSourceGroup[];
+}
+
 export interface JournalLine {
   id: string;
   accountCode: string;
@@ -222,6 +259,8 @@ export interface AccountingScenarioState {
   queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
   primaryDomain?: QueryDomain;
   statutoryAdvisory?: StatutoryAdvisoryInfo[];
+  /** Presentation-only view of already verified IRAS evidence; evidence records remain separate. */
+  irasEvidencePresentation?: IrasEvidencePresentation;
   officialAnswerLinks?: import('../utils/chatPresentation').OfficialAnswerLink[];
   shareTransferAnalysis?: ShareTransferAnalysis;
 

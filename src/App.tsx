@@ -16,6 +16,7 @@ import { loadProviderSettings, saveProviderSettings, type ProviderSettings } fro
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { getSingaporeTimestamp } from './utils/dateUtils';
 import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPresentation';
+import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { assessConversationRelation } from './services/conversationBoundary';
@@ -224,6 +225,7 @@ export const App: React.FC = () => {
             {scenario && (
               showJournal ||
               (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
+              hasCurrentIrasEvidencePresentation(scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) ||
               Boolean(scenario.accountingTreatmentSummary) ||
               Boolean(scenario.singaporeTaxTreatmentSummary) ||
               Boolean(scenario.regulatoryMandatesSummary)
@@ -293,6 +295,9 @@ export const App: React.FC = () => {
                     regulatoryMandatesSummary={scenario.regulatoryMandatesSummary}
                     effectiveDateOrTiming={scenario.effectiveDateOrTiming}
                     uncertaintyDisclaimer={scenario.uncertaintyDisclaimer}
+                    irasEvidencePresentation={scenario.irasEvidencePresentation}
+                    rawQuery={scenario.rawQuery}
+                    queryIntent={scenario.queryIntent}
                   />
                 )}
               </div>

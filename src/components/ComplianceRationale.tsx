@@ -1,9 +1,11 @@
-import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption } from '../types/accounting';
+import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption, IrasEvidencePresentation } from '../types/accounting';
 import React from 'react';
 import { ShieldCheck, ExternalLink, Scale, FileText, Calendar, AlertTriangle, Building, Landmark, Info } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
+import { formatSingaporeDate } from '../utils/dateUtils';
 import type { OfficialAnswerLink } from '../utils/chatPresentation';
+import { hasCurrentIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
 
 interface ComplianceRationaleProps {
   citations: StandardCitation[];
@@ -18,6 +20,9 @@ interface ComplianceRationaleProps {
   regulatoryMandatesSummary?: string;
   effectiveDateOrTiming?: string;
   uncertaintyDisclaimer?: string;
+  irasEvidencePresentation?: IrasEvidencePresentation;
+  rawQuery?: string;
+  queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
 }
 
 export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
@@ -30,9 +35,16 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   singaporeTaxTreatmentSummary,
   regulatoryMandatesSummary,
   effectiveDateOrTiming,
-  uncertaintyDisclaimer
+  uncertaintyDisclaimer,
+  irasEvidencePresentation,
+  rawQuery,
+  queryIntent
 }) => {
-  const evidenceIncomplete = citations.length === 0 || Boolean(uncertaintyDisclaimer);
+  const currentIrasPresentation = hasCurrentIrasEvidencePresentation(irasEvidencePresentation, rawQuery, primaryDomain, queryIntent)
+    ? irasEvidencePresentation : undefined;
+  const evidenceIncomplete = currentIrasPresentation
+    ? currentIrasPresentation.status === 'INSUFFICIENT'
+    : citations.length === 0 || Boolean(uncertaintyDisclaimer);
   const hasProjection = effectiveDateOrTiming?.toLowerCase().includes('projection') || false;
   const showTaxTreatment = Boolean(singaporeTaxTreatmentSummary);
   const directivesLabel = primaryDomain === 'ACCOUNTING_SFRS'
@@ -54,7 +66,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               </h3>
               {primaryDomain && (
                 <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2B374E] font-medium">
-                  {primaryDomain}
+                  {currentIrasPresentation?.domainLabel || primaryDomain}
                 </span>
               )}
             </div>
@@ -74,9 +86,19 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {/* Decision-status legend: users should never infer certainty from presentation alone. */}
       <div className="order-2 px-5 -mb-2 flex flex-wrap gap-2">
-        {!evidenceIncomplete && (
+        {!currentIrasPresentation && !evidenceIncomplete && (
           <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
             ✓ Evidence Grounded
+          </span>
+        )}
+        {currentIrasPresentation?.status === 'VERIFIED' && (
+          <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800">
+            ✓ Verified Evidence
+          </span>
+        )}
+        {currentIrasPresentation?.status === 'CONDITIONAL' && (
+          <span className="text-[10px] px-2.5 py-1 rounded-md font-semibold border bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+            ⚠ Conditional — Facts Required
           </span>
         )}
         {assumptions.length > 0 && (
@@ -173,8 +195,60 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
         </div>
       )}
 
+      {currentIrasPresentation && (
+        <section className="order-4 px-5 space-y-4" aria-label="IRAS verified evidence presentation">
+          <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{currentIrasPresentation.overview}</p>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
+              <Scale className="w-4 h-4 text-slate-400" />
+              <span>Supporting Official Guidance</span>
+            </div>
+            {currentIrasPresentation.sourceGroups.map(group => (
+              <article key={group.key} className="rounded-xl border border-slate-200 dark:border-[#2B374E] bg-slate-50/70 dark:bg-[#151D2C] p-3.5 space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h5 className="text-xs font-semibold text-slate-900 dark:text-white">{group.title}</h5>
+                  {group.canonicalUrl && (
+                    <a href={group.canonicalUrl} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] text-ynab-blue dark:text-blue-400 hover:underline">
+                      Official source <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+                <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">{group.summary}</p>
+                <details className="group rounded-lg border border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538]">
+                  <summary className="cursor-pointer list-none px-3 py-2 text-[10px] font-semibold text-ynab-blue dark:text-blue-400">
+                    Show evidence ({group.passages.length})
+                  </summary>
+                  <ol className="space-y-3 border-t border-slate-200 dark:border-[#2B374E] p-3">
+                    {group.passages.map((passage, index) => (
+                      <li key={`${group.key}-${index}`} className="min-w-0 space-y-1.5">
+                        <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-relaxed text-slate-800 dark:text-slate-200">{passage.text}</p>
+                        <p className="break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
+                          {passage.supportKind === 'REVIEWED_EDITORIAL_SUMMARY' ? 'Reviewed local summary (non-verbatim)' : 'Verified source wording'}
+                          {' · Record'}{passage.claimReferences.length === 1 ? '' : 's'}: {passage.claimReferences.map(reference => reference.recordId).join(', ')}
+                        </p>
+                        {passage.claimReferences.some(reference => reference.validFrom || reference.validTo) && (
+                          <p className="break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
+                            Applicability: {passage.claimReferences.map(reference => `${reference.validFrom ? formatSingaporeDate(reference.validFrom) : 'unknown'} to ${reference.validTo ? formatSingaporeDate(reference.validTo) : 'open-ended'}`).join('; ')}
+                          </p>
+                        )}
+                        {!group.canonicalUrl && <p className="text-[10px] text-slate-500 dark:text-slate-400">No independently verified page URL is available for this passage.</p>}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              </article>
+            ))}
+          </div>
+          <div className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30 p-4 space-y-1.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">Application status</h4>
+            <p className="text-[11px] leading-relaxed text-amber-900 dark:text-amber-200">{currentIrasPresentation.applicationStatus}</p>
+          </div>
+        </section>
+      )}
+
       {/* Advisory Breakdown Cards (if available) */}
-      {advisories && advisories.length > 0 && (
+      {!currentIrasPresentation && advisories && advisories.length > 0 && (
         <div className="order-4 px-5 space-y-3">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
             <Scale className="w-4 h-4 text-slate-400" />

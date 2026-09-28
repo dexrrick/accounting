@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { readFile } from 'node:fs/promises';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
@@ -9,6 +11,9 @@ import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifi
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistry.ts';
+import { createChatPreview } from '../../src/utils/chatPresentation.ts';
+import { createIrasEvidencePresentation, getIrasDomainDisplayLabel } from '../../src/utils/irasEvidencePresentation.ts';
+import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
 
 const fixture = JSON.parse(await readFile(new URL('../evaluation/singapore/iras-answer-e2e.json', import.meta.url), 'utf8'));
 const datedCase = fixture.cases.find(item => item.id === 'gst-historical-standard-rated-supply-2023');
@@ -23,6 +28,8 @@ assert.ok(!/[.!?]$/.test(rate.sourceText.trim()), 'Reviewed historical rate text
 const localRateFallback = renderIrasEvidenceResponse({}, context, query, null, 'SFRS_I', 'LOCAL');
 assert.ok(localRateFallback.claimVerification.accepted.some(claim => claim.recordId === rate.id && claim.text === rate.sourceText),
   'The live-page prose filter must not suppress an exact reviewed local rate source.');
+assert.equal(localRateFallback.scenarioState.irasEvidencePresentation.status, 'VERIFIED',
+  'A source-backed verified calculation is not downgraded merely because it has a statutory caveat.');
 const dated2024Case = fixture.cases.find(item => item.id === 'gst-historical-standard-rated-supply-2024');
 const rate2024 = UNIFIED_SOURCE_REGISTRY.GST_RATE_9_PERCENT;
 const classification2024 = classifyQuestion(dated2024Case.question);
@@ -349,6 +356,7 @@ try {
   };
   const privateDtrResponse = renderIrasEvidenceResponse({ taxClaims: [{ text: dtrQuote, quote: dtrQuote, recordId: dtrRecord.id, kind: 'RULE' }] },
     privateDtrContext, dtrQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(privateDtrResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT');
   assert.ok(!privateDtrResponse.messageText.includes(dtrQuote), 'Rejected Government-only relief is not presented as a private-employer rule.');
 
   const governmentDtrQuestion = 'What double taxation relief is available to a Singapore tax resident employed overseas on behalf of the Government of Singapore whose income is taxed there?';
@@ -549,6 +557,193 @@ try {
   assert.ok(verifiedSecondmentResponse.messageText.includes(ftcUrl) && verifiedSecondmentResponse.messageText.includes(individualDtaUrl));
   assert.notEqual(secondmentRecords[1].canonicalSourceUrl, secondmentRecords[2].canonicalSourceUrl,
     'The FTC and DTA concepts are supported by separate fetched official pages.');
+  const secondmentPresentation = verifiedSecondmentResponse.scenarioState.irasEvidencePresentation;
+  assert.ok(secondmentPresentation, 'Verified IRAS policy output carries its presentation-only projection.');
+  assert.equal(secondmentPresentation.domainLabel, 'IRAS Individual Income Tax');
+  assert.equal(secondmentPresentation.status, 'CONDITIONAL', 'Covered rules with unresolved application facts are conditional, not incomplete.');
+  assert.equal(secondmentPresentation.sourceGroups.length, 3, 'Passages are grouped by the three canonical official pages.');
+  assert.deepEqual(secondmentPresentation.sourceGroups.map(group => group.canonicalUrl).sort(), [secondmentUrl, ftcUrl, individualDtaUrl].sort());
+  const secondmentPreview = createChatPreview(verifiedSecondmentResponse.messageText, verifiedSecondmentResponse.scenarioState);
+  assert.match(secondmentPreview, /^IRAS Individual Income Tax — verified guidance/);
+  assert.ok(secondmentPreview.includes(overseasQuote) && secondmentPreview.includes('Your overseas employment is incidental to your Singapore employment.'),
+    'The useful chat answer retains complete overseas-employment rules and qualifications.');
+  assert.ok(secondmentPresentation.sourceGroups[0].passages.some(passage => passage.text === taxableOverseasIncomeQuote && passage.text.includes(incidentalQuote)),
+    'The original example remains untouched inside the complete collapsed source passage.');
+  for (const condition of [
+    'Anyone claiming FTC must satisfy all of the following conditions:',
+    'The individual must be a tax resident in Singapore for the relevant basis year;',
+    'Tax has been paid or is payable on the same income in the foreign country; and',
+    'The income is taxable in Singapore.'
+  ]) assert.ok(secondmentPreview.includes(condition), `The complete FTC conditions remain in chat: ${condition}`);
+  assert.ok(secondmentPreview.includes(individualDtaQuote),
+    'The chat answer includes DTA guidance instead of stopping at an evidence heading.');
+  assert.ok(['[1]', '[2]', '[3]'].every(reference => secondmentPreview.includes(reference)),
+    'Each displayed rule unit retains its source-group reference.');
+  assert.equal(secondmentPreview.split(ftcQuote).length - 1, 1,
+    'The complete FTC source statement is displayed once while the raw evidence remains available in source details.');
+  assert.ok(secondmentPreview.length > 350, 'The useful answer is not cut off before its FTC and DTA topics.');
+  assert.ok(secondmentPreview.length < verifiedSecondmentResponse.messageText.length,
+    'The main chat uses a concise extractive synthesis while the complete source passages remain in evidence details.');
+  assert.doesNotMatch(secondmentPreview, /Admitted source evidence and reviewed summaries|Information still needed to complete the question/);
+  const panelMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: verifiedSecondmentResponse.scenarioState.statutoryAdvisory, standard: 'SFRS_I',
+    primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: secondmentPresentation,
+    uncertaintyDisclaimer: verifiedSecondmentResponse.scenarioState.uncertaintyDisclaimer
+  }));
+  assert.match(panelMarkup, /IRAS Individual Income Tax/);
+  assert.match(panelMarkup, /Conditional — Facts Required/);
+  assert.doesNotMatch(panelMarkup, /Evidence Incomplete — Review Required/,
+    'Conditional application facts do not get mislabeled as incomplete evidence.');
+  assert.doesNotMatch(panelMarkup, /Answer \/ treatment/,
+    'The evidence panel does not label source-review instructions as the answer.');
+  assert.equal(panelMarkup.split('Claiming foreign tax credit').length - 1, 1,
+    'The FTC source title is shown once instead of repeated claim cards.');
+  assert.match(panelMarkup, /<details class="group/);
+  assert.doesNotMatch(panelMarkup, /<details[^>]* open/,
+    'Raw source passages are in collapsed evidence details.');
+
+  const sameTitleRecords = secondmentQuality.eligibleRecords.map(record => ({
+    ...record,
+    documentTitle: 'IRAS | Shared page title'
+  }));
+  const sameTitleResponse = renderIrasEvidenceResponse({ taxClaims: [
+    { text: overseasQuote, quote: overseasQuote, recordId: secondmentRecords[0].id, kind: 'RULE' },
+    { text: ftcQuote, quote: ftcQuote, recordId: secondmentRecords[1].id, kind: 'RULE' },
+    { text: individualDtaQuote, quote: individualDtaQuote, recordId: secondmentRecords[2].id, kind: 'RULE' }
+  ] }, { ...secondmentContext, evidenceQuality: { ...secondmentQuality, eligibleRecords: sameTitleRecords } },
+  secondmentQuestion, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(sameTitleResponse.scenarioState.irasEvidencePresentation.sourceGroups.length, 3,
+    'Different canonical pages stay separate even when their display titles are identical.');
+
+  const duplicatePassageResponse = renderIrasEvidenceResponse({ taxClaims: [
+    { text: overseasQuote, quote: overseasQuote, recordId: secondmentRecords[0].id, kind: 'RULE' },
+    { text: overseasQuote, quote: overseasQuote, recordId: secondmentRecords[0].id, kind: 'RULE' },
+    { text: ftcQuote, quote: ftcQuote, recordId: secondmentRecords[1].id, kind: 'RULE' },
+    { text: individualDtaQuote, quote: individualDtaQuote, recordId: secondmentRecords[2].id, kind: 'RULE' }
+  ] }, secondmentContext, secondmentQuestion, null, 'SFRS_I', 'PROVIDER');
+  const duplicateWorkGroup = duplicatePassageResponse.scenarioState.irasEvidencePresentation.sourceGroups.find(group => group.canonicalUrl === secondmentUrl);
+  assert.equal(duplicateWorkGroup.passages.filter(passage => passage.text === overseasQuote).length, 1,
+    'Exact repeated qualified claims are deduplicated only in the presentation.');
+  assert.ok(duplicatePassageResponse.claimVerification.accepted.filter(claim => claim.text === overseasQuote).length > 1,
+    'Presentation deduplication does not merge or remove claim-verification records.');
+
+  const duplicateExamplePresentation = createIrasEvidencePresentation({
+    query: secondmentQuestion,
+    classification: secondmentClassification,
+    quality: secondmentQuality,
+    acceptedClaims: [taxableOverseasIncomeQuote, incidentalQuote].map(text => ({
+      text, quote: text, recordId: secondmentRecords[0].id, canonicalUrl: secondmentUrl, supportKind: 'EXACT_SOURCE_QUOTE'
+    })),
+    missingFacts: [], applicationConclusions: [], hasVerifiedCalculation: false, hasApplicationUncertainty: true
+  });
+  assert.ok(!duplicateExamplePresentation.chatAnswer.includes(incidentalQuote),
+    'Main chat omits a complete Example block only when its exact same-scope passage is separately admitted.');
+  assert.ok(duplicateExamplePresentation.sourceGroups[0].passages.some(passage => passage.text === incidentalQuote),
+    'The separately admitted example remains untouched in grouped source details.');
+
+  const whitespaceVariant = overseasQuote.replace('you are contracted', 'you  are contracted');
+  const caseVariant = overseasQuote.replace('If you are contracted', 'if you are contracted');
+  const exactDedupPresentation = createIrasEvidencePresentation({
+    query: secondmentQuestion,
+    classification: secondmentClassification,
+    quality: secondmentQuality,
+    acceptedClaims: [overseasQuote, whitespaceVariant, caseVariant].map(text => ({
+      text, quote: text, recordId: secondmentRecords[0].id, canonicalUrl: secondmentUrl, supportKind: 'EXACT_SOURCE_QUOTE'
+    })),
+    missingFacts: [], applicationConclusions: [], hasVerifiedCalculation: false, hasApplicationUncertainty: true
+  });
+  const exactDedupGroup = exactDedupPresentation.sourceGroups[0];
+  assert.deepEqual(exactDedupGroup.passages.map(passage => passage.text), [overseasQuote, whitespaceVariant, caseVariant],
+    'Raw admitted passage text preserves distinct case and whitespace exactly.');
+  assert.equal(exactDedupPresentation.chatAnswer.split('If you are contracted').length - 1, 1,
+    'Main chat may normalize whitespace when deduplicating complete passages.');
+  assert.ok(exactDedupPresentation.chatAnswer.includes('if you are contracted'),
+    'Main chat deduplication remains case-sensitive.');
+
+  const noUrlRecord = { ...secondmentQuality.eligibleRecords[0], urlVerificationStatus: 'CANDIDATE' };
+  const noUrlPresentation = createIrasEvidencePresentation({
+    query: secondmentQuestion,
+    classification: secondmentClassification,
+    quality: { ...secondmentQuality, eligibleRecords: [noUrlRecord] },
+    acceptedClaims: [{ text: overseasQuote, quote: overseasQuote, recordId: noUrlRecord.id, supportKind: 'EXACT_SOURCE_QUOTE' }],
+    missingFacts: [], applicationConclusions: [], hasVerifiedCalculation: false, hasApplicationUncertainty: true
+  });
+  assert.equal(noUrlPresentation.sourceGroups[0].canonicalUrl, undefined);
+  assert.ok(noUrlPresentation.sourceGroups[0].key.startsWith('record:'));
+  assert.equal(noUrlPresentation.sourceGroups[0].passages[0].claimReferences[0].recordId, noUrlRecord.id);
+  assert.equal(noUrlPresentation.sourceGroups[0].passages[0].claimReferences[0].canonicalUrl, undefined,
+    'A URL without verified provenance is neither invented nor linked.');
+
+  const historicalRecords = [
+    { ...secondmentRecords[0], id: 'SECONDMENT_HISTORICAL_2020', validFrom: '2020-01-01', validTo: '2020-12-31' },
+    { ...secondmentRecords[0], id: 'SECONDMENT_HISTORICAL_2021', validFrom: '2021-01-01', validTo: '2021-12-31' }
+  ];
+  const historicalPresentation = createIrasEvidencePresentation({
+    query: secondmentQuestion,
+    classification: secondmentClassification,
+    quality: { ...secondmentQuality, eligibleRecords: historicalRecords },
+    acceptedClaims: historicalRecords.map(record => ({
+      text: overseasQuote, quote: overseasQuote, recordId: record.id, canonicalUrl: secondmentUrl,
+      supportKind: 'EXACT_SOURCE_QUOTE'
+    })),
+    missingFacts: [], applicationConclusions: [], hasVerifiedCalculation: false, hasApplicationUncertainty: true
+  });
+  assert.equal(historicalPresentation.sourceGroups.length, 1,
+    'Historical versions of one canonical page stay in one source group.');
+  assert.equal(historicalPresentation.sourceGroups[0].passages.length, 2,
+    'Identical wording is not deduplicated across different recorded validity scopes.');
+  assert.deepEqual(historicalPresentation.sourceGroups[0].passages.map(passage => [
+    passage.claimReferences[0].validFrom, passage.claimReferences[0].validTo
+  ]), [['2020-01-01', '2020-12-31'], ['2021-01-01', '2021-12-31']]);
+  const historicalPanelMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], advisories: [], standard: 'SFRS_I', primaryDomain: 'IRAS_TAX', rawQuery: secondmentQuestion,
+    irasEvidencePresentation: historicalPresentation
+  }));
+  assert.match(historicalPanelMarkup, /Applicability: 01\/01\/2020 to 31\/12\/2020/);
+  assert.match(historicalPanelMarkup, /Applicability: 01\/01\/2021 to 31\/12\/2021/);
+  assert.match(historicalPanelMarkup, /overflow-wrap:anywhere/,
+    'Evidence passages and record identifiers wrap within the mobile source details.');
+  const coveredWithoutCalculation = {
+    query: secondmentQuestion,
+    classification: secondmentClassification,
+    quality: { ...secondmentQuality, missingFacts: [] },
+    acceptedClaims: verifiedSecondmentResponse.claimVerification.accepted,
+    missingFacts: [], applicationConclusions: [], hasVerifiedCalculation: false, hasApplicationUncertainty: false
+  };
+  assert.equal(createIrasEvidencePresentation(coveredWithoutCalculation).status, 'VERIFIED',
+    'Covered evidence with no facts or stated application uncertainty can be verified without a calculation.');
+  const qualityFactPresentation = createIrasEvidencePresentation({
+    ...coveredWithoutCalculation,
+    quality: { ...coveredWithoutCalculation.quality, missingFacts: ['Confirm the foreign tax payment status'] }
+  });
+  assert.equal(qualityFactPresentation.status, 'CONDITIONAL');
+  assert.match(qualityFactPresentation.applicationStatus, /Confirm the foreign tax payment status/,
+    'Evidence quality missing facts are included in both status and its caveat.');
+  const promptFactPresentation = createIrasEvidencePresentation({
+    ...coveredWithoutCalculation,
+    existingFactPrompts: ['Confirm the relevant Year of Assessment']
+  });
+  assert.equal(promptFactPresentation.status, 'CONDITIONAL');
+  assert.match(promptFactPresentation.applicationStatus, /Confirm the relevant Year of Assessment/,
+    'Existing material fact prompts prevent a verified status and appear in its caveat.');
+
+  const structuralScenario = {
+    ...verifiedSecondmentResponse.scenarioState,
+    rawQuery: 'A new non-IRAS question', primaryDomain: 'GENERAL', isComplete: true,
+    directGroups: [], projectedGroups: [], accountingTreatmentSummary: 'Current non-IRAS treatment'
+  };
+  assert.equal(createChatPreview('Admitted source evidence and reviewed summaries:\n\nInformation still needed to complete the question:\n\nOfficial sources\n\nA readable supported answer.', structuralScenario),
+    'A readable supported answer.', 'Structural section labels do not become stand-alone previews on other response paths.');
+  assert.equal(createChatPreview('Current payroll answer.', structuralScenario), 'Current payroll answer.',
+    'A previous IRAS projection cannot override a new non-IRAS response.');
+
+  const genericQuestion = 'What is the income tax treatment?';
+  assert.equal(getIrasDomainDisplayLabel(classifyQuestion(genericQuestion), genericQuestion), 'IRAS Income Tax');
+  assert.equal(getIrasDomainDisplayLabel(classifyQuestion('What are the corporate tax filing requirements for a company?'), 'What are the corporate tax filing requirements for a company?'), 'IRAS Corporate Income Tax');
+  assert.equal(getIrasDomainDisplayLabel(classifyQuestion('When must an employer file IR21 for a departing employee?'), 'When must an employer file IR21 for a departing employee?'), 'IRAS Employer Tax');
+  assert.equal(getIrasDomainDisplayLabel(classifyQuestion('Can an individual claim personal income tax relief?'), 'Can an individual claim personal income tax relief?'), 'IRAS Individual Income Tax');
+  assert.equal(getIrasDomainDisplayLabel(classifyQuestion('How do I charge GST on this supply?'), 'How do I charge GST on this supply?'), 'IRAS GST');
   assert.ok(secondmentQuality.coveredTopicIds.includes('iras-individual-foreign-tax-credit'),
     'The FTC record is admitted only when its source text contains the credit and core eligibility conditions.');
   const partialSecondmentResponse = renderIrasEvidenceResponse({ taxClaims: [
@@ -574,6 +769,11 @@ try {
   const secondmentNoClaimFallback = renderIrasEvidenceResponse({ taxClaims: [] }, secondmentContext,
     secondmentQuestion, null, 'SFRS_I', 'PROVIDER_NO_CLAIMS');
   const fallbackTexts = secondmentNoClaimFallback.claimVerification.accepted.map(claim => claim.text);
+  const fallbackPreview = createChatPreview(secondmentNoClaimFallback.messageText, secondmentNoClaimFallback.scenarioState);
+  assert.ok(fallbackPreview.includes('Your overseas employment is incidental to your Singapore employment.') &&
+    fallbackPreview.includes('Anyone claiming FTC must satisfy all of the following conditions:') &&
+    fallbackPreview.includes(individualDtaQuote),
+    'Provider claim failures still produce a readable answer from verified fallback claims.');
   assert.ok(fallbackTexts.includes(ftcConditionsQuote) && fallbackTexts.includes(individualDtaQuote) &&
     fallbackTexts.includes(taxableOverseasIncomeQuote) && fallbackTexts.includes(overseasQuote),
     'No-claim fallback includes complete FTC, DTA, wholly-overseas and incidental-employment passages instead of spending its excerpt budget on earlier source pages.');

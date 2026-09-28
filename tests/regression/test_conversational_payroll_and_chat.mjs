@@ -60,6 +60,17 @@ assert.equal(correctedDate.scenarioState.committedDirectGroups?.length, 1);
 const preview = createChatPreview(followUp.messageText, state);
 assert.match(preview, /prorated gross salary/i);
 assert.doesNotMatch(preview, /Official Statutory & Regulatory Verification Sources|Employment Act 1968 — Section 22/);
+const incompleteWithBalancedJournal = {
+  ...state,
+  rawQuery: 'An incomplete non-IRAS accounting scenario',
+  primaryDomain: 'GENERAL',
+  queryIntent: 'TRANSACTION',
+  isComplete: false,
+  missingFields: [{ fieldKey: 'period', fieldName: 'Period', prompt: 'Which reporting period applies?', whyNeeded: 'Needed to determine the period.' }]
+};
+assert.match(createChatPreview('A balanced journal already exists.', incompleteWithBalancedJournal),
+  /^I need one detail to continue: Which reporting period applies\?$/,
+  'An incomplete non-IRAS answer asks for its missing fact before showing an existing balanced journal preview.');
 const links = extractOfficialAnswerLinks(followUp.messageText);
 assert.deepEqual(links, [], 'Payroll and CPF calculations remain local while their unverified statutory URLs stay unlinked.');
 const citationsMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {

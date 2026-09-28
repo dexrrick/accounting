@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { AccountingScenarioState } from '../types/accounting';
 import { RefreshCw, Layers, Sparkles, ChevronDown } from 'lucide-react';
+import { getIrasDomainDisplayLabel, hasCurrentIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
 
 interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
@@ -38,9 +39,12 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
       case 'ACCOUNTING_SFRS':
         return { label: 'SFRS(I) Standards', color: 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800' };
       case 'IRAS_TAX':
-        return { label: 'IRAS Corporate Tax', color: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800' };
+        return { label: hasCurrentIrasEvidencePresentation(scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent)
+          ? scenario.irasEvidencePresentation.domainLabel
+          : getIrasDomainDisplayLabel(undefined, scenario.rawQuery, scenario.primaryDomain),
+        color: 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800' };
       case 'IRAS_GST':
-        return { label: 'IRAS GST (9%)', color: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-800' };
+        return { label: 'IRAS GST', color: 'bg-teal-50 text-teal-800 border-teal-200 dark:bg-teal-950/70 dark:text-teal-300 dark:border-teal-800' };
       case 'ACRA_CORP':
         return { label: 'ACRA Companies Act', color: 'bg-purple-50 text-purple-800 border-purple-200 dark:bg-purple-950/70 dark:text-purple-300 dark:border-purple-800' };
       case 'MOM_EMPLOYMENT':
