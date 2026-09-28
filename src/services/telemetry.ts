@@ -24,7 +24,64 @@ export interface RequestTelemetry {
   post_processing_ms: number;
   verification_ms?: number;
   assembly_ms?: number;
+  official_source_fallback?: {
+    path: string;
+    attempts: Array<{ topicId: string; status: string; stage?: string; queryVariant?: string }>;
+    stages: Array<{ stage: string; status: string }>;
+  };
   timestamp: string;
+}
+
+interface SourceMapFallbackTraceLike {
+  path?: unknown;
+  attempts?: Array<{ topicId?: unknown; fetchStatus?: unknown; discoveryStage?: unknown; searchQueryVariant?: unknown }>;
+  discoveryFetchAttempts?: Array<{ topicId?: unknown; fetchStatus?: unknown }>;
+  stages?: Array<{ stage?: unknown; status?: unknown }>;
+}
+
+const FALLBACK_STATUSES = new Set([
+  'SUCCESS', 'CORS_ERROR', 'NETWORK_ERROR', 'TIMEOUT', 'TOPIC_MISMATCH', 'NO_CANDIDATES',
+  'HTTP_ERROR', 'INVALID_CONTENT', 'INVALID_URL', 'UNAUTHORIZED_DOMAIN_ACCESS', 'REDIRECT_REJECTED',
+  'HASH_MISMATCH', 'PROVENANCE_MISMATCH', 'HISTORICAL_SCOPE_UNVERIFIED'
+]);
+const FALLBACK_STAGES = new Set(['MAPPED_SOURCE', 'SITEMAP_DISCOVERY', 'OFFICIAL_DOMAIN_SEARCH']);
+const QUERY_VARIANTS = new Set(['FULL_QUERY', 'TOPIC_HINT_1', 'TOPIC_HINT_2', 'TOPIC_HINT_3']);
+
+/** Explicit safe projection: no URLs, response text, errors, headers, or environment data. */
+export function projectOfficialSourceFallbackDiagnostics(trace: SourceMapFallbackTraceLike) {
+  const path = typeof trace.path === 'string' && /^[A-Z_]{1,40}$/.test(trace.path) ? trace.path : 'UNKNOWN';
+  const candidateAttempts = (Array.isArray(trace.attempts) ? trace.attempts : []).slice(0, 50).flatMap(attempt => {
+    const topicId = typeof attempt.topicId === 'string' ? attempt.topicId.slice(0, 100) : '';
+    const rawStatus = typeof attempt.fetchStatus === 'string' ? attempt.fetchStatus : '';
+    const status = FALLBACK_STATUSES.has(rawStatus) ? rawStatus : 'OTHER';
+    if (!topicId) return [];
+    const stage = typeof attempt.discoveryStage === 'string' && FALLBACK_STAGES.has(attempt.discoveryStage)
+      ? attempt.discoveryStage
+      : undefined;
+    const queryVariant = typeof attempt.searchQueryVariant === 'string' && QUERY_VARIANTS.has(attempt.searchQueryVariant)
+      ? attempt.searchQueryVariant
+      : undefined;
+    return [{ topicId, status, ...(stage ? { stage } : {}), ...(queryVariant ? { queryVariant } : {}) }];
+  });
+  const discoveryFetchAttempts = (Array.isArray(trace.discoveryFetchAttempts) ? trace.discoveryFetchAttempts : [])
+    .slice(0, 40)
+    .flatMap(attempt => {
+      const topicId = typeof attempt.topicId === 'string' ? attempt.topicId.slice(0, 100) : '';
+      const rawStatus = typeof attempt.fetchStatus === 'string' ? attempt.fetchStatus : '';
+      if (!topicId) return [];
+      return [{
+        topicId,
+        status: FALLBACK_STATUSES.has(rawStatus) ? rawStatus : 'OTHER',
+        stage: 'SITEMAP_DISCOVERY'
+      }];
+    });
+  const attempts = [...candidateAttempts, ...discoveryFetchAttempts].slice(0, 60);
+  const stages = (Array.isArray(trace.stages) ? trace.stages : []).slice(0, 10).flatMap(stage => {
+    const name = typeof stage.stage === 'string' && /^[A-Z_]{1,40}$/.test(stage.stage) ? stage.stage : '';
+    const status = typeof stage.status === 'string' && /^[A-Z_]{1,40}$/.test(stage.status) ? stage.status : '';
+    return name && status ? [{ stage: name, status }] : [];
+  });
+  return { path, attempts, stages };
 }
 
 export class RequestProfiler {
@@ -47,6 +104,8 @@ export class RequestProfiler {
   private verificationMs = 0;
   private assemblyMs = 0;
   private queryMode = 'UNKNOWN';
+  private officialSourceFallback?: RequestTelemetry['official_source_fallback'];
+  private finalizedTelemetry?: RequestTelemetry;
 
   constructor(query: string, modelName?: string) {
     this.query = query;
@@ -62,6 +121,13 @@ export class RequestProfiler {
 
   public setQueryMode(mode: string): void {
     this.queryMode = mode;
+  }
+
+  public recordOfficialSourceFallback(trace: SourceMapFallbackTraceLike): void {
+    this.officialSourceFallback = projectOfficialSourceFallbackDiagnostics(trace);
+    if (this.finalizedTelemetry) {
+      this.finalizedTelemetry.official_source_fallback = this.officialSourceFallback;
+    }
   }
 
   public recordClassification(ms: number): void {
@@ -154,8 +220,10 @@ export class RequestProfiler {
       post_processing_ms: Math.round(this.postProcessingMs * 100) / 100,
       verification_ms: Math.round(this.verificationMs * 100) / 100,
       assembly_ms: Math.round(this.assemblyMs * 100) / 100,
+      ...(this.officialSourceFallback ? { official_source_fallback: this.officialSourceFallback } : {}),
       timestamp: new Date().toISOString()
     };
+    this.finalizedTelemetry = telemetry;
 
     if (typeof window !== 'undefined') {
       const w = window as any;

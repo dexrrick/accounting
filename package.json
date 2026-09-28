@@ -8,14 +8,15 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/build_cloudflare_worker.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "preflight": "node scripts/preflight.mjs",
     "test": "npm run preflight && node scripts/run_all_tests.mjs --tier=full",
     "test:all": "npm run preflight && node scripts/run_all_tests.mjs --tier=full",
     "test:smoke": "npm run preflight && node scripts/run_all_tests.mjs --tier=smoke",
-    "test:integration": "tsx tests/integration/test_real_source_integration.mjs"
+    "test:integration": "tsx tests/integration/test_real_source_integration.mjs",
+    "test:official-source-live": "tsx scripts/validate_official_source_browser_path.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.41.0",

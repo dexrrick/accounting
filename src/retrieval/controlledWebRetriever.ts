@@ -1,6 +1,7 @@
 import { defaultExternalSourceValidator, ExternalSourceValidator, type TopicContentExpectation } from './externalSourceValidator';
 import { defaultSourceCache, SourceCache, type CachedSource } from './sourceCache';
 import { computeSha256 } from '../standards/sourceVersioning';
+import { getDefaultOfficialSourceFetch, type OfficialSourceResponse } from './officialSourceTransport';
 
 export type ControlledFetchStatus =
   | 'SUCCESS'
@@ -105,8 +106,9 @@ export class ControlledWebRetriever {
       useCache = true,
       ttlMs,
       expectedHash,
-      customFetch = (globalThis.fetch ? globalThis.fetch.bind(globalThis) : undefined)
+      customFetch
     } = options;
+    const fetchTransport = customFetch ?? getDefaultOfficialSourceFetch();
 
     const retrievedAt = new Date().toISOString();
 
@@ -163,7 +165,7 @@ export class ControlledWebRetriever {
     }
 
     // 3. Prepare Fetch with AbortController for strict timeout
-    if (!customFetch) {
+    if (!fetchTransport) {
       return {
         status: 'NETWORK_ERROR',
         error: 'No fetch transport available in current runtime environment',
@@ -186,7 +188,7 @@ export class ControlledWebRetriever {
         Object.assign(headers, condHeaders);
       }
 
-      const response = await customFetch(url, {
+      const response = await fetchTransport(url, {
         method: 'GET',
         signal: controller.signal,
         redirect: 'manual', // Intercept redirects for security validation
@@ -194,6 +196,20 @@ export class ControlledWebRetriever {
       });
 
       clearTimeout(timeoutId);
+
+      const transportFailure = (response as OfficialSourceResponse).__officialSourceTransportFailure;
+      if (transportFailure) {
+        return {
+          status: transportFailure,
+          error: transportFailure === 'TIMEOUT'
+            ? `Official source transport timed out after ${timeoutMs}ms`
+            : transportFailure === 'REDIRECT_REJECTED'
+              ? 'Official source redirect was rejected by the server transport'
+              : 'Official source server transport failed',
+          retrievedAt,
+          sourceUrl: url
+        };
+      }
 
       // Handle 304 Not Modified
       if (response.status === 304 && cached && cached.rawContent) {

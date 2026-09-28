@@ -518,6 +518,7 @@ export async function processAccountingQuery(
   const governedOfflineResponse = async (scenario: AccountingScenarioState): Promise<GeminiResponse> => {
     if (!irasEvidenceRequired) return renderStructuredOfflineResponse(scenario, standard);
     const context = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey);
+    if (context.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(context.sourceMapFallbackTrace);
     diagnostics?.onGroundedContext?.(context);
     return renderIrasEvidenceResponse(
       { treatment: scenario.accountingTreatmentSummary }, context, userInput, scenario, standard,
@@ -673,6 +674,7 @@ export async function processAccountingQuery(
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
   const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey);
+  if (groundedContext.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(groundedContext.sourceMapFallbackTrace);
   diagnostics?.onGroundedContext?.(groundedContext);
   profiler.recordStage('grounding', Date.now() - tGround0);
 
@@ -1433,6 +1435,7 @@ export async function callGeminiAPI(
   const imageEvidenceSummary = formatImageEvidenceForAccounting(imageEvidence);
   const tGround0 = Date.now();
   const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario, undefined, apiKey);
+  if (context.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(context.sourceMapFallbackTrace);
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
   profiler.recordStage('grounding', Date.now() - tGround0);
 

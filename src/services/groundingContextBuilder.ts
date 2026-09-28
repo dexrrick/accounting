@@ -79,6 +79,8 @@ export interface SourceMapFallbackTrace {
   finalVerifiedUrls: string[];
   candidateOnly: boolean;
   attempts: SourceMapFallbackAttempt[];
+  /** Status-only sitemap/robots fetch metadata; never a fetched evidence candidate. */
+  discoveryFetchAttempts?: Array<{ topicId: string; fetchStatus: string }>;
   stages?: Array<{ stage: 'LOCAL_VERIFIED' | 'MAPPED_SOURCE' | 'SITEMAP_DISCOVERY' | 'OFFICIAL_DOMAIN_SEARCH' | 'INSUFFICIENT'; status: 'SUFFICIENT' | 'ATTEMPTED' | 'EXHAUSTED' | 'SKIPPED'; reason: string }>;
 }
 
@@ -145,6 +147,8 @@ export interface OfficialSourceDiscoveryRequest {
 export interface OfficialSourceDiscoveryAdapter {
   discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
   getCandidateTitle?(url: string): string | undefined;
+  /** Status-only transport trace for sitemap/robots fetches; never evidence. */
+  getLastFetchTrace?(): Array<{ topicId: string; status: string }>;
 }
 
 /** Search returns candidate URLs only; every candidate is independently fetched and validated. */
@@ -956,6 +960,7 @@ export async function resolveMappedOfficialSourceFallback(
 
   const records: AuthoritativeSourceRecord[] = [];
   const attempts: SourceMapFallbackAttempt[] = [];
+  const discoveryFetchAttempts: NonNullable<SourceMapFallbackTrace['discoveryFetchAttempts']> = [];
   const sourceMapIds = new Set<string>();
   const finalVerifiedUrls = new Set<string>();
   const discoveredEvidenceIds = new Set<string>();
@@ -1091,7 +1096,8 @@ export async function resolveMappedOfficialSourceFallback(
     selectedRecordIds: records.map(record => record.id),
     finalVerifiedUrls: [...finalVerifiedUrls],
     candidateOnly: records.length > 0,
-    attempts
+    attempts,
+    discoveryFetchAttempts
   });
   const hasAdequateCoverage = (topics: readonly MappedCoverageTopic[]): boolean => {
     if (topics.length === 0) return false;
@@ -1192,6 +1198,12 @@ export async function resolveMappedOfficialSourceFallback(
       // First-party discovery is optional and fail-closed. Mapped retrieval
       // results already collected remain available if the sitemap is down.
       discoveredCandidates = [];
+    }
+    for (const fetchAttempt of discoveryAdapter.getLastFetchTrace?.() || []) {
+      discoveryFetchAttempts.push({
+        topicId: fetchAttempt.topicId || topic.id,
+        fetchStatus: fetchAttempt.status
+      });
     }
     const candidateQueue: Array<LinkedOfficialCandidate & { depth: number }> = discoveredCandidates.slice(0, 4)
       .map(url => ({ url, title: discoveryAdapter.getCandidateTitle?.(url), discoverySourceUrl: '', depth: 0 }));
@@ -1344,6 +1356,7 @@ export async function resolveMappedOfficialSourceFallback(
       finalVerifiedUrls: [...finalVerifiedUrls],
       candidateOnly: records.length > 0,
       attempts,
+      discoveryFetchAttempts,
       stages
     }
   };

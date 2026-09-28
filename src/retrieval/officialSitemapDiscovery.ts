@@ -260,6 +260,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
   private readonly fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response> };
   private readonly sitemapCache = new Map<string, SitemapCacheEntry>();
   private readonly candidateIndex = new Map<string, OfficialSourceIndexEntry>();
+  private lastFetchTrace: Array<{ topicId: string; status: string }> = [];
 
   constructor(
     retriever: ControlledWebRetriever,
@@ -278,14 +279,24 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     return this.candidateIndex.get(url)?.pageTitle;
   }
 
+  /** Bounded status-only trace for sitemap fetches; it is diagnostic metadata, never evidence. */
+  public getLastFetchTrace(): Array<{ topicId: string; status: string }> {
+    return this.lastFetchTrace.slice(0, 40).map(item => ({ ...item }));
+  }
+
+  private recordFetchStatus(request: OfficialSourceDiscoveryRequest, status: string): void {
+    this.lastFetchTrace.push({ topicId: request.topicId.slice(0, 100), status: status.slice(0, 60) });
+    if (this.lastFetchTrace.length > 40) this.lastFetchTrace.shift();
+  }
+
   private async readConfiguredSitemapEntries(
     content: string,
     sitemapUrl: string,
     approvedHosts: readonly string[],
-    authority?: string
+    request: OfficialSourceDiscoveryRequest
   ): Promise<OfficialSourceIndexEntry[]> {
     if (!/<(?:urlset|sitemapindex)\b/i.test(content)) {
-      return readHtmlSitemapEntries(content, sitemapUrl, approvedHosts, authority);
+      return readHtmlSitemapEntries(content, sitemapUrl, approvedHosts, request.authority);
     }
 
     const allowedHosts = new Set(approvedHosts.map(host => host.toLowerCase()));
@@ -299,6 +310,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
           ...this.fetchOptions,
           useCache: false
         });
+        this.recordFetchStatus(request, childSitemap.status);
         let finalHost = '';
         try { finalHost = new URL(childSitemap.finalUrl || '').hostname.toLowerCase(); } catch { /* reject below */ }
         if (childSitemap.status === 'SUCCESS' && childSitemap.content && allowedHosts.has(finalHost)) {
@@ -314,7 +326,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       try {
         const url = new URL(location.url);
         if (url.protocol !== 'https:' || !allowedHosts.has(url.hostname.toLowerCase())) continue;
-        const entry = makeIndexEntry(url.toString(), location.sourceUrl, undefined, [], authority);
+        const entry = makeIndexEntry(url.toString(), location.sourceUrl, undefined, [], request.authority);
         if (entry) entries.set(entry.canonicalUrl, entry);
       } catch { /* Ignore malformed or unapproved XML locations. */ }
     }
@@ -339,12 +351,13 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
         ...this.fetchOptions,
         useCache: false
       });
+      this.recordFetchStatus(request, sitemap.status);
       const finalHost = (() => {
         try { return new URL(sitemap.finalUrl || '').hostname.toLowerCase(); } catch { return ''; }
       })();
       if (sitemap.status === 'SUCCESS' && sitemap.content && allowedHosts.has(finalHost)) {
         const entries = await this.readConfiguredSitemapEntries(
-          sitemap.content, sitemap.finalUrl || sitemapUrl, [...allowedHosts], request.authority
+          sitemap.content, sitemap.finalUrl || sitemapUrl, [...allowedHosts], request
         );
         if (entries.length > 0) {
           this.sitemapCache.set(cacheKey, { expiresAt: Date.now() + SITEMAP_CACHE_MS, entries });
@@ -359,6 +372,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       ...this.fetchOptions,
       useCache: false
     });
+    this.recordFetchStatus(request, robots.status);
     if (robots.status !== 'SUCCESS' || !robots.content) {
       this.sitemapCache.set(cacheKey, { expiresAt: Date.now() + UNAVAILABLE_CACHE_MS, entries: [] });
       return [];
@@ -387,6 +401,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
         ...this.fetchOptions,
         useCache: false
       });
+      this.recordFetchStatus(request, sitemap.status);
       if (sitemap.status !== 'SUCCESS' || !sitemap.content) continue;
       let locations = readLocValues(sitemap.content);
       if (/<sitemapindex\b/i.test(sitemap.content)) {
@@ -403,6 +418,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
             ...this.fetchOptions,
             useCache: false
           });
+          this.recordFetchStatus(request, childSitemap.status);
           if (childSitemap.status === 'SUCCESS' && childSitemap.content) {
             locations.push(...readLocValues(childSitemap.content));
           }
@@ -430,6 +446,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
   }
 
   public async discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]> {
+    this.lastFetchTrace = [];
     const approvedHosts = [...new Set(request.approvedHosts.map(host => host.toLowerCase()))];
     const distinctHosts = approvedHosts.filter(host => {
       if (!host.startsWith('www.') && approvedHosts.includes(`www.${host}`)) return false;
@@ -600,11 +617,19 @@ export class OfficialDomainSearchAdapter {
       try {
         let html = '';
         let searchHost = endpoint.hostname;
-        const directResponse = await customFetch(endpoint.toString(), {
-          method: 'GET', signal: controller.signal, redirect: 'manual', headers: { Accept: 'text/html' }
-        });
-        if (directResponse.ok && directResponse.status === 200) html = await directResponse.text();
+        let directResponse: Response | undefined;
+        try {
+          directResponse = await customFetch(endpoint.toString(), {
+            method: 'GET', signal: controller.signal, redirect: 'manual', headers: { Accept: 'text/html' }
+          });
+          if (directResponse.ok && directResponse.status === 200) html = await directResponse.text();
+        } catch (error) {
+          if (controller.signal.aborted) throw error;
+          // A browser CORS/network failure for the direct HTML search should
+          // still allow the existing fixed Jina rendering fallback below.
+        }
         if (!html) {
+          if (controller.signal.aborted) throw new Error('Official-domain search request timed out.');
           // Some environments rate-limit direct HTML search. A text-rendering
           // proxy may expose the same restricted query as Markdown; its output
           // remains untrusted metadata and only approved-host URLs are retained.
@@ -621,7 +646,7 @@ export class OfficialDomainSearchAdapter {
           }
           searchHost = proxy.hostname;
           html = await proxyResponse.text();
-        } else if (directResponse.url) {
+        } else if (directResponse?.url) {
           try {
             const finalUrl = new URL(directResponse.url);
             if (finalUrl.origin !== endpoint.origin) continue;
