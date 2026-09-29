@@ -35,10 +35,12 @@ import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidenceP
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import {
   buildSemanticDiscoveryQuery,
+  getRequestedQuestionConcepts,
   getSemanticIrasDiscoveryContext,
   interpretSemanticQuestion,
   isShortSemanticFollowUp,
   reconcileQuestionUnderstanding,
+  type RequestedQuestionConcept,
   type SemanticQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
 
@@ -117,6 +119,38 @@ interface MappedCoverageTopic extends SingaporeCoverageTopic {
   canonicalSourceId?: string;
   canonicalSourceUrl?: string;
   pageTitle?: string;
+  /** Query-scoped evidence concepts; labels are discovery aids, never evidence. */
+  requestedConcepts?: RequestedQuestionConcept[];
+  mappedTopicIds?: string[];
+}
+
+const EMPLOYEE_BENEFIT_TAX_CONCEPT_IDS = new Set([
+  'employee_benefit_tax_treatment',
+  'employee_reimbursement_tax_treatment',
+  'employee_housing_benefit_tax_treatment',
+  'employee_personal_insurance_tax_treatment'
+]);
+
+function isEmployeeBenefitTaxTopic(topic: MappedCoverageTopic): boolean {
+  return topic.id === 'iras-employment-benefits' ||
+    topic.requestedConcepts?.some(concept => EMPLOYEE_BENEFIT_TAX_CONCEPT_IDS.has(concept.id)) === true;
+}
+
+function pageDiscussesEmployeeBenefitTaxTreatment(pageText: string): boolean {
+  const normalized = normalizeEvidenceText(pageText);
+  const subjects = /\b(?:benefits? in kind|perquisites?|employment benefits?|benefits?|reimbursements?|allowances?|insurance|housing|accommodation)\b/g;
+  for (const match of normalized.matchAll(subjects)) {
+    const index = match.index || 0;
+    // IRAS tables often put the subject, employee context, and tax outcome in
+    // adjacent cells or lines instead of a single sentence. Keep the window
+    // tight enough that unrelated page sections cannot be combined.
+    const start = Math.max(0, index - 180);
+    const end = Math.min(normalized.length, index + match[0].length + 180);
+    const context = normalized.slice(start, end);
+    if (/\b(?:employee|employees|employment|staff|workers?)\b/.test(context) &&
+        /\b(?:taxable|non taxable|not taxable|subject to tax|tax treatment|taxability|taxed)\b/.test(context)) return true;
+  }
+  return false;
 }
 
 interface SourceMapPointer extends AuthoritativeSourceRecord {
@@ -201,15 +235,19 @@ function provisionalIrasDiscoveryTopic(query: string, semanticContext?: ReturnTy
   const corporateTaxTarget = /\b(?:corporate income tax|corporate tax|company tax|business income tax)\b/.test(lower) ||
     companyIncomeTarget &&
     /\b(?:tax|taxable|exempt|chargeable|remit|relief)\b/.test(lower);
+  const employmentBenefits = /\b(?:employee|employees|staff|workers?)\b/.test(lower) &&
+    /\b(?:benefits?\s+in\s+kind|perquisites?|employment\s+benefits?|housing\s+allowances?|personal\s+insurance|reimbursements?)\b/.test(lower) &&
+    /\b(?:tax(?:able|ability|ed)?|income\s+tax|perquisites?|benefits?\s+in\s+kind)\b/.test(lower);
   const individual = semanticContext
     ? semanticContext.population === 'INDIVIDUAL' || semanticContext.population === 'EMPLOYEE'
     : !corporateTaxTarget &&
-    /\b(?:individual|employee|employment income|salary|wages|tax resident|secondment|overseas posting)\b/.test(lower);
-  const domainId = semanticContext?.domainId || (individual ? 'IRAS_INDIVIDUAL_TAX'
+    (employmentBenefits || /\b(?:individual|employee|employment income|salary|wages|tax resident|secondment|overseas posting)\b/.test(lower));
+  const domainId = employmentBenefits ? 'IRAS_EMPLOYER_TAX' : semanticContext?.domainId || (individual ? 'IRAS_INDIVIDUAL_TAX'
     : corporateTaxTarget ? 'IRAS_CORPORATE_TAX'
       : /\b(?:gst|goods and services tax)\b/.test(lower) ? 'IRAS_GST'
         : /\b(?:company|companies|corporate|business|withholding tax|wht)\b/.test(lower) ? 'IRAS_CORPORATE_TAX' : 'IRAS_OTHER');
-  const populationContext = semanticContext
+  const populationContext = employmentBenefits ? 'employee'
+    : semanticContext
     ? semanticContext.population.toLowerCase().replace(/_/g, ' ')
     : individual ? 'individual employee' : domainId === 'IRAS_CORPORATE_TAX' ? 'company' : 'taxpayer';
   const semanticTerms = semanticContext ? [semanticContext.primarySubject, ...semanticContext.concepts].join(' ') : '';
@@ -239,6 +277,35 @@ function provisionalIrasDiscoveryTopic(query: string, semanticContext?: ReturnTy
     shortDescription: `Transient ${populationContext} routing context derived from the complete user query and validated intent labels; not reviewed knowledge.`
   } as unknown as MappedCoverageTopic;
   return topic;
+}
+
+function provisionalIrasConceptTopics(
+  query: string,
+  semanticContext?: ReturnType<typeof getSemanticIrasDiscoveryContext>,
+  requestedConcepts = semanticContext?.requestedConcepts || getRequestedQuestionConcepts(query)
+): MappedCoverageTopic[] {
+  const concepts = requestedConcepts;
+  if (concepts.length === 0) return [provisionalIrasDiscoveryTopic(query, semanticContext)];
+  const base = provisionalIrasDiscoveryTopic(query, semanticContext);
+  return concepts.map(concept => {
+    const slug = concept.id.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+    const mappedTopics = getCoverageTopicsByIds(concept.topicIds);
+    const preferredDomain = mappedTopics.find(topic => topic.domainId.startsWith('IRAS_'))?.domainId || base.domainId;
+    const terms = [...new Set([concept.label, ...concept.terms].filter(Boolean))];
+    return {
+      ...base,
+      id: `iras-authority-query-concept-${slug}`,
+      title: String(preferredDomain) === 'IRAS_OTHER' && String(base.domainId) === 'IRAS_OTHER'
+        ? `${base.title} — ${concept.label}`
+        : `IRAS ${preferredDomain.replaceAll('_', ' ').replace(/^IRAS /, '')} — ${concept.label}`,
+      domainId: preferredDomain,
+      legacyDomains: ['IRAS_TAX'],
+      keywords: terms,
+      aliases: terms,
+      requestedConcepts: [concept],
+      mappedTopicIds: concept.topicIds
+    } as MappedCoverageTopic;
+  });
 }
 
 /**
@@ -505,6 +572,9 @@ function irasCandidateDomainMismatch(query: string, topic: MappedCoverageTopic, 
   const pageIsPropertyTaxRoute = /^\/taxes\/property-tax(?:\/|$)/.test(path);
   const pageIsStampDutyRoute = /^\/taxes\/stamp-duty(?:\/|$)/.test(path);
   const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
+  if (isEmployeeBenefitTaxTopic(topic) && pageIsCorporateIncomeTaxRoute) {
+    return 'The fetched IRAS page is in the corporate income-tax domain, which does not match employee benefit tax treatment.';
+  }
   if (pageIsGstRoute && topic.domainId !== 'IRAS_GST') {
     return 'The fetched IRAS page is in the GST domain, which does not match the unresolved tax topic.';
   }
@@ -561,6 +631,7 @@ function candidateMatchesIrasPopulation(query: string, topic: MappedCoverageTopi
   if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && pageIsWithholdingTaxRoute && !queryExplicitlyConcernsWithholdingTax) return false;
   if (topic.domainId === 'IRAS_INDIVIDUAL_TAX' && pageTitleIsCorporate && !pageHasIndividualContext && !pageHasEmployeeContext) return false;
   if (topic.domainId === 'IRAS_EMPLOYER_TAX' && queryIsEmployer && !pageHasEmployerContext) return false;
+  if (isEmployeeBenefitTaxTopic(topic) && !pageDiscussesEmployeeBenefitTaxTreatment(pageText)) return false;
   if (topic.domainId === 'IRAS_CORPORATE_TAX' && queryIsNonResidentRecipient && !pageHasRecipientContext) return false;
   return true;
 }
@@ -867,10 +938,9 @@ function makeLiveCandidateEvidence(
     officialSourceUrl: url,
     domain: (pointer?.domain || topic.legacyDomains[0] || 'ACCOUNTING_SFRS') as QueryDomain,
     jurisdiction: 'Singapore',
-    // A discovered record is associated only with the topic whose page and
-    // excerpt were actually validated. Registry keywords are routing hints,
-    // not cross-topic evidence associations.
-    tags: [topic.id],
+    // A discovered record is associated only with topics whose own page and
+    // excerpt checks passed. Registry keywords remain routing metadata.
+    tags: [topic.id, ...(topic.mappedTopicIds || [])],
     sourceStatus: 'NEEDS_REVIEW' as const,
     sourceType: 'OFFICIAL_GUIDANCE' as const,
     evidenceTier: 'OFFICIAL_GUIDANCE' as const,
@@ -949,13 +1019,14 @@ export async function resolveMappedOfficialSourceFallback(
   const authorityFallbackPermitted = options.authorityLevelDiscovery === true &&
     !options.localEvidenceAdequate && !historicalIrasScopeRequested;
   const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'HISTORICAL');
-  const semanticIrasContext = getSemanticIrasDiscoveryContext(options.questionUnderstanding);
-  const authorityDiscoveryTopic = authorityFallbackPermitted ? provisionalIrasDiscoveryTopic(query, semanticIrasContext) : undefined;
-  const provisionalTopics: MappedCoverageTopic[] = authorityDiscoveryTopic && topicsRequiringFallback.length === 0
-    ? [authorityDiscoveryTopic]
+  const semanticIrasContext = getSemanticIrasDiscoveryContext(options.questionUnderstanding, query);
+  const requestedConcepts = semanticIrasContext?.requestedConcepts || getRequestedQuestionConcepts(query, options.questionUnderstanding);
+  const authorityDiscoveryTopics = authorityFallbackPermitted
+    ? provisionalIrasConceptTopics(query, semanticIrasContext, requestedConcepts)
     : [];
+  const provisionalTopics: MappedCoverageTopic[] = [...authorityDiscoveryTopics];
 
-  if (topicsRequiringFallback.length === 0 && !authorityDiscoveryTopic) {
+  if (topicsRequiringFallback.length === 0 && authorityDiscoveryTopics.length === 0) {
     const historicalBlocked = options.authorityLevelDiscovery === true && !options.localEvidenceAdequate && historicalIrasScopeRequested;
     if (historicalBlocked) {
       return { records: [], provisionalTopics: [], trace: {
@@ -986,6 +1057,7 @@ export async function resolveMappedOfficialSourceFallback(
   const finalVerifiedUrls = new Set<string>();
   const discoveredEvidenceIds = new Set<string>();
   const sitemapLinkedCandidates = new Map<string, LinkedOfficialCandidate[]>();
+  const successfulPageFetches = new Map<string, Awaited<ReturnType<ControlledWebRetriever['fetchOfficialSource']>>>();
   let mappedStageAttempted = false;
   let sitemapStageAttempted = false;
   let onlineSearchStageAttempted = false;
@@ -1009,13 +1081,17 @@ export async function resolveMappedOfficialSourceFallback(
         discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
       topicTerms: getTopicContentTerms(topic),
-      minimumTopicTermMatches: topic.id.startsWith('iras-authority-query-') ||
+      minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
         topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1
     };
-    const result = await webRetriever.fetchOfficialSource(candidateUrl, {
-      ...options.fetchOptions,
-      topicValidation: expectation
-    });
+    let result = successfulPageFetches.get(candidateUrl);
+    if (!result) {
+      result = await webRetriever.fetchOfficialSource(candidateUrl, {
+        ...options.fetchOptions,
+        topicValidation: expectation
+      });
+      if (result.status === 'SUCCESS' && result.content) successfulPageFetches.set(candidateUrl, result);
+    }
     const attempt: SourceMapFallbackAttempt = {
       topicId: topic.id,
       sourceMapId: pointer?.id,
@@ -1082,8 +1158,27 @@ export async function resolveMappedOfficialSourceFallback(
         : 'Fetched page does not contain all required topic-specific section phrases for grounding.';
       return undefined;
     }
-    const record = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);
-    records.push(record);
+    const fetchedRecord = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);
+    const isTransientTopic = (topicId: string): boolean => topicId.startsWith('iras-authority-query-');
+    const canMergeAcrossTopicScopes = isTransientTopic(topic.id);
+    const existingRecordIndex = records.findIndex(existing => existing.canonicalSourceUrl === fetchedRecord.canonicalSourceUrl &&
+      existing.contentHash === fetchedRecord.contentHash &&
+      // A single official page may serve multiple transient concept queries;
+      // keep their validated associations on one record. Registered topics
+      // retain separate records so each topic's source-map trace stays intact.
+      (canMergeAcrossTopicScopes || (existing.tags || []).some(isTransientTopic)));
+    let record = fetchedRecord;
+    if (existingRecordIndex >= 0) {
+      const existing = records[existingRecordIndex];
+      record = {
+        ...existing,
+        sourceText: [...new Set([existing.sourceText, fetchedRecord.sourceText].filter(Boolean))].join('\n\n'),
+        tags: [...new Set([...(existing.tags || []), ...(fetchedRecord.tags || [])])]
+      };
+      records[existingRecordIndex] = record;
+    } else {
+      records.push(record);
+    }
     if (!pointer) discoveredEvidenceIds.add(record.id);
     finalVerifiedUrls.add(result.finalUrl);
     return record;
@@ -1137,6 +1232,7 @@ export async function resolveMappedOfficialSourceFallback(
       provisionalTopics: provisional,
       records,
       missingFacts: [],
+      requestedConcepts,
       authorities: ['IRAS'],
       sourceMapFallbackTrace: currentTrace()
     });
@@ -1146,9 +1242,10 @@ export async function resolveMappedOfficialSourceFallback(
   const registeredCoverageAssessment = () => evaluateEvidenceQuality({
     query,
     topicIds: topicsRequiringFallback.filter(topic => topic.domainId.startsWith('IRAS_')).map(topic => topic.id),
-    provisionalTopics: [],
+    provisionalTopics,
     records,
     missingFacts: [],
+    requestedConcepts,
     authorities: ['IRAS'],
     sourceMapFallbackTrace: currentTrace()
   });
@@ -1158,8 +1255,11 @@ export async function resolveMappedOfficialSourceFallback(
       ? uncovered.has(topic.id)
       : !hasAdequateCoverage([topic]));
   };
-  const registeredCoverageAdequate = (): boolean => topicsRequiringFallback.length > 0 &&
+  const registeredCoverageAdequate = (): boolean => topicsRequiringFallback.length === 0 ||
     unresolvedRegisteredTopics().length === 0;
+  const provisionalCoverageAdequate = (): boolean => provisionalTopics.length === 0 ||
+    provisionalTopics.every(topic => topicCovered(topic));
+  const allRequiredCoverageAdequate = (): boolean => registeredCoverageAdequate() && provisionalCoverageAdequate();
 
   // Stage 1: try every applicable reviewed map before beginning any discovery.
   for (const { topic, applicablePointers, historicalIrasQuery } of topicWork) {
@@ -1178,13 +1278,10 @@ export async function resolveMappedOfficialSourceFallback(
       await tryFetch(topic, pointer.officialSourceUrl, pointer, 'MAPPED_SOURCE');
     }
   }
-  const mappedCoverageAdequate = registeredCoverageAdequate();
+  const mappedCoverageAdequate = topicsRequiringFallback.length > 0 && registeredCoverageAdequate();
 
-  const sitemapTopics = (): MappedCoverageTopic[] => {
-    if (registeredCoverageAdequate()) return [];
-    if (topicsRequiringFallback.length > 0) return unresolvedRegisteredTopics();
-    return authorityDiscoveryTopic && !topicCovered(authorityDiscoveryTopic) ? [authorityDiscoveryTopic] : [];
-  };
+  const sitemapTopics = (): MappedCoverageTopic[] =>
+    !registeredCoverageAdequate() ? unresolvedRegisteredTopics() : [];
   const discoverSitemapForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
     const work = topicWork.find(item => item.topic.id === topic.id);
     // Discovered pages have no reviewed period-specific validity metadata.
@@ -1268,15 +1365,12 @@ export async function resolveMappedOfficialSourceFallback(
   // uncovered after the complete mapped-source pass.
   for (const topic of sitemapTopics()) await discoverSitemapForTopic(topic, false);
 
-  // A provisional authority-level query supplements registered scopes after
-  // their sitemap routes. It remains a separate topic and cannot cover them.
-  if (authorityDiscoveryTopic && topicsRequiringFallback.length > 0 && unresolvedRegisteredTopics().length > 0) {
-    provisionalTopics.push(authorityDiscoveryTopic);
-    if (!topicCovered(authorityDiscoveryTopic)) await discoverSitemapForTopic(authorityDiscoveryTopic, true);
+  // Each unresolved material concept receives its own official discovery
+  // scope, even when a registered topic such as the relief cap already matched.
+  for (const topic of provisionalTopics.filter(candidate => !topicCovered(candidate))) {
+    await discoverSitemapForTopic(topic, true);
   }
-  const sitemapCoverageAdequate = topicsRequiringFallback.length > 0
-    ? registeredCoverageAdequate()
-    : Boolean(authorityDiscoveryTopic && topicCovered(authorityDiscoveryTopic));
+  const sitemapCoverageAdequate = allRequiredCoverageAdequate();
 
   const discoverOnlineForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
     const work = topicWork.find(item => item.topic.id === topic.id);
@@ -1341,14 +1435,12 @@ export async function resolveMappedOfficialSourceFallback(
 
   // Stage 3 is reached only after all applicable sitemap candidates have been
   // attempted and at least one required scope remains uncovered.
-  if (!registeredCoverageAdequate()) {
-    const unresolved = topicsRequiringFallback.length > 0
-      ? unresolvedRegisteredTopics()
-      : authorityDiscoveryTopic && !topicCovered(authorityDiscoveryTopic) ? [authorityDiscoveryTopic] : [];
+  if (!allRequiredCoverageAdequate()) {
+    const unresolved = [
+      ...(!registeredCoverageAdequate() ? unresolvedRegisteredTopics() : []),
+      ...provisionalTopics.filter(topic => !topicCovered(topic))
+    ];
     for (const topic of unresolved) await discoverOnlineForTopic(topic, topic.id.startsWith('iras-authority-query-'));
-    if (authorityDiscoveryTopic && topicsRequiringFallback.length > 0 && unresolvedRegisteredTopics().length > 0 && !topicCovered(authorityDiscoveryTopic)) {
-      await discoverOnlineForTopic(authorityDiscoveryTopic, true);
-    }
   }
 
   const anyMappedAttempt = sourceMapIds.size > 0;
@@ -1357,9 +1449,7 @@ export async function resolveMappedOfficialSourceFallback(
     : anyMappedAttempt
       ? 'MAPPED_SOURCE_REJECTED'
       : 'NO_VERIFIED_MAP';
-  const finalCoverageAdequate = topicsRequiringFallback.length > 0
-    ? registeredCoverageAdequate()
-    : Boolean(authorityDiscoveryTopic && topicCovered(authorityDiscoveryTopic));
+  const finalCoverageAdequate = allRequiredCoverageAdequate();
   const stages: NonNullable<SourceMapFallbackTrace['stages']> = [
     { stage: 'LOCAL_VERIFIED', status: options.localEvidenceAdequate ? 'SUFFICIENT' : 'EXHAUSTED', reason: options.localEvidenceAdequate ? 'Reviewed local evidence covered the routed request; live discovery was not needed.' : 'Local retrieval was insufficient for at least one routed topic.' },
     { stage: 'MAPPED_SOURCE', status: mappedCoverageAdequate ? 'SUFFICIENT' : mappedStageAttempted ? 'EXHAUSTED' : 'SKIPPED', reason: mappedStageAttempted ? 'Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic.' : 'No applicable reviewed source-map pointer was available.' },
@@ -1369,7 +1459,7 @@ export async function resolveMappedOfficialSourceFallback(
   ];
   return {
     records,
-    provisionalTopics: provisionalTopics.filter(topic => records.some(record => record.tags.includes(topic.id))),
+    provisionalTopics,
     trace: {
       path,
       sourceMapIds: [...sourceMapIds],
@@ -1558,17 +1648,19 @@ export async function buildGroundedReasoningContext(
   // Keep a transient full-query scope beside any registered routing topics.
   // The registry is a routing aid: a lexical topic hit can cover one concept
   // while the rest of the user's IRAS question still needs discovery.
-  const semanticIrasContext = irasPolicy ? getSemanticIrasDiscoveryContext(questionUnderstanding) : undefined;
+  const semanticIrasContext = irasPolicy ? getSemanticIrasDiscoveryContext(questionUnderstanding, userInput) : undefined;
+  const requestedConcepts = semanticIrasContext?.requestedConcepts || getRequestedQuestionConcepts(userInput, questionUnderstanding);
   const semanticDiscoveryQuery = buildSemanticDiscoveryQuery(userInput, questionUnderstanding.interpretation);
-  const authorityDiscoveryContext = irasPolicy
-    ? provisionalIrasDiscoveryTopic(userInput, semanticIrasContext)
-    : undefined;
+  const authorityDiscoveryContexts = irasPolicy
+    ? provisionalIrasConceptTopics(userInput, semanticIrasContext, requestedConcepts)
+    : [];
   const localRetrievalHints = irasPolicy
     ? { ...retrievalHints, domain: undefined, authorities: ['IRAS' as const], topicIds: irasTopicIds }
     : retrievalHints;
   const localRetrieved = await retriever.retrieveSources({
     query: userInput,
     ...(semanticIrasContext ? { semanticQuery: semanticDiscoveryQuery } : {}),
+    ...(irasPolicy ? { requestedConcepts } : {}),
     ...localRetrievalHints,
     maxResults: GROUNDING_SOURCE_MAX_RESULTS,
     semanticContext: semanticUnderstanding
@@ -1581,7 +1673,8 @@ export async function buildGroundedReasoningContext(
   const localQuality = irasPolicy ? applyStandaloneGstCalculationCoverage(userInput, evaluateEvidenceQuality({
     query: userInput, topicIds: evidenceTopicIds, records: contextualLocalRetrieved,
     missingFacts: classification.missingFacts,
-    provisionalTopics: authorityDiscoveryContext ? [authorityDiscoveryContext] : undefined,
+    provisionalTopics: authorityDiscoveryContexts,
+    requestedConcepts,
     authorities: ['IRAS']
   }), classification.missingFacts) : undefined;
   const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
@@ -1604,7 +1697,8 @@ export async function buildGroundedReasoningContext(
   const evidenceQuality = irasPolicy ? applyStandaloneGstCalculationCoverage(userInput, evaluateEvidenceQuality({
     query: userInput, topicIds: evidenceTopicIds, records: allRetrieved,
     missingFacts: classification.missingFacts, sourceMapFallbackTrace: mappedFallback.trace,
-    provisionalTopics: mappedFallback.provisionalTopics.length ? mappedFallback.provisionalTopics : authorityDiscoveryContext ? [authorityDiscoveryContext] : undefined,
+    provisionalTopics: mappedFallback.provisionalTopics.length ? mappedFallback.provisionalTopics : authorityDiscoveryContexts,
+    requestedConcepts,
     authorities: ['IRAS']
   }), classification.missingFacts) : undefined;
   const retrieved = evidenceQuality ? evidenceQuality.eligibleRecords : allRetrieved;

@@ -6,6 +6,7 @@ import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { findRecordEligibilityRejection } from '../verification/claimEvidenceVerifier';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
+import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 
 export interface EvidenceQualityTraceAttempt {
   topicId: string;
@@ -40,6 +41,8 @@ export interface EvidenceQualityInput {
   authorities?: StatutoryAuthority[];
   /** Query-scoped discovery scope; never persisted as reviewed registry knowledge. */
   provisionalTopics?: SingaporeCoverageTopic[];
+  /** Query-scoped material concepts, used for conservative relevance and coverage checks. */
+  requestedConcepts?: RequestedQuestionConcept[];
 }
 
 export interface EvidenceQualityAssessment {
@@ -50,6 +53,10 @@ export interface EvidenceQualityAssessment {
   uncoveredTopicIds: string[];
   /** Material query concepts that still lack source-text support for transient authority scopes. */
   uncoveredConceptGroups?: Record<string, string[][]>;
+  requestedConcepts?: string[];
+  coveredConcepts?: string[];
+  uncoveredConcepts?: string[];
+  acceptedSourceGroups?: string[];
   missingFacts: string[];
   targetDate?: string;
   targetDateConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
@@ -85,11 +92,98 @@ function recordTopicAssociations(record: AuthoritativeSourceRecord): Set<string>
   ]);
 }
 
+function scopedConcepts(topic: SingaporeCoverageTopic): RequestedQuestionConcept[] {
+  return (topic as SingaporeCoverageTopic & { requestedConcepts?: RequestedQuestionConcept[] }).requestedConcepts || [];
+}
+
+function scopedMappedTopicIds(topic: SingaporeCoverageTopic): string[] {
+  return (topic as SingaporeCoverageTopic & { mappedTopicIds?: string[] }).mappedTopicIds || [];
+}
+
+function hasEmployeeTaxTreatmentFor(text: string, benefitPattern: RegExp, maxDistance = 180): boolean {
+  const normalizedText = normalizeText(text);
+  const subjects = new RegExp(benefitPattern.source, 'gi');
+  for (const match of normalizedText.matchAll(subjects)) {
+    const index = match.index || 0;
+    const start = Math.max(0, index - maxDistance);
+    const end = Math.min(normalizedText.length, index + match[0].length + maxDistance);
+    const context = normalizedText.slice(start, end);
+    // Corporate profit-tax language can mention employee costs and benefits in
+    // passing. It does not establish how the item is taxed for the employee.
+    if (/\b(?:corporate|company|business)\b.{0,55}\b(?:taxable profits?|chargeable income)\b/.test(context)) continue;
+    if (/\b(?:employee|employees|employer|employment|staff|worker|workers)\b/.test(context) &&
+        /\b(?:taxable|non taxable|not taxable|taxed|tax treatment|taxability|subject to tax|exempt from tax)\b/.test(context)) return true;
+  }
+  return false;
+}
+
+function directlyStatesReliefPriority(text: string): boolean {
+  return text.split(/[.!?;\n]+/).some(rawClause => {
+    const clause = normalizeText(rawClause);
+    if (/\bin order to\b/.test(clause)) return false;
+    const reliefTarget = '(?:(?:tax )?reliefs?|relief claims?|claims? for (?:tax )?relief)';
+    const priorityOfReliefs = new RegExp(`\\b(?:priority|prioriti[sz]ation)\\s+(?:of|for|between|among)\\s+(?:the )?${reliefTarget}\\b`).test(clause);
+    const reliefsPrioritized = new RegExp(`\\b${reliefTarget}\\b.{0,24}\\b(?:prioritized|prioritised|ranked|sequenced)\\b`).test(clause);
+    const explicitOrderOfReliefs = new RegExp(`\\border(?:ing)?\\s+(?:of|for|between|among)\\s+(?:the )?${reliefTarget}\\b`).test(clause);
+    const explicitlyAppliedInOrder = new RegExp(`\\b${reliefTarget}\\b.{0,32}\\b(?:applied|claimed|deducted|considered|taken)\\b.{0,24}\\bin (?:the |a )?(?:following|specified|fixed|prescribed|particular|specific|priority) order\\b`).test(clause);
+    const orderInWhichApplied = new RegExp(`\\border in which ${reliefTarget} (?:are |must be |should be )?(?:applied|claimed|deducted|considered|taken)\\b`).test(clause);
+    const noFixedPriorityForReliefs = new RegExp(`\\b(?:no|without)\\b.{0,35}\\b(?:(?:fixed|specific|prescribed)\\s+)?(?:priority|order|sequence)\\b.{0,60}\\b(?:tax reliefs?|personal reliefs?|relief claims?|claims? for (?:tax )?relief)\\b|\\b(?:tax reliefs?|personal reliefs?|relief claims?|claims? for (?:tax )?relief)\\b.{0,45}\\b(?:have|has|is|are)?\\s*(?:no|without)\\s+(?:(?:fixed|specific|prescribed)\\s+)?(?:priority|order|sequence)\\b`).test(clause);
+    const reliefsMayBeClaimedInAnyOrder = new RegExp(`\\b(?:tax reliefs?|personal reliefs?|relief claims?)\\b.{0,45}\\b(?:may|can) be claimed in any order\\b`).test(clause);
+    return priorityOfReliefs || reliefsPrioritized || explicitOrderOfReliefs || explicitlyAppliedInOrder || orderInWhichApplied ||
+      noFixedPriorityForReliefs || reliefsMayBeClaimedInAnyOrder;
+  });
+}
+
+export function matchesRequestedQuestionConcept(text: string, concept: RequestedQuestionConcept): boolean {
+  const normalizedText = normalizeText(text);
+  if (concept.id === 'relief_claim_prioritization') {
+    return directlyStatesReliefPriority(text);
+  }
+  if (concept.id === 'employee_benefit_tax_treatment') {
+    return hasEmployeeTaxTreatmentFor(text, /\b(?:benefits? in kind|perquisites?|employment benefits?|benefits?)\b/);
+  }
+  if (concept.id === 'employee_reimbursement_tax_treatment') {
+    return hasEmployeeTaxTreatmentFor(text, /\breimbursements?\b/);
+  }
+  if (concept.id === 'employee_housing_benefit_tax_treatment') {
+    return hasEmployeeTaxTreatmentFor(text, /\b(?:housing allowances?|housing benefits?|accommodation|rent paid by employer)\b/, 240);
+  }
+  if (concept.id === 'employee_personal_insurance_tax_treatment') {
+    return hasEmployeeTaxTreatmentFor(text, /\b(?:personal insurance|insurance premiums?|insurance policy)\b/, 240);
+  }
+  const phraseMatches = concept.terms.some(term => {
+    const normalizedTerm = normalizeText(term);
+    return normalizedTerm.length >= 5 && normalizedText.includes(normalizedTerm);
+  });
+  if (phraseMatches) return true;
+  if (concept.id === 'personal_income_tax_relief_cap') {
+    return /\b(?:personal|individual)\b/.test(normalizedText) && /\brelief\b/.test(normalizedText) &&
+      /\b(?:cap|capped|limit|ceiling|80 000)\b/.test(normalizedText);
+  }
+  if (concept.id === 'cpf_relief') return /\bcpf\b/.test(normalizedText) && /\brelief\b/.test(normalizedText);
+  if (concept.id === 'srs_relief') return /\bsrs\b/.test(normalizedText) && /\brelief\b/.test(normalizedText);
+  if (concept.id === 'parent_relief') return /\bparent\b/.test(normalizedText) && /\brelief\b/.test(normalizedText);
+  if (concept.id === 'grandparent_caregiver_relief') return /\bgrandparent\b/.test(normalizedText) && /\bcaregiver\b/.test(normalizedText) && /\brelief\b/.test(normalizedText);
+  if (concept.id === 'working_mother_child_relief') return /\b(?:wmcr|working mother(?:s)? child relief)\b/.test(normalizedText);
+  if (concept.id === 'qualifying_child_relief') return /\b(?:qcr|qualifying child relief)\b/.test(normalizedText);
+  const tokens = [...new Set(words(concept.label).filter(word => word.length >= 3 && !GENERIC_TOPIC_WORDS.has(word)))];
+  if (tokens.length < 2) return false;
+  const variants = (token: string) => token === 'cap' ? ['cap', 'capped', 'limit', 'ceiling']
+    : token === 'priority' || token === 'prioritization' ? ['priority', 'prioritization', 'prioritise', 'prioritize', 'order', 'sequence']
+      : token === 'relief' ? ['relief', 'reliefs'] : [token];
+  const matched = tokens.filter(token => variants(token).some(variant => normalizedText.split(' ').includes(variant))).length;
+  return matched >= Math.max(2, Math.ceil(tokens.length * 0.6));
+}
+
 function metadataAssociatesRecord(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic): boolean {
   // Live discovery records are bound to the one topic whose page, population,
   // and excerpt were validated. Registry keywords remain routing metadata and
   // must not backfill associations to other topics.
-  if (record.provenance === 'LIVE_EXTERNAL') return recordTopicAssociations(record).has(topic.id);
+  if (record.provenance === 'LIVE_EXTERNAL') return recordTopicAssociations(record).has(topic.id) ||
+    scopedMappedTopicIds(topic).some(id => recordTopicAssociations(record).has(id));
+  const mappedTopicIds = scopedMappedTopicIds(topic);
+  if (mappedTopicIds.some(id => recordTopicAssociations(record).has(id) ||
+      getCoverageTopicById(id)?.sourceRecordIds.includes(record.id))) return true;
   if (topic.sourceRecordIds.includes(record.id)) return true;
   const associations = recordTopicAssociations(record);
   if (associations.has(topic.id) || (topic.relatedTopicIds || []).some(id => associations.has(id))) return true;
@@ -122,6 +216,8 @@ function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): 
 function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic, query: string): boolean {
   const text = normalizeText(record.sourceText || '');
   if (text.length < 24) return false;
+  const concepts = scopedConcepts(topic);
+  if (concepts.length > 0) return concepts.every(concept => matchesRequestedQuestionConcept(text, concept));
   if (topic.id === 'iras-individual-foreign-tax-credit') {
     // DTA and general double-tax guidance may mention the same income being
     // taxed twice, but that does not establish the separate FTC conditions.
@@ -321,7 +417,7 @@ function normalizeUrlIdentity(rawUrl: string | undefined): string | undefined {
 
 function traceProvesLiveRecord(
   record: AuthoritativeSourceRecord,
-  topicId: string,
+  topic: SingaporeCoverageTopic,
   trace?: EvidenceQualitySourceMapTrace
 ): boolean {
   const canonical = normalizeUrlIdentity(record.canonicalSourceUrl);
@@ -332,19 +428,23 @@ function traceProvesLiveRecord(
       !trace?.selectedRecordIds?.includes(record.id) ||
       !trace.finalVerifiedUrls?.some(url => normalizeUrlIdentity(url) === canonical)) return false;
 
+  const associations = recordTopicAssociations(record);
+  const mappedTopicIds = scopedMappedTopicIds(topic);
   return Boolean(trace.attempts?.some(attempt =>
-    attempt.topicId === topicId && attempt.fetchStatus === 'SUCCESS' &&
+    (attempt.topicId === topic.id || mappedTopicIds.includes(attempt.topicId) && associations.has(attempt.topicId) || associations.has(topic.id) &&
+      attempt.topicId.startsWith('iras-authority-query-concept-') && recordTopicAssociations(record).has(attempt.topicId)) &&
+    attempt.fetchStatus === 'SUCCESS' &&
     attempt.titleMatched === true && attempt.contentMatched === true &&
     normalizeUrlIdentity(attempt.finalUrl) === canonical
   ));
 }
 
-function isVerifiedLiveCandidate(record: AuthoritativeSourceRecord, topicId: string, targetDate: string | undefined, trace?: EvidenceQualitySourceMapTrace): boolean {
+function isVerifiedLiveCandidate(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic, targetDate: string | undefined, trace?: EvidenceQualitySourceMapTrace): boolean {
   return record.provenance === 'LIVE_EXTERNAL' &&
     record.lifecycleState === 'CANDIDATE' && (record.recordRole as string | undefined) === 'DISCOVERED_EVIDENCE' &&
     record.groundingEligible === true && record.sourceType !== 'APPLICATION_RULE' &&
     record.evidenceTier !== 'APPLICATION_RULE' && record.sourceAuthority === 'IRAS' &&
-    (!targetDate || isWithinTargetPeriod(record, targetDate)) && traceProvesLiveRecord(record, topicId, trace) &&
+    (!targetDate || isWithinTargetPeriod(record, targetDate)) && traceProvesLiveRecord(record, topic, trace) &&
     Boolean(record.sourceText?.trim());
 }
 
@@ -418,6 +518,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   const localByTopic = new Set<string>();
   const liveByTopic = new Set<string>();
   const irasRequest = hasIrasAssessmentScope(input);
+  const requestedConcepts = input.requestedConcepts || targetTopics.flatMap(scopedConcepts);
   const reject = (recordId: string, code: string, reason: string) => rejectedRecords.push({ recordId, code, reason });
 
   if (!irasRequest) {
@@ -428,6 +529,10 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       rejectedRecords: [],
       coveredTopicIds: [],
       uncoveredTopicIds: [],
+      requestedConcepts: requestedConcepts.map(concept => concept.label),
+      coveredConcepts: [],
+      uncoveredConcepts: requestedConcepts.map(concept => concept.label),
+      acceptedSourceGroups: untouchedRecords.map(record => record.canonicalSourceUrl || record.id),
       missingFacts: [...input.missingFacts],
       targetDate: resolvedTarget.targetDate,
       targetDateConfidence: resolvedTarget.confidence
@@ -442,6 +547,10 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       rejectedRecords,
       coveredTopicIds: [],
       uncoveredTopicIds: [],
+      requestedConcepts: requestedConcepts.map(concept => concept.label),
+      coveredConcepts: [],
+      uncoveredConcepts: requestedConcepts.map(concept => concept.label),
+      acceptedSourceGroups: [],
       missingFacts: [...input.missingFacts],
       targetDate: resolvedTarget.targetDate,
       targetDateConfidence: resolvedTarget.confidence
@@ -505,7 +614,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       const local = record.provenance === 'LOCAL_STATIC' && !eligibilityRejection ||
         Boolean(record.provenance === 'LOCAL_STATIC' && transitionTargetDate && !transitionEligibilityRejection);
       const live = !local && !eligibilityRejection &&
-        isVerifiedLiveCandidate(record, topic.id, targetDate, input.sourceMapFallbackTrace);
+        isVerifiedLiveCandidate(record, topic, targetDate, input.sourceMapFallbackTrace);
       const topicTextMatches = distinctiveTextMatches(record, topic, input.query) || explicitlyBoundLocal || transitionContext ||
         (topic.domainId === 'IRAS_GST' && isStandardGstRateContext(record, topic, rateYears));
       if (!local && !live) {
@@ -540,22 +649,33 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   }
 
   const uncoveredConceptGroups: Record<string, string[][]> = {};
+  const coveredConceptIds = new Set<string>();
   for (const topic of targetTopics.filter(candidate => candidate.id.startsWith('iras-authority-query-'))) {
-    const groups = queryMaterialConceptGroups(input.query);
+    const topicConcepts = scopedConcepts(topic);
+    const groups = topicConcepts.length > 0
+      ? topicConcepts.map(concept => [...new Set(words(concept.label).filter(word => word.length >= 3 && !GENERIC_TOPIC_WORDS.has(word)))])
+      : queryMaterialConceptGroups(input.query);
     const conceptRecords = [...eligibleById.values()].filter(record => {
       if (recordTopicAssociations(record).has(topic.id)) return true;
       return getCoverageTopicsByIds([...recordTopicAssociations(record)])
         .some(associatedTopic => associatedTopic.domainId === topic.domainId);
     });
     const combinedConceptWords = new Set(conceptRecords.flatMap(record => words(record.sourceText || '')));
-    const supportingGroupIndexes = groups.map((group, index) =>
-      supportsQueryConceptGroup(combinedConceptWords, group) ? index : -1
-    ).filter(index => index >= 0);
-    const missingGroups = groups.filter((_, index) => !supportingGroupIndexes.includes(index));
+    const supportingGroupIndexes = groups.map((group, index) => topicConcepts.length > 0
+      ? conceptRecords.some(record => matchesRequestedQuestionConcept(record.sourceText || '', topicConcepts[index]))
+      : supportsQueryConceptGroup(combinedConceptWords, group) ? true : false
+    ).map((matched, index) => matched ? index : -1).filter(index => index >= 0);
+    const missingGroupIndexes = groups.map((_, index) => index).filter(index => !supportingGroupIndexes.includes(index));
+    const missingGroups = missingGroupIndexes.map(index => groups[index]);
+    topicConcepts.forEach((concept, index) => {
+      if (supportingGroupIndexes.includes(index)) coveredConceptIds.add(concept.id);
+    });
     if (groups.length === 0 || missingGroups.length > 0) {
       uncoveredConceptGroups[topic.id] = groups.length === 0
         ? [['No material query concept could be resolved']]
-        : missingGroups;
+        : topicConcepts.length > 0
+          ? missingGroupIndexes.map(index => [topicConcepts[index]?.label || 'Uncovered requested concept'])
+          : missingGroups;
       continue;
     }
     covered.add(topic.id);
@@ -586,10 +706,19 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     ...relevantLiveOnlyForGap.filter(record => record.provenance === 'LIVE_EXTERNAL')
   ];
   const uncoveredTopicIds = targetTopics.map(topic => topic.id).filter(id => !covered.has(id));
+  const derivedConcepts = requestedConcepts.length > 0 ? requestedConcepts : targetTopics.flatMap(scopedConcepts);
+  for (const concept of derivedConcepts) {
+    const matchedRecord = [...eligibleById.values()].some(record => matchesRequestedQuestionConcept(record.sourceText || '', concept) &&
+      (concept.topicIds.length === 0 || concept.topicIds.some(id => recordTopicAssociations(record).has(id)) ||
+        targetTopics.some(topic => scopedConcepts(topic).some(scoped => scoped.id === concept.id) && metadataAssociatesRecord(record, topic))));
+    if (matchedRecord) coveredConceptIds.add(concept.id);
+  }
+  const coveredConcepts = derivedConcepts.filter(concept => coveredConceptIds.has(concept.id)).map(concept => concept.label);
+  const uncoveredConcepts = derivedConcepts.filter(concept => !coveredConceptIds.has(concept.id)).map(concept => concept.label);
   const allCoveredLocally = uncoveredTopicIds.length === 0 && targetTopics.every(topic => localByTopic.has(topic.id));
   let status: EvidenceQualityAssessment['status'];
   if (eligibleRecords.length === 0) status = 'INSUFFICIENT';
-  else if (input.missingFacts.length > 0 || uncoveredTopicIds.length > 0) status = 'LIMITED';
+  else if (input.missingFacts.length > 0 || uncoveredTopicIds.length > 0 || uncoveredConcepts.length > 0) status = 'LIMITED';
   else if (allCoveredLocally) status = 'LOCAL_SUFFICIENT';
   else status = 'RETRIEVED_SUFFICIENT';
 
@@ -600,6 +729,10 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     coveredTopicIds: targetTopics.map(topic => topic.id).filter(id => covered.has(id)),
     uncoveredTopicIds,
     ...(Object.keys(uncoveredConceptGroups).length > 0 ? { uncoveredConceptGroups } : {}),
+    requestedConcepts: derivedConcepts.map(concept => concept.label),
+    coveredConcepts,
+    uncoveredConcepts,
+    acceptedSourceGroups: [...new Set(eligibleRecords.map(record => record.canonicalSourceUrl || record.id))],
     missingFacts: [...input.missingFacts],
     targetDate: resolvedTarget.targetDate,
     targetDateConfidence: resolvedTarget.confidence

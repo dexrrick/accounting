@@ -6,7 +6,8 @@ import {
 } from '../standards/unifiedSourceModel';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
-import { evaluateEvidenceQuality, isIrasEvidenceRequest } from './evidenceQualityGate';
+import { evaluateEvidenceQuality, isIrasEvidenceRequest, matchesRequestedQuestionConcept } from './evidenceQualityGate';
+import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 
 export interface SourceRetrievalQuery {
@@ -17,6 +18,8 @@ export interface SourceRetrievalQuery {
   topicIds?: string[];
   /** Validated semantic labels used only to rank sources; gates keep `query` unchanged. */
   semanticQuery?: string;
+  /** Material concepts affect local candidate ranking only; the original query remains the evidence gate. */
+  requestedConcepts?: RequestedQuestionConcept[];
   maxResults?: number;
   targetDate?: string;
   includeHistorical?: boolean;
@@ -254,12 +257,18 @@ export class InMemorySourceRetriever implements ISourceRetriever {
         topicIds: retrievalQuery.topicIds || [],
         records: rankedRecords,
         missingFacts: [],
+        requestedConcepts: retrievalQuery.requestedConcepts,
         domain,
         authorities,
         targetDate: explicitTargetDate,
         referenceDate
       });
-      return assessment.eligibleRecords.slice(0, maxResults);
+      const conceptRank = (record: AuthoritativeSourceRecord) =>
+        (retrievalQuery.requestedConcepts || []).reduce((score, concept) =>
+          score + (matchesRequestedQuestionConcept(record.sourceText || '', concept) ? 1 : 0), 0);
+      return [...assessment.eligibleRecords]
+        .sort((left, right) => conceptRank(right) - conceptRank(left))
+        .slice(0, maxResults);
     }
     return rankedRecords.slice(0, maxResults);
   }

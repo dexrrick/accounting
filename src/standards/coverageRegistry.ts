@@ -229,7 +229,8 @@ const irasSourceMap = (
   canonicalSourceUrl: string,
   pageTitle: string,
   subdomain: string,
-  shortDescription: string
+  shortDescription: string,
+  urlVerifiedDate = IRAS_URL_VERIFICATION_DATE
 ): IrasSourceMapDefinition => ({
   id,
   domainId,
@@ -239,9 +240,9 @@ const irasSourceMap = (
   subdomain,
   shortDescription,
   urlVerificationStatus: 'VERIFIED',
-  urlVerifiedDate: IRAS_URL_VERIFICATION_DATE,
+  urlVerifiedDate,
   urlVerificationMethod: IRAS_URL_VERIFICATION_METHOD,
-  urlVerificationEvidence: `Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on ${IRAS_URL_VERIFICATION_DATE}.`
+  urlVerificationEvidence: `Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on ${urlVerifiedDate}.`
 });
 
 /**
@@ -358,6 +359,27 @@ export const IRAS_SOURCE_MAP_DEFINITIONS: readonly IrasSourceMapDefinition[] = [
   irasSourceMap('IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP', 'IRAS_EMPLOYER_TAX', ['iras-directors-fees', 'iras-employee-bonus-timing'],
     'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not/employment-income/salary-bonus-director\'s-fee-commission-and-others',
     'Employment Income (Salary, bonus, director\'s fee)', 'employer-tax', 'IRAS guidance on contractual, contingent, advance and non-contractual bonus timing and director-fee assessment timing.'),
+  irasSourceMap('IRAS_PERSONAL_RELIEF_CAP_SOURCE_MAP', 'IRAS_INDIVIDUAL_TAX', ['iras-individual-relief-cap'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs',
+    'Tax Reliefs', 'individual-income-tax', 'IRAS overview of the overall personal income tax relief cap.', '2026-09-29'),
+  irasSourceMap('IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP', 'IRAS_INDIVIDUAL_TAX', ['iras-individual-cpf-relief'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees',
+    'Central Provident Fund (CPF) Relief for employees', 'individual-income-tax', 'IRAS guidance on CPF Relief for compulsory employee contributions.', '2026-09-29'),
+  irasSourceMap('IRAS_SRS_RELIEF_SOURCE_MAP', 'IRAS_INDIVIDUAL_TAX', ['iras-individual-srs-relief'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes/srs-contributions',
+    'SRS contributions and tax relief', 'individual-income-tax', 'IRAS guidance on Supplementary Retirement Scheme tax relief.', '2026-09-29'),
+  irasSourceMap('IRAS_PARENT_RELIEF_SOURCE_MAP', 'IRAS_INDIVIDUAL_TAX', ['iras-individual-parent-relief'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/parent-relief-parent-relief-(disability)',
+    'Parent Relief/Parent Relief (Disability)', 'individual-income-tax', 'IRAS guidance on Parent Relief eligibility.', '2026-09-29'),
+  irasSourceMap('IRAS_GRANDPARENT_CAREGIVER_RELIEF_SOURCE_MAP', 'IRAS_INDIVIDUAL_TAX', ['iras-individual-grandparent-caregiver-relief'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/grandparent-caregiver-relief',
+    'Grandparent Caregiver Relief', 'individual-income-tax', 'IRAS guidance on Grandparent Caregiver Relief eligibility.', '2026-09-29'),
+  irasSourceMap('IRAS_WMCR_SOURCE_MAP', 'IRAS_INDIVIDUAL_TAX', ['iras-individual-wmcr'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/working-mother%27s-child-relief-(wmcr)',
+    "Working Mother's Child Relief (WMCR)", 'individual-income-tax', 'IRAS guidance on Working Mother\'s Child Relief eligibility.', '2026-09-29'),
+  irasSourceMap('IRAS_QCR_SOURCE_MAP', 'IRAS_INDIVIDUAL_TAX', ['iras-individual-qcr'],
+    'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/qualifying-child-relief-(qcr)-child-relief-(disability)',
+    'Qualifying Child Relief (QCR)/Child Relief (Disability)', 'individual-income-tax', 'IRAS guidance on Qualifying Child Relief eligibility.', '2026-09-29'),
   irasSourceMap('IRAS_BENEFITS_IN_KIND_SOURCE_MAP', 'IRAS_EMPLOYER_TAX', ['iras-employment-benefits'],
     'https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/tax-principles-and-flexible-benefits',
     'Tax Principles and Flexible Benefits', 'employer-tax', 'IRAS guidance on taxable employment benefits and benefits-in-kind reporting.')
@@ -532,6 +554,12 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-individual-certificate-of-residence', title: 'Certificate of Residence for Individuals', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['individual certificate of residence', 'apply for certificate of residence', 'certificate of residence individual', 'cor for dta benefits'], aliases: ['Apply for COR'], queryPatterns: [String.raw`\b(?:certificate of residence|\bcor\b)[\s\S]{0,80}\b(?:dta|treaty|individual|tax resident)\b`] },
   { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
   { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'] },
+  { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'] },
+  { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['srs relief', 'supplementary retirement scheme relief'] },
+  { id: 'iras-individual-parent-relief', title: 'Parent Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['parent relief', 'parent relief disability'] },
+  { id: 'iras-individual-grandparent-caregiver-relief', title: 'Grandparent Caregiver Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['grandparent caregiver relief', 'caregiver relief'] },
+  { id: 'iras-individual-wmcr', title: "Working Mother's Child Relief", domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['working mother child relief', 'wmcr'] },
+  { id: 'iras-individual-qcr', title: 'Qualifying Child Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['qualifying child relief', 'qcr'] },
   { id: 'iras-property-tax-annual-value', title: 'Property Tax and Annual Value', domainId: 'IRAS_PROPERTY_TAX', priority: 'P1', keywords: ['property tax', 'annual value', 'owner-occupied property tax', 'non-owner-occupied property tax'] },
   { id: 'iras-stamp-duty-bsd', title: 'Buyer’s Stamp Duty', domainId: 'IRAS_STAMP_DUTY', priority: 'P1', keywords: ['bsd', 'buyers stamp duty', 'buyer’s stamp duty', 'buyer stamp duty'] },
   { id: 'iras-stamp-duty-absd', title: 'Additional Buyer’s Stamp Duty', domainId: 'IRAS_STAMP_DUTY', priority: 'P1', keywords: ['absd', 'additional buyers stamp duty', 'additional buyer’s stamp duty'] },

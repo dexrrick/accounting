@@ -12,6 +12,7 @@ import { buildGroundedReasoningContext, postProcessAIResponse, resolveMappedOffi
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 import { getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
+import { getRequestedQuestionConcepts } from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const query = 'What is the tax treatment for overseas income received in Singapore by an individual?';
 const pageUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/employees/scenario-based-faqs-for-working-in-singapore-and-abroad/i-want-to-know-the-tax-treatment-on-working-outside-singapore';
@@ -318,7 +319,7 @@ const ftcSearchFallback = await resolveMappedOfficialSourceFallback(['iras-indiv
 assert.ok(ftcSearchQueries.length >= 2 && ftcSearchQueries.length <= 8,
   'Each unresolved registered/provisional topic is limited to one full query plus three topic variants.');
 assert.ok(ftcSearchQueries.some(searchQuery => searchQuery === `site:iras.gov.sg ${irasFtcQuery}`));
-assert.ok(ftcSearchQueries.some(searchQuery => /^site:iras\.gov\.sg [^\"]+$/.test(searchQuery) && !searchQuery.includes(irasFtcQuery)),
+assert.ok(ftcSearchQueries.some(searchQuery => /^site:iras\.gov\.sg [^"]+$/.test(searchQuery) && !searchQuery.includes(irasFtcQuery)),
   'Topic-specific official-domain query variants are bounded and separate from the full question.');
 assert.ok(ftcSearchPageCalls.includes(irasFtcPage),
   'The individual FTC page is separately fetched after official search.');
@@ -394,11 +395,11 @@ const dtaFallback = await resolveMappedOfficialSourceFallback(['iras-individual-
   discoveryAdapter: dtaSitemap,
   officialDomainSearchAdapter: dtaSearchAdapter
 });
-assert.ok(dtaQueryVariants.length >= 3 && dtaQueryVariants.length <= 4,
-  'DTA search tries later bounded topic phrases when the full query and first hint return no candidates.');
+assert.ok(dtaQueryVariants.length >= 3 && dtaQueryVariants.length <= 8,
+  'The registered DTA topic and remaining full-query scope each use bounded topic-specific search variants.');
 assert.ok(dtaQueryVariants[0].includes(irasFtcQuery));
-assert.ok(dtaFallback.trace.attempts.some(attempt => attempt.candidateUrl === observedWithholdingDtaPage && attempt.fetchStatus === 'POPULATION_MISMATCH'),
-  'The live-observed WHT DTA filing page is fetched but rejected for an individual employee query.');
+assert.ok(dtaFallback.trace.attempts.some(attempt => attempt.candidateUrl === observedWithholdingDtaPage && attempt.fetchStatus !== 'SUCCESS'),
+  'The live-observed WHT DTA filing page is fetched but rejected before becoming individual-tax evidence.');
 assert.ok(dtaFallback.trace.attempts.some(attempt => attempt.candidateUrl === individualDtaPage && attempt.fetchStatus === 'SUCCESS' && attempt.searchQueryVariant === 'TOPIC_HINT_3'),
   'The individual DTA page is discovered by a later topic-specific search variant, fetched independently, and admitted only after validation.');
 assert.equal(dtaFallback.records.filter(record => record.officialSourceUrl === individualDtaPage).length, 1);
@@ -627,6 +628,108 @@ assert.equal(mixedCorporateQuality.status, 'RETRIEVED_SUFFICIENT',
   'The requested corporate income-tax evidence is adequate without repeating unrelated GST-registration or employee background facts.');
 assert.ok(mixedCorporateQuality.eligibleRecords.some(record => record.canonicalSourceUrl === mixedCorporateUrl));
 assert.ok(mixedCorporateFallback.trace.stages?.some(stage => stage.stage === 'OFFICIAL_DOMAIN_SEARCH' && stage.status === 'SKIPPED'));
+
+const employeeBenefitQuery = 'When our company pays employee housing allowances and personal insurance, are these taxable employment benefits or non-taxable reimbursements?';
+const employeeBenefitCorporateCandidates = [
+  {
+    url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/capital-allowances/employee-housing-benefits',
+    title: 'IRAS | Capital Allowances for Employee Housing Benefits'
+  },
+  {
+    url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/filing-taxes/form-c-s-employee-benefits',
+    title: 'IRAS | Form C-S and Employee Benefits'
+  },
+  {
+    url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/deductions/employee-allowances',
+    title: 'IRAS | Company Deductions for Employee Allowances'
+  }
+];
+const employeeBenefitCorporateHtml = candidate => `<html><head><title>${candidate.title}</title><link rel="canonical" href="${candidate.url}"></head><body><main>
+  <h1>${candidate.title.replace('IRAS | ', '')}</h1>
+  <p>For corporate income tax, a company may claim qualifying capital allowances and deduct employee housing allowances and personal insurance costs. An employee may receive a taxable housing benefit or personal-insurance perquisite which is treated as employment income.</p>
+</main></body></html>`;
+for (const candidate of employeeBenefitCorporateCandidates) {
+  const employeeBenefitCandidateFallback = await resolveMappedOfficialSourceFallback([], employeeBenefitQuery, emptyLocalRetriever, {
+    authorityLevelDiscovery: true,
+    webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+    fetchOptions: {
+      customFetch: async url => url === candidate.url
+        ? new Response(employeeBenefitCorporateHtml(candidate), { status: 200, headers: { 'content-type': 'text/html' } })
+        : new Response('', { status: 404 }),
+      timeoutMs: 500,
+      useCache: false
+    },
+    discoveryAdapter: {
+      async discoverOfficialSourceCandidates() { return [candidate.url]; },
+      getCandidateTitle(url) { return url === candidate.url ? candidate.title : undefined; }
+    },
+    officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; } }
+  });
+  assert.deepEqual(employeeBenefitCandidateFallback.records, [],
+    `A relevant-looking corporate tax page cannot support employee benefit treatment: ${candidate.url}`);
+  assert.ok(employeeBenefitCandidateFallback.trace.attempts.some(attempt =>
+    attempt.candidateUrl === candidate.url && attempt.fetchStatus === 'DOMAIN_MISMATCH'),
+  `Corporate capital allowance, Form C-S, and company-deduction candidates are rejected by tax domain: ${candidate.url}`);
+}
+
+const employeeBenefitCostOnlyUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/employers/employee-housing-costs';
+const employeeBenefitCostOnlyTitle = 'IRAS | Employee Housing Allowances and Personal Insurance Costs';
+const employeeBenefitCostOnlyHtml = `<html><head><title>${employeeBenefitCostOnlyTitle}</title><link rel="canonical" href="${employeeBenefitCostOnlyUrl}"></head><body><main>
+  <h1>Employee housing allowances and personal insurance costs</h1>
+  <p>Employers may reimburse housing allowances and insurance costs, which are recorded as staff costs in the company accounts.</p>
+</main></body></html>`;
+const employeeBenefitCostOnlyFallback = await resolveMappedOfficialSourceFallback([], employeeBenefitQuery, emptyLocalRetriever, {
+  authorityLevelDiscovery: true,
+  webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+  fetchOptions: {
+    customFetch: async url => url === employeeBenefitCostOnlyUrl
+      ? new Response(employeeBenefitCostOnlyHtml, { status: 200, headers: { 'content-type': 'text/html' } })
+      : new Response('', { status: 404 }),
+    timeoutMs: 500,
+    useCache: false
+  },
+  discoveryAdapter: {
+    async discoverOfficialSourceCandidates() { return [employeeBenefitCostOnlyUrl]; },
+    getCandidateTitle(url) { return url === employeeBenefitCostOnlyUrl ? employeeBenefitCostOnlyTitle : undefined; }
+  },
+  officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; } }
+});
+assert.deepEqual(employeeBenefitCostOnlyFallback.records, [],
+  'A page that only discusses housing and insurance costs cannot establish taxable benefit or reimbursement treatment.');
+assert.ok(employeeBenefitCostOnlyFallback.trace.attempts.some(attempt =>
+  attempt.candidateUrl === employeeBenefitCostOnlyUrl && attempt.fetchStatus !== 'SUCCESS'));
+
+const adjacentInsuranceQuestion = 'Are employer-funded personal insurance premiums taxable as employment benefits?';
+const adjacentInsuranceUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/insurance-premium';
+const adjacentInsuranceTitle = 'IRAS | Insurance Premium';
+const adjacentInsuranceHtml = `<html><head><title>${adjacentInsuranceTitle}</title><link rel="canonical" href="${adjacentInsuranceUrl}"></head><body><main>
+  <h1>Insurance Premium</h1>
+  <p>Learn about the tax treatment of insurance premiums paid by employers.</p>
+  <table><tr><td>Personal Insurance policy where employee is the policyholder.</td><td>Taxable</td></tr></table>
+</main></body></html>`;
+const adjacentInsuranceFallback = await resolveMappedOfficialSourceFallback([], adjacentInsuranceQuestion, emptyLocalRetriever, {
+  authorityLevelDiscovery: true,
+  webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+  fetchOptions: {
+    customFetch: async url => url === adjacentInsuranceUrl
+      ? new Response(adjacentInsuranceHtml, { status: 200, headers: { 'content-type': 'text/html' } })
+      : new Response('', { status: 404 }),
+    timeoutMs: 500,
+    useCache: false
+  },
+  discoveryAdapter: {
+    async discoverOfficialSourceCandidates() { return [adjacentInsuranceUrl]; },
+    getCandidateTitle(url) { return url === adjacentInsuranceUrl ? adjacentInsuranceTitle : undefined; }
+  },
+  officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; } }
+});
+const adjacentInsuranceTopic = adjacentInsuranceFallback.provisionalTopics.find(topic =>
+  topic.requestedConcepts?.some(concept => concept.id === 'employee_personal_insurance_tax_treatment'));
+assert.ok(adjacentInsuranceTopic, 'The original question creates a personal-insurance concept independent of interpretation labels.');
+assert.ok(adjacentInsuranceFallback.records.some(record => record.canonicalSourceUrl === adjacentInsuranceUrl),
+  'IRAS insurance evidence is admitted when employee context and the tax result occupy adjacent table cells.');
+assert.ok(adjacentInsuranceFallback.trace.attempts.some(attempt =>
+  attempt.topicId === adjacentInsuranceTopic.id && attempt.candidateUrl === adjacentInsuranceUrl && attempt.fetchStatus === 'SUCCESS'));
 
 const gstQuestion = 'For GST input tax claims, what supporting invoice and business purposes are required?';
 const gstContext = await buildGroundedReasoningContext(gstQuestion, null, emptyLocalRetriever, undefined, {
@@ -936,5 +1039,89 @@ const mappedShortCircuit = await resolveMappedOfficialSourceFallback(['iras-cit-
 assert.equal(mappedShortCircuit.trace.stages?.find(stage => stage.stage === 'MAPPED_SOURCE')?.status, 'SUFFICIENT');
 assert.ok(mappedShortCircuit.trace.stages?.some(stage => stage.stage === 'SITEMAP_DISCOVERY' && stage.status === 'SKIPPED'));
 assert.deepEqual(mappedShortCircuitEvents, [], 'Adequate mapped evidence prevents sitemap and search calls.');
+
+const pluralLabelReliefQuestion = 'Given the overall personal income tax relief cap of SGD 80,000, how are overlapping claims prioritized between mandatory CPF contributions, the Supplementary Retirement Scheme (SRS), and parenthood/caregiver reliefs?';
+const pluralLabelReliefUnderstanding = {
+  mode: 'SEMANTIC_INTERPRETATION',
+  interpretation: {
+    jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: ['CPF'],
+    domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL',
+    primarySubject: 'overall personal income tax relief cap',
+    concepts: [
+      { concept: 'mandatory CPF contributions', role: 'RELATED' },
+      { concept: 'Supplementary Retirement Scheme reliefs', role: 'RELATED' },
+      { concept: 'parenthood and caregiver reliefs', role: 'RELATED' }
+    ],
+    requestedOperation: 'EXPLAIN_INTERACTION', requiresUserSpecificFacts: false,
+    calculationRequested: false, factsExplicitlyProvided: [], confidence: 0.94
+  }
+};
+const pluralReliefDiscoveryRequests = [];
+const pluralReliefDiscovery = await resolveMappedOfficialSourceFallback([], pluralLabelReliefQuestion, emptyLocalRetriever, {
+  authorityLevelDiscovery: true,
+  questionUnderstanding: pluralLabelReliefUnderstanding,
+  discoveryAdapter: {
+    async discoverOfficialSourceCandidates(request) { pluralReliefDiscoveryRequests.push(request); return []; }
+  },
+  officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; } }
+});
+const expectedPluralReliefConceptIds = [
+  'personal_income_tax_relief_cap', 'cpf_relief', 'srs_relief', 'parent_relief',
+  'grandparent_caregiver_relief', 'working_mother_child_relief', 'qualifying_child_relief',
+  'relief_claim_prioritization'
+];
+const discoveredPluralReliefConceptIds = pluralReliefDiscovery.provisionalTopics.flatMap(topic =>
+  topic.requestedConcepts?.map(concept => concept.id) || []);
+assert.deepEqual(discoveredPluralReliefConceptIds, expectedPluralReliefConceptIds,
+  'Resolver discovery retains all eight canonical relief concepts without plural-label duplicates.');
+assert.equal(pluralReliefDiscoveryRequests.some(request => /semantic_(?:mandatory_cpf_contributions|parenthood_and_caregiver_reliefs)/.test(request.topicId)), false,
+  'The plural Gemini labels do not create extra resolver discovery requests.');
+assert.ok(pluralReliefDiscoveryRequests.every(request => request.query === pluralLabelReliefQuestion),
+  'Every relief concept discovery remains governed by the complete original question.');
+
+const mappedReliefPages = [
+  ['iras-individual-relief-cap', 'Tax Reliefs', 'Overall personal income tax relief cap. The total amount of personal income tax reliefs that an individual can claim is capped at $80,000 per Year of Assessment.'],
+  ['iras-individual-cpf-relief', 'Central Provident Fund (CPF) Relief for employees', 'CPF Relief for employees applies to compulsory CPF contributions made by an employee.'],
+  ['iras-individual-srs-relief', 'SRS contributions and tax relief', 'Individuals may claim Supplementary Retirement Scheme (SRS) Relief for qualifying SRS contributions.'],
+  ['iras-individual-parent-relief', 'Parent Relief/Parent Relief (Disability)', 'An individual may claim Parent Relief for supporting a parent who meets the conditions.'],
+  ['iras-individual-grandparent-caregiver-relief', 'Grandparent Caregiver Relief', 'Grandparent Caregiver Relief may be claimed by an individual who meets the caregiver conditions.'],
+  ['iras-individual-wmcr', "Working Mother's Child Relief (WMCR)", "Working Mother's Child Relief (WMCR) may be claimed by eligible working mothers."],
+  ['iras-individual-qcr', 'Qualifying Child Relief (QCR)/Child Relief (Disability)', 'Qualifying Child Relief (QCR) may be claimed by an eligible individual for a qualifying child.']
+];
+const reliefPageBodies = new Map(mappedReliefPages.map(([id, title, body]) => {
+  const url = getCoverageTopicById(id)?.canonicalSourceUrl;
+  assert.ok(url, `Registered ${id} has a reviewed IRAS URL pointer.`);
+  return [url, `<html><head><title>IRAS | ${title}</title><link rel="canonical" href="${url}"></head><body><main><h1>${title}</h1><p>${body}</p></main></body></html>`];
+}));
+const mappedReliefFetches = [];
+const mappedReliefResult = await resolveMappedOfficialSourceFallback(
+  mappedReliefPages.map(([id]) => id), pluralLabelReliefQuestion, defaultSourceRetriever, {
+    fetchOptions: {
+      useCache: false,
+      customFetch: async url => {
+        mappedReliefFetches.push(url);
+        const html = reliefPageBodies.get(url);
+        return new Response(html || 'Unavailable', { status: html ? 200 : 503, headers: { 'content-type': 'text/html' } });
+      }
+    },
+    authorityLevelDiscovery: false
+  }
+);
+assert.equal(mappedReliefResult.records.length, mappedReliefPages.length,
+  `Every material registered relief concept fetches its own verified official page: ${JSON.stringify(mappedReliefResult.trace.attempts.map(attempt => [attempt.topicId, attempt.fetchStatus]))}`);
+assert.deepEqual(new Set(mappedReliefFetches), new Set(reliefPageBodies.keys()),
+  'Mapped retrieval fetches only the seven reviewed IRAS relief URLs.');
+const mappedReliefCoverage = evaluateEvidenceQuality({
+  query: pluralLabelReliefQuestion,
+  topicIds: mappedReliefPages.map(([id]) => id),
+  records: mappedReliefResult.records,
+  missingFacts: [],
+  requestedConcepts: getRequestedQuestionConcepts(pluralLabelReliefQuestion, pluralLabelReliefUnderstanding),
+  provisionalTopics: mappedReliefResult.provisionalTopics,
+  sourceMapFallbackTrace: mappedReliefResult.trace,
+  authorities: ['IRAS']
+});
+assert.deepEqual(mappedReliefCoverage.uncoveredConcepts, ['Order or prioritization among relief claims'],
+  'Specific relief pages cover their concepts, while an unsupported claim-priority interaction remains uncovered.');
 
 console.log('PASS | IRAS authority discovery covers search after sitemap exhaustion and sitemap-first evidence admission with independent claim verification.');

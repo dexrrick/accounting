@@ -49,6 +49,14 @@ export interface QuestionUnderstandingDiagnostics {
   concepts: string[];
 }
 
+/** Retrieval-only description of a material concept present in the question. */
+export interface RequestedQuestionConcept {
+  id: string;
+  label: string;
+  terms: string[];
+  topicIds: string[];
+}
+
 const POPULATIONS = new Set<SemanticPopulation>(['INDIVIDUAL', 'EMPLOYEE', 'EMPLOYER', 'COMPANY', 'SHAREHOLDER', 'FUND', 'PROPERTY_OWNER', 'UNKNOWN']);
 const DOMAINS = new Set<SemanticQuestionDomain>(['ACCOUNTING', 'IRAS_INCOME_TAX', 'IRAS_GST', 'IRAS_PROPERTY_TAX', 'IRAS_STAMP_DUTY', 'IRAS_OTHER', 'CPF_PAYROLL', 'MOM_EMPLOYMENT', 'ACRA_CORPORATE', 'MAS_FUNDS', 'UNKNOWN']);
 const OPERATIONS = new Set<SemanticQuestionOperation>(['EXPLAIN_RULE', 'EXPLAIN_INTERACTION', 'DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'CALCULATE', 'PREPARE_JOURNAL', 'COMPARE', 'FILING_REQUIREMENT', 'OTHER']);
@@ -260,9 +268,21 @@ function refineUnknownEmploymentPopulation(
   query: string,
   semantic: SemanticQuestionInterpretation
 ): SemanticQuestionInterpretation {
-  if (semantic.domain !== 'IRAS_INCOME_TAX' || semantic.population !== 'UNKNOWN') return semantic;
   const semanticSubject = [semantic.primarySubject, ...semantic.concepts
     .filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept)].join(' ');
+  const explicitCompanyTaxOutcome = /\b(?:company|corporate|business)\b[^.!?]{0,100}\b(?:deduct\w*|taxable profits?|chargeable income|tax return|form c(?:-s)?|\beci\b)\b|\b(?:deduct\w*|taxable profits?|chargeable income|tax return|form c(?:-s)?|\beci\b)[^.!?]{0,100}\b(?:company|corporate|business)\b/i.test(query);
+  const namesEmploymentRecipient = /\b(?:employee|employees|staff|workers?|employer[ -]?(?:funded|paid))\b/i.test(query) ||
+    /\bemployment\s+benefits?\b/i.test(`${query} ${semanticSubject}`);
+  const asksEmployerCompliance = /\b(?:ir21|ir8a|ir8s|ais|fil(?:e|ing)|report(?:ing)?|withhold(?:ing)?)\b/i.test(query) &&
+    /\b(?:employer|employee|employees|staff)\b/i.test(query);
+  const employmentBenefitQuestion = semantic.domain === 'IRAS_INCOME_TAX' && namesEmploymentRecipient &&
+    /\b(?:benefits?\s+in\s+kind|perquisites?|employment\s+benefits?|housing\s+allowances?|personal\s+insurance|reimbursements?)\b/i.test(`${query} ${semanticSubject}`) &&
+    /\b(?:tax(?:able|ability|ed)?|income\s+tax|perquisites?|benefits?\s+in\s+kind)\b/i.test(`${query} ${semanticSubject}`) &&
+    !explicitCompanyTaxOutcome && !asksEmployerCompliance;
+  if (employmentBenefitQuestion && semantic.population !== 'EMPLOYEE') {
+    return validateSemanticQuestionInterpretation({ ...semantic, population: 'EMPLOYEE' }) || semantic;
+  }
+  if (semantic.domain !== 'IRAS_INCOME_TAX' || semantic.population !== 'UNKNOWN') return semantic;
   const describesEmploymentIncome = /\b(?:employment\s+income|employee\s+(?:income|earnings)|salary|wages?)\b/i.test(semanticSubject);
   const identifiesEmployeeRecipient = /\b(?:employees?|individuals?|persons?|tax\s+residents?|resident\s+individuals?)\b[^.!?]{0,180}\b(?:earn\w*|receive\w*|derive\w*|employment\s+income|salar(?:y|ies)|wages?|income|pay\w*\s+tax|taxed)\b/i.test(query) ||
     /\b(?:earn\w*|receive\w*|derive\w*)\b[^.!?]{0,180}\b(?:employment\s+income|salar(?:y|ies)|wages?)\b/i.test(query) ||
@@ -316,6 +336,103 @@ function toRegistryDomain(domain: SemanticQuestionDomain, population: SemanticPo
     case 'IRAS_STAMP_DUTY': return 'IRAS_STAMP_DUTY';
     default: return undefined;
   }
+}
+
+function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionInterpretation): RequestedQuestionConcept[] {
+  const semanticLabels = semantic?.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept) || [];
+  const text = `${query} ${semantic?.primarySubject || ''} ${semanticLabels.join(' ')}`.toLowerCase();
+  const concepts: RequestedQuestionConcept[] = [];
+  const add = (id: string, label: string, terms: string[], topicIds: string[]) => {
+    if (!concepts.some(item => item.id === id)) concepts.push({ id, label, terms, topicIds });
+  };
+  const personalReliefContext = /\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\b|\bpersonal\s+relief\b/i.test(text) ||
+    /\b(?:srs|cpf)\b/i.test(text) && /\b(?:relief|tax\s+cap|relief\s+cap)\b/i.test(text);
+  const asksReliefCap = personalReliefContext && /\b(?:relief\s+cap|cap\s+of\s+(?:sgd\s*)?\$?\s*80,?000|overall\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|aggregate\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|total\s+(?:personal\s+)?relief\s+limit)\b/i.test(text);
+  if (asksReliefCap) add('personal_income_tax_relief_cap', 'Overall personal income tax relief cap',
+    ['personal income tax relief cap', 'overall relief cap', 'aggregate relief cap', '80,000 relief cap'], ['iras-individual-relief-cap']);
+  if (personalReliefContext && /\b(?:cpf|central provident fund|mandatory cpf contributions?|compulsory cpf contributions?)\b/i.test(text)) {
+    add('cpf_relief', 'CPF Relief / compulsory CPF contributions', ['cpf relief', 'central provident fund relief', 'compulsory cpf contributions'], ['iras-individual-cpf-relief']);
+  }
+  if (personalReliefContext && /\b(?:srs|supplementary retirement scheme)\b/i.test(text)) {
+    add('srs_relief', 'Supplementary Retirement Scheme (SRS) Relief', ['srs relief', 'supplementary retirement scheme relief'], ['iras-individual-srs-relief']);
+  }
+  if (personalReliefContext) {
+    if (/\b(?:parenthood|parent relief|parents? relief)\b/i.test(text)) {
+      add('parent_relief', 'Parent Relief', ['parent relief', 'parents relief'], ['iras-individual-parent-relief']);
+    }
+    if (/\b(?:caregiver|grandparent caregiver|caregiving)\b/i.test(text)) {
+      add('grandparent_caregiver_relief', 'Grandparent Caregiver Relief', ['grandparent caregiver relief', 'caregiver relief'], ['iras-individual-grandparent-caregiver-relief']);
+    }
+    if (/\b(?:parenthood|caregiver|working mother|wmcr|qualifying child|qcr)\b/i.test(text)) {
+      add('working_mother_child_relief', "Working Mother's Child Relief (WMCR)", ['working mother child relief', 'wmcr'], ['iras-individual-wmcr']);
+      add('qualifying_child_relief', 'Qualifying Child Relief (QCR)', ['qualifying child relief', 'qcr'], ['iras-individual-qcr']);
+    }
+    if (asksReliefCap && /\b(?:overlap\w*|prioriti[sz]\w*|order|sequence|interact\w*|interplay)\b/i.test(text)) {
+      add('relief_claim_prioritization', 'Order or prioritization among relief claims', ['order of relief claims', 'priority among relief claims', 'prioritization of relief claims', 'sequence of tax relief claims'], []);
+    }
+  }
+  const companyProfitDeductionOutcome = /\b(?:company|corporate|business)\b[^.!?]{0,100}\b(?:deduct\w*|taxable profits?|chargeable income|tax return|form c(?:-s)?|\beci\b)\b|\b(?:deduct\w*|taxable profits?|chargeable income|tax return|form c(?:-s)?|\beci\b)[^.!?]{0,100}\b(?:company|corporate|business)\b/i.test(query);
+  const namesEmploymentRecipient = /\b(?:employee|employees|staff|workers?|employer[ -]?(?:funded|paid))\b/i.test(query) ||
+    /\bemployment\s+benefits?\b/i.test(text);
+  const employeeBenefits = !companyProfitDeductionOutcome && namesEmploymentRecipient &&
+    /\b(?:benefits?\s+in\s+kind|perquisites?|employment\s+benefits?|housing\s+allowances?|personal\s+insurance|reimbursements?)\b/i.test(query) &&
+    /\b(?:tax(?:able|ability|ed)?|income\s+tax|perquisites?|benefits?\s+in\s+kind)\b/i.test(query);
+  if (employeeBenefits) {
+    add('employee_benefit_tax_treatment', 'Tax treatment of employee benefits and perquisites',
+      ['employee benefits', 'employment benefits', 'benefits in kind', 'benefits-in-kind', 'taxable perquisites', 'gains and profits derived by an employee'], ['iras-employment-benefits']);
+    if (/\b(?:business\s+reimbursements?|reimbursements?)\b/i.test(query)) {
+      add('employee_reimbursement_tax_treatment', 'Employee reimbursement tax treatment',
+        ['employee reimbursements', 'business reimbursements', 'taxable vs non-taxable reimbursements', 'reimbursement for an item', 'reimbursement to an employee'], ['iras-employment-benefits']);
+    }
+    if (/\b(?:housing\s+allowances?|accommodation|rent paid by (?:the )?employer)\b/i.test(query)) {
+      add('employee_housing_benefit_tax_treatment', 'Employee housing and accommodation tax treatment',
+        ['housing allowance', 'housing allowances', 'accommodation and related benefits', 'accommodation provided to an employee', 'rent paid by employer'], ['iras-employment-benefits']);
+    }
+    if (/\b(?:personal\s+insurance|insurance\s+premiums?)\b/i.test(query)) {
+      add('employee_personal_insurance_tax_treatment', 'Employee personal insurance premium tax treatment',
+        ['personal insurance', 'insurance premium', 'insurance premiums', 'personal insurance policy where employee is policyholder', 'employer-paid insurance premium'], ['iras-employment-benefits']);
+    }
+  }
+  const requestedDomain = concepts.some(concept => concept.id === 'employee_benefit_tax_treatment')
+    ? 'IRAS_EMPLOYER_TAX'
+    : semantic ? toRegistryDomain(semantic.domain, semantic.population) : undefined;
+
+  // Semantic labels are retrieval aids. Keep them in the requested-concept
+  // diagnostic and discovery list, while evidence checks still require their
+  // meaning to occur in an admitted official source's text.
+  for (const label of semanticLabels) {
+    const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    if (normalized.length < 5 || concepts.some(item => item.label.toLowerCase().includes(normalized) || normalized.includes(item.label.toLowerCase()))) continue;
+    const hasCanonical = (id: string) => concepts.some(concept => concept.id === id);
+    const isAlreadyCoveredCanonicalConcept =
+      hasCanonical('cpf_relief') && /\b(?:cpf|central provident fund)\b/.test(normalized) && /\b(?:reliefs?|contributions?)\b/.test(normalized) ||
+      hasCanonical('srs_relief') && /\b(?:srs|supplementary retirement scheme)\b/.test(normalized) && /\breliefs?\b/.test(normalized) ||
+      ['parent_relief', 'grandparent_caregiver_relief', 'working_mother_child_relief', 'qualifying_child_relief'].some(hasCanonical) &&
+        /\b(?:parenthood|parent|caregiver|family|working mother|wmcr|qualifying child|qcr)\b/.test(normalized) && /\breliefs?\b/.test(normalized) ||
+      hasCanonical('personal_income_tax_relief_cap') && /\b(?:personal|individual)\b/.test(normalized) && /\breliefs?\b/.test(normalized) && /\b(?:cap|limit|ceiling)\b/.test(normalized) ||
+      hasCanonical('employee_benefit_tax_treatment') && (
+        hasCanonical('employee_reimbursement_tax_treatment') && /\breimbursements?\b/.test(normalized) ||
+        hasCanonical('employee_housing_benefit_tax_treatment') && /\b(?:housing|accommodation|rent)\b/.test(normalized) ||
+        hasCanonical('employee_personal_insurance_tax_treatment') && /\b(?:personal insurance|insurance premiums?)\b/.test(normalized) ||
+        /\b(?:benefits? in kind|perquisites?|employment benefits?)\b/.test(normalized)
+      );
+    if (isAlreadyCoveredCanonicalConcept) continue;
+    const mappedTopics = defaultQueryTopicResolver.decomposeQuery(label).topics
+      .filter(topic => topic.domainId.startsWith('IRAS_') && (!requestedDomain || topic.domainId === requestedDomain))
+      .map(topic => topic.id);
+    if (mappedTopics.some(topicId => concepts.some(concept => concept.topicIds.includes(topicId)))) continue;
+    const id = `semantic_${normalized.replace(/\s+/g, '_').slice(0, 48)}`;
+    add(id, label, [label], mappedTopics);
+  }
+  return concepts;
+}
+
+/** Concepts derived from the complete query plus validated intent labels; never evidence by themselves. */
+export function getRequestedQuestionConcepts(query: string, understanding?: SemanticQuestionUnderstanding | SemanticQuestionInterpretation): RequestedQuestionConcept[] {
+  const semantic = validateSemanticQuestionInterpretation(
+    understanding && 'interpretation' in understanding ? understanding.interpretation : understanding
+  );
+  return canonicalRequestedConcepts(query, semantic);
 }
 
 /** Query terms used only to rank/fetch scoped evidence; user facts and evidence gates keep the original question. */
@@ -395,20 +512,29 @@ export function reconcileQuestionUnderstanding(
   }
 
   const conceptText = [semantic.primarySubject, ...semantic.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept)].join(' ');
-  const selectedDomain = toRegistryDomain(semantic.domain, semantic.population);
+  const requestedConcepts = canonicalRequestedConcepts(query, semantic);
+  const hasEmploymentBenefitTopic = requestedConcepts.some(concept => concept.topicIds.includes('iras-employment-benefits'));
+  const selectedDomain = hasEmploymentBenefitTopic ? 'IRAS_EMPLOYER_TAX' : toRegistryDomain(semantic.domain, semantic.population);
   const semanticTopicIds = (semantic.domain === 'IRAS_INCOME_TAX' && !selectedDomain ? [] : defaultQueryTopicResolver.decomposeQuery(conceptText).topics)
     .filter(topic => topic.domainId.startsWith('IRAS_'))
     .filter(topic => {
-      return !selectedDomain || topic.domainId === selectedDomain;
+      return !selectedDomain || topic.domainId === selectedDomain ||
+        hasEmploymentBenefitTopic && topic.id === 'iras-employment-benefits';
     })
     .map(topic => topic.id);
   const targetDomain = selectedDomain;
   const topicIds = [...new Set([
     ...classification.topicIds.filter(id => {
       const topic = getCoverageTopicsByIds([id])[0];
-      return topic?.domainId.startsWith('IRAS_') && (targetDomain ? topic.domainId === targetDomain : semanticTopicIds.includes(id));
+      return topic?.domainId.startsWith('IRAS_') && (targetDomain ? topic.domainId === targetDomain : semanticTopicIds.includes(id)) ||
+        hasEmploymentBenefitTopic && id === 'iras-employment-benefits';
     }),
-    ...semanticTopicIds
+    ...semanticTopicIds,
+    ...requestedConcepts.flatMap(concept => concept.topicIds.filter(id => {
+      const topic = getCoverageTopicsByIds([id])[0];
+      return topic?.domainId.startsWith('IRAS_') && (!targetDomain || topic.domainId === targetDomain) ||
+        hasEmploymentBenefitTopic && id === 'iras-employment-benefits';
+    }))
   ])];
   const domains = [...new Set([
     ...getCoverageTopicsByIds(topicIds).map(topic => topic.domainId),
@@ -466,15 +592,22 @@ export function projectQuestionUnderstandingDiagnostics(understanding: SemanticQ
 }
 
 /** Values for a transient IRAS retrieval topic. These only affect target selection/ranking. */
-export function getSemanticIrasDiscoveryContext(understanding: SemanticQuestionUnderstanding | undefined) {
+export function getSemanticIrasDiscoveryContext(understanding: SemanticQuestionUnderstanding | undefined, query = '') {
   const semantic = validateSemanticQuestionInterpretation(understanding?.interpretation);
   if (!semantic || !isIrasDomain(semantic.domain) || !semantic.authorityCandidates.includes('IRAS')) return undefined;
-  const domainId = toRegistryDomain(semantic.domain, semantic.population) || 'IRAS_OTHER';
+  const requestedConcepts = canonicalRequestedConcepts(query, semantic);
+  const semanticText = `${semantic.primarySubject} ${semantic.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept).join(' ')}`;
+  const employmentBenefitSubject = /\b(?:benefits?|perquisites?|reimbursements?|housing allowances?|insurance)\b/i.test(semanticText);
+  const employmentBenefits = semantic.domain === 'IRAS_INCOME_TAX' && employmentBenefitSubject &&
+    (semantic.population === 'EMPLOYEE' || requestedConcepts.some(concept => concept.topicIds.includes('iras-employment-benefits')));
+  const domainId = employmentBenefits ? 'IRAS_EMPLOYER_TAX' : toRegistryDomain(semantic.domain, semantic.population) || 'IRAS_OTHER';
   return {
     domainId,
     population: semantic.population,
     primarySubject: semantic.primarySubject,
     concepts: semantic.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept),
+    requestedConcepts,
+    mappedTopicIds: [...new Set(requestedConcepts.flatMap(concept => concept.topicIds))],
     requestedOperation: semantic.requestedOperation
   };
 }

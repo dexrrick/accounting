@@ -1,0 +1,121 @@
+{
+  "suite": "Semantic question understanding adversarial routing and evidence coverage",
+  "description": "Held-out adversarial cases for employee-tax subjects, multi-concept relief discovery, evidence relevance, and presentation consistency. Oracle interpretations exercise reconciliation only and are not model-understanding measurements.",
+  "cases": [
+    {
+      "id": "employee-benefits-context-company",
+      "question": "How does IRAS distinguish between non-taxable business reimbursements and taxable perquisites/benefits-in-kind for employee housing allowances and corporate-paid personal insurance?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "primarySubject": "tax treatment of employee benefits and reimbursements",
+        "concepts": [{"concept": "employment benefits", "role": "PRIMARY"}, {"concept": "taxable perquisites", "role": "RELATED"}],
+        "requestedOperation": "EXPLAIN_INTERACTION", "requiresUserSpecificFacts": false, "calculationRequested": false,
+        "factsExplicitlyProvided": [], "confidence": 0.95
+      },
+      "expected": {"domain": "IRAS_EMPLOYER_TAX", "population": "EMPLOYEE", "topicIds": ["iras-employment-benefits"]}
+    },
+    {
+      "id": "employee-benefit-employer-context",
+      "question": "When our company pays for employee housing and personal insurance, which amounts are taxable employment benefits or non-taxable reimbursements?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "primarySubject": "employee housing and insurance benefit taxability",
+        "concepts": [{"concept": "employee benefits", "role": "PRIMARY"}, {"concept": "reimbursements", "role": "RELATED"}],
+        "requestedOperation": "EXPLAIN_RULE", "requiresUserSpecificFacts": false, "calculationRequested": false,
+        "factsExplicitlyProvided": [], "confidence": 0.94
+      },
+      "expected": {"domain": "IRAS_EMPLOYER_TAX", "population": "EMPLOYEE", "topicIds": ["iras-employment-benefits"]}
+    },
+    {
+      "id": "employer-funded-insurance-is-employee-income",
+      "question": "Are employer-funded personal insurance premiums taxable as employment benefits?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "primarySubject": "taxability of employer-funded employment benefits",
+        "concepts": [{"concept": "personal insurance benefits", "role": "PRIMARY"}, {"concept": "employment income", "role": "RELATED"}],
+        "requestedOperation": "EXPLAIN_RULE", "requiresUserSpecificFacts": false, "calculationRequested": false,
+        "factsExplicitlyProvided": [], "confidence": 0.94
+      },
+      "expected": {"domain": "IRAS_EMPLOYER_TAX", "population": "EMPLOYEE", "topicIds": ["iras-employment-benefits"]}
+    },
+    {
+      "id": "staff-only-company-paid-perquisites",
+      "question": "How are company-paid perquisites for staff taxed?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "primarySubject": "tax treatment of staff perquisites",
+        "concepts": [{"concept": "employee perquisites", "role": "PRIMARY"}],
+        "requestedOperation": "EXPLAIN_RULE", "requiresUserSpecificFacts": false, "calculationRequested": false,
+        "factsExplicitlyProvided": [], "confidence": 0.93
+      },
+      "expected": {"domain": "IRAS_EMPLOYER_TAX", "population": "EMPLOYEE", "topicIds": ["iras-employment-benefits"]}
+    },
+    {
+      "id": "actual-company-deduction",
+      "question": "Can our company deduct employee housing allowances and insurance premiums when calculating corporate taxable profits?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "primarySubject": "company deductions for employee costs",
+        "concepts": [{"concept": "corporate deductions for employee allowances", "role": "PRIMARY"}],
+        "requestedOperation": "CHECK_ELIGIBILITY", "requiresUserSpecificFacts": true, "calculationRequested": false,
+        "factsExplicitlyProvided": [], "confidence": 0.94
+      },
+      "expected": {"domain": "IRAS_CORPORATE_TAX", "population": "COMPANY"}
+    },
+    {
+      "id": "actual-company-form-cs-filing",
+      "question": "Which corporate income tax return must our company file, Form C-S or Form C?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "primarySubject": "company corporate income tax filing",
+        "concepts": [{"concept": "Form C-S versus Form C filing", "role": "PRIMARY"}],
+        "requestedOperation": "FILING_REQUIREMENT", "requiresUserSpecificFacts": false, "calculationRequested": false,
+        "factsExplicitlyProvided": [], "confidence": 0.95
+      },
+      "expected": {"domain": "IRAS_CORPORATE_TAX", "population": "COMPANY"}
+    },
+    {
+      "id": "employee-income-not-employer-benefits",
+      "question": "When is my employment income from a temporary overseas posting taxable in Singapore?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX", "population": "EMPLOYEE", "primarySubject": "overseas employment income",
+        "concepts": [{"concept": "employment income taxability", "role": "PRIMARY"}],
+        "requestedOperation": "EXPLAIN_RULE", "requiresUserSpecificFacts": false, "calculationRequested": false,
+        "factsExplicitlyProvided": [], "confidence": 0.92
+      },
+      "expected": {"domain": "IRAS_INDIVIDUAL_TAX", "population": "EMPLOYEE"}
+    },
+    {
+      "id": "multi-relief-cap-cpf-srs-family",
+      "question": "Given the overall personal income tax relief cap of SGD 80,000, how are overlapping claims prioritized between mandatory CPF contributions, the Supplementary Retirement Scheme (SRS), and parenthood/caregiver reliefs?",
+      "interpretation": {
+        "jurisdiction": ["Singapore"], "authorityCandidates": ["IRAS"], "contextualAuthorities": ["CPF"],
+        "domain": "IRAS_INCOME_TAX", "population": "INDIVIDUAL", "primarySubject": "personal income tax relief cap interaction",
+        "concepts": [
+          {"concept": "personal income tax relief cap", "role": "PRIMARY"},
+          {"concept": "mandatory CPF contribution relief", "role": "RELATED"},
+          {"concept": "Supplementary Retirement Scheme relief", "role": "RELATED"},
+          {"concept": "parenthood and caregiver relief", "role": "RELATED"}
+        ],
+        "requestedOperation": "EXPLAIN_INTERACTION", "requiresUserSpecificFacts": false, "calculationRequested": false,
+        "factsExplicitlyProvided": ["SGD 80,000"], "confidence": 0.96
+      },
+      "expected": {"domain": "IRAS_INDIVIDUAL_TAX", "population": "INDIVIDUAL", "minimumConcepts": 7}
+    }
+  ],
+  "evidenceScenarios": [
+    {
+      "id": "strong-srs-weak-other-concepts",
+      "description": "An SRS source and a generic official IRAS page cannot close the cap, CPF, family-relief, or prioritization gaps.",
+      "questionCaseId": "multi-relief-cap-cpf-srs-family",
+      "sourceProfile": "SRS_ONLY_PLUS_GENERIC_OFFICIAL"
+    },
+    {
+      "id": "generic-official-versus-specific-official",
+      "description": "Official-domain status and shared tax/company/relief vocabulary do not establish topic relevance.",
+      "questionCaseId": "multi-relief-cap-cpf-srs-family",
+      "sourceProfile": "GENERIC_ONLY"
+    }
+  ]
+}

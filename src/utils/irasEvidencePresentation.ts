@@ -54,9 +54,8 @@ export function getIrasDomainDisplayLabel(
   if (incomeTaxDomains.length === 1) {
     const domain = incomeTaxDomains[0];
     if (domain === 'IRAS_INDIVIDUAL_TAX') return 'IRAS Individual Income Tax';
+    if (domain === 'IRAS_CORPORATE_TAX') return 'IRAS Corporate Income Tax';
     if (domain === 'IRAS_EMPLOYER_TAX') return 'IRAS Employer Tax';
-    if (explicitlyIndividualQuery(rawQuery)) return 'IRAS Individual Income Tax';
-    if ((classification?.topicIds.length || 0) > 0 || explicitlyCorporateQuery(rawQuery)) return 'IRAS Corporate Income Tax';
   }
   if (incomeTaxDomains.length === 0 && fallbackDomain === 'IRAS_TAX') {
     if (explicitlyEmployerQuery(rawQuery)) return 'IRAS Employer Tax';

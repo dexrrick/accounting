@@ -64,6 +64,12 @@ async function run() {
 
   const definitionIds = IRAS_SOURCE_MAP_DEFINITIONS.map(item => item.id);
   assert.equal(new Set(definitionIds).size, definitionIds.length, 'IRAS source-map identifiers must be unique.');
+  const reliefMapsReviewedOn29September = new Set([
+    'IRAS_PERSONAL_RELIEF_CAP_SOURCE_MAP', 'IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP',
+    'IRAS_SRS_RELIEF_SOURCE_MAP', 'IRAS_PARENT_RELIEF_SOURCE_MAP',
+    'IRAS_GRANDPARENT_CAREGIVER_RELIEF_SOURCE_MAP', 'IRAS_WMCR_SOURCE_MAP',
+    'IRAS_QCR_SOURCE_MAP'
+  ]);
   for (const definition of IRAS_SOURCE_MAP_DEFINITIONS) {
     const canonical = new URL(definition.canonicalSourceUrl);
     assert.ok(['www.iras.gov.sg', 'iras.gov.sg'].includes(canonical.hostname), `${definition.id} must be a first-party IRAS URL.`);
@@ -72,9 +78,11 @@ async function run() {
     assert.equal(canonical.hash, '', `${definition.id} must not contain a fragment.`);
     assert.ok(canonical.pathname.split('/').filter(Boolean).length >= 3, `${definition.id} must use a page-specific URL.`);
     assert.equal(definition.urlVerificationStatus, 'VERIFIED');
-    assert.equal(definition.urlVerifiedDate, '2026-09-26');
+    const expectedReviewDate = reliefMapsReviewedOn29September.has(definition.id) ? '2026-09-29' : '2026-09-26';
+    assert.equal(definition.urlVerifiedDate, expectedReviewDate);
     assert.equal(definition.urlVerificationMethod, 'OFFICIAL_HTML_PAGE_TITLE_AND_TOPIC_CHECK');
     assert.match(definition.urlVerificationEvidence, /official IRAS page/i);
+    assert.ok(definition.urlVerificationEvidence.includes(expectedReviewDate));
     assert.ok(definition.pageTitle.trim().length > 3);
     assert.ok(hasVerifiedSourceUrlProvenance({
       officialSourceUrl: definition.canonicalSourceUrl,

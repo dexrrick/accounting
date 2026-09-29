@@ -106,12 +106,18 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   // Lexical aliases such as "foreign-sourced income" are shared by corporate
   // and individual tax guidance. Use explicit population signals to prevent a
   // corporate topic from winning solely because those words overlap.
-  const individualTaxContext = /\b(?:individual|personally|my (?:income|salary|tax)|i (?:earn|receive)|singapore tax resident|tax resident in singapore|employee|employment income|salary|wages|secondment|overseas posting|non[ -]resident individual|non[ -]resident employee)\b/i.test(query);
+  const employmentBenefitSubject = /\b(?:benefits?\s+in\s+kind|perquisites?|employment\s+benefits?|housing\s+allowances?|personal\s+insurance|employee reimbursements?)\b/i.test(query);
+  const namesEmploymentRecipient = /\b(?:employee|employees|staff|workers?|employer[ -]?(?:funded|paid))\b/i.test(query) ||
+    /\bemployment\s+benefits?\b/i.test(query);
+  const employeeBenefitsTaxContext = employmentBenefitSubject && namesEmploymentRecipient &&
+    /\b(?:tax(?:able|ability|ed)?|income\s+tax|perquisites?|benefits?\s+in\s+kind)\b/i.test(query);
+  const individualTaxContext = /\b(?:individual|personally|my (?:income|salary|tax)|i (?:earn|receive)|singapore tax resident|tax resident in singapore|employee|employment income|salary|wages|secondment|overseas posting|non[ -]resident individual|non[ -]resident employee)\b/i.test(query) || employeeBenefitsTaxContext;
   // A company or employer can be mentioned in an individual employee query.
   // Treat it as the taxpayer only where the query is not framed around an
   // individual's employment, or the company is explicitly the income/tax subject.
-  const corporateTaxContext = /\b(?:corporate tax|company tax|form c(?:-s|\b)|business income|trade or business|company profits?|branch profits?|company income)\b/i.test(query) ||
-    (/\b(?:company|companies|corporation)\b/i.test(query) && !individualTaxContext);
+  const explicitlyCorporateTaxTarget = /\b(?:corporate tax|company tax|form c(?:-s|\b)|business income|trade or business|company profits?|branch profits?|company income|company deductions?|company taxable profits?|corporate deductions?)\b/i.test(query);
+  const corporateTaxContext = explicitlyCorporateTaxTarget ||
+    (/\b(?:company|companies|corporation)\b/i.test(query) && !individualTaxContext && !employeeBenefitsTaxContext);
   const taxOutcomeContext = /\b(?:tax(?:able|ed|ability|ation)?|exempt(?:ion)?|chargeable)\b/i.test(query);
   const requestsSingaporeTaxTreatment = taxOutcomeContext && (
     /\b(?:in|into|under|to|for)\s+singapore\b/i.test(query) ||
@@ -208,6 +214,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:income tax|corporate tax|company tax|personal tax|individual tax|foreign[- ]sourced income|employment income|salary|wages|branch profits?|business income|company profits?|company income|tax residenc\w*|tax resident|foreign tax credit|double tax(?:ation)? relief|double tax agreement)\b/i.test(q);
 
   const hasTax = !foreignTaxOnlyContext && (
+    employeeBenefitsTaxContext ||
     q.includes('tax deduct') ||
     q.includes('deductib') ||
     q.includes('corporate tax') ||
@@ -350,13 +357,15 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   if (hasPayroll && !domains.some(domain => domain.startsWith('CPF_'))) addDomainIfMissing('CPF_CONTRIBUTIONS');
   if (hasMasFunds && !domains.some(domain => domain.startsWith('MAS_'))) addDomainIfMissing('MAS_FUND_MANAGEMENT');
   if (hasTax) {
-    if (/\b(ir21|ir8a|ir8s|ais|benefits-in-kind|benefits in kind)\b/i.test(q)) addDomainIfMissing('IRAS_EMPLOYER_TAX');
+    if (/\b(ir21|ir8a|ir8s|ais)\b/i.test(q)) addDomainIfMissing('IRAS_EMPLOYER_TAX');
+    else if (corporateTaxContext && /\b(corporate tax|company tax|income tax|tax deduct\w*|deductib\w*|capital allowance|form c|sute|pte|section 14|section 15|section 19|transfer pricing|tax loss|group relief|withholding tax|eci)\b/i.test(q)) addDomainIfMissing('IRAS_CORPORATE_TAX');
+    else if (employeeBenefitsTaxContext || /\b(benefits-in-kind|benefits in kind)\b/i.test(q)) addDomainIfMissing('IRAS_EMPLOYER_TAX');
+    else if (individualTaxContext) addDomainIfMissing('IRAS_INDIVIDUAL_TAX');
     else if (/\b(personal tax|individual tax|tax residency|tax resident|183[- ]day|personal relief)\b/i.test(q)) addDomainIfMissing('IRAS_INDIVIDUAL_TAX');
     else if (singaporeTaxOutcomeContext || explicitSingaporeIncomeTaxOutcome) addDomainIfMissing(corporateTaxContext ? 'IRAS_CORPORATE_TAX' : 'IRAS_INDIVIDUAL_TAX');
     else if (/\b(property tax|annual value)\b/i.test(q)) addDomainIfMissing('IRAS_PROPERTY_TAX');
     else if (/\b(stamp duty|bsd|absd|ssd)\b/i.test(q)) addDomainIfMissing('IRAS_STAMP_DUTY');
     else if (/\b(crs|fatca)\b/i.test(q)) addDomainIfMissing('IRAS_CRS_FATCA');
-    else if (/\b(corporate tax|company tax|income tax|tax deduct\w*|deductib\w*|capital allowance|form c|sute|pte|section 14|section 15|section 19|transfer pricing|tax loss|group relief|withholding tax|eci)\b/i.test(q)) addDomainIfMissing('IRAS_CORPORATE_TAX');
   }
   if (multiAuthority) domains.push('MULTI_AUTHORITY');
 

@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
-import { evaluateEvidenceQuality } from '../../src/retrieval/evidenceQualityGate.ts';
+import { evaluateEvidenceQuality, matchesRequestedQuestionConcept } from '../../src/retrieval/evidenceQualityGate.ts';
 import { findRecordEligibilityRejection, verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 import { InMemorySourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { AdvancedSourceRetriever } from '../../src/retrieval/advancedSourceRetriever.ts';
 import { getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
+import { getRequestedQuestionConcepts } from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const mealTopic = 'iras-gst-entertainment';
 const standardRateTopic = 'iras-gst-standard-rated-supplies';
@@ -169,6 +170,178 @@ const completeBranchConceptGate = evaluateEvidenceQuality({
 });
 assert.ok(completeBranchConceptGate.coveredTopicIds.includes(provisionalBranchTopic.id),
   'A page with substantive support across the material concepts covers the transient discovery scope.');
+
+const multiReliefQuery = 'Given the overall personal income tax relief cap of SGD 80,000, how are overlapping claims prioritized between mandatory CPF contributions, the Supplementary Retirement Scheme (SRS), and parenthood/caregiver reliefs?';
+const requestedReliefConcepts = getRequestedQuestionConcepts(multiReliefQuery);
+const reliefConceptTopics = requestedReliefConcepts.map(concept => ({
+  id: `iras-authority-query-concept-${concept.id.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}`,
+  title: `IRAS individual income tax — ${concept.label}`,
+  domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', status: 'MISSING', authorities: ['IRAS'],
+  legacyDomains: ['IRAS_TAX'], sourceRecordIds: [], requiredChecks: [], keywords: [concept.label, ...concept.terms],
+  aliases: concept.terms, exclusionKeywords: [], requestedConcepts: [concept], mappedTopicIds: concept.topicIds
+}));
+const reliefTopicTags = reliefConceptTopics.map(topic => topic.id);
+const directReliefHubEvidence = makeRecord({
+  id: 'DIRECT_IRAS_RELIEF_HUB', domain: 'IRAS_TAX', tags: [...reliefTopicTags, 'iras-individual-relief-cap'],
+  documentTitle: 'Tax Reliefs',
+  sourceText: 'Individual income tax reliefs are subject to an overall relief cap of $80,000. CPF Relief and SRS Relief are among the claims. Parent Relief, Grandparent Caregiver Relief, Working Mother’s Child Relief (WMCR), and Qualifying Child Relief (QCR) are available according to the applicable conditions.',
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/tax-reliefs',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/tax-reliefs'
+});
+const reliefHubGate = evaluateEvidenceQuality({
+  query: multiReliefQuery, topicIds: ['iras-individual-relief-cap'], provisionalTopics: reliefConceptTopics,
+  requestedConcepts: requestedReliefConcepts, records: [directReliefHubEvidence], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', referenceDate: '2026-09-26'
+});
+assert.equal(reliefHubGate.status, 'LIMITED',
+  'Direct hub evidence covers the cap and named reliefs but cannot prove an unstated priority order.');
+assert.deepEqual(reliefHubGate.coveredConcepts, requestedReliefConcepts.slice(0, -1).map(concept => concept.label));
+assert.deepEqual(reliefHubGate.uncoveredConcepts, ['Order or prioritization among relief claims']);
+assert.deepEqual(reliefHubGate.acceptedSourceGroups, [directReliefHubEvidence.canonicalSourceUrl]);
+
+const directNoPriorityEvidence = {
+  ...directReliefHubEvidence,
+  id: 'DIRECT_IRAS_RELIEF_HUB_NO_PRIORITY',
+  sourceText: `${directReliefHubEvidence.sourceText} IRAS states there is no fixed order or priority for claiming personal income tax reliefs.`
+};
+const directNoPriorityGate = evaluateEvidenceQuality({
+  query: multiReliefQuery, topicIds: ['iras-individual-relief-cap'], provisionalTopics: reliefConceptTopics,
+  requestedConcepts: requestedReliefConcepts, records: [directNoPriorityEvidence], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', referenceDate: '2026-09-26'
+});
+assert.equal(directNoPriorityGate.uncoveredConcepts.includes('Order or prioritization among relief claims'), false,
+  'A direct official statement that no fixed priority applies answers the priority concept.');
+assert.ok(directNoPriorityGate.coveredConcepts.includes('Order or prioritization among relief claims'));
+const equityOnlyEvidence = {
+  ...directReliefHubEvidence,
+  id: 'IRAS_RELIEF_EQUITY_PURPOSE_ONLY',
+  sourceText: `${directReliefHubEvidence.sourceText} This cap is applied in order to preserve equity.`
+};
+const equityOnlyGate = evaluateEvidenceQuality({
+  query: multiReliefQuery, topicIds: ['iras-individual-relief-cap'], provisionalTopics: reliefConceptTopics,
+  requestedConcepts: requestedReliefConcepts, records: [equityOnlyEvidence], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', referenceDate: '2026-09-26'
+});
+assert.ok(equityOnlyGate.uncoveredConcepts.includes('Order or prioritization among relief claims'),
+  'A generic phrase such as “in order to preserve equity” does not establish claim priority.');
+
+const capAndCpfConcepts = requestedReliefConcepts.filter(concept =>
+  concept.id === 'personal_income_tax_relief_cap' || concept.id === 'cpf_relief');
+const capOnlyEvidence = makeRecord({
+  id: 'CAP_ONLY_RELIEF_EVIDENCE',
+  authorityName: 'Inland Revenue Authority of Singapore (IRAS)',
+  domain: 'IRAS_TAX',
+  tags: ['iras-individual-relief-cap'],
+  sourceText: 'Personal income tax reliefs are subject to an overall relief cap of $80,000.',
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/tax-reliefs',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/tax-reliefs'
+});
+const capWithoutCpfTopic = evaluateEvidenceQuality({
+  query: multiReliefQuery, topicIds: ['iras-individual-relief-cap'], provisionalTopics: [],
+  requestedConcepts: capAndCpfConcepts, records: [capOnlyEvidence], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', referenceDate: '2026-09-26'
+});
+assert.equal(capWithoutCpfTopic.status, 'LIMITED',
+  'Uncovered requested concepts keep the result limited even when no provisional topic was supplied for CPF Relief.');
+assert.deepEqual(capWithoutCpfTopic.coveredConcepts, ['Overall personal income tax relief cap']);
+assert.deepEqual(capWithoutCpfTopic.uncoveredConcepts, ['CPF Relief / compulsory CPF contributions']);
+
+const employeeBenefitQuery = 'How does IRAS distinguish between non-taxable business reimbursements and taxable perquisites/benefits-in-kind for employee housing allowances and corporate-paid personal insurance?';
+const employeeBenefitConcepts = getRequestedQuestionConcepts(employeeBenefitQuery);
+const employeeBenefitTopics = employeeBenefitConcepts.map(concept => ({
+  id: `iras-authority-query-concept-${concept.id.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase()}`,
+  title: `IRAS employment tax — ${concept.label}`,
+  domainId: 'IRAS_EMPLOYER_TAX', priority: 'P1', status: 'MISSING', authorities: ['IRAS'],
+  legacyDomains: ['IRAS_TAX'], sourceRecordIds: [], requiredChecks: [], keywords: [concept.label, ...concept.terms],
+  aliases: concept.terms, exclusionKeywords: [], requestedConcepts: [concept], mappedTopicIds: concept.topicIds
+}));
+const irasEmployeeBenefitSources = [
+  {
+    conceptId: 'employee_benefit_tax_treatment',
+    id: 'IRAS_EMPLOYMENT_TAX_PRINCIPLE',
+    title: 'Tax Principles and Flexible Benefits',
+    url: 'https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/tax-principles-and-flexible-benefits',
+    sourceText: 'All gains and profits derived by an employee in respect of his employment are taxable, unless they are specifically exempt from income tax or are covered by an existing administrative concession. The gains or profits include all benefits, whether in money or otherwise, paid or granted to him in respect of employment.'
+  },
+  {
+    conceptId: 'employee_reimbursement_tax_treatment',
+    id: 'IRAS_TAXABLE_VS_NON_TAXABLE_REIMBURSEMENTS',
+    title: 'Taxable vs. Non-Taxable Reimbursements',
+    url: 'https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/tax-principles-and-flexible-benefits',
+    sourceText: 'Taxable vs. Non-Taxable Reimbursements | If an employee seeks reimbursement for an item that has been granted concession or exempt from tax, the reimbursement is not taxable. Reimbursement for an item that has not been granted concession or exempt from tax is taxable.'
+  },
+  {
+    conceptId: 'employee_housing_benefit_tax_treatment',
+    id: 'IRAS_HOUSING_ALLOWANCE_TAX_TREATMENT',
+    title: 'Accommodation and Related Benefits',
+    url: 'https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/accommodation-and-related-benefits',
+    sourceText: 'Accommodation and Related Benefits | Housing Allowance | Housing allowance is taxed in full. Where the employee signs a rental agreement but the employer pays the rent to the landlord, the actual rental amount paid by the employer will be taxed in full.'
+  },
+  {
+    conceptId: 'employee_personal_insurance_tax_treatment',
+    id: 'IRAS_PERSONAL_INSURANCE_PREMIUM_TAX_TREATMENT',
+    title: 'Insurance Premium',
+    url: 'https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/insurance-premium',
+    sourceText: 'Insurance Premium | Nature of insurance policy for which the premium is paid by employer | Personal Insurance policy where employee is the policyholder. | Taxable'
+  }
+];
+const employeeBenefitEvidence = irasEmployeeBenefitSources.map(source => {
+  const conceptTopic = employeeBenefitTopics.find(topic => topic.requestedConcepts[0].id === source.conceptId);
+  assert.ok(conceptTopic, `The original question must request ${source.conceptId}.`);
+  return makeRecord({
+    id: source.id,
+    domain: 'IRAS_TAX',
+    documentTitle: source.title,
+    tags: ['iras-employment-benefits', conceptTopic.id],
+    sourceText: source.sourceText,
+    officialSourceUrl: source.url,
+    canonicalSourceUrl: source.url
+  });
+});
+const employeeBenefitGate = evaluateEvidenceQuality({
+  query: employeeBenefitQuery,
+  topicIds: ['iras-employment-benefits'],
+  provisionalTopics: employeeBenefitTopics,
+  requestedConcepts: employeeBenefitConcepts,
+  records: employeeBenefitEvidence,
+  missingFacts: [], authorities: ['IRAS'], domain: 'IRAS_TAX', referenceDate: '2026-09-26'
+});
+assert.deepEqual(employeeBenefitGate.coveredConcepts, employeeBenefitConcepts.map(concept => concept.label),
+  'IRAS wording on employment gains, taxable/non-taxable reimbursements, housing allowance, and personal insurance premiums covers each requested concept independently.');
+assert.deepEqual(employeeBenefitGate.uncoveredConcepts, []);
+
+const genericEmployeeBenefitText = 'The company paid employee housing allowances, personal insurance premiums, and business reimbursements. These amounts appear among staff costs.';
+assert.ok(employeeBenefitConcepts.every(concept => !matchesRequestedQuestionConcept(genericEmployeeBenefitText, concept)),
+  'Shared words about company-paid housing, insurance, and reimbursements are not tax-treatment evidence.');
+const corporateDeductionDecoyText = 'The company may deduct employee housing allowances, personal insurance premiums, and business reimbursements when computing corporate taxable profits; these are company expenses, not employee income-tax benefits.';
+assert.ok(employeeBenefitConcepts.every(concept => !matchesRequestedQuestionConcept(corporateDeductionDecoyText, concept)),
+  'Corporate deduction text cannot cover employee benefit tax concepts through shared words alone.');
+
+const onlySrsConcept = requestedReliefConcepts.find(concept => concept.id === 'srs_relief');
+const srsOnlyTopic = reliefConceptTopics.find(topic => topic.requestedConcepts[0].id === 'srs_relief');
+const srsOnlyEvidence = makeRecord({
+  id: 'SRS_ONLY_EVIDENCE', domain: 'IRAS_TAX', tags: [srsOnlyTopic.id], documentTitle: 'SRS Relief',
+  sourceText: 'SRS Relief may be available for qualifying Supplementary Retirement Scheme contributions.',
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/srs',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/srs'
+});
+const genericOfficialEvidence = makeRecord({
+  id: 'GENERIC_IRAS_RELIEF_PAGE', domain: 'IRAS_TAX', tags: reliefTopicTags,
+  documentTitle: 'Tax Information',
+  sourceText: 'IRAS provides tax information for individuals, companies, employers and businesses. Refer to the official tax pages for applicable relief.',
+  officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax',
+  canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax'
+});
+const partialReliefGate = evaluateEvidenceQuality({
+  query: multiReliefQuery, topicIds: [], provisionalTopics: reliefConceptTopics,
+  requestedConcepts: requestedReliefConcepts, records: [srsOnlyEvidence, genericOfficialEvidence], missingFacts: [],
+  authorities: ['IRAS'], domain: 'IRAS_TAX', referenceDate: '2026-09-26'
+});
+assert.equal(partialReliefGate.status, 'LIMITED',
+  'A strong SRS source cannot make the multi-concept request sufficient when other requested material concepts are absent.');
+assert.deepEqual(partialReliefGate.coveredConcepts, [onlySrsConcept.label]);
+assert.equal(partialReliefGate.eligibleRecords.some(record => record.id === genericOfficialEvidence.id), false,
+  'A generic official IRAS page sharing only tax/company/relief vocabulary is rejected before presentation eligibility.');
 
 const needsReview = makeRecord({ id: 'MEAL_NEEDS_REVIEW', sourceStatus: 'NEEDS_REVIEW' });
 assert.equal(gate(mealQuery, [mealTopic], [needsReview]).status, 'INSUFFICIENT',

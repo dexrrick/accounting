@@ -4,6 +4,7 @@ import {
 } from '../../src/services/groundingContextBuilder.ts';
 import {
   buildSemanticDiscoveryQuery,
+  getRequestedQuestionConcepts,
   getSemanticIrasDiscoveryContext,
   interpretSemanticQuestion,
   isShortSemanticFollowUp,
@@ -72,6 +73,96 @@ assert.equal(personalRoute.classification.topicIds.every(id => id.startsWith('ir
 assert.equal(personalRoute.understanding.mode, 'SEMANTIC_PLUS_RULES');
 assert.deepEqual(personalRoute.classification.authorities, ['IRAS'],
   'CPF cited only as a contextual relief concept does not become another governing authority.');
+const materialReliefConcepts = getRequestedQuestionConcepts(personalRelief, personalRoute.understanding);
+assert.deepEqual(materialReliefConcepts.map(concept => concept.id), [
+  'personal_income_tax_relief_cap', 'cpf_relief', 'srs_relief', 'parent_relief',
+  'grandparent_caregiver_relief', 'working_mother_child_relief', 'qualifying_child_relief',
+  'relief_claim_prioritization'
+], 'A broad parenthood/caregiver relief question retains every material concept, while labels remain retrieval aids.');
+assert.ok(materialReliefConcepts.every(concept => concept.id !== 'semantic_mandatory_cpf_contribution_relief'),
+  'Semantic labels already represented by canonical material concepts do not create duplicate evidence requirements.');
+const recordedPluralReliefLabels = getRequestedQuestionConcepts(personalRelief, {
+  ...personalRoute.understanding.interpretation,
+  concepts: [
+    { concept: 'mandatory CPF contributions', role: 'RELATED' },
+    { concept: 'Supplementary Retirement Scheme reliefs', role: 'RELATED' },
+    { concept: 'parenthood and caregiver reliefs', role: 'RELATED' }
+  ]
+});
+assert.deepEqual(recordedPluralReliefLabels.map(concept => concept.id), materialReliefConcepts.map(concept => concept.id),
+  'Recorded plural Gemini labels normalize into the existing canonical CPF and family-relief concepts.');
+assert.ok(recordedPluralReliefLabels.every(concept => !concept.id.startsWith('semantic_')),
+  'Plural label variants do not create additional semantic evidence requirements.');
+
+const employeeBenefitsQuestions = [
+  'How does IRAS distinguish between non-taxable business reimbursements and taxable perquisites/benefits-in-kind for employee housing allowances and corporate-paid personal insurance?',
+  'When our company pays for employee housing and personal insurance, which amounts are taxable employment benefits or non-taxable reimbursements?',
+  'For an employer-funded employee allowance, does the employee face income tax on the perquisite even though the company paid it?',
+  'How are company-paid perquisites for staff taxed?',
+  'Are employer-funded personal insurance premiums taxable as employment benefits?'
+];
+for (const benefitQuestion of employeeBenefitsQuestions) {
+  const benefitRoute = reconcile(benefitQuestion, {
+    domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'tax treatment of employee benefits and reimbursements',
+    concepts: [{ concept: 'employment benefits', role: 'PRIMARY' }, { concept: 'taxable perquisites', role: 'RELATED' }],
+    requestedOperation: 'EXPLAIN_INTERACTION', requiresUserSpecificFacts: false
+  });
+  assert.equal(benefitRoute.understanding.interpretation.population, 'EMPLOYEE',
+    `Employee benefit taxation is attributed to the employee despite contextual company/employer language: ${benefitQuestion}`);
+  assert.ok(benefitRoute.classification.topicIds.includes('iras-employment-benefits'),
+    'Employee benefits preserve the registered employment benefits topic and source map.');
+  assert.equal(benefitRoute.classification.domains.includes('IRAS_CORPORATE_TAX'), false,
+    'A contextual business, company, or corporate-paid reference does not select corporate income tax.');
+  assert.equal(getSemanticIrasDiscoveryContext(benefitRoute.understanding, benefitQuestion).domainId, 'IRAS_EMPLOYER_TAX', benefitQuestion);
+  const fallbackClassification = classifyQuestion(benefitQuestion);
+  assert.equal(fallbackClassification.domains.includes('IRAS_CORPORATE_TAX'), false,
+    `Deterministic fallback must not treat contextual employer/company words as the taxpayer: ${benefitQuestion}`);
+  assert.ok(fallbackClassification.domains.includes('IRAS_EMPLOYER_TAX') || fallbackClassification.domains.includes('IRAS_INDIVIDUAL_TAX'),
+    `Deterministic fallback must stay within employee/employment tax scope: ${benefitQuestion}`);
+}
+const detailedEmployeeBenefitQuery = employeeBenefitsQuestions[0];
+const detailedEmployeeBenefitConcepts = getRequestedQuestionConcepts(detailedEmployeeBenefitQuery, interpretation({
+  domain: 'IRAS_INCOME_TAX',
+  population: 'EMPLOYEE',
+  primarySubject: 'employee benefit tax treatment',
+  concepts: [
+    { concept: 'business reimbursements', role: 'RELATED' },
+    { concept: 'housing allowances', role: 'RELATED' },
+    { concept: 'corporate-paid personal insurance', role: 'RELATED' }
+  ],
+  requestedOperation: 'EXPLAIN_INTERACTION',
+  requiresUserSpecificFacts: false
+}));
+assert.deepEqual(detailedEmployeeBenefitConcepts.map(concept => concept.id), [
+  'employee_benefit_tax_treatment',
+  'employee_reimbursement_tax_treatment',
+  'employee_housing_benefit_tax_treatment',
+  'employee_personal_insurance_tax_treatment'
+], 'The complete question tracks reimbursement, housing, and insurance separately, and semantic labels do not create duplicate requirements.');
+const employerReportingQuestion = 'When must an employer report taxable employee benefits on Form IR8A?';
+const employerReportingRoute = reconcile(employerReportingQuestion, {
+  domain: 'IRAS_INCOME_TAX', population: 'EMPLOYER', primarySubject: 'employer reporting obligations for employee benefits',
+  concepts: [{ concept: 'IR8A reporting for employee benefits', role: 'PRIMARY' }],
+  requestedOperation: 'FILING_REQUIREMENT', requiresUserSpecificFacts: false
+});
+assert.equal(employerReportingRoute.understanding.interpretation.population, 'EMPLOYER',
+  'An employer filing/reporting question remains about the employer despite employee-benefit terms.');
+const employeeIncomeNotBenefits = reconcile('When is my employment income from a temporary overseas posting taxable in Singapore?', {
+  domain: 'IRAS_INCOME_TAX', population: 'EMPLOYEE', primarySubject: 'overseas employment income',
+  concepts: [{ concept: 'employment income taxability', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false
+});
+assert.equal(getSemanticIrasDiscoveryContext(employeeIncomeNotBenefits.understanding).domainId, 'IRAS_INDIVIDUAL_TAX',
+  'Ordinary employment income questions do not get redirected into employer benefits reporting.');
+const companyDeductionQuestion = 'Can our company deduct employee housing allowances and insurance premiums when calculating corporate taxable profits?';
+const companyDeductionRoute = reconcile(companyDeductionQuestion, {
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'company deductions for employee costs',
+  concepts: [{ concept: 'corporate deductions for employee allowances', role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true
+});
+assert.equal(companyDeductionRoute.understanding.interpretation.population, 'COMPANY',
+  'An explicit company deduction from corporate profits remains a corporate-tax question.');
+assert.ok(companyDeductionRoute.classification.domains.includes('IRAS_CORPORATE_TAX'));
 const masMixedQuery = 'what is MAS 13O';
 const deterministicMasRoute = classifyQuestion(masMixedQuery);
 assert.deepEqual([...deterministicMasRoute.authorities].sort(), ['IRAS', 'MAS']);

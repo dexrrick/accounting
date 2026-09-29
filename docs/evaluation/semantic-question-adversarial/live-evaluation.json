@@ -1,0 +1,699 @@
+{
+  "summary": {
+    "suite": "Semantic question understanding adversarial routing and evidence coverage",
+    "mode": "LIVE_GEMINI_WITH_OFFLINE_EVIDENCE",
+    "model": "gemini-3.5-flash-lite",
+    "modelUnderstandingMeasured": true,
+    "cases": 8,
+    "oracleRoutingPasses": 7,
+    "presentationConsistency": {
+      "queryMatches": true,
+      "domainMatchesReconciledClassification": true,
+      "sourcesHaveAcceptedClaimsForCurrentQuery": true,
+      "chatPreviewAndSidePanelUseSamePresentation": true,
+      "staleQuestionRejected": true
+    },
+    "limitations": [
+      "Oracle fixture interpretations measure deterministic reconciliation, not model extraction.",
+      "Evidence coverage profiles are synthetic source-text fixtures; offline discovery does not measure live IRAS availability.",
+      "The priority-order concept remains uncovered unless an official passage directly states how relief claims are prioritized."
+    ]
+  },
+  "cases": [
+    {
+      "id": "employee-benefits-context-company",
+      "question": "How does IRAS distinguish between non-taxable business reimbursements and taxable perquisites/benefits-in-kind for employee housing allowances and corporate-paid personal insurance?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "EMPLOYEE",
+        "primarySubject": "business reimbursements versus benefits-in-kind for employee housing allowances and corporate-paid personal insurance",
+        "concepts": [
+          {
+            "concept": "business reimbursements",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "benefits-in-kind",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "employee housing allowances",
+            "role": "RELATED"
+          },
+          {
+            "concept": "corporate-paid personal insurance",
+            "role": "RELATED"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "population": "EMPLOYEE"
+      },
+      "requestedConcepts": [
+        "Tax treatment of employee benefits and perquisites",
+        "Employee reimbursement tax treatment",
+        "Employee housing and accommodation tax treatment",
+        "Employee personal insurance premium tax treatment"
+      ],
+      "mappedTopics": [
+        "iras-employment-benefits"
+      ],
+      "acceptedOfficialSources": [],
+      "evidenceCoverage": {
+        "status": "INSUFFICIENT",
+        "coveredConcepts": [],
+        "uncoveredConcepts": [
+          "Tax treatment of employee benefits and perquisites",
+          "Employee reimbursement tax treatment",
+          "Employee housing and accommodation tax treatment",
+          "Employee personal insurance premium tax treatment"
+        ],
+        "acceptedSourceGroups": [],
+        "uncoveredTopicIds": [
+          "iras-employment-benefits",
+          "iras-authority-query-concept-employee-benefit-tax-treatment",
+          "iras-authority-query-concept-employee-reimbursement-tax-treatment",
+          "iras-authority-query-concept-employee-housing-benefit-tax-treatment",
+          "iras-authority-query-concept-employee-personal-insurance-tax-treatment"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Employer Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": true,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": true,
+        "expectedDomain": true
+      }
+    },
+    {
+      "id": "employee-benefit-employer-context",
+      "question": "When our company pays for employee housing and personal insurance, which amounts are taxable employment benefits or non-taxable reimbursements?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "EMPLOYEE",
+        "primarySubject": "taxability of employee housing and personal insurance benefits",
+        "concepts": [
+          {
+            "concept": "employee housing",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "personal insurance",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "taxable employment benefits",
+            "role": "RELATED"
+          },
+          {
+            "concept": "non-taxable reimbursements",
+            "role": "RELATED"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "population": "EMPLOYEE"
+      },
+      "requestedConcepts": [
+        "Tax treatment of employee benefits and perquisites",
+        "Employee reimbursement tax treatment",
+        "Employee personal insurance premium tax treatment",
+        "employee housing"
+      ],
+      "mappedTopics": [
+        "iras-employment-benefits"
+      ],
+      "acceptedOfficialSources": [],
+      "evidenceCoverage": {
+        "status": "INSUFFICIENT",
+        "coveredConcepts": [],
+        "uncoveredConcepts": [
+          "Tax treatment of employee benefits and perquisites",
+          "Employee reimbursement tax treatment",
+          "Employee personal insurance premium tax treatment",
+          "employee housing"
+        ],
+        "acceptedSourceGroups": [],
+        "uncoveredTopicIds": [
+          "iras-employment-benefits",
+          "iras-authority-query-concept-employee-benefit-tax-treatment",
+          "iras-authority-query-concept-employee-reimbursement-tax-treatment",
+          "iras-authority-query-concept-employee-personal-insurance-tax-treatment",
+          "iras-authority-query-concept-semantic-employee-housing"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Employer Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": true,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": true,
+        "expectedDomain": true
+      }
+    },
+    {
+      "id": "employer-funded-insurance-is-employee-income",
+      "question": "Are employer-funded personal insurance premiums taxable as employment benefits?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "EMPLOYEE",
+        "primarySubject": "taxability of employer-funded personal insurance premiums as employment benefits",
+        "concepts": [
+          {
+            "concept": "employer-funded personal insurance premiums",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "employment benefits",
+            "role": "RELATED"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "population": "EMPLOYEE"
+      },
+      "requestedConcepts": [
+        "Tax treatment of employee benefits and perquisites",
+        "Employee personal insurance premium tax treatment"
+      ],
+      "mappedTopics": [
+        "iras-employment-benefits"
+      ],
+      "acceptedOfficialSources": [],
+      "evidenceCoverage": {
+        "status": "INSUFFICIENT",
+        "coveredConcepts": [],
+        "uncoveredConcepts": [
+          "Tax treatment of employee benefits and perquisites",
+          "Employee personal insurance premium tax treatment"
+        ],
+        "acceptedSourceGroups": [],
+        "uncoveredTopicIds": [
+          "iras-employment-benefits",
+          "iras-authority-query-concept-employee-benefit-tax-treatment",
+          "iras-authority-query-concept-employee-personal-insurance-tax-treatment"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Employer Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": true,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": true,
+        "expectedDomain": true
+      }
+    },
+    {
+      "id": "staff-only-company-paid-perquisites",
+      "question": "How are company-paid perquisites for staff taxed?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "EMPLOYEE",
+        "primarySubject": "company-paid perquisites for staff",
+        "concepts": [
+          {
+            "concept": "perquisites",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "taxation of staff benefits",
+            "role": "RELATED"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "population": "EMPLOYEE"
+      },
+      "requestedConcepts": [
+        "Tax treatment of employee benefits and perquisites",
+        "taxation of staff benefits"
+      ],
+      "mappedTopics": [
+        "iras-employment-benefits"
+      ],
+      "acceptedOfficialSources": [],
+      "evidenceCoverage": {
+        "status": "INSUFFICIENT",
+        "coveredConcepts": [],
+        "uncoveredConcepts": [
+          "Tax treatment of employee benefits and perquisites",
+          "taxation of staff benefits"
+        ],
+        "acceptedSourceGroups": [],
+        "uncoveredTopicIds": [
+          "iras-employment-benefits",
+          "iras-authority-query-concept-employee-benefit-tax-treatment",
+          "iras-authority-query-concept-semantic-taxation-of-staff-benefits"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Employer Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": true,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": true,
+        "expectedDomain": true
+      }
+    },
+    {
+      "id": "actual-company-deduction",
+      "question": "Can our company deduct employee housing allowances and insurance premiums when calculating corporate taxable profits?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "deductibility of employee housing allowances and insurance premiums for corporate taxable profits",
+        "concepts": [
+          {
+            "concept": "employee housing allowances",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "insurance premiums",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "corporate taxable profits",
+            "role": "RELATED"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "population": "COMPANY"
+      },
+      "requestedConcepts": [
+        "employee housing allowances",
+        "insurance premiums",
+        "corporate taxable profits"
+      ],
+      "mappedTopics": [
+        "iras-cit-deductibility"
+      ],
+      "acceptedOfficialSources": [
+        {
+          "title": "Income Tax Act 1947",
+          "url": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-"
+        }
+      ],
+      "evidenceCoverage": {
+        "status": "LIMITED",
+        "coveredConcepts": [],
+        "uncoveredConcepts": [
+          "employee housing allowances",
+          "insurance premiums",
+          "corporate taxable profits"
+        ],
+        "acceptedSourceGroups": [
+          "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-"
+        ],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-employee-housing-allowances",
+          "iras-authority-query-concept-semantic-insurance-premiums",
+          "iras-authority-query-concept-semantic-corporate-taxable-profits"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Corporate Income Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": true,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": true,
+        "expectedDomain": true
+      }
+    },
+    {
+      "id": "actual-company-form-cs-filing",
+      "question": "Which corporate income tax return must our company file, Form C-S or Form C?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "corporate income tax return filing requirements Form C-S vs Form C",
+        "concepts": [
+          {
+            "concept": "Form C-S",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "Form C",
+            "role": "PRIMARY"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "population": "COMPANY"
+      },
+      "requestedConcepts": [
+        "Form C-S"
+      ],
+      "mappedTopics": [
+        "iras-cit-returns"
+      ],
+      "acceptedOfficialSources": [
+        {
+          "title": "IRAS Form C-S/ Form C-S (Lite)/ Form C filing guidance",
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/form-c-s-form-c-s-(lite)-form-c-filing/overview-of-form-c-s-form-c-s-(lite)-form-c"
+        }
+      ],
+      "evidenceCoverage": {
+        "status": "LIMITED",
+        "coveredConcepts": [
+          "Form C-S"
+        ],
+        "uncoveredConcepts": [],
+        "acceptedSourceGroups": [
+          "https://www.iras.gov.sg/taxes/corporate-income-tax/form-c-s-form-c-s-(lite)-form-c-filing/overview-of-form-c-s-form-c-s-(lite)-form-c"
+        ],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-form-c-s"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Corporate Income Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": true,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": true,
+        "expectedDomain": true
+      }
+    },
+    {
+      "id": "employee-income-not-employer-benefits",
+      "question": "When is my employment income from a temporary overseas posting taxable in Singapore?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "INDIVIDUAL",
+        "primarySubject": "taxability of employment income from temporary overseas posting",
+        "concepts": [
+          {
+            "concept": "employment income",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "temporary overseas posting",
+            "role": "RELATED"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "population": "INDIVIDUAL"
+      },
+      "requestedConcepts": [
+        "employment income",
+        "temporary overseas posting"
+      ],
+      "mappedTopics": [
+        "iras-individual-overseas-employment",
+        "iras-individual-foreign-employment-income"
+      ],
+      "acceptedOfficialSources": [],
+      "evidenceCoverage": {
+        "status": "INSUFFICIENT",
+        "coveredConcepts": [],
+        "uncoveredConcepts": [
+          "employment income",
+          "temporary overseas posting"
+        ],
+        "acceptedSourceGroups": [],
+        "uncoveredTopicIds": [
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income",
+          "iras-authority-query-concept-semantic-employment-income",
+          "iras-authority-query-concept-semantic-temporary-overseas-posting"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Individual Income Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": false,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": false,
+        "expectedDomain": true
+      }
+    },
+    {
+      "id": "multi-relief-cap-cpf-srs-family",
+      "question": "Given the overall personal income tax relief cap of SGD 80,000, how are overlapping claims prioritized between mandatory CPF contributions, the Supplementary Retirement Scheme (SRS), and parenthood/caregiver reliefs?",
+      "interpretationSource": "LIVE_PROVIDER",
+      "modelUnderstandingMeasured": true,
+      "semanticInterpretation": {
+        "domain": "IRAS_INCOME_TAX",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax relief cap prioritization",
+        "concepts": [
+          {
+            "concept": "overall personal income tax relief cap",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "mandatory CPF contributions",
+            "role": "RELATED"
+          },
+          {
+            "concept": "Supplementary Retirement Scheme",
+            "role": "RELATED"
+          },
+          {
+            "concept": "parenthood and caregiver reliefs",
+            "role": "RELATED"
+          }
+        ]
+      },
+      "reconciledDomainPopulation": {
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "population": "INDIVIDUAL"
+      },
+      "requestedConcepts": [
+        "Overall personal income tax relief cap",
+        "CPF Relief / compulsory CPF contributions",
+        "Supplementary Retirement Scheme (SRS) Relief",
+        "Parent Relief",
+        "Grandparent Caregiver Relief",
+        "Working Mother's Child Relief (WMCR)",
+        "Qualifying Child Relief (QCR)",
+        "Order or prioritization among relief claims"
+      ],
+      "mappedTopics": [
+        "iras-individual-relief-cap",
+        "iras-individual-cpf-relief",
+        "iras-individual-grandparent-caregiver-relief",
+        "iras-individual-srs-relief",
+        "iras-individual-parent-relief",
+        "iras-individual-wmcr",
+        "iras-individual-qcr"
+      ],
+      "acceptedOfficialSources": [],
+      "evidenceCoverage": {
+        "status": "INSUFFICIENT",
+        "coveredConcepts": [],
+        "uncoveredConcepts": [
+          "Overall personal income tax relief cap",
+          "CPF Relief / compulsory CPF contributions",
+          "Supplementary Retirement Scheme (SRS) Relief",
+          "Parent Relief",
+          "Grandparent Caregiver Relief",
+          "Working Mother's Child Relief (WMCR)",
+          "Qualifying Child Relief (QCR)",
+          "Order or prioritization among relief claims"
+        ],
+        "acceptedSourceGroups": [],
+        "uncoveredTopicIds": [
+          "iras-individual-relief-cap",
+          "iras-individual-cpf-relief",
+          "iras-individual-srs-relief",
+          "iras-individual-parent-relief",
+          "iras-individual-grandparent-caregiver-relief",
+          "iras-individual-wmcr",
+          "iras-individual-qcr",
+          "iras-authority-query-concept-personal-income-tax-relief-cap",
+          "iras-authority-query-concept-cpf-relief",
+          "iras-authority-query-concept-srs-relief",
+          "iras-authority-query-concept-parent-relief",
+          "iras-authority-query-concept-grandparent-caregiver-relief",
+          "iras-authority-query-concept-working-mother-child-relief",
+          "iras-authority-query-concept-qualifying-child-relief",
+          "iras-authority-query-concept-relief-claim-prioritization"
+        ]
+      },
+      "presentationDomainLabel": "IRAS Individual Income Tax",
+      "oracleRoutingChecks": {
+        "domain": true,
+        "population": true,
+        "requiredTopics": true
+      },
+      "liveModelChecks": {
+        "validInterpretation": true,
+        "expectedPopulation": true,
+        "expectedDomain": true
+      }
+    }
+  ],
+  "evidenceScenarios": [
+    {
+      "id": "strong-srs-weak-other-concepts",
+      "question": "Given the overall personal income tax relief cap of SGD 80,000, how are overlapping claims prioritized between mandatory CPF contributions, the Supplementary Retirement Scheme (SRS), and parenthood/caregiver reliefs?",
+      "requestedConcepts": [
+        "Overall personal income tax relief cap",
+        "CPF Relief / compulsory CPF contributions",
+        "Supplementary Retirement Scheme (SRS) Relief",
+        "Parent Relief",
+        "Grandparent Caregiver Relief",
+        "Working Mother's Child Relief (WMCR)",
+        "Qualifying Child Relief (QCR)",
+        "Order or prioritization among relief claims"
+      ],
+      "coveredConcepts": [
+        "Supplementary Retirement Scheme (SRS) Relief"
+      ],
+      "uncoveredConcepts": [
+        "Overall personal income tax relief cap",
+        "CPF Relief / compulsory CPF contributions",
+        "Parent Relief",
+        "Grandparent Caregiver Relief",
+        "Working Mother's Child Relief (WMCR)",
+        "Qualifying Child Relief (QCR)",
+        "Order or prioritization among relief claims"
+      ],
+      "acceptedSourceGroups": [
+        "https://www.iras.gov.sg/taxes/individual-income-tax/srs"
+      ],
+      "evidenceStatus": "LIMITED",
+      "acceptedRecordIds": [
+        "SRS_RELIEF"
+      ],
+      "rejectedRecords": [
+        {
+          "recordId": "GENERIC_IRAS_RELIEF",
+          "code": "TOPIC_TEXT_NOT_DISTINCTIVE",
+          "reason": "Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic."
+        }
+      ]
+    },
+    {
+      "id": "generic-official-versus-specific-official",
+      "question": "Given the overall personal income tax relief cap of SGD 80,000, how are overlapping claims prioritized between mandatory CPF contributions, the Supplementary Retirement Scheme (SRS), and parenthood/caregiver reliefs?",
+      "requestedConcepts": [
+        "Overall personal income tax relief cap",
+        "CPF Relief / compulsory CPF contributions",
+        "Supplementary Retirement Scheme (SRS) Relief",
+        "Parent Relief",
+        "Grandparent Caregiver Relief",
+        "Working Mother's Child Relief (WMCR)",
+        "Qualifying Child Relief (QCR)",
+        "Order or prioritization among relief claims"
+      ],
+      "coveredConcepts": [],
+      "uncoveredConcepts": [
+        "Overall personal income tax relief cap",
+        "CPF Relief / compulsory CPF contributions",
+        "Supplementary Retirement Scheme (SRS) Relief",
+        "Parent Relief",
+        "Grandparent Caregiver Relief",
+        "Working Mother's Child Relief (WMCR)",
+        "Qualifying Child Relief (QCR)",
+        "Order or prioritization among relief claims"
+      ],
+      "acceptedSourceGroups": [],
+      "evidenceStatus": "INSUFFICIENT",
+      "acceptedRecordIds": [],
+      "rejectedRecords": [
+        {
+          "recordId": "GENERIC_IRAS_RELIEF",
+          "code": "TOPIC_TEXT_NOT_DISTINCTIVE",
+          "reason": "Topic metadata alone is insufficient; source text lacks distinctive evidence for this topic."
+        }
+      ]
+    },
+    {
+      "id": "direct-relief-hub-covers-named-reliefs-but-not-order",
+      "question": "Given the overall personal income tax relief cap of SGD 80,000, how are overlapping claims prioritized between mandatory CPF contributions, the Supplementary Retirement Scheme (SRS), and parenthood/caregiver reliefs?",
+      "requestedConcepts": [
+        "Overall personal income tax relief cap",
+        "CPF Relief / compulsory CPF contributions",
+        "Supplementary Retirement Scheme (SRS) Relief",
+        "Parent Relief",
+        "Grandparent Caregiver Relief",
+        "Working Mother's Child Relief (WMCR)",
+        "Qualifying Child Relief (QCR)",
+        "Order or prioritization among relief claims"
+      ],
+      "coveredConcepts": [
+        "Overall personal income tax relief cap",
+        "CPF Relief / compulsory CPF contributions",
+        "Supplementary Retirement Scheme (SRS) Relief",
+        "Parent Relief",
+        "Grandparent Caregiver Relief",
+        "Working Mother's Child Relief (WMCR)",
+        "Qualifying Child Relief (QCR)"
+      ],
+      "uncoveredConcepts": [
+        "Order or prioritization among relief claims"
+      ],
+      "acceptedSourceGroups": [
+        "https://www.iras.gov.sg/taxes/individual-income-tax/tax-reliefs"
+      ],
+      "evidenceStatus": "LIMITED",
+      "acceptedRecordIds": [
+        "DIRECT_IRAS_RELIEF_HUB"
+      ],
+      "rejectedRecords": []
+    }
+  ]
+}
