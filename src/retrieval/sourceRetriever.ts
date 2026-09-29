@@ -15,6 +15,8 @@ export interface SourceRetrievalQuery {
   authorities?: StatutoryAuthority[];
   /** Canonical coverage-topic hints; these do not constitute source evidence. */
   topicIds?: string[];
+  /** Validated semantic labels used only to rank sources; gates keep `query` unchanged. */
+  semanticQuery?: string;
   maxResults?: number;
   targetDate?: string;
   includeHistorical?: boolean;
@@ -125,7 +127,8 @@ export class InMemorySourceRetriever implements ISourceRetriever {
       referenceDate = SourceFreshnessManager.DEFAULT_REFERENCE_DATE
     } = retrievalQuery;
     const lowerQ = query.toLowerCase();
-    const queryTokens = lowerQ.split(/[\s,.;:!?/()]+/).filter((t) => t.length > 2);
+    const rankingText = `${query} ${retrievalQuery.semanticQuery || ''}`.toLowerCase();
+    const queryTokens = rankingText.split(/[\s,.;:!?/()]+/).filter((t) => t.length > 2);
     const renovationBasisPeriodUnclear = hasUnresolvedSection14NBasisPeriod(query);
 
     // Resolve target date (either explicit or parsed from query)
@@ -179,18 +182,18 @@ export class InMemorySourceRetriever implements ISourceRetriever {
 
       // 3. Exact Paragraph or Section mention
       const pClean = record.paragraphOrSection.toLowerCase().replace(/[§]/g, '').trim();
-      if (pClean && lowerQ.includes(pClean)) {
+      if (pClean && rankingText.includes(pClean)) {
         score += 30;
       }
 
       // 4. Exact Document Title or Act Code mention
-      if (lowerQ.includes(record.standardOrActCode.toLowerCase()) || lowerQ.includes(record.documentTitle.toLowerCase())) {
+      if (rankingText.includes(record.standardOrActCode.toLowerCase()) || rankingText.includes(record.documentTitle.toLowerCase())) {
         score += 25;
       }
 
       // 5. Tag matches
       for (const tag of record.tags) {
-        if (lowerQ.includes(tag.toLowerCase())) {
+        if (rankingText.includes(tag.toLowerCase())) {
           score += 8;
         }
       }

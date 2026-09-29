@@ -8,6 +8,7 @@ const tsxCli = path.join(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 
 const testSuites = [
   { name: 'AI Semantic Extraction & Schema Validation Gate', file: 'test_ai_semantic_extraction.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Semantic Question Understanding & Guarded Routing', file: 'test_semantic_question_understanding.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Understanding & Routing', file: 'test_sidequest2_semantic_understanding.mjs', layer: 'input-understanding', tier: 'full' },
   { name: 'Multi-Turn Accounting State & Follow-Ups', file: 'test_followup_accounting_state.mjs', layer: 'conversation-state', tier: 'smoke' },
   { name: 'Phase 5 Integration & Semantics', file: 'test_sidequest2_phase5_integration.mjs', layer: 'retrieval-evidence', tier: 'full' },

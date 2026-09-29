@@ -78,6 +78,22 @@ function hasForeignJurisdictionTarget(complement: string): boolean {
   return false;
 }
 
+/** Uses complete country-name matching so unrelated later phrases cannot turn into a foreign tax target. */
+export function isExplicitForeignTaxOnlyQuestion(query: string): boolean {
+  const taxOutcomeContext = /\b(?:tax(?:able|ed|ability|ation)?|exempt(?:ion)?|chargeable)\b/i.test(query);
+  const requestsSingaporeTaxTreatment = taxOutcomeContext && (
+    /\b(?:in|into|under|to|for)\s+singapore\b/i.test(query) ||
+    /\bsingapore(?:an)?\s+(?:income\s+)?tax\b/i.test(query)
+  );
+  const foreignTaxTargetCandidates = [...query.matchAll(
+    /\b(?:taxable|taxed|subject\s+to\s+tax|tax\s+(?:treatment|liability))\s+(?:in|under|by)\s+(?:(?:the|a|an)\s+)?([a-z][a-z-]*(?:\s+[a-z][a-z-]*){0,5})/gi
+  )];
+  const explicitlyForeignTaxTarget = taxOutcomeContext && foreignTaxTargetCandidates.some(match =>
+    hasForeignJurisdictionTarget(match[1] || '')
+  );
+  return explicitlyForeignTaxTarget && !requestsSingaporeTaxTreatment && !/\biras\b/i.test(query);
+}
+
 /**
  * Deterministic Question Classifier for Singapore Accounting & Statutory domains.
  * Accurately detects multi-authority questions, time-sensitivity, and missing facts.
@@ -101,17 +117,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:in|into|under|to|for)\s+singapore\b/i.test(query) ||
     /\bsingapore(?:an)?\s+(?:income\s+)?tax\b/i.test(query)
   );
-  // Suppress IRAS only when the tax outcome is directly tied to an explicit
-  // foreign jurisdiction. Do not let a later preposition in an accounting
-  // clause (for example, "accounting treatment in the financial statements")
-  // get attached to an earlier mention of tax treatment.
-  const foreignTaxTargetCandidates = [...query.matchAll(
-    /\b(?:taxable|taxed|subject\s+to\s+tax|tax\s+(?:treatment|liability))\s+(?:in|under|by)\s+(?:(?:the|a|an)\s+)?([a-z][a-z-]*(?:\s+[a-z][a-z-]*){0,5})/gi
-  )];
-  const explicitlyForeignTaxTarget = taxOutcomeContext && foreignTaxTargetCandidates.some(match =>
-    hasForeignJurisdictionTarget(match[1] || '')
-  );
-  const foreignTaxOnlyContext = explicitlyForeignTaxTarget && !requestsSingaporeTaxTreatment && !/\biras\b/i.test(query);
+  const foreignTaxOnlyContext = isExplicitForeignTaxOnlyQuestion(query);
   const employerComplianceContext = /\b(?:employer|payroll|ir8a|ir21|ais submission|report employee|withhold monies)\b/i.test(query);
   const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(q) ||
     /\bdouble entr\w*/i.test(q);
@@ -455,7 +461,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   }
 
   // Vehicle purchase missing facts (only when assessing a specific acquisition or claim)
-  if (!isPureConceptualQuery && (q.includes('car') || q.includes('vehicle')) && (q.includes('bought') || q.includes('purchas') || q.includes('claim') || q.includes('deduct') || q.includes('entry'))) {
+  if (!isPureConceptualQuery && /\b(?:car|cars|vehicle|vehicles)\b/i.test(q) && (q.includes('bought') || q.includes('purchas') || /\bclaim(?:s|ed|ing)?\b/i.test(q) || q.includes('deduct') || q.includes('entry'))) {
     if (!q.includes('s-plate') && !q.includes('g-plate') && !q.includes('passenger') && !q.includes('commercial')) {
       missingFacts.push('Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)');
     }

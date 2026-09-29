@@ -11,6 +11,7 @@ import { toSafeProviderError } from './aiTransport';
 import {
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
+  isStandaloneOutputGstCalculationRequest,
   postProcessAIResponse,
   type GroundedReasoningContext,
   type SourceMapFallbackTrace
@@ -27,7 +28,14 @@ import { UNIFIED_SOURCE_REGISTRY } from '../standards/unifiedSourceModel';
 import { answerSfrsi9KnowledgeQuery } from './sfrsi9AnswerService';
 import { answerConsolidationKnowledgeQuery } from './consolidationKnowledgeService';
 import { renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
+import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import { classifyQuestion } from '../classification/questionClassifier';
+import {
+  interpretSemanticQuestion,
+  isShortSemanticFollowUp,
+  projectQuestionUnderstandingDiagnostics,
+  reconcileQuestionUnderstanding
+} from './semanticQuestionUnderstanding';
 
 export interface GeminiResponse {
   messageText: string;
@@ -438,8 +446,9 @@ export async function processAccountingQuery(
   diagnostics?: AccountingQueryDiagnostics
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
-  const imageAttachments = getCurrentImageAttachments(chatHistory);
-  const hasImages = imageAttachments.length > 0;
+  let imageAttachments = getCurrentImageAttachments(chatHistory);
+  let hasImages = imageAttachments.length > 0;
+  let relevantChatHistory = chatHistory;
   if (outputPreference?.shareStructure) {
     const shareAnswer = answerShareStructureQuery(userInput, currentScenario);
     if (shareAnswer) return shareAnswer;
@@ -449,10 +458,10 @@ export async function processAccountingQuery(
   // The parser has the same boundary as a defence in depth measure; applying
   // it here also prevents grounding and provider prompts from seeing stale
   // balances on a complete new transaction.
-  const activeScenario = startsNewAccountingScenario(userInput, currentScenario)
+  let activeScenario = startsNewAccountingScenario(userInput, currentScenario)
     ? null
     : currentScenario;
-  const amendmentResolution = resolveFactAmendment(userInput, activeScenario);
+  let amendmentResolution = resolveFactAmendment(userInput, activeScenario);
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
     if (!amendmentResolution.amendments?.length) return response;
     return {
@@ -514,10 +523,61 @@ export async function processAccountingQuery(
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
   const journalRequested = Boolean(outputPreference?.journal || /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput));
-  const irasEvidenceRequired = usesIrasEvidencePolicy(classifyQuestion(userInput), userInput);
+  // Preserve the established no-provider path only for the complete, dated
+  // output-GST calculator case, after the deterministic calculation confirms
+  // that an admitted local Section 16 rate applies. A lexical GST match alone
+  // can never bypass semantic interpretation.
+  if (!hasImages && !journalRequested && isStandaloneOutputGstCalculationRequest(userInput) &&
+      computeVerifiedStandardGst(userInput, Object.values(UNIFIED_SOURCE_REGISTRY))) {
+    const localUnderstanding = { mode: 'DETERMINISTIC_FALLBACK' as const, failure: 'NO_PROVIDER' as const };
+    const localContext = await buildGroundedReasoningContext(userInput, null, undefined, undefined, {
+      questionUnderstanding: localUnderstanding,
+      authorityLevelDiscovery: false,
+      localOnly: true
+    });
+    const localQuality = localContext.evidenceQuality;
+    if (localQuality?.status === 'LOCAL_SUFFICIENT' && localQuality.uncoveredTopicIds.length === 0 &&
+        computeVerifiedStandardGst(userInput, localQuality.eligibleRecords, localQuality.targetDate, localContext.missingFacts)) {
+      profiler.setQuestionUnderstanding(projectQuestionUnderstandingDiagnostics(localContext.questionUnderstanding || localUnderstanding));
+      profiler.setQueryMode('IRAS_LOCAL_VERIFIED_CALCULATION');
+      diagnostics?.onGroundedContext?.(localContext);
+      profiler.recordFirstVisibleResponse();
+      profiler.logSummary();
+      return attachAmendmentProvenance(renderIrasEvidenceResponse({}, localContext, userInput, null, standard, 'LOCAL'));
+    }
+  }
+  const questionUnderstandingStarted = performance.now();
+  const rawQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+  if (!['NO_PROVIDER', 'QUERY_TOO_LONG'].includes(rawQuestionUnderstanding.failure || '')) {
+    profiler.recordGeminiCall({ durationMs: performance.now() - questionUnderstandingStarted });
+  }
+  if (rawQuestionUnderstanding.failure === 'TIMEOUT') profiler.recordTimeout();
+  else if (rawQuestionUnderstanding.failure && rawQuestionUnderstanding.failure !== 'NO_PROVIDER') profiler.recordFallback();
+  const classificationStarted = performance.now();
+  const deterministicClassification = classifyQuestion(userInput);
+  const reconciledQuestionUnderstanding = reconcileQuestionUnderstanding(userInput, deterministicClassification, rawQuestionUnderstanding);
+  const classification = reconciledQuestionUnderstanding.classification;
+  const questionUnderstanding = reconciledQuestionUnderstanding.understanding;
+  profiler.recordClassification(performance.now() - classificationStarted);
+  profiler.setQuestionUnderstanding(projectQuestionUnderstandingDiagnostics(questionUnderstanding));
+  if (questionUnderstanding.mode === 'DETERMINISTIC_FALLBACK' && rawQuestionUnderstanding.mode !== 'DETERMINISTIC_FALLBACK') profiler.recordFallback();
+  const standaloneIrasQuestion = usesIrasEvidencePolicy(classification, userInput) &&
+    !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
+    (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
+    !isShortSemanticFollowUp(userInput);
+  if (standaloneIrasQuestion) {
+    activeScenario = null;
+    amendmentResolution = resolveFactAmendment(userInput, null);
+    const currentUserTurn = [...chatHistory].reverse().find(message =>
+      message.sender === 'user' && message.text.trim() === userInput.trim());
+    relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    imageAttachments = currentUserTurn?.images || [];
+    hasImages = imageAttachments.length > 0;
+  }
+  const irasEvidenceRequired = usesIrasEvidencePolicy(classification, userInput);
   const governedOfflineResponse = async (scenario: AccountingScenarioState): Promise<GeminiResponse> => {
     if (!irasEvidenceRequired) return renderStructuredOfflineResponse(scenario, standard);
-    const context = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey);
+    const context = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, { questionUnderstanding });
     if (context.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(context.sourceMapFallbackTrace);
     diagnostics?.onGroundedContext?.(context);
     return renderIrasEvidenceResponse(
@@ -673,7 +733,7 @@ export async function processAccountingQuery(
 
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
-  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey);
+  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, { questionUnderstanding });
   if (groundedContext.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(groundedContext.sourceMapFallbackTrace);
   diagnostics?.onGroundedContext?.(groundedContext);
   profiler.recordStage('grounding', Date.now() - tGround0);
@@ -719,7 +779,7 @@ export async function processAccountingQuery(
       }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, chatHistory, groundedContext, deterministicScenario));
+          return attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario));
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -733,7 +793,7 @@ export async function processAccountingQuery(
             standard,
             providerOrApiKey.gemini.apiKey.trim(),
             providerOrApiKey.gemini.model || modelName,
-            chatHistory,
+            relevantChatHistory,
             groundedContext,
             deterministicScenario,
             profiler,
@@ -751,7 +811,7 @@ export async function processAccountingQuery(
             activeScenario,
             standard,
             providerOrApiKey.openai,
-            chatHistory,
+            relevantChatHistory,
             groundedContext,
             deterministicScenario
           ));
@@ -769,7 +829,7 @@ export async function processAccountingQuery(
           standard,
           providerOrApiKey.trim(),
           modelName,
-          chatHistory,
+          relevantChatHistory,
           groundedContext,
           deterministicScenario,
           profiler,

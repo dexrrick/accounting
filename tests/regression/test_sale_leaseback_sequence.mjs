@@ -19,18 +19,47 @@ Recorded annual straight-line depreciation on the newly recognized ROU asset ove
 Task: Prepare all general journal entries for the sale and leaseback and year-end lease entries.`;
 
 const provider = { activeProvider: 'gemini', gemini: { apiKey: 'test-key-long-enough', model: 'gemini-3.5-flash-lite' } };
+const accountingIntent = {
+  jurisdiction: ['Singapore'], authorityCandidates: ['ACCOUNTING_STANDARDS'], contextualAuthorities: ['IRAS'],
+  domain: 'ACCOUNTING', population: 'COMPANY', primarySubject: 'sale and leaseback accounting entries',
+  concepts: [{ concept: 'sale and leaseback', role: 'PRIMARY' }],
+  requestedOperation: 'PREPARE_JOURNAL', requiresUserSpecificFacts: true, calculationRequested: false,
+  factsExplicitlyProvided: [], confidence: 0.96
+};
+const makeResponse = value => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }] }), { status: 200 });
+const requestKind = init => {
+  const body = JSON.parse(init.body);
+  const systemText = body.systemInstruction?.parts?.[0]?.text || '';
+  const userText = body.contents?.[0]?.parts?.[0]?.text || '';
+  if (systemText.includes('Interpret the user question only')) return 'intent';
+  if (userText.startsWith('Extract chronological accounting EVENT FACTS')) return 'events';
+  return 'unexpected';
+};
 const originalFetch = globalThis.fetch;
 let calls = 0;
+let intentCalls = 0;
+let eventCalls = 0;
 try {
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (_url, init) => {
     calls += 1;
-    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ events: [
+    const kind = requestKind(init);
+    if (kind === 'intent') {
+      intentCalls += 1;
+      return makeResponse(accountingIntent);
+    }
+    if (kind === 'events') {
+      eventCalls += 1;
+      return makeResponse({ events: [
       { id: 'event-1', type: 'sale_and_leaseback', date: '1 Jan 2024', description: 'Sold the asset and leased it back.', confidence: 0.96 },
       { id: 'event-2', type: 'lease_payment', date: '31 Dec 2024', description: 'Paid the first lease instalment and accrued interest.', relatesTo: ['event-1'], confidence: 0.95 }
-    ] }) }] } }] }) };
+      ] });
+    }
+    return new Response('', { status: 500 });
   };
   const result = await processAccountingQuery(query, null, 'SFRS_I', provider, provider.gemini.model, [], { journal: true, statutory: false });
-  assert.equal(calls, 1, 'the selected AI provider must be called');
+  assert.equal(calls, 2, 'semantic intent and economic-event extraction are separate provider stages');
+  assert.equal(intentCalls, 1, 'one semantic-intent call runs before classification');
+  assert.equal(eventCalls, 1, 'one economic-event extraction call supplies transaction facts');
   assert.equal(result.scenarioState.scenarioType, 'EVENT_SEQUENCE');
   assert.equal(result.scenarioState.directGroups?.length, 2, result.messageText);
   assert.ok(result.scenarioState.directGroups.every(group => group.isBalanced && group.totalDebit > 0));
@@ -40,8 +69,26 @@ try {
   assert.equal(result.scenarioState.directGroups[0].lines.find(line => line.accountName === 'Gain on Sale and Leaseback')?.credit, 26539.6);
   assert.equal(result.scenarioState.directGroups[1].lines.find(line => line.accountName === 'Finance Cost — Lease Liability')?.debit, 8019.06);
 
-  globalThis.fetch = async () => ({ ok: false, status: 404 });
+  calls = 0;
+  intentCalls = 0;
+  eventCalls = 0;
+  globalThis.fetch = async (_url, init) => {
+    calls += 1;
+    const kind = requestKind(init);
+    if (kind === 'intent') {
+      intentCalls += 1;
+      return makeResponse(accountingIntent);
+    }
+    if (kind === 'events') {
+      eventCalls += 1;
+      return new Response('', { status: 404 });
+    }
+    return new Response('', { status: 500 });
+  };
   const failed = await processAccountingQuery(query, null, 'SFRS_I', provider, provider.gemini.model, [], { journal: true, statutory: false });
+  assert.equal(calls, 2);
+  assert.equal(intentCalls, 1);
+  assert.equal(eventCalls, 1);
   assert.equal(failed.scenarioState.directGroups?.length, 0);
   assert.match(failed.messageText, /Gemini event extraction returned HTTP 404/);
 } finally {

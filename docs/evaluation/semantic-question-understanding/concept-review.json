@@ -1,0 +1,194 @@
+{
+  "reviewer": "Supervisor",
+  "report": "live-evaluation.json",
+  "rawSnapshotImplementationSha256": "4bcc88f4df3de307ddf96d613a1d38f7a9344bad0d8edb1341f37f83bc4d8e4c",
+  "method": "Compare original question and validated non-context concept labels. This descriptive manual check supplements the automated exact-label flags; it does not change strict population, operation, fact-policy or routing scores and does not judge tax conclusions.",
+  "summary": {
+    "cases": 36,
+    "meaningCovered": 26,
+    "partialOrConservativeLabels": 8,
+    "noModelOutput": 2
+  },
+  "cases": [
+    {
+      "id": "relief-family-budget",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures retirement savings, elderly-parent support and the personal deduction ceiling, without naming the benchmark’s SRS/Parent Relief labels. The conversational question does not explicitly name those products."
+    },
+    {
+      "id": "cpf-context-order",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "caregiver-no-car",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures caregiver relief, retirement contributions and the overall relief limit without assuming that retirement contributions necessarily mean CPF or that caregiver relief necessarily means Parent Relief."
+    },
+    {
+      "id": "career-course",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "card-relief",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "relief-number-conceptual",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "relief-calculation",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures CPF, SRS and Parent Relief but omits the benchmark’s overall relief-cap concept. The original calculation query is still retained for retrieval and evidence checks."
+    },
+    {
+      "id": "parent-eligibility",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "personal-overseas-employer",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "company-is-employer",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "secondment-treaty",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "personal-foreign-interest",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "residence-office-context",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "individual-residence-general",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "company-foreign-dividend",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "corporate-employee-context",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "corporate-residence-office",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "corporate-filing-eci",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "business-expense-specific",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "gst-dinner-case",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "gst-conceptual-entertainment",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "gst-card-no-vehicle",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "gst-caring-no-vehicle",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "gst-real-vehicle",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures input tax and the leased passenger car. Adds “blocked expenses”, a category inferred beyond the user’s wording; this label must remain a retrieval aid and cannot establish a statutory conclusion."
+    },
+    {
+      "id": "gst-calculation",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures output GST and invoice total, but omits the standard-rated qualifier from concept labels. That qualifier remains in the original question and must govern deterministic calculation/evidence checks."
+    },
+    {
+      "id": "gst-unknown-discovery",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures digital gaming tokens and GST, but omits the transfer between accounts from concept labels. The original transfer wording remains in the discovery query."
+    },
+    {
+      "id": "personal-unknown-discovery",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "property-owner",
+      "status": "NO_MODEL_OUTPUT",
+      "note": "Interpreter timed out; deterministic fallback remained active."
+    },
+    {
+      "id": "employer-tax-clearance",
+      "status": "NO_MODEL_OUTPUT",
+      "note": "Interpreter timed out; deterministic fallback remained active."
+    },
+    {
+      "id": "cpf-real-contribution",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "cpf-rule",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "associate-accounting",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "lease-accounting",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures right-of-use assets and lease accounting, but omits the explicit IFRS 16 reference and rent-expensing comparison from concept labels."
+    },
+    {
+      "id": "gst-reg-context-personal",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    },
+    {
+      "id": "foreign-residence-context",
+      "status": "PARTIAL_OR_CONSERVATIVE_LABELS",
+      "note": "Captures withholding-tax filing and overseas tax residence, but omits service-fee/payment characterization from concept labels."
+    },
+    {
+      "id": "ambiguous-income-owner",
+      "status": "MEANING_COVERED",
+      "note": "Concept labels cover the requested subject through direct terms or ordinary synonyms."
+    }
+  ]
+}

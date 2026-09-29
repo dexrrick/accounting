@@ -34,18 +34,39 @@ assert.match(unknownTax?.clarifications[0]?.prompt || '', /GST treatment/i);
 
 const originalFetch = globalThis.fetch;
 let calls = 0;
+let intentCalls = 0;
+let eventCalls = 0;
+const accountingIntent = {
+  jurisdiction: ['Singapore'], authorityCandidates: ['ACCOUNTING_STANDARDS'], contextualAuthorities: ['IRAS'],
+  domain: 'ACCOUNTING', population: 'COMPANY', primarySubject: 'investment accounting journal entries',
+  concepts: [{ concept: 'FVOCI and FVTPL investment events', role: 'PRIMARY' }],
+  requestedOperation: 'PREPARE_JOURNAL', requiresUserSpecificFacts: true, calculationRequested: false,
+  factsExplicitlyProvided: [], confidence: 0.96
+};
+const makeResponse = value => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }] }), { status: 200 });
 try {
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (_url, init) => {
     calls++;
-    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ events: [
+    const body = JSON.parse(init.body);
+    if (body.systemInstruction?.parts?.[0]?.text.includes('Interpret the user question only')) {
+      intentCalls++;
+      return makeResponse(accountingIntent);
+    }
+    if (body.contents?.[0]?.parts?.[0]?.text.startsWith('Extract chronological accounting EVENT FACTS')) {
+      eventCalls++;
+      return makeResponse({ events: [
       { type: 'fvoci_equity_acquisition', description: 'Acquired FVOCI equity.' },
       { type: 'fvtpl_portfolio_valuation', description: 'Remeasured portfolio and accrued fees.' },
       { type: 'fvoci_equity_valuation', description: 'Valued equity.' },
       { type: 'investment_distribution', description: 'Received treasury bills.' }
-    ] }) }] } }] }) };
+      ] });
+    }
+    return new Response('', { status: 500 });
   };
   assertResult(await processAccountingQuery(query, null, 'SFRS_I', { activeProvider: 'gemini', gemini: { apiKey: 'test-key-long-enough', model: 'gemini-3.5-flash-lite' } }, 'gemini-3.5-flash-lite', [], { journal: true, statutory: false }));
-  assert.equal(calls, 1);
+  assert.equal(calls, 2, 'semantic intent and economic-event extraction are separate provider stages');
+  assert.equal(intentCalls, 1, 'exactly one validated accounting-intent call precedes classification');
+  assert.equal(eventCalls, 1, 'exactly one economic-event extraction call supplies transaction facts');
 } finally { globalThis.fetch = originalFetch; }
 
 console.log('PASS | investment sequence posts balanced FVOCI/FVTPL, fees, valuation and non-cash dividend entries');

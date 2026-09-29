@@ -1125,7 +1125,7 @@ export class DeterministicSemanticExtractor {
     }
 
     // 8. PPE / Motor Vehicle Acquisition (SFRS(I) 1-16)
-    if (q.includes('car') || q.includes('vehicle') || q.includes('machinery') || q.includes('equipment')) {
+    if (/\b(?:car|cars|vehicle|vehicles)\b/i.test(q) || q.includes('machinery') || q.includes('equipment')) {
       return {
         ownershipContext: 'not_applicable',
         subject: 'property, plant and equipment acquisition',

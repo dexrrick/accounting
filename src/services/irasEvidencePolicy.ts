@@ -12,6 +12,13 @@ import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentatio
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
+  const directCpfContributionQuery = classification.primaryDomain === 'PAYROLL' &&
+    classification.authorities.includes('CPF') && !classification.authorities.includes('IRAS') &&
+    !classification.taxAnalysisRequired && Boolean(query &&
+      /\b(?:cpf|central provident fund)\b/i.test(query) &&
+      /\b(?:contribution|ordinary wages?|additional wages?|payroll)\b/i.test(query));
+  if (directCpfContributionQuery) return false;
+
   const explicitTaxQuestion = Boolean(query?.split(/[.!?\n;]+/).some(clause =>
     /\b(?:gst|tax|iras|ir21|ir8a|withholding|deduct\w*|claim\w*|capital allowances?|section\s+(?:13w|14n)|zero[ -]rated|out[ -]of[ -]scope)\b/i.test(clause) &&
     /\b(?:can|whether|what|how|when|which|should|does|do we|is (?:it|this|the)|are (?:we|these)|explain|advise|assess|determine|confirm|calculate|compute|work\s+out|eligib\w*)\b/i.test(clause)

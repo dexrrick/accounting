@@ -50,16 +50,37 @@ assert.match(badAllocation?.clarifications[0]?.prompt || '', /reconciling invest
 
 const originalFetch = globalThis.fetch;
 let calls = 0;
+let intentCalls = 0;
+let eventCalls = 0;
+const accountingIntent = {
+  jurisdiction: ['Singapore'], authorityCandidates: ['ACCOUNTING_STANDARDS'], contextualAuthorities: ['IRAS'],
+  domain: 'ACCOUNTING', population: 'COMPANY', primarySubject: 'dated family-office investment journal entries',
+  concepts: [{ concept: 'investment acquisition and fair value events', role: 'PRIMARY' }],
+  requestedOperation: 'PREPARE_JOURNAL', requiresUserSpecificFacts: true, calculationRequested: false,
+  factsExplicitlyProvided: [], confidence: 0.96
+};
+const makeResponse = value => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(value) }] } }] }), { status: 200 });
 try {
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (_url, init) => {
     calls++;
-    return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: JSON.stringify({ events: [
+    const body = JSON.parse(init.body);
+    if (body.systemInstruction?.parts?.[0]?.text.includes('Interpret the user question only')) {
+      intentCalls++;
+      return makeResponse(accountingIntent);
+    }
+    if (body.contents?.[0]?.parts?.[0]?.text.startsWith('Extract chronological accounting EVENT FACTS')) {
+      eventCalls++;
+      return makeResponse({ events: [
       { type: 'other', description: 'Note acquisition.' }, { type: 'other', description: 'Fund capital call.' },
       { type: 'other', description: 'Share issue and advance.' }, { type: 'other', description: 'Valuations and coupon.' }
-    ] }) }] } }] }) };
+      ] });
+    }
+    return new Response('', { status: 500 });
   };
   check(await processAccountingQuery(query, null, 'SFRS_I', { activeProvider: 'gemini', gemini: { apiKey: 'test-key-long-enough', model: 'gemini-3.5-flash-lite' } }, 'gemini-3.5-flash-lite', [], { journal: false, statutory: false }));
-  assert.equal(calls, 1);
+  assert.equal(calls, 2, 'semantic intent and economic-event extraction are separate provider stages');
+  assert.equal(intentCalls, 1, 'exactly one validated accounting-intent call precedes classification');
+  assert.equal(eventCalls, 1, 'exactly one economic-event extraction call supplies transaction facts');
 } finally { globalThis.fetch = originalFetch; }
 
 console.log('PASS | date-labelled family-office events post seven balanced groups without AI lease hallucination');

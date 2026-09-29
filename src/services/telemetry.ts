@@ -4,6 +4,8 @@
  * across all query types in the Singapore Accounting AI Assistant.
  */
 
+import { sanitizeSemanticDiagnosticLabel } from './semanticQuestionUnderstanding';
+
 export interface RequestTelemetry {
   query: string;
   query_mode: string;
@@ -29,6 +31,7 @@ export interface RequestTelemetry {
     attempts: Array<{ topicId: string; status: string; stage?: string; queryVariant?: string }>;
     stages: Array<{ stage: string; status: string }>;
   };
+  questionUnderstanding?: import('./semanticQuestionUnderstanding').QuestionUnderstandingDiagnostics;
   timestamp: string;
 }
 
@@ -105,6 +108,7 @@ export class RequestProfiler {
   private assemblyMs = 0;
   private queryMode = 'UNKNOWN';
   private officialSourceFallback?: RequestTelemetry['official_source_fallback'];
+  private questionUnderstanding?: RequestTelemetry['questionUnderstanding'];
   private finalizedTelemetry?: RequestTelemetry;
 
   constructor(query: string, modelName?: string) {
@@ -121,6 +125,25 @@ export class RequestProfiler {
 
   public setQueryMode(mode: string): void {
     this.queryMode = mode;
+  }
+
+  public setQuestionUnderstanding(value?: RequestTelemetry['questionUnderstanding']): void {
+    if (!value) {
+      this.questionUnderstanding = undefined;
+      return;
+    }
+    // Accept only the allowlisted projection. Facts, contextual mentions and
+    // arbitrary provider text are not part of request telemetry.
+    this.questionUnderstanding = {
+      mode: ['SEMANTIC_INTERPRETATION', 'SEMANTIC_PLUS_RULES', 'DETERMINISTIC_FALLBACK'].includes(value.mode)
+        ? value.mode : 'DETERMINISTIC_FALLBACK',
+      population: value.population,
+      primarySubject: sanitizeSemanticDiagnosticLabel(value.primarySubject),
+      requestedOperation: value.requestedOperation,
+      authorityCandidates: value.authorityCandidates.filter(authority => ['IRAS', 'CPF', 'ACRA', 'MOM', 'MAS', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION', 'SSO'].includes(authority)).slice(0, 5),
+      concepts: value.concepts.slice(0, 12).map(sanitizeSemanticDiagnosticLabel).filter(Boolean)
+    };
+    if (this.finalizedTelemetry) this.finalizedTelemetry.questionUnderstanding = this.questionUnderstanding;
   }
 
   public recordOfficialSourceFallback(trace: SourceMapFallbackTraceLike): void {
@@ -221,6 +244,7 @@ export class RequestProfiler {
       verification_ms: Math.round(this.verificationMs * 100) / 100,
       assembly_ms: Math.round(this.assemblyMs * 100) / 100,
       ...(this.officialSourceFallback ? { official_source_fallback: this.officialSourceFallback } : {}),
+      ...(this.questionUnderstanding ? { questionUnderstanding: this.questionUnderstanding } : {}),
       timestamp: new Date().toISOString()
     };
     this.finalizedTelemetry = telemetry;

@@ -33,6 +33,14 @@ import { defaultExternalSourceValidator } from '../retrieval/externalSourceValid
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
+import {
+  buildSemanticDiscoveryQuery,
+  getSemanticIrasDiscoveryContext,
+  interpretSemanticQuestion,
+  isShortSemanticFollowUp,
+  reconcileQuestionUnderstanding,
+  type SemanticQuestionUnderstanding
+} from './semanticQuestionUnderstanding';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
@@ -53,6 +61,7 @@ export interface GroundedReasoningContext {
   applicationRules: string[];
   currentInformationRequired: boolean;
   semanticUnderstanding?: TransactionUnderstanding;
+  questionUnderstanding?: SemanticQuestionUnderstanding;
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
 }
 
@@ -166,8 +175,14 @@ export interface MappedFallbackOptions {
   officialDomainSearchAdapter?: OfficialDomainSearchAdapter;
   /** Permit a transient authority-level query scope when no reviewed topic matches. */
   authorityLevelDiscovery?: boolean;
+  /** Restrict this pass to reviewed local records; do not fetch mapped sources. */
+  localOnly?: boolean;
   /** The caller already found adequate reviewed local evidence. */
   localEvidenceAdequate?: boolean;
+  /** Precomputed provider result; it is revalidated before it affects routing. */
+  questionUnderstanding?: SemanticQuestionUnderstanding;
+  /** Semantic intent terms used only for IRAS discovery/ranking, with original query retained. */
+  semanticDiscoveryQuery?: string;
 }
 
 const AUTHORITY_QUERY_STOPWORDS = new Set([
@@ -176,7 +191,7 @@ const AUTHORITY_QUERY_STOPWORDS = new Set([
   'these', 'this', 'to', 'under', 'was', 'we', 'what', 'when', 'where', 'which', 'while', 'who', 'will', 'with'
 ]);
 
-function provisionalIrasDiscoveryTopic(query: string): MappedCoverageTopic {
+function provisionalIrasDiscoveryTopic(query: string, semanticContext?: ReturnType<typeof getSemanticIrasDiscoveryContext>): MappedCoverageTopic {
   const lower = query.toLowerCase();
   // Select the taxpayer from the requested income/tax subject, not from a
   // background mention of an employee or an employer. Corporate income must
@@ -186,14 +201,19 @@ function provisionalIrasDiscoveryTopic(query: string): MappedCoverageTopic {
   const corporateTaxTarget = /\b(?:corporate income tax|corporate tax|company tax|business income tax)\b/.test(lower) ||
     companyIncomeTarget &&
     /\b(?:tax|taxable|exempt|chargeable|remit|relief)\b/.test(lower);
-  const individual = !corporateTaxTarget &&
+  const individual = semanticContext
+    ? semanticContext.population === 'INDIVIDUAL' || semanticContext.population === 'EMPLOYEE'
+    : !corporateTaxTarget &&
     /\b(?:individual|employee|employment income|salary|wages|tax resident|secondment|overseas posting)\b/.test(lower);
-  const domainId = individual ? 'IRAS_INDIVIDUAL_TAX'
+  const domainId = semanticContext?.domainId || (individual ? 'IRAS_INDIVIDUAL_TAX'
     : corporateTaxTarget ? 'IRAS_CORPORATE_TAX'
       : /\b(?:gst|goods and services tax)\b/.test(lower) ? 'IRAS_GST'
-        : /\b(?:company|companies|corporate|business|withholding tax|wht)\b/.test(lower) ? 'IRAS_CORPORATE_TAX' : 'IRAS_INDIVIDUAL_TAX';
-  const populationContext = individual ? 'individual employee' : domainId === 'IRAS_CORPORATE_TAX' ? 'company' : 'taxpayer';
-  const normalized = normalizeEvidenceText(query);
+        : /\b(?:company|companies|corporate|business|withholding tax|wht)\b/.test(lower) ? 'IRAS_CORPORATE_TAX' : 'IRAS_OTHER');
+  const populationContext = semanticContext
+    ? semanticContext.population.toLowerCase().replace(/_/g, ' ')
+    : individual ? 'individual employee' : domainId === 'IRAS_CORPORATE_TAX' ? 'company' : 'taxpayer';
+  const semanticTerms = semanticContext ? [semanticContext.primarySubject, ...semanticContext.concepts].join(' ') : '';
+  const normalized = normalizeEvidenceText(`${query} ${semanticTerms}`);
   const queryWords = [...new Set(normalized.split(' ').filter(word => word.length >= 4 && !AUTHORITY_QUERY_STOPWORDS.has(word)))];
   const phrases = new Set<string>();
   for (let index = 0; index < queryWords.length; index++) {
@@ -204,7 +224,7 @@ function provisionalIrasDiscoveryTopic(query: string): MappedCoverageTopic {
   const idSuffix = normalized.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'question';
   const topic = {
     id: `iras-authority-query-${idSuffix}`,
-    title: `IRAS ${populationContext} guidance for ${query.slice(0, 140)}`,
+    title: `IRAS ${populationContext} guidance for ${semanticContext?.primarySubject || query.slice(0, 140)}`,
     domainId,
     priority: 'P1',
     status: 'MISSING',
@@ -216,7 +236,7 @@ function provisionalIrasDiscoveryTopic(query: string): MappedCoverageTopic {
     exclusionKeywords: [],
     aliases: [],
     actOrStandard: 'IRAS official guidance',
-    shortDescription: `Transient ${populationContext} routing context derived from the complete user query; not reviewed knowledge.`
+    shortDescription: `Transient ${populationContext} routing context derived from the complete user query and validated intent labels; not reviewed knowledge.`
   } as unknown as MappedCoverageTopic;
   return topic;
 }
@@ -227,7 +247,7 @@ function provisionalIrasDiscoveryTopic(query: string): MappedCoverageTopic {
  * invoice total. The calculator separately verifies the stated facts and the
  * admitted dated Section 16 rate record.
  */
-function isStandaloneOutputGstCalculationRequest(query: string): boolean {
+export function isStandaloneOutputGstCalculationRequest(query: string): boolean {
   const text = query.normalize('NFC').trim();
   const requestStart = /\b(?:what|which|when|where|why|how|whether|if|can|could|should|do|does|did|will|would|explain|advise|assess|determine|confirm|calculate|compute|work\s+out)\b/i.exec(text);
   if (!requestStart || requestStart.index === undefined) return false;
@@ -929,7 +949,8 @@ export async function resolveMappedOfficialSourceFallback(
   const authorityFallbackPermitted = options.authorityLevelDiscovery === true &&
     !options.localEvidenceAdequate && !historicalIrasScopeRequested;
   const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'HISTORICAL');
-  const authorityDiscoveryTopic = authorityFallbackPermitted ? provisionalIrasDiscoveryTopic(query) : undefined;
+  const semanticIrasContext = getSemanticIrasDiscoveryContext(options.questionUnderstanding);
+  const authorityDiscoveryTopic = authorityFallbackPermitted ? provisionalIrasDiscoveryTopic(query, semanticIrasContext) : undefined;
   const provisionalTopics: MappedCoverageTopic[] = authorityDiscoveryTopic && topicsRequiringFallback.length === 0
     ? [authorityDiscoveryTopic]
     : [];
@@ -1176,7 +1197,7 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       sitemapStageAttempted = true;
       discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates({
-        query,
+        query: options.semanticDiscoveryQuery || query,
         authority: topic.authorities[0],
         topicId: topic.id,
         topicTitle: topic.title,
@@ -1269,7 +1290,7 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       onlineSearchStageAttempted = true;
       searchCandidates = await officialDomainSearchAdapter.searchOfficialDomainCandidates({
-        query,
+        query: options.semanticDiscoveryQuery || query,
         authority: topic.authorities[0],
         topicId: topic.id,
         topicTitle: topic.title,
@@ -1502,13 +1523,24 @@ export async function buildGroundedReasoningContext(
   providerOrApiKey?: ProviderSettings | string,
   retrievalOptions: MappedFallbackOptions = {}
 ): Promise<GroundedReasoningContext> {
-  // 1. Semantic Transaction Understanding & Question Classification
-  const classification = classifyQuestion(userInput);
+  // 1. Interpret question meaning before keyword/topic classification. A
+  // caller may pass its precomputed result to prevent a duplicate provider call.
+  const initialQuestionUnderstanding = retrievalOptions.questionUnderstanding ||
+    await interpretSemanticQuestion(userInput, providerOrApiKey);
+  const deterministicClassification = classifyQuestion(userInput);
+  const reconciledQuestion = reconcileQuestionUnderstanding(userInput, deterministicClassification, initialQuestionUnderstanding);
+  const classification = reconciledQuestion.classification;
+  const questionUnderstanding = reconciledQuestion.understanding;
   const irasPolicy = usesIrasEvidencePolicy(classification, userInput);
-  const conversationContext = extractAccountingContext(currentScenario);
+  const ignorePriorAccountingContext = Boolean(irasPolicy &&
+    !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
+    (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
+    !isShortSemanticFollowUp(userInput));
+  const relevantScenario = ignorePriorAccountingContext ? null : currentScenario;
+  const conversationContext = extractAccountingContext(relevantScenario);
   const semanticUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
     userInput,
-    currentScenario?.functionalCurrency || 'SGD',
+    relevantScenario?.functionalCurrency || 'SGD',
     'SG',
     irasPolicy ? undefined : providerOrApiKey,
     conversationContext
@@ -1526,14 +1558,17 @@ export async function buildGroundedReasoningContext(
   // Keep a transient full-query scope beside any registered routing topics.
   // The registry is a routing aid: a lexical topic hit can cover one concept
   // while the rest of the user's IRAS question still needs discovery.
+  const semanticIrasContext = irasPolicy ? getSemanticIrasDiscoveryContext(questionUnderstanding) : undefined;
+  const semanticDiscoveryQuery = buildSemanticDiscoveryQuery(userInput, questionUnderstanding.interpretation);
   const authorityDiscoveryContext = irasPolicy
-    ? provisionalIrasDiscoveryTopic(userInput)
+    ? provisionalIrasDiscoveryTopic(userInput, semanticIrasContext)
     : undefined;
   const localRetrievalHints = irasPolicy
     ? { ...retrievalHints, domain: undefined, authorities: ['IRAS' as const], topicIds: irasTopicIds }
     : retrievalHints;
   const localRetrieved = await retriever.retrieveSources({
     query: userInput,
+    ...(semanticIrasContext ? { semanticQuery: semanticDiscoveryQuery } : {}),
     ...localRetrievalHints,
     maxResults: GROUNDING_SOURCE_MAX_RESULTS,
     semanticContext: semanticUnderstanding
@@ -1550,17 +1585,19 @@ export async function buildGroundedReasoningContext(
     authorities: ['IRAS']
   }), classification.missingFacts) : undefined;
   const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
-  const fallbackTopicIds = initiallyMatchedCoverage
+  const fallbackTopicIds = (retrievalOptions.localOnly ? [] : initiallyMatchedCoverage
     .filter(topic => !irasPolicy || topic.id.startsWith('iras-'))
     .filter(topic => localQuality && topic.id.startsWith('iras-')
       ? localQuality.uncoveredTopicIds.includes(topic.id)
       : topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
-    .map(topic => topic.id);
+    .map(topic => topic.id));
   const needsAuthorityFallback = Boolean(irasPolicy && localQuality &&
     (localQuality.status === 'INSUFFICIENT' || localQuality.uncoveredTopicIds.length > 0));
   const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, {
     ...retrievalOptions,
-    authorityLevelDiscovery: retrievalOptions.authorityLevelDiscovery ?? needsAuthorityFallback,
+    questionUnderstanding,
+    semanticDiscoveryQuery: semanticIrasContext ? semanticDiscoveryQuery : undefined,
+    authorityLevelDiscovery: retrievalOptions.localOnly ? false : retrievalOptions.authorityLevelDiscovery ?? needsAuthorityFallback,
     localEvidenceAdequate: localQuality ? localQuality.uncoveredTopicIds.length === 0 && localQuality.eligibleRecords.length > 0 : false
   });
   const allRetrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
@@ -1592,7 +1629,7 @@ export async function buildGroundedReasoningContext(
   }
 
   // 4. Facts, Missing Facts, and Assumptions
-  const userFacts = extractUserFacts(userInput, currentScenario, semanticUnderstanding);
+  const userFacts = extractUserFacts(userInput, relevantScenario, semanticUnderstanding);
   const missingFacts = [...classification.missingFacts];
 
   const isTransactionQuery =
@@ -1610,8 +1647,8 @@ export async function buildGroundedReasoningContext(
 
   // Assumptions: only when genuinely needed for an illustrative calculation/scenario
   const assumptions: ExplicitAssumption[] = [];
-  if (currentScenario?.assumptions) {
-    assumptions.push(...currentScenario.assumptions);
+  if (relevantScenario?.assumptions) {
+    assumptions.push(...relevantScenario.assumptions);
   }
 
   if (semanticUnderstanding.assumptions) {
@@ -1643,6 +1680,7 @@ export async function buildGroundedReasoningContext(
     applicationRules,
     currentInformationRequired: classification.currentInformationRequired,
     semanticUnderstanding,
+    questionUnderstanding,
     evidenceQuality,
     sourceMapFallbackTrace: mappedFallback.trace
   };
