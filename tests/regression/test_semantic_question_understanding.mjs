@@ -657,9 +657,13 @@ assert.match(unknownSitemapTitle, /unknown guidance/i, 'Authority-level discover
 const originalFetch = globalThis.fetch;
 let processInterpretationCalls = 0;
 let productionContext;
-globalThis.fetch = async (url) => {
+globalThis.fetch = async (url, init) => {
   if (String(url).includes('generateContent')) {
-    processInterpretationCalls += 1;
+    const request = JSON.parse(String(init?.body || '{}'));
+    const prompt = request.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+    // A limited-evidence response may make a separate answer-generation call.
+    // This assertion concerns reuse of the semantic interpretation only.
+    if (prompt.includes('Interpret this question:\n')) processInterpretationCalls += 1;
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(interpretation(personalMeaning)) }] } }] }), { status: 200 });
   }
   return new Response('', { status: 503 });
