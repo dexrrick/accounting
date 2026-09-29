@@ -51,3 +51,26 @@ authoritative during migration.
 - The original user query remains in relevance and claim checks.
 - Prior IRAS employee-benefit and multi-relief behavior remains unchanged.
 - Evidence status is separate from model interpretation and deterministic mapping.
+
+## Resumed implementation boundaries
+
+- Resolve evidence per issue, then group the results into authority/domain/population
+  workstreams. Contextual authorities never create a workstream.
+- Keep the raw question in provenance, temporal, relevance, and claim checks;
+  scoped issue labels are retrieval intent only.
+- Add an explicit internal IRAS evidence scope for topic and concept selection.
+  Reuse the existing local/fallback pipeline, admission gate, and claim verifier.
+  Calls without a scope retain the legacy behavior.
+- Start other providers with canonical reviewed local evidence only. Require
+  exact registry identity, appropriate authority/domain/topic, source-text
+  specificity, date eligibility, and verified complete quotations. Unsupported
+  discovery stages and absent topic coverage return explicit gaps.
+- Track evidence coverage separately from case application. Aggregation must
+  honor unresolved issues, empty/fallback plans, provider failures, and uncovered
+  concepts even when another stream succeeds.
+- Add the generic presentation alongside the legacy IRAS projection. Bind it to
+  the current raw question and combine verified quotations with named gaps.
+  Do not introduce unsupported cross-authority interaction prose.
+- Enable the new runtime for multiple material workstreams; preserve ordinary
+  accounting and single-IRAS paths during this migration. Keep deterministic
+  journal generation and evidence presentation independent.

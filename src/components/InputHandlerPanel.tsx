@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { AccountingScenarioState } from '../types/accounting';
 import { RefreshCw, Layers, Sparkles, ChevronDown } from 'lucide-react';
 import { getIrasDomainDisplayLabel, hasCurrentIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
+import { hasCurrentAuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
 
 interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
@@ -35,6 +36,16 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
       ];
 
   const getDomainBadge = (domain?: string) => {
+    const currentAuthorityPresentation = hasCurrentAuthorityEvidencePresentation(
+      scenario.authorityEvidencePresentation, scenario.rawQuery
+    ) ? scenario.authorityEvidencePresentation : undefined;
+    if (currentAuthorityPresentation) {
+      const labels = [...new Set(currentAuthorityPresentation.workstreams.map(stream => stream.domainLabel))];
+      return {
+        label: labels.length ? labels.join(' + ') : 'Whole-question evidence review',
+        color: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800'
+      };
+    }
     switch (domain) {
       case 'ACCOUNTING_SFRS':
         return { label: 'SFRS(I) Standards', color: 'bg-indigo-50 text-indigo-800 border-indigo-200 dark:bg-indigo-950/70 dark:text-indigo-300 dark:border-indigo-800' };

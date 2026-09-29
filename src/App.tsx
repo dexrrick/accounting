@@ -17,6 +17,7 @@ import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { getSingaporeTimestamp } from './utils/dateUtils';
 import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPresentation';
 import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresentation';
+import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEvidencePresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { assessConversationRelation } from './services/conversationBoundary';
@@ -179,6 +180,9 @@ export const App: React.FC = () => {
   const hasJournal = computed.groups.some((group) => group.lines.length > 0);
   const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
+  const currentAuthorityPresentation = scenario && hasCurrentAuthorityEvidencePresentation(
+    scenario.authorityEvidencePresentation, scenario.rawQuery
+  ) ? scenario.authorityEvidencePresentation : undefined;
 
   return (
     <div className="min-h-screen bg-[#F4F7FA] dark:bg-[#131A29] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
@@ -225,6 +229,7 @@ export const App: React.FC = () => {
             {scenario && (
               showJournal ||
               (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
+              Boolean(currentAuthorityPresentation) ||
               hasCurrentIrasEvidencePresentation(scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) ||
               Boolean(scenario.accountingTreatmentSummary) ||
               Boolean(scenario.singaporeTaxTreatmentSummary) ||
@@ -296,6 +301,7 @@ export const App: React.FC = () => {
                     effectiveDateOrTiming={scenario.effectiveDateOrTiming}
                     uncertaintyDisclaimer={scenario.uncertaintyDisclaimer}
                     irasEvidencePresentation={scenario.irasEvidencePresentation}
+                    authorityEvidencePresentation={currentAuthorityPresentation}
                     rawQuery={scenario.rawQuery}
                     queryIntent={scenario.queryIntent}
                   />

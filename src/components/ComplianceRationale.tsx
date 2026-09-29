@@ -6,6 +6,9 @@ import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import type { OfficialAnswerLink } from '../utils/chatPresentation';
 import { hasCurrentIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
+import type { AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
+import { hasCurrentAuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
+import { AuthorityCompliancePanel } from './AuthorityCompliancePanel';
 
 interface ComplianceRationaleProps {
   citations: StandardCitation[];
@@ -21,6 +24,7 @@ interface ComplianceRationaleProps {
   effectiveDateOrTiming?: string;
   uncertaintyDisclaimer?: string;
   irasEvidencePresentation?: IrasEvidencePresentation;
+  authorityEvidencePresentation?: AuthorityEvidencePresentation;
   rawQuery?: string;
   queryIntent?: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
 }
@@ -77,9 +81,16 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   effectiveDateOrTiming,
   uncertaintyDisclaimer,
   irasEvidencePresentation,
+  authorityEvidencePresentation,
   rawQuery,
   queryIntent
 }) => {
+  const currentAuthorityPresentation = hasCurrentAuthorityEvidencePresentation(authorityEvidencePresentation, rawQuery)
+    ? authorityEvidencePresentation : undefined;
+  if (currentAuthorityPresentation) {
+    return <AuthorityCompliancePanel presentation={currentAuthorityPresentation} />;
+  }
+
   const currentIrasPresentation = hasCurrentIrasEvidencePresentation(irasEvidencePresentation, rawQuery, primaryDomain, queryIntent)
     ? irasEvidencePresentation : undefined;
   const irasDetail = irasStatusDetail(currentIrasPresentation);

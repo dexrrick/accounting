@@ -200,7 +200,7 @@ function metadataAssociatesRecord(record: AuthoritativeSourceRecord, topic: Sing
   });
 }
 
-function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): boolean {
+export function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): boolean {
   const canonical = UNIFIED_SOURCE_REGISTRY[record.id];
   if (!canonical || canonical.provenance !== 'LOCAL_STATIC') return false;
   // A bound ID is an association only when the evidence payload is the reviewed
