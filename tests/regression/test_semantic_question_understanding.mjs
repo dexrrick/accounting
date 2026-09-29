@@ -518,6 +518,12 @@ assert.doesNotMatch(promptCalls[0].prompt, /retrieved evidence|conversation hist
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => '{bad json')).failure, 'INVALID_RESPONSE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => JSON.stringify(interpretation({ confidence: 0.2 })))).failure, 'LOW_CONFIDENCE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => { throw new Error('request timed out'); })).failure, 'TIMEOUT');
+const rateLimited = await interpretSemanticQuestion('Question?', provider, async () => {
+  throw new Error('Gemini API request failed with HTTP 429. The provider response was withheld for security.');
+});
+assert.equal(rateLimited.failure, 'RATE_LIMITED');
+assert.equal(rateLimited.providerStatus, 429);
+assert.equal('providerResponse' in rateLimited, false, 'Rate-limit handling must not retain provider response bodies.');
 assert.equal((await interpretSemanticQuestion('Question?', undefined, async () => { throw new Error('must not call'); })).failure, 'NO_PROVIDER');
 
 const projected = projectQuestionUnderstandingDiagnostics(unknownRoute.understanding);

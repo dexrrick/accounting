@@ -1,4 +1,5 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
@@ -12,13 +13,50 @@ const outputDirectory = path.join(root, 'docs/evaluation/multi-authority-workstr
 const jsonPath = path.join(outputDirectory, 'live-semantic-evaluation.json');
 const markdownPath = path.join(outputDirectory, 'live-semantic-evaluation.md');
 const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
+const interpreterSourcePath = path.join(root, 'src/services/semanticQuestionUnderstanding.ts');
 const MODEL = fixture.expectedModel;
 const FAILURE_TAXONOMY = [
   'MODEL_OMISSION', 'MODEL_FALSE_ISSUE', 'MODEL_WRONG_AUTHORITY', 'MODEL_WRONG_DOMAIN',
   'MODEL_WRONG_POPULATION', 'MODEL_WRONG_OPERATION', 'MODEL_INVALID_SCHEMA', 'MODEL_TIMEOUT',
   'RECONCILIATION_REJECTION', 'TAXONOMY_MAPPING_GAP', 'RUNTIME_ROUTING_FAILURE'
 ];
-const NO_RESPONSE_FAILURES = new Set(['NO_PROVIDER', 'PROVIDER_ERROR', 'TIMEOUT', 'QUERY_TOO_LONG']);
+const NO_RESPONSE_FAILURES = new Set(['NO_PROVIDER', 'PROVIDER_ERROR', 'RATE_LIMITED', 'TIMEOUT', 'QUERY_TOO_LONG']);
+const RETRYABLE_PROVIDER_FAILURES = new Set(['PROVIDER_ERROR', 'RATE_LIMITED']);
+const MIN_GEMINI_INTERVAL_MS = 8_000;
+const REQUEST_START_GUARD_MS = 250;
+const MAX_ATTEMPTS_PER_CASE = 5;
+
+function requestedMinimumInterval() {
+  const index = process.argv.indexOf('--min-interval-ms');
+  const inline = process.argv.find(argument => argument.startsWith('--min-interval-ms='));
+  if (index < 0 && !inline) return MIN_GEMINI_INTERVAL_MS;
+  const raw = inline ? inline.slice('--min-interval-ms='.length) : process.argv[index + 1];
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < MIN_GEMINI_INTERVAL_MS) {
+    throw new Error(`--min-interval-ms must be an integer of at least ${MIN_GEMINI_INTERVAL_MS}.`);
+  }
+  return value;
+}
+
+const minimumIntervalMs = requestedMinimumInterval();
+const resumeRequested = process.argv.includes('--resume');
+const retryProviderErrorsOnly = process.argv.includes('--retry-provider-errors');
+const retryInvalidResponsesOnly = process.argv.includes('--retry-invalid-response');
+if (retryProviderErrorsOnly && !resumeRequested) {
+  throw new Error('--retry-provider-errors requires --resume. No model call was made.');
+}
+if (retryInvalidResponsesOnly && !resumeRequested) {
+  throw new Error('--retry-invalid-response requires --resume. No model call was made.');
+}
+if (retryProviderErrorsOnly && retryInvalidResponsesOnly) {
+  throw new Error('--retry-invalid-response and --retry-provider-errors are mutually exclusive. No model call was made.');
+}
+if (retryProviderErrorsOnly && process.argv.includes('--report-only')) {
+  throw new Error('--retry-provider-errors cannot be combined with --report-only. No model call was made.');
+}
+if (retryInvalidResponsesOnly && process.argv.includes('--report-only')) {
+  throw new Error('--retry-invalid-response cannot be combined with --report-only. No model call was made.');
+}
 
 if (process.argv.includes('--oracle') || process.argv.includes('--replay-from')) {
   throw new Error('This runner measures live production-path model understanding only; oracle/replay input is not accepted.');
@@ -40,6 +78,9 @@ function emptySummary(status, note) {
     expectedModel: MODEL,
     runPlan: fixture.runs,
     liveCalls: 0,
+    logicalCaseCalls: 0,
+    providerRequestAttempts: 0,
+    providerResponseAttempts: 0,
     totalCaseCalls: 0,
     semanticMetrics: null,
     taxonomyFailureCounts: {},
@@ -70,13 +111,15 @@ function markdownReport(report) {
     const outcomes = summary.callOutcomes;
     lines.push(
       `**${summary.note || 'LIVE GEMINI NOT MEASURED — live calls have not been run.'}**`,
-      `Attempted calls: ${outcomes?.attemptedCalls || 0}; provider responses: ${outcomes?.providerResponses || 0}; no-response rate: ${fmtRatio(outcomes?.providerNoResponseRate)}.`,
+      `Logical case calls: ${outcomes?.logicalCaseCalls || 0}; provider request attempts: ${outcomes?.providerRequestAttempts || 0}; provider response attempts: ${outcomes?.providerResponseAttempts || 0}; no-response rate: ${fmtRatio(outcomes?.providerNoResponseRate)}.`,
       ''
     );
   } else {
     const metrics = summary.semanticMetrics;
     lines.push(
-      `Unique cases: ${summary.uniqueCaseCount}; attempted calls: ${summary.liveCalls}; provider responses: ${summary.modelResponses}; valid interpretations: ${summary.validInterpretations}; provider failures: ${summary.providerFailures}.`,
+      `Unique cases: ${summary.uniqueCaseCount}; logical case calls: ${summary.logicalCaseCalls}; provider request attempts: ${summary.providerRequestAttempts}; provider response attempts: ${summary.providerResponseAttempts}; final valid interpretations: ${summary.validInterpretations}.`,
+      `Provider attempt failures: ${summary.providerFailures}; rate limited (429): ${summary.rateLimitedAttempts}; final provider-error cases: ${summary.finalProviderErrorCases}; final rate-limited cases: ${summary.finalRateLimitedCases}.`,
+      `Provider request attempts by runtime: ${Object.entries(summary.providerAttemptCountsByRuntime || {}).map(([runtime, count]) => `${runtime}: ${count}`).join('; ') || 'n/a'}.`,
       `Issue recall: ${fmtRatio(metrics.issueRecall)}; issue precision: ${fmtRatio(metrics.issuePrecision)}; omission rate: ${fmtRatio(metrics.omissionRate)}.`,
       `Authority: ${fmtRatio(metrics.governingAuthorityAccuracy)}; contextual authority: ${fmtRatio(metrics.contextualAuthorityAccuracy)}; domain: ${fmtRatio(metrics.domainAccuracy)}; population: ${fmtRatio(metrics.populationAccuracy)}; operation: ${fmtRatio(metrics.operationAccuracy)}.`,
       `Final workstream-set accuracy: ${fmtRatio(metrics.finalWorkstreamSetAccuracy)}; valid interpretation rate: ${fmtRatio(metrics.validInterpretationRate)}; invalid/timeout/fallback rate: ${fmtRatio(metrics.invalidTimeoutFallbackRate)}.`,
@@ -85,9 +128,10 @@ function markdownReport(report) {
     );
     if (summary.note) lines.push(`**${summary.note}**`, '');
     lines.push('## Failure taxonomy', '', ...FAILURE_TAXONOMY.map(code => `- ${code}: ${summary.taxonomyFailureCounts[code] || 0}`), '');
-    lines.push('## Per-call results', '', '| Run | Case | Issue recall | Issue precision | Workstream set | Taxonomy |', '|---|---|---:|---:|---|---|');
+    lines.push('## Provider attempt outcomes', '', ...Object.entries(summary.providerAttemptOutcomeCounts || {}).map(([outcome, count]) => `- ${outcome}: ${count}`), '');
+    lines.push('## Per-call results', '', '| Run | Case | Attempts | Last provider status | Issue recall | Issue precision | Workstream set | Taxonomy |', '|---|---|---:|---|---:|---:|---|---|');
     for (const row of report.calls) {
-      lines.push(`| ${row.runId} | ${row.caseId} | ${fmtRatio(row.metrics?.issueRecall)} | ${fmtRatio(row.metrics?.issuePrecision)} | ${row.metrics ? row.metrics.finalWorkstreamSetAccuracy ? 'PASS' : 'FAIL' : 'N/A'} | ${row.failureTaxonomies.join(', ') || '—'} |`);
+      lines.push(`| ${row.runId} | ${row.caseId} | ${row.attempts?.length || 0} | ${row.providerStatus ?? '—'} | ${fmtRatio(row.metrics?.issueRecall)} | ${fmtRatio(row.metrics?.issuePrecision)} | ${row.metrics ? row.metrics.finalWorkstreamSetAccuracy ? 'PASS' : 'FAIL' : 'N/A'} | ${row.failureTaxonomies.join(', ') || '—'} |`);
     }
     lines.push('', '## Repeated A–D workstream stability', '');
     const stability = summary.repeatedOriginalCaseStability;
@@ -98,10 +142,23 @@ function markdownReport(report) {
     lines.push('## Per-call detail', '');
     for (const row of report.calls) {
       lines.push(`### ${row.runId} — ${row.caseId}`, '', `Question: ${row.question}`, '',
-        `Valid: ${row.interpretationValid}; failure: ${row.semanticFailure || 'none'}; latency: ${row.latencyMs ?? 'n/a'} ms.`,
+        `Valid: ${row.interpretationValid}; final outcome: ${row.semanticFailure || 'PROVIDER_RESPONSE'}; provider category: ${row.providerCategory || 'none'}; HTTP status: ${row.providerStatus ?? 'n/a'}; attempts: ${row.attempts?.length || 0}; latency: ${row.latencyMs ?? 'n/a'} ms.`,
         `Workstreams: ${row.finalWorkstreams.join(', ') || 'none'}.`,
+        `Attempt history: ${(row.attempts || []).map(attempt => `#${attempt.attempt} ${attempt.outcome}${attempt.providerStatus ? ` (HTTP ${attempt.providerStatus})` : ''}`).join('; ') || 'not recorded'}.`,
         `Failures: ${row.failureTaxonomies.join(', ') || 'none'}.`, '');
     }
+  }
+  if (summary.testedCommit || summary.semanticInterpreterSha256) {
+    lines.push('## Tested source', '');
+    if (summary.testedCommit) lines.push(`Commit: ${summary.testedCommit}.`);
+    if (summary.semanticInterpreterSha256) lines.push(`Interpreter SHA-256: ${summary.semanticInterpreterSha256}.`);
+    if (summary.initialEvaluationRuntime) lines.push(`Initial evaluation runtime: ${summary.initialEvaluationRuntime}.`);
+    if (summary.runtime) lines.push(`Report-generation runtime: ${summary.runtime}.`);
+    if (summary.providerAttemptCountsByRuntime) {
+      lines.push(`Provider request attempts by runtime: ${Object.entries(summary.providerAttemptCountsByRuntime).map(([runtime, count]) => `${runtime}: ${count}`).join('; ') || 'none'}.`);
+    }
+    if (summary.promptChange) lines.push(`Prompt change: ${summary.promptChange}`);
+    lines.push('');
   }
   lines.push('## Limits', '', ...summary.limitations.map(item => `- ${item}`), '');
   return `${lines.join('\n').trimEnd()}\n`;
@@ -116,12 +173,19 @@ async function saveReport(report) {
   await mkdir(outputDirectory, { recursive: true });
   const json = `${JSON.stringify(report, null, 2)}\n`;
   if (apiKey && json.includes(apiKey)) throw new Error('Refusing to persist output containing the configured credential.');
-  await writeFile(jsonPath, json, 'utf8');
-  await writeFile(markdownPath, markdownReport(report), 'utf8');
+  const jsonTempPath = `${jsonPath}.${process.pid}.tmp`;
+  const markdownTempPath = `${markdownPath}.${process.pid}.tmp`;
+  await writeFile(jsonTempPath, json, 'utf8');
+  await rename(jsonTempPath, jsonPath);
+  await writeFile(markdownTempPath, markdownReport(report), 'utf8');
+  await rename(markdownTempPath, markdownPath);
 }
 
 const apiKey = process.env.GEMINI_API_KEY?.trim();
 if (!apiKey || apiKey.length <= 10) {
+  if (resumeRequested) {
+    throw new Error('Cannot resume without a configured Gemini API key. Existing evaluation data was left unchanged.');
+  }
   const note = !apiKey
     ? 'LIVE GEMINI NOT MEASURED — API key unavailable.'
     : 'LIVE GEMINI NOT MEASURED — configured API key is too short for the production interpreter; no call was attempted.';
@@ -135,8 +199,10 @@ if (!apiKey || apiKey.length <= 10) {
 const contracts = fixture.issueContracts;
 const cases = fixture.cases.map(item => ({ ...item, expected: contracts[item.contract] }));
 if (cases.some(item => !item.expected)) throw new Error('The live case contract references a missing issue contract.');
-const resumeRequested = process.argv.includes('--resume');
 let calls = [];
+let preservedSummaryMetadata = {};
+let priorReportRuntime;
+let initialEvaluationRuntime = process.version;
 if (resumeRequested) {
   try {
     const priorReport = JSON.parse(await readFile(jsonPath, 'utf8'));
@@ -144,11 +210,91 @@ if (resumeRequested) {
       throw new Error('Existing report does not match this model and live case suite.');
     }
     calls = priorReport.calls;
+    priorReportRuntime = priorReport.summary.runtime;
+    initialEvaluationRuntime = priorReport.summary.initialEvaluationRuntime || priorReport.summary.runtime || process.version;
+    for (const key of ['testedCommit', 'promptChange']) {
+      if (priorReport.summary?.[key] !== undefined) preservedSummaryMetadata[key] = priorReport.summary[key];
+    }
+    preservedSummaryMetadata.initialEvaluationRuntime = initialEvaluationRuntime;
   } catch (error) {
     throw new Error(`Cannot resume the live evaluation report: ${error instanceof Error ? error.message : 'invalid report'}`);
   }
 }
 const completedCallKeys = new Set(calls.map(row => `${row.runId}\u0000${row.caseId}`));
+
+function ensureAttemptHistory(row) {
+  if (Array.isArray(row.attempts)) {
+    for (const attempt of row.attempts) {
+      if (!attempt.runtime) attempt.runtime = attempt.attempt === 1 ? initialEvaluationRuntime : priorReportRuntime || initialEvaluationRuntime;
+    }
+    if (row.pendingEvaluation?.attempt && !row.pendingEvaluation.attempt.runtime) {
+      const attempt = row.pendingEvaluation.attempt;
+      attempt.runtime = attempt.attempt === 1 ? initialEvaluationRuntime : priorReportRuntime || initialEvaluationRuntime;
+    }
+    return row.attempts;
+  }
+  const failure = row.semanticFailure;
+  const outcome = row.providerResponseReceived
+    ? (row.interpretationValid ? 'VALID_INTERPRETATION' : failure || 'INVALID_RESPONSE')
+    : failure || 'PROVIDER_ERROR';
+  row.attempts = [{
+    attempt: 1,
+    requestStartedAt: row.requestStartedAt || null,
+    providerRequestAttempted: row.callAttempted !== false,
+    outcome,
+    providerStatus: Number.isInteger(row.providerStatus) ? row.providerStatus : null,
+    providerCategory: row.providerCategory || (failure === 'PROVIDER_ERROR' ? 'STATUS_UNAVAILABLE' : null),
+    runtime: initialEvaluationRuntime
+  }];
+  return row.attempts;
+}
+
+for (const row of calls) ensureAttemptHistory(row);
+let coldStartGuardPending = calls.length > 0 && !calls.some(row => [
+  ...ensureAttemptHistory(row),
+  ...(row.pendingEvaluation?.attempt ? [row.pendingEvaluation.attempt] : [])
+].some(attempt => Number.isFinite(Date.parse(attempt.requestStartedAt || ''))));
+
+function delay(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+function lastProviderRequestStart() {
+  let latest = 0;
+  for (const row of calls) {
+    for (const attempt of [
+      ...ensureAttemptHistory(row),
+      ...(row.pendingEvaluation?.attempt ? [row.pendingEvaluation.attempt] : [])
+    ]) {
+      const timestamp = Date.parse(attempt.requestStartedAt || '');
+      if (Number.isFinite(timestamp)) latest = Math.max(latest, timestamp);
+    }
+  }
+  return latest;
+}
+
+async function waitForRequestSlot(eligibleAt = 0) {
+  const now = Date.now();
+  const lastStart = lastProviderRequestStart();
+  const waitMs = Math.max(eligibleAt - now, lastStart ? lastStart + minimumIntervalMs + REQUEST_START_GUARD_MS - now : 0);
+  if (waitMs > 0) await delay(waitMs);
+}
+
+function outcomeForAttempt(understanding, valid, providerResponseReceived) {
+  if (understanding?.failure === 'RATE_LIMITED') return 'RATE_LIMITED';
+  if (understanding?.failure === 'PROVIDER_ERROR') return 'PROVIDER_ERROR';
+  if (understanding?.failure) return understanding.failure;
+  return providerResponseReceived && valid ? 'VALID_INTERPRETATION' : 'PROVIDER_RESPONSE';
+}
+
+function providerCategoryFor(understanding) {
+  if (Number.isInteger(understanding?.providerStatus)) {
+    return understanding.providerStatus === 429 ? 'HTTP_429_RATE_LIMITED' : `HTTP_${understanding.providerStatus}`;
+  }
+  if (understanding?.failure === 'RATE_LIMITED') return 'RATE_LIMIT_STATUS_UNAVAILABLE';
+  if (understanding?.failure === 'PROVIDER_ERROR') return 'STATUS_UNAVAILABLE';
+  return undefined;
+}
 
 function normalizedWords(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
@@ -311,9 +457,20 @@ function summarizeAll(rows) {
   };
   const exactRate = key => ratio(metricRows.filter(row => row.metrics[key] === true).length, metricRows.length);
   const calls = rows.length;
+  const attempts = rows.flatMap(row => [
+    ...ensureAttemptHistory(row),
+    ...(row.pendingEvaluation?.attempt ? [row.pendingEvaluation.attempt] : [])
+  ]);
+  const requestAttempts = attempts.filter(attempt => attempt.providerRequestAttempted !== false);
+  const providerAttemptCountsByRuntime = Object.fromEntries([...new Set(requestAttempts.map(attempt => attempt.runtime || 'UNKNOWN'))]
+    .map(runtime => [runtime, requestAttempts.filter(attempt => (attempt.runtime || 'UNKNOWN') === runtime).length]));
+  const outcomeCounts = Object.fromEntries([...new Set(attempts.map(attempt => attempt.outcome || 'UNKNOWN'))]
+    .map(outcome => [outcome, attempts.filter(attempt => attempt.outcome === outcome).length]));
+  const responseAttempts = attempts.filter(attempt => !NO_RESPONSE_FAILURES.has(attempt.outcome));
   const responseRows = rows.filter(row => row.providerResponseReceived);
   const validRows = rows.filter(row => row.interpretationValid && row.metrics);
-  const durations = responseRows.map(row => row.latencyMs).filter(Number.isFinite).sort((a, b) => a - b);
+  const durations = attempts.filter(attempt => !NO_RESPONSE_FAILURES.has(attempt.outcome))
+    .map(attempt => attempt.latencyMs).filter(Number.isFinite).sort((a, b) => a - b);
   const originalCases = fixture.cases.filter(item => item.runGroup === 'originalABCD');
   const assessedOriginals = originalCases.map(testCase => {
     const repeated = rows.filter(row => row.caseId === testCase.id && row.runGroup === 'originalABCD');
@@ -333,27 +490,40 @@ function summarizeAll(rows) {
   const changedCases = assessedOriginals.filter(item => item.assessed && item.runSets);
   const unassessedCases = assessedOriginals.filter(item => !item.assessed).map(({ caseId, observedCount, plannedCount, attemptedCount }) => ({ caseId, observedCount, plannedCount, attemptedCount }));
   const failureCounts = Object.fromEntries(FAILURE_TAXONOMY.map(code => [code, rows.filter(row => row.failureTaxonomies.includes(code)).length]));
-  const fallbackCount = rows.filter(row => row.semanticFailure).length;
-  const timeouts = rows.filter(row => row.semanticFailure === 'TIMEOUT').length;
-  const providerFailureCounts = Object.fromEntries([...NO_RESPONSE_FAILURES].map(failure => [failure, rows.filter(row => row.semanticFailure === failure).length]));
+  const semanticFallbackOutcomes = new Set(['INVALID_RESPONSE', 'LOW_CONFIDENCE', 'TIMEOUT']);
+  const fallbackCount = attempts.filter(attempt => semanticFallbackOutcomes.has(attempt.outcome)).length;
+  const timeouts = attempts.filter(attempt => attempt.outcome === 'TIMEOUT').length;
+  const providerFailureCounts = Object.fromEntries(['PROVIDER_ERROR', 'RATE_LIMITED', 'NO_PROVIDER', 'TIMEOUT', 'QUERY_TOO_LONG']
+    .map(failure => [failure, outcomeCounts[failure] || 0]));
+  const finalProviderErrorCases = rows.filter(row => row.semanticFailure === 'PROVIDER_ERROR').length;
+  const finalRateLimitedCases = rows.filter(row => row.semanticFailure === 'RATE_LIMITED').length;
+  const noResponseAttempts = requestAttempts.filter(attempt => NO_RESPONSE_FAILURES.has(attempt.outcome)).length;
   const plannedCalls = fixture.runs.originalABCD * fixture.cases.filter(item => item.runGroup === 'originalABCD').length +
     fixture.runs.paraphrasesAndAdversarial * fixture.cases.filter(item => item.runGroup === 'expanded').length;
   const complete = rows.length === plannedCalls;
-  const measured = responseRows.length > 0;
-  const providerComplete = responseRows.length === plannedCalls;
+  const measured = responseAttempts.length > 0;
+  const providerComplete = responseRows.length === plannedCalls && responseRows.every(row => row.providerResponseReceived);
   const summary = emptySummary(measured ? 'MEASURED' : 'NOT_MEASURED', measured
-    ? !providerComplete ? `Live measurement is partial: ${responseRows.length}/${plannedCalls} provider responses; failures are reported separately.` : undefined
-    : 'LIVE GEMINI NOT MEASURED — no provider response was obtained; attempted calls and failures are recorded.');
+    ? !providerComplete ? `Live measurement is partial: ${responseRows.length}/${plannedCalls} logical case calls have a provider response; request-attempt failures are reported separately.` : undefined
+    : 'LIVE GEMINI NOT MEASURED — no provider response was obtained; logical case calls and request attempts are recorded.');
   summary.measurementStatus = measured ? (complete && providerComplete ? 'COMPLETE' : 'PARTIAL') : 'NOT_MEASURED';
   summary.mode = measured
     ? (complete && providerComplete ? 'LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS' : 'LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS_PARTIAL')
     : 'LIVE_SEMANTIC_NOT_MEASURED';
   summary.liveCalls = calls;
+  summary.logicalCaseCalls = calls;
+  summary.providerRequestAttempts = requestAttempts.length;
+  summary.providerResponseAttempts = responseAttempts.length;
+  summary.initialEvaluationRuntime = initialEvaluationRuntime;
+  summary.providerAttemptCountsByRuntime = providerAttemptCountsByRuntime;
   summary.uniqueCaseCount = fixture.cases.length;
-  summary.modelResponses = responseRows.length;
+  summary.modelResponses = responseAttempts.length;
   summary.validInterpretations = validRows.length;
   summary.providerFailures = providerFailureCounts.PROVIDER_ERROR;
-  summary.noResponseCalls = calls - responseRows.length;
+  summary.rateLimitedAttempts = providerFailureCounts.RATE_LIMITED;
+  summary.finalProviderErrorCases = finalProviderErrorCases;
+  summary.finalRateLimitedCases = finalRateLimitedCases;
+  summary.noResponseCalls = noResponseAttempts;
   summary.invalidResponseCount = rows.filter(row => row.semanticFailure === 'INVALID_RESPONSE' || row.semanticFailure === 'LOW_CONFIDENCE').length;
   summary.totalCaseCalls = rows.length;
   summary.plannedCaseCalls = plannedCalls;
@@ -361,14 +531,17 @@ function summarizeAll(rows) {
   summary.suiteComplete = complete && providerComplete;
   summary.providerComplete = providerComplete;
   summary.callOutcomes = {
-    attemptedCalls: calls,
-    providerResponses: responseRows.length,
+    logicalCaseCalls: calls,
+    providerRequestAttempts: requestAttempts.length,
+    providerResponseAttempts: responseAttempts.length,
     validInterpretations: validRows.length,
-    noResponseCalls: calls - responseRows.length,
+    noResponseAttempts,
     invalidTimeoutFallbackCalls: fallbackCount,
     providerFailureCounts,
-    providerNoResponseRate: ratio(calls - responseRows.length, calls),
-    invalidTimeoutFallbackRate: ratio(fallbackCount, calls)
+    providerAttemptOutcomeCounts: outcomeCounts,
+    providerAttemptCountsByRuntime,
+    providerNoResponseRate: ratio(noResponseAttempts, requestAttempts.length),
+    invalidTimeoutFallbackRate: ratio(fallbackCount, requestAttempts.length)
   };
   summary.semanticMetrics = measured ? {
       issueRecall: averageRatio('issueRecall'),
@@ -382,11 +555,12 @@ function summarizeAll(rows) {
       omissionRate: averageRatio('omissionRate'),
       qualityCallDenominator: metricRows.length,
       validInterpretationRate: ratio(validRows.length, calls),
-      invalidTimeoutFallbackRate: ratio(fallbackCount, calls),
+      invalidTimeoutFallbackRate: ratio(fallbackCount, requestAttempts.length),
       semanticUnderstandingCorrect: ratio(validRows.filter(row => row.semanticUnderstandingCorrect).length, validRows.length)
     } : null;
   summary.taxonomyFailureCounts = failureCounts;
   summary.providerFailureCounts = providerFailureCounts;
+  summary.providerAttemptOutcomeCounts = outcomeCounts;
   summary.latencyMs = durations.length ? {
     median: durations[Math.floor(durations.length / 2)],
     p95: durations[Math.min(durations.length - 1, Math.ceil(durations.length * 0.95) - 1)],
@@ -407,8 +581,218 @@ function summarizeAll(rows) {
 }
 
 async function writeMeasuredReport() {
-  const report = { summary: summarizeAll(calls), calls };
+  const source = await readFile(interpreterSourcePath);
+  const summary = {
+    ...summarizeAll(calls),
+    ...preservedSummaryMetadata,
+    initialEvaluationRuntime: preservedSummaryMetadata.initialEvaluationRuntime || initialEvaluationRuntime,
+    semanticInterpreterSha256: createHash('sha256').update(source).digest('hex'),
+    runtime: process.version
+  };
+  const report = { summary, calls };
   await saveReport(report);
+}
+
+function replaceCallRow(row) {
+  const key = `${row.runId}\u0000${row.caseId}`;
+  const existingIndex = calls.findIndex(item => `${item.runId}\u0000${item.caseId}` === key);
+  if (existingIndex >= 0) calls[existingIndex] = row;
+  else calls.push(row);
+  completedCallKeys.add(key);
+}
+
+async function finalizePendingEvaluation(checkpointRow, testCase) {
+  const pending = checkpointRow.pendingEvaluation;
+  if (!pending) return checkpointRow;
+  const understanding = {
+    mode: pending.mode,
+    ...(pending.failure ? { failure: pending.failure } : {}),
+    ...(Number.isInteger(pending.providerStatus) ? { providerStatus: pending.providerStatus } : {}),
+    ...(pending.interpretation ? { interpretation: pending.interpretation } : {})
+  };
+  const interpretation = understanding.interpretation;
+  const semanticIssues = interpretation?.issues || [];
+  let reconciled;
+  let planned = [];
+  let built = [];
+  let runtimeFailure;
+  try {
+    reconciled = reconcileQuestionUnderstanding(testCase.question, classifyQuestion(testCase.question), understanding);
+    planned = planAuthorityWorkstreams(reconciled.issuePlan).map(stream => `${stream.authority}/${stream.domain}`);
+    const runtime = await buildAuthorityWorkstreams(testCase.question, reconciled.issuePlan, {
+      localOnly: true,
+      questionUnderstanding: understanding
+    });
+    built = runtime.workstreams.map(stream => `${stream.authority}/${stream.domain}`);
+  } catch (error) {
+    runtimeFailure = error instanceof Error ? error.message.replaceAll(apiKey || '', '[REDACTED]') : 'Unknown runtime failure.';
+  }
+  const issuePlan = reconciled?.issuePlan || { issues: [] };
+  const providerResponseReceived = pending.status === 'PROVIDER_RESPONSE_RECEIVED';
+  const valid = Boolean(interpretation) && understanding.mode === 'SEMANTIC_INTERPRETATION' && !understanding.failure;
+  const { expectedByActual } = matchIssues(testCase.expected, semanticIssues);
+  const scoredCase = scoreCall(testCase, semanticIssues, expectedByActual, issuePlan, built.map(key => {
+    const [authority, domain] = key.split('/'); return { authority, domain };
+  }));
+  const attemptHistory = ensureAttemptHistory(checkpointRow).slice();
+  const attempt = pending.attempt;
+  const semanticFailure = pending.failure;
+  const providerCategory = pending.providerCategory || undefined;
+  const finalRow = {
+    runId: checkpointRow.runId,
+    runGroup: testCase.runGroup,
+    caseId: testCase.id,
+    model: MODEL,
+    question: testCase.question,
+    interpretationValid: valid,
+    providerResponseReceived,
+    callAttempted: true,
+    requestStartedAt: attempt.requestStartedAt,
+    semanticFailure,
+    rateLimitFailureCount: pending.rateLimitFailureCount,
+    nextRetryAt: pending.nextRetryAt,
+    ...(checkpointRow.retryReason ? { retryReason: checkpointRow.retryReason } : {}),
+    providerStatus: attempt.providerStatus || undefined,
+    providerCategory,
+    latencyMs: attempt.latencyMs,
+    topLevel: interpretation ? {
+      jurisdiction: interpretation.jurisdiction,
+      domain: interpretation.domain,
+      population: interpretation.population,
+      authorityCandidates: interpretation.authorityCandidates,
+      contextualAuthorities: interpretation.contextualAuthorities,
+      primarySubject: interpretation.primarySubject,
+      requestedOperation: interpretation.requestedOperation,
+      requiresUserSpecificFacts: interpretation.requiresUserSpecificFacts,
+      calculationRequested: interpretation.calculationRequested
+    } : null,
+    issues: semanticIssues.map((issue, index) => plainIssue(issue, issuePlan.issues[index], index)),
+    deterministicReconciliation: {
+      source: issuePlan.source,
+      coverageEstablished: issuePlan.coverageEstablished,
+      hasUnmappedResidual: issuePlan.hasUnmappedResidual,
+      issues: issuePlan.issues.map(issue => ({
+        id: issue.id,
+        subject: issue.subject,
+        population: issue.population,
+        domain: issue.domain,
+        governingAuthorities: issue.governingAuthorities,
+        contextualAuthorities: issue.contextualAuthorities,
+        operation: issue.operation,
+        deterministicMappedTopicIds: issue.mappedTopicIds,
+        reconciliationStatus: issue.status,
+        unresolvedReason: issue.unresolvedReason
+      }))
+    },
+    plannedWorkstreams: planned,
+    finalWorkstreams: built,
+    metrics: valid ? scoredCase.metrics : null,
+    semanticUnderstandingCorrect: valid && scoredCase.semanticCorrect,
+    expectedIssueMatches: scoredCase.matched,
+    unmatchedModelIssueIndexes: semanticIssues.map((_, index) => index).filter(index => !expectedByActual.has(index)),
+    runtimeFailure,
+    failureTaxonomies: taxonomyFor(testCase, understanding, interpretation, semanticIssues, issuePlan, scoredCase, Boolean(runtimeFailure)),
+    attempts: [...attemptHistory, attempt]
+  };
+  if (NO_RESPONSE_FAILURES.has(semanticFailure)) {
+    finalRow.providerFailure = semanticFailure === 'RATE_LIMITED'
+      ? 'Gemini rate limit (HTTP 429); response body withheld.'
+      : 'No provider interpretation was received; response body withheld.';
+  }
+  return finalRow;
+}
+
+async function runCaseAttempt(testCase, runId, priorRow, eligibleAt = 0, retryReason) {
+  await waitForRequestSlot(eligibleAt);
+  if (coldStartGuardPending) {
+    await delay(minimumIntervalMs + REQUEST_START_GUARD_MS);
+    coldStartGuardPending = false;
+  }
+  const requestStartedAt = new Date().toISOString();
+  let understanding;
+  const interpreterStarted = performance.now();
+  try {
+    understanding = await interpretSemanticQuestion(testCase.question, apiKey);
+  } catch {
+    understanding = { mode: 'DETERMINISTIC_FALLBACK', failure: 'PROVIDER_ERROR' };
+  }
+  const completedAt = new Date();
+  const interpreterDurationMs = Math.round(performance.now() - interpreterStarted);
+  const attemptHistory = priorRow ? ensureAttemptHistory(priorRow).slice() : [];
+  const providerResponseReceived = !NO_RESPONSE_FAILURES.has(understanding?.failure);
+  const valid = Boolean(understanding?.interpretation) && understanding.mode === 'SEMANTIC_INTERPRETATION' && !understanding.failure;
+  const semanticFailure = understanding?.failure;
+  const providerCategory = providerCategoryFor(understanding);
+  const attempt = {
+    attempt: attemptHistory.length + 1,
+    requestStartedAt,
+    providerRequestAttempted: true,
+    outcome: outcomeForAttempt(understanding, valid, providerResponseReceived),
+    latencyMs: interpreterDurationMs,
+    runtime: process.version,
+    providerStatus: Number.isInteger(understanding?.providerStatus) ? understanding.providerStatus : null,
+    providerCategory: providerCategory || null
+  };
+  const previousRateLimitCount = Math.max(
+    priorRow?.rateLimitFailureCount || 0,
+    attemptHistory.filter(previousAttempt => previousAttempt.outcome === 'RATE_LIMITED').length
+  );
+  const rateLimitFailureCount = semanticFailure === 'RATE_LIMITED' ? previousRateLimitCount + 1 : previousRateLimitCount;
+  const nextRetryDelayMs = semanticFailure === 'RATE_LIMITED' && attemptHistory.length + 1 < MAX_ATTEMPTS_PER_CASE
+    ? Math.min(MIN_GEMINI_INTERVAL_MS * 2 ** (rateLimitFailureCount - 1), 128_000)
+    : null;
+  const pendingEvaluation = {
+    status: providerResponseReceived ? 'PROVIDER_RESPONSE_RECEIVED' : 'NO_PROVIDER_RESPONSE',
+    mode: understanding?.mode || 'DETERMINISTIC_FALLBACK',
+    failure: semanticFailure || null,
+    providerStatus: Number.isInteger(understanding?.providerStatus) ? understanding.providerStatus : null,
+    providerCategory: providerCategory || null,
+    interpretation: understanding?.interpretation || null,
+    completedAt: completedAt.toISOString(),
+    rateLimitFailureCount,
+    nextRetryAt: nextRetryDelayMs === null ? null : new Date(completedAt.getTime() + nextRetryDelayMs).toISOString(),
+    attempt
+  };
+  const checkpointRow = priorRow
+    ? { ...priorRow, ...(retryReason ? { retryReason } : {}), pendingEvaluation }
+    : { runId, runGroup: testCase.runGroup, caseId: testCase.id, model: MODEL, question: testCase.question, callAttempted: true, ...(retryReason ? { retryReason } : {}), attempts: attemptHistory, pendingEvaluation };
+  replaceCallRow(checkpointRow);
+  await writeMeasuredReport();
+
+  const finalRow = await finalizePendingEvaluation(checkpointRow, testCase);
+  replaceCallRow(finalRow);
+  await writeMeasuredReport();
+  console.log(`[${runId} ${testCase.id} attempt=${attempt.attempt}] outcome=${attempt.outcome} status=${attempt.providerStatus ?? 'n/a'} valid=${finalRow.interpretationValid} recall=${finalRow.metrics?.issueRecall.rate ?? 'n/a'}`);
+  return finalRow;
+}
+
+async function drainProviderRetryQueue(pending) {
+  while (pending.length) {
+    const now = Date.now();
+    const index = pending.findIndex(item => item.eligibleAt <= now);
+    if (index < 0) {
+      await waitForRequestSlot(Math.min(...pending.map(item => item.eligibleAt)));
+      continue;
+    }
+    const item = pending.splice(index, 1)[0];
+    if (ensureAttemptHistory(item.row).length >= MAX_ATTEMPTS_PER_CASE) continue;
+    const updated = await runCaseAttempt(item.testCase, item.row.runId, item.row, item.eligibleAt);
+    if (updated.semanticFailure === 'RATE_LIMITED' && updated.attempts.length < MAX_ATTEMPTS_PER_CASE) {
+      item.row = updated;
+      item.eligibleAt = Date.parse(updated.nextRetryAt || '') || Date.now() + MIN_GEMINI_INTERVAL_MS;
+      pending.push(item);
+      console.log(`[${updated.runId} ${updated.caseId}] deferred after HTTP 429; sanitized category=${updated.providerCategory}; next retry=${updated.nextRetryAt}.`);
+    }
+  }
+}
+
+for (const checkpointRow of [...calls].filter(row => row.pendingEvaluation)) {
+  const testCase = cases.find(item => item.id === checkpointRow.caseId);
+  if (!testCase) throw new Error(`Cannot locally finalize pending checkpoint for unknown case ${checkpointRow.caseId}.`);
+  const finalRow = await finalizePendingEvaluation(checkpointRow, testCase);
+  replaceCallRow(finalRow);
+  await writeMeasuredReport();
+  console.log(`[${checkpointRow.runId} ${checkpointRow.caseId}] finalized saved provider result locally; no Gemini call was made.`);
 }
 
 if (process.argv.includes('--report-only')) {
@@ -417,102 +801,69 @@ if (process.argv.includes('--report-only')) {
   process.exit(0);
 }
 
-for (const runGroup of ['originalABCD', 'expanded']) {
-  const runCount = runGroup === 'originalABCD' ? fixture.runs.originalABCD : fixture.runs.paraphrasesAndAdversarial;
-  const selected = cases.filter(testCase => testCase.runGroup === runGroup);
-  for (let run = 1; run <= runCount; run += 1) {
-    const runId = `${runGroup}-${run}`;
-    for (const testCase of selected) {
-      if (completedCallKeys.has(`${runId}\u0000${testCase.id}`)) continue;
-      let understanding;
-      const interpreterStarted = performance.now();
-      try {
-        understanding = await interpretSemanticQuestion(testCase.question, apiKey);
-      } catch {
-        understanding = { mode: 'DETERMINISTIC_FALLBACK', failure: 'PROVIDER_ERROR' };
-      }
-      const interpreterDurationMs = Math.round(performance.now() - interpreterStarted);
-      const interpretation = understanding?.interpretation;
-      const semanticIssues = interpretation?.issues || [];
-      let reconciled;
-      let planned = [];
-      let built = [];
-      let runtimeFailure;
-      try {
-        reconciled = reconcileQuestionUnderstanding(testCase.question, classifyQuestion(testCase.question), understanding);
-        planned = planAuthorityWorkstreams(reconciled.issuePlan).map(stream => `${stream.authority}/${stream.domain}`);
-        const runtime = await buildAuthorityWorkstreams(testCase.question, reconciled.issuePlan, {
-          localOnly: true,
-          questionUnderstanding: understanding
-        });
-        built = runtime.workstreams.map(stream => `${stream.authority}/${stream.domain}`);
-      } catch (error) {
-        runtimeFailure = error instanceof Error ? error.message.replaceAll(apiKey, '[REDACTED]') : 'Unknown runtime failure.';
-      }
-      const issuePlan = reconciled?.issuePlan || { issues: [] };
-      const providerResponseReceived = !NO_RESPONSE_FAILURES.has(understanding?.failure);
-      const valid = Boolean(interpretation) && understanding.mode === 'SEMANTIC_INTERPRETATION' && !understanding.failure;
-      const { expectedByActual } = matchIssues(testCase.expected, semanticIssues);
-      const scoredCase = scoreCall(testCase, semanticIssues, expectedByActual, issuePlan, built.map(key => {
-        const [authority, domain] = key.split('/'); return { authority, domain };
-      }));
-      const row = {
-        runId,
-        runGroup,
-        caseId: testCase.id,
-        model: MODEL,
-        question: testCase.question,
-        interpretationValid: valid,
-        providerResponseReceived,
-        callAttempted: true,
-        semanticFailure: understanding?.failure,
-        latencyMs: interpreterDurationMs,
-        topLevel: interpretation ? {
-          jurisdiction: interpretation.jurisdiction,
-          domain: interpretation.domain,
-          population: interpretation.population,
-          authorityCandidates: interpretation.authorityCandidates,
-          contextualAuthorities: interpretation.contextualAuthorities,
-          primarySubject: interpretation.primarySubject,
-          requestedOperation: interpretation.requestedOperation,
-          requiresUserSpecificFacts: interpretation.requiresUserSpecificFacts,
-          calculationRequested: interpretation.calculationRequested
-        } : null,
-        issues: semanticIssues.map((issue, index) => plainIssue(issue, issuePlan.issues[index], index)),
-        deterministicReconciliation: {
-          source: issuePlan.source,
-          coverageEstablished: issuePlan.coverageEstablished,
-          hasUnmappedResidual: issuePlan.hasUnmappedResidual,
-          issues: issuePlan.issues.map(issue => ({
-            id: issue.id,
-            subject: issue.subject,
-            population: issue.population,
-            domain: issue.domain,
-            governingAuthorities: issue.governingAuthorities,
-            contextualAuthorities: issue.contextualAuthorities,
-            operation: issue.operation,
-            deterministicMappedTopicIds: issue.mappedTopicIds,
-            reconciliationStatus: issue.status,
-            unresolvedReason: issue.unresolvedReason
-          }))
-        },
-        plannedWorkstreams: planned,
-        finalWorkstreams: built,
-        metrics: valid ? scoredCase.metrics : null,
-        semanticUnderstandingCorrect: valid && scoredCase.semanticCorrect,
-        expectedIssueMatches: scoredCase.matched,
-        unmatchedModelIssueIndexes: semanticIssues.map((_, index) => index).filter(index => !expectedByActual.has(index)),
-        runtimeFailure,
-        failureTaxonomies: []
-      };
-      row.failureTaxonomies = taxonomyFor(testCase, understanding, interpretation, semanticIssues, issuePlan, scoredCase, Boolean(runtimeFailure));
-      if (NO_RESPONSE_FAILURES.has(understanding?.failure)) row.providerFailure = 'No provider interpretation was received; this is not a semantic-quality result.';
-      calls.push(row);
-      completedCallKeys.add(`${runId}\u0000${testCase.id}`);
-      await writeMeasuredReport();
-      console.log(`[${runId} ${testCase.id}] response=${providerResponseReceived} valid=${valid} recall=${row.metrics?.issueRecall.rate ?? 'n/a'} workstreams=${built.join(',') || 'none'}`);
+if (retryInvalidResponsesOnly) {
+  const pendingInvalidResponses = calls
+    .filter(row => (
+      row.semanticFailure === 'INVALID_RESPONSE' &&
+      !row.retryReason &&
+      ensureAttemptHistory(row).length === 1
+    ) || (
+      row.semanticFailure === 'RATE_LIMITED' &&
+      row.retryReason === 'INVALID_RESPONSE_STABILITY' &&
+      ensureAttemptHistory(row).length < MAX_ATTEMPTS_PER_CASE
+    ))
+    .map(row => ({ row, testCase: cases.find(testCase => testCase.id === row.caseId), eligibleAt: Date.parse(row.nextRetryAt || '') || 0 }))
+    .filter(item => item.testCase);
+  const pendingRateLimits = [];
+  if (!pendingInvalidResponses.length) console.log('No initial INVALID_RESPONSE rows or deferred invalid-response 429 retries are eligible.');
+  for (const item of pendingInvalidResponses) {
+    const updated = await runCaseAttempt(item.testCase, item.row.runId, item.row, item.eligibleAt, 'INVALID_RESPONSE_STABILITY');
+    if (updated.semanticFailure === 'RATE_LIMITED' && updated.attempts.length < MAX_ATTEMPTS_PER_CASE) {
+      pendingRateLimits.push({
+        row: updated,
+        testCase: item.testCase,
+        eligibleAt: Date.parse(updated.nextRetryAt || '') || Date.now() + MIN_GEMINI_INTERVAL_MS
+      });
+      console.log(`[${updated.runId} ${updated.caseId}] deferred after HTTP 429; sanitized category=${updated.providerCategory}; next retry=${updated.nextRetryAt}.`);
     }
   }
+  await drainProviderRetryQueue(pendingRateLimits);
+} else if (retryProviderErrorsOnly) {
+  const pending = calls
+    .filter(row => RETRYABLE_PROVIDER_FAILURES.has(row.semanticFailure) && ensureAttemptHistory(row).length < MAX_ATTEMPTS_PER_CASE)
+    .map(row => ({
+      row,
+      testCase: cases.find(testCase => testCase.id === row.caseId),
+      eligibleAt: Date.parse(row.nextRetryAt || '') || 0
+    }))
+    .filter(item => item.testCase);
+  if (!pending.length) console.log('No PROVIDER_ERROR or RATE_LIMITED case rows are eligible for retry.');
+  await drainProviderRetryQueue(pending);
+} else {
+  const pendingRateLimits = calls
+    .filter(row => row.semanticFailure === 'RATE_LIMITED' && ensureAttemptHistory(row).length < MAX_ATTEMPTS_PER_CASE)
+    .map(row => ({ row, testCase: cases.find(testCase => testCase.id === row.caseId), eligibleAt: Date.parse(row.nextRetryAt || '') || 0 }))
+    .filter(item => item.testCase);
+  for (const runGroup of ['originalABCD', 'expanded']) {
+    const runCount = runGroup === 'originalABCD' ? fixture.runs.originalABCD : fixture.runs.paraphrasesAndAdversarial;
+    const selected = cases.filter(testCase => testCase.runGroup === runGroup);
+    for (let run = 1; run <= runCount; run += 1) {
+      const runId = `${runGroup}-${run}`;
+      for (const testCase of selected) {
+        if (completedCallKeys.has(`${runId}\u0000${testCase.id}`)) continue;
+        const row = await runCaseAttempt(testCase, runId);
+        if (row.semanticFailure === 'RATE_LIMITED' && row.attempts.length < MAX_ATTEMPTS_PER_CASE) {
+          pendingRateLimits.push({
+            row,
+            testCase,
+            eligibleAt: Date.parse(row.nextRetryAt || '') || Date.now() + MIN_GEMINI_INTERVAL_MS
+          });
+          console.log(`[${runId} ${testCase.id}] deferred after HTTP 429; sanitized category=${row.providerCategory}; next retry=${row.nextRetryAt}.`);
+        }
+      }
+    }
+  }
+  await drainProviderRetryQueue(pendingRateLimits);
 }
 
 console.log(`Wrote ${path.relative(root, jsonPath)} and ${path.relative(root, markdownPath)}.`);

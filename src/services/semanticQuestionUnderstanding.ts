@@ -53,7 +53,9 @@ export interface SemanticQuestionInterpretation {
 export interface SemanticQuestionUnderstanding {
   mode: QuestionUnderstandingMode;
   interpretation?: SemanticQuestionInterpretation;
-  failure?: 'NO_PROVIDER' | 'INVALID_RESPONSE' | 'LOW_CONFIDENCE' | 'TIMEOUT' | 'PROVIDER_ERROR' | 'QUERY_TOO_LONG';
+  failure?: 'NO_PROVIDER' | 'INVALID_RESPONSE' | 'LOW_CONFIDENCE' | 'TIMEOUT' | 'PROVIDER_ERROR' | 'RATE_LIMITED' | 'QUERY_TOO_LONG';
+  /** Safe HTTP status extracted from the transport's sanitized error message. */
+  providerStatus?: number;
 }
 
 export interface QuestionUnderstandingDiagnostics {
@@ -354,9 +356,18 @@ export async function interpretSemanticQuestion(
     if (interpretation.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'LOW_CONFIDENCE' };
     return { mode: 'SEMANTIC_INTERPRETATION', interpretation };
   } catch (error) {
+    // aiTransport deliberately withholds provider bodies and includes only the HTTP status.
+    // Preserve 429 as a transport outcome so callers can retry without scoring it as model quality.
+    const providerStatusMatch = error instanceof Error
+      ? error.message.match(/^Gemini API request failed with HTTP (\d{3})\./)
+      : null;
+    const providerStatus = providerStatusMatch ? Number(providerStatusMatch[1]) : undefined;
     return {
       mode: 'DETERMINISTIC_FALLBACK',
-      failure: error instanceof Error && /abort|timed\s*out|timeout/i.test(error.message) ? 'TIMEOUT' : 'PROVIDER_ERROR'
+      failure: providerStatus === 429
+        ? 'RATE_LIMITED'
+        : error instanceof Error && /abort|timed\s*out|timeout/i.test(error.message) ? 'TIMEOUT' : 'PROVIDER_ERROR',
+      ...(providerStatus ? { providerStatus } : {})
     };
   }
 }

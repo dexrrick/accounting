@@ -1,9 +1,9 @@
 {
   "summary": {
     "suite": "Singapore multi-authority workstreams live semantic evaluation",
-    "mode": "LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS_PARTIAL",
+    "mode": "LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS",
     "modelUnderstandingMeasured": true,
-    "measurementStatus": "PARTIAL",
+    "measurementStatus": "COMPLETE",
     "model": "gemini-3.5-flash-lite",
     "expectedModel": "gemini-3.5-flash-lite",
     "runPlan": {
@@ -11,92 +11,95 @@
       "paraphrasesAndAdversarial": 1
     },
     "liveCalls": 34,
+    "logicalCaseCalls": 34,
+    "providerRequestAttempts": 54,
+    "providerResponseAttempts": 36,
     "totalCaseCalls": 34,
     "semanticMetrics": {
       "issueRecall": {
-        "correct": 34,
-        "total": 36,
-        "rate": 0.9444444444444444
-      },
-      "issuePrecision": {
-        "correct": 34,
-        "total": 34,
-        "rate": 1
-      },
-      "governingAuthorityAccuracy": {
-        "correct": 34,
-        "total": 34,
-        "rate": 1
-      },
-      "contextualAuthorityAccuracy": {
-        "correct": 31,
-        "total": 34,
-        "rate": 0.9117647058823529
-      },
-      "domainAccuracy": {
-        "correct": 34,
-        "total": 34,
-        "rate": 1
-      },
-      "populationAccuracy": {
-        "correct": 30,
-        "total": 34,
-        "rate": 0.8823529411764706
-      },
-      "operationAccuracy": {
-        "correct": 30,
-        "total": 34,
-        "rate": 0.8823529411764706
-      },
-      "finalWorkstreamSetAccuracy": {
-        "correct": 12,
-        "total": 14,
+        "correct": 66,
+        "total": 77,
         "rate": 0.8571428571428571
       },
-      "omissionRate": {
-        "correct": 2,
-        "total": 36,
-        "rate": 0.05555555555555555
+      "issuePrecision": {
+        "correct": 66,
+        "total": 74,
+        "rate": 0.8918918918918919
       },
-      "qualityCallDenominator": 14,
+      "governingAuthorityAccuracy": {
+        "correct": 64,
+        "total": 66,
+        "rate": 0.9696969696969697
+      },
+      "contextualAuthorityAccuracy": {
+        "correct": 62,
+        "total": 66,
+        "rate": 0.9393939393939394
+      },
+      "domainAccuracy": {
+        "correct": 64,
+        "total": 66,
+        "rate": 0.9696969696969697
+      },
+      "populationAccuracy": {
+        "correct": 60,
+        "total": 66,
+        "rate": 0.9090909090909091
+      },
+      "operationAccuracy": {
+        "correct": 49,
+        "total": 66,
+        "rate": 0.7424242424242424
+      },
+      "finalWorkstreamSetAccuracy": {
+        "correct": 25,
+        "total": 33,
+        "rate": 0.7575757575757576
+      },
+      "omissionRate": {
+        "correct": 11,
+        "total": 77,
+        "rate": 0.14285714285714285
+      },
+      "qualityCallDenominator": 33,
       "validInterpretationRate": {
-        "correct": 14,
+        "correct": 33,
         "total": 34,
-        "rate": 0.4117647058823529
+        "rate": 0.9705882352941176
       },
       "invalidTimeoutFallbackRate": {
-        "correct": 20,
-        "total": 34,
-        "rate": 0.5882352941176471
+        "correct": 3,
+        "total": 54,
+        "rate": 0.05555555555555555
       },
       "semanticUnderstandingCorrect": {
-        "correct": 8,
-        "total": 14,
-        "rate": 0.5714285714285714
+        "correct": 12,
+        "total": 33,
+        "rate": 0.36363636363636365
       }
     },
     "taxonomyFailureCounts": {
-      "MODEL_OMISSION": 2,
-      "MODEL_FALSE_ISSUE": 0,
-      "MODEL_WRONG_AUTHORITY": 3,
-      "MODEL_WRONG_DOMAIN": 0,
-      "MODEL_WRONG_POPULATION": 3,
-      "MODEL_WRONG_OPERATION": 4,
-      "MODEL_INVALID_SCHEMA": 2,
+      "MODEL_OMISSION": 10,
+      "MODEL_FALSE_ISSUE": 7,
+      "MODEL_WRONG_AUTHORITY": 5,
+      "MODEL_WRONG_DOMAIN": 2,
+      "MODEL_WRONG_POPULATION": 5,
+      "MODEL_WRONG_OPERATION": 13,
+      "MODEL_INVALID_SCHEMA": 1,
       "MODEL_TIMEOUT": 0,
-      "RECONCILIATION_REJECTION": 3,
-      "TAXONOMY_MAPPING_GAP": 12,
+      "RECONCILIATION_REJECTION": 6,
+      "TAXONOMY_MAPPING_GAP": 28,
       "RUNTIME_ROUTING_FAILURE": 0
     },
     "latencyMs": {
-      "median": 2105,
-      "p95": 2701,
-      "max": 2701,
+      "median": 2235,
+      "p95": 2957,
+      "max": 2985,
       "timeouts": 0
     },
     "repeatedOriginalCaseStability": {
       "cases": 4,
-      "observedTotal": 10,
+      "observedTotal": 11,
       "plannedTotal": 12,
       "assessedCases": 3,
       "stableCases": 3,
@@ -104,13 +107,12 @@
       "unassessedCases": [
         {
           "caseId": "A-original",
-          "observedCount": 1,
+          "observedCount": 2,
           "plannedCount": 3,
           "attemptedCount": 3
         }
       ]
     },
-    "note": "Live measurement is partial: 16/34 provider responses; failures are reported separately.",
     "limitations": [
       "This report measures calls to interpretSemanticQuestion(query, GEMINI_API_KEY) and uses only the production prompt, schema, validation, and timeout.",
       "The caller must load repository .env/.env.local values through Node --env-file options; the runner does not read environment files itself.",
@@ -119,49 +121,74 @@
       "Topic hints from the model are recorded separately and never supply deterministic mapped topic IDs."
     ],
     "uniqueCaseCount": 26,
-    "modelResponses": 16,
-    "validInterpretations": 14,
+    "modelResponses": 36,
+    "validInterpretations": 33,
     "providerFailures": 18,
+    "rateLimitedAttempts": 0,
+    "finalProviderErrorCases": 0,
+    "finalRateLimitedCases": 0,
     "noResponseCalls": 18,
-    "invalidResponseCount": 2,
+    "invalidResponseCount": 1,
     "plannedCaseCalls": 34,
     "allCallsAttempted": true,
-    "suiteComplete": false,
-    "providerComplete": false,
+    "suiteComplete": true,
+    "providerComplete": true,
     "callOutcomes": {
-      "attemptedCalls": 34,
-      "providerResponses": 16,
-      "validInterpretations": 14,
-      "noResponseCalls": 18,
-      "invalidTimeoutFallbackCalls": 20,
+      "logicalCaseCalls": 34,
+      "providerRequestAttempts": 54,
+      "providerResponseAttempts": 36,
+      "validInterpretations": 33,
+      "noResponseAttempts": 18,
+      "invalidTimeoutFallbackCalls": 3,
       "providerFailureCounts": {
-        "NO_PROVIDER": 0,
         "PROVIDER_ERROR": 18,
+        "RATE_LIMITED": 0,
+        "NO_PROVIDER": 0,
         "TIMEOUT": 0,
         "QUERY_TOO_LONG": 0
       },
+      "providerAttemptOutcomeCounts": {
+        "VALID_INTERPRETATION": 33,
+        "INVALID_RESPONSE": 3,
+        "PROVIDER_ERROR": 18
+      },
       "providerNoResponseRate": {
         "correct": 18,
-        "total": 34,
-        "rate": 0.5294117647058824
+        "total": 54,
+        "rate": 0.3333333333333333
       },
       "invalidTimeoutFallbackRate": {
-        "correct": 20,
-        "total": 34,
-        "rate": 0.5882352941176471
+        "correct": 3,
+        "total": 54,
+        "rate": 0.05555555555555555
+      },
+      "providerAttemptCountsByRuntime": {
+        "v22.23.1": 34,
+        "v24.19.0": 20
       }
     },
     "providerFailureCounts": {
-      "NO_PROVIDER": 0,
       "PROVIDER_ERROR": 18,
+      "RATE_LIMITED": 0,
+      "NO_PROVIDER": 0,
       "TIMEOUT": 0,
       "QUERY_TOO_LONG": 0
     },
-    "evaluatedAt": "2026-09-29T11:56:17.667Z",
+    "providerAttemptOutcomeCounts": {
+      "VALID_INTERPRETATION": 33,
+      "INVALID_RESPONSE": 3,
+      "PROVIDER_ERROR": 18
+    },
+    "evaluatedAt": "2026-09-29T13:21:58.289Z",
     "testedCommit": "a03da5dad22212acbc8eabda9d91f17f0cf88f91",
-    "semanticInterpreterSha256": "4383b8bcad4d6e3296f8bee86c8d28746e6fbdab2c9eeed15767bb0765566fe6",
-    "runtime": "v22.23.1",
-    "promptChange": "Generic compound-issue decomposition guidance: preserve distinct requested outcomes/populations, distinguish governing from contextual authorities, and use UNKNOWN for compound legacy top-level fields."
+    "promptChange": "Generic compound-issue decomposition guidance: preserve distinct requested outcomes/populations, distinguish governing from contextual authorities, and use UNKNOWN for compound legacy top-level fields.",
+    "semanticInterpreterSha256": "e27062764dcf61a0d12b3d310959ab5dc9ee68f647f20f300a693929d5555974",
+    "runtime": "v24.19.0",
+    "initialEvaluationRuntime": "v22.23.1",
+    "providerAttemptCountsByRuntime": {
+      "v22.23.1": 34,
+      "v24.19.0": 20
+    }
   },
   "calls": [
     {
@@ -407,7 +434,18 @@
         }
       ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": []
+      "failureTaxonomies": [],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
+      ]
     },
     {
       "runId": "originalABCD-1",
@@ -646,6 +684,17 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -833,6 +882,17 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -1027,6 +1087,17 @@
         "MODEL_WRONG_AUTHORITY",
         "MODEL_WRONG_OPERATION",
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -1038,8 +1109,12 @@
       "interpretationValid": false,
       "providerResponseReceived": true,
       "callAttempted": true,
+      "requestStartedAt": "2026-09-29T13:21:47.773Z",
       "semanticFailure": "INVALID_RESPONSE",
-      "latencyMs": 2259,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "retryReason": "INVALID_RESPONSE_STABILITY",
+      "latencyMs": 2336,
       "topLevel": null,
       "issues": [],
       "deterministicReconciliation": {
@@ -1093,6 +1168,27 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "MODEL_INVALID_SCHEMA"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "INVALID_RESPONSE",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:21:47.773Z",
+          "providerRequestAttempted": true,
+          "outcome": "INVALID_RESPONSE",
+          "latencyMs": 2336,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
       ]
     },
     {
@@ -1332,6 +1428,17 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -1519,6 +1626,17 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -1712,6 +1830,17 @@
         "MODEL_WRONG_AUTHORITY",
         "MODEL_WRONG_OPERATION",
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -1720,43 +1849,135 @@
       "caseId": "A-original",
       "model": "gemini-3.5-flash-lite",
       "question": "An employee earns SGD 6,000 per month. What CPF contributions must the employer and employee make, and how do the employee's compulsory CPF contributions affect personal income tax relief?",
-      "interpretationValid": false,
+      "interpretationValid": true,
       "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "INVALID_RESPONSE",
-      "latencyMs": 2067,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:21:56.022Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "retryReason": "INVALID_RESPONSE_STABILITY",
+      "latencyMs": 2235,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "CPF contributions and income tax relief",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "Employer CPF contribution obligations",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        },
+        {
+          "index": 1,
+          "subject": "Employee CPF contribution obligations",
+          "population": "EMPLOYEE",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        },
+        {
+          "index": 2,
+          "subject": "Impact of compulsory CPF contributions on personal income tax relief",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_INTERACTION",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "iras-individual-cpf-relief"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "UNRESOLVED",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
         "issues": [
           {
-            "id": "issue_1cd7f6be",
-            "subject": "CPF Tiered Contribution Rates by Age",
-            "population": "UNKNOWN",
+            "id": "issue_ef306d67",
+            "subject": "Employer CPF contribution obligations",
+            "population": "EMPLOYER",
             "domain": "CPF_PAYROLL",
             "governingAuthorities": [
               "CPF"
             ],
             "contextualAuthorities": [],
-            "operation": "OTHER",
+            "operation": "DETERMINE_TREATMENT",
             "deterministicMappedTopicIds": [
               "cpf_contribution_rates"
             ],
             "reconciliationStatus": "MAPPED"
           },
           {
-            "id": "issue_729a8879",
-            "subject": "CPF Relief for Employees",
-            "population": "INDIVIDUAL",
+            "id": "issue_aa9f6dbd",
+            "subject": "Employee CPF contribution obligations",
+            "population": "EMPLOYEE",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "reconciliationStatus": "MAPPED"
+          },
+          {
+            "id": "issue_bb7654cc",
+            "subject": "Impact of compulsory CPF contributions on personal income tax relief",
+            "population": "EMPLOYEE",
             "domain": "IRAS_INCOME_TAX",
             "governingAuthorities": [
               "IRAS"
             ],
-            "contextualAuthorities": [],
-            "operation": "OTHER",
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "EXPLAIN_INTERACTION",
             "deterministicMappedTopicIds": [
               "iras-individual-cpf-relief"
             ],
@@ -1772,12 +1993,129 @@
         "CPF/CPF_PAYROLL",
         "IRAS/IRAS_INDIVIDUAL_TAX"
       ],
-      "metrics": null,
+      "metrics": {
+        "issueRecall": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 3,
+          "rate": 0.3333333333333333
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 3,
+          "rate": 0
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employer-cpf-contribution",
+          "modelIssueIndex": 0,
+          "subject": "Employer CPF contribution obligations",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED"
+        },
+        {
+          "expectedIssueId": "employee-cpf-contribution",
+          "modelIssueIndex": 1,
+          "subject": "Employee CPF contribution obligations",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED"
+        },
+        {
+          "expectedIssueId": "individual-cpf-tax-relief",
+          "modelIssueIndex": 2,
+          "subject": "Impact of compulsory CPF contributions on personal income tax relief",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": false,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "iras-individual-cpf-relief"
+          ],
+          "reconciliationStatus": "MAPPED"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
-        "MODEL_INVALID_SCHEMA"
+        "MODEL_WRONG_POPULATION",
+        "MODEL_WRONG_OPERATION",
+        "RECONCILIATION_REJECTION"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "INVALID_RESPONSE",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:21:56.022Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2235,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
       ]
     },
     {
@@ -2017,6 +2355,17 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -2204,6 +2553,17 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -2400,6 +2760,17 @@
         "MODEL_WRONG_AUTHORITY",
         "MODEL_WRONG_OPERATION",
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -2640,6 +3011,17 @@
         "MODEL_WRONG_POPULATION",
         "TAXONOMY_MAPPING_GAP",
         "RECONCILIATION_REJECTION"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -2839,6 +3221,17 @@
         "MODEL_WRONG_OPERATION",
         "RECONCILIATION_REJECTION",
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -3036,6 +3429,17 @@
         "MODEL_OMISSION",
         "MODEL_WRONG_POPULATION",
         "RECONCILIATION_REJECTION"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -3274,6 +3678,17 @@
       "unmatchedModelIssueIndexes": [],
       "failureTaxonomies": [
         "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v22.23.1"
+        }
       ]
     },
     {
@@ -3282,47 +3697,239 @@
       "caseId": "B-paraphrase-1",
       "model": "gemini-3.5-flash-lite",
       "question": "We plan to bring a foreign staff member to Singapore on an Employment Pass. What must the company report for tax, what work-pass rules apply, and does payroll CPF apply?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 267,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:09:49.730Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2957,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "bringing a foreign staff member to Singapore on an Employment Pass and associated tax, work pass, and CPF reporting requirements",
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "what the company must report for tax regarding a foreign staff member on an Employment Pass",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "FILING_REQUIREMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.92
+        },
+        {
+          "index": 1,
+          "subject": "what work-pass rules apply for bringing a foreign staff member to Singapore on an Employment Pass",
+          "population": "COMPANY",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "mom-work-passes-employment-pass"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.95
+        },
+        {
+          "index": 2,
+          "subject": "whether payroll CPF applies for a foreign staff member on an Employment Pass",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CHECK_ELIGIBILITY",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.93
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
         "issues": [
           {
-            "id": "issue_59a44b4d",
-            "subject": "Employment Pass",
-            "population": "UNKNOWN",
+            "id": "issue_3c429a3d",
+            "subject": "what the company must report for tax regarding a foreign staff member on an Employment Pass",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "FILING_REQUIREMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_176bc12b",
+            "subject": "what work-pass rules apply for bringing a foreign staff member to Singapore on an Employment Pass",
+            "population": "COMPANY",
             "domain": "MOM_EMPLOYMENT",
             "governingAuthorities": [
               "MOM"
             ],
             "contextualAuthorities": [],
-            "operation": "OTHER",
+            "operation": "EXPLAIN_RULE",
             "deterministicMappedTopicIds": [
               "mom-work-passes-employment-pass"
             ],
             "reconciliationStatus": "MAPPED"
+          },
+          {
+            "id": "issue_3f79b486",
+            "subject": "whether payroll CPF applies for a foreign staff member on an Employment Pass",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
           }
         ]
       },
       "plannedWorkstreams": [
-        "MOM/MOM_EMPLOYMENT"
+        "IRAS/IRAS_CORPORATE_TAX",
+        "MOM/MOM_EMPLOYMENT",
+        "CPF/CPF_PAYROLL"
       ],
       "finalWorkstreams": [
-        "MOM/MOM_EMPLOYMENT"
+        "IRAS/IRAS_CORPORATE_TAX",
+        "MOM/MOM_EMPLOYMENT",
+        "CPF/CPF_PAYROLL"
       ],
-      "metrics": null,
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 3,
+          "rate": 0.3333333333333333
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 3,
+          "rate": 0.3333333333333333
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "populationAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "operationAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "finalWorkstreamSetAccuracy": false,
+        "omissionRate": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
-      "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "foreign-employment-and-work-pass",
+          "modelIssueIndex": 0,
+          "subject": "what the company must report for tax regarding a foreign staff member on an Employment Pass",
+          "semanticDimensions": {
+            "governingAuthority": false,
+            "contextualAuthority": true,
+            "domain": false,
+            "population": false,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [
+        1,
+        2
+      ],
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_FALSE_ISSUE",
+        "MODEL_WRONG_AUTHORITY",
+        "MODEL_WRONG_DOMAIN",
+        "MODEL_WRONG_POPULATION",
+        "MODEL_WRONG_OPERATION",
+        "RECONCILIATION_REJECTION"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:09:49.730Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2957,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3330,47 +3937,251 @@
       "caseId": "B-paraphrase-2",
       "model": "gemini-3.5-flash-lite",
       "question": "Before hiring an overseas worker here, what tax filings will we as employer need to consider, are CPF contributions due, and what employment authorization is needed?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 255,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:09:57.989Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2985,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "EMPLOYER",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "tax filings, CPF contributions, and employment authorization for hiring an overseas worker",
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "tax filings to consider as an employer before hiring an overseas worker",
+          "population": "EMPLOYER",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "FILING_REQUIREMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "CPF contributions due for hiring an overseas worker",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        },
+        {
+          "index": 2,
+          "subject": "employment authorization needed for hiring an overseas worker",
+          "population": "EMPLOYER",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
         "issues": [
           {
-            "id": "issue_1cd7f6be",
-            "subject": "CPF Tiered Contribution Rates by Age",
-            "population": "UNKNOWN",
+            "id": "issue_10e2ee39",
+            "subject": "tax filings to consider as an employer before hiring an overseas worker",
+            "population": "EMPLOYER",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "FILING_REQUIREMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_9f565e2b",
+            "subject": "CPF contributions due for hiring an overseas worker",
+            "population": "EMPLOYER",
             "domain": "CPF_PAYROLL",
             "governingAuthorities": [
               "CPF"
             ],
             "contextualAuthorities": [],
-            "operation": "OTHER",
+            "operation": "DETERMINE_TREATMENT",
             "deterministicMappedTopicIds": [
               "cpf_contribution_rates"
             ],
             "reconciliationStatus": "MAPPED"
+          },
+          {
+            "id": "issue_0bbb12d2",
+            "subject": "employment authorization needed for hiring an overseas worker",
+            "population": "EMPLOYER",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
           }
         ]
       },
       "plannedWorkstreams": [
-        "CPF/CPF_PAYROLL"
+        "IRAS/IRAS_EMPLOYER_REPORTING",
+        "CPF/CPF_PAYROLL",
+        "MOM/MOM_EMPLOYMENT"
       ],
       "finalWorkstreams": [
-        "CPF/CPF_PAYROLL"
+        "IRAS/IRAS_EMPLOYER_REPORTING",
+        "CPF/CPF_PAYROLL",
+        "MOM/MOM_EMPLOYMENT"
       ],
-      "metrics": null,
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 1,
+          "total": 3,
+          "rate": 0.3333333333333333
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
-      "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employer-tax-reporting",
+          "modelIssueIndex": 0,
+          "subject": "tax filings to consider as an employer before hiring an overseas worker",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "foreign-employee-cpf-applicability",
+          "modelIssueIndex": 1,
+          "subject": "CPF contributions due for hiring an overseas worker",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [
+        2
+      ],
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_FALSE_ISSUE",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:09:57.989Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2985,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3378,18 +4189,129 @@
       "caseId": "B-paraphrase-3",
       "model": "gemini-3.5-flash-lite",
       "question": "For foreign staff in Singapore, can you cover employer tax reporting first, then the CPF position and the requirements for employing them?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 256,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:10:06.239Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2399,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "employer tax reporting, CPF position, and employment requirements for foreign staff",
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "employer tax reporting requirements for foreign staff",
+          "population": "EMPLOYER",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "FILING_REQUIREMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "CPF position and obligations for foreign staff",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 2,
+          "subject": "employment requirements and regulations for hiring foreign staff",
+          "population": "EMPLOYER",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
         "issues": [
+          {
+            "id": "issue_722b3bcc",
+            "subject": "employer tax reporting requirements for foreign staff",
+            "population": "EMPLOYER",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "FILING_REQUIREMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_57fa1f53",
+            "subject": "CPF position and obligations for foreign staff",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_8ea79445",
+            "subject": "employment requirements and regulations for hiring foreign staff",
+            "population": "EMPLOYER",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
           {
             "id": "issue_77cad010",
             "subject": "Reporting Financial Institution Status",
@@ -3403,22 +4325,130 @@
             "deterministicMappedTopicIds": [
               "iras-crs-fatca-reporting-fi"
             ],
-            "reconciliationStatus": "MAPPED"
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "UNASSIGNED_QUERY_TOPIC"
           }
         ]
       },
       "plannedWorkstreams": [
+        "IRAS/IRAS_EMPLOYER_REPORTING",
+        "CPF/CPF_PAYROLL",
+        "MOM/MOM_EMPLOYMENT",
         "IRAS/UNKNOWN"
       ],
       "finalWorkstreams": [
+        "IRAS/IRAS_EMPLOYER_REPORTING",
+        "CPF/CPF_PAYROLL",
+        "MOM/MOM_EMPLOYMENT",
         "IRAS/UNKNOWN"
       ],
-      "metrics": null,
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": false,
+        "omissionRate": {
+          "correct": 1,
+          "total": 3,
+          "rate": 0.3333333333333333
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
-      "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employer-tax-reporting",
+          "modelIssueIndex": 0,
+          "subject": "employer tax reporting requirements for foreign staff",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "foreign-employment-and-work-pass",
+          "modelIssueIndex": 2,
+          "subject": "employment requirements and regulations for hiring foreign staff",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [
+        1
+      ],
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_FALSE_ISSUE",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:10:06.239Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2399,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3426,27 +4456,248 @@
       "caseId": "B-paraphrase-4",
       "model": "gemini-3.5-flash-lite",
       "question": "We hired someone from overseas. Explain the work-pass and employment obligations, whether CPF must be contributed, and the employer's reporting duties without assuming which authority handles them.",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 264,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:10:14.493Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2346,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "overseas hire work-pass employment obligations CPF contribution and reporting duties",
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "work-pass and employment obligations for hiring someone from overseas",
+          "population": "EMPLOYER",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "whether CPF must be contributed for an overseas hire",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 2,
+          "subject": "employer's reporting duties for an overseas hire",
+          "population": "EMPLOYER",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.85
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_11ddedb6",
+            "subject": "work-pass and employment obligations for hiring someone from overseas",
+            "population": "EMPLOYER",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_3264b305",
+            "subject": "whether CPF must be contributed for an overseas hire",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_9eb82fdb",
+            "subject": "employer's reporting duties for an overseas hire",
+            "population": "EMPLOYER",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "MOM/MOM_EMPLOYMENT",
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_EMPLOYER_REPORTING"
+      ],
+      "finalWorkstreams": [
+        "MOM/MOM_EMPLOYMENT",
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_EMPLOYER_REPORTING"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 3,
+          "rate": 0.6666666666666666
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 1,
+          "total": 3,
+          "rate": 0.3333333333333333
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
-      "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "foreign-employment-and-work-pass",
+          "modelIssueIndex": 0,
+          "subject": "work-pass and employment obligations for hiring someone from overseas",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "foreign-employee-cpf-applicability",
+          "modelIssueIndex": 1,
+          "subject": "whether CPF must be contributed for an overseas hire",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [
+        2
+      ],
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_FALSE_ISSUE",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:10:14.493Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2346,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3454,27 +4705,211 @@
       "caseId": "C-paraphrase-1",
       "model": "gemini-3.5-flash-lite",
       "question": "If the business pays for staff accommodation, can it deduct that cost and does the employee pay income tax on the benefit?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 264,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:10:22.746Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2241,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "staff accommodation tax treatment",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "deductibility of staff accommodation cost for the business",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "employee income tax on staff accommodation benefit",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_022c419f",
+            "subject": "deductibility of staff accommodation cost for the business",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_a3385d0b",
+            "subject": "employee income tax on staff accommodation benefit",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
-      "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        }
+      },
+      "semanticUnderstandingCorrect": true,
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-housing-cost-deductibility",
+          "modelIssueIndex": 0,
+          "subject": "deductibility of staff accommodation cost for the business",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "employee-housing-benefit-tax",
+          "modelIssueIndex": 1,
+          "subject": "employee income tax on staff accommodation benefit",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:10:22.746Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2241,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3482,27 +4917,212 @@
       "caseId": "C-paraphrase-2",
       "model": "gemini-3.5-flash-lite",
       "question": "From the employer's perspective, how is a housing benefit for staff treated for company tax, and is it taxable employment income to the recipient?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 275,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:10:31.004Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2173,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "tax treatment of housing benefit for staff",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "tax treatment of housing benefit for company tax from employer perspective",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_INTERACTION",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "UNRESOLVED",
+          "confidence": 0.95
+        },
+        {
+          "index": 1,
+          "subject": "taxability of housing benefit as employment income for recipient",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_INTERACTION",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "UNRESOLVED",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_929660c6",
+            "subject": "tax treatment of housing benefit for company tax from employer perspective",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_INTERACTION",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_cabbbdf4",
+            "subject": "taxability of housing benefit as employment income for recipient",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_INTERACTION",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-housing-cost-deductibility",
+          "modelIssueIndex": 0,
+          "subject": "tax treatment of housing benefit for company tax from employer perspective",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "employee-housing-benefit-tax",
+          "modelIssueIndex": 1,
+          "subject": "taxability of housing benefit as employment income for recipient",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "MODEL_WRONG_OPERATION",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:10:31.004Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2173,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3510,27 +5130,211 @@
       "caseId": "C-paraphrase-3",
       "model": "gemini-3.5-flash-lite",
       "question": "Is the employee taxed on a housing allowance before considering whether the company may deduct what it paid?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 270,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:10:39.257Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 1902,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "taxability of housing allowance and company deduction",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "taxability of housing allowance to the employee",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        },
+        {
+          "index": 1,
+          "subject": "company deductibility of housing allowance paid",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_b7a6fe20",
+            "subject": "taxability of housing allowance to the employee",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_875a5368",
+            "subject": "company deductibility of housing allowance paid",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
-      "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        }
+      },
+      "semanticUnderstandingCorrect": true,
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employee-housing-benefit-tax",
+          "modelIssueIndex": 0,
+          "subject": "taxability of housing allowance to the employee",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "company-housing-cost-deductibility",
+          "modelIssueIndex": 1,
+          "subject": "company deductibility of housing allowance paid",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:10:39.257Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 1902,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3538,27 +5342,212 @@
       "caseId": "C-paraphrase-4",
       "model": "gemini-3.5-flash-lite",
       "question": "Our firm gives an employee a housing benefit. How is it treated for the employee's tax and for the company's deduction?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 261,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:10:47.516Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2034,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "housing benefit tax treatment for employee and company deduction",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "housing benefit tax treatment for the employee",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_INTERACTION",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "UNRESOLVED",
+          "confidence": 0.95
+        },
+        {
+          "index": 1,
+          "subject": "tax deduction for the company providing housing benefit",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_INTERACTION",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "UNRESOLVED",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_c3e31a60",
+            "subject": "housing benefit tax treatment for the employee",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_INTERACTION",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_975f469f",
+            "subject": "tax deduction for the company providing housing benefit",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_INTERACTION",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employee-housing-benefit-tax",
+          "modelIssueIndex": 0,
+          "subject": "housing benefit tax treatment for the employee",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "company-housing-cost-deductibility",
+          "modelIssueIndex": 1,
+          "subject": "tax deduction for the company providing housing benefit",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "MODEL_WRONG_OPERATION",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:10:47.516Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2034,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3566,18 +5555,100 @@
       "caseId": "D-paraphrase-1",
       "model": "gemini-3.5-flash-lite",
       "question": "Is a business expense tax deductible in Singapore, and how should the same item appear in the financial statements under SFRS(I)?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 259,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:10:55.778Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2486,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "business expense tax deductibility and financial statement accounting treatment under SFRS(I)",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "tax deductibility of a business expense",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "iras-cit-deductibility"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.92
+        },
+        {
+          "index": 1,
+          "subject": "financial statement accounting treatment under SFRS(I) for a business expense item",
+          "population": "COMPANY",
+          "domain": "ACCOUNTING",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_INTERACTION",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "UNRESOLVED",
+          "confidence": 0.92
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
         "issues": [
+          {
+            "id": "issue_1d6b9810",
+            "subject": "tax deductibility of a business expense",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [
+              "iras-cit-deductibility"
+            ],
+            "reconciliationStatus": "MAPPED"
+          },
+          {
+            "id": "issue_980ee829",
+            "subject": "financial statement accounting treatment under SFRS(I) for a business expense item",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_INTERACTION",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
           {
             "id": "issue_b73d230a",
             "subject": "Financial Statements Presentation",
@@ -3591,39 +5662,126 @@
             "deterministicMappedTopicIds": [
               "acra_financial_statements"
             ],
-            "reconciliationStatus": "MAPPED"
-          },
-          {
-            "id": "issue_64d7c397",
-            "subject": "Corporate Tax Deductibility",
-            "population": "COMPANY",
-            "domain": "IRAS_INCOME_TAX",
-            "governingAuthorities": [
-              "IRAS"
-            ],
-            "contextualAuthorities": [],
-            "operation": "OTHER",
-            "deterministicMappedTopicIds": [
-              "iras-cit-deductibility"
-            ],
-            "reconciliationStatus": "MAPPED"
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "UNASSIGNED_QUERY_TOPIC"
           }
         ]
       },
       "plannedWorkstreams": [
-        "ACRA/ACRA_CORPORATE",
-        "IRAS/IRAS_CORPORATE_TAX"
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "ACRA/ACRA_CORPORATE"
       ],
       "finalWorkstreams": [
-        "ACRA/ACRA_CORPORATE",
-        "IRAS/IRAS_CORPORATE_TAX"
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "ACRA/ACRA_CORPORATE"
       ],
-      "metrics": null,
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "finalWorkstreamSetAccuracy": false,
+        "omissionRate": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 0,
+          "subject": "tax deductibility of a business expense",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "iras-cit-deductibility"
+          ],
+          "reconciliationStatus": "MAPPED"
+        },
+        {
+          "expectedIssueId": "sfrsi-expense-accounting",
+          "modelIssueIndex": 1,
+          "subject": "financial statement accounting treatment under SFRS(I) for a business expense item",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "MODEL_WRONG_OPERATION",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:10:55.778Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2486,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3631,27 +5789,199 @@
       "caseId": "D-paraphrase-2",
       "model": "gemini-3.5-flash-lite",
       "question": "Please explain the accounting treatment for an expense and whether the company can claim it against corporate taxable income.",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 259,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:11:04.036Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 1935,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "accounting treatment and corporate tax deductibility of an expense",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "accounting treatment for an expense",
+          "population": "COMPANY",
+          "domain": "ACCOUNTING",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "corporate tax claimability of an expense against taxable income",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_c3c531c0",
+            "subject": "accounting treatment for an expense",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_d1ab9f3d",
+            "subject": "corporate tax claimability of an expense against taxable income",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
-      "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "sfrsi-expense-accounting",
+          "modelIssueIndex": 0,
+          "subject": "accounting treatment for an expense",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [
+        1
+      ],
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_FALSE_ISSUE",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:11:04.036Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 1935,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3659,27 +5989,200 @@
       "caseId": "D-paraphrase-3",
       "model": "gemini-3.5-flash-lite",
       "question": "What is the SFRS(I) journal treatment for this cost, and separately can it be deducted for company income-tax purposes?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 256,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:11:12.300Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 1927,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "COMPANY",
+        "authorityCandidates": [
+          "ACCOUNTING_STANDARDS",
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "SFRS(I) journal treatment and company income tax deduction for a cost",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "SFRS(I) journal treatment for the cost",
+          "population": "COMPANY",
+          "domain": "ACCOUNTING",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "PREPARE_JOURNAL",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        },
+        {
+          "index": 1,
+          "subject": "Deductibility of the cost for company income-tax purposes",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CHECK_ELIGIBILITY",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_0a2f5dbc",
+            "subject": "SFRS(I) journal treatment for the cost",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "PREPARE_JOURNAL",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_b94bb9c4",
+            "subject": "Deductibility of the cost for company income-tax purposes",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
-      "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 1,
+          "subject": "Deductibility of the cost for company income-tax purposes",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [
+        0
+      ],
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_FALSE_ISSUE",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:11:12.300Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 1927,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3687,27 +6190,200 @@
       "caseId": "D-paraphrase-4",
       "model": "gemini-3.5-flash-lite",
       "question": "For financial reporting and Singapore company tax, how should a cost be recognised and is it deductible?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 264,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:11:20.550Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 1938,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "cost recognition and tax deductibility",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "how should a cost be recognised for financial reporting",
+          "population": "COMPANY",
+          "domain": "ACCOUNTING",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "is a cost deductible for Singapore company tax",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_0fa8bc1c",
+            "subject": "how should a cost be recognised for financial reporting",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_0ac97da0",
+            "subject": "is a cost deductible for Singapore company tax",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
-      "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 1,
+          "subject": "is a cost deductible for Singapore company tax",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [
+        0
+      ],
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_FALSE_ISSUE",
+        "MODEL_WRONG_OPERATION",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:11:20.550Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 1938,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3715,27 +6391,168 @@
       "caseId": "adversarial-A-contextual-cpf",
       "model": "gemini-3.5-flash-lite",
       "question": "Does mentioning CPF in a personal income tax relief question mean CPF Board determines the relief?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 260,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:11:28.814Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2853,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "INDIVIDUAL",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [
+          "CPF"
+        ],
+        "primarySubject": "personal income tax relief interaction with CPF",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "Whether mentioning CPF in a personal income tax relief question means CPF Board determines the relief",
+          "population": "INDIVIDUAL",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_INTERACTION",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "UNRESOLVED",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_967455d4",
+            "subject": "Whether mentioning CPF in a personal income tax relief question means CPF Board determines the relief",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "EXPLAIN_INTERACTION",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
-      "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        }
+      },
+      "semanticUnderstandingCorrect": true,
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "relief-governing-authority",
+          "modelIssueIndex": 0,
+          "subject": "Whether mentioning CPF in a personal income tax relief question means CPF Board determines the relief",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:11:28.814Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2853,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3743,27 +6560,169 @@
       "caseId": "adversarial-B-cpf-expense",
       "model": "gemini-3.5-flash-lite",
       "question": "Our company pays CPF for employees. Is the CPF expense deductible for corporate income tax?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 278,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:11:37.079Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2056,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "authorityCandidates": [
+          "IRAS",
+          "CPF"
+        ],
+        "contextualAuthorities": [
+          "CPF"
+        ],
+        "primarySubject": "deductibility of CPF expense for corporate income tax",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "Whether CPF contributions paid for employees are deductible for corporate income tax",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_39f795ba",
+            "subject": "Whether CPF contributions paid for employees are deductible for corporate income tax",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
-      "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        }
+      },
+      "semanticUnderstandingCorrect": true,
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "cpf-expense-corporate-deductibility",
+          "modelIssueIndex": 0,
+          "subject": "Whether CPF contributions paid for employees are deductible for corporate income tax",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:11:37.079Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2056,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3771,27 +6730,163 @@
       "caseId": "adversarial-C-employee-benefit",
       "model": "gemini-3.5-flash-lite",
       "question": "The employer provides accommodation to staff. What tax does the employee pay on the benefit?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 253,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:11:45.330Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 1613,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "EMPLOYEE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "taxation of accommodation benefit provided by employer",
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "tax treatment of accommodation benefit for employee",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.95
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_7aee5fdd",
+            "subject": "tax treatment of accommodation benefit for employee",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employee-accommodation-benefit-tax",
+          "modelIssueIndex": 0,
+          "subject": "tax treatment of accommodation benefit for employee",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "MODEL_WRONG_OPERATION",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:11:45.330Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 1613,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3799,27 +6894,212 @@
       "caseId": "adversarial-D-workpass-and-salary-tax",
       "model": "gemini-3.5-flash-lite",
       "question": "A foreign employee needs a work pass and the company needs to know whether his salary is taxable.",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 266,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:11:53.583Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2874,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "foreign employee work pass and taxability of salary",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "foreign employee work pass requirement",
+          "population": "EMPLOYEE",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "taxability of foreign employee salary",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
-        "issues": []
+        "issues": [
+          {
+            "id": "issue_6b6810d7",
+            "subject": "foreign employee work pass requirement",
+            "population": "EMPLOYEE",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_ebbfea8f",
+            "subject": "taxability of foreign employee salary",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
       },
-      "plannedWorkstreams": [],
-      "finalWorkstreams": [],
-      "metrics": null,
+      "plannedWorkstreams": [
+        "MOM/MOM_EMPLOYMENT",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "finalWorkstreams": [
+        "MOM/MOM_EMPLOYMENT",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "finalWorkstreamSetAccuracy": false,
+        "omissionRate": {
+          "correct": 0,
+          "total": 2,
+          "rate": 0
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "foreign-worker-work-pass",
+          "modelIssueIndex": 0,
+          "subject": "foreign employee work pass requirement",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "foreign-worker-salary-income-tax",
+          "modelIssueIndex": 1,
+          "subject": "taxability of foreign employee salary",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "MODEL_WRONG_OPERATION",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:11:53.583Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2874,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3827,47 +7107,264 @@
       "caseId": "adversarial-E-three-authorities",
       "model": "gemini-3.5-flash-lite",
       "question": "How do CPF contributions, work-pass requirements and employee income-tax reporting interact for a foreign employee?",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 284,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:12:01.843Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2082,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "interaction of CPF contributions, work-pass requirements, and employee income-tax reporting for a foreign employee",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "CPF contributions for a foreign employee",
+          "population": "EMPLOYEE",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "work-pass requirements for a foreign employee",
+          "population": "EMPLOYEE",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        },
+        {
+          "index": 2,
+          "subject": "employee income-tax reporting for a foreign employee",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
         "issues": [
           {
-            "id": "issue_1cd7f6be",
-            "subject": "CPF Tiered Contribution Rates by Age",
-            "population": "UNKNOWN",
+            "id": "issue_fc6cd429",
+            "subject": "CPF contributions for a foreign employee",
+            "population": "EMPLOYEE",
             "domain": "CPF_PAYROLL",
             "governingAuthorities": [
               "CPF"
             ],
             "contextualAuthorities": [],
-            "operation": "OTHER",
+            "operation": "EXPLAIN_RULE",
             "deterministicMappedTopicIds": [
               "cpf_contribution_rates"
             ],
             "reconciliationStatus": "MAPPED"
+          },
+          {
+            "id": "issue_98046b45",
+            "subject": "work-pass requirements for a foreign employee",
+            "population": "EMPLOYEE",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_d6f88612",
+            "subject": "employee income-tax reporting for a foreign employee",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
           }
         ]
       },
       "plannedWorkstreams": [
-        "CPF/CPF_PAYROLL"
+        "CPF/CPF_PAYROLL",
+        "MOM/MOM_EMPLOYMENT",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
       ],
       "finalWorkstreams": [
-        "CPF/CPF_PAYROLL"
+        "CPF/CPF_PAYROLL",
+        "MOM/MOM_EMPLOYMENT",
+        "IRAS/IRAS_EMPLOYMENT_BENEFITS"
       ],
-      "metrics": null,
+      "metrics": {
+        "issueRecall": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 3,
+          "rate": 0.3333333333333333
+        },
+        "finalWorkstreamSetAccuracy": false,
+        "omissionRate": {
+          "correct": 0,
+          "total": 3,
+          "rate": 0
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "foreign-worker-cpf-contributions",
+          "modelIssueIndex": 0,
+          "subject": "CPF contributions for a foreign employee",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "reconciliationStatus": "MAPPED"
+        },
+        {
+          "expectedIssueId": "foreign-worker-work-pass-interaction",
+          "modelIssueIndex": 1,
+          "subject": "work-pass requirements for a foreign employee",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "foreign-worker-income-tax-reporting",
+          "modelIssueIndex": 2,
+          "subject": "employee income-tax reporting for a foreign employee",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": false
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "MODEL_WRONG_OPERATION",
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:12:01.843Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2082,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     },
     {
       "runId": "expanded-1",
@@ -3875,28 +7372,71 @@
       "caseId": "adversarial-F-accounting-and-tax",
       "model": "gemini-3.5-flash-lite",
       "question": "A company records an employee benefit under SFRS(I) and wants to know whether it is tax deductible.",
-      "interpretationValid": false,
-      "providerResponseReceived": false,
+      "interpretationValid": true,
+      "providerResponseReceived": true,
       "callAttempted": true,
-      "semanticFailure": "PROVIDER_ERROR",
-      "latencyMs": 245,
-      "topLevel": null,
-      "issues": [],
+      "requestStartedAt": "2026-09-29T13:12:10.100Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2036,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "IRAS",
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "primarySubject": "tax deductibility of employee benefit recorded under SFRS(I)",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "Whether an employee benefit recorded by a company under SFRS(I) is tax deductible",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "iras-cit-deductibility"
+          ],
+          "reconciliationStatus": "MAPPED",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        }
+      ],
       "deterministicReconciliation": {
-        "source": "TAXONOMY_FALLBACK",
+        "source": "SEMANTIC_ISSUES",
         "coverageEstablished": false,
         "hasUnmappedResidual": true,
         "issues": [
           {
-            "id": "issue_64d7c397",
-            "subject": "Corporate Tax Deductibility",
+            "id": "issue_8cb28dd2",
+            "subject": "Whether an employee benefit recorded by a company under SFRS(I) is tax deductible",
             "population": "COMPANY",
             "domain": "IRAS_INCOME_TAX",
             "governingAuthorities": [
               "IRAS"
             ],
-            "contextualAuthorities": [],
-            "operation": "OTHER",
+            "contextualAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "operation": "DETERMINE_TREATMENT",
             "deterministicMappedTopicIds": [
               "iras-cit-deductibility"
             ],
@@ -3910,12 +7450,97 @@
       "finalWorkstreams": [
         "IRAS/IRAS_CORPORATE_TAX"
       ],
-      "metrics": null,
+      "metrics": {
+        "issueRecall": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        },
+        "issuePrecision": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "domainAccuracy": {
+          "correct": 0,
+          "total": 1,
+          "rate": 0
+        },
+        "populationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": false,
+        "omissionRate": {
+          "correct": 1,
+          "total": 2,
+          "rate": 0.5
+        }
+      },
       "semanticUnderstandingCorrect": false,
-      "expectedIssueMatches": [],
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employee-benefit-accounting",
+          "modelIssueIndex": 0,
+          "subject": "Whether an employee benefit recorded by a company under SFRS(I) is tax deductible",
+          "semanticDimensions": {
+            "governingAuthority": false,
+            "contextualAuthority": false,
+            "domain": false,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [
+            "iras-cit-deductibility"
+          ],
+          "reconciliationStatus": "MAPPED"
+        }
+      ],
       "unmatchedModelIssueIndexes": [],
-      "failureTaxonomies": [],
-      "providerFailure": "No provider interpretation was received; this is not a semantic-quality result."
+      "failureTaxonomies": [
+        "MODEL_OMISSION",
+        "MODEL_WRONG_AUTHORITY",
+        "MODEL_WRONG_DOMAIN",
+        "RECONCILIATION_REJECTION"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": null,
+          "providerRequestAttempted": true,
+          "outcome": "PROVIDER_ERROR",
+          "providerStatus": null,
+          "providerCategory": "STATUS_UNAVAILABLE",
+          "runtime": "v22.23.1"
+        },
+        {
+          "attempt": 2,
+          "requestStartedAt": "2026-09-29T13:12:10.100Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2036,
+          "providerStatus": null,
+          "providerCategory": null,
+          "runtime": "v24.19.0"
+        }
+      ]
     }
   ]
 }
