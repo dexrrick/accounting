@@ -18,6 +18,20 @@ export type SemanticQuestionOperation =
   | 'PREPARE_JOURNAL' | 'COMPARE' | 'FILING_REQUIREMENT' | 'OTHER';
 export type SemanticAuthority = 'IRAS' | 'CPF' | 'ACRA' | 'MOM' | 'MAS' | 'ACCOUNTING_STANDARDS' | 'IFRS_FOUNDATION' | 'SSO' | 'UNKNOWN';
 export type SemanticConceptRole = 'PRIMARY' | 'RELATED' | 'CONTEXT_ONLY';
+export type SemanticEvidenceRequirement = 'AUTHORITATIVE_SOURCE' | 'CASE_FACTS' | 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' | 'UNRESOLVED';
+
+/** One material workstream identified in a compound question. IDs are assigned during reconciliation. */
+export interface SemanticQuestionIssue {
+  subject: string;
+  population: SemanticPopulation;
+  domain: SemanticQuestionDomain;
+  governingAuthorities: SemanticAuthority[];
+  contextualAuthorities: SemanticAuthority[];
+  operation: SemanticQuestionOperation;
+  mappedTopicIds: string[];
+  evidenceRequirement: SemanticEvidenceRequirement;
+  confidence: number;
+}
 
 export interface SemanticQuestionInterpretation {
   jurisdiction: string[];
@@ -32,6 +46,8 @@ export interface SemanticQuestionInterpretation {
   calculationRequested: boolean;
   factsExplicitlyProvided: string[];
   confidence: number;
+  /** Optional for compatibility with existing single-issue providers and fixtures. */
+  issues?: SemanticQuestionIssue[];
 }
 
 export interface SemanticQuestionUnderstanding {
@@ -62,6 +78,9 @@ const DOMAINS = new Set<SemanticQuestionDomain>(['ACCOUNTING', 'IRAS_INCOME_TAX'
 const OPERATIONS = new Set<SemanticQuestionOperation>(['EXPLAIN_RULE', 'EXPLAIN_INTERACTION', 'DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'CALCULATE', 'PREPARE_JOURNAL', 'COMPARE', 'FILING_REQUIREMENT', 'OTHER']);
 const AUTHORITIES = new Set<SemanticAuthority>(['IRAS', 'CPF', 'ACRA', 'MOM', 'MAS', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION', 'SSO', 'UNKNOWN']);
 const CONCEPT_ROLES = new Set<SemanticConceptRole>(['PRIMARY', 'RELATED', 'CONTEXT_ONLY']);
+const EVIDENCE_REQUIREMENTS = new Set<SemanticEvidenceRequirement>([
+  'AUTHORITATIVE_SOURCE', 'CASE_FACTS', 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'UNRESOLVED'
+]);
 const MAX_LABEL_LENGTH = 160;
 
 /** Redacts a few recognizable case values only at the diagnostics boundary. */
@@ -122,12 +141,131 @@ function domainAuthorityIsPossible(value: SemanticQuestionInterpretation): boole
   }
 }
 
+const LEGACY_INTERPRETATION_KEYS = [
+  'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject', 'concepts',
+  'requestedOperation', 'requiresUserSpecificFacts', 'calculationRequested', 'factsExplicitlyProvided', 'confidence'
+] as const;
+
+function topicDomainsForIssue(domain: SemanticQuestionDomain, population: SemanticPopulation): SingaporeKnowledgeDomain[] {
+  switch (domain) {
+    case 'ACCOUNTING': return ['ACCOUNTING_SFRS', 'ACCOUNTING_FRS', 'ACCOUNTING_SMALL_ENTITIES'];
+    case 'IRAS_INCOME_TAX': {
+      const primary = toRegistryDomain(domain, population);
+      // Employee-benefit reporting topics sit in the employer tax domain, while
+      // an employee's personal relief belongs to individual income tax.
+      return primary ? [primary, ...(population === 'EMPLOYEE' ? ['IRAS_EMPLOYER_TAX' as const] : [])] : [];
+    }
+    case 'IRAS_GST': return ['IRAS_GST'];
+    case 'IRAS_PROPERTY_TAX': return ['IRAS_PROPERTY_TAX'];
+    case 'IRAS_STAMP_DUTY': return ['IRAS_STAMP_DUTY'];
+    case 'IRAS_OTHER': return ['IRAS_CRS_FATCA'];
+    case 'CPF_PAYROLL':
+      // CPF payroll applies to employee/employer relationships; unrelated
+      // subject populations must not inherit CPF topic mappings.
+      return population === 'SHAREHOLDER' || population === 'FUND' || population === 'PROPERTY_OWNER'
+        ? [] : ['CPF_CONTRIBUTIONS', 'CPF_PAYROLL_LEVIES'];
+    case 'MOM_EMPLOYMENT': return ['MOM_EMPLOYMENT', 'MOM_WORK_PASSES', 'MOM_FOREIGN_WORKFORCE'];
+    case 'ACRA_CORPORATE': return ['ACRA_COMPANIES', 'ACRA_VCC', 'ACRA_CSP'];
+    case 'MAS_FUNDS': return ['MAS_FUND_MANAGEMENT', 'MAS_FAMILY_OFFICE', 'MAS_REGULATORY_REPORTING', 'MAS_AML'];
+    case 'UNKNOWN': return [];
+  }
+}
+
+function semanticAuthorityCoversTopic(authorities: SemanticAuthority[], topicAuthorities: readonly string[], domain: SemanticQuestionDomain): boolean {
+  const accepted = new Set<string>(authorities);
+  if (domain === 'ACCOUNTING' && (accepted.has('ACCOUNTING_STANDARDS') || accepted.has('IFRS_FOUNDATION'))) accepted.add('ACRA');
+  return topicAuthorities.some(authority => accepted.has(authority));
+}
+
+function resolveIssueTopicIds(
+  subject: string,
+  domain: SemanticQuestionDomain,
+  population: SemanticPopulation,
+  governingAuthorities: SemanticAuthority[],
+  independentlyRecognizedTopicIds: ReadonlySet<string>
+): string[] {
+  const allowedDomains = topicDomainsForIssue(domain, population);
+  const subjectTopicIds = defaultQueryTopicResolver.decomposeQuery(subject).topics.map(topic => topic.id);
+  return getCoverageTopicsByIds(subjectTopicIds).filter(topic =>
+    independentlyRecognizedTopicIds.has(topic.id) && allowedDomains.includes(topic.domainId) &&
+    semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain))
+    .map(topic => topic.id).sort();
+}
+
+function deriveEvidenceRequirement(
+  domain: SemanticQuestionDomain,
+  operation: SemanticQuestionOperation,
+  caseSpecific?: boolean
+): SemanticEvidenceRequirement {
+  if (domain === 'UNKNOWN') return 'UNRESOLVED';
+  if (operation === 'EXPLAIN_INTERACTION') {
+    if (caseSpecific === undefined) return 'UNRESOLVED';
+    return caseSpecific ? 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' : 'AUTHORITATIVE_SOURCE';
+  }
+  if (operation === 'EXPLAIN_RULE' || operation === 'COMPARE' || operation === 'OTHER') return 'AUTHORITATIVE_SOURCE';
+  return 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS';
+}
+
+function validateSemanticQuestionIssue(value: unknown): SemanticQuestionIssue | undefined {
+  const issueKeys = [
+    'subject', 'population', 'domain', 'governingAuthorities', 'contextualAuthorities', 'operation',
+    'mappedTopicIds', 'evidenceRequirement', 'confidence'
+  ];
+  if (!isRecord(value) || !hasExactKeys(value, issueKeys) || typeof value.subject !== 'string' || !isSafeSemanticLabel(value.subject) ||
+      typeof value.population !== 'string' || !POPULATIONS.has(value.population as SemanticPopulation) ||
+      typeof value.domain !== 'string' || !DOMAINS.has(value.domain as SemanticQuestionDomain) ||
+      !validAuthorities(value.governingAuthorities) || !validAuthorities(value.contextualAuthorities) ||
+      !OPERATIONS.has(value.operation as SemanticQuestionOperation) ||
+      !Array.isArray(value.mappedTopicIds) || value.mappedTopicIds.length > 20 ||
+      !value.mappedTopicIds.every(id => typeof id === 'string' && id.trim().length > 0) ||
+      typeof value.evidenceRequirement !== 'string' || !EVIDENCE_REQUIREMENTS.has(value.evidenceRequirement as SemanticEvidenceRequirement) ||
+      typeof value.confidence !== 'number' || !Number.isFinite(value.confidence) || value.confidence < 0 || value.confidence > 1 ||
+      value.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return undefined;
+
+  const domain = value.domain as SemanticQuestionDomain;
+  const population = value.population as SemanticPopulation;
+  const governingAuthorities = value.governingAuthorities as SemanticAuthority[];
+  const contextualAuthorities = value.contextualAuthorities as SemanticAuthority[];
+  const topicHints = value.mappedTopicIds as string[];
+  if (governingAuthorities.length !== 1 ||
+      contextualAuthorities.some(authority => governingAuthorities.includes(authority))) return undefined;
+  if (domain === 'UNKNOWN') {
+    if (governingAuthorities[0] !== 'UNKNOWN') return undefined;
+  } else if (!issueDomainAuthoritiesArePossible(domain, governingAuthorities)) return undefined;
+  const allowedDomains = topicDomainsForIssue(domain, population);
+  const mappedTopicIds = getCoverageTopicsByIds(topicHints).filter(topic =>
+    allowedDomains.includes(topic.domainId) && semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain))
+    .map(topic => topic.id).sort();
+  const operation = value.operation as SemanticQuestionOperation;
+  return {
+    subject: value.subject.trim(), population, domain, governingAuthorities, contextualAuthorities,
+    operation, mappedTopicIds: [...new Set(mappedTopicIds)],
+    evidenceRequirement: deriveEvidenceRequirement(domain, operation), confidence: value.confidence
+  };
+}
+
+function issueDomainAuthoritiesArePossible(domain: SemanticQuestionDomain, authorities: SemanticAuthority[]): boolean {
+  const authority = authorities[0];
+  switch (domain) {
+    case 'ACCOUNTING': return authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION' || authority === 'ACRA' || authority === 'SSO';
+    case 'IRAS_INCOME_TAX':
+    case 'IRAS_GST':
+    case 'IRAS_PROPERTY_TAX':
+    case 'IRAS_STAMP_DUTY':
+    case 'IRAS_OTHER': return authority === 'IRAS';
+    case 'CPF_PAYROLL': return authority === 'CPF';
+    case 'MOM_EMPLOYMENT': return authority === 'MOM';
+    case 'ACRA_CORPORATE': return authority === 'ACRA';
+    case 'MAS_FUNDS': return authority === 'MAS';
+    case 'UNKNOWN': return authority === 'UNKNOWN';
+  }
+}
+
 /** Strictly validates provider output; unknown keys and contradictory flags are rejected. */
 export function validateSemanticQuestionInterpretation(value: unknown): SemanticQuestionInterpretation | undefined {
-  if (!isRecord(value) || !hasExactKeys(value, [
-    'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject', 'concepts',
-    'requestedOperation', 'requiresUserSpecificFacts', 'calculationRequested', 'factsExplicitlyProvided', 'confidence'
-  ])) return undefined;
+  if (!isRecord(value) || !(hasExactKeys(value, LEGACY_INTERPRETATION_KEYS) ||
+      hasExactKeys(value, [...LEGACY_INTERPRETATION_KEYS, 'issues'])) ||
+      Object.hasOwn(value, 'issues') && (!Array.isArray(value.issues) || value.issues.length > 12)) return undefined;
   if (!validLabelList(value.jurisdiction, 6) || !validAuthorities(value.authorityCandidates) ||
       !validAuthorities(value.contextualAuthorities) || typeof value.domain !== 'string' || !DOMAINS.has(value.domain as SemanticQuestionDomain) ||
       typeof value.population !== 'string' || !POPULATIONS.has(value.population as SemanticPopulation) ||
@@ -158,8 +296,10 @@ export function validateSemanticQuestionInterpretation(value: unknown): Semantic
     requiresUserSpecificFacts: value.requiresUserSpecificFacts,
     calculationRequested: value.calculationRequested,
     factsExplicitlyProvided: value.factsExplicitlyProvided.map(item => item.trim()),
-    confidence: value.confidence
+    confidence: value.confidence,
+    ...(Object.hasOwn(value, 'issues') ? { issues: (value.issues as unknown[]).map(validateSemanticQuestionIssue) as SemanticQuestionIssue[] } : {})
   };
+  if (Object.hasOwn(value, 'issues') && interpretation.issues?.some(issue => !issue)) return undefined;
   if (!domainAuthorityIsPossible(interpretation)) return undefined;
   if (interpretation.calculationRequested !== (interpretation.requestedOperation === 'CALCULATE')) return undefined;
   if (interpretation.calculationRequested && !interpretation.requiresUserSpecificFacts) return undefined;
@@ -179,7 +319,9 @@ function hasConfiguredProvider(provider?: ProviderSettings | string): boolean {
 
 const SYSTEM_INSTRUCTION = 'Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.';
 
-const RESPONSE_SCHEMA = `Return exactly these keys. Enums: domain=ACCOUNTING|IRAS_INCOME_TAX|IRAS_GST|IRAS_PROPERTY_TAX|IRAS_STAMP_DUTY|IRAS_OTHER|CPF_PAYROLL|MOM_EMPLOYMENT|ACRA_CORPORATE|MAS_FUNDS|UNKNOWN; population=INDIVIDUAL|EMPLOYEE|EMPLOYER|COMPANY|SHAREHOLDER|FUND|PROPERTY_OWNER|UNKNOWN; authority values=IRAS|CPF|ACRA|MOM|MAS|ACCOUNTING_STANDARDS|IFRS_FOUNDATION|SSO|UNKNOWN; operation=EXPLAIN_RULE|EXPLAIN_INTERACTION|DETERMINE_TREATMENT|CHECK_ELIGIBILITY|CALCULATE|PREPARE_JOURNAL|COMPARE|FILING_REQUIREMENT|OTHER; concept role=PRIMARY|RELATED|CONTEXT_ONLY. confidence must be a number from 0 through 1. calculationRequested must be true exactly when operation=CALCULATE; CALCULATE requires requiresUserSpecificFacts=true. PREPARE_JOURNAL requires ACCOUNTING.
+const RESPONSE_SCHEMA = `Return the 12 legacy keys below, plus an optional issues array when the question contains distinct material workstreams. Existing consumers accept the legacy keys without issues. Do not provide issue IDs; they are assigned deterministically. Each issue has exactly: subject, population, domain, governingAuthorities, contextualAuthorities, operation, mappedTopicIds, evidenceRequirement, confidence. mappedTopicIds are optional candidate hints; the application derives candidates from the issue subject and only maps them when the same topic is independently recognized in the original question and matches domain, population, and authority. Leave mappedTopicIds empty when unsure and keep the issue present when no exact topic applies. An issue's population is the party whose own status or treatment is at issue; use UNKNOWN when not established. evidenceRequirement is AUTHORITATIVE_SOURCE|CASE_FACTS|AUTHORITATIVE_SOURCE_AND_CASE_FACTS|UNRESOLVED; the application derives the final requirement from the issue domain and operation. For EXPLAIN_INTERACTION, case facts are needed only for case-specific issues; otherwise use UNRESOLVED when unsure. Issues describe questions to resolve, never conclusions.
+
+Enums: domain=ACCOUNTING|IRAS_INCOME_TAX|IRAS_GST|IRAS_PROPERTY_TAX|IRAS_STAMP_DUTY|IRAS_OTHER|CPF_PAYROLL|MOM_EMPLOYMENT|ACRA_CORPORATE|MAS_FUNDS|UNKNOWN; population=INDIVIDUAL|EMPLOYEE|EMPLOYER|COMPANY|SHAREHOLDER|FUND|PROPERTY_OWNER|UNKNOWN; authority values=IRAS|CPF|ACRA|MOM|MAS|ACCOUNTING_STANDARDS|IFRS_FOUNDATION|SSO|UNKNOWN; operation=EXPLAIN_RULE|EXPLAIN_INTERACTION|DETERMINE_TREATMENT|CHECK_ELIGIBILITY|CALCULATE|PREPARE_JOURNAL|COMPARE|FILING_REQUIREMENT|OTHER; concept role=PRIMARY|RELATED|CONTEXT_ONLY. confidence must be a number from 0 through 1. calculationRequested must be true exactly when operation=CALCULATE; CALCULATE requires requiresUserSpecificFacts=true. PREPARE_JOURNAL requires ACCOUNTING.
 
 Separate general explanation from resolving a particular case. requiresUserSpecificFacts means the requested result depends on facts about the person's or entity's own situation, whether or not the user already supplied those facts; it does not mean that more facts are necessarily missing. Use CHECK_ELIGIBILITY for a specific person's claim or a specific business cost/supply, and set the flag true. Use DETERMINE_TREATMENT with the flag true for a particular transaction, income receipt, or taxpayer case. Use EXPLAIN_RULE or EXPLAIN_INTERACTION with the flag false when explaining general criteria or how rules relate, independent of deciding an identified case. A general rule may mention employers, employees, relatives, business types, conditions, or illustrative amounts and still be conceptual. Put only case facts explicitly stated by the user in factsExplicitlyProvided; omit examples and general conditions.
 
@@ -455,14 +597,32 @@ export function isShortSemanticFollowUp(query: string): boolean {
 export interface ReconciledQuestionUnderstanding {
   classification: QuestionClassificationResult;
   understanding: SemanticQuestionUnderstanding;
+  /** Separate workstream plan for future orchestration; it does not replace classification. */
+  issuePlan: SemanticIssueReconciliation;
+}
+
+export interface ReconciledSemanticQuestionIssue extends SemanticQuestionIssue {
+  id: string;
+  /** MAPPED means taxonomy mapping succeeded; it does not mean the issue is answered. */
+  status: 'MAPPED' | 'UNRESOLVED';
+  unresolvedReason?: 'NO_COVERAGE_TOPIC' | 'UNASSIGNED_QUERY_TOPIC' | 'UNKNOWN_DOMAIN';
+}
+
+export interface SemanticIssueReconciliation {
+  source: 'SEMANTIC_ISSUES' | 'TAXONOMY_FALLBACK';
+  issues: ReconciledSemanticQuestionIssue[];
+  /** True only when a semantic plan covers every independently recognized topic and has no residual query text. */
+  coverageEstablished: boolean;
+  /** Fail-closed signal for unsupported query text, unresolved issues, or absent recognized topic coverage. */
+  hasUnmappedResidual: boolean;
 }
 
 /** Deterministically guards and projects the semantic interpretation into existing IRAS routing fields. */
-export function reconcileQuestionUnderstanding(
+function reconcileLegacyQuestionUnderstanding(
   query: string,
   classification: QuestionClassificationResult,
   understanding: SemanticQuestionUnderstanding
-): ReconciledQuestionUnderstanding {
+): Omit<ReconciledQuestionUnderstanding, 'issuePlan'> {
   const wrapperIsValidated = (understanding.mode === 'SEMANTIC_INTERPRETATION' || understanding.mode === 'SEMANTIC_PLUS_RULES') &&
     understanding.failure === undefined;
   const validatedSemantic = wrapperIsValidated ? validateSemanticQuestionInterpretation(understanding.interpretation) : undefined;
@@ -572,6 +732,147 @@ export function reconcileQuestionUnderstanding(
     reasoning: `Semantic interpretation routed this ${semantic.population.toLowerCase()} question to IRAS for ${semantic.primarySubject}.`
   };
   return { classification: reconciled, understanding: { ...understanding, interpretation: semantic, mode: 'SEMANTIC_PLUS_RULES' } };
+}
+
+function stableIssueId(issue: Pick<SemanticQuestionIssue, 'subject' | 'population' | 'domain' | 'governingAuthorities' | 'operation' | 'mappedTopicIds'>): string {
+  const canonical = [
+    issue.domain, issue.population, issue.subject.normalize('NFKC').toLowerCase().trim().replace(/\s+/g, ' '),
+    [...issue.governingAuthorities].sort().join(','), issue.operation, [...issue.mappedTopicIds].sort().join(',')
+  ].join('|');
+  let hash = 0x811c9dc5;
+  for (const character of canonical) {
+    hash ^= character.codePointAt(0) || 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return 'issue_' + (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function issueFromTaxonomyGroup(topics: ReturnType<typeof defaultQueryTopicResolver.decomposeQuery>['topics']): SemanticQuestionIssue {
+  const first = topics[0];
+  const registryDomain = first.domainId;
+  let domain: SemanticQuestionDomain;
+  let population: SemanticPopulation = 'UNKNOWN';
+  if (registryDomain.startsWith('ACCOUNTING_')) domain = 'ACCOUNTING';
+  else if (registryDomain.startsWith('IRAS_')) {
+    if (registryDomain === 'IRAS_GST') domain = 'IRAS_GST';
+    else if (registryDomain === 'IRAS_PROPERTY_TAX') domain = 'IRAS_PROPERTY_TAX';
+    else if (registryDomain === 'IRAS_STAMP_DUTY') domain = 'IRAS_STAMP_DUTY';
+    else if (registryDomain === 'IRAS_CRS_FATCA') domain = 'IRAS_OTHER';
+    else {
+      domain = 'IRAS_INCOME_TAX';
+      if (registryDomain === 'IRAS_INDIVIDUAL_TAX') population = 'INDIVIDUAL';
+      else if (registryDomain === 'IRAS_CORPORATE_TAX') population = 'COMPANY';
+    }
+  } else if (registryDomain.startsWith('CPF_')) domain = 'CPF_PAYROLL';
+  else if (registryDomain.startsWith('MOM_')) domain = 'MOM_EMPLOYMENT';
+  else if (registryDomain.startsWith('ACRA_')) domain = 'ACRA_CORPORATE';
+  else if (registryDomain.startsWith('MAS_')) domain = 'MAS_FUNDS';
+  else domain = 'UNKNOWN';
+
+  const governingAuthorities: SemanticAuthority[] = domain === 'ACCOUNTING'
+    ? ['ACCOUNTING_STANDARDS']
+    : first.authorities.filter((authority): authority is SemanticAuthority => AUTHORITIES.has(authority as SemanticAuthority));
+  return {
+    subject: topics.map(topic => topic.name).join('; '),
+    population,
+    domain,
+    governingAuthorities,
+    contextualAuthorities: [],
+    operation: 'OTHER',
+    mappedTopicIds: topics.map(topic => topic.id),
+    evidenceRequirement: deriveEvidenceRequirement(domain, 'OTHER'),
+    confidence: 1
+  };
+}
+
+function independentlyRecognizedTopics(query: string, classification: QuestionClassificationResult) {
+  const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
+  const candidateIds = [...new Set([...decomposition.topics.map(topic => topic.id), ...classification.topicIds])];
+  const topics = defaultQueryTopicResolver.resolveTopicIds(candidateIds).filter(topic =>
+    topic.domainId.startsWith('ACCOUNTING_') || topic.domainId.startsWith('IRAS_') ||
+    topic.domainId.startsWith('CPF_') || topic.domainId.startsWith('MOM_') ||
+    topic.domainId.startsWith('ACRA_') || topic.domainId.startsWith('MAS_'));
+  return { topics, hasUnparsedText: (decomposition.unresolvedTopics?.length || 0) > 0 };
+}
+
+function reconcileSemanticIssuePlan(
+  query: string,
+  classification: QuestionClassificationResult,
+  understanding: SemanticQuestionUnderstanding
+): SemanticIssueReconciliation {
+  const wrapperIsValidated = (understanding.mode === 'SEMANTIC_INTERPRETATION' || understanding.mode === 'SEMANTIC_PLUS_RULES') &&
+    understanding.failure === undefined;
+  const semantic = wrapperIsValidated ? validateSemanticQuestionInterpretation(understanding.interpretation) : undefined;
+  const inventory = independentlyRecognizedTopics(query, classification);
+  const inventoryIds = new Set(inventory.topics.map(topic => topic.id));
+  const usesSemanticIssues = semantic?.issues !== undefined;
+  const seenIds = new Map<string, number>();
+  const addId = (issue: SemanticQuestionIssue): string => {
+    const baseId = stableIssueId(issue);
+    const occurrence = (seenIds.get(baseId) || 0) + 1;
+    seenIds.set(baseId, occurrence);
+    return occurrence === 1 ? baseId : baseId + '_' + occurrence;
+  };
+
+  if (usesSemanticIssues) {
+    const issues: ReconciledSemanticQuestionIssue[] = (semantic.issues || []).map(issue => {
+      const mappedTopicIds = resolveIssueTopicIds(issue.subject, issue.domain, issue.population, issue.governingAuthorities, inventoryIds);
+      const reconciledIssue = {
+        ...issue,
+        mappedTopicIds,
+        evidenceRequirement: deriveEvidenceRequirement(issue.domain, issue.operation, semantic.requiresUserSpecificFacts)
+      };
+      const unresolvedReason: ReconciledSemanticQuestionIssue['unresolvedReason'] = mappedTopicIds.length > 0
+        ? undefined
+        : issue.domain === 'UNKNOWN' ? 'UNKNOWN_DOMAIN' : 'NO_COVERAGE_TOPIC';
+      return {
+        ...reconciledIssue,
+        id: addId(reconciledIssue),
+        status: unresolvedReason ? 'UNRESOLVED' : 'MAPPED',
+        ...(unresolvedReason ? { unresolvedReason } : {})
+      };
+    });
+    const mappedInventory = new Set(issues.flatMap(issue => issue.mappedTopicIds));
+    for (const topic of inventory.topics) {
+      if (mappedInventory.has(topic.id)) continue;
+      const residual = issueFromTaxonomyGroup([topic]);
+      issues.push({
+        ...residual,
+        id: addId(residual),
+        status: 'UNRESOLVED',
+        unresolvedReason: 'UNASSIGNED_QUERY_TOPIC'
+      });
+    }
+    const hasUnmappedResidual = inventory.hasUnparsedText || inventory.topics.length === 0 ||
+      issues.some(issue => issue.status === 'UNRESOLVED');
+    return {
+      source: 'SEMANTIC_ISSUES',
+      issues,
+      coverageEstablished: inventory.topics.length > 0 && !hasUnmappedResidual,
+      hasUnmappedResidual
+    };
+  }
+
+  const groups = new Map<SingaporeKnowledgeDomain, typeof inventory.topics>();
+  for (const topic of inventory.topics) groups.set(topic.domainId, [...(groups.get(topic.domainId) || []), topic]);
+  const issues = [...groups.values()].map(issueFromTaxonomyGroup).map(issue => {
+    return {
+      ...issue,
+      id: addId(issue),
+      status: 'MAPPED' as const
+    };
+  });
+  return { source: 'TAXONOMY_FALLBACK', issues, coverageEstablished: false, hasUnmappedResidual: true };
+}
+
+/** Keeps issue reconciliation separate from the legacy flat classification projection. */
+export function reconcileQuestionUnderstanding(
+  query: string,
+  classification: QuestionClassificationResult,
+  understanding: SemanticQuestionUnderstanding
+): ReconciledQuestionUnderstanding {
+  const reconciled = reconcileLegacyQuestionUnderstanding(query, classification, understanding);
+  return { ...reconciled, issuePlan: reconcileSemanticIssuePlan(query, classification, understanding) };
 }
 
 /** Safe allowlisted telemetry projection; user facts and contextual authority mentions are deliberately excluded. */
