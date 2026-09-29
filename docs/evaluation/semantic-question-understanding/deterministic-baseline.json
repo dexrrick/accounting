@@ -1,0 +1,945 @@
+[
+  {
+    "id": "relief-family-budget",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "cpf-context-order",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "CPF_CONTRIBUTIONS",
+        "IRAS_INDIVIDUAL_TAX",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS",
+        "CPF"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Multi-authority question spanning IRAS & CPF. Separating financial reporting from statutory tax/regulatory compliance."
+    }
+  },
+  {
+    "id": "caregiver-no-car",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "career-course",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [
+        "iras-individual-reliefs"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)"
+      ],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "card-relief",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)"
+      ],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "relief-number-conceptual",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "GENERAL",
+      "domains": [],
+      "topicIds": [],
+      "authorities": [],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GENERAL question governed by Singapore Law."
+    }
+  },
+  {
+    "id": "relief-calculation",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX",
+        "CPF_CONTRIBUTIONS",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [
+        "iras-individual-reliefs"
+      ],
+      "authorities": [
+        "IRAS",
+        "CPF"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Multi-authority question spanning IRAS & CPF. Separating financial reporting from statutory tax/regulatory compliance."
+    }
+  },
+  {
+    "id": "parent-eligibility",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "GENERAL",
+      "domains": [],
+      "topicIds": [],
+      "authorities": [],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GENERAL question governed by Singapore Law."
+    }
+  },
+  {
+    "id": "personal-overseas-employer",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [
+        "iras-individual-tax-residency"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "company-is-employer",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "secondment-treaty",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [
+        "iras-individual-foreign-tax-credit"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "personal-foreign-interest",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "residence-office-context",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "ACRA_COMPANIES",
+        "IRAS_INDIVIDUAL_TAX",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [
+        "acra_registered-office"
+      ],
+      "authorities": [
+        "IRAS",
+        "ACRA"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Multi-authority question spanning IRAS & ACRA. Separating financial reporting from statutory tax/regulatory compliance."
+    }
+  },
+  {
+    "id": "individual-residence-general",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [
+        "iras-individual-tax-residency"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "company-foreign-dividend",
+    "expectedDomain": "IRAS_CORPORATE_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "corporate-employee-context",
+    "expectedDomain": "IRAS_CORPORATE_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "corporate-residence-office",
+    "expectedDomain": "IRAS_CORPORATE_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "ACRA_COMPANIES",
+        "IRAS_CORPORATE_TAX",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [
+        "acra_registered-office"
+      ],
+      "authorities": [
+        "IRAS",
+        "ACRA"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Multi-authority question spanning IRAS & ACRA. Separating financial reporting from statutory tax/regulatory compliance."
+    }
+  },
+  {
+    "id": "corporate-filing-eci",
+    "expectedDomain": "IRAS_CORPORATE_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "topicIds": [
+        "iras-cit-eci"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "business-expense-specific",
+    "expectedDomain": "IRAS_CORPORATE_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "GENERAL",
+      "domains": [],
+      "topicIds": [],
+      "authorities": [],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GENERAL question governed by Singapore Law."
+    }
+  },
+  {
+    "id": "gst-dinner-case",
+    "expectedDomain": "IRAS_GST",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "GST",
+      "domains": [
+        "IRAS_GST"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [
+        "Business or private use and supporting tax invoice for the GST claim",
+        "Business purpose of the meal or entertainment",
+        "Who attended and their relationship to the company"
+      ],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GST question governed by IRAS."
+    }
+  },
+  {
+    "id": "gst-conceptual-entertainment",
+    "expectedDomain": "IRAS_GST",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "GST",
+      "domains": [
+        "IRAS_GST"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GST question governed by IRAS."
+    }
+  },
+  {
+    "id": "gst-card-no-vehicle",
+    "expectedDomain": "IRAS_GST",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "ACCOUNTING_SFRS",
+        "IRAS_GST",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "ACRA",
+        "IRAS"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": true,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+        "Business or private use and supporting tax invoice for the GST claim"
+      ],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Multi-authority question spanning ACRA & IRAS. Separating financial reporting from statutory tax/regulatory compliance."
+    }
+  },
+  {
+    "id": "gst-caring-no-vehicle",
+    "expectedDomain": "IRAS_GST",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "GST",
+      "domains": [
+        "IRAS_GST"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)"
+      ],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GST question governed by IRAS."
+    }
+  },
+  {
+    "id": "gst-real-vehicle",
+    "expectedDomain": "IRAS_GST",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "IRAS_GST",
+        "ACRA_COMPANIES",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles"
+      ],
+      "authorities": [
+        "IRAS",
+        "ACRA"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [
+        "Business or private use and supporting tax invoice for the GST claim",
+        "Vehicle registration/use details and whether a specific motor-car exception applies"
+      ],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Multi-authority question spanning IRAS & ACRA. Separating financial reporting from statutory tax/regulatory compliance."
+    }
+  },
+  {
+    "id": "gst-calculation",
+    "expectedDomain": "IRAS_GST",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "GST",
+      "domains": [
+        "IRAS_GST"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": true,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GST question governed by IRAS."
+    }
+  },
+  {
+    "id": "gst-unknown-discovery",
+    "expectedDomain": "IRAS_GST",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "GST",
+      "domains": [
+        "IRAS_GST"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GST question governed by IRAS."
+    }
+  },
+  {
+    "id": "personal-unknown-discovery",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "property-owner",
+    "expectedDomain": "IRAS_PROPERTY_TAX",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_PROPERTY_TAX"
+      ],
+      "topicIds": [
+        "iras-property-tax-annual-value",
+        "iras-property-tax-use-status"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "employer-tax-clearance",
+    "expectedDomain": "IRAS_EMPLOYER_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "cpf-real-contribution",
+    "expectedDomain": "CPF_CONTRIBUTIONS",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "CPF_CONTRIBUTIONS",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS",
+        "CPF",
+        "MOM"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": true,
+      "journalEntryRequired": true,
+      "missingFacts": [],
+      "intent": "TRANSACTION",
+      "reasoning": "Multi-authority question spanning IRAS & CPF & MOM. Separating financial reporting from statutory tax/regulatory compliance."
+    }
+  },
+  {
+    "id": "cpf-rule",
+    "expectedDomain": "CPF_CONTRIBUTIONS",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "PAYROLL",
+      "domains": [
+        "CPF_CONTRIBUTIONS"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "CPF"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain PAYROLL question governed by CPF."
+    }
+  },
+  {
+    "id": "associate-accounting",
+    "expectedDomain": "ACCOUNTING_SFRS",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "ACCOUNTING",
+      "domains": [
+        "ACCOUNTING_SFRS"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "ACRA"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": true,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+    }
+  },
+  {
+    "id": "lease-accounting",
+    "expectedDomain": "ACCOUNTING_SFRS",
+    "expectedFacts": false,
+    "classification": {
+      "primaryDomain": "ACCOUNTING",
+      "domains": [
+        "ACCOUNTING_SFRS"
+      ],
+      "topicIds": [
+        "sfrsi_leases"
+      ],
+      "authorities": [
+        "ACRA"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": true,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+    }
+  },
+  {
+    "id": "gst-reg-context-personal",
+    "expectedDomain": "IRAS_INDIVIDUAL_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX",
+        "IRAS_GST"
+      ],
+      "topicIds": [
+        "iras-individual-overseas-employment",
+        "iras-individual-foreign-employment-income"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  },
+  {
+    "id": "foreign-residence-context",
+    "expectedDomain": "IRAS_CORPORATE_TAX",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "GENERAL",
+      "domains": [],
+      "topicIds": [],
+      "authorities": [],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain GENERAL question governed by Singapore Law."
+    }
+  },
+  {
+    "id": "ambiguous-income-owner",
+    "expectedDomain": "IRAS_UNKNOWN",
+    "expectedFacts": true,
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Single-domain TAX question governed by IRAS."
+    }
+  }
+]

@@ -1,0 +1,2149 @@
+{
+  "summary": {
+    "mode": "ORACLE_ROUTING_WITH_OFFLINE_EVIDENCE",
+    "evaluatedAt": "2026-09-29T00:45:27.153Z",
+    "runtime": "v22.23.1",
+    "model": "NOT_MEASURED_ORACLE_INPUT",
+    "implementationSha256": "92056da19b2b60138a54af738be22eea487cf2f575afd57056055a74b2dc29f1",
+    "interpretationImplementationSha256": "92056da19b2b60138a54af738be22eea487cf2f575afd57056055a74b2dc29f1",
+    "cases": 36,
+    "modelUnderstandingMeasured": false,
+    "validModelInterpretations": "NOT_MEASURED_ORACLE_INPUT",
+    "semanticInterpretationCorrect": "NOT_MEASURED_ORACLE_INPUT",
+    "populationCorrect": "NOT_MEASURED_ORACLE_INPUT",
+    "requestedOperationCorrect": "NOT_MEASURED_ORACLE_INPUT",
+    "authorityCorrect": 36,
+    "domainCorrect": 36,
+    "retrievalScopeCorrect": 36,
+    "appropriateMissingFacts": 36,
+    "baselineAuthorityCorrect": 25,
+    "baselineDomainCorrect": 27,
+    "finalEvidenceCoverage": {
+      "INSUFFICIENT": 29,
+      "LIMITED": 3,
+      "NON_IRAS_POLICY": 4
+    },
+    "limitations": [
+      "Oracle inputs do not measure model extraction accuracy.",
+      "Offline official discovery measures existing evidence admission and coverage only; live source availability is not measured.",
+      "Concept labels with synonyms require independent manual review.",
+      "Case-specific fact policy is scored against independently authored strict labels; wording that asks for conditions may admit a general explanation without deciding the user’s case.",
+      "No tax conclusion is inferred from routing correctness."
+    ]
+  },
+  "cases": [
+    {
+      "id": "relief-family-budget",
+      "question": "I'm trying to understand how retirement savings and support for elderly parents share the ceiling on personal tax deductions in Singapore. Does one relief get used before another?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax relief",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "personal income tax relief cap",
+          "SRS relief",
+          "parent relief"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-relief-cap"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-relief-cap",
+          "iras-authority-query-i-m-trying-to-understand-how-retirement-savings-"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "cpf-context-order",
+      "question": "IRAS allows CPF Relief, but the CPF Board collected my mandatory payments. Explain where those payments sit alongside SRS in the overall personal relief limit.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax relief",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "CPF relief",
+          "SRS relief",
+          "personal income tax relief cap"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-relief-cap"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-relief-cap",
+          "iras-authority-query-iras-allows-cpf-relief-but-the-cpf-board-collect"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "caregiver-no-car",
+      "question": "For Singapore personal tax, how do caregiver reliefs and retirement contributions interact when the total relief limit is exceeded?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax relief",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "personal income tax relief cap",
+          "parent relief",
+          "CPF relief"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-relief-cap"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-relief-cap",
+          "iras-authority-query-for-singapore-personal-tax-how-do-caregiver-reli"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "career-course",
+      "question": "Could I claim Singapore personal tax relief for a career development course I paid for myself?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax course fee relief",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "course fee relief"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": [
+          "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)"
+        ]
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-reliefs"
+        ],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-could-i-claim-singapore-personal-tax-relief-for-"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "card-relief",
+      "question": "My mother receives a pension paid to her bank card. What information would IRAS need to decide my Parent Relief claim?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax parent relief",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "parent relief"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": false,
+        "missingFacts": [
+          "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)"
+        ]
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-my-mother-receives-a-pension-paid-to-her-bank-ca"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "relief-number-conceptual",
+      "question": "Explain why the personal relief ceiling is $80,000 even though the limits on the separate Singapore reliefs can add up to more than that.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax relief cap",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "personal income tax relief cap"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-relief-cap"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-relief-cap",
+          "iras-authority-query-explain-why-the-personal-relief-ceiling-is-80-00"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "relief-calculation",
+      "question": "Work out my available Singapore personal tax relief: mandatory CPF $32,000, SRS $15,300, and Parent Relief $9,000. Ask me for anything else you need.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax relief calculation",
+        "requestedOperation": "CALCULATE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "personal income tax relief cap",
+          "CPF relief",
+          "SRS relief",
+          "parent relief"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": true,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-reliefs",
+          "iras-individual-relief-cap"
+        ],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-relief-cap",
+          "iras-authority-query-work-out-my-available-singapore-personal-tax-rel"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "parent-eligibility",
+      "question": "Can I get Parent Relief in Singapore if my dad lives with my sister and received $7,500 from work last year?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax parent relief",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "parent relief"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-can-i-get-parent-relief-in-singapore-if-my-dad-l"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "personal-overseas-employer",
+      "question": "My employer is a foreign company and sent me to Japan for four months. I'm a Singapore tax resident. What determines whether my wages are taxed here?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual overseas employment income taxation",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "overseas employment",
+          "foreign employment income"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-tax-residency",
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income"
+        ],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-tax-residency",
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income",
+          "iras-authority-query-my-employer-is-a-foreign-company-and-sent-me-to-"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "company-is-employer",
+      "question": "The company I work for has offices abroad. Explain Singapore income-tax treatment for employees temporarily working in those offices.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual overseas employment income taxation",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "overseas employment",
+          "foreign employment income"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income",
+          "iras-authority-query-the-company-i-work-for-has-offices-abroad-explai"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "secondment-treaty",
+      "question": "In general, when an employee on an overseas assignment is taxed twice on the same salary, how do Singapore treaty relief and foreign tax credits fit together?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual overseas employment double taxation relief",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "overseas employment",
+          "foreign tax credit",
+          "double taxation relief"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-foreign-tax-credit",
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income",
+          "iras-individual-double-tax-agreements"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income",
+          "iras-individual-foreign-tax-credit",
+          "iras-individual-double-tax-agreements",
+          "iras-authority-query-in-general-when-an-employee-on-an-overseas-assig"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "personal-foreign-interest",
+      "question": "I live in Singapore and have a savings account in London. Is interest paid into that account relevant to my individual Singapore income tax?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual foreign income taxation",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "individual foreign income",
+          "foreign interest income"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-i-live-in-singapore-and-have-a-savings-account-i"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "residence-office-context",
+      "question": "My employer's registered office is in Singapore, but I work in several countries. How is my own tax residence determined?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual tax residency",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "individual tax residency"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-tax-residency"
+        ],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-tax-residency",
+          "iras-authority-query-my-employer-s-registered-office-is-in-singapore-"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "individual-residence-general",
+      "question": "What does Singapore tax residency mean for a person who moves in and out of the country for work?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual tax residency",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "individual tax residency"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-tax-residency"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-tax-residency",
+          "iras-authority-query-what-does-singapore-tax-residency-mean-for-a-per"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "company-foreign-dividend",
+      "question": "Our Singapore company owns a Thai subsidiary that distributed a dividend. What conditions matter for Singapore tax on that receipt?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "corporate foreign income taxation",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "foreign-sourced income",
+          "foreign dividend income"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "topicIds": [
+          "iras-foreign-sourced-income"
+        ],
+        "missingFacts": [
+          "Facts relevant to the company income or claim, including the relevant tax year and supporting transaction details."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-foreign-sourced-income",
+          "iras-authority-query-our-singapore-company-owns-a-thai-subsidiary-tha"
+        ],
+        "discoveryPath": "MAPPED_SOURCE_REJECTED"
+      }
+    },
+    {
+      "id": "corporate-employee-context",
+      "question": "A Singapore company has employees posted abroad and receives profits from its overseas branch. Explain the company's Singapore tax treatment of those profits.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "corporate foreign branch income taxation",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "foreign branch profits",
+          "foreign-sourced income"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "topicIds": [
+          "iras-foreign-sourced-income"
+        ],
+        "missingFacts": [
+          "Facts relevant to the company income or claim, including the relevant tax year and supporting transaction details."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-foreign-sourced-income",
+          "iras-authority-query-a-singapore-company-has-employees-posted-abroad-"
+        ],
+        "discoveryPath": "MAPPED_SOURCE_REJECTED"
+      }
+    },
+    {
+      "id": "corporate-residence-office",
+      "question": "Does putting a company's registered address in Singapore alone establish its corporate income-tax residence?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "corporate tax residency",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "corporate tax residency"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "topicIds": [],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-does-putting-a-company-s-registered-address-in-s"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "corporate-filing-eci",
+      "question": "For a Singapore company, explain how the year-end relates to the deadline for estimated chargeable income filing.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "corporate tax estimated chargeable income filing",
+        "requestedOperation": "FILING_REQUIREMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "estimated chargeable income"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "topicIds": [
+          "iras-cit-eci"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-cit-eci",
+          "iras-authority-query-for-a-singapore-company-explain-how-the-year-end"
+        ],
+        "discoveryPath": "MAPPED_SOURCE_REJECTED"
+      }
+    },
+    {
+      "id": "business-expense-specific",
+      "question": "Our Singapore business paid for the owner's private holiday. Can that cost reduce the company's taxable profit?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "corporate tax business expense deductibility",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "business expense deductibility",
+          "private expenses"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "LIMITED"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "topicIds": [
+          "iras-cit-deductibility"
+        ],
+        "missingFacts": [
+          "Facts relevant to the company income or claim, including the relevant tax year and supporting transaction details."
+        ]
+      },
+      "evidence": {
+        "status": "LIMITED",
+        "eligibleRecordIds": [
+          "ITA_SEC14_GENERAL_DEDUCTION"
+        ],
+        "uncoveredTopicIds": [
+          "iras-authority-query-our-singapore-business-paid-for-the-owner-s-priv"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "gst-dinner-case",
+      "question": "We are GST registered and took two prospective customers out for dinner. Is the input tax recoverable, and what details do you need?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax business entertainment",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "GST input tax",
+          "business entertainment"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": [
+          "Business or private use and supporting tax invoice for the GST claim",
+          "Business purpose of the meal or entertainment",
+          "Who attended and their relationship to the company"
+        ]
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [
+          "iras-gst-entertainment"
+        ],
+        "missingFacts": [
+          "Business or private use and supporting tax invoice for the GST claim",
+          "Business purpose of the meal or entertainment"
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-gst-entertainment",
+          "iras-authority-query-we-are-gst-registered-and-took-two-prospective-c"
+        ],
+        "discoveryPath": "MAPPED_SOURCE_REJECTED"
+      }
+    },
+    {
+      "id": "gst-conceptual-entertainment",
+      "question": "Please explain the Singapore GST rules for input tax on business entertainment, including the conditions that matter.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax business entertainment",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "GST input tax",
+          "business entertainment"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [
+          "iras-gst-entertainment"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-gst-entertainment",
+          "iras-authority-query-please-explain-the-singapore-gst-rules-for-input"
+        ],
+        "discoveryPath": "MAPPED_SOURCE_REJECTED"
+      }
+    },
+    {
+      "id": "gst-card-no-vehicle",
+      "question": "Our GST-registered shop paid its credit card processing fees. How do we determine whether the GST on those fees can be claimed?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax on business fees",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "GST input tax",
+          "credit card processing fees"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": true,
+        "missingFacts": [
+          "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+          "Business or private use and supporting tax invoice for the GST claim"
+        ]
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [],
+        "missingFacts": [
+          "Business or private use and supporting tax invoice for the GST claim"
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-our-gst-registered-shop-paid-its-credit-card-pro"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "gst-caring-no-vehicle",
+      "question": "A GST-registered business bought supplies for a staff volunteering day at a caring centre. Can it recover the input tax?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax on volunteering supplies",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "GST input tax",
+          "business use"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": [
+          "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)"
+        ]
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [],
+        "missingFacts": [
+          "Nature and business purpose of the purchase or supply, parties’ GST status, and supporting tax invoice where relevant."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-a-gst-registered-business-bought-supplies-for-a-"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "gst-real-vehicle",
+      "question": "Can our GST-registered company recover input tax on a leased S-plate passenger car used by the sales director?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax motor car",
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "GST input tax",
+          "passenger motor car"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "LIMITED"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": true,
+        "missingFacts": [
+          "Business or private use and supporting tax invoice for the GST claim",
+          "Vehicle registration/use details and whether a specific motor-car exception applies"
+        ]
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "missingFacts": [
+          "Business or private use and supporting tax invoice for the GST claim",
+          "Vehicle registration/use details and whether a specific motor-car exception applies"
+        ]
+      },
+      "evidence": {
+        "status": "LIMITED",
+        "eligibleRecordIds": [
+          "GST_REG26_BLOCKED_INPUT_TAX"
+        ],
+        "uncoveredTopicIds": [
+          "iras-gst-motor-vehicles",
+          "iras-authority-query-can-our-gst-registered-company-recover-input-tax"
+        ],
+        "discoveryPath": "MAPPED_SOURCE_REJECTED"
+      }
+    },
+    {
+      "id": "gst-calculation",
+      "question": "Calculate output GST and the invoice total for a Singapore standard-rated sale of SGD 2,500 before tax today.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "GST output tax calculation",
+        "requestedOperation": "CALCULATE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "GST output tax",
+          "standard-rated supplies"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": true,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [],
+        "missingFacts": [
+          "Nature and business purpose of the purchase or supply, parties’ GST status, and supporting tax invoice where relevant."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-calculate-output-gst-and-the-invoice-total-for-a"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "gst-unknown-discovery",
+      "question": "Explain IRAS GST guidance on transferring unused digital gaming tokens between customer accounts. I'm asking about the rule, not my own figures.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "GST unused digital gaming token transfers",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "digital gaming token transfers"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-explain-iras-gst-guidance-on-transferring-unused"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "personal-unknown-discovery",
+      "question": "How does IRAS approach personal income tax on rewards earned by an individual moderating an online community for an overseas platform?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual income tax online moderation rewards",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "online moderation rewards",
+          "foreign income"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-how-does-iras-approach-personal-income-tax-on-re"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "property-owner",
+      "question": "Explain how Singapore property tax distinguishes an owner-occupied flat from a flat rented to someone else.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "PROPERTY_OWNER",
+        "primarySubject": "property tax owner occupation",
+        "requestedOperation": "COMPARE",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "property tax",
+          "owner-occupied property"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_PROPERTY_TAX"
+        ],
+        "topicIds": [
+          "iras-property-tax-annual-value",
+          "iras-property-tax-use-status"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-property-tax-annual-value",
+          "iras-property-tax-use-status",
+          "iras-authority-query-explain-how-singapore-property-tax-distinguishes"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "employer-tax-clearance",
+      "question": "Our employee is departing Singapore permanently. What must we as the employer file with IRAS before releasing final salary?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "EMPLOYER",
+        "primarySubject": "employer income tax clearance",
+        "requestedOperation": "FILING_REQUIREMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "IR21 tax clearance",
+          "withholding monies"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_EMPLOYER_TAX"
+        ],
+        "topicIds": [
+          "iras-employer-ir21"
+        ],
+        "missingFacts": [
+          "Nature of the taxpayer or recipient and the source/type of income."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-employer-ir21",
+          "iras-authority-query-our-employee-is-departing-singapore-permanently-"
+        ],
+        "discoveryPath": "MAPPED_SOURCE_REJECTED"
+      }
+    },
+    {
+      "id": "cpf-real-contribution",
+      "question": "Work out the employee CPF deduction on a monthly wage of SGD 5,000. This is a payroll contribution question, not an income-tax relief claim.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "EMPLOYEE",
+        "primarySubject": "CPF contribution calculation",
+        "requestedOperation": "CALCULATE",
+        "authorityCandidates": [
+          "CPF"
+        ],
+        "concepts": [
+          "CPF contributions"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": true,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "NON_IRAS_POLICY"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "CPF"
+        ],
+        "domains": [
+          "CPF_CONTRIBUTIONS"
+        ],
+        "topicIds": [
+          "cpf_contribution_rates"
+        ],
+        "missingFacts": [
+          "Employee age band, citizenship or residency status, wage type, and applicable contribution period."
+        ]
+      },
+      "evidence": {
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "cpf-rule",
+      "question": "Explain which employees must make contributions to CPF through payroll.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "EMPLOYEE",
+        "primarySubject": "CPF contribution obligation",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "CPF"
+        ],
+        "concepts": [
+          "CPF contributions"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "NON_IRAS_POLICY"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "CPF"
+        ],
+        "domains": [
+          "CPF_CONTRIBUTIONS"
+        ],
+        "topicIds": [
+          "cpf_contribution_rates"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "associate-accounting",
+      "question": "Please explain equity-method accounting for an associate under SFRS(I), including where the investor's share of profit is presented.",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "associate equity method accounting",
+        "requestedOperation": "EXPLAIN_RULE",
+        "authorityCandidates": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "concepts": [
+          "associate",
+          "equity method"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "NON_IRAS_POLICY"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "ACRA"
+        ],
+        "domains": [
+          "ACCOUNTING_SFRS"
+        ],
+        "topicIds": [],
+        "missingFacts": []
+      },
+      "evidence": {
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "lease-accounting",
+      "question": "Under IFRS 16, what is the difference between recognising a right-of-use asset and expensing rent?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "lease right of use accounting",
+        "requestedOperation": "COMPARE",
+        "authorityCandidates": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "concepts": [
+          "IFRS 16",
+          "right-of-use asset"
+        ]
+      },
+      "requiresUserSpecificFacts": false,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "NON_IRAS_POLICY"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "ACRA"
+        ],
+        "domains": [
+          "ACCOUNTING_SFRS"
+        ],
+        "topicIds": [
+          "sfrsi_leases"
+        ],
+        "missingFacts": []
+      },
+      "evidence": {
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "gst-reg-context-personal",
+      "question": "My employer is GST registered. Does that change how IRAS treats my own employment income from a short overseas posting?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "INDIVIDUAL",
+        "primarySubject": "individual overseas employment income taxation",
+        "requestedOperation": "EXPLAIN_INTERACTION",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "overseas employment",
+          "foreign employment income"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": true,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_INDIVIDUAL_TAX"
+        ],
+        "topicIds": [
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income"
+        ],
+        "missingFacts": [
+          "Facts relevant to the individual eligibility or treatment question, including the relevant tax year and personal circumstances."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-individual-overseas-employment",
+          "iras-individual-foreign-employment-income",
+          "iras-authority-query-my-employer-is-gst-registered-does-that-change-h"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "foreign-residence-context",
+      "question": "A Singapore company pays a consultant who is a tax resident abroad. What are the Singapore withholding-tax filing obligations on that payment?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "COMPANY",
+        "primarySubject": "company withholding tax filing",
+        "requestedOperation": "FILING_REQUIREMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "withholding tax",
+          "non-resident service fees"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "LIMITED"
+      },
+      "baseline": {
+        "authority": false,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [
+          "IRAS_CORPORATE_TAX"
+        ],
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-management-fees"
+        ],
+        "missingFacts": [
+          "Facts relevant to the company income or claim, including the relevant tax year and supporting transaction details."
+        ]
+      },
+      "evidence": {
+        "status": "LIMITED",
+        "eligibleRecordIds": [
+          "ITA_SEC45_WITHHOLDING_TAX",
+          "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES"
+        ],
+        "uncoveredTopicIds": [
+          "iras-authority-query-a-singapore-company-pays-a-consultant-who-is-a-t"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    },
+    {
+      "id": "ambiguous-income-owner",
+      "question": "We received money from overseas. Is it taxable in Singapore?",
+      "interpretationSource": "INDEPENDENT_LABEL_ORACLE",
+      "modelUnderstandingMeasured": false,
+      "understanding": {
+        "mode": "SEMANTIC_PLUS_RULES",
+        "population": "UNKNOWN",
+        "primarySubject": "Singapore income tax on foreign receipt",
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "concepts": [
+          "foreign income"
+        ]
+      },
+      "requiresUserSpecificFacts": true,
+      "calculationRequested": false,
+      "dimensions": {
+        "semanticInterpretation": "NOT_MEASURED_ORACLE_INPUT",
+        "authority": true,
+        "population": "NOT_MEASURED_ORACLE_INPUT",
+        "concepts": "NOT_MEASURED_ORACLE_INPUT",
+        "requestedOperation": "NOT_MEASURED_ORACLE_INPUT",
+        "missingFactAppropriateness": true,
+        "retrievalRouting": true,
+        "domain": true,
+        "finalEvidenceCoverage": "INSUFFICIENT"
+      },
+      "baseline": {
+        "authority": true,
+        "retrievalRouting": false,
+        "missingFacts": []
+      },
+      "classification": {
+        "authorities": [
+          "IRAS"
+        ],
+        "domains": [],
+        "topicIds": [],
+        "missingFacts": [
+          "Facts needed to identify the taxpayer or recipient, relevant period, and transaction or income type."
+        ]
+      },
+      "evidence": {
+        "status": "INSUFFICIENT",
+        "eligibleRecordIds": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-we-received-money-from-overseas-is-it-taxable-in"
+        ],
+        "discoveryPath": "NO_VERIFIED_MAP"
+      }
+    }
+  ]
+}
