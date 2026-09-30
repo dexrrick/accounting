@@ -10,6 +10,8 @@ const testSuites = [
   { name: 'AI Semantic Extraction & Schema Validation Gate', file: 'test_ai_semantic_extraction.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Question Understanding & Guarded Routing', file: 'test_semantic_question_understanding.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Per-Issue Semantic Operation Contracts', file: 'test_semantic_operations.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Versioned Semantic Question Wire Contract', file: 'test_semantic_wire_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Semantic Contract Follow-Up Runner', file: 'test_semantic_contract_followup_runner.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Material Issue Decomposition & Authority Ownership', file: 'test_material_issue_decomposition.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Authority Workstream Evidence Isolation & Coverage', file: 'test_authority_workstreams.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Multi-authority Issue Scoring', file: 'test_multi_authority_issue_scoring.mjs', layer: 'input-understanding', tier: 'smoke' },

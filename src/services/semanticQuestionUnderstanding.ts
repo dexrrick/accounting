@@ -7,6 +7,7 @@ import { executeStructuredLlmCall } from './aiTransport';
 
 export const SEMANTIC_QUESTION_MIN_CONFIDENCE = 0.72;
 export const SEMANTIC_QUESTION_TIMEOUT_MS = 8_000;
+export const SEMANTIC_QUESTION_SCHEMA_VERSION = 2 as const;
 
 export type QuestionUnderstandingMode = 'SEMANTIC_INTERPRETATION' | 'SEMANTIC_PLUS_RULES' | 'DETERMINISTIC_FALLBACK';
 export type SemanticPopulation = 'INDIVIDUAL' | 'EMPLOYEE' | 'EMPLOYER' | 'COMPANY' | 'SHAREHOLDER' | 'FUND' | 'PROPERTY_OWNER' | 'UNKNOWN';
@@ -49,6 +50,12 @@ export interface SemanticQuestionInterpretation {
   /** Optional for compatibility with existing single-issue providers and fixtures. */
   issues?: SemanticQuestionIssue[];
 }
+
+/** Versioned provider wire contract. The calculation flag is derived after validation. */
+export type SemanticQuestionInterpretationV2 = Omit<SemanticQuestionInterpretation, 'calculationRequested' | 'issues'> & {
+  schemaVersion: typeof SEMANTIC_QUESTION_SCHEMA_VERSION;
+  issues: SemanticQuestionIssue[];
+};
 
 export interface SemanticQuestionUnderstanding {
   mode: QuestionUnderstandingMode;
@@ -146,10 +153,14 @@ function domainAuthorityIsPossible(value: Pick<SemanticQuestionInterpretation, '
 
 function hasSemanticContractContradiction(value: unknown): boolean {
   if (!isRecord(value)) return false;
-  if (typeof value.requestedOperation === 'string' && OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) &&
+  const isVersion2 = value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION;
+  const calculated = isVersion2
+    ? value.requestedOperation === 'CALCULATE'
+    : value.calculationRequested;
+  if (!isVersion2 && typeof value.requestedOperation === 'string' && OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) &&
       typeof value.calculationRequested === 'boolean' &&
       value.calculationRequested !== (value.requestedOperation === 'CALCULATE')) return true;
-  if (value.calculationRequested === true && value.requiresUserSpecificFacts === false) return true;
+  if (calculated === true && value.requiresUserSpecificFacts === false) return true;
   if (value.requestedOperation === 'PREPARE_JOURNAL' && typeof value.domain === 'string' &&
       DOMAINS.has(value.domain as SemanticQuestionDomain) && value.domain !== 'ACCOUNTING') return true;
   if (Array.isArray(value.authorityCandidates) && typeof value.domain === 'string' && DOMAINS.has(value.domain as SemanticQuestionDomain) &&
@@ -175,6 +186,11 @@ function hasSemanticContractContradiction(value: unknown): boolean {
 const LEGACY_INTERPRETATION_KEYS = [
   'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject', 'concepts',
   'requestedOperation', 'requiresUserSpecificFacts', 'calculationRequested', 'factsExplicitlyProvided', 'confidence'
+] as const;
+
+const V2_INTERPRETATION_KEYS = [
+  'schemaVersion', 'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject',
+  'concepts', 'requestedOperation', 'requiresUserSpecificFacts', 'factsExplicitlyProvided', 'confidence', 'issues'
 ] as const;
 
 function topicDomainsForIssue(domain: SemanticQuestionDomain, population: SemanticPopulation): SingaporeKnowledgeDomain[] {
@@ -294,8 +310,12 @@ function issueDomainAuthoritiesArePossible(domain: SemanticQuestionDomain, autho
 
 /** Strictly validates provider output; unknown keys and contradictory flags are rejected. */
 export function validateSemanticQuestionInterpretation(value: unknown): SemanticQuestionInterpretation | undefined {
-  if (!isRecord(value) || !(hasExactKeys(value, LEGACY_INTERPRETATION_KEYS) ||
-      hasExactKeys(value, [...LEGACY_INTERPRETATION_KEYS, 'issues'])) ||
+  if (!isRecord(value)) return undefined;
+  const isVersion2 = Object.hasOwn(value, 'schemaVersion');
+  const exactSchema = isVersion2
+    ? value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION && hasExactKeys(value, V2_INTERPRETATION_KEYS)
+    : hasExactKeys(value, LEGACY_INTERPRETATION_KEYS) || hasExactKeys(value, [...LEGACY_INTERPRETATION_KEYS, 'issues']);
+  if (!exactSchema || (isVersion2 && (!Array.isArray(value.issues) || value.issues.length === 0)) ||
       Object.hasOwn(value, 'issues') && (!Array.isArray(value.issues) || value.issues.length > 12)) return undefined;
   if (!validLabelList(value.jurisdiction, 6) || !validAuthorities(value.authorityCandidates) ||
       !validAuthorities(value.contextualAuthorities) || typeof value.domain !== 'string' || !DOMAINS.has(value.domain as SemanticQuestionDomain) ||
@@ -303,7 +323,7 @@ export function validateSemanticQuestionInterpretation(value: unknown): Semantic
       typeof value.primarySubject !== 'string' || !isSafeSemanticLabel(value.primarySubject) ||
       !Array.isArray(value.concepts) || value.concepts.length > 12 ||
       !OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) ||
-      typeof value.requiresUserSpecificFacts !== 'boolean' || typeof value.calculationRequested !== 'boolean' ||
+      typeof value.requiresUserSpecificFacts !== 'boolean' || !isVersion2 && typeof value.calculationRequested !== 'boolean' ||
       !validLabelList(value.factsExplicitlyProvided, 12) || typeof value.confidence !== 'number' ||
       !Number.isFinite(value.confidence) || value.confidence < 0 || value.confidence > 1) return undefined;
 
@@ -325,7 +345,9 @@ export function validateSemanticQuestionInterpretation(value: unknown): Semantic
     concepts,
     requestedOperation: value.requestedOperation as SemanticQuestionOperation,
     requiresUserSpecificFacts: value.requiresUserSpecificFacts,
-    calculationRequested: value.calculationRequested,
+    calculationRequested: isVersion2
+      ? value.requestedOperation === 'CALCULATE'
+      : value.calculationRequested as boolean,
     factsExplicitlyProvided: value.factsExplicitlyProvided.map(item => item.trim()),
     confidence: value.confidence,
     ...(Object.hasOwn(value, 'issues') ? { issues: (value.issues as unknown[]).map(validateSemanticQuestionIssue) as SemanticQuestionIssue[] } : {})
@@ -350,25 +372,27 @@ function hasConfiguredProvider(provider?: ProviderSettings | string): boolean {
 
 const SYSTEM_INSTRUCTION = 'Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.';
 
-const RESPONSE_SCHEMA = `Return the 12 legacy keys and include an issues array for every requested material outcome, including exactly one issue for a simple single-outcome question. The validator continues accepting legacy payloads without issues for older-provider compatibility; do not omit issues from a new interpretation. Do not provide issue IDs; they are assigned deterministically. Each issue has exactly: subject, population, domain, governingAuthorities, contextualAuthorities, operation, mappedTopicIds, evidenceRequirement, confidence. mappedTopicIds are optional candidate hints; the application derives candidates from the issue subject and only maps them when the same topic is independently recognized in the original question and matches domain, population, and authority. Leave mappedTopicIds empty when unsure and keep the issue present when no exact topic applies. An issue's population is the party whose own status or treatment is at issue; use UNKNOWN when not established. evidenceRequirement is AUTHORITATIVE_SOURCE|CASE_FACTS|AUTHORITATIVE_SOURCE_AND_CASE_FACTS|UNRESOLVED; the application derives the final requirement from the issue domain and operation. For EXPLAIN_INTERACTION, case facts are needed only for case-specific issues; otherwise use UNRESOLVED when unsure. Issues describe questions to resolve, never conclusions.
+const RESPONSE_SCHEMA = `Return a V2 JSON object with exactly these top-level keys: schemaVersion, jurisdiction, authorityCandidates, contextualAuthorities, domain, population, primarySubject, concepts, requestedOperation, requiresUserSpecificFacts, factsExplicitlyProvided, confidence, issues. Set schemaVersion=2. The application derives the calculation flag from requestedOperation; it is not included in this wire response. Include 1–12 issues, one for every requested material outcome, including exactly one for a simple single-outcome question. Do not provide issue IDs; they are assigned deterministically. The validator continues accepting legacy payloads without issues for older-provider compatibility, but do not omit issues from a V2 interpretation. Each issue has exactly: subject, population, domain, governingAuthorities, contextualAuthorities, operation, mappedTopicIds, evidenceRequirement, confidence. Each concept has exactly {"concept":"...","role":"PRIMARY|RELATED|CONTEXT_ONLY"}; labels must be safe and nonempty, for example {"concept":"expense recognition","role":"PRIMARY"}. Confidence is a number from 0 through 1.
 
-For compound questions, decompose every distinct material outcome the user asks about into its own issue. An issue represents a requested answer or decision, not every noun, fact, or authority mentioned. Do not omit an issue because another authority or topic is more prominent. When the question asks separately about obligations or treatment for different parties, represent those as separate issues when their outcomes can differ; do not merge them just because they share a governing authority or domain. Multiple issues may have the same governing authority but different domains, populations, or operations. Assign exactly one governing authority to each issue. Put an authority in contextualAuthorities only when it is relevant context for that issue but does not govern it; merely mentioning an authority must not create an issue or workstream. Use UNKNOWN rather than inventing unsupported certainty. If a compound question has no single accurate top-level domain or population, set the legacy top-level domain and population to UNKNOWN and put the precise values on issues[]. Use authorityCandidates=[UNKNOWN] when no single top-level authority set applies; never mix UNKNOWN with other top-level authority values.
+mappedTopicIds are optional candidate hints; the application derives candidates from the issue subject and only maps them when the same topic is independently recognized in the original question and matches domain, population, and authority. Leave mappedTopicIds empty when unsure and keep the issue present when no exact topic applies. An issue's population is the party whose own status or treatment is at issue; use UNKNOWN when not established. evidenceRequirement is AUTHORITATIVE_SOURCE|CASE_FACTS|AUTHORITATIVE_SOURCE_AND_CASE_FACTS|UNRESOLVED; the application derives the final requirement from the issue domain and operation. For EXPLAIN_INTERACTION, case facts are needed only for case-specific issues; otherwise use UNRESOLVED when unsure. Issues describe questions to resolve, never conclusions.
+
+For compound questions, decompose every distinct material outcome the user asks about into its own issue. An issue represents a requested answer or decision, not every noun, fact, or authority mentioned. Do not omit an issue because another authority or topic is more prominent. When the question asks separately about obligations or treatment for different parties, represent those as separate issues when their outcomes can differ; do not merge them just because they share a governing authority or domain. Multiple issues may have the same governing authority but different domains, populations, or operations. Assign exactly one governing authority to each issue. Put an authority in contextualAuthorities only when it is relevant context for that issue but does not govern it; merely mentioning an authority must not create an issue or workstream. Use UNKNOWN rather than inventing unsupported certainty. If a compound question has no single accurate top-level domain or population, set the top-level domain and population to UNKNOWN and put the precise values on issues[]. Use authorityCandidates=[UNKNOWN] when no single top-level authority set applies; never mix UNKNOWN with other top-level authority values.
 
 Separate requested outcomes from background facts and context. Mentioning that an expense was recorded under IFRS/SFRS(I), or that an accounting standard was applied, is context when the user asks only about tax deductibility; create an accounting issue only when the user asks how to recognize, present, measure, disclose, or journalize it. Distinguish a company acting as employer from the company as corporate taxpayer: employer reporting obligations are not the same outcome as company tax deductibility. A company/COMPANY population applies only when the company's own tax position is requested.
 
 Classify each issue by the subject of the requested outcome. An employee's personal relief claim or salary/employment-income tax is individual income tax (IRAS); an employee benefit/perquisite tax question is employment-benefit tax (IRAS). EMPLOYEE alone does not imply a taxable benefit. Employer reporting is a separate issue only when the employer's reporting duty is requested; if the reporter is not established, use population=UNKNOWN rather than assuming the employee or company is the reporter. A company acting as employer for employment reporting has population=EMPLOYER; COMPANY is reserved for the company's own tax position. An employee's own CPF contribution amount and an employer's CPF contribution amount are separate payroll issues when both are requested.
 
-Choose each issue's operation from the requested result: EXPLAIN_RULE for a general rule; EXPLAIN_INTERACTION only for an expressly requested relationship (multiple issues alone are not interaction); DETERMINE_TREATMENT for applying a rule to a case, including an "explain whether" question; CHECK_ELIGIBILITY for whether a claimant qualifies; CALCULATE only for a requested numeric result, not an illustrative amount; PREPARE_JOURNAL for requested entries; COMPARE for requested alternatives; FILING_REQUIREMENT for filing, reporting, withholding, or notification duties; otherwise OTHER. requiresUserSpecificFacts is true when the result depends on a particular case, even when its facts are supplied, and false for conceptual guidance.
+Choose each issue's operation from the requested result: EXPLAIN_RULE for a general rule or conditions; EXPLAIN_INTERACTION only for an expressly requested relationship between rules (multiple issues alone are not interaction); DETERMINE_TREATMENT for applying a rule to a described case, including an "explain whether" or "what tax applies" question or the taxability/type of liability, even when the party is not named (use population=UNKNOWN if not established); CHECK_ELIGIBILITY for whether a claimant qualifies, distinct from explaining general eligibility rules; CALCULATE for a requested numeric result, including an implied amount payable or contribution due, but not an illustrative amount. An amount mentioned alone does not make the request a calculation; PREPARE_JOURNAL for requested entries; COMPARE for requested alternatives; FILING_REQUIREMENT for filing, reporting, withholding, or notification duties; otherwise OTHER. requiresUserSpecificFacts is true when the result depends on a particular case, even when its facts are supplied, and false for conceptual guidance.
 
-Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. calculationRequested is true exactly when that top-level operation is CALCULATE; it does not summarize issue operations. For mixed journal and non-accounting outcomes, use top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. Record only user-supplied case facts in factsExplicitlyProvided.
+Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. For mixed journal and non-accounting outcomes, use top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. Record only user-supplied case facts in factsExplicitlyProvided.
 
-Enums: domain=ACCOUNTING|IRAS_INCOME_TAX|IRAS_GST|IRAS_PROPERTY_TAX|IRAS_STAMP_DUTY|IRAS_OTHER|CPF_PAYROLL|MOM_EMPLOYMENT|ACRA_CORPORATE|MAS_FUNDS|UNKNOWN; population=INDIVIDUAL|EMPLOYEE|EMPLOYER|COMPANY|SHAREHOLDER|FUND|PROPERTY_OWNER|UNKNOWN; authority values=IRAS|CPF|ACRA|MOM|MAS|ACCOUNTING_STANDARDS|IFRS_FOUNDATION|SSO|UNKNOWN; operation=EXPLAIN_RULE|EXPLAIN_INTERACTION|DETERMINE_TREATMENT|CHECK_ELIGIBILITY|CALCULATE|PREPARE_JOURNAL|COMPARE|FILING_REQUIREMENT|OTHER; concept role=PRIMARY|RELATED|CONTEXT_ONLY. confidence must be a number from 0 through 1. calculationRequested must be true exactly when operation=CALCULATE; CALCULATE requires requiresUserSpecificFacts=true. PREPARE_JOURNAL requires ACCOUNTING.
+Enums: domain=ACCOUNTING|IRAS_INCOME_TAX|IRAS_GST|IRAS_PROPERTY_TAX|IRAS_STAMP_DUTY|IRAS_OTHER|CPF_PAYROLL|MOM_EMPLOYMENT|ACRA_CORPORATE|MAS_FUNDS|UNKNOWN; population=INDIVIDUAL|EMPLOYEE|EMPLOYER|COMPANY|SHAREHOLDER|FUND|PROPERTY_OWNER|UNKNOWN; authority values=IRAS|CPF|ACRA|MOM|MAS|ACCOUNTING_STANDARDS|IFRS_FOUNDATION|SSO|UNKNOWN; operation=EXPLAIN_RULE|EXPLAIN_INTERACTION|DETERMINE_TREATMENT|CHECK_ELIGIBILITY|CALCULATE|PREPARE_JOURNAL|COMPARE|FILING_REQUIREMENT|OTHER; concept role=PRIMARY|RELATED|CONTEXT_ONLY. CALCULATE requires requiresUserSpecificFacts=true. PREPARE_JOURNAL requires ACCOUNTING.
 
 Conceptual rules may mention parties, claims, conditions, or illustrative amounts without deciding an identified case. The case-specific flag does not mean facts are missing; omit hypothetical examples and general conditions from factsExplicitlyProvided.
 
 Identify the taxpayer or regulated party whose own status is at issue, not an employer, employee, relative, customer, or other contextual person. A bare first-person plural or a statement that overseas money was received does not identify whether the recipient is an individual, employer, company, or fund; use population=UNKNOWN unless the question establishes it. Use EMPLOYEE only for the employee's own position, EMPLOYER only for the employer's own obligations, and COMPANY only when the company itself is the taxpayer or claimant. A shareholder is not automatically the company. Do not turn a contextual authority mention into a governing authority. The governing authority must match the domain; contextualAuthorities are merely mentioned.
 
-Mixed journal-and-tax example: {"jurisdiction":["Singapore"],"authorityCandidates":["UNKNOWN"],"contextualAuthorities":[],"domain":"UNKNOWN","population":"UNKNOWN","primarySubject":"expense journal and tax deductibility","concepts":[],"requestedOperation":"OTHER","requiresUserSpecificFacts":true,"calculationRequested":false,"factsExplicitlyProvided":[],"confidence":0.9,"issues":[{"subject":"expense journal","population":"COMPANY","domain":"ACCOUNTING","governingAuthorities":["ACCOUNTING_STANDARDS"],"contextualAuthorities":[],"operation":"PREPARE_JOURNAL","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9},{"subject":"company expense deductibility","population":"COMPANY","domain":"IRAS_INCOME_TAX","governingAuthorities":["IRAS"],"contextualAuthorities":["ACCOUNTING_STANDARDS"],"operation":"CHECK_ELIGIBILITY","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9}]}`;
+Full V2 mixed journal-and-tax example: {"schemaVersion":2,"jurisdiction":["Singapore"],"authorityCandidates":["UNKNOWN"],"contextualAuthorities":[],"domain":"UNKNOWN","population":"UNKNOWN","primarySubject":"expense journal and tax deductibility","concepts":[{"concept":"expense accounting","role":"RELATED"},{"concept":"income-tax deductibility","role":"PRIMARY"}],"requestedOperation":"OTHER","requiresUserSpecificFacts":true,"factsExplicitlyProvided":[],"confidence":0.9,"issues":[{"subject":"expense journal","population":"COMPANY","domain":"ACCOUNTING","governingAuthorities":["ACCOUNTING_STANDARDS"],"contextualAuthorities":[],"operation":"PREPARE_JOURNAL","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9},{"subject":"company expense deductibility","population":"COMPANY","domain":"IRAS_INCOME_TAX","governingAuthorities":["IRAS"],"contextualAuthorities":["ACCOUNTING_STANDARDS"],"operation":"CHECK_ELIGIBILITY","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9}]}`;
 
 /** Calls only the configured provider with the current question; no evidence or conversation history is supplied. */
 export async function interpretSemanticQuestion(

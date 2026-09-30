@@ -151,13 +151,19 @@ for (const [caseId, operation, requiresFacts, expectedEvidence] of controls) {
 assert.match(capturedPrompt, /EXPLAIN_RULE for a general rule/i);
 assert.match(capturedPrompt, /EXPLAIN_INTERACTION only for an expressly requested relationship/i);
 assert.match(capturedPrompt, /multiple issues alone are not interaction/i);
-assert.match(capturedPrompt, /"explain whether" question/i);
-assert.match(capturedPrompt, /illustrative amount/i);
+assert.match(capturedPrompt, /DETERMINE_TREATMENT for applying a rule to a described case.*?party is not named/i);
+assert.match(capturedPrompt, /CHECK_ELIGIBILITY for whether a claimant qualifies, distinct from explaining general eligibility rules/i);
+assert.match(capturedPrompt, /CALCULATE for a requested numeric result, including an implied amount payable or contribution due, but not an illustrative amount/i);
+assert.match(capturedPrompt, /"what tax applies" question.*?taxability\/type/i);
+assert.match(capturedPrompt, /An amount mentioned alone does not make the request a calculation/i);
 assert.match(capturedPrompt, /PREPARE_JOURNAL for requested entries/i);
 assert.match(capturedPrompt, /COMPARE for requested alternatives/i);
 assert.match(capturedPrompt, /FILING_REQUIREMENT for filing/i);
-assert.match(capturedPrompt, /calculationRequested is true exactly when that top-level operation is CALCULATE/i);
-assert.match(capturedPrompt, /"requestedOperation":"OTHER".*?"issues":\[\{"subject":"expense journal/s);
+assert.match(capturedPrompt, /Each concept has exactly \{"concept":"\.\.\.","role":"PRIMARY\|RELATED\|CONTEXT_ONLY"\}/);
+assert.match(capturedPrompt, /\{"concept":"expense recognition","role":"PRIMARY"\}/);
+assert.match(capturedPrompt, /exactly these top-level keys: schemaVersion, jurisdiction, authorityCandidates, contextualAuthorities, domain, population, primarySubject, concepts, requestedOperation, requiresUserSpecificFacts, factsExplicitlyProvided, confidence, issues/i);
+assert.match(capturedPrompt, /Full V2 mixed journal-and-tax example: \{"schemaVersion":2.*?"issues":\[\{"subject":"expense journal"/s);
+assert.equal(capturedPrompt.includes('calculationRequested'), false, 'the V2 prompt leaves the calculation flag to the application');
 assert.ok(capturedPrompt.length < 9_000, `Operation guidance remains compact (${capturedPrompt.length} characters).`);
 
 const schemaMismatch = { ...mixedPayload, unexpectedSensitiveField: 'RAW_SCHEMA_SENTINEL' };

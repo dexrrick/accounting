@@ -11,7 +11,10 @@ import {
   runSemanticContractDiagnosis,
   safeRunnerErrorMessage
 } from '../evaluation/singapore/semantic-contract-diagnostics.mjs';
-import { validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
+import {
+  SEMANTIC_QUESTION_SCHEMA_VERSION,
+  validateSemanticQuestionInterpretation
+} from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const base = {
   jurisdiction: ['Singapore'],
@@ -43,6 +46,37 @@ assert.equal(accepted.validatorAccepted, true);
 assert.equal(accepted.interpreted, true);
 assert.equal(accepted.rejectionCode, 'NONE');
 assert.deepEqual(accepted.safeShape.fields.authorityCandidates.values, ['ACCOUNTING_STANDARDS']);
+
+const { calculationRequested: _legacyCalculationFlag, ...legacyWithoutCalculationFlag } = base;
+const versionedBase = {
+  schemaVersion: SEMANTIC_QUESTION_SCHEMA_VERSION,
+  ...legacyWithoutCalculationFlag,
+  issues: [{
+    subject: 'general recognition', population: 'UNKNOWN', domain: 'ACCOUNTING',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.92
+  }]
+};
+const acceptedV2 = diagnoseSemanticContract(versionedBase);
+assert.equal(acceptedV2.validatorAccepted, true);
+assert.equal(acceptedV2.safeShape.fields.schemaVersion.valid, true);
+assert.equal(acceptedV2.safeShape.fields.calculationRequested, 'DERIVED');
+assert.equal(acceptedV2.safeShape.missingKeyCount, 0);
+
+const { issues: _v2Issues, ...missingV2Issues } = versionedBase;
+const missingV2IssuesDiagnostic = diagnoseSemanticContract(missingV2Issues);
+assert.equal(missingV2IssuesDiagnostic.rejectionCode, 'MISSING_KEY');
+assert.equal(missingV2IssuesDiagnostic.rejectionPath, 'issues');
+assert.equal(diagnoseSemanticContract({ ...versionedBase, issues: [] }).rejectionCode, 'EMPTY_ISSUES');
+const v2CalculationContradiction = {
+  ...versionedBase,
+  requestedOperation: 'CALCULATE',
+  requiresUserSpecificFacts: false,
+  issues: [{ ...versionedBase.issues[0], operation: 'CALCULATE' }]
+};
+const v2ContradictionDiagnostic = diagnoseSemanticContract(v2CalculationContradiction);
+assert.equal(v2ContradictionDiagnostic.rejectionCode, 'CASE_FLAG_CONTRADICTION');
+assert.equal(v2ContradictionDiagnostic.rejectionPath, 'requiresUserSpecificFacts');
 
 const privateSentinel = 'SECRET_CASE_SENTINEL SGD 91,234.55 AIzaABCDEFGHIJKLMNOPQRSTUV';
 const unexpectedKey = verifyRejected({

@@ -1,5 +1,6 @@
 import {
   SEMANTIC_QUESTION_MIN_CONFIDENCE,
+  SEMANTIC_QUESTION_SCHEMA_VERSION,
   validateSemanticQuestionInterpretation
 } from '../../../src/services/semanticQuestionUnderstanding.ts';
 
@@ -20,7 +21,10 @@ const LEGACY_KEYS = [
   'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject', 'concepts',
   'requestedOperation', 'requiresUserSpecificFacts', 'calculationRequested', 'factsExplicitlyProvided', 'confidence'
 ];
-const ROOT_KEYS = new Set([...LEGACY_KEYS, 'issues']);
+const V2_KEYS = [
+  'schemaVersion', 'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject',
+  'concepts', 'requestedOperation', 'requiresUserSpecificFacts', 'factsExplicitlyProvided', 'confidence', 'issues'
+];
 const ISSUE_KEYS = [
   'subject', 'population', 'domain', 'governingAuthorities', 'contextualAuthorities', 'operation',
   'mappedTopicIds', 'evidenceRequirement', 'confidence'
@@ -42,6 +46,14 @@ function valueType(value) {
   if (typeof value === 'number') return 'NUMBER';
   if (typeof value === 'boolean') return 'BOOLEAN';
   return 'OTHER';
+}
+
+function expectedTopLevelKeys(value) {
+  return isRecord(value) && Object.hasOwn(value, 'schemaVersion') ? V2_KEYS : LEGACY_KEYS;
+}
+
+function isVersioned(value) {
+  return isRecord(value) && Object.hasOwn(value, 'schemaVersion');
 }
 
 function safeEnum(value, allowed) {
@@ -114,12 +126,17 @@ function shapeIssue(value) {
 function makeSafeShape(value) {
   if (!isRecord(value)) return { rootType: valueType(value) };
   const keys = Object.keys(value);
+  const requiredKeys = expectedTopLevelKeys(value);
+  const allowedKeys = new Set(isVersioned(value) ? V2_KEYS : [...LEGACY_KEYS, 'issues']);
   return {
     rootType: 'OBJECT',
     keyCount: safeCount(keys.length),
-    extraKeyCount: safeCount(keys.filter(key => !ROOT_KEYS.has(key)).length),
-    missingKeyCount: safeCount(LEGACY_KEYS.filter(key => !Object.hasOwn(value, key)).length),
+    extraKeyCount: safeCount(keys.filter(key => !allowedKeys.has(key)).length),
+    missingKeyCount: safeCount(requiredKeys.filter(key => !Object.hasOwn(value, key)).length),
     fields: {
+      schemaVersion: isVersioned(value)
+        ? { present: true, type: valueType(value.schemaVersion), valid: value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION }
+        : { present: false, type: 'MISSING', valid: false },
       jurisdiction: shapeStringList(value.jurisdiction, 6),
       authorityCandidates: shapeAuthorities(value.authorityCandidates),
       contextualAuthorities: shapeAuthorities(value.contextualAuthorities),
@@ -141,7 +158,9 @@ function makeSafeShape(value) {
       },
       requestedOperation: safeEnum(value.requestedOperation, ENUMS.operation),
       requiresUserSpecificFacts: typeof value.requiresUserSpecificFacts === 'boolean' ? value.requiresUserSpecificFacts : 'INVALID',
-      calculationRequested: typeof value.calculationRequested === 'boolean' ? value.calculationRequested : 'INVALID',
+      calculationRequested: isVersioned(value)
+        ? 'DERIVED'
+        : typeof value.calculationRequested === 'boolean' ? value.calculationRequested : 'INVALID',
       factsExplicitlyProvided: shapeStringList(value.factsExplicitlyProvided, 12),
       confidence: confidenceShape(value.confidence),
       issues: {
@@ -251,9 +270,12 @@ function diagnoseObject(value) {
     return violations;
   }
 
-  diagnoseExactKeys(value, LEGACY_KEYS, ['issues'], '', add);
+  const versioned = isVersioned(value);
+  if (versioned && value.schemaVersion !== SEMANTIC_QUESTION_SCHEMA_VERSION) add('INVALID_SCHEMA_VERSION', 'schemaVersion');
+  diagnoseExactKeys(value, versioned ? V2_KEYS : LEGACY_KEYS, versioned ? [] : ['issues'], '', add);
   if (Object.hasOwn(value, 'issues')) {
     if (!Array.isArray(value.issues)) add('ISSUE_STRUCTURE', 'issues');
+    else if (versioned && value.issues.length === 0) add('EMPTY_ISSUES', 'issues');
     else if (value.issues.length > 12) add('ISSUE_COUNT_LIMIT', 'issues');
   }
 
@@ -268,7 +290,7 @@ function diagnoseObject(value) {
   else if (value.concepts.length > 12) add('COUNT_LIMIT', 'concepts');
   diagnoseEnum(value.requestedOperation, ENUMS.operation, 'requestedOperation', add, 'INVALID_OPERATION');
   if (typeof value.requiresUserSpecificFacts !== 'boolean') add('WRONG_TYPE', 'requiresUserSpecificFacts');
-  if (typeof value.calculationRequested !== 'boolean') add('WRONG_TYPE', 'calculationRequested');
+  if (!versioned && typeof value.calculationRequested !== 'boolean') add('WRONG_TYPE', 'calculationRequested');
   diagnoseLabelList(value.factsExplicitlyProvided, 12, 'factsExplicitlyProvided', add);
   if (typeof value.confidence !== 'number' || !Number.isFinite(value.confidence)) add('INVALID_CONFIDENCE', 'confidence');
   else if (value.confidence < 0 || value.confidence > 1) add('CONFIDENCE_OUT_OF_RANGE', 'confidence');
@@ -296,11 +318,17 @@ function diagnoseObject(value) {
   if (ENUMS.domain.has(value.domain) && topAuthoritiesUsable && !domainAuthorityPossible(value.domain, value.authorityCandidates)) {
     add('DOMAIN_AUTHORITY_MISMATCH', 'authorityCandidates');
   }
-  if (typeof value.requestedOperation === 'string' && ENUMS.operation.has(value.requestedOperation) &&
-      typeof value.calculationRequested === 'boolean' && value.calculationRequested !== (value.requestedOperation === 'CALCULATE')) {
-    add('CALCULATION_FLAG_MISMATCH', 'calculationRequested');
+  if (versioned) {
+    if (value.requestedOperation === 'CALCULATE' && value.requiresUserSpecificFacts === false) {
+      add('CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+    }
+  } else {
+    if (typeof value.requestedOperation === 'string' && ENUMS.operation.has(value.requestedOperation) &&
+        typeof value.calculationRequested === 'boolean' && value.calculationRequested !== (value.requestedOperation === 'CALCULATE')) {
+      add('CALCULATION_FLAG_MISMATCH', 'calculationRequested');
+    }
+    if (value.calculationRequested === true && value.requiresUserSpecificFacts === false) add('CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
   }
-  if (value.calculationRequested === true && value.requiresUserSpecificFacts === false) add('CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
   if (value.requestedOperation === 'PREPARE_JOURNAL' && ENUMS.domain.has(value.domain) && value.domain !== 'ACCOUNTING') {
     add('JOURNAL_DOMAIN_MISMATCH', 'domain');
   }

@@ -47,8 +47,8 @@ await interpretSemanticQuestion('What is the individual tax treatment?', 'test-s
   capturedSemanticPrompt = prompt;
   return JSON.stringify(flatInterpretation());
 });
-assert.match(capturedSemanticPrompt, /include an issues array for every requested material outcome, including exactly one issue for a simple single-outcome question/i,
-  'The production prompt asks for one issue on a simple question while the validator remains backward compatible.');
+assert.match(capturedSemanticPrompt, /Include 1–12 issues, one for every requested material outcome, including exactly one for a simple single-outcome question/i,
+  'The V2 production prompt requires a nonempty issue list and one issue on a simple question while legacy validation remains backward compatible.');
 
 // Oracle contract fixtures: these exercise the structured issue-plan contract,
 // not live-model accuracy or completeness.
