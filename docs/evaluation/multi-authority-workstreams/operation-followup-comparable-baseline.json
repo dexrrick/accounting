@@ -1,0 +1,182 @@
+{
+  "SourceReport": "corrected-live-semantic-evaluation.json",
+  "Selection": "First valid historical response for each of the seven preselected corrected cases. Different prompts/time; not a causal paired trial. New controls excluded.",
+  "Calls": [
+    {
+      "CaseId": "A-original",
+      "HistoricalRun": "originalABCD-1",
+      "IssueRecall": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "IssuePrecision": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "OperationAccuracy": {
+        "correct": 1,
+        "total": 3,
+        "rate": 0.3333333333333333
+      },
+      "CompleteIssues": true,
+      "WorkstreamsCorrect": true,
+      "SelectedOperations": [
+        "EXPLAIN_RULE",
+        "EXPLAIN_RULE",
+        "EXPLAIN_INTERACTION"
+      ]
+    },
+    {
+      "CaseId": "A-paraphrase-2",
+      "HistoricalRun": "expanded-1",
+      "IssueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "IssuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "OperationAccuracy": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "CompleteIssues": true,
+      "WorkstreamsCorrect": true,
+      "SelectedOperations": [
+        "EXPLAIN_RULE",
+        "EXPLAIN_RULE"
+      ]
+    },
+    {
+      "CaseId": "C-original",
+      "HistoricalRun": "originalABCD-1",
+      "IssueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "IssuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "OperationAccuracy": {
+        "correct": 0,
+        "total": 2,
+        "rate": 0
+      },
+      "CompleteIssues": true,
+      "WorkstreamsCorrect": true,
+      "SelectedOperations": [
+        "EXPLAIN_RULE",
+        "EXPLAIN_RULE"
+      ]
+    },
+    {
+      "CaseId": "C-paraphrase-3",
+      "HistoricalRun": "expanded-1",
+      "IssueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "IssuePrecision": {
+        "correct": 2,
+        "total": 3,
+        "rate": 0.6666666666666666
+      },
+      "OperationAccuracy": {
+        "correct": 0,
+        "total": 2,
+        "rate": 0
+      },
+      "CompleteIssues": false,
+      "WorkstreamsCorrect": true,
+      "SelectedOperations": [
+        "EXPLAIN_RULE",
+        "EXPLAIN_RULE",
+        "EXPLAIN_INTERACTION"
+      ]
+    },
+    {
+      "CaseId": "C-paraphrase-4",
+      "HistoricalRun": "expanded-1",
+      "IssueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "IssuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "OperationAccuracy": {
+        "correct": 0,
+        "total": 2,
+        "rate": 0
+      },
+      "CompleteIssues": true,
+      "WorkstreamsCorrect": true,
+      "SelectedOperations": [
+        "EXPLAIN_RULE",
+        "EXPLAIN_RULE"
+      ]
+    },
+    {
+      "CaseId": "adversarial-C-employee-benefit",
+      "HistoricalRun": "expanded-1",
+      "IssueRecall": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "IssuePrecision": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "OperationAccuracy": {
+        "correct": 0,
+        "total": 1,
+        "rate": 0
+      },
+      "CompleteIssues": true,
+      "WorkstreamsCorrect": true,
+      "SelectedOperations": [
+        "EXPLAIN_RULE"
+      ]
+    },
+    {
+      "CaseId": "adversarial-D-workpass-and-salary-tax",
+      "HistoricalRun": "expanded-1",
+      "IssueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "IssuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "OperationAccuracy": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "CompleteIssues": true,
+      "WorkstreamsCorrect": true,
+      "SelectedOperations": [
+        "EXPLAIN_RULE",
+        "EXPLAIN_RULE"
+      ]
+    }
+  ]
+}

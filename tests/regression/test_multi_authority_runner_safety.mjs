@@ -258,6 +258,91 @@ try {
   ]) await unlink(filePath).catch(error => { if (error?.code !== 'ENOENT') throw error; });
 }
 
+const failureReasonPrefix = `failure-reason-regression-${process.pid}`;
+const failureReasonJsonPath = path.join(pendingOutputDirectory, `${failureReasonPrefix}.json`);
+const failureReasonMarkdownPath = path.join(pendingOutputDirectory, `${failureReasonPrefix}.md`);
+const failureReasonFixturePath = path.join(pendingOutputDirectory, `${failureReasonPrefix}-fixture.json`);
+const failureReasonSentinel = 'RAW_PROVIDER_DIAGNOSTIC_MUST_NOT_PERSIST';
+try {
+  const failureReasonFixture = {
+    ...correctedFixture,
+    runs: { originalABCD: 2, paraphrasesAndAdversarial: 0 },
+    cases: [correctedFixture.cases.find(item => item.id === 'A-original'), correctedFixture.cases.find(item => item.id === 'D-original')]
+  };
+  const failureReasonTime = new Date().toISOString();
+  const invalidResponseCheckpoint = (testCase, runNumber, failureReason) => ({
+    runId: `originalABCD-${runNumber}`,
+    runGroup: testCase.runGroup,
+    caseId: testCase.id,
+    model: correctedFixture.expectedModel,
+    question: testCase.question,
+    callAttempted: true,
+    requestStartedAt: failureReasonTime,
+    attempts: [],
+    pendingEvaluation: {
+      status: 'PROVIDER_RESPONSE_RECEIVED',
+      mode: 'DETERMINISTIC_FALLBACK',
+      failure: 'INVALID_RESPONSE',
+      failureReason,
+      providerStatus: 200,
+      providerCategory: 'HTTP_200',
+      interpretation: null,
+      completedAt: failureReasonTime,
+      rateLimitFailureCount: 0,
+      nextRetryAt: null,
+      attempt: {
+        attempt: 1,
+        requestStartedAt: failureReasonTime,
+        providerRequestAttempted: true,
+        outcome: 'INVALID_RESPONSE',
+        latencyMs: 1,
+        runtime: process.version,
+        providerStatus: 200,
+        providerCategory: 'HTTP_200',
+        failureReason
+      }
+    }
+  });
+  await writeFile(failureReasonFixturePath, `${JSON.stringify(failureReasonFixture, null, 2)}\n`, 'utf8');
+  await writeFile(failureReasonJsonPath, `${JSON.stringify({
+    summary: { expectedModel: correctedFixture.expectedModel, runtime: process.version, initialEvaluationRuntime: process.version },
+    calls: [
+      invalidResponseCheckpoint(failureReasonFixture.cases[0], 1, 'MALFORMED_JSON'),
+      invalidResponseCheckpoint(failureReasonFixture.cases[1], 2, failureReasonSentinel)
+    ]
+  }, null, 2)}\n`, 'utf8');
+  const failureReasonResume = invokeRunner([
+    `--fixture=${path.relative(root, failureReasonFixturePath).replaceAll('\\', '/')}`,
+    `--output-prefix=${failureReasonPrefix}`,
+    '--live',
+    '--resume',
+    '--report-only'
+  ], { GEMINI_API_KEY: 'test-only-failure-reason-key' });
+  assert.equal(failureReasonResume.status, 0,
+    `saved invalid responses should finalize locally without a provider call: ${failureReasonResume.stderr || failureReasonResume.stdout}`);
+  const failureReasonReport = JSON.parse(await readFile(failureReasonJsonPath, 'utf8'));
+  const classifiedFailure = failureReasonReport.calls.find(row => row.caseId === 'A-original');
+  const unclassifiedFailure = failureReasonReport.calls.find(row => row.caseId === 'D-original');
+  assert.equal(classifiedFailure.failureReason, 'MALFORMED_JSON');
+  assert.equal(classifiedFailure.attempts[0].failureReason, 'MALFORMED_JSON',
+    'the fixed diagnostic enum survives pending finalization on the individual attempt');
+  assert.equal(unclassifiedFailure.failureReason, undefined);
+  assert.equal(unclassifiedFailure.attempts[0].failureReason, undefined,
+    'unrecognized provider text is removed from attempt history');
+  const failureReasonMarkdown = await readFile(failureReasonMarkdownPath, 'utf8');
+  assert.match(failureReasonMarkdown, /Failure reason: MALFORMED_JSON/);
+  assert.equal(failureReasonMarkdown.includes(failureReasonSentinel), false,
+    'Markdown reports only whitelisted failure reasons');
+} finally {
+  for (const filePath of [
+    failureReasonJsonPath,
+    failureReasonMarkdownPath,
+    failureReasonFixturePath,
+    `${failureReasonJsonPath}.${process.pid}.tmp`,
+    `${failureReasonMarkdownPath}.${process.pid}.tmp`
+  ]) await unlink(filePath).catch(error => { if (error?.code !== 'ENOENT') throw error; });
+}
+
 const finalHashes = await Promise.all(originalReportPaths.map(async reportPath =>
   createHash('sha256').update(await readFile(reportPath)).digest('hex')
 ));

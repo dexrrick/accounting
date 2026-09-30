@@ -54,6 +54,7 @@ export interface SemanticQuestionUnderstanding {
   mode: QuestionUnderstandingMode;
   interpretation?: SemanticQuestionInterpretation;
   failure?: 'NO_PROVIDER' | 'INVALID_RESPONSE' | 'LOW_CONFIDENCE' | 'TIMEOUT' | 'PROVIDER_ERROR' | 'RATE_LIMITED' | 'QUERY_TOO_LONG';
+  failureReason?: 'RESPONSE_TOO_LARGE' | 'MALFORMED_JSON' | 'CONTRADICTORY_FIELDS' | 'SCHEMA_MISMATCH';
   /** Safe HTTP status extracted from the transport's sanitized error message. */
   providerStatus?: number;
 }
@@ -125,7 +126,7 @@ function validAuthorities(value: unknown): value is SemanticAuthority[] {
     new Set(value).size === value.length;
 }
 
-function domainAuthorityIsPossible(value: SemanticQuestionInterpretation): boolean {
+function domainAuthorityIsPossible(value: Pick<SemanticQuestionInterpretation, 'domain' | 'authorityCandidates'>): boolean {
   const has = (authority: SemanticAuthority) => value.authorityCandidates.includes(authority);
   switch (value.domain) {
     case 'IRAS_INCOME_TAX':
@@ -141,6 +142,34 @@ function domainAuthorityIsPossible(value: SemanticQuestionInterpretation): boole
     case 'ACCOUNTING': return has('ACCOUNTING_STANDARDS') || has('IFRS_FOUNDATION') || has('ACRA');
     case 'UNKNOWN': return true;
   }
+}
+
+function hasSemanticContractContradiction(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  if (typeof value.requestedOperation === 'string' && OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) &&
+      typeof value.calculationRequested === 'boolean' &&
+      value.calculationRequested !== (value.requestedOperation === 'CALCULATE')) return true;
+  if (value.calculationRequested === true && value.requiresUserSpecificFacts === false) return true;
+  if (value.requestedOperation === 'PREPARE_JOURNAL' && typeof value.domain === 'string' &&
+      DOMAINS.has(value.domain as SemanticQuestionDomain) && value.domain !== 'ACCOUNTING') return true;
+  if (Array.isArray(value.authorityCandidates) && typeof value.domain === 'string' && DOMAINS.has(value.domain as SemanticQuestionDomain) &&
+      value.authorityCandidates.every(authority => typeof authority === 'string' && AUTHORITIES.has(authority as SemanticAuthority)) &&
+      !domainAuthorityIsPossible({
+        domain: value.domain as SemanticQuestionDomain,
+        authorityCandidates: value.authorityCandidates as SemanticAuthority[]
+      })) return true;
+  if (Array.isArray(value.authorityCandidates) &&
+      value.authorityCandidates.every(authority => typeof authority === 'string' && AUTHORITIES.has(authority as SemanticAuthority)) &&
+      value.authorityCandidates.includes('UNKNOWN') && value.authorityCandidates.length > 1) return true;
+  if (Array.isArray(value.issues)) {
+    for (const issue of value.issues) {
+      if (!isRecord(issue) || typeof issue.domain !== 'string' || !DOMAINS.has(issue.domain as SemanticQuestionDomain) ||
+          !Array.isArray(issue.governingAuthorities) || issue.governingAuthorities.length !== 1 ||
+          !issue.governingAuthorities.every(authority => typeof authority === 'string' && AUTHORITIES.has(authority as SemanticAuthority))) continue;
+      if (!issueDomainAuthoritiesArePossible(issue.domain as SemanticQuestionDomain, issue.governingAuthorities as SemanticAuthority[])) return true;
+    }
+  }
+  return false;
 }
 
 const LEGACY_INTERPRETATION_KEYS = [
@@ -329,15 +358,17 @@ Separate requested outcomes from background facts and context. Mentioning that a
 
 Classify each issue by the subject of the requested outcome. An employee's personal relief claim or salary/employment-income tax is individual income tax (IRAS); an employee benefit/perquisite tax question is employment-benefit tax (IRAS). EMPLOYEE alone does not imply a taxable benefit. Employer reporting is a separate issue only when the employer's reporting duty is requested; if the reporter is not established, use population=UNKNOWN rather than assuming the employee or company is the reporter. A company acting as employer for employment reporting has population=EMPLOYER; COMPANY is reserved for the company's own tax position. An employee's own CPF contribution amount and an employer's CPF contribution amount are separate payroll issues when both are requested.
 
-Select operations from the requested action: calculate or state a requested amount using CALCULATE; prepare a requested journal entry using PREPARE_JOURNAL; explain general criteria with EXPLAIN_RULE; use EXPLAIN_INTERACTION only when the user asks how rules or outcomes interact. A question with multiple distinct outcomes is not automatically an interaction. For a generic cost/expense and tax claimability question without a specified case requiring eligibility determination, EXPLAIN_RULE is acceptable; use CHECK_ELIGIBILITY/DETERMINE_TREATMENT when the user asks for a specific taxpayer's case. Keep the operation specific when the user explicitly requests a journal entry or amounts.
+Choose each issue's operation from the requested result: EXPLAIN_RULE for a general rule; EXPLAIN_INTERACTION only for an expressly requested relationship (multiple issues alone are not interaction); DETERMINE_TREATMENT for applying a rule to a case, including an "explain whether" question; CHECK_ELIGIBILITY for whether a claimant qualifies; CALCULATE only for a requested numeric result, not an illustrative amount; PREPARE_JOURNAL for requested entries; COMPARE for requested alternatives; FILING_REQUIREMENT for filing, reporting, withholding, or notification duties; otherwise OTHER. requiresUserSpecificFacts is true when the result depends on a particular case, even when its facts are supplied, and false for conceptual guidance.
+
+Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. calculationRequested is true exactly when that top-level operation is CALCULATE; it does not summarize issue operations. For mixed journal and non-accounting outcomes, use top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. Record only user-supplied case facts in factsExplicitlyProvided.
 
 Enums: domain=ACCOUNTING|IRAS_INCOME_TAX|IRAS_GST|IRAS_PROPERTY_TAX|IRAS_STAMP_DUTY|IRAS_OTHER|CPF_PAYROLL|MOM_EMPLOYMENT|ACRA_CORPORATE|MAS_FUNDS|UNKNOWN; population=INDIVIDUAL|EMPLOYEE|EMPLOYER|COMPANY|SHAREHOLDER|FUND|PROPERTY_OWNER|UNKNOWN; authority values=IRAS|CPF|ACRA|MOM|MAS|ACCOUNTING_STANDARDS|IFRS_FOUNDATION|SSO|UNKNOWN; operation=EXPLAIN_RULE|EXPLAIN_INTERACTION|DETERMINE_TREATMENT|CHECK_ELIGIBILITY|CALCULATE|PREPARE_JOURNAL|COMPARE|FILING_REQUIREMENT|OTHER; concept role=PRIMARY|RELATED|CONTEXT_ONLY. confidence must be a number from 0 through 1. calculationRequested must be true exactly when operation=CALCULATE; CALCULATE requires requiresUserSpecificFacts=true. PREPARE_JOURNAL requires ACCOUNTING.
 
-Separate general explanation from resolving a particular case. requiresUserSpecificFacts means the requested result depends on facts about the person's or entity's own situation, whether or not the user already supplied those facts; it does not mean that more facts are necessarily missing. Use CHECK_ELIGIBILITY for a specific person's claim or a specific business cost/supply, and set the flag true. Use DETERMINE_TREATMENT with the flag true for a particular transaction, income receipt, or taxpayer case. Use EXPLAIN_RULE or EXPLAIN_INTERACTION with the flag false when explaining general criteria or how rules relate, independent of deciding an identified case. A general rule may mention employers, employees, relatives, business types, conditions, or illustrative amounts and still be conceptual. Put only case facts explicitly stated by the user in factsExplicitlyProvided; omit examples and general conditions.
+Conceptual rules may mention parties, claims, conditions, or illustrative amounts without deciding an identified case. The case-specific flag does not mean facts are missing; omit hypothetical examples and general conditions from factsExplicitlyProvided.
 
 Identify the taxpayer or regulated party whose own status is at issue, not an employer, employee, relative, customer, or other contextual person. A bare first-person plural or a statement that overseas money was received does not identify whether the recipient is an individual, employer, company, or fund; use population=UNKNOWN unless the question establishes it. Use EMPLOYEE only for the employee's own position, EMPLOYER only for the employer's own obligations, and COMPANY only when the company itself is the taxpayer or claimant. A shareholder is not automatically the company. Do not turn a contextual authority mention into a governing authority. The governing authority must match the domain; contextualAuthorities are merely mentioned.
 
-General illustration: asking for the rules that govern caregiver-related relief is EXPLAIN_RULE or EXPLAIN_INTERACTION, requiresUserSpecificFacts=false, even if the rule has caps and conditions. Case illustration: asking whether a named organization can claim a cost it incurred is CHECK_ELIGIBILITY, requiresUserSpecificFacts=true, even when the cost and amount are already stated. Example JSON: {"jurisdiction":["Singapore"],"authorityCandidates":["IRAS"],"contextualAuthorities":["CPF"],"domain":"IRAS_INCOME_TAX","population":"INDIVIDUAL","primarySubject":"personal income tax relief","concepts":[{"concept":"CPF relief","role":"RELATED"}],"requestedOperation":"EXPLAIN_INTERACTION","requiresUserSpecificFacts":false,"calculationRequested":false,"factsExplicitlyProvided":[],"confidence":0.91}`;
+Mixed journal-and-tax example: {"jurisdiction":["Singapore"],"authorityCandidates":["UNKNOWN"],"contextualAuthorities":[],"domain":"UNKNOWN","population":"UNKNOWN","primarySubject":"expense journal and tax deductibility","concepts":[],"requestedOperation":"OTHER","requiresUserSpecificFacts":true,"calculationRequested":false,"factsExplicitlyProvided":[],"confidence":0.9,"issues":[{"subject":"expense journal","population":"COMPANY","domain":"ACCOUNTING","governingAuthorities":["ACCOUNTING_STANDARDS"],"contextualAuthorities":[],"operation":"PREPARE_JOURNAL","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9},{"subject":"company expense deductibility","population":"COMPANY","domain":"IRAS_INCOME_TAX","governingAuthorities":["IRAS"],"contextualAuthorities":["ACCOUNTING_STANDARDS"],"operation":"CHECK_ELIGIBILITY","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9}]}`;
 
 /** Calls only the configured provider with the current question; no evidence or conversation history is supplied. */
 export async function interpretSemanticQuestion(
@@ -354,11 +385,17 @@ export async function interpretSemanticQuestion(
       timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
       temperature: 0
     });
-    if (response.length > 16_000) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE' };
+    if (response.length > 16_000) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE', failureReason: 'RESPONSE_TOO_LARGE' };
     let raw: unknown;
-    try { raw = JSON.parse(response); } catch { return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE' }; }
+    try { raw = JSON.parse(response); } catch {
+      return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE', failureReason: 'MALFORMED_JSON' };
+    }
     const interpretation = validateSemanticQuestionInterpretation(raw);
-    if (!interpretation) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE' };
+    if (!interpretation) return {
+      mode: 'DETERMINISTIC_FALLBACK',
+      failure: 'INVALID_RESPONSE',
+      failureReason: hasSemanticContractContradiction(raw) ? 'CONTRADICTORY_FIELDS' : 'SCHEMA_MISMATCH'
+    };
     if (interpretation.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'LOW_CONFIDENCE' };
     return { mode: 'SEMANTIC_INTERPRETATION', interpretation };
   } catch (error) {

@@ -45,6 +45,7 @@ const FAILURE_TAXONOMY = [
   'MODEL_WRONG_POPULATION', 'MODEL_WRONG_OPERATION', 'MODEL_INVALID_SCHEMA', 'MODEL_TIMEOUT',
   'RECONCILIATION_REJECTION', 'TAXONOMY_MAPPING_GAP', 'RUNTIME_ROUTING_FAILURE'
 ];
+const SEMANTIC_FAILURE_REASONS = new Set(['RESPONSE_TOO_LARGE', 'MALFORMED_JSON', 'CONTRADICTORY_FIELDS', 'SCHEMA_MISMATCH']);
 const NO_RESPONSE_FAILURES = new Set(['NO_PROVIDER', 'PROVIDER_ERROR', 'RATE_LIMITED', 'TIMEOUT', 'QUERY_TOO_LONG']);
 const RETRYABLE_PROVIDER_FAILURES = new Set(['PROVIDER_ERROR', 'RATE_LIMITED']);
 const MIN_GEMINI_INTERVAL_MS = 8_000;
@@ -179,16 +180,17 @@ function markdownReport(report) {
     if (summary.note) lines.push(`**${summary.note}**`, '');
     lines.push('## Failure taxonomy', '', ...FAILURE_TAXONOMY.map(code => `- ${code}: ${summary.taxonomyFailureCounts[code] || 0}`), '');
     lines.push('## Provider attempt outcomes', '', ...Object.entries(summary.providerAttemptOutcomeCounts || {}).map(([outcome, count]) => `- ${outcome}: ${count}`), '');
-    lines.push('## Per-call results', '', '| Run | Case | Checkpoint | Attempts | Last provider status | Issue recall | Issue precision | Workstream set | Taxonomy |', '|---|---|---|---:|---|---:|---:|---|---|');
+    lines.push('## Per-call results', '', '| Run | Case | Checkpoint | Attempts | Last provider status | Failure reason | Issue recall | Issue precision | Workstream set | Taxonomy |', '|---|---|---|---:|---|---|---:|---:|---|---|');
     for (const row of report.calls) {
       const pending = row.pendingEvaluation;
       const metrics = pending ? undefined : row.metrics;
       const attemptCount = (row.attempts?.length || 0) + Number(Boolean(pending?.attempt));
       const checkpoint = pending ? `PENDING: ${pending.status}` : 'FINALIZED';
       const providerStatus = pending?.attempt?.providerStatus ?? (pending ? '—' : row.providerStatus ?? '—');
+      const failureReason = safeSemanticFailureReason(pending?.failureReason ?? row.failureReason) || '—';
       const workstreamResult = pending ? 'PENDING' : metrics ? metrics.finalWorkstreamSetAccuracy ? 'PASS' : 'FAIL' : 'N/A';
       const taxonomy = pending ? 'pending finalization' : row.failureTaxonomies?.join(', ') || '—';
-      lines.push(`| ${row.runId} | ${row.caseId} | ${checkpoint} | ${attemptCount} | ${providerStatus} | ${fmtRatio(metrics?.issueRecall)} | ${fmtRatio(metrics?.issuePrecision)} | ${workstreamResult} | ${taxonomy} |`);
+      lines.push(`| ${row.runId} | ${row.caseId} | ${checkpoint} | ${attemptCount} | ${providerStatus} | ${failureReason} | ${fmtRatio(metrics?.issueRecall)} | ${fmtRatio(metrics?.issuePrecision)} | ${workstreamResult} | ${taxonomy} |`);
     }
     lines.push('', '## Repeated A–D workstream stability', '');
     const stability = summary.repeatedOriginalCaseStability;
@@ -204,10 +206,12 @@ function markdownReport(report) {
       const providerCategory = pending ? pending.providerCategory || 'pending finalization' : row.providerCategory || 'none';
       const providerStatus = pending ? pending.attempt?.providerStatus ?? 'n/a' : row.providerStatus ?? 'n/a';
       const latency = pending ? pending.attempt?.latencyMs ?? 'n/a' : row.latencyMs ?? 'n/a';
+      const failureReason = safeSemanticFailureReason(pending?.failureReason ?? row.failureReason) || 'none';
       lines.push(`### ${row.runId} — ${row.caseId}`, '', `Question: ${row.question}`, '',
         `Checkpoint: ${status}; valid: ${pending ? 'not finalized' : row.interpretationValid}; final outcome: ${pending ? 'not finalized' : row.semanticFailure || 'PROVIDER_RESPONSE'}; provider category: ${providerCategory}; HTTP status: ${providerStatus}; attempts: ${attemptHistory.length}; latency: ${latency} ms.`,
+        `Failure reason: ${failureReason}.`,
         `Workstreams: ${pending ? 'not finalized' : row.finalWorkstreams?.join(', ') || 'none'}.`,
-        `Attempt history: ${attemptHistory.map(attempt => `#${attempt.attempt} ${attempt.outcome}${attempt.providerStatus ? ` (HTTP ${attempt.providerStatus})` : ''}`).join('; ') || 'not recorded'}.`,
+        `Attempt history: ${attemptHistory.map(attempt => `#${attempt.attempt} ${attempt.outcome}${safeSemanticFailureReason(attempt.failureReason) ? ` (${safeSemanticFailureReason(attempt.failureReason)})` : ''}${attempt.providerStatus ? ` (HTTP ${attempt.providerStatus})` : ''}`).join('; ') || 'not recorded'}.`,
         `Failures: ${pending ? 'pending finalization' : row.failureTaxonomies?.join(', ') || 'none'}.`, '');
     }
   }
@@ -293,7 +297,7 @@ if (resumeRequested) {
 const completedCallKeys = new Set(calls.map(row => `${row.runId}\u0000${row.caseId}`));
 
 const FINALIZED_RESULT_FIELDS = [
-  'requestStartedAt', 'interpretationValid', 'providerResponseReceived', 'semanticFailure', 'providerStatus', 'providerCategory', 'latencyMs',
+  'requestStartedAt', 'interpretationValid', 'providerResponseReceived', 'semanticFailure', 'failureReason', 'providerStatus', 'providerCategory', 'latencyMs',
   'topLevel', 'issues', 'validatedInterpretation', 'deterministicReconciliation', 'plannedWorkstreams', 'finalWorkstreams', 'metrics',
   'semanticUnderstandingCorrect', 'downstreamBehavioralChecks', 'expectedIssueMatches', 'unmatchedModelIssueIndexes', 'runtimeFailure',
   'failureTaxonomies', 'providerFailure'
@@ -304,13 +308,19 @@ function clearFinalizedResultFields(row) {
 }
 
 function ensureAttemptHistory(row) {
+  if (row.pendingEvaluation?.attempt) {
+    const pendingAttempt = row.pendingEvaluation.attempt;
+    const failureReason = safeSemanticFailureReason(pendingAttempt.failureReason);
+    if (failureReason) pendingAttempt.failureReason = failureReason;
+    else delete pendingAttempt.failureReason;
+    if (!pendingAttempt.runtime) pendingAttempt.runtime = pendingAttempt.attempt === 1 ? initialEvaluationRuntime : priorReportRuntime || initialEvaluationRuntime;
+  }
   if (Array.isArray(row.attempts)) {
     for (const attempt of row.attempts) {
+      const failureReason = safeSemanticFailureReason(attempt.failureReason);
+      if (failureReason) attempt.failureReason = failureReason;
+      else delete attempt.failureReason;
       if (!attempt.runtime) attempt.runtime = attempt.attempt === 1 ? initialEvaluationRuntime : priorReportRuntime || initialEvaluationRuntime;
-    }
-    if (row.pendingEvaluation?.attempt && !row.pendingEvaluation.attempt.runtime) {
-      const attempt = row.pendingEvaluation.attempt;
-      attempt.runtime = attempt.attempt === 1 ? initialEvaluationRuntime : priorReportRuntime || initialEvaluationRuntime;
     }
     return row.attempts;
   }
@@ -336,7 +346,16 @@ function ensureAttemptHistory(row) {
 
 for (const row of calls) {
   ensureAttemptHistory(row);
-  if (row.pendingEvaluation) clearFinalizedResultFields(row);
+  if (row.pendingEvaluation) {
+    const reason = safeSemanticFailureReason(row.pendingEvaluation.failureReason);
+    if (reason) row.pendingEvaluation.failureReason = reason;
+    else delete row.pendingEvaluation.failureReason;
+    clearFinalizedResultFields(row);
+  } else {
+    const reason = safeSemanticFailureReason(row.failureReason);
+    if (reason) row.failureReason = reason;
+    else delete row.failureReason;
+  }
 }
 let coldStartGuardPending = calls.length > 0 && !calls.some(row => [
   ...ensureAttemptHistory(row),
@@ -382,6 +401,10 @@ function providerCategoryFor(understanding) {
   if (understanding?.failure === 'RATE_LIMITED') return 'RATE_LIMIT_STATUS_UNAVAILABLE';
   if (understanding?.failure === 'PROVIDER_ERROR') return 'STATUS_UNAVAILABLE';
   return undefined;
+}
+
+function safeSemanticFailureReason(value) {
+  return SEMANTIC_FAILURE_REASONS.has(value) ? value : undefined;
 }
 
 function sameSet(actual, expected) {
@@ -703,9 +726,11 @@ function replaceCallRow(row) {
 async function finalizePendingEvaluation(checkpointRow, testCase) {
   const pending = checkpointRow.pendingEvaluation;
   if (!pending) return checkpointRow;
+  const failureReason = safeSemanticFailureReason(pending.failureReason);
   const understanding = {
     mode: pending.mode,
     ...(pending.failure ? { failure: pending.failure } : {}),
+    ...(failureReason ? { failureReason } : {}),
     ...(Number.isInteger(pending.providerStatus) ? { providerStatus: pending.providerStatus } : {}),
     ...(pending.interpretation ? { interpretation: pending.interpretation } : {})
   };
@@ -750,6 +775,7 @@ async function finalizePendingEvaluation(checkpointRow, testCase) {
     callAttempted: true,
     requestStartedAt: attempt.requestStartedAt,
     semanticFailure,
+    ...(failureReason ? { failureReason } : {}),
     rateLimitFailureCount: pending.rateLimitFailureCount,
     nextRetryAt: pending.nextRetryAt,
     ...(checkpointRow.retryReason ? { retryReason: checkpointRow.retryReason } : {}),
@@ -1028,6 +1054,7 @@ async function runCaseAttempt(testCase, runId, priorRow, eligibleAt = 0, retryRe
   const providerResponseReceived = !NO_RESPONSE_FAILURES.has(understanding?.failure);
   const valid = Boolean(understanding?.interpretation) && understanding.mode === 'SEMANTIC_INTERPRETATION' && !understanding.failure;
   const semanticFailure = understanding?.failure;
+  const semanticFailureReason = safeSemanticFailureReason(understanding?.failureReason);
   const providerCategory = providerCategoryFor(understanding);
   const attempt = {
     attempt: attemptHistory.length + 1,
@@ -1037,7 +1064,8 @@ async function runCaseAttempt(testCase, runId, priorRow, eligibleAt = 0, retryRe
     latencyMs: interpreterDurationMs,
     runtime: process.version,
     providerStatus: Number.isInteger(understanding?.providerStatus) ? understanding.providerStatus : null,
-    providerCategory: providerCategory || null
+    providerCategory: providerCategory || null,
+    ...(semanticFailureReason ? { failureReason: semanticFailureReason } : {})
   };
   const previousRateLimitCount = Math.max(
     priorRow?.rateLimitFailureCount || 0,
@@ -1051,6 +1079,7 @@ async function runCaseAttempt(testCase, runId, priorRow, eligibleAt = 0, retryRe
     status: providerResponseReceived ? 'PROVIDER_RESPONSE_RECEIVED' : 'NO_PROVIDER_RESPONSE',
     mode: understanding?.mode || 'DETERMINISTIC_FALLBACK',
     failure: semanticFailure || null,
+    ...(semanticFailureReason ? { failureReason: semanticFailureReason } : {}),
     providerStatus: Number.isInteger(understanding?.providerStatus) ? understanding.providerStatus : null,
     providerCategory: providerCategory || null,
     interpretation: understanding?.interpretation || null,

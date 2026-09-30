@@ -1,0 +1,304 @@
+{
+  "comparisonType": "Descriptive, preselected seven cases; first valid historical call versus one new call; changed prompt and time, not causal paired inference",
+  "interpreterSha256": "2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505",
+  "baseline": {
+    "cases": 7,
+    "issueRecall": {
+      "correct": 14,
+      "total": 14
+    },
+    "issuePrecision": {
+      "correct": 14,
+      "total": 15
+    },
+    "operationAccuracy": {
+      "correct": 3,
+      "total": 14
+    },
+    "completeQuestionIssueCoverage": 6,
+    "finalWorkstreamSetAccuracy": 7
+  },
+  "followup": {
+    "cases": 7,
+    "validInterpretations": 7,
+    "issueRecall": {
+      "correct": 14,
+      "total": 14
+    },
+    "issuePrecision": {
+      "correct": 14,
+      "total": 14
+    },
+    "operationAccuracy": {
+      "correct": 12,
+      "total": 14
+    },
+    "completeQuestionIssueCoverage": 7,
+    "finalWorkstreamSetAccuracy": 7
+  },
+  "perCase": [
+    {
+      "caseId": "A-original",
+      "operations": [
+        "CALCULATE",
+        "CALCULATE",
+        "EXPLAIN_INTERACTION"
+      ],
+      "operationAccuracy": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "issueRecall": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "workstreamsCorrect": true,
+      "completeIssueCoverage": true
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "operations": [
+        "CHECK_ELIGIBILITY",
+        "EXPLAIN_RULE"
+      ],
+      "operationAccuracy": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "workstreamsCorrect": true,
+      "completeIssueCoverage": true
+    },
+    {
+      "caseId": "C-original",
+      "operations": [
+        "CHECK_ELIGIBILITY",
+        "CHECK_ELIGIBILITY"
+      ],
+      "operationAccuracy": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "workstreamsCorrect": true,
+      "completeIssueCoverage": true
+    },
+    {
+      "caseId": "C-paraphrase-3",
+      "operations": [
+        "CHECK_ELIGIBILITY",
+        "CHECK_ELIGIBILITY"
+      ],
+      "operationAccuracy": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "workstreamsCorrect": true,
+      "completeIssueCoverage": true
+    },
+    {
+      "caseId": "C-paraphrase-4",
+      "operations": [
+        "DETERMINE_TREATMENT",
+        "CHECK_ELIGIBILITY"
+      ],
+      "operationAccuracy": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "workstreamsCorrect": true,
+      "completeIssueCoverage": true
+    },
+    {
+      "caseId": "adversarial-C-employee-benefit",
+      "operations": [
+        "EXPLAIN_RULE"
+      ],
+      "operationAccuracy": {
+        "correct": 0,
+        "total": 1,
+        "rate": 0
+      },
+      "issueRecall": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "workstreamsCorrect": true,
+      "completeIssueCoverage": true
+    },
+    {
+      "caseId": "adversarial-D-workpass-and-salary-tax",
+      "operations": [
+        "CHECK_ELIGIBILITY",
+        "CHECK_ELIGIBILITY"
+      ],
+      "operationAccuracy": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "workstreamsCorrect": true,
+      "completeIssueCoverage": true
+    }
+  ],
+  "controls": {
+    "cases": 5,
+    "validInterpretations": 3,
+    "operationAccuracy": {
+      "correct": 3,
+      "total": 3
+    },
+    "outcomes": [
+      {
+        "caseId": "control-general-recognition",
+        "valid": false,
+        "failureReason": "SCHEMA_MISMATCH",
+        "operations": [
+          null
+        ]
+      },
+      {
+        "caseId": "control-general-comparison",
+        "valid": true,
+        "failureReason": null,
+        "operations": [
+          "COMPARE"
+        ]
+      },
+      {
+        "caseId": "control-journal-entry",
+        "valid": true,
+        "failureReason": null,
+        "operations": [
+          "PREPARE_JOURNAL"
+        ]
+      },
+      {
+        "caseId": "control-employer-filing",
+        "valid": true,
+        "failureReason": null,
+        "operations": [
+          "FILING_REQUIREMENT"
+        ]
+      },
+      {
+        "caseId": "control-general-interaction",
+        "valid": false,
+        "failureReason": "SCHEMA_MISMATCH",
+        "operations": [
+          null
+        ]
+      }
+    ]
+  },
+  "reliabilityCheck": [
+    {
+      "caseId": "A-paraphrase-3",
+      "valid": false,
+      "failureReason": "CONTRADICTORY_FIELDS",
+      "latencyMs": 2425,
+      "operations": [
+        null
+      ],
+      "operationAccuracy": null
+    },
+    {
+      "caseId": "A-paraphrase-4",
+      "valid": true,
+      "failureReason": null,
+      "latencyMs": 2280,
+      "operations": [
+        "CALCULATE",
+        "CALCULATE",
+        "DETERMINE_TREATMENT"
+      ],
+      "operationAccuracy": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      }
+    }
+  ],
+  "finalProviderAttempts": 14,
+  "finalValidInterpretations": 11,
+  "finalInvalidResponses": 3,
+  "finalTimeouts": 0,
+  "finalRateLimitedAttempts": 0,
+  "maxFinalLatencyMs": 2425.0,
+  "minimumFinalRequestStartGapMs": 15251.0,
+  "heldoutRetuned": false,
+  "mergeRecommendation": "HOLD: remaining matched operation errors and unresolved conceptual schema failures; strict fallback/guards preserved",
+  "limitations": [
+    "Small selected development sample does not establish broad improvement or no regression.",
+    "Matched issue accuracy excludes invalid responses and unmatched issues.",
+    "New controls have no comparable historical baseline; two invalid controls prevent a claim of conceptual model reliability.",
+    "Invalid response text and provider finish metadata intentionally not retained; enum diagnostics do not identify precise rejected field.",
+    "Existing statutory coverage gaps and phrase-matcher limitations remain.",
+    "No end-to-end substantive answer correctness was scored."
+  ]
+}

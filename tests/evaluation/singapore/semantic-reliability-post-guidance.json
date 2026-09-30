@@ -1,0 +1,193 @@
+{
+  "expectedWorkstreams": {
+    "A": [
+      "CPF/CPF_PAYROLL",
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ]
+  },
+  "purpose": "Check new prompt contract consistency on corrected development cases after the fixed deadline experiment. No held-out cases, retries or label changes.",
+  "expectedModel": "gemini-3.5-flash-lite",
+  "runs": {
+    "originalABCD": 1,
+    "paraphrasesAndAdversarial": 1
+  },
+  "suite": "Once-only post-guidance checks for two invalid baseline cases",
+  "issueContracts": {
+    "A": [
+      {
+        "id": "employer-cpf-contribution",
+        "subject": "employer CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employer",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "company",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employer",
+            "provident",
+            "contribut"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employer",
+            "cpf",
+            "position"
+          ],
+          [
+            "employer",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "employee-cpf-contribution",
+        "subject": "employee compulsory CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employee",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employee",
+            "provident",
+            "contribut"
+          ],
+          [
+            "mandatory",
+            "cpf",
+            "salary"
+          ],
+          [
+            "compulsory",
+            "cpf",
+            "salary"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employee",
+            "cpf",
+            "position"
+          ],
+          [
+            "employee",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "individual-cpf-tax-relief",
+        "subject": "individual income tax relief for compulsory CPF",
+        "matchAny": [
+          [
+            "income",
+            "tax",
+            "relief"
+          ],
+          [
+            "personal",
+            "tax",
+            "relief"
+          ],
+          [
+            "cpf",
+            "relief"
+          ],
+          [
+            "tax",
+            "claim",
+            "cpf"
+          ]
+        ],
+        "population": [
+          "INDIVIDUAL",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "CPF"
+          ]
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY",
+          "EXPLAIN_INTERACTION",
+          "EXPLAIN_RULE"
+        ]
+      }
+    ]
+  },
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "A-paraphrase-3",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "If a worker is paid SGD 6,000 monthly, explain the personal income tax relief linked to mandatory payroll CPF first, then state the employer and employee contribution amounts."
+    },
+    {
+      "id": "A-paraphrase-4",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "With a monthly wage of SGD 6,000, what are both sides' CPF payroll contributions, and what tax relief does the worker get for the compulsory deduction?"
+    }
+  ]
+}

@@ -1,0 +1,598 @@
+{
+  "summary": {
+    "suite": "Once-only post-guidance checks for two invalid baseline cases",
+    "mode": "LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS",
+    "modelUnderstandingMeasured": true,
+    "measurementStatus": "COMPLETE",
+    "model": "gemini-3.5-flash-lite",
+    "expectedModel": "gemini-3.5-flash-lite",
+    "runPlan": {
+      "originalABCD": 1,
+      "paraphrasesAndAdversarial": 1
+    },
+    "liveCalls": 2,
+    "logicalCaseCalls": 2,
+    "providerRequestAttempts": 2,
+    "providerResponseAttempts": 2,
+    "totalCaseCalls": 2,
+    "semanticMetrics": {
+      "issueRecall": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "governingAuthorityAccuracy": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "contextualAuthorityAccuracy": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "domainAccuracy": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "populationAccuracy": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "operationAccuracy": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "finalWorkstreamSetAccuracy": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "omissionRate": {
+        "correct": 0,
+        "total": 3,
+        "rate": 0
+      },
+      "workstreamRoutingAccuracy": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "qualityCallDenominator": 1,
+      "validInterpretationRate": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "invalidTimeoutFallbackRate": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "semanticUnderstandingCorrect": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      }
+    },
+    "taxonomyFailureCounts": {
+      "MODEL_OMISSION": 0,
+      "MODEL_FALSE_ISSUE": 0,
+      "MODEL_WRONG_AUTHORITY": 0,
+      "MODEL_WRONG_DOMAIN": 0,
+      "MODEL_WRONG_POPULATION": 0,
+      "MODEL_WRONG_OPERATION": 0,
+      "MODEL_INVALID_SCHEMA": 1,
+      "MODEL_TIMEOUT": 0,
+      "RECONCILIATION_REJECTION": 0,
+      "TAXONOMY_MAPPING_GAP": 1,
+      "RUNTIME_ROUTING_FAILURE": 0
+    },
+    "latencyMs": {
+      "median": 2425,
+      "p95": 2425,
+      "max": 2425,
+      "timeouts": 0
+    },
+    "repeatedOriginalCaseStability": {
+      "cases": 0,
+      "observedTotal": 0,
+      "plannedTotal": 0,
+      "assessedCases": 0,
+      "stableCases": 0,
+      "changedCases": [],
+      "unassessedCases": []
+    },
+    "limitations": [
+      "This report measures calls to interpretSemanticQuestion(query, GEMINI_API_KEY) and uses only the production prompt, schema, validation, and timeout.",
+      "The caller must load repository .env/.env.local values through Node --env-file options; the runner does not read environment files itself.",
+      "Authority workstream evidence retrieval is local-only; this evaluation measures semantic interpretation, reconciliation, and planned/final scope, not source freshness or evidence sufficiency.",
+      "Issue identity matching uses deterministic phrase anchors in the held-out contract. Ambiguous subject matches require review.",
+      "Topic hints from the model are recorded separately and never supply deterministic mapped topic IDs."
+    ],
+    "initialEvaluationRuntime": "v22.23.1",
+    "providerAttemptCountsByRuntime": {
+      "v22.23.1": 2
+    },
+    "uniqueCaseCount": 2,
+    "modelResponses": 2,
+    "validInterpretations": 1,
+    "providerFailures": 0,
+    "rateLimitedAttempts": 0,
+    "finalProviderErrorCases": 0,
+    "finalRateLimitedCases": 0,
+    "noResponseCalls": 0,
+    "invalidResponseCount": 1,
+    "pendingLocalFinalizationCalls": 0,
+    "plannedCaseCalls": 2,
+    "allCallsAttempted": true,
+    "suiteComplete": true,
+    "providerComplete": true,
+    "callOutcomes": {
+      "logicalCaseCalls": 2,
+      "providerRequestAttempts": 2,
+      "providerResponseAttempts": 2,
+      "validInterpretations": 1,
+      "noResponseAttempts": 0,
+      "invalidTimeoutFallbackCalls": 1,
+      "providerFailureCounts": {
+        "PROVIDER_ERROR": 0,
+        "RATE_LIMITED": 0,
+        "NO_PROVIDER": 0,
+        "TIMEOUT": 0,
+        "QUERY_TOO_LONG": 0
+      },
+      "providerAttemptOutcomeCounts": {
+        "INVALID_RESPONSE": 1,
+        "VALID_INTERPRETATION": 1
+      },
+      "providerAttemptCountsByRuntime": {
+        "v22.23.1": 2
+      },
+      "providerNoResponseRate": {
+        "correct": 0,
+        "total": 2,
+        "rate": 0
+      },
+      "invalidTimeoutFallbackRate": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      }
+    },
+    "downstreamBehavioralDenominator": 2,
+    "downstreamRoutingEvidenceGuardCorrectness": {
+      "correct": 2,
+      "total": 2,
+      "rate": 1
+    },
+    "providerFailureCounts": {
+      "PROVIDER_ERROR": 0,
+      "RATE_LIMITED": 0,
+      "NO_PROVIDER": 0,
+      "TIMEOUT": 0,
+      "QUERY_TOO_LONG": 0
+    },
+    "providerAttemptOutcomeCounts": {
+      "INVALID_RESPONSE": 1,
+      "VALID_INTERPRETATION": 1
+    },
+    "evaluatedAt": "2026-09-30T13:38:43.907Z",
+    "semanticInterpreterSha256": "2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505",
+    "runtime": "v22.23.1"
+  },
+  "calls": [
+    {
+      "runId": "expanded-1",
+      "runGroup": "expanded",
+      "caseId": "A-paraphrase-3",
+      "model": "gemini-3.5-flash-lite",
+      "question": "If a worker is paid SGD 6,000 monthly, explain the personal income tax relief linked to mandatory payroll CPF first, then state the employer and employee contribution amounts.",
+      "interpretationValid": false,
+      "providerResponseReceived": true,
+      "callAttempted": true,
+      "requestStartedAt": "2026-09-30T13:38:26.340Z",
+      "semanticFailure": "INVALID_RESPONSE",
+      "failureReason": "CONTRADICTORY_FIELDS",
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2425,
+      "topLevel": null,
+      "issues": [],
+      "validatedInterpretation": null,
+      "deterministicReconciliation": {
+        "source": "TAXONOMY_FALLBACK",
+        "coverageEstablished": false,
+        "hasUnmappedResidual": true,
+        "issues": [
+          {
+            "id": "issue_1cd7f6be",
+            "subject": "CPF Tiered Contribution Rates by Age",
+            "population": "UNKNOWN",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "OTHER",
+            "deterministicMappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "reconciliationStatus": "MAPPED"
+          }
+        ]
+      },
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "metrics": null,
+      "semanticUnderstandingCorrect": false,
+      "downstreamBehavioralChecks": {
+        "residualNoRequestedWorkstream": true,
+        "incompletePlanNotVerified": true,
+        "operationsPreserved": true,
+        "requiresCaseFacts": true,
+        "correct": true
+      },
+      "expectedIssueMatches": [],
+      "unmatchedModelIssueIndexes": [],
+      "failureTaxonomies": [
+        "MODEL_INVALID_SCHEMA"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": "2026-09-30T13:38:26.340Z",
+          "providerRequestAttempted": true,
+          "outcome": "INVALID_RESPONSE",
+          "latencyMs": 2425,
+          "runtime": "v22.23.1",
+          "providerStatus": null,
+          "providerCategory": null,
+          "failureReason": "CONTRADICTORY_FIELDS"
+        }
+      ]
+    },
+    {
+      "runId": "expanded-1",
+      "runGroup": "expanded",
+      "caseId": "A-paraphrase-4",
+      "model": "gemini-3.5-flash-lite",
+      "question": "With a monthly wage of SGD 6,000, what are both sides' CPF payroll contributions, and what tax relief does the worker get for the compulsory deduction?",
+      "interpretationValid": true,
+      "providerResponseReceived": true,
+      "callAttempted": true,
+      "requestStartedAt": "2026-09-30T13:38:41.604Z",
+      "semanticFailure": null,
+      "rateLimitFailureCount": 0,
+      "nextRetryAt": null,
+      "latencyMs": 2280,
+      "topLevel": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "primarySubject": "CPF contributions and income tax relief",
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false
+      },
+      "issues": [
+        {
+          "index": 0,
+          "subject": "employee CPF contribution amount",
+          "population": "EMPLOYEE",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        },
+        {
+          "index": 1,
+          "subject": "employer CPF contribution amount",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        },
+        {
+          "index": 2,
+          "subject": "employee tax relief for compulsory CPF deduction",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "DETERMINE_TREATMENT",
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC",
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9
+        }
+      ],
+      "validatedInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "CPF contributions and income tax relief",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "monthly wage of SGD 6,000"
+        ],
+        "confidence": 0.9,
+        "issues": [
+          {
+            "subject": "employee CPF contribution amount",
+            "population": "EMPLOYEE",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.9
+          },
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.9
+          },
+          {
+            "subject": "employee tax relief for compulsory CPF deduction",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.9
+          }
+        ]
+      },
+      "deterministicReconciliation": {
+        "source": "SEMANTIC_ISSUES",
+        "coverageEstablished": false,
+        "hasUnmappedResidual": true,
+        "issues": [
+          {
+            "id": "issue_15052740",
+            "subject": "employee CPF contribution amount",
+            "population": "EMPLOYEE",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_67b396ae",
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          },
+          {
+            "id": "issue_6091aecb",
+            "subject": "employee tax relief for compulsory CPF deduction",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "DETERMINE_TREATMENT",
+            "deterministicMappedTopicIds": [],
+            "reconciliationStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC"
+          }
+        ]
+      },
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "metrics": {
+        "issueRecall": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "issuePrecision": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "governingAuthorityAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "contextualAuthorityAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "domainAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "populationAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "operationAccuracy": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "finalWorkstreamSetAccuracy": true,
+        "completeQuestionIssueCoverage": true,
+        "omissionRate": {
+          "correct": 0,
+          "total": 3,
+          "rate": 0
+        }
+      },
+      "semanticUnderstandingCorrect": true,
+      "downstreamBehavioralChecks": {
+        "residualNoRequestedWorkstream": true,
+        "incompletePlanNotVerified": true,
+        "operationsPreserved": true,
+        "requiresCaseFacts": true,
+        "correct": true
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employee-cpf-contribution",
+          "modelIssueIndex": 0,
+          "subject": "employee CPF contribution amount",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "employer-cpf-contribution",
+          "modelIssueIndex": 1,
+          "subject": "employer CPF contribution amount",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "expectedIssueId": "individual-cpf-tax-relief",
+          "modelIssueIndex": 2,
+          "subject": "employee tax relief for compulsory CPF deduction",
+          "semanticDimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          },
+          "modelTopicHints": [],
+          "deterministicMappedTopicIds": [],
+          "reconciliationStatus": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "unmatchedModelIssueIndexes": [],
+      "failureTaxonomies": [
+        "TAXONOMY_MAPPING_GAP"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "requestStartedAt": "2026-09-30T13:38:41.604Z",
+          "providerRequestAttempted": true,
+          "outcome": "VALID_INTERPRETATION",
+          "latencyMs": 2280,
+          "runtime": "v22.23.1",
+          "providerStatus": null,
+          "providerCategory": null
+        }
+      ]
+    }
+  ]
+}
