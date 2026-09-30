@@ -118,10 +118,42 @@ function canonicalDomainForIssue(
   if (mappedAreas.length > 1) return 'UNKNOWN';
   if (issue.domain === 'IRAS_GST' || issue.domain === 'IRAS_PROPERTY_TAX' || issue.domain === 'IRAS_STAMP_DUTY') return issue.domain;
   if (issue.domain !== 'IRAS_INCOME_TAX') return 'UNKNOWN';
+
+  // Without a mapped topic, use only an explicit subject clue. Population is
+  // insufficient to distinguish an employee's personal tax from benefit tax,
+  // or to identify who is responsible for an ambiguous reporting request.
+  const subject = issue.subject.toLowerCase();
+  const explicitReporting = /\b(?:report(?:ing)?|filings?|ais|ir21|tax clearance|withholding)\b/.test(subject);
+  const employmentReportingSubject = /\b(?:employee|staff|employment income|foreign worker|workforce)\b/.test(subject);
+  const explicitEmployerReporting = explicitReporting && (
+    /\bemployer\b/.test(subject) || /\b(?:company|business)\b/.test(subject) && employmentReportingSubject
+  );
+  const companyDeduction = /\b(?:company|corporate|business)\b/.test(subject) &&
+    /\b(?:deductibility|deductible|deduction|chargeable income|taxable profits?)\b/.test(subject);
+  const personalRelief = /\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\b|\b(?:tax|cpf|srs) relief\b/.test(subject);
+  const benefitSubject = /\b(?:benefits?|perquisites?|accommodation|housing allowance|reimbursements?|stock options?|bonus)\b/.test(subject);
+  const employeeIsTaxSubject = issue.population === 'EMPLOYEE' ||
+    /\b(?:benefit|accommodation|housing allowance|perquisite)\b[^.!?]{0,45}\b(?:for|to) (?:the )?employee\b|\b(?:for|to) (?:the )?employee\b[^.!?]{0,45}\b(?:benefit|accommodation|housing allowance|perquisite)\b/.test(subject);
+  const explicitEmployeeTaxOutcome = /\b(?:taxability|taxable|taxed|tax treatment|tax liability)\b[^.!?]{0,55}\b(?:to|for) (?:the )?employee\b|\b(?:employee(?:'s)?|employee personal)\b[^.!?]{0,55}\b(?:taxability|tax treatment|tax liability|taxable|taxed)\b/.test(subject);
+  const employeeBenefitTaxOutcome = companyDeduction
+    ? explicitEmployeeTaxOutcome
+    : /\b(?:tax|taxable|taxability|income)\b/.test(subject);
+  const employeeBenefit = benefitSubject && employeeIsTaxSubject && employeeBenefitTaxOutcome;
+  const personalSalaryTax = /\b(?:salary|wages?|employment income)\b/.test(subject) &&
+    /\b(?:personal|individual|employee|salary|wages?|employment income)\b/.test(subject);
+
+  const explicitAreas = [
+    explicitEmployerReporting && 'IRAS_EMPLOYER_REPORTING',
+    companyDeduction && 'IRAS_CORPORATE_TAX',
+    personalRelief && 'IRAS_INDIVIDUAL_TAX',
+    employeeBenefit && 'IRAS_EMPLOYMENT_BENEFITS'
+  ].filter((area): area is AuthorityWorkstreamDomain => Boolean(area));
+  const distinctExplicitAreas = [...new Set(explicitAreas)];
+  if (distinctExplicitAreas.length > 1) return 'UNKNOWN';
+  if (distinctExplicitAreas.length === 1) return distinctExplicitAreas[0];
+
+  if (personalSalaryTax || issue.population === 'INDIVIDUAL') return 'IRAS_INDIVIDUAL_TAX';
   if (issue.population === 'COMPANY' || issue.population === 'FUND') return 'IRAS_CORPORATE_TAX';
-  if (issue.population === 'EMPLOYEE') return 'IRAS_EMPLOYMENT_BENEFITS';
-  if (issue.population === 'EMPLOYER') return 'IRAS_EMPLOYER_REPORTING';
-  if (issue.population === 'INDIVIDUAL') return 'IRAS_INDIVIDUAL_TAX';
   return 'UNKNOWN';
 }
 
@@ -135,6 +167,9 @@ function topicMatchesCanonicalWorkstream(topic: SingaporeCoverageTopic, authorit
 function toInternalPlan(issuePlan: SemanticIssueReconciliation): InternalPlan[] {
   const grouped = new Map<string, InternalPlan>();
   for (const issue of issuePlan.issues) {
+    // An unassigned topic records taxonomy residue and an evidence gap. It is
+    // not a requested workstream from the validated semantic interpretation.
+    if (issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC') continue;
     const allTopics = getCoverageTopicsByIds(issue.mappedTopicIds);
     const authorities = [...new Set(issue.governingAuthorities.filter(authority => authority !== 'UNKNOWN'))];
     for (const authority of authorities) {
@@ -722,7 +757,12 @@ export async function buildAuthorityWorkstreams(
   }
 
   for (const issue of issuePlan.issues) {
-    if (!plannedIssueIds.has(issue.id)) topLevelGaps.push(issueGapForUnplanned(issue));
+    if (!plannedIssueIds.has(issue.id) && issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC') {
+      topLevelGaps.push(makeGap(issue, issue.governingAuthorities[0] || 'UNKNOWN', issue.domain, 'mapped',
+        'UNASSIGNED_QUERY_TOPIC', 'A taxonomy topic remained unresolved because no validated requested issue claimed it.'));
+    } else if (!plannedIssueIds.has(issue.id)) {
+      topLevelGaps.push(issueGapForUnplanned(issue));
+    }
   }
   for (const concept of getRequestedQuestionConcepts(query, understanding).filter(item => item.topicIds.length === 0)) {
     const assigned = internalPlans.some(plan => plan.authority === 'IRAS' && plan.issuePlans.some(item =>

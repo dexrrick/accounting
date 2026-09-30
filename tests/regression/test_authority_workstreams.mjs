@@ -71,6 +71,102 @@ assert.equal(plannedAreas.some(item => item.authority === 'CPF'), false,
   'A contextual authority must not become a requested workstream.');
 assert.ok(plannedAreas.find(item => item.domain === 'IRAS_EMPLOYER_REPORTING').sourceSections.includes('IRAS_EMPLOYER_TAX'),
   'Employer tax source collection remains section metadata.');
+const topiclessAreaIssues = [
+  issue('topicless-employee-relief', {
+    subject: 'employee personal income tax relief for CPF contributions', population: 'EMPLOYEE',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-employee-salary', {
+    subject: 'employee salary income tax treatment', population: 'EMPLOYEE',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-benefit', {
+    subject: 'taxability of employee housing benefit', population: 'EMPLOYEE',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-accommodation-benefit-for-employee', {
+    subject: 'tax treatment of accommodation benefit for employee', population: 'UNKNOWN',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-housing-benefit-tax-treatment', {
+    subject: 'housing benefit tax treatment for the employee', population: 'UNKNOWN',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-benefit-employment-income', {
+    subject: 'employee income tax treatment of housing benefit as employment income', population: 'EMPLOYEE',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-company-employment-reporting', {
+    subject: 'company reporting of foreign employee income tax', population: 'COMPANY',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-employer-income-reporting', {
+    subject: 'employer employment-income reporting requirements', population: 'COMPANY',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-ambiguous-reporting', {
+    subject: 'employee income tax reporting for a foreign worker', population: 'EMPLOYEE',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-bare-employee', {
+    subject: 'employee tax position', population: 'EMPLOYEE',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }),
+  issue('topicless-company-deduction', {
+    subject: 'company deductibility of recorded employee benefit expense', population: 'COMPANY',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  })
+];
+const topiclessPlans = planAuthorityWorkstreams(issuePlan(topiclessAreaIssues));
+const topiclessAreas = new Map(topiclessPlans.map(item => [item.id, item.domain]));
+const topiclessStreamByIssue = new Map(topiclessPlans.flatMap(stream => stream.issueIds.map(id => [id, stream.id])));
+assert.equal(topiclessStreamByIssue.get('topicless-employee-relief'), 'IRAS:IRAS_INDIVIDUAL_TAX');
+assert.equal(topiclessStreamByIssue.get('topicless-employee-salary'), 'IRAS:IRAS_INDIVIDUAL_TAX');
+assert.equal(topiclessStreamByIssue.get('topicless-benefit'), 'IRAS:IRAS_EMPLOYMENT_BENEFITS');
+assert.equal(topiclessStreamByIssue.get('topicless-accommodation-benefit-for-employee'), 'IRAS:IRAS_EMPLOYMENT_BENEFITS');
+assert.equal(topiclessStreamByIssue.get('topicless-housing-benefit-tax-treatment'), 'IRAS:IRAS_EMPLOYMENT_BENEFITS');
+assert.equal(topiclessStreamByIssue.get('topicless-benefit-employment-income'), 'IRAS:IRAS_EMPLOYMENT_BENEFITS',
+  'Housing benefit remains employment-benefit tax when described as employment income.');
+assert.equal(topiclessStreamByIssue.get('topicless-company-employment-reporting'), 'IRAS:IRAS_EMPLOYER_REPORTING');
+assert.equal(topiclessStreamByIssue.get('topicless-employer-income-reporting'), 'IRAS:IRAS_EMPLOYER_REPORTING',
+  'Employer employment-income reporting is not routed to personal salary tax.');
+assert.equal(topiclessStreamByIssue.get('topicless-ambiguous-reporting'), 'IRAS:UNKNOWN');
+assert.equal(topiclessStreamByIssue.get('topicless-bare-employee'), 'IRAS:UNKNOWN');
+assert.equal(topiclessStreamByIssue.get('topicless-company-deduction'), 'IRAS:IRAS_CORPORATE_TAX');
+assert.equal(topiclessAreas.get('IRAS:IRAS_INDIVIDUAL_TAX'), 'IRAS_INDIVIDUAL_TAX',
+  'Employee personal relief and salary-tax subjects resolve to individual income tax without treating EMPLOYEE as a benefit label.');
+assert.equal(topiclessAreas.get('IRAS:IRAS_EMPLOYMENT_BENEFITS'), 'IRAS_EMPLOYMENT_BENEFITS');
+assert.equal(topiclessAreas.get('IRAS:IRAS_EMPLOYER_REPORTING'), 'IRAS_EMPLOYER_REPORTING',
+  'Explicit company employment reporting remains employer reporting even with population COMPANY.');
+assert.equal(topiclessAreas.get('IRAS:UNKNOWN'), 'UNKNOWN',
+  'Ambiguous reporting and a bare employee tax subject remain unresolved.');
+assert.equal(topiclessAreas.get('IRAS:IRAS_CORPORATE_TAX'), 'IRAS_CORPORATE_TAX',
+  'Corporate deductibility remains corporate tax even when the expense concerns an employee benefit.');
+const companyBenefitDeductionSubjects = [
+  'company tax deductibility of accommodation benefit for the employee',
+  'company income tax deduction of accommodation benefit for the employee'
+];
+const companyBenefitDeductionOverlaps = companyBenefitDeductionSubjects.flatMap((subject, subjectIndex) =>
+  ['COMPANY', 'UNKNOWN', 'EMPLOYEE'].map(population => issue(`company-benefit-deduction-${subjectIndex}-${population.toLowerCase()}`, {
+    subject, population, domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+  }))
+);
+companyBenefitDeductionOverlaps.push(issue('company-deduction-and-employee-taxability', {
+  subject: 'company tax deductibility of accommodation benefit and employee taxability', population: 'EMPLOYEE',
+  domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: []
+}));
+const companyBenefitOverlapPlans = planAuthorityWorkstreams(issuePlan(companyBenefitDeductionOverlaps));
+const companyBenefitOverlapDomainByIssue = new Map(companyBenefitOverlapPlans.flatMap(stream =>
+  stream.issueIds.map(id => [id, stream.domain])
+));
+for (const subjectIndex of [0, 1]) {
+  for (const population of ['company', 'unknown', 'employee']) {
+    assert.equal(companyBenefitOverlapDomainByIssue.get(`company-benefit-deduction-${subjectIndex}-${population}`), 'IRAS_CORPORATE_TAX',
+      `An employee recipient or EMPLOYEE population is context for the explicit company deduction (${subjectIndex}/${population}).`);
+  }
+}
+assert.equal(companyBenefitOverlapDomainByIssue.get('company-deduction-and-employee-taxability'), 'UNKNOWN',
+  'A separately stated employee taxability outcome conflicts with company deductibility and remains unresolved.');
 const conflictingAreas = planAuthorityWorkstreams(issuePlan([issue('conflict', {
   subject: 'company corporate and employee benefit tax treatment',
   domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], population: 'COMPANY',
@@ -247,5 +343,26 @@ for (const incompletePlan of [
   assert.equal(result.evidenceStatus, 'INSUFFICIENT');
   assert.equal(result.status, 'INSUFFICIENT');
 }
+
+const requestedWithResidual = issuePlan([
+  issue('requested-cpf'),
+  issue('unassigned-accounting-topic', {
+    subject: 'ACRA annual return filing', population: 'UNKNOWN', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], mappedTopicIds: ['acra-companies'], status: 'UNRESOLVED',
+    unresolvedReason: 'UNASSIGNED_QUERY_TOPIC'
+  })
+], { coverageEstablished: false, hasUnmappedResidual: true });
+const residualPlan = planAuthorityWorkstreams(requestedWithResidual);
+assert.equal(residualPlan.some(item => item.authority === 'ACRA'), false,
+  'Unassigned taxonomy residue does not become a requested authority workstream.');
+const residualResult = await buildAuthorityWorkstreams('Explain a CPF rule and an unparsed ACRA mention.', requestedWithResidual, {
+  retriever: cpfRetriever, localOnly: true, referenceDate
+});
+assert.ok(residualResult.issuePlan.issues.some(item => item.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC'));
+assert.ok(residualResult.gaps.some(gap => gap.code === 'UNASSIGNED_QUERY_TOPIC' && gap.authority === 'ACRA'),
+  'Residual authority, domain, and issue remain represented by a diagnostic gap.');
+assert.equal(residualResult.evidenceStatus, 'INSUFFICIENT',
+  'A mapped issue cannot establish complete-question evidence while taxonomy residue remains.');
+assert.equal(residualResult.workstreams.some(item => item.authority === 'ACRA'), false);
 
 console.log('Authority workstream evidence isolation and coverage tests passed.');

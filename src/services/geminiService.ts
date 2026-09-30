@@ -608,7 +608,8 @@ export async function processAccountingQuery(
     );
     profiler.setQueryMode('AUTHORITY_WORKSTREAM_EVIDENCE');
     const materialPlanRequestsAccounting = reconciledQuestionUnderstanding.issuePlan.issues.some(issue =>
-      issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL'
+      issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
+      (issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')
     );
     const standaloneAuthorityQuestion = !materialPlanRequestsAccounting &&
       !journalRequested && !outputPreference?.journal && !isShortSemanticFollowUp(userInput);

@@ -1,0 +1,597 @@
+{
+  "suite": "Frozen held-out multi-authority semantic evaluation",
+  "expectedModel": "gemini-3.5-flash-lite",
+  "frozenAt": "2026-09-29; before production implementation and live measurement",
+  "notUsedForTuning": true,
+  "runs": {
+    "originalABCD": 3,
+    "paraphrasesAndAdversarial": 1
+  },
+  "expectedWorkstreams": {
+    "explicit-dual": [
+      "ACCOUNTING_STANDARDS/ACCOUNTING",
+      "IRAS/IRAS_CORPORATE_TAX"
+    ],
+    "background-tax": [
+      "IRAS/IRAS_CORPORATE_TAX"
+    ],
+    "personal-relief": [
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "employee-benefit": [
+      "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+    ],
+    "employer-report": [
+      "IRAS/IRAS_EMPLOYER_REPORTING"
+    ],
+    "corporate-deduction": [
+      "IRAS/IRAS_CORPORATE_TAX"
+    ],
+    "mixed-parties": [
+      "CPF/CPF_PAYROLL",
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "uncovered": [
+      "IRAS/IRAS_CORPORATE_TAX"
+    ],
+    "context-cpf": [
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "salary-and-pass": [
+      "MOM/MOM_EMPLOYMENT",
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "unidentified-report": [
+      "IRAS/UNKNOWN"
+    ]
+  },
+  "issueContracts": {
+    "explicit-dual": [
+      {
+        "id": "expense-accounting",
+        "subject": "journal entries for staff welfare expense",
+        "matchAny": [
+          [
+            "journal"
+          ],
+          [
+            "expense",
+            "account"
+          ],
+          [
+            "cost",
+            "record"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "PREPARE_JOURNAL"
+        ]
+      },
+      {
+        "id": "expense-deduction",
+        "subject": "company deduction for staff welfare expense",
+        "matchAny": [
+          [
+            "deduct"
+          ],
+          [
+            "tax",
+            "claim"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "ACCOUNTING_STANDARDS"
+          ],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "background-tax": [
+      {
+        "id": "expense-deduction",
+        "subject": "company deduction for an already recorded expense",
+        "matchAny": [
+          [
+            "deduct"
+          ],
+          [
+            "tax",
+            "claim"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "ACCOUNTING_STANDARDS"
+          ],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "personal-relief": [
+      {
+        "id": "personal-relief",
+        "subject": "employee personal tax relief for compulsory CPF",
+        "matchAny": [
+          [
+            "relief"
+          ],
+          [
+            "cpf",
+            "tax",
+            "claim"
+          ]
+        ],
+        "population": [
+          "INDIVIDUAL",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "CPF"
+          ]
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "employee-benefit": [
+      {
+        "id": "benefit-tax",
+        "subject": "employee taxation of company accommodation benefit",
+        "matchAny": [
+          [
+            "tax",
+            "benefit"
+          ],
+          [
+            "tax",
+            "accommodat"
+          ],
+          [
+            "tax",
+            "housing"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "employer-report": [
+      {
+        "id": "report-obligation",
+        "subject": "employer employment income reporting obligations",
+        "matchAny": [
+          [
+            "report"
+          ],
+          [
+            "fil"
+          ],
+          [
+            "ir8a"
+          ],
+          [
+            "ais"
+          ]
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "FILING_REQUIREMENT",
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE"
+        ]
+      }
+    ],
+    "corporate-deduction": [
+      {
+        "id": "corporate-deduction",
+        "subject": "company deduction for remuneration cost",
+        "matchAny": [
+          [
+            "deduct"
+          ],
+          [
+            "tax",
+            "claim"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "mixed-parties": [
+      {
+        "id": "employer-cpf",
+        "subject": "employer contribution amount",
+        "matchAny": [
+          [
+            "employer",
+            "cpf",
+            "contribut"
+          ]
+        ],
+        "rejectAny": [
+          "relief"
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE"
+        ]
+      },
+      {
+        "id": "employee-relief",
+        "subject": "employee personal CPF relief eligibility",
+        "matchAny": [
+          [
+            "relief"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE",
+          "INDIVIDUAL"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "CPF"
+          ]
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "uncovered": [
+      {
+        "id": "novel-expense",
+        "subject": "deductibility of a company aurora-token access charge",
+        "matchAny": [
+          [
+            "deduct"
+          ],
+          [
+            "tax",
+            "claim"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "context-cpf": [
+      {
+        "id": "relief-rule",
+        "subject": "general rules for personal CPF tax relief",
+        "matchAny": [
+          [
+            "relief"
+          ]
+        ],
+        "population": [
+          "INDIVIDUAL",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "CPF"
+          ]
+        ],
+        "operation": [
+          "EXPLAIN_RULE",
+          "EXPLAIN_INTERACTION"
+        ]
+      }
+    ],
+    "salary-and-pass": [
+      {
+        "id": "pass-rule",
+        "subject": "employment authorization requirements",
+        "matchAny": [
+          [
+            "work",
+            "pass"
+          ],
+          [
+            "employment",
+            "authoriz"
+          ],
+          [
+            "pass",
+            "require"
+          ]
+        ],
+        "population": [
+          "EMPLOYER",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "MOM_EMPLOYMENT"
+        ],
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE",
+          "CHECK_ELIGIBILITY"
+        ]
+      },
+      {
+        "id": "salary-tax",
+        "subject": "employee personal taxation of salary",
+        "matchAny": [
+          [
+            "salary",
+            "tax"
+          ],
+          [
+            "employment",
+            "income",
+            "tax"
+          ],
+          [
+            "personal",
+            "tax"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE",
+          "INDIVIDUAL"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY"
+        ]
+      }
+    ],
+    "unidentified-report": [
+      {
+        "id": "unclear-report",
+        "subject": "unspecified party income tax reporting for a worker",
+        "matchAny": [
+          [
+            "report"
+          ],
+          [
+            "fil"
+          ]
+        ],
+        "population": [
+          "UNKNOWN"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "FILING_REQUIREMENT",
+          "EXPLAIN_RULE",
+          "OTHER"
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "heldout-explicit-dual",
+      "contract": "explicit-dual",
+      "runGroup": "originalABCD",
+      "question": "Our Singapore company incurred staff welfare costs. Please prepare the journal entries under SFRS(I) and determine whether we may deduct those costs for corporate income tax."
+    },
+    {
+      "id": "heldout-accounting-background",
+      "contract": "background-tax",
+      "runGroup": "originalABCD",
+      "question": "We are a Singapore company. The staff welfare expense has already been recognised in our SFRS(I) accounts. Can we deduct this expenditure for company income tax?"
+    },
+    {
+      "id": "heldout-employee-personal-relief",
+      "contract": "personal-relief",
+      "runGroup": "originalABCD",
+      "question": "I am an employee in Singapore and paid compulsory CPF from my wages. Can I claim personal income tax relief for the amount I paid?"
+    },
+    {
+      "id": "heldout-company-as-employer",
+      "contract": "employer-report",
+      "runGroup": "originalABCD",
+      "question": "Our Singapore company employed staff this year. What employment income must we report to IRAS in our role as employer?"
+    },
+    {
+      "id": "heldout-recorded-benefit-context",
+      "contract": "background-tax",
+      "runGroup": "expanded",
+      "question": "Our Singapore company has booked its staff accommodation benefit under IFRS. For corporate tax, may we deduct the cost?"
+    },
+    {
+      "id": "heldout-employee-benefit",
+      "contract": "employee-benefit",
+      "runGroup": "expanded",
+      "question": "My Singapore employer paid for my accommodation this year. Is the housing benefit taxable to me as an employee?"
+    },
+    {
+      "id": "heldout-company-taxpayer",
+      "contract": "corporate-deduction",
+      "runGroup": "expanded",
+      "question": "Our Singapore company paid staff remuneration. Can the company deduct this cost from its taxable income?"
+    },
+    {
+      "id": "heldout-different-populations",
+      "contract": "mixed-parties",
+      "runGroup": "expanded",
+      "question": "An employee in Singapore earns SGD 5,200 monthly. Calculate only the employer's CPF contribution and explain whether the employee can claim personal tax relief for compulsory CPF paid."
+    },
+    {
+      "id": "heldout-missing-taxonomy",
+      "contract": "uncovered",
+      "runGroup": "expanded",
+      "question": "Our Singapore company bought an aurora-token access charge. Is this specific charge deductible for corporate tax?"
+    },
+    {
+      "id": "heldout-context-authority",
+      "contract": "context-cpf",
+      "runGroup": "expanded",
+      "question": "In general, what personal tax relief rules apply to compulsory CPF paid by employees? CPF Board manages contributions; I am asking about the tax relief rules."
+    },
+    {
+      "id": "heldout-salary-pass",
+      "contract": "salary-and-pass",
+      "runGroup": "expanded",
+      "question": "We hired a foreign employee in Singapore. Explain the work-pass requirements and determine whether the employee's salary is taxable to that employee."
+    },
+    {
+      "id": "heldout-unidentified-reporter",
+      "contract": "unidentified-report",
+      "runGroup": "expanded",
+      "question": "In Singapore, what income-tax reporting is required in relation to a worker? The question does not identify who must make the report."
+    }
+  ]
+}

@@ -11,6 +11,8 @@ const testSuites = [
   { name: 'Semantic Question Understanding & Guarded Routing', file: 'test_semantic_question_understanding.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Material Issue Decomposition & Authority Ownership', file: 'test_material_issue_decomposition.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Authority Workstream Evidence Isolation & Coverage', file: 'test_authority_workstreams.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Multi-authority Issue Scoring', file: 'test_multi_authority_issue_scoring.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Multi-authority Evaluation Runner Output Safety', file: 'test_multi_authority_runner_safety.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Whole-Question Authority Evidence Presentation', file: 'test_authority_evidence_presentation.mjs', layer: 'ux-resilience', tier: 'smoke' },
   { name: 'Semantic Understanding & Routing', file: 'test_sidequest2_semantic_understanding.mjs', layer: 'input-understanding', tier: 'full' },
   { name: 'Multi-Turn Accounting State & Follow-Ups', file: 'test_followup_accounting_state.mjs', layer: 'conversation-state', tier: 'smoke' },

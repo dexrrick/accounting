@@ -42,6 +42,14 @@ const issue = (overrides = {}) => ({
   ...overrides
 });
 
+let capturedSemanticPrompt = '';
+await interpretSemanticQuestion('What is the individual tax treatment?', 'test-semantic-provider-key', async (prompt, _system, _provider, _options) => {
+  capturedSemanticPrompt = prompt;
+  return JSON.stringify(flatInterpretation());
+});
+assert.match(capturedSemanticPrompt, /include an issues array for every requested material outcome, including exactly one issue for a simple single-outcome question/i,
+  'The production prompt asks for one issue on a simple question while the validator remains backward compatible.');
+
 // Oracle contract fixtures: these exercise the structured issue-plan contract,
 // not live-model accuracy or completeness.
 const fixtures = {
@@ -326,6 +334,38 @@ const caseInteraction = reconcileQuestionUnderstanding(
 );
 assert.equal(caseInteraction.issuePlan.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
   'A case-specific interaction requires source evidence and case facts.');
+
+const contextualAccountingQuery = 'A company records an employee benefit under SFRS(I) and wants to know whether it is tax deductible.';
+const taxOnlyWithAccountingContext = reconcileQuestionUnderstanding(contextualAccountingQuery, classifyQuestion(contextualAccountingQuery), {
+  mode: 'SEMANTIC_INTERPRETATION',
+  interpretation: flatInterpretation({
+    domain: 'IRAS_INCOME_TAX', population: 'COMPANY', authorityCandidates: ['IRAS'],
+    primarySubject: 'corporate tax deductibility of recorded employee benefit',
+    requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true,
+    issues: [issue({
+      subject: 'company deductibility of recorded employee benefit expense', population: 'COMPANY',
+      domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], operation: 'CHECK_ELIGIBILITY'
+    })]
+  })
+});
+assert.equal(taxOnlyWithAccountingContext.classification.accountingAnalysisRequired, false,
+  'A validated tax-only request keeps accounting standards as context even when the original words mention recording under SFRS(I).');
+assert.equal(taxOnlyWithAccountingContext.classification.journalEntryRequired, false);
+
+const explicitJournalAccountingQuery = 'Prepare the SFRS(I) journal entry for this employee benefit and explain the corporate tax deduction.';
+const requestedJournalAccounting = reconcileQuestionUnderstanding(explicitJournalAccountingQuery, classifyQuestion(explicitJournalAccountingQuery), {
+  mode: 'SEMANTIC_INTERPRETATION',
+  interpretation: flatInterpretation({
+    domain: 'UNKNOWN', population: 'UNKNOWN', authorityCandidates: ['UNKNOWN'],
+    issues: [issue({
+      subject: 'journal entry for employee benefit', population: 'COMPANY', domain: 'ACCOUNTING',
+      governingAuthorities: ['ACCOUNTING_STANDARDS'], operation: 'PREPARE_JOURNAL'
+    })]
+  })
+});
+assert.equal(requestedJournalAccounting.classification.accountingAnalysisRequired, true,
+  'A validated accounting/journal issue remains requested when the question asks for the entry.');
+assert.equal(requestedJournalAccounting.classification.journalEntryRequired, true);
 
 const noProvider = await interpretSemanticQuestion(noProviderQuery, undefined, async () => {
   throw new Error('No provider should be called.');

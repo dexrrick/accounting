@@ -5,16 +5,41 @@ import { performance } from 'node:perf_hooks';
 import { fileURLToPath } from 'node:url';
 import { classifyQuestion } from '../../../src/classification/questionClassifier.ts';
 import { planAuthorityWorkstreams, buildAuthorityWorkstreams } from '../../../src/services/authorityWorkstreams.ts';
-import { interpretSemanticQuestion, reconcileQuestionUnderstanding } from '../../../src/services/semanticQuestionUnderstanding.ts';
+import { interpretSemanticQuestion, reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../../src/services/semanticQuestionUnderstanding.ts';
+import { matchIssues, scoreIssueDimensions } from './multi-authority-issue-scoring.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
-const fixturePath = path.join(root, 'tests/evaluation/singapore/multi-authority-workstreams-live.json');
+function optionValue(name) {
+  const prefix = `${name}=`;
+  const inline = process.argv.find(argument => argument.startsWith(prefix));
+  if (inline) return inline.slice(prefix.length);
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+}
+
+const fixtureArgument = optionValue('--fixture');
+const fixturePath = fixtureArgument
+  ? path.resolve(root, fixtureArgument)
+  : path.join(root, 'tests/evaluation/singapore/multi-authority-workstreams-live.json');
 const outputDirectory = path.join(root, 'docs/evaluation/multi-authority-workstreams');
-const jsonPath = path.join(outputDirectory, 'live-semantic-evaluation.json');
-const markdownPath = path.join(outputDirectory, 'live-semantic-evaluation.md');
+const outputPrefix = optionValue('--output-prefix') || 'live-semantic-evaluation';
+if (!outputPrefix.trim() || path.basename(outputPrefix) !== outputPrefix) throw new Error('--output-prefix must be a filename prefix without directory separators.');
+const jsonPath = path.join(outputDirectory, `${outputPrefix}.json`);
+const markdownPath = path.join(outputDirectory, `${outputPrefix}.md`);
 const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
 const interpreterSourcePath = path.join(root, 'src/services/semanticQuestionUnderstanding.ts');
 const MODEL = fixture.expectedModel;
+const rescoreFrom = optionValue('--rescore-from');
+const reconcileSaved = process.argv.includes('--reconcile-saved');
+const defaultFixturePath = path.join(root, 'tests/evaluation/singapore/multi-authority-workstreams-live.json');
+const normalizeFilesystemPath = value => process.platform === 'win32' ? value.toLocaleLowerCase('en-US') : value;
+const isAlternateFixture = normalizeFilesystemPath(path.resolve(fixturePath)) !== normalizeFilesystemPath(path.resolve(defaultFixturePath));
+if (outputPrefix.toLocaleLowerCase('en-US') === 'live-semantic-evaluation' && (isAlternateFixture || Boolean(rescoreFrom))) {
+  throw new Error('--output-prefix=live-semantic-evaluation is reserved for the original live fixture and cannot be used with alternate fixtures or saved-response rescoring.');
+}
+if (fixtureArgument && !optionValue('--output-prefix') && !rescoreFrom) {
+  throw new Error('--fixture requires --output-prefix so alternate fixture runs cannot replace the original live report.');
+}
 const FAILURE_TAXONOMY = [
   'MODEL_OMISSION', 'MODEL_FALSE_ISSUE', 'MODEL_WRONG_AUTHORITY', 'MODEL_WRONG_DOMAIN',
   'MODEL_WRONG_POPULATION', 'MODEL_WRONG_OPERATION', 'MODEL_INVALID_SCHEMA', 'MODEL_TIMEOUT',
@@ -61,10 +86,14 @@ if (retryInvalidResponsesOnly && process.argv.includes('--report-only')) {
 if (process.argv.includes('--oracle') || process.argv.includes('--replay-from')) {
   throw new Error('This runner measures live production-path model understanding only; oracle/replay input is not accepted.');
 }
-if (!process.argv.includes('--live')) {
+if (rescoreFrom && (!optionValue('--output-prefix') || process.argv.includes('--live'))) {
+  throw new Error('--rescore-from requires --output-prefix and cannot be combined with --live.');
+}
+if (reconcileSaved && !rescoreFrom) throw new Error('--reconcile-saved requires --rescore-from.');
+if (!rescoreFrom && !process.argv.includes('--live')) {
   throw new Error('Explicit --live is required. No model call was made; oracle/default evaluation is not supported here.');
 }
-if (process.argv.includes('--report-only') && !process.argv.includes('--resume')) {
+if (!rescoreFrom && process.argv.includes('--report-only') && !process.argv.includes('--resume')) {
   throw new Error('--report-only requires --resume to read an existing live report. No model call was made.');
 }
 
@@ -107,8 +136,28 @@ function markdownReport(report) {
     `Measurement status: ${summary.measurementStatus}. Model: ${summary.model}. Mode: ${summary.mode}.`,
     ''
   ];
+  if (summary.pendingLocalFinalizationCalls) {
+    lines.push(`Pending local finalization: ${summary.pendingLocalFinalizationCalls} call(s). These checkpoints include provider-attempt data but do not yet have finalized interpretation metrics or workstreams.`, '');
+  }
   if (!summary.modelUnderstandingMeasured) {
     const outcomes = summary.callOutcomes;
+    if (summary.mode?.startsWith('SAVED_RESPONSE_')) {
+      const metrics = summary.semanticMetrics || {};
+      lines.push(
+        `**Saved-response rescore; no provider call was made.** Source report: ${summary.sourceReport || 'unknown'}; source measurement: ${summary.sourceMeasurementStatus || 'unknown'}.`,
+        `Saved logical case rows: ${summary.logicalCaseCalls || 0}; preserved provider request attempts: ${summary.providerRequestAttempts || 0}; preserved provider response attempts: ${summary.providerResponseAttempts || 0}.`,
+        `Issue recall: ${fmtRatio(metrics.issueRecall)}; issue precision: ${fmtRatio(metrics.issuePrecision)}; complete-question issue coverage: ${fmtRatio(metrics.completeQuestionIssueCoverage)}; saved downstream workstream routing: ${fmtRatio(metrics.workstreamRoutingAccuracy)}.`,
+        `Runtime routing/evidence-guard correctness: ${fmtRatio(summary.downstreamRoutingEvidenceGuardCorrectness)} (n=${summary.downstreamBehavioralDenominator || 0}); this does not score substantive answer correctness.`,
+        ''
+      );
+      if (summary.note) lines.push(`**${summary.note}**`, '');
+      lines.push('## Rescored calls', '', '| Run | Case | Attempts | Issue recall | Issue precision | Complete issues | Workstream set |', '|---|---|---:|---:|---:|---|---|');
+      for (const row of report.calls) {
+        lines.push(`| ${row.runId} | ${row.caseId} | ${row.attempts?.length || 0} | ${fmtRatio(row.metrics?.issueRecall)} | ${fmtRatio(row.metrics?.issuePrecision)} | ${row.metrics?.completeQuestionIssueCoverage ? 'PASS' : row.metrics ? 'FAIL' : 'N/A'} | ${row.metrics ? row.metrics.finalWorkstreamSetAccuracy ? 'PASS' : 'FAIL' : 'N/A'} |`);
+      }
+      lines.push('', '## Limits', '', ...summary.limitations.map(item => `- ${item}`), '');
+      return `${lines.join('\n').trimEnd()}\n`;
+    }
     lines.push(
       `**${summary.note || 'LIVE GEMINI NOT MEASURED — live calls have not been run.'}**`,
       `Logical case calls: ${outcomes?.logicalCaseCalls || 0}; provider request attempts: ${outcomes?.providerRequestAttempts || 0}; provider response attempts: ${outcomes?.providerResponseAttempts || 0}; no-response rate: ${fmtRatio(outcomes?.providerNoResponseRate)}.`,
@@ -122,16 +171,24 @@ function markdownReport(report) {
       `Provider request attempts by runtime: ${Object.entries(summary.providerAttemptCountsByRuntime || {}).map(([runtime, count]) => `${runtime}: ${count}`).join('; ') || 'n/a'}.`,
       `Issue recall: ${fmtRatio(metrics.issueRecall)}; issue precision: ${fmtRatio(metrics.issuePrecision)}; omission rate: ${fmtRatio(metrics.omissionRate)}.`,
       `Authority: ${fmtRatio(metrics.governingAuthorityAccuracy)}; contextual authority: ${fmtRatio(metrics.contextualAuthorityAccuracy)}; domain: ${fmtRatio(metrics.domainAccuracy)}; population: ${fmtRatio(metrics.populationAccuracy)}; operation: ${fmtRatio(metrics.operationAccuracy)}.`,
-      `Final workstream-set accuracy: ${fmtRatio(metrics.finalWorkstreamSetAccuracy)}; valid interpretation rate: ${fmtRatio(metrics.validInterpretationRate)}; invalid/timeout/fallback rate: ${fmtRatio(metrics.invalidTimeoutFallbackRate)}.`,
+      `Complete-question issue coverage: ${fmtRatio(metrics.completeQuestionIssueCoverage)}; final workstream-set accuracy: ${fmtRatio(metrics.finalWorkstreamSetAccuracy)}; valid interpretation rate: ${fmtRatio(metrics.validInterpretationRate)}; invalid/timeout/fallback rate: ${fmtRatio(metrics.invalidTimeoutFallbackRate)}.`,
+      `Runtime routing/evidence-guard correctness: ${fmtRatio(summary.downstreamRoutingEvidenceGuardCorrectness)} (n=${summary.downstreamBehavioralDenominator || 0}); this does not score substantive answer correctness.`,
       `Semantic latency (ms): median ${summary.latencyMs.median}, p95 ${summary.latencyMs.p95}, max ${summary.latencyMs.max}; timeouts ${summary.latencyMs.timeouts}.`,
       ''
     );
     if (summary.note) lines.push(`**${summary.note}**`, '');
     lines.push('## Failure taxonomy', '', ...FAILURE_TAXONOMY.map(code => `- ${code}: ${summary.taxonomyFailureCounts[code] || 0}`), '');
     lines.push('## Provider attempt outcomes', '', ...Object.entries(summary.providerAttemptOutcomeCounts || {}).map(([outcome, count]) => `- ${outcome}: ${count}`), '');
-    lines.push('## Per-call results', '', '| Run | Case | Attempts | Last provider status | Issue recall | Issue precision | Workstream set | Taxonomy |', '|---|---|---:|---|---:|---:|---|---|');
+    lines.push('## Per-call results', '', '| Run | Case | Checkpoint | Attempts | Last provider status | Issue recall | Issue precision | Workstream set | Taxonomy |', '|---|---|---|---:|---|---:|---:|---|---|');
     for (const row of report.calls) {
-      lines.push(`| ${row.runId} | ${row.caseId} | ${row.attempts?.length || 0} | ${row.providerStatus ?? '—'} | ${fmtRatio(row.metrics?.issueRecall)} | ${fmtRatio(row.metrics?.issuePrecision)} | ${row.metrics ? row.metrics.finalWorkstreamSetAccuracy ? 'PASS' : 'FAIL' : 'N/A'} | ${row.failureTaxonomies.join(', ') || '—'} |`);
+      const pending = row.pendingEvaluation;
+      const metrics = pending ? undefined : row.metrics;
+      const attemptCount = (row.attempts?.length || 0) + Number(Boolean(pending?.attempt));
+      const checkpoint = pending ? `PENDING: ${pending.status}` : 'FINALIZED';
+      const providerStatus = pending?.attempt?.providerStatus ?? (pending ? '—' : row.providerStatus ?? '—');
+      const workstreamResult = pending ? 'PENDING' : metrics ? metrics.finalWorkstreamSetAccuracy ? 'PASS' : 'FAIL' : 'N/A';
+      const taxonomy = pending ? 'pending finalization' : row.failureTaxonomies?.join(', ') || '—';
+      lines.push(`| ${row.runId} | ${row.caseId} | ${checkpoint} | ${attemptCount} | ${providerStatus} | ${fmtRatio(metrics?.issueRecall)} | ${fmtRatio(metrics?.issuePrecision)} | ${workstreamResult} | ${taxonomy} |`);
     }
     lines.push('', '## Repeated A–D workstream stability', '');
     const stability = summary.repeatedOriginalCaseStability;
@@ -141,11 +198,17 @@ function markdownReport(report) {
     if (stability.changedCases.length) lines.push('');
     lines.push('## Per-call detail', '');
     for (const row of report.calls) {
+      const pending = row.pendingEvaluation;
+      const attemptHistory = [...(row.attempts || []), ...(pending?.attempt ? [pending.attempt] : [])];
+      const status = pending ? `PENDING_LOCAL_FINALIZATION (${pending.status})` : 'FINALIZED';
+      const providerCategory = pending ? pending.providerCategory || 'pending finalization' : row.providerCategory || 'none';
+      const providerStatus = pending ? pending.attempt?.providerStatus ?? 'n/a' : row.providerStatus ?? 'n/a';
+      const latency = pending ? pending.attempt?.latencyMs ?? 'n/a' : row.latencyMs ?? 'n/a';
       lines.push(`### ${row.runId} — ${row.caseId}`, '', `Question: ${row.question}`, '',
-        `Valid: ${row.interpretationValid}; final outcome: ${row.semanticFailure || 'PROVIDER_RESPONSE'}; provider category: ${row.providerCategory || 'none'}; HTTP status: ${row.providerStatus ?? 'n/a'}; attempts: ${row.attempts?.length || 0}; latency: ${row.latencyMs ?? 'n/a'} ms.`,
-        `Workstreams: ${row.finalWorkstreams.join(', ') || 'none'}.`,
-        `Attempt history: ${(row.attempts || []).map(attempt => `#${attempt.attempt} ${attempt.outcome}${attempt.providerStatus ? ` (HTTP ${attempt.providerStatus})` : ''}`).join('; ') || 'not recorded'}.`,
-        `Failures: ${row.failureTaxonomies.join(', ') || 'none'}.`, '');
+        `Checkpoint: ${status}; valid: ${pending ? 'not finalized' : row.interpretationValid}; final outcome: ${pending ? 'not finalized' : row.semanticFailure || 'PROVIDER_RESPONSE'}; provider category: ${providerCategory}; HTTP status: ${providerStatus}; attempts: ${attemptHistory.length}; latency: ${latency} ms.`,
+        `Workstreams: ${pending ? 'not finalized' : row.finalWorkstreams?.join(', ') || 'none'}.`,
+        `Attempt history: ${attemptHistory.map(attempt => `#${attempt.attempt} ${attempt.outcome}${attempt.providerStatus ? ` (HTTP ${attempt.providerStatus})` : ''}`).join('; ') || 'not recorded'}.`,
+        `Failures: ${pending ? 'pending finalization' : row.failureTaxonomies?.join(', ') || 'none'}.`, '');
     }
   }
   if (summary.testedCommit || summary.semanticInterpreterSha256) {
@@ -182,7 +245,7 @@ async function saveReport(report) {
 }
 
 const apiKey = process.env.GEMINI_API_KEY?.trim();
-if (!apiKey || apiKey.length <= 10) {
+if (!rescoreFrom && (!apiKey || apiKey.length <= 10)) {
   if (resumeRequested) {
     throw new Error('Cannot resume without a configured Gemini API key. Existing evaluation data was left unchanged.');
   }
@@ -197,8 +260,15 @@ if (!apiKey || apiKey.length <= 10) {
 }
 
 const contracts = fixture.issueContracts;
-const cases = fixture.cases.map(item => ({ ...item, expected: contracts[item.contract] }));
-if (cases.some(item => !item.expected)) throw new Error('The live case contract references a missing issue contract.');
+const cases = fixture.cases.map(item => {
+  const contract = contracts[item.contract];
+  const expected = item.expectedIssueIds
+    ? item.expectedIssueIds.map(id => contract?.find(issue => issue.id === id))
+    : contract;
+  if (!contract || !expected || expected.some(issue => !issue)) throw new Error(`The case ${item.id} references a missing issue contract.`);
+  const expectedWorkstreams = item.expectedWorkstreams || fixture.expectedWorkstreams?.[item.contract] || [];
+  return { ...item, expected, expectedWorkstreams };
+});
 let calls = [];
 let preservedSummaryMetadata = {};
 let priorReportRuntime;
@@ -222,6 +292,17 @@ if (resumeRequested) {
 }
 const completedCallKeys = new Set(calls.map(row => `${row.runId}\u0000${row.caseId}`));
 
+const FINALIZED_RESULT_FIELDS = [
+  'requestStartedAt', 'interpretationValid', 'providerResponseReceived', 'semanticFailure', 'providerStatus', 'providerCategory', 'latencyMs',
+  'topLevel', 'issues', 'validatedInterpretation', 'deterministicReconciliation', 'plannedWorkstreams', 'finalWorkstreams', 'metrics',
+  'semanticUnderstandingCorrect', 'downstreamBehavioralChecks', 'expectedIssueMatches', 'unmatchedModelIssueIndexes', 'runtimeFailure',
+  'failureTaxonomies', 'providerFailure'
+];
+
+function clearFinalizedResultFields(row) {
+  for (const field of FINALIZED_RESULT_FIELDS) delete row[field];
+}
+
 function ensureAttemptHistory(row) {
   if (Array.isArray(row.attempts)) {
     for (const attempt of row.attempts) {
@@ -231,6 +312,10 @@ function ensureAttemptHistory(row) {
       const attempt = row.pendingEvaluation.attempt;
       attempt.runtime = attempt.attempt === 1 ? initialEvaluationRuntime : priorReportRuntime || initialEvaluationRuntime;
     }
+    return row.attempts;
+  }
+  if (row.pendingEvaluation) {
+    row.attempts = [];
     return row.attempts;
   }
   const failure = row.semanticFailure;
@@ -249,7 +334,10 @@ function ensureAttemptHistory(row) {
   return row.attempts;
 }
 
-for (const row of calls) ensureAttemptHistory(row);
+for (const row of calls) {
+  ensureAttemptHistory(row);
+  if (row.pendingEvaluation) clearFinalizedResultFields(row);
+}
 let coldStartGuardPending = calls.length > 0 && !calls.some(row => [
   ...ensureAttemptHistory(row),
   ...(row.pendingEvaluation?.attempt ? [row.pendingEvaluation.attempt] : [])
@@ -296,39 +384,6 @@ function providerCategoryFor(understanding) {
   return undefined;
 }
 
-function normalizedWords(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
-}
-
-function containsAnchor(words, anchor) {
-  return anchor.every(term => words.some(word => word === term || word.startsWith(term)));
-}
-
-function isExpectedIssue(issue, expected) {
-  const words = normalizedWords(issue.subject);
-  if (expected.rejectAny?.some(term => normalizedWords(term).every(word => words.some(actual => actual.startsWith(word))))) return false;
-  return expected.matchAny.some(anchor => containsAnchor(words, anchor));
-}
-
-function matchIssues(expectedIssues, actualIssues) {
-  const ownerByExpected = new Map();
-  const visit = (actualIndex, seen) => {
-    for (let expectedIndex = 0; expectedIndex < expectedIssues.length; expectedIndex += 1) {
-      if (seen.has(expectedIndex) || !isExpectedIssue(actualIssues[actualIndex], expectedIssues[expectedIndex])) continue;
-      seen.add(expectedIndex);
-      const previous = ownerByExpected.get(expectedIndex);
-      if (previous === undefined || visit(previous, seen)) {
-        ownerByExpected.set(expectedIndex, actualIndex);
-        return true;
-      }
-    }
-    return false;
-  };
-  for (let index = 0; index < actualIssues.length; index += 1) visit(index, new Set());
-  const expectedByActual = new Map([...ownerByExpected.entries()].map(([expectedIndex, actualIndex]) => [actualIndex, expectedIndex]));
-  return { ownerByExpected, expectedByActual };
-}
-
 function sameSet(actual, expected) {
   return Array.isArray(actual) && Array.isArray(expected) && actual.length === expected.length &&
     [...actual].sort().every((item, index) => item === [...expected].sort()[index]);
@@ -346,11 +401,7 @@ function scoreCall(testCase, semanticIssues, expectedByActual, issuePlan, finalW
   for (const [actualIndex, expectedIndex] of expectedByActual) {
     const actual = semanticIssues[actualIndex];
     const expected = expectedIssues[expectedIndex];
-    const authority = sameSet(actual.governingAuthorities, expected.governingAuthorities);
-    const contextual = expected.contextualAuthoritiesAnyOf.some(candidate => sameSet(actual.contextualAuthorities, candidate));
-    const domain = expected.domain.includes(actual.domain);
-    const population = expected.population.includes(actual.population);
-    const operation = expected.operation.includes(actual.operation);
+    const { governingAuthority: authority, contextualAuthority: contextual, domain, population, operation } = scoreIssueDimensions(actual, expected);
     const deterministic = statuses[actualIndex];
     authorityCorrect += Number(authority);
     contextualCorrect += Number(contextual);
@@ -372,8 +423,10 @@ function scoreCall(testCase, semanticIssues, expectedByActual, issuePlan, finalW
   const expectedCount = expectedIssues.length;
   const actualCount = semanticIssues.length;
   const plannedKeys = finalWorkstreams.map(stream => `${stream.authority}/${stream.domain}`).sort();
-  const expectedKeys = fixture.expectedWorkstreams[testCase.contract].slice().sort();
-  const exactWorkstreams = sameSet(plannedKeys, expectedKeys);
+  const expectedWorkstreamSets = testCase.expectedWorkstreamsAnyOf || [testCase.expectedWorkstreams];
+  const exactWorkstreams = expectedWorkstreamSets.some(expected => sameSet(plannedKeys, expected));
+  const expectedKeys = expectedWorkstreamSets[0].slice().sort();
+  const completeQuestionIssueCoverage = matchedCount === expectedCount && matchedCount === actualCount;
   const metrics = {
     issueRecall: ratio(matchedCount, expectedCount),
     issuePrecision: ratio(matchedCount, actualCount),
@@ -383,12 +436,42 @@ function scoreCall(testCase, semanticIssues, expectedByActual, issuePlan, finalW
     populationAccuracy: ratio(populationCorrect, matchedCount),
     operationAccuracy: ratio(operationCorrect, matchedCount),
     finalWorkstreamSetAccuracy: exactWorkstreams,
+    completeQuestionIssueCoverage,
     omissionRate: ratio(expectedCount - matchedCount, expectedCount)
   };
   const semanticCorrect = matchedCount === expectedCount && matchedCount === actualCount &&
     authorityCorrect === matchedCount && contextualCorrect === matchedCount && domainCorrect === matchedCount &&
     populationCorrect === matchedCount && operationCorrect === matchedCount;
   return { metrics, matched, semanticCorrect, expectedWorkstreamKeys: expectedKeys, actualWorkstreamKeys: plannedKeys };
+}
+
+function downstreamBehavioralChecks(semanticIssues, issuePlan, runtime) {
+  if (!runtime || !issuePlan) return undefined;
+  const residuals = issuePlan.issues.filter(issue => issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC');
+  const incompletePlan = !issuePlan.coverageEstablished || issuePlan.hasUnmappedResidual ||
+    issuePlan.issues.some(issue => issue.status === 'UNRESOLVED');
+  const runtimeIssues = runtime.workstreams.flatMap(stream => stream.issues);
+  const residualNoRequestedWorkstream = residuals.every(residual =>
+    !runtimeIssues.some(issue => issue.issueId === residual.id));
+  const incompletePlanNotVerified = !incompletePlan || runtime.status !== 'VERIFIED' && runtime.evidenceStatus !== 'VERIFIED';
+  const reconciledIssues = issuePlan.issues.slice(0, semanticIssues.length);
+  const operationsPreserved = semanticIssues.every((issue, index) => reconciledIssues[index]?.operation === issue.operation) &&
+    runtimeIssues.every(runtimeIssue => {
+      const source = reconciledIssues.find(issue => issue.id === runtimeIssue.issueId);
+      return !source || source.operation === runtimeIssue.operation;
+    });
+  const caseSpecificOperations = new Set(['CALCULATE', 'PREPARE_JOURNAL', 'CHECK_ELIGIBILITY']);
+  const requiresCaseFacts = semanticIssues.every((issue, index) => {
+    if (!caseSpecificOperations.has(issue.operation) || issue.domain === 'UNKNOWN') return true;
+    return reconciledIssues[index]?.evidenceRequirement === 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS';
+  });
+  return {
+    residualNoRequestedWorkstream,
+    incompletePlanNotVerified,
+    operationsPreserved,
+    requiresCaseFacts,
+    correct: residualNoRequestedWorkstream && incompletePlanNotVerified && operationsPreserved && requiresCaseFacts
+  };
 }
 
 function taxonomyFor(testCase, understanding, interpretation, semanticIssues, issuePlan, score, runtimeFailed) {
@@ -449,7 +532,8 @@ function plainIssue(issue, reconciled, index) {
 }
 
 function summarizeAll(rows) {
-  const metricRows = rows.filter(row => row.metrics);
+  const finalizedRows = rows.filter(row => !row.pendingEvaluation);
+  const metricRows = finalizedRows.filter(row => row.metrics);
   const averageRatio = key => {
     const correct = metricRows.reduce((sum, row) => sum + (row.metrics[key]?.correct || 0), 0);
     const total = metricRows.reduce((sum, row) => sum + (row.metrics[key]?.total || 0), 0);
@@ -457,6 +541,7 @@ function summarizeAll(rows) {
   };
   const exactRate = key => ratio(metricRows.filter(row => row.metrics[key] === true).length, metricRows.length);
   const calls = rows.length;
+  const pendingLocalFinalizationCalls = rows.filter(row => Boolean(row.pendingEvaluation)).length;
   const attempts = rows.flatMap(row => [
     ...ensureAttemptHistory(row),
     ...(row.pendingEvaluation?.attempt ? [row.pendingEvaluation.attempt] : [])
@@ -467,14 +552,17 @@ function summarizeAll(rows) {
   const outcomeCounts = Object.fromEntries([...new Set(attempts.map(attempt => attempt.outcome || 'UNKNOWN'))]
     .map(outcome => [outcome, attempts.filter(attempt => attempt.outcome === outcome).length]));
   const responseAttempts = attempts.filter(attempt => !NO_RESPONSE_FAILURES.has(attempt.outcome));
-  const responseRows = rows.filter(row => row.providerResponseReceived);
-  const validRows = rows.filter(row => row.interpretationValid && row.metrics);
+  // Logical-call completeness follows the latest provider outcome; historical responses remain in attempt counts.
+  const responseRows = rows.filter(row => row.pendingEvaluation
+    ? row.pendingEvaluation.status === 'PROVIDER_RESPONSE_RECEIVED'
+    : row.providerResponseReceived);
+  const validRows = finalizedRows.filter(row => row.interpretationValid && row.metrics);
   const durations = attempts.filter(attempt => !NO_RESPONSE_FAILURES.has(attempt.outcome))
     .map(attempt => attempt.latencyMs).filter(Number.isFinite).sort((a, b) => a - b);
   const originalCases = fixture.cases.filter(item => item.runGroup === 'originalABCD');
   const assessedOriginals = originalCases.map(testCase => {
     const repeated = rows.filter(row => row.caseId === testCase.id && row.runGroup === 'originalABCD');
-    const observations = repeated.filter(row => row.interpretationValid && row.metrics);
+    const observations = repeated.filter(row => !row.pendingEvaluation && row.interpretationValid && row.metrics);
     const plannedCount = fixture.runs.originalABCD;
     const assessed = observations.length === plannedCount;
     const sets = [...new Set(observations.map(row => row.finalWorkstreams.slice().sort().join('|')))];
@@ -489,26 +577,28 @@ function summarizeAll(rows) {
   });
   const changedCases = assessedOriginals.filter(item => item.assessed && item.runSets);
   const unassessedCases = assessedOriginals.filter(item => !item.assessed).map(({ caseId, observedCount, plannedCount, attemptedCount }) => ({ caseId, observedCount, plannedCount, attemptedCount }));
-  const failureCounts = Object.fromEntries(FAILURE_TAXONOMY.map(code => [code, rows.filter(row => row.failureTaxonomies.includes(code)).length]));
+  const failureCounts = Object.fromEntries(FAILURE_TAXONOMY.map(code => [code, finalizedRows.filter(row => row.failureTaxonomies?.includes(code)).length]));
   const semanticFallbackOutcomes = new Set(['INVALID_RESPONSE', 'LOW_CONFIDENCE', 'TIMEOUT']);
   const fallbackCount = attempts.filter(attempt => semanticFallbackOutcomes.has(attempt.outcome)).length;
   const timeouts = attempts.filter(attempt => attempt.outcome === 'TIMEOUT').length;
   const providerFailureCounts = Object.fromEntries(['PROVIDER_ERROR', 'RATE_LIMITED', 'NO_PROVIDER', 'TIMEOUT', 'QUERY_TOO_LONG']
     .map(failure => [failure, outcomeCounts[failure] || 0]));
-  const finalProviderErrorCases = rows.filter(row => row.semanticFailure === 'PROVIDER_ERROR').length;
-  const finalRateLimitedCases = rows.filter(row => row.semanticFailure === 'RATE_LIMITED').length;
+  const finalProviderErrorCases = finalizedRows.filter(row => row.semanticFailure === 'PROVIDER_ERROR').length;
+  const finalRateLimitedCases = finalizedRows.filter(row => row.semanticFailure === 'RATE_LIMITED').length;
   const noResponseAttempts = requestAttempts.filter(attempt => NO_RESPONSE_FAILURES.has(attempt.outcome)).length;
   const plannedCalls = fixture.runs.originalABCD * fixture.cases.filter(item => item.runGroup === 'originalABCD').length +
     fixture.runs.paraphrasesAndAdversarial * fixture.cases.filter(item => item.runGroup === 'expanded').length;
   const complete = rows.length === plannedCalls;
   const measured = responseAttempts.length > 0;
-  const providerComplete = responseRows.length === plannedCalls && responseRows.every(row => row.providerResponseReceived);
+  const providerComplete = responseRows.length === plannedCalls;
   const summary = emptySummary(measured ? 'MEASURED' : 'NOT_MEASURED', measured
-    ? !providerComplete ? `Live measurement is partial: ${responseRows.length}/${plannedCalls} logical case calls have a provider response; request-attempt failures are reported separately.` : undefined
+    ? pendingLocalFinalizationCalls
+      ? `Live measurement is partial: ${pendingLocalFinalizationCalls} provider result(s) are checkpointed and await local finalization.`
+      : !providerComplete ? `Live measurement is partial: ${responseRows.length}/${plannedCalls} logical case calls have a provider response; request-attempt failures are reported separately.` : undefined
     : 'LIVE GEMINI NOT MEASURED — no provider response was obtained; logical case calls and request attempts are recorded.');
-  summary.measurementStatus = measured ? (complete && providerComplete ? 'COMPLETE' : 'PARTIAL') : 'NOT_MEASURED';
+  summary.measurementStatus = measured ? (complete && providerComplete && pendingLocalFinalizationCalls === 0 ? 'COMPLETE' : 'PARTIAL') : 'NOT_MEASURED';
   summary.mode = measured
-    ? (complete && providerComplete ? 'LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS' : 'LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS_PARTIAL')
+    ? (complete && providerComplete && pendingLocalFinalizationCalls === 0 ? 'LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS' : 'LIVE_GEMINI_SEMANTIC_AND_LOCAL_AUTHORITY_WORKSTREAMS_PARTIAL')
     : 'LIVE_SEMANTIC_NOT_MEASURED';
   summary.liveCalls = calls;
   summary.logicalCaseCalls = calls;
@@ -524,11 +614,12 @@ function summarizeAll(rows) {
   summary.finalProviderErrorCases = finalProviderErrorCases;
   summary.finalRateLimitedCases = finalRateLimitedCases;
   summary.noResponseCalls = noResponseAttempts;
-  summary.invalidResponseCount = rows.filter(row => row.semanticFailure === 'INVALID_RESPONSE' || row.semanticFailure === 'LOW_CONFIDENCE').length;
+  summary.invalidResponseCount = finalizedRows.filter(row => row.semanticFailure === 'INVALID_RESPONSE' || row.semanticFailure === 'LOW_CONFIDENCE').length;
   summary.totalCaseCalls = rows.length;
+  summary.pendingLocalFinalizationCalls = pendingLocalFinalizationCalls;
   summary.plannedCaseCalls = plannedCalls;
   summary.allCallsAttempted = complete;
-  summary.suiteComplete = complete && providerComplete;
+  summary.suiteComplete = complete && providerComplete && pendingLocalFinalizationCalls === 0;
   summary.providerComplete = providerComplete;
   summary.callOutcomes = {
     logicalCaseCalls: calls,
@@ -552,12 +643,19 @@ function summarizeAll(rows) {
       populationAccuracy: averageRatio('populationAccuracy'),
       operationAccuracy: averageRatio('operationAccuracy'),
       finalWorkstreamSetAccuracy: exactRate('finalWorkstreamSetAccuracy'),
+      completeQuestionIssueCoverage: ratio(finalizedRows.filter(row => row.metrics?.completeQuestionIssueCoverage).length, calls),
       omissionRate: averageRatio('omissionRate'),
+      workstreamRoutingAccuracy: exactRate('finalWorkstreamSetAccuracy'),
       qualityCallDenominator: metricRows.length,
       validInterpretationRate: ratio(validRows.length, calls),
       invalidTimeoutFallbackRate: ratio(fallbackCount, requestAttempts.length),
       semanticUnderstandingCorrect: ratio(validRows.filter(row => row.semanticUnderstandingCorrect).length, validRows.length)
     } : null;
+  const behavioralRows = finalizedRows.filter(row => row.downstreamBehavioralChecks);
+  summary.downstreamBehavioralDenominator = behavioralRows.length;
+  summary.downstreamRoutingEvidenceGuardCorrectness = behavioralRows.length
+    ? ratio(behavioralRows.filter(row => row.downstreamBehavioralChecks.correct).length, behavioralRows.length)
+    : null;
   summary.taxonomyFailureCounts = failureCounts;
   summary.providerFailureCounts = providerFailureCounts;
   summary.providerAttemptOutcomeCounts = outcomeCounts;
@@ -591,6 +689,7 @@ async function writeMeasuredReport() {
   };
   const report = { summary, calls };
   await saveReport(report);
+  return report;
 }
 
 function replaceCallRow(row) {
@@ -615,17 +714,19 @@ async function finalizePendingEvaluation(checkpointRow, testCase) {
   let reconciled;
   let planned = [];
   let built = [];
+  let runtime;
   let runtimeFailure;
   try {
     reconciled = reconcileQuestionUnderstanding(testCase.question, classifyQuestion(testCase.question), understanding);
     planned = planAuthorityWorkstreams(reconciled.issuePlan).map(stream => `${stream.authority}/${stream.domain}`);
-    const runtime = await buildAuthorityWorkstreams(testCase.question, reconciled.issuePlan, {
+    runtime = await buildAuthorityWorkstreams(testCase.question, reconciled.issuePlan, {
       localOnly: true,
       questionUnderstanding: understanding
     });
     built = runtime.workstreams.map(stream => `${stream.authority}/${stream.domain}`);
   } catch (error) {
-    runtimeFailure = error instanceof Error ? error.message.replaceAll(apiKey || '', '[REDACTED]') : 'Unknown runtime failure.';
+    const message = error instanceof Error ? error.message : 'Unknown runtime failure.';
+    runtimeFailure = apiKey ? message.replaceAll(apiKey, '[REDACTED]') : message;
   }
   const issuePlan = reconciled?.issuePlan || { issues: [] };
   const providerResponseReceived = pending.status === 'PROVIDER_RESPONSE_RECEIVED';
@@ -667,6 +768,7 @@ async function finalizePendingEvaluation(checkpointRow, testCase) {
       calculationRequested: interpretation.calculationRequested
     } : null,
     issues: semanticIssues.map((issue, index) => plainIssue(issue, issuePlan.issues[index], index)),
+    validatedInterpretation: interpretation || null,
     deterministicReconciliation: {
       source: issuePlan.source,
       coverageEstablished: issuePlan.coverageEstablished,
@@ -688,6 +790,7 @@ async function finalizePendingEvaluation(checkpointRow, testCase) {
     finalWorkstreams: built,
     metrics: valid ? scoredCase.metrics : null,
     semanticUnderstandingCorrect: valid && scoredCase.semanticCorrect,
+    downstreamBehavioralChecks: downstreamBehavioralChecks(semanticIssues, issuePlan, runtime),
     expectedIssueMatches: scoredCase.matched,
     unmatchedModelIssueIndexes: semanticIssues.map((_, index) => index).filter(index => !expectedByActual.has(index)),
     runtimeFailure,
@@ -700,6 +803,209 @@ async function finalizePendingEvaluation(checkpointRow, testCase) {
       : 'No provider interpretation was received; response body withheld.';
   }
   return finalRow;
+}
+
+function validatedInterpretationFromSavedRow(row) {
+  const persisted = validateSemanticQuestionInterpretation(row.validatedInterpretation);
+  if (persisted) return { interpretation: persisted, reconstructed: false };
+  if (!row.interpretationValid || !row.topLevel || !Array.isArray(row.issues)) return { reconstructed: false };
+  const top = row.topLevel;
+  const reconstructed = validateSemanticQuestionInterpretation({
+    jurisdiction: ['Singapore'],
+    authorityCandidates: top.authorityCandidates,
+    contextualAuthorities: top.contextualAuthorities,
+    domain: top.domain,
+    population: top.population,
+    primarySubject: top.primarySubject,
+    concepts: [],
+    requestedOperation: top.requestedOperation,
+    requiresUserSpecificFacts: top.requiresUserSpecificFacts,
+    calculationRequested: top.calculationRequested,
+    factsExplicitlyProvided: [],
+    confidence: 1,
+    issues: row.issues.map(issue => ({
+      subject: issue.subject,
+      population: issue.population,
+      domain: issue.domain,
+      governingAuthorities: issue.governingAuthorities,
+      contextualAuthorities: issue.contextualAuthorities || [],
+      operation: issue.operation,
+      mappedTopicIds: issue.modelTopicHints || [],
+      evidenceRequirement: issue.evidenceRequirement || 'UNRESOLVED',
+      confidence: issue.confidence
+    }))
+  });
+  return reconstructed ? { interpretation: reconstructed, reconstructed: true } : { reconstructed: true };
+}
+
+function issuePlanFromSavedRow(row) {
+  const saved = row.deterministicReconciliation;
+  if (!saved || !Array.isArray(saved.issues)) return undefined;
+  return {
+    source: saved.source,
+    coverageEstablished: Boolean(saved.coverageEstablished),
+    hasUnmappedResidual: Boolean(saved.hasUnmappedResidual),
+    issues: saved.issues.map(issue => ({
+      ...issue,
+      mappedTopicIds: issue.deterministicMappedTopicIds || [],
+      status: issue.reconciliationStatus || 'UNRESOLVED'
+    }))
+  };
+}
+
+function ratioFromRows(rows, key) {
+  const scored = rows.map(row => row.metrics?.[key]).filter(value => value && Number.isFinite(value.correct) && Number.isFinite(value.total));
+  return ratio(scored.reduce((sum, value) => sum + value.correct, 0), scored.reduce((sum, value) => sum + value.total, 0));
+}
+
+async function rescoreSavedReport() {
+  const savedPath = path.resolve(root, rescoreFrom);
+  if (path.resolve(savedPath) === path.resolve(jsonPath)) throw new Error('Rescore output must not overwrite the saved source report.');
+  const sourceReport = JSON.parse(await readFile(savedPath, 'utf8'));
+  if (!Array.isArray(sourceReport.calls)) throw new Error('--rescore-from must point to a saved evaluation report with calls[].');
+  const casesById = new Map(cases.map(testCase => [testCase.id, testCase]));
+  let reconstructedCount = 0;
+  const rescoredCalls = [];
+
+  for (const row of sourceReport.calls) {
+    const testCase = casesById.get(row.caseId);
+    if (!testCase) {
+      rescoredCalls.push({ ...row, rescoringNote: 'Case is absent from the selected fixture; saved scoring retained.' });
+      continue;
+    }
+    const savedInterpretation = validatedInterpretationFromSavedRow(row);
+    if (savedInterpretation.reconstructed) reconstructedCount += 1;
+    const interpretation = savedInterpretation.interpretation;
+    const semanticIssues = interpretation?.issues || [];
+    let issuePlan = issuePlanFromSavedRow(row);
+    let scoredWorkstreams = row.finalWorkstreams || [];
+    let replayed = undefined;
+    let behaviorChecks;
+
+    if (reconcileSaved && interpretation) {
+      const understanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation };
+      const reconciled = reconcileQuestionUnderstanding(testCase.question, classifyQuestion(testCase.question), understanding);
+      issuePlan = reconciled.issuePlan;
+      const planned = planAuthorityWorkstreams(issuePlan).map(stream => `${stream.authority}/${stream.domain}`);
+      const runtime = await buildAuthorityWorkstreams(testCase.question, issuePlan, {
+        localOnly: true,
+        questionUnderstanding: understanding
+      });
+      scoredWorkstreams = runtime.workstreams.map(stream => `${stream.authority}/${stream.domain}`);
+      behaviorChecks = downstreamBehavioralChecks(semanticIssues, issuePlan, runtime);
+      replayed = {
+        source: savedInterpretation.reconstructed ? 'RECONSTRUCTED_SAVED_VALIDATED_INTERPRETATION' : 'PERSISTED_VALIDATED_INTERPRETATION',
+        coverageEstablished: issuePlan.coverageEstablished,
+        hasUnmappedResidual: issuePlan.hasUnmappedResidual,
+        plannedWorkstreams: planned,
+        finalWorkstreams: scoredWorkstreams,
+        evidenceStatus: runtime.evidenceStatus,
+        status: runtime.status,
+        gapCodes: [...new Set(runtime.gaps.map(gap => gap.code))]
+      };
+    }
+
+    if (!issuePlan) issuePlan = { issues: [] };
+    const { expectedByActual } = matchIssues(testCase.expected, semanticIssues);
+    const scoredCase = scoreCall(testCase, semanticIssues, expectedByActual, issuePlan, scoredWorkstreams.map(key => {
+      const [authority, domain] = key.split('/');
+      return { authority, domain };
+    }));
+    const valid = Boolean(interpretation) && row.interpretationValid;
+    const understandingForTaxonomy = interpretation
+      ? { mode: 'SEMANTIC_INTERPRETATION', interpretation }
+      : { mode: 'DETERMINISTIC_FALLBACK', ...(row.semanticFailure ? { failure: row.semanticFailure } : {}) };
+    const correctedFailureTaxonomies = taxonomyFor(testCase, understandingForTaxonomy, interpretation,
+      semanticIssues, issuePlan, scoredCase, Boolean(row.runtimeFailure));
+    const nextRow = {
+      ...row,
+      originalScoring: {
+        metrics: row.metrics || null,
+        semanticUnderstandingCorrect: row.semanticUnderstandingCorrect,
+        expectedIssueMatches: row.expectedIssueMatches,
+        failureTaxonomies: row.failureTaxonomies || []
+      },
+      scoringFixture: path.relative(root, fixturePath),
+      metrics: valid ? scoredCase.metrics : null,
+      semanticUnderstandingCorrect: valid && scoredCase.semanticCorrect,
+      failureTaxonomies: correctedFailureTaxonomies,
+      expectedIssueMatches: scoredCase.matched,
+      unmatchedModelIssueIndexes: semanticIssues.map((_, index) => index).filter(index => !expectedByActual.has(index)),
+      expectedWorkstreamKeys: scoredCase.expectedWorkstreamKeys,
+      scoredWorkstreams,
+      ...(replayed ? { deterministicReplay: replayed } : {}),
+      downstreamBehavioralChecks: behaviorChecks || null,
+      ...(savedInterpretation.reconstructed ? { interpretationReconstructedForScoring: true } : {})
+    };
+    rescoredCalls.push(nextRow);
+  }
+
+  const rowsWithMetrics = rescoredCalls.filter(row => row.metrics);
+  const attempts = sourceReport.calls.flatMap(row => row.attempts || []);
+  const noResponseAttempts = attempts.filter(attempt => NO_RESPONSE_FAILURES.has(attempt.outcome)).length;
+  const providerRequestAttempts = attempts.filter(attempt => attempt.providerRequestAttempted !== false).length;
+  const providerResponseAttempts = attempts.filter(attempt => attempt.providerRequestAttempted !== false && !NO_RESPONSE_FAILURES.has(attempt.outcome)).length;
+  const completeRows = rescoredCalls.filter(row => row.metrics?.completeQuestionIssueCoverage).length;
+  const behavioralRows = rescoredCalls.filter(row => row.downstreamBehavioralChecks);
+  const failureTaxonomyCounts = Object.fromEntries(FAILURE_TAXONOMY.map(code =>
+    [code, rescoredCalls.filter(row => row.failureTaxonomies?.includes(code)).length]));
+  const summary = {
+    suite: fixture.suite,
+    mode: reconcileSaved ? 'SAVED_RESPONSE_DETERMINISTIC_REPLAY' : 'SAVED_RESPONSE_RESCORE',
+    modelUnderstandingMeasured: false,
+    measurementStatus: 'RESCORED',
+    model: sourceReport.summary?.model || sourceReport.summary?.expectedModel || MODEL,
+    expectedModel: MODEL,
+    sourceReport: path.relative(root, savedPath),
+    sourceMeasurementStatus: sourceReport.summary?.measurementStatus || 'UNKNOWN',
+    scoringFixture: path.relative(root, fixturePath),
+    logicalCaseCalls: sourceReport.calls.length,
+    providerRequestAttempts,
+    providerResponseAttempts,
+    validInterpretations: rowsWithMetrics.length,
+    completeQuestionIssueCoverageCount: completeRows,
+    reconstructedInterpretationCount: reconstructedCount,
+    taxonomyFailureCounts: failureTaxonomyCounts,
+    semanticMetrics: {
+      issueRecall: ratioFromRows(rowsWithMetrics, 'issueRecall'),
+      issuePrecision: ratioFromRows(rowsWithMetrics, 'issuePrecision'),
+      governingAuthorityAccuracy: ratioFromRows(rowsWithMetrics, 'governingAuthorityAccuracy'),
+      contextualAuthorityAccuracy: ratioFromRows(rowsWithMetrics, 'contextualAuthorityAccuracy'),
+      domainAccuracy: ratioFromRows(rowsWithMetrics, 'domainAccuracy'),
+      populationAccuracy: ratioFromRows(rowsWithMetrics, 'populationAccuracy'),
+      operationAccuracy: ratioFromRows(rowsWithMetrics, 'operationAccuracy'),
+      completeQuestionIssueCoverage: ratio(completeRows, rescoredCalls.length),
+      workstreamRoutingAccuracy: ratio(rowsWithMetrics.filter(row => row.metrics.finalWorkstreamSetAccuracy).length, rowsWithMetrics.length),
+      qualityCallDenominator: rowsWithMetrics.length
+    },
+    downstreamRoutingEvidenceGuardCorrectness: behavioralRows.length
+      ? ratio(behavioralRows.filter(row => row.downstreamBehavioralChecks.correct).length, behavioralRows.length)
+      : null,
+    downstreamBehavioralDenominator: behavioralRows.length,
+    callOutcomes: {
+      logicalCaseCalls: sourceReport.calls.length,
+      providerRequestAttempts,
+      providerResponseAttempts,
+      noResponseAttempts,
+      providerNoResponseRate: ratio(noResponseAttempts, providerRequestAttempts)
+    },
+    note: reconcileSaved
+      ? 'Deterministic replay uses saved validated interpretations. It is not a new model measurement or raw-provider replay.'
+      : 'This report rescored saved validated interpretations and retained saved reconciliation, workstreams, and provider attempts. No model call was made.',
+    limitations: [
+      'This is a rescore of saved validated interpretations; raw model response bodies and schema failures are not reconstructed.',
+      ...(reconstructedCount ? ['The source report did not persist the full validated JSON for every row; missing fields were reconstructed from saved top-level labels and issue records, so this is not a raw-model replay.'] : []),
+      ...(reconcileSaved ? ['The optional deterministic replay reruns current reconciliation and local-only routing against saved interpretations; its outputs are separate from original saved workstreams.'] : ['Saved deterministic reconciliation and workstream outcomes were retained; this mode does not replay current routing code.']),
+      'Workstream and evidence status measure routing and evidence guards only; they do not establish that an accounting or tax answer is substantively correct.'
+    ]
+  };
+  await saveReport({ summary, calls: rescoredCalls });
+  console.log(`Rescored ${sourceReport.calls.length} saved rows into ${path.relative(root, jsonPath)} and ${path.relative(root, markdownPath)}. No model call was made.`);
+}
+
+if (rescoreFrom) {
+  await rescoreSavedReport();
+  process.exit(0);
 }
 
 async function runCaseAttempt(testCase, runId, priorRow, eligibleAt = 0, retryReason) {
@@ -754,8 +1060,19 @@ async function runCaseAttempt(testCase, runId, priorRow, eligibleAt = 0, retryRe
     attempt
   };
   const checkpointRow = priorRow
-    ? { ...priorRow, ...(retryReason ? { retryReason } : {}), pendingEvaluation }
+    ? {
+      ...priorRow,
+      callAttempted: true,
+      requestStartedAt,
+      rateLimitFailureCount,
+      nextRetryAt: pendingEvaluation.nextRetryAt,
+      ...(retryReason ? { retryReason } : {}),
+      pendingEvaluation
+    }
     : { runId, runGroup: testCase.runGroup, caseId: testCase.id, model: MODEL, question: testCase.question, callAttempted: true, ...(retryReason ? { retryReason } : {}), attempts: attemptHistory, pendingEvaluation };
+  if (priorRow) {
+    clearFinalizedResultFields(checkpointRow);
+  }
   replaceCallRow(checkpointRow);
   await writeMeasuredReport();
 
@@ -786,7 +1103,14 @@ async function drainProviderRetryQueue(pending) {
   }
 }
 
-for (const checkpointRow of [...calls].filter(row => row.pendingEvaluation)) {
+const pendingCheckpointRows = [...calls].filter(row => row.pendingEvaluation);
+if (resumeRequested && pendingCheckpointRows.length) {
+  // Re-persist the checkpoint safely before local finalization so an interrupted resume
+  // remains inspectable and recoverable without replaying the provider request.
+  const pendingSnapshot = await writeMeasuredReport();
+  console.log(`[resume] pending checkpoint snapshot persisted: pending=${pendingSnapshot.summary.pendingLocalFinalizationCalls}; finalized quality rows=${pendingSnapshot.summary.semanticMetrics?.qualityCallDenominator ?? 0}; complete issue coverage=${fmtRatio(pendingSnapshot.summary.semanticMetrics?.completeQuestionIssueCoverage)}.`);
+}
+for (const checkpointRow of pendingCheckpointRows) {
   const testCase = cases.find(item => item.id === checkpointRow.caseId);
   if (!testCase) throw new Error(`Cannot locally finalize pending checkpoint for unknown case ${checkpointRow.caseId}.`);
   const finalRow = await finalizePendingEvaluation(checkpointRow, testCase);
