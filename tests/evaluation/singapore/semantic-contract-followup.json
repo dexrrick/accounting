@@ -1,0 +1,599 @@
+{
+  "schemaVersion": 1,
+  "suite": "Contract consistency follow-up: five known failures and five independent controls",
+  "expectedModel": "gemini-3.5-flash-lite",
+  "runs": {
+    "paraphrasesAndAdversarial": 1,
+    "originalABCD": 1
+  },
+  "issueContracts": {
+    "A": [
+      {
+        "id": "employer-cpf-contribution",
+        "subject": "employer CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employer",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "company",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employer",
+            "provident",
+            "contribut"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employer",
+            "cpf",
+            "position"
+          ],
+          [
+            "employer",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "employee-cpf-contribution",
+        "subject": "employee compulsory CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employee",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employee",
+            "provident",
+            "contribut"
+          ],
+          [
+            "mandatory",
+            "cpf",
+            "salary"
+          ],
+          [
+            "compulsory",
+            "cpf",
+            "salary"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employee",
+            "cpf",
+            "position"
+          ],
+          [
+            "employee",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "individual-cpf-tax-relief",
+        "subject": "individual income tax relief for compulsory CPF",
+        "matchAny": [
+          [
+            "income",
+            "tax",
+            "relief"
+          ],
+          [
+            "personal",
+            "tax",
+            "relief"
+          ],
+          [
+            "cpf",
+            "relief"
+          ],
+          [
+            "tax",
+            "claim",
+            "cpf"
+          ]
+        ],
+        "population": [
+          "INDIVIDUAL",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "CPF"
+          ]
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY",
+          "EXPLAIN_INTERACTION",
+          "EXPLAIN_RULE"
+        ]
+      }
+    ],
+    "adversarial-C": [
+      {
+        "id": "employee-accommodation-benefit-tax",
+        "subject": "employee tax on accommodation benefit",
+        "matchAny": [
+          [
+            "employee",
+            "tax",
+            "accommodat"
+          ],
+          [
+            "employee",
+            "tax",
+            "benefit"
+          ],
+          [
+            "staff",
+            "tax",
+            "housing"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "general-recognition": [
+      {
+        "id": "general-recognition",
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "operation": [
+          "EXPLAIN_RULE"
+        ],
+        "population": [
+          "UNKNOWN",
+          "COMPANY"
+        ],
+        "matchAny": [
+          [
+            "intangible"
+          ],
+          [
+            "recogn"
+          ]
+        ],
+        "subject": "general-recognition",
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ]
+      }
+    ],
+    "general-interaction": [
+      {
+        "id": "general-interaction",
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "operation": [
+          "EXPLAIN_INTERACTION"
+        ],
+        "population": [
+          "UNKNOWN",
+          "COMPANY"
+        ],
+        "matchAny": [
+          [
+            "recogn"
+          ],
+          [
+            "measure"
+          ],
+          [
+            "interaction"
+          ]
+        ],
+        "subject": "general-interaction",
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ]
+      }
+    ],
+    "dev-rule": [
+      {
+        "id": "general-provision-measurement",
+        "subject": "general provision measurement principles",
+        "matchAny": [
+          [
+            "provision",
+            "measure"
+          ],
+          [
+            "provision",
+            "rule"
+          ]
+        ],
+        "population": [
+          "UNKNOWN"
+        ],
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ],
+        "operation": [
+          "EXPLAIN_RULE"
+        ]
+      }
+    ],
+    "dev-eligibility": [
+      {
+        "id": "company-training-deduction",
+        "subject": "company tax deduction for staff training",
+        "matchAny": [
+          [
+            "training",
+            "deduct"
+          ],
+          [
+            "training",
+            "claim"
+          ],
+          [
+            "training",
+            "tax"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "dev-mixed": [
+      {
+        "id": "stationery-journal",
+        "subject": "journal entry for stationery purchase",
+        "matchAny": [
+          [
+            "stationery",
+            "journal"
+          ],
+          [
+            "purchase",
+            "journal"
+          ],
+          [
+            "stationery",
+            "entry"
+          ]
+        ],
+        "population": [
+          "COMPANY",
+          "UNKNOWN"
+        ],
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "PREPARE_JOURNAL"
+        ]
+      },
+      {
+        "id": "four-purchase-total",
+        "subject": "total amount for four purchases",
+        "matchAny": [
+          [
+            "purchase",
+            "total"
+          ],
+          [
+            "purchase",
+            "calculat"
+          ],
+          [
+            "four",
+            "total"
+          ],
+          [
+            "stationery",
+            "total"
+          ]
+        ],
+        "population": [
+          "COMPANY",
+          "UNKNOWN"
+        ],
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE"
+        ]
+      }
+    ],
+    "dev-filing": [
+      {
+        "id": "company-income-tax-return",
+        "subject": "annual company income tax return filing",
+        "matchAny": [
+          [
+            "company",
+            "tax",
+            "return"
+          ],
+          [
+            "corporate",
+            "tax",
+            "fil"
+          ],
+          [
+            "income",
+            "tax",
+            "return"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "FILING_REQUIREMENT"
+        ]
+      }
+    ],
+    "dev-comparison": [
+      {
+        "id": "investment-cost-fair-value",
+        "subject": "investment cost and fair value comparison",
+        "matchAny": [
+          [
+            "cost",
+            "fair",
+            "value"
+          ],
+          [
+            "investment",
+            "compar"
+          ]
+        ],
+        "population": [
+          "UNKNOWN"
+        ],
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ],
+        "operation": [
+          "COMPARE"
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "A-paraphrase-2",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+      "expectedIssueIds": [
+        "employer-cpf-contribution",
+        "individual-cpf-tax-relief"
+      ]
+    },
+    {
+      "id": "adversarial-C-employee-benefit",
+      "contract": "adversarial-C",
+      "runGroup": "expanded",
+      "question": "The employer provides accommodation to staff. What tax does the employee pay on the benefit?"
+    },
+    {
+      "contract": "general-recognition",
+      "question": "What are the general principles for recognizing intangible assets under IFRS?",
+      "runGroup": "expanded",
+      "id": "control-general-recognition"
+    },
+    {
+      "contract": "general-interaction",
+      "question": "Explain generally how recognition and measurement decisions relate in financial reporting under IFRS.",
+      "runGroup": "expanded",
+      "id": "control-general-interaction"
+    },
+    {
+      "id": "A-paraphrase-3",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "If a worker is paid SGD 6,000 monthly, explain the personal income tax relief linked to mandatory payroll CPF first, then state the employer and employee contribution amounts."
+    },
+    {
+      "expectedIssueIds": [
+        "general-provision-measurement"
+      ],
+      "contract": "dev-rule",
+      "question": "Outline the general measurement rules for provisions under SFRS(I), using SGD 500 only as an illustration.",
+      "runGroup": "expanded",
+      "notes": "Independent development control fixed before live measurement; no held-out derivation.",
+      "id": "dev-conceptual-illustration",
+      "expectedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ]
+    },
+    {
+      "expectedIssueIds": [
+        "company-training-deduction"
+      ],
+      "contract": "dev-eligibility",
+      "question": "Our Singapore-resident company incurred a staff training expense. May it claim that expense for income tax?",
+      "runGroup": "expanded",
+      "notes": "Independent development control fixed before live measurement; no held-out derivation.",
+      "id": "dev-training-entitlement",
+      "expectedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX"
+      ]
+    },
+    {
+      "expectedIssueIds": [
+        "stationery-journal",
+        "four-purchase-total"
+      ],
+      "contract": "dev-mixed",
+      "question": "Our company bought office stationery for SGD 300 cash, excluding GST. Record the journal entry and calculate the purchase total for four identical purchases.",
+      "runGroup": "expanded",
+      "notes": "Independent development control fixed before live measurement; no held-out derivation.",
+      "id": "dev-mixed-entry-total",
+      "expectedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ]
+    },
+    {
+      "expectedIssueIds": [
+        "company-income-tax-return"
+      ],
+      "contract": "dev-filing",
+      "question": "Which annual income-tax return must a Singapore-incorporated company submit?",
+      "runGroup": "expanded",
+      "notes": "Independent development control fixed before live measurement; no held-out derivation.",
+      "id": "dev-corporate-filing",
+      "expectedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX"
+      ]
+    },
+    {
+      "expectedIssueIds": [
+        "investment-cost-fair-value"
+      ],
+      "contract": "dev-comparison",
+      "question": "Compare acquisition cost and fair value as bases for measuring an investment under SFRS(I).",
+      "runGroup": "expanded",
+      "notes": "Independent development control fixed before live measurement; no held-out derivation.",
+      "id": "dev-investment-comparison",
+      "expectedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ]
+    }
+  ]
+}

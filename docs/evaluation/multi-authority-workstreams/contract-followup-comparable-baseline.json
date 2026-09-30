@@ -1,0 +1,101 @@
+{
+  "baseCommit": "47a6e4a",
+  "comparison": "Five preselected historical failures, fixed before new observations; changed prompt/time not causal",
+  "calls": [
+    {
+      "caseId": "A-paraphrase-2",
+      "valid": true,
+      "failure": null,
+      "failureReason": null,
+      "operationAccuracy": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "completeIssueCoverage": true,
+      "workstreamsCorrect": true,
+      "operations": [
+        "CHECK_ELIGIBILITY",
+        "EXPLAIN_RULE"
+      ]
+    },
+    {
+      "caseId": "adversarial-C-employee-benefit",
+      "valid": true,
+      "failure": null,
+      "failureReason": null,
+      "operationAccuracy": {
+        "correct": 0,
+        "total": 1,
+        "rate": 0
+      },
+      "issueRecall": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 1,
+        "total": 1,
+        "rate": 1
+      },
+      "completeIssueCoverage": true,
+      "workstreamsCorrect": true,
+      "operations": [
+        "EXPLAIN_RULE"
+      ]
+    },
+    {
+      "caseId": "A-paraphrase-3",
+      "valid": false,
+      "failure": "INVALID_RESPONSE",
+      "failureReason": "CONTRADICTORY_FIELDS",
+      "operationAccuracy": null,
+      "issueRecall": null,
+      "issuePrecision": null,
+      "completeIssueCoverage": null,
+      "workstreamsCorrect": null,
+      "operations": [
+        null
+      ]
+    },
+    {
+      "caseId": "control-general-recognition",
+      "valid": false,
+      "failure": "INVALID_RESPONSE",
+      "failureReason": "SCHEMA_MISMATCH",
+      "operationAccuracy": null,
+      "issueRecall": null,
+      "issuePrecision": null,
+      "completeIssueCoverage": null,
+      "workstreamsCorrect": null,
+      "operations": [
+        null
+      ]
+    },
+    {
+      "caseId": "control-general-interaction",
+      "valid": false,
+      "failure": "INVALID_RESPONSE",
+      "failureReason": "SCHEMA_MISMATCH",
+      "operationAccuracy": null,
+      "issueRecall": null,
+      "issuePrecision": null,
+      "completeIssueCoverage": null,
+      "workstreamsCorrect": null,
+      "operations": [
+        null
+      ]
+    }
+  ]
+}
