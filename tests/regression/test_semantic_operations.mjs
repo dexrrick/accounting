@@ -148,14 +148,16 @@ for (const [caseId, operation, requiresFacts, expectedEvidence] of controls) {
   assert.equal(reconciled.issuePlan.issues[0].evidenceRequirement, expectedEvidence, `${caseId} keeps the matching evidence requirement`);
 }
 
-assert.match(capturedPrompt, /EXPLAIN_RULE for a general rule/i);
-assert.match(capturedPrompt, /EXPLAIN_INTERACTION only for an expressly requested relationship/i);
+assert.match(capturedPrompt, /Choose each issue's operation by the requested output/i);
+assert.match(capturedPrompt, /requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide.*?even if inputs are missing and no "amount", "how much", or "calculate" term appears/i);
+assert.match(capturedPrompt, /A number merely included as a case fact or illustration is not a calculation/i);
+assert.match(capturedPrompt, /DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances/i);
+assert.match(capturedPrompt, /liability applicability or type even when phrased "explain" or "what tax applies"/i);
+assert.match(capturedPrompt, /CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement/i);
+assert.match(capturedPrompt, /a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT/i);
+assert.match(capturedPrompt, /EXPLAIN_RULE for general principles or conditions without applying them to a case/i);
+assert.match(capturedPrompt, /FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE/i);
 assert.match(capturedPrompt, /multiple issues alone are not interaction/i);
-assert.match(capturedPrompt, /DETERMINE_TREATMENT for applying a rule to a described case.*?party is not named/i);
-assert.match(capturedPrompt, /CHECK_ELIGIBILITY for whether a claimant qualifies, distinct from explaining general eligibility rules/i);
-assert.match(capturedPrompt, /CALCULATE for a requested numeric result, including an implied amount payable or contribution due, but not an illustrative amount/i);
-assert.match(capturedPrompt, /"what tax applies" question.*?taxability\/type/i);
-assert.match(capturedPrompt, /An amount mentioned alone does not make the request a calculation/i);
 assert.match(capturedPrompt, /PREPARE_JOURNAL for requested entries/i);
 assert.match(capturedPrompt, /COMPARE for requested alternatives/i);
 assert.match(capturedPrompt, /FILING_REQUIREMENT for filing/i);

@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "suite": "Singapore semantic operation-intent boundaries",
+  "purpose": "Independent operation-boundary controls with mock V2 metadata for no-API contract and downstream regressions. Mock results do not measure model inference.",
+  "cases": [
+    {
+      "id": "employer-cpf-implicit-calculation",
+      "question": "Our Singapore company employs a 30-year-old Singapore citizen on monthly gross wages of SGD 6,200. What must the company contribute to CPF for this payroll?",
+      "expected": [{ "id": "employer-cpf-amount", "subject": "employer CPF contribution payable for employee wages", "matchAny": [["employer", "cpf", "contribut"], ["company", "cpf", "contribut"]], "population": ["EMPLOYER"], "domain": ["CPF_PAYROLL"], "governingAuthorities": ["CPF"], "contextualAuthoritiesAnyOf": [[]], "operation": ["CALCULATE"] }],
+      "expectedWorkstreamsAnyOf": [["CPF/CPF_PAYROLL"]],
+      "mock": { "domain": "CPF_PAYROLL", "population": "EMPLOYER", "authorityCandidates": ["CPF"], "contextualAuthorities": [], "primarySubject": "employer CPF contribution amount", "requestedOperation": "CALCULATE", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["employee age", "citizenship", "monthly wages"], "issues": [{ "subject": "employer CPF contribution payable for employee wages", "population": "EMPLOYER", "domain": "CPF_PAYROLL", "governingAuthorities": ["CPF"], "contextualAuthorities": [], "operation": "CALCULATE" }] }
+    },
+    {
+      "id": "wht-payment-amount-calculation",
+      "question": "Our Singapore company owes SGD 24,000 for management services performed here by a non-resident company. What withholding-tax amount must we remit from that payment?",
+      "expected": [{ "id": "company-wht-amount", "subject": "company withholding-tax amount on non-resident management services", "matchAny": [["withholding", "tax", "management"], ["wht", "management", "services"]], "population": ["COMPANY"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["CALCULATE"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_CORPORATE_TAX"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "company withholding-tax amount on non-resident management services", "requestedOperation": "CALCULATE", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["management service payment", "payment amount", "non-resident recipient"], "issues": [{ "subject": "company withholding-tax amount on non-resident management services", "population": "COMPANY", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "CALCULATE" }] }
+    },
+    {
+      "id": "withholding-tax-liability-classification",
+      "question": "A Singapore company pays a non-resident contractor for services performed here. Does Singapore withholding tax apply to that payment, and what type of tax liability is it?",
+      "expected": [{ "id": "company-wht-applicability", "subject": "withholding-tax applicability and liability type for a company payment", "matchAny": [["withholding", "tax", "appli"], ["withholding", "liability", "type"]], "population": ["COMPANY"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["DETERMINE_TREATMENT"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_CORPORATE_TAX"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "company withholding-tax applicability and liability type", "requestedOperation": "DETERMINE_TREATMENT", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["company payment", "non-resident contractor", "services performed in Singapore"], "issues": [{ "subject": "withholding-tax applicability and liability type for a company payment", "population": "COMPANY", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "DETERMINE_TREATMENT" }] }
+    },
+    {
+      "id": "srs-relief-eligibility-with-numbers",
+      "question": "I am a Singapore tax resident earning SGD 128,000 annually and contributed SGD 15,000 to SRS. Can I claim the full contribution as personal tax relief?",
+      "expected": [{ "id": "individual-srs-relief-eligibility", "subject": "individual eligibility to claim SRS relief on a contribution", "matchAny": [["srs", "relief"], ["contribution", "eligib"]], "population": ["INDIVIDUAL"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["CHECK_ELIGIBILITY"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_INDIVIDUAL_TAX"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "INDIVIDUAL", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "individual eligibility to claim SRS relief", "requestedOperation": "CHECK_ELIGIBILITY", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["tax residence", "annual income", "SRS contribution"], "issues": [{ "subject": "individual eligibility to claim SRS relief on a contribution", "population": "INDIVIDUAL", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "CHECK_ELIGIBILITY" }] }
+    },
+    {
+      "id": "illustrative-relief-cap-interaction",
+      "question": "Using hypothetical figures of SGD 10,000 and SGD 2,000 only as examples, how do SRS relief and mandatory CPF relief interact with the personal income-tax relief cap?",
+      "expected": [{ "id": "individual-relief-cap-interaction", "subject": "interaction of SRS and CPF relief with the personal relief cap", "matchAny": [["srs", "cpf", "relief"], ["relief", "cap", "interact"]], "population": ["INDIVIDUAL"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [["CPF"]], "operation": ["EXPLAIN_INTERACTION"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_INDIVIDUAL_TAX"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "INDIVIDUAL", "authorityCandidates": ["IRAS"], "contextualAuthorities": ["CPF"], "primarySubject": "interaction of SRS and CPF relief with personal relief cap", "requestedOperation": "EXPLAIN_INTERACTION", "requiresUserSpecificFacts": false, "factsExplicitlyProvided": [], "issues": [{ "subject": "interaction of SRS and CPF relief with the personal relief cap", "population": "INDIVIDUAL", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": ["CPF"], "operation": "EXPLAIN_INTERACTION" }] }
+    },
+    {
+      "id": "general-employment-benefit-rule",
+      "question": "Under Singapore income-tax principles, how are employee benefits and perquisites generally treated?",
+      "expected": [{ "id": "general-employee-benefit-tax-rule", "subject": "general income-tax rules for employee benefits and perquisites", "matchAny": [["employee", "benefit", "tax"], ["perquisite", "income", "tax"]], "population": ["EMPLOYEE"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["EXPLAIN_RULE"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_EMPLOYMENT_BENEFITS"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "EMPLOYEE", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "general income-tax rules for employee benefits and perquisites", "requestedOperation": "EXPLAIN_RULE", "requiresUserSpecificFacts": false, "factsExplicitlyProvided": [], "issues": [{ "subject": "general income-tax rules for employee benefits and perquisites", "population": "EMPLOYEE", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "EXPLAIN_RULE" }] }
+    },
+    {
+      "id": "specific-employee-benefit-treatment",
+      "question": "Our Singapore company pays an annual personal accident insurance premium of SGD 3,000 for one employee. What is the employee's Singapore income-tax treatment of that benefit?",
+      "expected": [{ "id": "employee-insurance-benefit-tax-treatment", "subject": "employee income-tax treatment of company-paid personal accident insurance benefit", "matchAny": [["employee", "income", "tax", "insurance"], ["employee", "benefit", "treatment"]], "population": ["EMPLOYEE"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["DETERMINE_TREATMENT"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_EMPLOYMENT_BENEFITS"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "EMPLOYEE", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "employee income-tax treatment of company-paid insurance benefit", "requestedOperation": "DETERMINE_TREATMENT", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["company-paid insurance premium", "employee benefit"], "issues": [{ "subject": "employee income-tax treatment of company-paid personal accident insurance benefit", "population": "EMPLOYEE", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "DETERMINE_TREATMENT" }] }
+    },
+    {
+      "id": "foreign-dividend-receipt-treatment",
+      "question": "Our Singapore company received a dividend from its Thai subsidiary in the current year. Explain the company's Singapore corporate income-tax treatment for this receipt.",
+      "expected": [{ "id": "company-foreign-dividend-receipt-treatment", "subject": "corporate income-tax treatment of foreign dividend received by company", "matchAny": [["company", "foreign", "dividend", "tax"], ["corporate", "dividend", "receipt"]], "population": ["COMPANY"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["DETERMINE_TREATMENT"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_CORPORATE_TAX"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "corporate income-tax treatment of foreign dividend receipt", "requestedOperation": "DETERMINE_TREATMENT", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["Singapore company", "foreign dividend receipt", "subsidiary location"], "issues": [{ "subject": "corporate income-tax treatment of foreign dividend received by company", "population": "COMPANY", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "DETERMINE_TREATMENT" }] }
+    },
+    {
+      "id": "private-expense-treatment",
+      "question": "Our Singapore company paid SGD 900 for the director's private holiday and recorded it as travel expense. What is its corporate income-tax treatment?",
+      "expected": [{ "id": "company-private-expense-tax-treatment", "subject": "corporate income-tax treatment of company expense for director's private holiday", "matchAny": [["company", "private", "holiday", "tax"], ["corporate", "expense", "treatment"]], "population": ["COMPANY"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["DETERMINE_TREATMENT"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_CORPORATE_TAX"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "corporate income-tax treatment of private expense", "requestedOperation": "DETERMINE_TREATMENT", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["company expense", "director's private holiday", "expense amount"], "issues": [{ "subject": "corporate income-tax treatment of company expense for director's private holiday", "population": "COMPANY", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "DETERMINE_TREATMENT" }] }
+    },
+    {
+      "id": "corporate-residency-general-rule",
+      "question": "How do Singapore tax rules determine whether a company is tax resident here?",
+      "expected": [{ "id": "general-company-tax-residency-rule", "subject": "general rule for company tax residency in Singapore", "matchAny": [["company", "tax", "residency"], ["tax", "residency", "singapore"]], "population": ["COMPANY"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["EXPLAIN_RULE"] }],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_CORPORATE_TAX"]],
+      "mock": { "domain": "IRAS_INCOME_TAX", "population": "COMPANY", "authorityCandidates": ["IRAS"], "contextualAuthorities": [], "primarySubject": "general rule for company tax residency in Singapore", "requestedOperation": "EXPLAIN_RULE", "requiresUserSpecificFacts": false, "factsExplicitlyProvided": [], "issues": [{ "subject": "general rule for company tax residency in Singapore", "population": "COMPANY", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "EXPLAIN_RULE" }] }
+    },
+    {
+      "id": "mixed-withholding-amount-and-filing",
+      "question": "Our Singapore company paid SGD 24,000 for management services performed here by a non-resident company. What withholding-tax amount must we remit, and what filing/reporting procedure applies?",
+      "expected": [
+        { "id": "company-wht-amount", "subject": "company withholding-tax amount on non-resident management services", "matchAny": [["withholding", "tax", "management"], ["wht", "management", "services"]], "population": ["COMPANY"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["CALCULATE"] },
+        { "id": "company-wht-filing-duty", "subject": "company withholding-tax filing and reporting procedure", "matchAny": [["withholding", "tax", "filing"], ["wht", "reporting"]], "population": ["COMPANY"], "domain": ["IRAS_INCOME_TAX"], "governingAuthorities": ["IRAS"], "contextualAuthoritiesAnyOf": [[]], "operation": ["FILING_REQUIREMENT"] }
+      ],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_CORPORATE_TAX"]],
+      "mock": { "domain": "UNKNOWN", "population": "UNKNOWN", "authorityCandidates": ["UNKNOWN"], "contextualAuthorities": [], "primarySubject": "company withholding amount and filing procedure", "requestedOperation": "OTHER", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["management service payment", "payment amount", "non-resident recipient"], "issues": [
+        { "subject": "company withholding-tax amount on non-resident management services", "population": "COMPANY", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "CALCULATE" },
+        { "subject": "company withholding-tax filing and reporting procedure", "population": "COMPANY", "domain": "IRAS_INCOME_TAX", "governingAuthorities": ["IRAS"], "contextualAuthorities": [], "operation": "FILING_REQUIREMENT" }
+      ] }
+    },
+    {
+      "id": "unknown-cpf-population-context",
+      "question": "The payroll note gives gross wages of SGD 5,000 and says the worker's immigration status is being checked under MOM rules. It does not say whether the employee or employer contribution is being asked about. What CPF contribution amount is due?",
+      "expected": [{ "id": "cpf-contribution-amount-party-unknown", "subject": "CPF contribution amount due on payroll wages", "matchAny": [["cpf", "contribution", "wages"], ["cpf", "amount", "payroll"]], "population": ["UNKNOWN"], "domain": ["CPF_PAYROLL"], "governingAuthorities": ["CPF"], "contextualAuthoritiesAnyOf": [["MOM"]], "operation": ["CALCULATE"] }],
+      "expectedWorkstreamsAnyOf": [["CPF/CPF_PAYROLL"]],
+      "mock": { "domain": "CPF_PAYROLL", "population": "UNKNOWN", "authorityCandidates": ["CPF"], "contextualAuthorities": ["MOM"], "primarySubject": "CPF contribution amount due on payroll wages", "requestedOperation": "CALCULATE", "requiresUserSpecificFacts": true, "factsExplicitlyProvided": ["gross wages", "immigration status is under MOM review", "contribution party is unspecified"], "issues": [{ "subject": "CPF contribution amount due on payroll wages", "population": "UNKNOWN", "domain": "CPF_PAYROLL", "governingAuthorities": ["CPF"], "contextualAuthorities": ["MOM"], "operation": "CALCULATE" }] }
+    }
+  ]
+}

@@ -20,12 +20,15 @@ const REPORT_DIRECTORY = path.join(PROJECT_ROOT, 'docs', 'evaluation', 'multi-au
 const MODEL = 'gemini-3.5-flash-lite';
 const START_GAP_MS = 15_250;
 const OUTPUT_PREFIX = 'semantic-contract-followup-v2-live';
-const JSON_OUTPUT = `${OUTPUT_PREFIX}.json`;
-const MARKDOWN_OUTPUT = `${OUTPUT_PREFIX}.md`;
+const INTENT_BOUNDARY_OUTPUT_PREFIX = 'semantic-intent-targeted-live';
+const INTENT_FINAL_OUTPUT_PREFIX = 'semantic-intent-final-live';
 const PRIMARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-contract-followup.json');
 const OPERATION_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-operation-followup.json');
 const GUIDANCE_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-reliability-post-guidance.json');
+const INTENT_BOUNDARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-intent-boundaries.json');
 const COMPARABLE_BASELINE = path.join(REPORT_DIRECTORY, 'contract-followup-comparable-baseline.json');
+const EVALUATION_RUNNER_FILE = fileURLToPath(import.meta.url);
+const INTENT_CLI_RUNNER_FILE = path.join(SCRIPT_DIRECTORY, 'semantic-intent-followup-evaluation.mjs');
 const SOURCE_FILES = Object.freeze({
   semanticInterpretation: path.join(PROJECT_ROOT, 'src', 'services', 'semanticQuestionUnderstanding.ts'),
   transport: path.join(PROJECT_ROOT, 'src', 'services', 'aiTransport.ts'),
@@ -51,6 +54,18 @@ const REQUIRED_CASE_IDS = Object.freeze([
   'dev-mixed-entry-total',
   'dev-corporate-filing',
   'dev-investment-comparison'
+]);
+const INTENT_KNOWN_CASE_IDS = Object.freeze([
+  'A-paraphrase-2',
+  'adversarial-C-employee-benefit',
+  'control-general-recognition'
+]);
+const INTENT_BOUNDARY_CASE_IDS = Object.freeze([
+  'employer-cpf-implicit-calculation',
+  'wht-payment-amount-calculation',
+  'general-employment-benefit-rule',
+  'specific-employee-benefit-treatment',
+  'withholding-tax-liability-classification'
 ]);
 const REJECTION_CODES = new Set([
   'NONE', 'WRONG_ROOT_TYPE', 'MISSING_KEY', 'UNEXPECTED_KEY', 'WRONG_TYPE', 'COUNT_LIMIT', 'INVALID_LABEL',
@@ -137,6 +152,70 @@ async function readJson(filePath) {
   }
 }
 
+function isStringArray(value) {
+  return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+function validateIntentBoundaryCase(testCase) {
+  const expected = testCase?.expected;
+  const workstreamSets = testCase?.expectedWorkstreamsAnyOf;
+  if (typeof testCase?.id !== 'string' || typeof testCase?.question !== 'string' ||
+      !Array.isArray(expected) || expected.length === 0 ||
+      new Set(expected.map(issue => issue?.id)).size !== expected.length ||
+      expected.some(issue => typeof issue?.id !== 'string' || typeof issue?.subject !== 'string' ||
+        !Array.isArray(issue.matchAny) || issue.matchAny.length === 0 ||
+        issue.matchAny.some(tokens => !isStringArray(tokens) || tokens.length === 0) ||
+        !isStringArray(issue.population) || !isStringArray(issue.domain) ||
+        !isStringArray(issue.governingAuthorities) ||
+        !Array.isArray(issue.contextualAuthoritiesAnyOf) ||
+        issue.contextualAuthoritiesAnyOf.some(authorities => !isStringArray(authorities)) ||
+        !isStringArray(issue.operation)) ||
+      !Array.isArray(workstreamSets) || workstreamSets.length === 0 ||
+      workstreamSets.some(set => !Array.isArray(set) || set.length === 0 ||
+        set.some(item => typeof item !== 'string' || !/^[A-Z_]+\/[A-Z_]+$/.test(item)))) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return {
+    id: testCase.id,
+    question: testCase.question,
+    group: 'INDEPENDENT_CONTROL',
+    expected,
+    expectedWorkstreamsAnyOf: workstreamSets
+  };
+}
+
+/** Fixed intent-targeted selection: three frozen historical cases and five frozen boundary controls. */
+export async function loadSemanticIntentTargetedCases() {
+  const [historicalCases, boundaryFixture] = await Promise.all([
+    loadSemanticContractFollowupCases(),
+    readJson(INTENT_BOUNDARY_FIXTURE)
+  ]);
+  const historicalById = new Map(historicalCases.map(testCase => [testCase.id, testCase]));
+  const boundaryRows = boundaryFixture.cases;
+  if (!Array.isArray(boundaryRows) || new Set(boundaryRows.map(item => item?.id)).size !== boundaryRows.length) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  const boundaryById = new Map(boundaryRows.map(testCase => [testCase.id, testCase]));
+  const known = INTENT_KNOWN_CASE_IDS.map(id => historicalById.get(id));
+  const boundary = INTENT_BOUNDARY_CASE_IDS.map(id => boundaryById.get(id)).map(validateIntentBoundaryCase);
+  if (known.some(testCase => !testCase) || known.length !== INTENT_KNOWN_CASE_IDS.length ||
+      boundary.length !== INTENT_BOUNDARY_CASE_IDS.length ||
+      new Set([...known, ...boundary].map(testCase => testCase.id)).size !== known.length + boundary.length) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return [...known, ...boundary];
+}
+
+/** Intent-final deliberately reuses the original, unchanged ten-case selection. */
+export async function loadSemanticIntentFinalCases() {
+  const cases = await loadSemanticContractFollowupCases();
+  if (cases.length !== REQUIRED_CASE_IDS.length ||
+      REQUIRED_CASE_IDS.some(id => !cases.some(testCase => testCase.id === id))) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return cases;
+}
+
 function getExpectedIssues(fixture, testCase) {
   const issueContracts = fixture.issueContracts?.[testCase.contract];
   const requestedIds = testCase.expectedIssueIds || issueContracts?.map(issue => issue.id);
@@ -186,8 +265,8 @@ export async function loadSemanticContractFollowupCases() {
   }));
 }
 
-async function refuseExistingOutputs(directory) {
-  for (const name of [JSON_OUTPUT, MARKDOWN_OUTPUT]) {
+async function refuseExistingOutputs(directory, outputPrefix = OUTPUT_PREFIX) {
+  for (const name of [`${outputPrefix}.json`, `${outputPrefix}.md`]) {
     try {
       await access(path.join(directory, name));
     } catch (error) {
@@ -412,8 +491,12 @@ function caseSummary(cases, group) {
 }
 
 function renderMarkdown(document) {
+  const intentProfile = document.evaluationProfile === 'intent-targeted' || document.evaluationProfile === 'intent-final';
+  const heading = document.evaluationProfile === 'intent-targeted' ? '# Semantic intent targeted live evaluation'
+    : document.evaluationProfile === 'intent-final' ? '# Semantic intent final live evaluation'
+      : '# Semantic contract follow-up v2 live evaluation';
   const lines = [
-    '# Semantic contract follow-up v2 live evaluation',
+    heading,
     '',
     `- Model: ${document.model}`,
     `- Timeout: ${document.timeoutMs} ms`,
@@ -431,13 +514,141 @@ function renderMarkdown(document) {
   for (const summary of document.summaries) {
     lines.push(`| ${summary.group} | ${summary.validInterpretations.count} / ${summary.cases} | ${summary.issueRecallValidInterpretations.matched} / ${summary.issueRecallValidInterpretations.expected} | ${summary.issueRecallAllCases.matched} / ${summary.issueRecallAllCases.expected} | ${summary.issuePrecisionValidInterpretations.matched} / ${summary.issuePrecisionValidInterpretations.predicted} | ${summary.operationAccuracy.correct} / ${summary.operationAccuracy.matched} | ${summary.completeQuestionCoverage.complete} / ${summary.completeQuestionCoverage.allCases} | ${summary.routingWorkstreamCorrectness.correct} / ${summary.routingWorkstreamCorrectness.validCases} | ${summary.routingWorkstreamCorrectness.correct} / ${summary.routingWorkstreamCorrectness.allCases} | ${summary.invalidResponses.count} / ${summary.invalidResponses.calls} | ${summary.invalidResponses.timeout.count} | ${summary.invalidResponses.providerFailure.count} |`);
   }
+  if (intentProfile) {
+    lines.push('', '| Case | Intent acceptance | Case-specific facts expected / actual | Strict operation checks |', '| --- | --- | --- | --- |');
+    for (const item of document.cases) {
+      const strictChecks = item.intentAcceptance?.strictOperationChecks || [];
+      const specificity = item.intentAcceptance?.caseSpecificity;
+      const specificityText = typeof specificity?.expected === 'boolean' && typeof specificity?.actual === 'boolean'
+        ? `${specificity.expected} / ${specificity.actual} (${item.intentAcceptance.caseSpecificityCorrect})`
+        : 'UNKNOWN';
+      lines.push(`| ${item.caseId} | ${item.intentAcceptance?.passed ?? '—'} | ${specificityText} | ${strictChecks.map(check => `${check.expectedIssueId}: ${check.actualOperation || 'UNMATCHED'} → ${check.expectedOperation} (${check.passed})`).join('; ') || '—'} |`);
+    }
+  }
   lines.push('', `Source fingerprints stable during capture: ${document.sourceHashesConsistent}`, `Fixture fingerprints stable during capture: ${document.fixtureHashesConsistent}`, '');
   return lines.join('\n');
 }
 
-async function writeProgress(directory, document) {
-  await atomicWrite(path.join(directory, JSON_OUTPUT), `${JSON.stringify(document, null, 2)}\n`);
-  await atomicWrite(path.join(directory, MARKDOWN_OUTPUT), renderMarkdown(document));
+async function writeProgress(directory, document, outputPrefix = OUTPUT_PREFIX) {
+  await atomicWrite(path.join(directory, `${outputPrefix}.json`), `${JSON.stringify(document, null, 2)}\n`);
+  await atomicWrite(path.join(directory, `${outputPrefix}.md`), renderMarkdown(document));
+}
+
+function profileConfiguration(evaluationProfile) {
+  if (evaluationProfile === undefined) {
+    return {
+      evaluationProfile: undefined,
+      outputPrefix: OUTPUT_PREFIX,
+      sourceFiles: SOURCE_FILES,
+      fixtureFiles: FIXTURE_FILES,
+      purpose: 'Once-only focused semantic-contract follow-up using the fixed ten-case evaluation fixture.'
+    };
+  }
+  if (evaluationProfile === 'intent-targeted') {
+    return {
+      evaluationProfile,
+      outputPrefix: INTENT_BOUNDARY_OUTPUT_PREFIX,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        semanticIntentEvaluationRunner: EVALUATION_RUNNER_FILE,
+        semanticIntentCliRunner: INTENT_CLI_RUNNER_FILE
+      },
+      fixtureFiles: { ...FIXTURE_FILES, semanticIntentBoundaries: INTENT_BOUNDARY_FIXTURE },
+      purpose: 'Once-only targeted semantic-intent evaluation using three fixed historical cases and five fixed independent boundary controls.'
+    };
+  }
+  if (evaluationProfile === 'intent-final') {
+    return {
+      evaluationProfile,
+      outputPrefix: INTENT_FINAL_OUTPUT_PREFIX,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        semanticIntentEvaluationRunner: EVALUATION_RUNNER_FILE,
+        semanticIntentCliRunner: INTENT_CLI_RUNNER_FILE
+      },
+      fixtureFiles: FIXTURE_FILES,
+      purpose: 'Once-only final semantic-intent evaluation using the original unchanged ten-case fixture.'
+    };
+  }
+  throw new Error('A supported fixed evaluation profile is required.');
+}
+
+const STRICT_INTENT_OPERATIONS = Object.freeze({
+  'A-paraphrase-2': Object.freeze({ issueId: 'employer-cpf-contribution', operation: 'CALCULATE' }),
+  'adversarial-C-employee-benefit': Object.freeze({ issueId: 'employee-accommodation-benefit-tax', operation: 'DETERMINE_TREATMENT' })
+});
+const EXPECTED_CASE_SPECIFICITY = Object.freeze({
+  'A-paraphrase-2': true,
+  'adversarial-C-employee-benefit': true,
+  'control-general-recognition': false,
+  'control-general-interaction': false,
+  'A-paraphrase-3': true,
+  'dev-conceptual-illustration': false,
+  'dev-training-entitlement': true,
+  'dev-mixed-entry-total': true,
+  'dev-corporate-filing': false,
+  'dev-investment-comparison': false,
+  'employer-cpf-implicit-calculation': true,
+  'wht-payment-amount-calculation': true,
+  'general-employment-benefit-rule': false,
+  'specific-employee-benefit-treatment': true,
+  'withholding-tax-liability-classification': true
+});
+
+function intentAcceptance(testCase, validInterpretation, scoring, routing, interpretation) {
+  const expectedRequiresUserSpecificFacts = EXPECTED_CASE_SPECIFICITY[testCase.id];
+  const actualRequiresUserSpecificFacts = interpretation?.requiresUserSpecificFacts;
+  const caseSpecificityCorrect = typeof expectedRequiresUserSpecificFacts === 'boolean' &&
+    typeof actualRequiresUserSpecificFacts === 'boolean' &&
+    actualRequiresUserSpecificFacts === expectedRequiresUserSpecificFacts;
+  const caseSpecificity = {
+    ...(typeof expectedRequiresUserSpecificFacts === 'boolean' ? { expected: expectedRequiresUserSpecificFacts } : {}),
+    ...(typeof actualRequiresUserSpecificFacts === 'boolean' ? { actual: actualRequiresUserSpecificFacts } : {})
+  };
+  const strictTarget = STRICT_INTENT_OPERATIONS[testCase.id];
+  const strictOperationChecks = strictTarget ? (() => {
+    const expectedIndex = testCase.expected.findIndex(issue => issue.id === strictTarget.issueId);
+    const actualIssues = Array.isArray(interpretation?.issues) ? interpretation.issues : [];
+    const { expectedByActual } = matchIssues(testCase.expected, actualIssues);
+    const actualIndex = [...expectedByActual.entries()].find(([, index]) => index === expectedIndex)?.[0];
+    const actualOperation = actualIndex === undefined
+      ? undefined
+      : safeEnum(actualIssues[actualIndex]?.operation, OPERATIONS, 'UNKNOWN');
+    return [{
+      expectedIssueId: strictTarget.issueId,
+      expectedOperation: strictTarget.operation,
+      ...(actualOperation ? { actualOperation } : {}),
+      matched: actualIndex !== undefined,
+      passed: actualOperation === strictTarget.operation
+    }];
+  })() : [];
+  const completeExpectedIssueCoverage = scoring.completeQuestionIssueCoverage === true &&
+    scoring.matchedIssueCount === scoring.expectedIssueCount &&
+    scoring.predictedIssueCount === scoring.expectedIssueCount;
+  const matchedDimensionsCorrect = scoring.matchedIssueCount > 0 &&
+    Object.values(scoring.dimensionsCorrect).every(correct => correct === scoring.matchedIssueCount);
+  const allMatchedOperationsCorrect = scoring.operationMatched > 0 &&
+    scoring.operationCorrect === scoring.operationMatched;
+  const strictOperationsCorrect = strictOperationChecks.every(check => check.passed);
+  const correctRouting = routing?.finalWorkstreamSetAccuracy === true;
+  const allRuntimeGuardsPassed = Boolean(routing?.guardChecks) &&
+    Object.values(routing.guardChecks).every(passed => passed === true);
+  const passed = validInterpretation && completeExpectedIssueCoverage && matchedDimensionsCorrect &&
+    allMatchedOperationsCorrect && strictOperationsCorrect && caseSpecificityCorrect &&
+    correctRouting && allRuntimeGuardsPassed;
+  return {
+    passed,
+    validInterpretation,
+    completeExpectedIssueCoverage,
+    matchedDimensionsCorrect,
+    allMatchedOperationsCorrect,
+    strictOperationsCorrect,
+    caseSpecificity,
+    caseSpecificityCorrect,
+    correctRouting,
+    allRuntimeGuardsPassed,
+    strictOperationChecks
+  };
 }
 
 /** Live-gated, once-per-case follow-up; only fixed diagnostics and score data are persisted. */
@@ -451,24 +662,39 @@ export async function runSemanticContractFollowupEvaluation({
   sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)),
   now = () => new Date(),
   monotonicNow = () => performance.now(),
-  cases: suppliedCases
+  cases: suppliedCases,
+  evaluationProfile
 } = {}) {
   if (!live) throw new Error('Live capture requires --live.');
-  await mkdir(outputDirectory, { recursive: true });
-  await refuseExistingOutputs(outputDirectory);
-  if (typeof apiKey !== 'string' || apiKey.trim().length <= 10) throw new Error('GEMINI_API_KEY is not configured.');
-
-  const selectedCases = suppliedCases || await loadSemanticContractFollowupCases();
-  if (!Array.isArray(selectedCases) || selectedCases.length !== REQUIRED_CASE_IDS.length ||
-      REQUIRED_CASE_IDS.some(id => !selectedCases.some(item => item.id === id))) {
+  const profile = profileConfiguration(evaluationProfile);
+  if (evaluationProfile !== undefined && suppliedCases !== undefined) {
     throw new Error('A required fixed evaluation case is missing.');
   }
-  const sourceHashes = await hashManifest(SOURCE_FILES);
-  const fixtureHashes = await hashManifest(FIXTURE_FILES);
+  await mkdir(outputDirectory, { recursive: true });
+  await refuseExistingOutputs(outputDirectory, profile.outputPrefix);
+  if (typeof apiKey !== 'string' || apiKey.trim().length <= 10) throw new Error('GEMINI_API_KEY is not configured.');
+
+  const selectedCases = evaluationProfile === 'intent-targeted'
+    ? await loadSemanticIntentTargetedCases()
+    : evaluationProfile === 'intent-final'
+      ? await loadSemanticIntentFinalCases()
+      : suppliedCases || await loadSemanticContractFollowupCases();
+  const requiredIds = evaluationProfile === 'intent-targeted'
+    ? [...INTENT_KNOWN_CASE_IDS, ...INTENT_BOUNDARY_CASE_IDS]
+    : REQUIRED_CASE_IDS;
+  if (!Array.isArray(selectedCases) || selectedCases.length !== requiredIds.length ||
+      requiredIds.some(id => !selectedCases.some(item => item.id === id)) ||
+      new Set(selectedCases.map(item => item.id)).size !== selectedCases.length) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  const sourceHashes = await hashManifest(profile.sourceFiles);
+  const fixtureHashes = await hashManifest(profile.fixtureFiles);
   const initialMonotonic = monotonicNow();
   const document = {
     schemaVersion: 1,
-    purpose: 'Once-only focused semantic-contract follow-up using the fixed ten-case evaluation fixture.',
+    ...(profile.evaluationProfile ? { evaluationProfile: profile.evaluationProfile } : {}),
+    purpose: profile.purpose,
+    ...(profile.evaluationProfile ? { outputPrefix: profile.outputPrefix } : {}),
     model: MODEL,
     timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
     minimumStartGapMs: START_GAP_MS,
@@ -488,12 +714,12 @@ export async function runSemanticContractFollowupEvaluation({
   for (let index = 0; index < selectedCases.length; index += 1) {
     const testCase = selectedCases[index];
     if (index > 0) await sleep(START_GAP_MS);
-    const sourceBefore = await hashManifest(SOURCE_FILES);
-    const fixturesBefore = await hashManifest(FIXTURE_FILES);
+    const sourceBefore = await hashManifest(profile.sourceFiles);
+    const fixturesBefore = await hashManifest(profile.fixtureFiles);
     if (!sameManifest(sourceHashes, sourceBefore) || !sameManifest(fixtureHashes, fixturesBefore)) {
       document.sourceHashesConsistent = sameManifest(sourceHashes, sourceBefore);
       document.fixtureHashesConsistent = sameManifest(fixtureHashes, fixturesBefore);
-      if (document.cases.length) await writeProgress(outputDirectory, document);
+      if (document.cases.length) await writeProgress(outputDirectory, document, profile.outputPrefix);
       throw new Error('Source or fixture hash changed during live capture.');
     }
     let rawResponse;
@@ -610,8 +836,8 @@ export async function runSemanticContractFollowupEvaluation({
         };
       }
     }
-    const sourceAfter = await hashManifest(SOURCE_FILES);
-    const fixturesAfter = await hashManifest(FIXTURE_FILES);
+    const sourceAfter = await hashManifest(profile.sourceFiles);
+    const fixturesAfter = await hashManifest(profile.fixtureFiles);
     const sourceHashesConsistent = sameManifest(sourceBefore, sourceAfter) && sameManifest(sourceHashes, sourceAfter);
     const fixtureHashesConsistent = sameManifest(fixturesBefore, fixturesAfter) && sameManifest(fixtureHashes, fixturesAfter);
     document.sourceHashesConsistent = document.sourceHashesConsistent && sourceHashesConsistent;
@@ -626,6 +852,9 @@ export async function runSemanticContractFollowupEvaluation({
       ...(capture ? { capture } : {}),
       ...(responseDiagnostic ? { responseDiagnostic } : {}),
       scoring,
+      ...(profile.evaluationProfile === 'intent-targeted' || profile.evaluationProfile === 'intent-final'
+        ? { intentAcceptance: intentAcceptance(testCase, validInterpretation, scoring, routing, productionResult?.interpretation) }
+        : {}),
       ...(routing ? { routing } : {}),
       sourceHashesConsistent,
       fixtureHashesConsistent,
@@ -636,7 +865,7 @@ export async function runSemanticContractFollowupEvaluation({
       caseSummary(document.cases, 'INDEPENDENT_CONTROL'),
       caseSummary(document.cases, 'COMBINED')
     ];
-    await writeProgress(outputDirectory, document);
+    await writeProgress(outputDirectory, document, profile.outputPrefix);
     if (!sourceHashesConsistent || !fixtureHashesConsistent) {
       throw new Error('Source or fixture hash changed during live capture.');
     }
@@ -644,7 +873,7 @@ export async function runSemanticContractFollowupEvaluation({
   }
 
   document.completedAt = now().toISOString();
-  await writeProgress(outputDirectory, document);
+  await writeProgress(outputDirectory, document, profile.outputPrefix);
   return document;
 }
 
