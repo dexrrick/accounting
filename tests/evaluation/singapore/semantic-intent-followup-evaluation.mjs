@@ -2,19 +2,22 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runSemanticContractFollowupEvaluation } from './semantic-contract-followup-evaluation.mjs';
 
-const SUPPORTED_PROFILES = new Set(['intent-targeted', 'intent-final']);
+const SUPPORTED_PROFILES = new Set([
+  'intent-targeted', 'intent-final', 'authority-relief-targeted-live', 'authority-relief-final-live'
+]);
 const SAFE_ERRORS = new Set([
   'A semantic contract follow-up output file already exists.',
   'A required fixed evaluation case is missing.',
   'GEMINI_API_KEY is not configured.',
   'Source or fixture hash changed during live capture.',
-  'A fixed evaluation case did not make exactly one provider request.'
+  'A fixed evaluation case did not make exactly one provider request.',
+  'The authority-relief targeted profile has not passed; final live capture is gated.'
 ]);
 
 export function parseSemanticIntentProfileArgs(args) {
   if (!Array.isArray(args) || args.length !== 3 || args[0] !== '--profile' ||
       !SUPPORTED_PROFILES.has(args[1]) || args[2] !== '--live') {
-    throw new Error('Usage: --profile intent-targeted|intent-final --live');
+    throw new Error('Usage: --profile intent-targeted|intent-final|authority-relief-targeted-live|authority-relief-final-live --live');
   }
   return args[1];
 }
@@ -34,7 +37,8 @@ async function main() {
       evaluationProfile,
       outputPrefix: result.outputPrefix,
       requestCount: result.requestCount,
-      summaries: result.summaries
+      summaries: result.summaries,
+      ...(result.authorityReliefAcceptance ? { authorityReliefAcceptance: result.authorityReliefAcceptance } : {})
     }, null, 2)}\n`);
   } catch (error) {
     const message = SAFE_ERRORS.has(error?.message) ? error.message : 'Semantic intent follow-up runner failed.';

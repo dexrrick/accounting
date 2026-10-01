@@ -7,6 +7,7 @@ import { classifyQuestion } from '../../../src/classification/questionClassifier
 import { executeStructuredLlmCall } from '../../../src/services/aiTransport.ts';
 import { buildAuthorityWorkstreams, planAuthorityWorkstreams } from '../../../src/services/authorityWorkstreams.ts';
 import {
+  canonicalAccountingWorkstreamAuthority,
   interpretSemanticQuestion,
   reconcileQuestionUnderstanding,
   SEMANTIC_QUESTION_TIMEOUT_MS
@@ -22,10 +23,14 @@ const START_GAP_MS = 15_250;
 const OUTPUT_PREFIX = 'semantic-contract-followup-v2-live';
 const INTENT_BOUNDARY_OUTPUT_PREFIX = 'semantic-intent-targeted-live';
 const INTENT_FINAL_OUTPUT_PREFIX = 'semantic-intent-final-live';
+const AUTHORITY_RELIEF_TARGETED_OUTPUT_PREFIX = 'authority-relief-targeted-live';
+const AUTHORITY_RELIEF_FINAL_OUTPUT_PREFIX = 'authority-relief-final-live';
 const PRIMARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-contract-followup.json');
 const OPERATION_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-operation-followup.json');
 const GUIDANCE_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-reliability-post-guidance.json');
 const INTENT_BOUNDARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-intent-boundaries.json');
+const AUTHORITY_RELIEF_TARGETED_FIXTURE = path.join(SCRIPT_DIRECTORY, 'authority-relief-targeted.json');
+const AUTHORITY_RELIEF_PROTECTED_HASHES = path.join(REPORT_DIRECTORY, 'authority-relief-protected-hashes.json');
 const COMPARABLE_BASELINE = path.join(REPORT_DIRECTORY, 'contract-followup-comparable-baseline.json');
 const EVALUATION_RUNNER_FILE = fileURLToPath(import.meta.url);
 const INTENT_CLI_RUNNER_FILE = path.join(SCRIPT_DIRECTORY, 'semantic-intent-followup-evaluation.mjs');
@@ -67,6 +72,17 @@ const INTENT_BOUNDARY_CASE_IDS = Object.freeze([
   'specific-employee-benefit-treatment',
   'withholding-tax-liability-classification'
 ]);
+const AUTHORITY_RELIEF_TARGETED_CASE_IDS = Object.freeze([
+  'control-general-recognition', 'A-paraphrase-2',
+  'target-sfrsi-general-recognition', 'target-mixed-ifrs-singapore-accounting',
+  'target-relief-entitlement', 'target-relief-amount',
+  'target-cpf-general-control', 'target-mom-general-control'
+]);
+const AUTHORITY_RELIEF_TARGETED_CONTROL_IDS = Object.freeze([
+  'target-sfrsi-general-recognition', 'target-mixed-ifrs-singapore-accounting',
+  'target-relief-entitlement', 'target-relief-amount',
+  'target-cpf-general-control', 'target-mom-general-control'
+]);
 const REJECTION_CODES = new Set([
   'NONE', 'WRONG_ROOT_TYPE', 'MISSING_KEY', 'UNEXPECTED_KEY', 'WRONG_TYPE', 'COUNT_LIMIT', 'INVALID_LABEL',
   'INVALID_AUTHORITY', 'INVALID_ENUM', 'INVALID_POPULATION', 'INVALID_DOMAIN', 'INVALID_OPERATION',
@@ -99,6 +115,18 @@ const RUNTIME_STATUSES = new Set(['VERIFIED', 'CONDITIONAL', 'INSUFFICIENT']);
 const EVIDENCE_STATUSES = new Set(['VERIFIED', 'INSUFFICIENT']);
 const APPLICATION_STATUSES = new Set(['NOT_REQUIRED', 'UNRESOLVED']);
 const CASE_SPECIFIC_OPERATIONS = new Set(['CALCULATE', 'PREPARE_JOURNAL', 'CHECK_ELIGIBILITY', 'DETERMINE_TREATMENT']);
+const AUTHORITY_RELIEF_ROUTING_GAP_CODES = Object.freeze([
+  'NO_COVERAGE_TOPIC', 'UNKNOWN_DOMAIN', 'UNASSIGNED_QUERY_TOPIC', 'CANONICAL_AREA_UNRESOLVED',
+  'ISSUE_UNMAPPED', 'NO_GOVERNING_AUTHORITY', 'PROVIDER_UNAVAILABLE', 'PROVIDER_AUTHORITY_MISMATCH',
+  'PROVIDER_ERROR', 'ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL', 'ISSUE_PLAN_COVERAGE_UNESTABLISHED',
+  'NO_CANDIDATE_EVIDENCE', 'CANDIDATE_REJECTED', 'NO_ADMITTED_EVIDENCE', 'NO_VERIFIED_CLAIM',
+  'ISSUE_CONCEPT_UNCOVERED', 'IRAS_SCOPE_NOT_COVERED', 'OTHER_GAP'
+]);
+const AUTHORITY_RELIEF_BLOCKING_ROUTING_GAP_CODES = Object.freeze([
+  'NO_COVERAGE_TOPIC', 'UNKNOWN_DOMAIN', 'UNASSIGNED_QUERY_TOPIC', 'CANONICAL_AREA_UNRESOLVED',
+  'ISSUE_UNMAPPED', 'NO_GOVERNING_AUTHORITY', 'PROVIDER_UNAVAILABLE', 'PROVIDER_AUTHORITY_MISMATCH',
+  'PROVIDER_ERROR', 'ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL', 'ISSUE_PLAN_COVERAGE_UNESTABLISHED', 'OTHER_GAP'
+]);
 function requiresApplicationStatus(issue) {
   return issue.evidenceRequirement === 'CASE_FACTS' ||
     issue.evidenceRequirement === 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' ||
@@ -110,7 +138,8 @@ const SAFE_RUNNER_ERRORS = new Set([
   'GEMINI_API_KEY is not configured.',
   'A required fixed evaluation case is missing.',
   'Source or fixture hash changed during live capture.',
-  'A fixed evaluation case did not make exactly one provider request.'
+  'A fixed evaluation case did not make exactly one provider request.',
+  'The authority-relief targeted profile has not passed; final live capture is gated.'
 ]);
 
 function sha256(value) {
@@ -214,6 +243,68 @@ export async function loadSemanticIntentFinalCases() {
     throw new Error('A required fixed evaluation case is missing.');
   }
   return cases;
+}
+
+function validateAuthorityReliefCase(testCase) {
+  const expected = testCase?.expected;
+  const workstreamSets = testCase?.expectedWorkstreamsAnyOf;
+  const strictOperations = testCase?.strictOperations || [];
+  if (typeof testCase?.id !== 'string' || typeof testCase?.question !== 'string' ||
+      typeof testCase?.expectedRequiresUserSpecificFacts !== 'boolean' ||
+      !Array.isArray(expected) || expected.length === 0 ||
+      new Set(expected.map(issue => issue?.id)).size !== expected.length ||
+      expected.some(issue => typeof issue?.id !== 'string' || typeof issue?.subject !== 'string' ||
+        !Array.isArray(issue.matchAny) || issue.matchAny.length === 0 ||
+        issue.matchAny.some(tokens => !isStringArray(tokens) || tokens.length === 0) ||
+        !isStringArray(issue.population) || !isStringArray(issue.domain) ||
+        !isStringArray(issue.governingAuthorities) ||
+        !Array.isArray(issue.contextualAuthoritiesAnyOf) ||
+        issue.contextualAuthoritiesAnyOf.some(authorities => !isStringArray(authorities)) ||
+        !isStringArray(issue.operation)) ||
+      !Array.isArray(workstreamSets) || workstreamSets.length === 0 ||
+      workstreamSets.some(set => !Array.isArray(set) || set.length === 0 ||
+        set.some(item => typeof item !== 'string' || !/^[A-Z_]+\/[A-Z_]+$/.test(item))) ||
+      !Array.isArray(strictOperations) || strictOperations.some(item =>
+        !item || typeof item.issueId !== 'string' || !OPERATIONS.has(item.operation))) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return { ...testCase, group: 'INDEPENDENT_CONTROL' };
+}
+
+/** Fixed authority-relief set: two frozen questions and six independent controls. */
+export async function loadAuthorityReliefTargetedCases() {
+  const [historical, fixture] = await Promise.all([
+    loadSemanticContractFollowupCases(),
+    readJson(AUTHORITY_RELIEF_TARGETED_FIXTURE)
+  ]);
+  const historicalById = new Map(historical.map(testCase => [testCase.id, testCase]));
+  const recognition = historicalById.get('control-general-recognition');
+  const relief = historicalById.get('A-paraphrase-2');
+  if (fixture?.schemaVersion !== 1 || fixture?.expectedModel !== MODEL || !Array.isArray(fixture.cases) ||
+      fixture.cases.length !== 6 || new Set(fixture.cases.map(testCase => testCase?.id)).size !== 6 ||
+      !recognition || !relief ||
+      relief.question !== 'For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?') {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  const fixedHistorical = [
+    { ...recognition, group: 'PRESELECTED_KNOWN_FAILURE', expectedRequiresUserSpecificFacts: false, strictOperations: [] },
+    {
+      ...relief,
+      group: 'PRESELECTED_KNOWN_FAILURE',
+      expectedRequiresUserSpecificFacts: true,
+      strictOperations: [
+        { issueId: 'employer-cpf-contribution', operation: 'CALCULATE' },
+        { issueId: 'individual-cpf-tax-relief', operation: 'CHECK_ELIGIBILITY' }
+      ]
+    }
+  ];
+  const controls = fixture.cases.map(validateAuthorityReliefCase);
+  const selected = [...fixedHistorical, ...controls];
+  if (selected.length !== 8 || new Set(selected.map(testCase => testCase.id)).size !== selected.length ||
+      !exactSameSet(controls.map(testCase => testCase.id), AUTHORITY_RELIEF_TARGETED_CONTROL_IDS)) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return selected;
 }
 
 function getExpectedIssues(fixture, testCase) {
@@ -320,7 +411,42 @@ function expectedWorkstreamAccuracy(runtimeWorkstreams, expectedSets) {
   return expectedSets.some(expected => exactSameSet(actual, expected));
 }
 
-function summarizeRuntime(testCase, understanding, buildRuntime) {
+function authorityReliefRoutingDiagnostics(semanticIssues, reconciledIssues, runtime, runtimeIssues) {
+  const requested = reconciledIssues.slice(0, semanticIssues.length);
+  const requestedIds = new Set(requested.map(issue => issue.id).filter(id => typeof id === 'string'));
+  const runtimeById = new Map(runtimeIssues.filter(issue => requestedIds.has(issue.issueId)).map(issue => [issue.issueId, issue]));
+  const mappedIssueCount = requested.filter(issue => issue.status === 'MAPPED').length;
+  const lifecycleMappedCount = requested.filter(issue => runtimeById.get(issue.id)?.lifecycle?.mapped === true).length;
+  const retrievalAttemptedCount = requested.filter(issue => runtimeById.get(issue.id)?.lifecycle?.retrievalAttempted === true).length;
+  const routingGapCounts = Object.fromEntries(AUTHORITY_RELIEF_ROUTING_GAP_CODES.map(code => [code, 0]));
+  for (const gap of Array.isArray(runtime.gaps) ? runtime.gaps : []) {
+    if (!requestedIds.has(gap?.issueId)) continue;
+    const code = typeof gap.code === 'string' && Object.hasOwn(routingGapCounts, gap.code) ? gap.code : 'OTHER_GAP';
+    routingGapCounts[code] += 1;
+  }
+  const blockingRoutingGapCount = AUTHORITY_RELIEF_BLOCKING_ROUTING_GAP_CODES.reduce((sum, code) => sum + routingGapCounts[code], 0);
+  const runtimeTimedOut = runtime?.timedOut === true || runtime?.timeout === true || runtime?.status === 'TIMEOUT' ||
+    runtime?.failure === 'TIMEOUT' || runtime?.failureCode === 'TIMEOUT';
+  const requestedIssueCoverage = {
+    requestedIssueCount: semanticIssues.length,
+    mappedIssueCount,
+    inCanonicalRuntimeCount: runtimeById.size,
+    lifecycleMappedCount,
+    retrievalAttemptedCount,
+    routingGapCounts,
+    blockingRoutingGapCount,
+    unclassifiedRoutingGapCount: routingGapCounts.OTHER_GAP
+  };
+  const requestedIssuesMappedAndRetrieved = semanticIssues.length > 0 &&
+    requestedIssueCoverage.requestedIssueCount === mappedIssueCount &&
+    requestedIssueCoverage.requestedIssueCount === requestedIssueCoverage.inCanonicalRuntimeCount &&
+    requestedIssueCoverage.requestedIssueCount === lifecycleMappedCount &&
+    requestedIssueCoverage.requestedIssueCount === retrievalAttemptedCount &&
+    blockingRoutingGapCount === 0 && !runtimeTimedOut;
+  return { requestedIssueCoverage, requestedIssuesMappedAndRetrieved, runtimeTimedOut };
+}
+
+function summarizeRuntime(testCase, understanding, buildRuntime, { captureAuthorityReliefRouting = false } = {}) {
   const semanticIssues = understanding.interpretation?.issues || [];
   try {
     const classification = classifyQuestion(testCase.question);
@@ -373,6 +499,9 @@ function summarizeRuntime(testCase, understanding, buildRuntime) {
       applicationStatusCounts.requiredPlanIssues = requiredApplicationIssues.length;
       applicationStatusCounts.routedRequiredIssues = routedApplicationIssues.length;
       const finalWorkstreamSetAccuracy = expectedWorkstreamAccuracy(runtimeWorkstreams, testCase.expectedWorkstreamsAnyOf);
+      const authorityReliefRouting = captureAuthorityReliefRouting
+        ? authorityReliefRoutingDiagnostics(semanticIssues, reconciledIssues, runtime, runtimeIssues)
+        : undefined;
       return {
         plannedWorkstreamCount: planned.length,
         finalWorkstreamCount: runtimeWorkstreams.length,
@@ -388,9 +517,14 @@ function summarizeRuntime(testCase, understanding, buildRuntime) {
           residualHasNoWorkstream,
           caseSpecificApplicationsUnresolved,
           requiredApplicationStatusesUnresolved,
-          unresolvedApplicationNotVerified
+          unresolvedApplicationNotVerified,
+          ...(authorityReliefRouting ? { requestedIssuesMappedAndRetrieved: authorityReliefRouting.requestedIssuesMappedAndRetrieved } : {})
         },
-        applicationStatusCounts
+        applicationStatusCounts,
+        ...(authorityReliefRouting ? {
+          requestedIssueCoverage: authorityReliefRouting.requestedIssueCoverage,
+          runtimeTimedOut: authorityReliefRouting.runtimeTimedOut
+        } : {})
       };
     });
   } catch {
@@ -438,6 +572,185 @@ function scoreValidInterpretation(testCase, interpretation) {
     dimensionsCorrect: Object.fromEntries(['governingAuthority', 'contextualAuthority', 'domain', 'population', 'operation'].map(key => [
       key, matched.filter(item => item.dimensions[key]).length
     ]))
+  };
+}
+
+function canonicalAuthorityIssueForScoring(issue, expected = false) {
+  const domain = expected
+    ? Array.isArray(issue.domain) && issue.domain.includes('ACCOUNTING') ? 'ACCOUNTING' : issue.domain?.[0]
+    : issue.domain;
+  return {
+    ...issue,
+    governingAuthorities: (issue.governingAuthorities || []).map(authority =>
+      canonicalAccountingWorkstreamAuthority(domain, authority))
+  };
+}
+
+/** Canonical-contract score for new authority-relief profiles; raw scoring remains unchanged. */
+export function scoreAuthorityReliefCanonicalContract(testCase, interpretation) {
+  const canonicalTestCase = {
+    ...testCase,
+    expected: testCase.expected.map(issue => {
+      const strictOperation = strictOperationsForAuthorityReliefCase(testCase)
+        .find(target => target.issueId === issue.id)?.operation;
+      return {
+        ...canonicalAuthorityIssueForScoring(issue, true),
+        ...(strictOperation ? { operation: [strictOperation] } : {})
+      };
+    })
+  };
+  const canonicalInterpretation = {
+    ...interpretation,
+    issues: (interpretation.issues || []).map(issue => canonicalAuthorityIssueForScoring(issue))
+  };
+  return scoreValidInterpretation(canonicalTestCase, canonicalInterpretation);
+}
+
+function strictOperationsForAuthorityReliefCase(testCase) {
+  if (Array.isArray(testCase.strictOperations) && testCase.strictOperations.length > 0) return testCase.strictOperations;
+  const checks = [];
+  const legacyStrict = STRICT_INTENT_OPERATIONS[testCase.id];
+  if (legacyStrict) checks.push(legacyStrict);
+  if (testCase.id === 'A-paraphrase-2' && testCase.expected.some(issue => issue.id === 'individual-cpf-tax-relief')) {
+    checks.push({ issueId: 'individual-cpf-tax-relief', operation: 'CHECK_ELIGIBILITY' });
+  }
+  return checks;
+}
+
+/** 100% fixed-case acceptance for the new authority-relief profiles only. */
+export function authorityReliefCaseAcceptance({
+  testCase,
+  validInterpretation,
+  canonicalScoring,
+  routing,
+  interpretation,
+  productionResult,
+  capture,
+  requestCount,
+  sourceHashesConsistent,
+  fixtureHashesConsistent
+}) {
+  const expectedSpecificity = typeof testCase.expectedRequiresUserSpecificFacts === 'boolean'
+    ? testCase.expectedRequiresUserSpecificFacts : EXPECTED_CASE_SPECIFICITY[testCase.id];
+  const actualSpecificity = interpretation?.requiresUserSpecificFacts;
+  const caseSpecificityCorrect = typeof expectedSpecificity === 'boolean' &&
+    typeof actualSpecificity === 'boolean' && actualSpecificity === expectedSpecificity;
+  const strictOperationChecks = strictOperationsForAuthorityReliefCase(testCase).map(target => {
+    const expectedIndex = testCase.expected.findIndex(issue => issue.id === target.issueId);
+    const actualIssues = Array.isArray(interpretation?.issues) ? interpretation.issues : [];
+    const { expectedByActual } = matchIssues(testCase.expected, actualIssues);
+    const actualIndex = [...expectedByActual.entries()].find(([, index]) => index === expectedIndex)?.[0];
+    const actualOperation = actualIndex === undefined ? undefined : actualIssues[actualIndex]?.operation;
+    return {
+      expectedIssueId: target.issueId,
+      expectedOperation: target.operation,
+      ...(actualOperation ? { actualOperation } : {}),
+      matched: actualIndex !== undefined,
+      passed: actualOperation === target.operation
+    };
+  });
+  const issueCoverageCorrect = canonicalScoring?.completeQuestionIssueCoverage === true &&
+    canonicalScoring.matchedIssueCount === canonicalScoring.expectedIssueCount &&
+    canonicalScoring.predictedIssueCount === canonicalScoring.expectedIssueCount;
+  const allDimensionsCorrect = canonicalScoring?.matchedIssueCount > 0 &&
+    Object.values(canonicalScoring.dimensionsCorrect || {}).every(correct => correct === canonicalScoring.matchedIssueCount);
+  const operationsCorrect = canonicalScoring?.operationMatched > 0 &&
+    canonicalScoring.operationCorrect === canonicalScoring.operationMatched &&
+    strictOperationChecks.every(check => check.passed);
+  const topLevelCalculationFlagCorrect = typeof interpretation?.calculationRequested === 'boolean' &&
+    interpretation.calculationRequested === (interpretation.requestedOperation === 'CALCULATE');
+  const guardsCorrect = Boolean(routing?.guardChecks) && Object.values(routing.guardChecks).every(Boolean);
+  const routingCorrect = routing?.finalWorkstreamSetAccuracy === true;
+  const requestedIssueCoverage = routing?.requestedIssueCoverage;
+  const expectedRequestedIssueCount = testCase.expected.length;
+  const routingGapKeysCorrect = exactSameSet(Object.keys(requestedIssueCoverage?.routingGapCounts || {}), AUTHORITY_RELIEF_ROUTING_GAP_CODES) &&
+    Object.values(requestedIssueCoverage?.routingGapCounts || {}).every(count => Number.isInteger(count) && count >= 0);
+  const noBlockingRequestedRoutingGaps = routingGapKeysCorrect &&
+    AUTHORITY_RELIEF_BLOCKING_ROUTING_GAP_CODES.every(code => requestedIssueCoverage.routingGapCounts[code] === 0) &&
+    requestedIssueCoverage.unclassifiedRoutingGapCount === 0 && requestedIssueCoverage.blockingRoutingGapCount === 0;
+  const requestedIssueCoverageCorrect = requestedIssueCoverage?.requestedIssueCount === expectedRequestedIssueCount &&
+    requestedIssueCoverage.mappedIssueCount === expectedRequestedIssueCount &&
+    requestedIssueCoverage.inCanonicalRuntimeCount === expectedRequestedIssueCount &&
+    requestedIssueCoverage.lifecycleMappedCount === expectedRequestedIssueCount &&
+    requestedIssueCoverage.retrievalAttemptedCount === expectedRequestedIssueCount &&
+    noBlockingRequestedRoutingGaps && routing?.runtimeTimedOut === false &&
+    routing?.guardChecks?.requestedIssuesMappedAndRetrieved === true;
+  const runtimeTimedOut = routing?.runtimeTimedOut !== false;
+  const singleProviderCallPassed = requestCount === 1 && validInterpretation && !productionResult?.failure &&
+    capture?.responseReceived === true && !capture?.transportCategory;
+  const fingerprintsStable = sourceHashesConsistent === true && fixtureHashesConsistent === true;
+  const passed = validInterpretation && issueCoverageCorrect && allDimensionsCorrect && operationsCorrect &&
+    caseSpecificityCorrect && topLevelCalculationFlagCorrect && routingCorrect && guardsCorrect &&
+    requestedIssueCoverageCorrect && !runtimeTimedOut && singleProviderCallPassed && fingerprintsStable;
+  return {
+    passed,
+    validInterpretation,
+    issueCoverageCorrect,
+    allDimensionsCorrect,
+    operationsCorrect,
+    caseSpecificity: { expected: expectedSpecificity, actual: actualSpecificity },
+    caseSpecificityCorrect,
+    topLevelCalculationFlagCorrect,
+    routingCorrect,
+    guardsCorrect,
+    requestedIssueCoverageCorrect,
+    runtimeTimedOut,
+    singleProviderCallPassed,
+    fingerprintsStable,
+    strictOperationChecks
+  };
+}
+
+function summarizeAuthorityReliefAcceptance(document, expectedCaseCount) {
+  const rows = document.cases.filter(item => item.authorityReliefAcceptance);
+  const issueTotal = rows.reduce((sum, item) => sum + (item.canonicalScoring?.expectedIssueCount || 0), 0);
+  const matchedTotal = rows.reduce((sum, item) => sum + (item.canonicalScoring?.matchedIssueCount || 0), 0);
+  const predictedTotal = rows.reduce((sum, item) => sum + (item.canonicalScoring?.predictedIssueCount || 0), 0);
+  const matchedOperationTotal = rows.reduce((sum, item) => sum + (item.canonicalScoring?.operationMatched || 0), 0);
+  const correctOperationTotal = rows.reduce((sum, item) => sum + (item.canonicalScoring?.operationCorrect || 0), 0);
+  const dimensions = Object.fromEntries(['governingAuthority', 'contextualAuthority', 'domain', 'population', 'operation'].map(key => {
+    const correct = rows.reduce((sum, item) => sum + (item.canonicalScoring?.dimensionsCorrect?.[key] || 0), 0);
+    return [key, { correct, matched: matchedTotal, rate: ratio(correct, matchedTotal) }];
+  }));
+  const failedCases = rows.filter(item => !item.authorityReliefAcceptance.passed).map(item => item.caseId);
+  const startPacingPassed = expectedCaseCount <= 1 ||
+    Number.isFinite(document.minimumObservedStartGapMs) && document.minimumObservedStartGapMs >= START_GAP_MS;
+  const completeCaseCount = rows.length === expectedCaseCount && document.requestCount === expectedCaseCount;
+  const fingerprintsStable = document.sourceHashesConsistent === true && document.fixtureHashesConsistent === true &&
+    rows.every(item => item.sourceHashesConsistent === true && item.fixtureHashesConsistent === true);
+  const invalidResponses = rows.filter(item => !item.validInterpretation ||
+    ['INVALID_RESPONSE', 'LOW_CONFIDENCE', 'NO_PROVIDER', 'QUERY_TOO_LONG'].includes(item.production?.failure)).length;
+  const timeouts = rows.filter(item => item.production?.failure === 'TIMEOUT' || item.capture?.transportCategory === 'TIMEOUT').length;
+  const providerFailures = rows.filter(item => ['PROVIDER_ERROR', 'RATE_LIMITED'].includes(item.production?.failure) ||
+    ['PROVIDER_ERROR', 'RATE_LIMITED'].includes(item.capture?.transportCategory)).length;
+  const zeroInvalidTimeoutProviderFailures = completeCaseCount && invalidResponses === 0 && timeouts === 0 && providerFailures === 0 &&
+    rows.every(item => item.capture?.responseReceived === true && !item.capture?.transportCategory);
+  const passed = completeCaseCount && failedCases.length === 0 &&
+    matchedTotal === issueTotal && predictedTotal === issueTotal && correctOperationTotal === matchedOperationTotal &&
+    Object.values(dimensions).every(item => item.rate === 1) && startPacingPassed && fingerprintsStable;
+  return {
+    passed,
+    completedCases: rows.length,
+    passedCases: rows.length - failedCases.length,
+    expectedCases: expectedCaseCount,
+    failedCases,
+    canonicalContractScoring: {
+      issueRecall: { correct: matchedTotal, total: issueTotal, rate: ratio(matchedTotal, issueTotal) },
+      issuePrecision: { correct: matchedTotal, total: predictedTotal, rate: ratio(matchedTotal, predictedTotal) },
+      dimensions,
+      operationAccuracy: { correct: correctOperationTotal, total: matchedOperationTotal, rate: ratio(correctOperationTotal, matchedOperationTotal) },
+      canonicalWorkstreamRoutingAccuracy: {
+        correct: rows.filter(item => item.authorityReliefAcceptance.routingCorrect).length,
+        total: rows.length,
+        rate: ratio(rows.filter(item => item.authorityReliefAcceptance.routingCorrect).length, rows.length)
+      }
+    },
+    invalidResponses,
+    timeouts,
+    providerFailures,
+    zeroInvalidTimeoutProviderFailures,
+    pacingPolicyPassed: startPacingPassed,
+    fingerprintsStable
   };
 }
 
@@ -492,7 +805,11 @@ function caseSummary(cases, group) {
 
 function renderMarkdown(document) {
   const intentProfile = document.evaluationProfile === 'intent-targeted' || document.evaluationProfile === 'intent-final';
-  const heading = document.evaluationProfile === 'intent-targeted' ? '# Semantic intent targeted live evaluation'
+  const authorityReliefProfile = document.evaluationProfile === 'authority-relief-targeted-live' ||
+    document.evaluationProfile === 'authority-relief-final-live';
+  const heading = document.evaluationProfile === 'authority-relief-targeted-live' ? '# Authority and relief targeted live evaluation'
+    : document.evaluationProfile === 'authority-relief-final-live' ? '# Authority and relief final live evaluation'
+      : document.evaluationProfile === 'intent-targeted' ? '# Semantic intent targeted live evaluation'
     : document.evaluationProfile === 'intent-final' ? '# Semantic intent final live evaluation'
       : '# Semantic contract follow-up v2 live evaluation';
   const lines = [
@@ -509,6 +826,37 @@ function renderMarkdown(document) {
   ];
   for (const item of document.cases) {
     lines.push(`| ${item.caseId} | ${item.group} | ${item.validInterpretation} | ${item.scoring.matchedIssueCount} / ${item.scoring.expectedIssueCount} | ${item.scoring.predictedIssueCount} | ${item.scoring.operationCorrect} / ${item.scoring.operationMatched} | ${item.routing?.finalWorkstreamSetAccuracy ?? false} | ${item.production.failure || '—'} |`);
+  }
+  if (authorityReliefProfile) {
+    const acceptance = document.authorityReliefAcceptance;
+    const canonical = acceptance?.canonicalContractScoring;
+    lines.push(
+      '',
+      '## Canonical contract scoring',
+      '',
+      'Raw scoring above remains unchanged. The supplemental score canonicalizes only ACCOUNTING governing IFRS Foundation authority to ACCOUNTING_STANDARDS; contextual authorities remain unchanged. Explicit authority-relief operation requirements are included.',
+      '',
+      `Strict acceptance passed: ${acceptance?.passed ?? false} (${acceptance?.passedCases ?? 0} / ${acceptance?.expectedCases ?? document.cases.length} cases).`,
+      '',
+      '| Issue recall | Issue precision | Governing authority | Contextual authority | Domain | Population | Operation | Canonical workstream routing | Invalid responses | Timeouts | Provider failures | Pacing | Fingerprints | Zero failures |',
+      '| --- | --- | --- | --- | --- | --- | --- | --- | ---: | ---: | ---: | --- | --- | --- |',
+      `| ${canonical?.issueRecall?.correct ?? 0} / ${canonical?.issueRecall?.total ?? 0} (${canonical?.issueRecall?.rate ?? 0}) | ${canonical?.issuePrecision?.correct ?? 0} / ${canonical?.issuePrecision?.total ?? 0} (${canonical?.issuePrecision?.rate ?? 0}) | ${canonical?.dimensions?.governingAuthority?.correct ?? 0} / ${canonical?.dimensions?.governingAuthority?.matched ?? 0} (${canonical?.dimensions?.governingAuthority?.rate ?? 0}) | ${canonical?.dimensions?.contextualAuthority?.correct ?? 0} / ${canonical?.dimensions?.contextualAuthority?.matched ?? 0} (${canonical?.dimensions?.contextualAuthority?.rate ?? 0}) | ${canonical?.dimensions?.domain?.correct ?? 0} / ${canonical?.dimensions?.domain?.matched ?? 0} (${canonical?.dimensions?.domain?.rate ?? 0}) | ${canonical?.dimensions?.population?.correct ?? 0} / ${canonical?.dimensions?.population?.matched ?? 0} (${canonical?.dimensions?.population?.rate ?? 0}) | ${canonical?.dimensions?.operation?.correct ?? 0} / ${canonical?.dimensions?.operation?.matched ?? 0} (${canonical?.dimensions?.operation?.rate ?? 0}) | ${canonical?.canonicalWorkstreamRoutingAccuracy?.correct ?? 0} / ${canonical?.canonicalWorkstreamRoutingAccuracy?.total ?? 0} (${canonical?.canonicalWorkstreamRoutingAccuracy?.rate ?? 0}) | ${acceptance?.invalidResponses ?? 0} | ${acceptance?.timeouts ?? 0} | ${acceptance?.providerFailures ?? 0} | ${acceptance?.pacingPolicyPassed ?? false} | ${acceptance?.fingerprintsStable ?? false} | ${acceptance?.zeroInvalidTimeoutProviderFailures ?? false} |`,
+      '',
+      'Per-case canonical contract acceptance:',
+      '',
+      '| Case | Canonical matched / expected | Dimensions | Operation | Specificity | Workstream set | Requested mapped / runtime / retrieval | Guards | Strict case acceptance |',
+      '| --- | ---: | --- | --- | --- | --- | --- | --- | --- |'
+    );
+    for (const item of document.cases) {
+      const score = item.canonicalScoring;
+      const accepted = item.authorityReliefAcceptance;
+      const requestedRouting = item.routing?.requestedIssueCoverage;
+      const allDimensions = score && Object.values(score.dimensionsCorrect || {}).every(value => value === score.matchedIssueCount);
+      const requestedRoutingText = requestedRouting
+        ? `${requestedRouting.mappedIssueCount} / ${requestedRouting.requestedIssueCount} / ${requestedRouting.inCanonicalRuntimeCount} / ${requestedRouting.retrievalAttemptedCount}`
+        : '—';
+      lines.push(`| ${item.caseId} | ${score?.matchedIssueCount ?? 0} / ${score?.expectedIssueCount ?? 0} | ${allDimensions ?? false} | ${score?.operationCorrect ?? 0} / ${score?.operationMatched ?? 0} | ${accepted?.caseSpecificityCorrect ?? false} | ${accepted?.routingCorrect ?? false} | ${requestedRoutingText} | ${accepted?.guardsCorrect ?? false} | ${accepted?.passed ?? false} |`);
+    }
   }
   lines.push('', '| Group | Valid / cases | Valid recall | All-case recall | Valid precision | Operation accuracy | Complete coverage | Routing / valid | Routing / all | Invalid / calls | Timeout | Provider failure |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
   for (const summary of document.summaries) {
@@ -534,7 +882,7 @@ async function writeProgress(directory, document, outputPrefix = OUTPUT_PREFIX) 
   await atomicWrite(path.join(directory, `${outputPrefix}.md`), renderMarkdown(document));
 }
 
-function profileConfiguration(evaluationProfile) {
+export function profileConfiguration(evaluationProfile) {
   if (evaluationProfile === undefined) {
     return {
       evaluationProfile: undefined,
@@ -570,7 +918,150 @@ function profileConfiguration(evaluationProfile) {
       purpose: 'Once-only final semantic-intent evaluation using the original unchanged ten-case fixture.'
     };
   }
+  if (evaluationProfile === 'authority-relief-targeted-live') {
+    return {
+      evaluationProfile,
+      outputPrefix: AUTHORITY_RELIEF_TARGETED_OUTPUT_PREFIX,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
+        authorityReliefCliRunner: INTENT_CLI_RUNNER_FILE
+      },
+      fixtureFiles: {
+        ...FIXTURE_FILES,
+        authorityReliefTargeted: AUTHORITY_RELIEF_TARGETED_FIXTURE,
+        protectedAuditHashes: AUTHORITY_RELIEF_PROTECTED_HASHES
+      },
+      purpose: 'Once-only strict authority and tax-relief evaluation using two frozen historical questions and six fixed independent controls.'
+    };
+  }
+  if (evaluationProfile === 'authority-relief-final-live') {
+    return {
+      evaluationProfile,
+      outputPrefix: AUTHORITY_RELIEF_FINAL_OUTPUT_PREFIX,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
+        authorityReliefCliRunner: INTENT_CLI_RUNNER_FILE
+      },
+      fixtureFiles: {
+        ...FIXTURE_FILES,
+        authorityReliefTargeted: AUTHORITY_RELIEF_TARGETED_FIXTURE,
+        protectedAuditHashes: AUTHORITY_RELIEF_PROTECTED_HASHES
+      },
+      purpose: 'Conditional once-only authority and tax-relief evaluation using the original unchanged ten-case selection and expectations.'
+    };
+  }
   throw new Error('A supported fixed evaluation profile is required.');
+}
+
+function strictOperationExpectations(testCase) {
+  return strictOperationsForAuthorityReliefCase(testCase);
+}
+
+function strictTargetRowPassed(row, testCase, index) {
+  const score = row?.canonicalScoring;
+  const acceptance = row?.authorityReliefAcceptance;
+  const expectedCount = testCase.expected.length;
+  const strictChecks = strictOperationExpectations(testCase);
+  const allDimensionsCorrect = score && Object.keys(score.dimensionsCorrect || {}).length === 5 &&
+    Object.values(score.dimensionsCorrect).every(value => value === expectedCount);
+  const strictChecksCorrect = Array.isArray(acceptance?.strictOperationChecks) &&
+    acceptance.strictOperationChecks.length === strictChecks.length &&
+    strictChecks.every((expected, strictIndex) => {
+      const actual = acceptance.strictOperationChecks[strictIndex];
+      return actual?.expectedIssueId === expected.issueId && actual.expectedOperation === expected.operation &&
+        actual.actualOperation === expected.operation && actual.matched === true && actual.passed === true;
+    });
+  const capture = row?.capture;
+  const capturePassed = capture?.requestCount === 1 && capture?.model === MODEL &&
+    capture?.timeoutMs === SEMANTIC_QUESTION_TIMEOUT_MS && capture?.temperature === 0 &&
+    capture?.jsonMode === true && capture?.responseReceived === true && !capture?.transportCategory &&
+    Number.isFinite(capture?.promptChars) && capture.promptChars > 0 && capture.promptChars < 9_000 &&
+    (index === 0 ? capture.startGapMs === null : Number.isFinite(capture.startGapMs) && capture.startGapMs >= START_GAP_MS);
+  const routingPassed = row?.routing?.finalWorkstreamSetAccuracy === true &&
+    Object.keys(row.routing.guardChecks || {}).length >= 7 &&
+    Object.values(row.routing.guardChecks || {}).every(value => value === true);
+  const requestedRouting = row?.routing?.requestedIssueCoverage;
+  const requestedRoutingPassed = exactSameSet(Object.keys(requestedRouting?.routingGapCounts || {}), AUTHORITY_RELIEF_ROUTING_GAP_CODES) &&
+    Object.values(requestedRouting?.routingGapCounts || {}).every(value => Number.isInteger(value) && value >= 0) &&
+    requestedRouting.requestedIssueCount === expectedCount && requestedRouting.mappedIssueCount === expectedCount &&
+    requestedRouting.inCanonicalRuntimeCount === expectedCount && requestedRouting.lifecycleMappedCount === expectedCount &&
+    requestedRouting.retrievalAttemptedCount === expectedCount && requestedRouting.blockingRoutingGapCount === 0 &&
+    requestedRouting.unclassifiedRoutingGapCount === 0 &&
+    AUTHORITY_RELIEF_BLOCKING_ROUTING_GAP_CODES.every(code => requestedRouting.routingGapCounts[code] === 0) &&
+    row.routing.runtimeTimedOut === false && row.routing.guardChecks?.requestedIssuesMappedAndRetrieved === true;
+  const specificityPassed = acceptance?.caseSpecificityCorrect === true &&
+    acceptance.caseSpecificity?.expected === testCase.expectedRequiresUserSpecificFacts &&
+    acceptance.caseSpecificity?.actual === testCase.expectedRequiresUserSpecificFacts;
+  const rawShapePassed = row?.caseId === testCase.id &&
+    exactSameSet(row.expectedIssueIds, testCase.expected.map(issue => issue.id)) &&
+    row.expectedWorkstreamSetCount === testCase.expectedWorkstreamsAnyOf.length &&
+    row.validInterpretation === true && row.production?.mode === 'SEMANTIC_INTERPRETATION' &&
+    row.production?.failure === undefined;
+  const canonicalScorePassed = score?.completeQuestionIssueCoverage === true &&
+    score.expectedIssueCount === expectedCount && score.predictedIssueCount === expectedCount &&
+    score.matchedIssueCount === expectedCount && score.operationMatched === expectedCount &&
+    score.operationCorrect === expectedCount && allDimensionsCorrect;
+  return rawShapePassed && canonicalScorePassed && strictChecksCorrect && capturePassed && routingPassed &&
+    specificityPassed && acceptance?.validInterpretation === true && acceptance.issueCoverageCorrect === true &&
+    acceptance.allDimensionsCorrect === true && acceptance.operationsCorrect === true &&
+    acceptance.topLevelCalculationFlagCorrect === true && acceptance.routingCorrect === true &&
+    acceptance.guardsCorrect === true && acceptance.requestedIssueCoverageCorrect === true &&
+    acceptance.runtimeTimedOut === false && requestedRoutingPassed && acceptance.singleProviderCallPassed === true &&
+    acceptance.fingerprintsStable === true && acceptance.passed === true &&
+    row.sourceHashesConsistent === true && row.fixtureHashesConsistent === true;
+}
+
+async function requirePassingAuthorityReliefTarget(outputDirectory) {
+  let targeted;
+  try {
+    targeted = JSON.parse(await readFile(path.join(outputDirectory, `${AUTHORITY_RELIEF_TARGETED_OUTPUT_PREFIX}.json`), 'utf8'));
+  } catch {
+    throw new Error('The authority-relief targeted profile has not passed; final live capture is gated.');
+  }
+  const acceptance = targeted.authorityReliefAcceptance;
+  const currentProfile = profileConfiguration('authority-relief-targeted-live');
+  const [currentSourceManifest, currentFixtureManifest, expectedCases, protectedHashes] = await Promise.all([
+    hashManifest(currentProfile.sourceFiles), hashManifest(currentProfile.fixtureFiles),
+    loadAuthorityReliefTargetedCases(), readJson(AUTHORITY_RELIEF_PROTECTED_HASHES)
+  ]);
+  const protectedFilesPassed = Array.isArray(protectedHashes) && protectedHashes.length === 29 &&
+    (await Promise.all(protectedHashes.map(async item => {
+      if (typeof item?.path !== 'string' || typeof item.sha256 !== 'string') return false;
+      const filePath = path.resolve(PROJECT_ROOT, item.path);
+      return await hashFile(filePath) === item.sha256;
+    }))).every(Boolean);
+  const rowAcceptancePassed = Array.isArray(targeted.cases) && targeted.cases.length === expectedCases.length &&
+    expectedCases.every((testCase, index) => strictTargetRowPassed(targeted.cases[index], testCase, index));
+  const aggregateIssueCount = expectedCases.reduce((sum, testCase) => sum + testCase.expected.length, 0);
+  const aggregateCanonical = acceptance?.canonicalContractScoring;
+  const aggregatePassed = rowAcceptancePassed && targeted.requestCount === expectedCases.length &&
+    acceptance?.completedCases === expectedCases.length && acceptance.passedCases === expectedCases.length &&
+    Array.isArray(acceptance.failedCases) && acceptance.failedCases.length === 0 &&
+    aggregateCanonical?.issueRecall?.correct === aggregateIssueCount && aggregateCanonical.issueRecall.total === aggregateIssueCount &&
+    aggregateCanonical.issuePrecision?.correct === aggregateIssueCount && aggregateCanonical.issuePrecision.total === aggregateIssueCount &&
+    Object.values(aggregateCanonical.dimensions || {}).every(item => item.correct === aggregateIssueCount &&
+      item.matched === aggregateIssueCount && item.rate === 1) &&
+    aggregateCanonical.operationAccuracy?.correct === aggregateIssueCount &&
+    aggregateCanonical.operationAccuracy.total === aggregateIssueCount &&
+    aggregateCanonical.canonicalWorkstreamRoutingAccuracy?.correct === expectedCases.length &&
+    aggregateCanonical.canonicalWorkstreamRoutingAccuracy.total === expectedCases.length &&
+    aggregateCanonical.canonicalWorkstreamRoutingAccuracy.rate === 1;
+  const profileAndPacingPassed = targeted.evaluationProfile === 'authority-relief-targeted-live' &&
+    targeted.outputPrefix === AUTHORITY_RELIEF_TARGETED_OUTPUT_PREFIX && targeted.completedAt !== undefined &&
+    targeted.model === MODEL && targeted.timeoutMs === SEMANTIC_QUESTION_TIMEOUT_MS &&
+    targeted.minimumStartGapMs === START_GAP_MS && targeted.minimumObservedStartGapMs >= START_GAP_MS &&
+    targeted.pacingPolicy === 'Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.' &&
+    exactSameSet(targeted.cases?.map(item => item.caseId), AUTHORITY_RELIEF_TARGETED_CASE_IDS);
+  const manifestsPassed = sameManifest(targeted.sourceFingerprints || {}, currentSourceManifest) &&
+    sameManifest(targeted.fixtureFingerprints || {}, currentFixtureManifest) &&
+    targeted.sourceHashesConsistent === true && targeted.fixtureHashesConsistent === true && protectedFilesPassed;
+  if (!profileAndPacingPassed || !aggregatePassed || !manifestsPassed || acceptance?.passed !== true ||
+      acceptance.zeroInvalidTimeoutProviderFailures !== true || acceptance.pacingPolicyPassed !== true ||
+      acceptance.fingerprintsStable !== true) {
+    throw new Error('The authority-relief targeted profile has not passed; final live capture is gated.');
+  }
 }
 
 const STRICT_INTENT_OPERATIONS = Object.freeze({
@@ -670,18 +1161,25 @@ export async function runSemanticContractFollowupEvaluation({
   if (evaluationProfile !== undefined && suppliedCases !== undefined) {
     throw new Error('A required fixed evaluation case is missing.');
   }
+  if (evaluationProfile === 'authority-relief-final-live') await requirePassingAuthorityReliefTarget(outputDirectory);
   await mkdir(outputDirectory, { recursive: true });
   await refuseExistingOutputs(outputDirectory, profile.outputPrefix);
   if (typeof apiKey !== 'string' || apiKey.trim().length <= 10) throw new Error('GEMINI_API_KEY is not configured.');
 
+  const isAuthorityReliefProfile = evaluationProfile === 'authority-relief-targeted-live' ||
+    evaluationProfile === 'authority-relief-final-live';
   const selectedCases = evaluationProfile === 'intent-targeted'
     ? await loadSemanticIntentTargetedCases()
-    : evaluationProfile === 'intent-final'
+    : evaluationProfile === 'intent-final' || evaluationProfile === 'authority-relief-final-live'
       ? await loadSemanticIntentFinalCases()
-      : suppliedCases || await loadSemanticContractFollowupCases();
+      : evaluationProfile === 'authority-relief-targeted-live'
+        ? await loadAuthorityReliefTargetedCases()
+        : suppliedCases || await loadSemanticContractFollowupCases();
   const requiredIds = evaluationProfile === 'intent-targeted'
     ? [...INTENT_KNOWN_CASE_IDS, ...INTENT_BOUNDARY_CASE_IDS]
-    : REQUIRED_CASE_IDS;
+    : evaluationProfile === 'authority-relief-targeted-live'
+      ? AUTHORITY_RELIEF_TARGETED_CASE_IDS
+      : REQUIRED_CASE_IDS;
   if (!Array.isArray(selectedCases) || selectedCases.length !== requiredIds.length ||
       requiredIds.some(id => !selectedCases.some(item => item.id === id)) ||
       new Set(selectedCases.map(item => item.id)).size !== selectedCases.length) {
@@ -745,6 +1243,7 @@ export async function runSemanticContractFollowupEvaluation({
         model: MODEL,
         timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
         temperature: 0,
+        jsonMode: true,
         requestCount: 1,
         startGapMs
       };
@@ -813,7 +1312,9 @@ export async function runSemanticContractFollowupEvaluation({
     let routing;
     if (validInterpretation) {
       try {
-        routing = await summarizeRuntime(testCase, productionResult, buildRuntime);
+        routing = await summarizeRuntime(testCase, productionResult, buildRuntime, {
+          captureAuthorityReliefRouting: isAuthorityReliefProfile
+        });
       } catch {
         routing = {
           plannedWorkstreamCount: 0,
@@ -842,6 +1343,23 @@ export async function runSemanticContractFollowupEvaluation({
     const fixtureHashesConsistent = sameManifest(fixturesBefore, fixturesAfter) && sameManifest(fixtureHashes, fixturesAfter);
     document.sourceHashesConsistent = document.sourceHashesConsistent && sourceHashesConsistent;
     document.fixtureHashesConsistent = document.fixtureHashesConsistent && fixtureHashesConsistent;
+    const canonicalScoring = isAuthorityReliefProfile && validInterpretation
+      ? scoreAuthorityReliefCanonicalContract(testCase, productionResult.interpretation)
+      : undefined;
+    const authorityReliefAcceptance = isAuthorityReliefProfile
+      ? authorityReliefCaseAcceptance({
+        testCase,
+        validInterpretation,
+        canonicalScoring: canonicalScoring || scoring,
+        routing,
+        interpretation: productionResult?.interpretation,
+        productionResult,
+        capture,
+        requestCount: callCount,
+        sourceHashesConsistent,
+        fixtureHashesConsistent
+      })
+      : undefined;
     document.cases.push({
       caseId: testCase.id,
       group: testCase.group,
@@ -852,6 +1370,8 @@ export async function runSemanticContractFollowupEvaluation({
       ...(capture ? { capture } : {}),
       ...(responseDiagnostic ? { responseDiagnostic } : {}),
       scoring,
+      ...(canonicalScoring ? { canonicalScoring } : {}),
+      ...(authorityReliefAcceptance ? { authorityReliefAcceptance } : {}),
       ...(profile.evaluationProfile === 'intent-targeted' || profile.evaluationProfile === 'intent-final'
         ? { intentAcceptance: intentAcceptance(testCase, validInterpretation, scoring, routing, productionResult?.interpretation) }
         : {}),
@@ -860,6 +1380,9 @@ export async function runSemanticContractFollowupEvaluation({
       fixtureHashesConsistent,
       elapsedMs: Math.round((monotonicNow() - initialMonotonic) * 100) / 100
     });
+    if (isAuthorityReliefProfile) {
+      document.authorityReliefAcceptance = summarizeAuthorityReliefAcceptance(document, selectedCases.length);
+    }
     document.summaries = [
       caseSummary(document.cases, 'PRESELECTED_KNOWN_FAILURE'),
       caseSummary(document.cases, 'INDEPENDENT_CONTROL'),
@@ -873,6 +1396,9 @@ export async function runSemanticContractFollowupEvaluation({
   }
 
   document.completedAt = now().toISOString();
+  if (isAuthorityReliefProfile) {
+    document.authorityReliefAcceptance = summarizeAuthorityReliefAcceptance(document, selectedCases.length);
+  }
   await writeProgress(outputDirectory, document, profile.outputPrefix);
   return document;
 }

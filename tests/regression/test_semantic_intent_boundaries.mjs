@@ -104,6 +104,7 @@ assert.match(capturedPrompt, /CHECK_ELIGIBILITY for qualification or entitlement
 assert.match(capturedPrompt, /EXPLAIN_RULE for general principles or conditions without applying them to a case/i);
 assert.match(capturedPrompt, /a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT/i);
 assert.match(capturedPrompt, /Assign exactly one governing authority to each issue and ensure it matches the issue domain/i);
-assert.ok(capturedPrompt.length < 8_750, `Generic intent guidance remains within the prior prompt budget (${capturedPrompt.length} characters).`);
+// The existing 8,730-character prompt gains one short relief entitlement/amount distinction.
+assert.ok(capturedPrompt.length < 9_000, `Generic intent guidance and the short relief distinction remain within the adjusted prompt budget (${capturedPrompt.length} characters).`);
 
 console.log(`Semantic intent-boundary mock V2 contract and downstream regressions passed for ${fixture.cases.length} cases; promptChars=${capturedPrompt.length}. These mocks test prompt/contract/routing behavior, not model inference.`);

@@ -38,6 +38,7 @@ import {
 } from './groundingContextBuilder';
 import { renderIrasEvidenceResponse } from './irasEvidencePolicy';
 import {
+  canonicalAccountingWorkstreamAuthority,
   getRequestedQuestionConcepts,
   type ReconciledSemanticQuestionIssue,
   type SemanticAuthority,
@@ -171,7 +172,9 @@ function toInternalPlan(issuePlan: SemanticIssueReconciliation): InternalPlan[] 
     // not a requested workstream from the validated semantic interpretation.
     if (issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC') continue;
     const allTopics = getCoverageTopicsByIds(issue.mappedTopicIds);
-    const authorities = [...new Set(issue.governingAuthorities.filter(authority => authority !== 'UNKNOWN'))];
+    const authorities = [...new Set(issue.governingAuthorities
+      .map(authority => canonicalAccountingWorkstreamAuthority(issue.domain, authority))
+      .filter(authority => authority !== 'UNKNOWN'))];
     for (const authority of authorities) {
       const authorityTopics = allTopics.filter(topic => sourceDomainMatchesAuthority(topic, authority));
       const domain = canonicalDomainForIssue(issue, authority, authorityTopics);

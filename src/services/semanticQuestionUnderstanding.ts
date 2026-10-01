@@ -224,6 +224,13 @@ function semanticAuthorityCoversTopic(authorities: SemanticAuthority[], topicAut
   return topicAuthorities.some(authority => accepted.has(authority));
 }
 
+export function canonicalAccountingWorkstreamAuthority(
+  domain: SemanticQuestionDomain,
+  authority: SemanticAuthority
+): SemanticAuthority {
+  return domain === 'ACCOUNTING' && authority === 'IFRS_FOUNDATION' ? 'ACCOUNTING_STANDARDS' : authority;
+}
+
 function resolveIssueTopicIds(
   subject: string,
   domain: SemanticQuestionDomain,
@@ -382,7 +389,7 @@ Separate requested outcomes from background facts and context. Mentioning that a
 
 Classify each issue by the subject of the requested outcome. An employee's personal relief claim or salary/employment-income tax is individual income tax (IRAS); an employee benefit/perquisite tax question is employment-benefit tax (IRAS). EMPLOYEE alone does not imply a taxable benefit. Employer reporting is a separate issue only when the employer's reporting duty is requested; if the reporter is not established, use population=UNKNOWN rather than assuming the employee or company is the reporter. A company acting as employer for employment reporting has population=EMPLOYER; COMPANY is reserved for the company's own tax position. An employee's own CPF contribution amount and an employer's CPF contribution amount are separate payroll issues when both are requested.
 
-Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; this includes liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement, even if claimant status is unclear; use UNKNOWN when needed. A requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries, COMPARE for requested alternatives, and otherwise OTHER. requiresUserSpecificFacts is true when a result depends on a particular case, even if its facts are supplied, and false for conceptual guidance.
+Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; this includes liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement, even if claimant status is unclear; for relief, "what can I claim?" or "can I claim?" asks entitlement, while "how much can I claim?" asks an amount (CALCULATE). Use UNKNOWN when needed. A requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries, COMPARE for requested alternatives, and otherwise OTHER. requiresUserSpecificFacts is true when a result depends on a particular case, even if its facts are supplied, and false for conceptual guidance.
 
 Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. For mixed journal and non-accounting outcomes, use top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. Record only user-supplied case facts in factsExplicitlyProvided.
 
@@ -898,15 +905,20 @@ function reconcileSemanticIssuePlan(
 
   if (usesSemanticIssues) {
     const issues: ReconciledSemanticQuestionIssue[] = (semantic.issues || []).map(issue => {
-      const mappedTopicIds = resolveIssueTopicIds(issue.subject, issue.domain, issue.population, issue.governingAuthorities, inventoryIds);
-      const reconciledIssue = {
+      const routedIssue = {
         ...issue,
+        governingAuthorities: issue.governingAuthorities.map(authority =>
+          canonicalAccountingWorkstreamAuthority(issue.domain, authority))
+      };
+      const mappedTopicIds = resolveIssueTopicIds(routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.governingAuthorities, inventoryIds);
+      const reconciledIssue = {
+        ...routedIssue,
         mappedTopicIds,
-        evidenceRequirement: deriveEvidenceRequirement(issue.domain, issue.operation, semantic.requiresUserSpecificFacts)
+        evidenceRequirement: deriveEvidenceRequirement(routedIssue.domain, routedIssue.operation, semantic.requiresUserSpecificFacts)
       };
       const unresolvedReason: ReconciledSemanticQuestionIssue['unresolvedReason'] = mappedTopicIds.length > 0
         ? undefined
-        : issue.domain === 'UNKNOWN' ? 'UNKNOWN_DOMAIN' : 'NO_COVERAGE_TOPIC';
+        : routedIssue.domain === 'UNKNOWN' ? 'UNKNOWN_DOMAIN' : 'NO_COVERAGE_TOPIC';
       return {
         ...reconciledIssue,
         id: addId(reconciledIssue),

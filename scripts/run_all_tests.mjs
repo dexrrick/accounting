@@ -12,6 +12,8 @@ const testSuites = [
   { name: 'Per-Issue Semantic Operation Contracts', file: 'test_semantic_operations.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Operation Intent Boundaries', file: 'test_semantic_intent_boundaries.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Intent Follow-Up Runner', file: 'test_semantic_intent_followup_runner.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+  { name: 'Semantic Authority & Relief Evaluation Safety', file: 'test_semantic_authority_relief_evaluation.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+  { name: 'Semantic Authority & Relief Contract', file: 'test_semantic_authority_relief_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Versioned Semantic Question Wire Contract', file: 'test_semantic_wire_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Contract Follow-Up Runner', file: 'test_semantic_contract_followup_runner.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Material Issue Decomposition & Authority Ownership', file: 'test_material_issue_decomposition.mjs', layer: 'input-understanding', tier: 'smoke' },
