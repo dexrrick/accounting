@@ -165,7 +165,7 @@ const fixtures = {
 
 const expectedTopicIds = {
   A: [['cpf_contribution_rates'], ['cpf_contribution_rates'], ['iras-individual-cpf-relief']],
-  B: [[], [], ['cpf_contribution_rates'], []],
+  B: [[], ['mom-work-passes-general'], ['cpf_contribution_rates'], []],
   C: [[], []],
   D: [[], []]
 };
@@ -216,8 +216,8 @@ assert.equal(
   reconcileQuestionUnderstanding(prompts.B, classifyQuestion(prompts.B), {
     mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: fixtures.B })
   }).issuePlan.issues.find(item => item.subject.includes('work-pass'))?.status,
-  'UNRESOLVED',
-  'A material issue without an exact coverage topic remains visible as unresolved.'
+  'MAPPED',
+  'A generic work-pass issue maps to the safe MOM parent topic without choosing a specific pass category.'
 );
 
 for (const invalidIssue of [

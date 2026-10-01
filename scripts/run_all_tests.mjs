@@ -22,6 +22,7 @@ const testSuites = [
   { name: 'Multi-authority Evaluation Runner Output Safety', file: 'test_multi_authority_runner_safety.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Semantic Reliability Experiment Harness', file: 'test_semantic_reliability_experiment.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Semantic Contract Diagnostics & Capture Runner Safety', file: 'test_semantic_contract_diagnostics.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+  { name: 'Resolver Coverage Contract & Compound Issue Isolation', file: 'test_resolver_coverage_contract.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Whole-Question Authority Evidence Presentation', file: 'test_authority_evidence_presentation.mjs', layer: 'ux-resilience', tier: 'smoke' },
   { name: 'Semantic Understanding & Routing', file: 'test_sidequest2_semantic_understanding.mjs', layer: 'input-understanding', tier: 'full' },
   { name: 'Multi-Turn Accounting State & Follow-Ups', file: 'test_followup_accounting_state.mjs', layer: 'conversation-state', tier: 'smoke' },

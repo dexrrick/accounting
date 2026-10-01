@@ -167,7 +167,11 @@ for (const profile of ['authority-relief-targeted-live', 'authority-relief-final
   const config = profileConfiguration(profile);
   assert.ok(Object.hasOwn(config.fixtureFiles, 'protectedAuditHashes'));
   assert.equal(typeof config.sourceFiles.semanticInterpretation, 'string');
+  assert.equal(typeof config.sourceFiles.queryTopicResolver, 'string', 'authority-relief profiles fingerprint query topic resolution');
+  assert.equal(typeof config.sourceFiles.coverageRegistry, 'string', 'authority-relief profiles fingerprint coverage metadata');
 }
+assert.equal(Object.hasOwn(profileConfiguration('intent-targeted').sourceFiles, 'queryTopicResolver'), false,
+  'resolver fingerprints are scoped to the authority-relief profiles');
 assert.equal(parseSemanticIntentProfileArgs(['--profile', 'authority-relief-targeted-live', '--live']), 'authority-relief-targeted-live');
 assert.equal(parseSemanticIntentProfileArgs(['--profile', 'authority-relief-final-live', '--live']), 'authority-relief-final-live');
 
@@ -232,11 +236,20 @@ try {
     }
   });
   assert.equal(result.requestCount, 8);
-  assert.equal(result.authorityReliefAcceptance.passed, false,
-    'the real fixed set remains held when the frozen CPF case and independent MOM control have no complete mapped route');
-  assert.equal(result.authorityReliefAcceptance.passedCases, 6);
-  assert.deepEqual(result.authorityReliefAcceptance.failedCases, ['A-paraphrase-2', 'target-mom-general-control']);
+  assert.equal(result.authorityReliefAcceptance.passed, true,
+    'the updated resolver metadata maps the frozen CPF case and independent generic MOM control');
+  assert.equal(result.authorityReliefAcceptance.passedCases, 8);
+  assert.deepEqual(result.authorityReliefAcceptance.failedCases, []);
   assert.equal(result.authorityReliefAcceptance.canonicalContractScoring.issueRecall.rate, 1);
+  assert.equal(result.authorityReliefAcceptance.canonicalContractScoring.issueRecall.total, 9);
+  const requestedIssueCoverageTotals = result.cases.reduce((totals, row) => {
+    const coverage = row.routing.requestedIssueCoverage;
+    totals.requested += coverage.requestedIssueCount;
+    totals.mapped += coverage.mappedIssueCount;
+    totals.retrievalAttempted += coverage.retrievalAttemptedCount;
+    return totals;
+  }, { requested: 0, mapped: 0, retrievalAttempted: 0 });
+  assert.deepEqual(requestedIssueCoverageTotals, { requested: 9, mapped: 9, retrievalAttempted: 9 });
   assert.equal(result.authorityReliefAcceptance.zeroInvalidTimeoutProviderFailures, true);
   assert.equal(result.minimumObservedStartGapMs >= START_GAP_MS, true);
   const recognition = result.cases.find(item => item.caseId === 'control-general-recognition');
@@ -248,7 +261,7 @@ try {
   const markdown = await readFile(path.join(outputDirectory, 'authority-relief-targeted-live.md'), 'utf8');
   assert.match(markdown, /# Authority and relief targeted live evaluation/);
   assert.match(markdown, /Canonical contract scoring/);
-  assert.match(markdown, /Strict acceptance passed: false \(6 \/ 8 cases\)/);
+  assert.match(markdown, /Strict acceptance passed: true \(8 \/ 8 cases\)/);
   const serialized = await readFile(path.join(outputDirectory, 'authority-relief-targeted-live.json'), 'utf8');
   assert.equal(serialized.includes(TEST_KEY), false);
   assert.equal(serialized.includes(SECRET), false, 'private provider data is not written to the report');

@@ -42,6 +42,10 @@ const SOURCE_FILES = Object.freeze({
   responseDiagnostics: path.join(SCRIPT_DIRECTORY, 'semantic-contract-diagnosis.mjs'),
   issueScoring: path.join(SCRIPT_DIRECTORY, 'multi-authority-issue-scoring.mjs')
 });
+const AUTHORITY_RELIEF_RESOLVER_FILES = Object.freeze({
+  queryTopicResolver: path.join(PROJECT_ROOT, 'src', 'retrieval', 'queryTopicResolver.ts'),
+  coverageRegistry: path.join(PROJECT_ROOT, 'src', 'standards', 'coverageRegistry.ts')
+});
 const FIXTURE_FILES = Object.freeze({
   semanticContractFollowup: PRIMARY_FIXTURE,
   semanticOperationFollowup: OPERATION_FIXTURE,
@@ -924,6 +928,7 @@ export function profileConfiguration(evaluationProfile) {
       outputPrefix: AUTHORITY_RELIEF_TARGETED_OUTPUT_PREFIX,
       sourceFiles: {
         ...SOURCE_FILES,
+        ...AUTHORITY_RELIEF_RESOLVER_FILES,
         semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
         authorityReliefCliRunner: INTENT_CLI_RUNNER_FILE
       },
@@ -941,6 +946,7 @@ export function profileConfiguration(evaluationProfile) {
       outputPrefix: AUTHORITY_RELIEF_FINAL_OUTPUT_PREFIX,
       sourceFiles: {
         ...SOURCE_FILES,
+        ...AUTHORITY_RELIEF_RESOLVER_FILES,
         semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
         authorityReliefCliRunner: INTENT_CLI_RUNNER_FILE
       },
