@@ -83,43 +83,78 @@ function includesAny(words: readonly string[], allowed: ReadonlySet<string>): bo
   return words.some(word => allowed.has(word));
 }
 
-function boundedRuleSourceUnits(sourceText: string, family: RuleFamily): string[] {
-  const paragraphs = sourceText.normalize('NFC').replace(/\u00a0/g, ' ')
-    .split(/\r?\n[\t ]*\r?\n+/).map(paragraph => paragraph.trim()).filter(Boolean);
-  const anchorPattern = family === 'FOREIGN_DIVIDEND' ? /foreign|overseas|dividend/gi
-    : family === 'GST_INPUT_TAX' ? /input[ -]tax/gi
-      : family === 'PRIVATE_EXPENSE_DEDUCTIBILITY' ? /private|personal|expense/gi
-        : /royalt|withholding|\bwht\b/gi;
-  const continuationPattern = family === 'FOREIGN_DIVIDEND' ? /dividend|foreign|overseas|receipt|receiv|tax|condition|exempt/i
-    : family === 'GST_INPUT_TAX' ? /input[ -]tax|claim|recover|condition|invoice|business|purchase|taxable|suppl/i
-      : family === 'PRIVATE_EXPENSE_DEDUCTIBILITY' ? /private|personal|expense|deduct|disallow/i
-        : /royalt|withholding|\bwht\b|non[ -]resident/i;
-  const units = new Set<string>();
-  const addBounded = (text: string) => {
-    if (text.length <= 1800) units.add(text);
-    else {
-      anchorPattern.lastIndex = 0;
-      for (const match of text.matchAll(anchorPattern)) {
-        const start = Math.max(0, (match.index || 0) - 300);
-        units.add(text.slice(start, Math.min(text.length, start + 1800)));
-      }
-    }
-  };
+type RuleSourceUnit =
+  | { kind: 'statement'; text: string }
+  | { kind: 'headed-list'; heading: string; item: string };
 
-  for (let index = 0; index < paragraphs.length; index += 1) {
-    const paragraph = paragraphs[index];
-    addBounded(paragraph);
-    let attached = paragraph;
-    for (let next = index + 1; next < Math.min(paragraphs.length, index + 3); next += 1) {
-      const continuation = paragraphs[next];
-      anchorPattern.lastIndex = 0;
-      if (attached.length + continuation.length > 1800 || !anchorPattern.test(attached) || !continuationPattern.test(continuation)) break;
-      anchorPattern.lastIndex = 0;
-      attached = `${attached}\n${continuation}`;
-      addBounded(attached);
+function isListMarker(line: string): boolean {
+  return /^\s*(?:[•●▪◦*-]|\(?\d+[.)]|[a-z][.)])\s+/i.test(line);
+}
+
+function sentenceParts(text: string): string[] {
+  return text.split(/(?<=[.!?])\s+(?=[A-Z0-9“"'(])|(?<=;)\s+/u)
+    .flatMap(sentence => sentence.split(/\s+\b(?:while|whereas|but|although)\b\s+/i))
+    .map(part => part.trim()).filter(Boolean);
+}
+
+/**
+ * Keep evidence relationships inside one complete statement. The only
+ * cross-line unit is a colon-ended heading with its immediately attached
+ * marked list; blank lines inside that list are allowed by the page format.
+ */
+function boundedRuleSourceUnits(sourceText: string): RuleSourceUnit[] {
+  const lines = sourceText.normalize('NFC').replace(/\u00a0/g, ' ').split(/\r?\n/);
+  const consumed = new Set<number>();
+  const units: RuleSourceUnit[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const heading = lines[index].trim();
+    if (!/:\s*$/.test(heading)) continue;
+    let next = index + 1;
+    while (next < lines.length && !lines[next].trim()) next += 1;
+    if (next >= lines.length || !isListMarker(lines[next])) continue;
+
+    consumed.add(index);
+    const items: string[] = [];
+    let lastItemIndex = -1;
+    let cursor = index + 1;
+    while (cursor < lines.length) {
+      if (!lines[cursor].trim()) {
+        cursor += 1;
+        continue;
+      }
+      if (isListMarker(lines[cursor])) {
+        const item = lines[cursor].replace(/^\s*(?:[•●▪◦*-]|\(?\d+[.)]|[a-z][.)])\s+/i, '').trim();
+        items.push(item);
+        lastItemIndex = items.length - 1;
+        consumed.add(cursor);
+        cursor += 1;
+        continue;
+      }
+      if (lastItemIndex >= 0 && /^\s+\S/.test(lines[cursor])) {
+        items[lastItemIndex] = `${items[lastItemIndex]} ${lines[cursor].trim()}`;
+        consumed.add(cursor);
+        cursor += 1;
+        continue;
+      }
+      break;
+    }
+    for (const item of items) {
+      for (const sentence of sentenceParts(item)) units.push({ kind: 'headed-list', heading, item: sentence });
     }
   }
-  return [...units];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (consumed.has(index) || !line.trim()) continue;
+    if (isListMarker(line)) {
+      const item = line.replace(/^\s*(?:[•●▪◦*-]|\(?\d+[.)]|[a-z][.)])\s+/i, '').trim();
+      for (const sentence of sentenceParts(item)) units.push({ kind: 'statement', text: sentence });
+      continue;
+    }
+    for (const sentence of sentenceParts(line.trim())) units.push({ kind: 'statement', text: sentence });
+  }
+  return units;
 }
 
 function selectedFamily(input: GeneralIrasRuleSupportInput, words: readonly string[]): RuleFamily | undefined {
@@ -143,59 +178,94 @@ function selectedFamily(input: GeneralIrasRuleSupportInput, words: readonly stri
 }
 
 function hasForeignDividendReceiptTaxRule(sourceText: string): boolean {
-  return boundedRuleSourceUnits(sourceText, 'FOREIGN_DIVIDEND').some(unit => {
-    const clause = unit.replace(/[\r\n]+/g, ' ');
-    const words = tokenize(clause);
-    const dividend = includesAny(words, new Set(['dividend', 'dividends']));
-    const foreignDividendRelation =
-      /\bforeign[ -]sourced\b.{0,120}\bdividends?\b|\bforeign\b.{0,45}\bdividends?\b|\boverseas\b.{0,45}\bdividends?\b|\bdividends?\b.{0,45}\b(?:from|sourced|derived|arising)\b.{0,30}\b(?:overseas|abroad|outside singapore|foreign source|foreign[ -]sourced)\b/i.test(clause) &&
-      !/\b(?:domestic|local)\b.{0,50}\bdividends?\b.{0,50}\b(?:foreign|overseas)\s+(?:company|subsidiary|payer)\b/i.test(clause) &&
-      !/\bdividends?\b.{0,40}\b(?:paid|issued|distributed)\b.{0,25}\bby\b.{0,20}\b(?:foreign|overseas)\s+(?:company|subsidiary|payer)\b/i.test(clause);
-    const receipt = includesAny(words, new Set(['receive', 'received', 'receiving', 'receipt', 'remit', 'remitted', 'remittance']));
-    const singapore = includesAny(words, new Set(['singapore'])) &&
-      /(?:receiv\w*|receipt|remitt\w*).{0,80}(?:in|into|to) singapore|(?:in|into|to) singapore.{0,80}(?:receiv\w*|receipt|remitt\w*)/i.test(clause);
-    const tax = includesAny(words, new Set(['tax', 'taxable', 'taxation']));
-    const conditional = includesAny(words, new Set(['if', 'when', 'upon', 'unless', 'provided', 'subject', 'only']));
-    const taxAndReceiptConnected = /\b(?:tax(?:able|ation)?|subject to tax)\b.{0,100}\b(?:receiv\w*|receipt|remitt\w*)\b|\b(?:receiv\w*|receipt|remitt\w*)\b.{0,100}\b(?:tax(?:able|ation)?|subject to tax)\b/i.test(clause);
-    return foreignDividendRelation && dividend && receipt && singapore && tax && (conditional || taxAndReceiptConnected);
+  const units = boundedRuleSourceUnits(sourceText);
+  const hasForeignOrigin = (text: string) =>
+    /\b(?:foreign[ -]sourced|foreign|overseas)\s+dividends?\b|\bdividends?\s+(?:from|sourced|derived|arising)\s+(?:overseas|abroad|outside singapore|a foreign source)\b/i.test(text);
+  const hasForeignIncomeSubject = (text: string) => /\b(?:foreign[ -]sourced|foreign)\s+income\b/i.test(text);
+  const dividendSubject = String.raw`(?:\b(?:foreign[ -]sourced|foreign|overseas)\s+dividends?\b|\bdividends?\s+(?:from|sourced|derived|arising)\s+(?:overseas|abroad|outside singapore|a foreign source)\b)`;
+  const taxTreatment = String.raw`(?:(?:are|is|may be|can be|will be)\s+(?:taxable|exempt(?:ed)?(?: from tax)?|subject to tax|liable to tax)|may qualify for exemption)`;
+  const singaporeReceipt = String.raw`(?:received|remitted)\s+(?:in|into|to) singapore`;
+  const hasDividendSingaporeReceiptAndTax = (text: string) =>
+    new RegExp(`${dividendSubject}(?:\\s+(?:that|which)\\s+are)?\\s+${singaporeReceipt}\\s+${taxTreatment}`, 'i').test(text) ||
+    new RegExp(`${dividendSubject}(?:\\s+(?:that|which)\\s+are)?\\s+${taxTreatment}\\s+(?:(?:only\\s+)?(?:when|if|upon)\\s+)?(?:(?:they|these dividends?)\\s+)?(?:are\\s+)?${singaporeReceipt}`, 'i').test(text) ||
+    /\b(?:specified\s+)?foreign[ -]sourced income\s+(?:that is\s+)?received\s+(?:in|into) singapore,?\s+including\s+(?:a\s+)?foreign dividend(?:\s+from\s+(?:an?\s+)?(?:overseas|foreign) subsidiary)?,?\s+(?:may qualify for exemption|may be exempt(?: from tax)?|is taxable|is exempt(?: from tax)?)\b/i.test(text);
+  const headingOwnsSingaporeReceipt = (text: string) =>
+    /\b(?:foreign[ -]sourced|foreign)\s+income\s+(?:that\s+is\s+|which\s+is\s+)?(?:received|remitted)\s+(?:in|into) singapore\b/i.test(text);
+  const hasTaxTreatment = (text: string) =>
+    /\b(?:taxable|exempt(?:ed)?(?: from tax)?|subject to tax|liable to tax|tax applies|may qualify for exemption|may be exempt)\b/i.test(text);
+  const hasForeignPayerConfusion = (text: string) =>
+    /\b(?:domestic|local)\b.{0,50}\bdividends?\b.{0,50}\b(?:foreign|overseas)\s+(?:company|subsidiary|payer)\b|\bdividends?\b.{0,40}\b(?:paid|issued|distributed)\b.{0,25}\bby\b.{0,20}\b(?:foreign|overseas)\s+(?:company|subsidiary|payer)\b/i.test(text);
+
+  return units.some(unit => {
+    if (unit.kind === 'statement') {
+      const statement = unit.text;
+      return hasDividendSingaporeReceiptAndTax(statement) && hasForeignOrigin(statement) && !hasForeignPayerConfusion(statement);
+    }
+    // A complete heading can qualify the dividend category that immediately
+    // follows it. The heading itself must carry foreign origin, Singapore
+    // receipt, and tax-rule meaning; a bare or orphan dividend label cannot.
+    const heading = unit.heading;
+    return /\b(?:income|dividends?)\b/i.test(heading) && (hasForeignOrigin(heading) || hasForeignIncomeSubject(heading)) &&
+      headingOwnsSingaporeReceipt(heading) && /\btax\b/i.test(heading) &&
+      /\bdividends?\b/i.test(unit.item) &&
+      (hasTaxTreatment(heading) || hasTaxTreatment(unit.item) && hasDividendSingaporeReceiptAndTax(unit.item)) &&
+      !hasForeignPayerConfusion(`${heading} ${unit.item}`);
   });
 }
 
 function hasGstInputTaxClaimRule(sourceText: string): boolean {
-  return boundedRuleSourceUnits(sourceText, 'GST_INPUT_TAX').some(unit => {
-    const normalized = tokenize(unit);
-    const hasClaimOrRecovery = includesAny(normalized, new Set(['claim', 'claiming', 'claimed', 'claims', 'recover', 'recovering', 'recovered', 'recovery']));
-    const meaningfulScope = includesAny(normalized, new Set([
-      'business', 'purchase', 'condition', 'document', 'invoice', 'record', 'taxable', 'supply', 'supplies'
-    ]));
-    // Require an affirmative general entitlement/conditions statement. A
-    // restriction such as "business purpose alone does not make a blocked
-    // claim recoverable" discusses input tax and business use, but does not
-    // establish the ordinary claim conditions.
-    const affirmativeRule =
-      /\b(?:may|can|is entitled to|are entitled to|is allowed to|are allowed to)\b.{0,100}\b(?:claim|recover)\b.{0,100}\binput[ -]tax\b/i.test(unit) ||
-      /\binput[ -]tax\b.{0,100}\b(?:may|can)\s+be\s+(?:claimed|recovered)\b/i.test(unit) ||
-      /\bto\s+(?:claim|recover)\s+input[ -]tax\b.{0,160}\b(?:following|these|conditions|must|where|if|provided|subject to)\b/i.test(unit);
-    return hasPhrase(normalized, ['input', 'tax']) && hasClaimOrRecovery && meaningfulScope && affirmativeRule;
+  const blockedSpecificException = (text: string) =>
+    /\b(?:motor cars?|vehicles?|clubs?|staff medical|medical expenses?|blocked input tax|exceptions?|(?:special|specific|particular) exceptions?|limited restrictions?|only under this exception)\b/i.test(text);
+  const negatesEntitlement = (text: string) =>
+    /\bnot true that\b|\b(?:cannot|can't|does not|do not|doesn't|don't)\b.{0,45}\b(?:claim|recover|entitled)\b|\b(?:may|can) not\s+(?:claim|recover)\b/i.test(text);
+  const meaningfulGeneralScope = (text: string) =>
+    /\btaxable supplies\b|\bbusiness (?:purchases?|purposes?|expenses?)\b|\bused for (?:the )?(?:business|taxable supplies)\b|\b(?:conditions?|provided that|if the following)\b/i.test(text);
+  const affirmativeEntitlement = (text: string) =>
+    /\b(?:may|can|is entitled to|are entitled to|is allowed to|are allowed to)\s+(?:claim|recover)\b.{0,55}\binput[ -]tax\b|\binput[ -]tax\b.{0,55}\b(?:may|can) be (?:claimed|recovered)\b/i.test(text);
+
+  return boundedRuleSourceUnits(sourceText).some(unit => {
+    if (blockedSpecificException(unit.kind === 'statement' ? unit.text : `${unit.heading} ${unit.item}`)) return false;
+    if (unit.kind === 'statement') {
+      return hasPhrase(tokenize(unit.text), ['input', 'tax']) && affirmativeEntitlement(unit.text) &&
+        meaningfulGeneralScope(unit.text) && !negatesEntitlement(unit.text);
+    }
+    const headingRequestsClaim = /^\s*(?:to|in order to)\s+(?:claim|recover)\s+input[ -]tax\s*:/i.test(unit.heading);
+    const itemStatesCondition = /\b(?:must|need to|required to|should)\b/i.test(unit.item) &&
+      /\b(?:taxable supplies|business purposes?|used for|purchases?)\b/i.test(unit.item);
+    return headingRequestsClaim && itemStatesCondition && !negatesEntitlement(unit.item);
   });
 }
 
 function hasPrivateExpenseDeductibilityRule(sourceText: string): boolean {
-  return boundedRuleSourceUnits(sourceText, 'PRIVATE_EXPENSE_DEDUCTIBILITY').some(clause => {
+  return boundedRuleSourceUnits(sourceText).some(unit => {
+    if (unit.kind !== 'statement') return false;
+    const clause = unit.text;
     const words = tokenize(clause).map(canonicalWord);
     const privateExpense = includesAny(words, new Set(['private', 'personal'])) && includesAny(words, new Set(['expense', 'cost']));
-    const explicitDisallowance = /\b(?:disallowed|non[ -]deductible|not deductible|not allowed as (?:a )?deduction)\b/i.test(clause);
-    return privateExpense && explicitDisallowance;
+    const explicitDisallowance =
+      /\b(?:private|personal)\b[^.;:]{0,18}\bexpenses?\s+(?:are|is|will be|shall be|remain|considered|treated as)\s+(?:(?:generally|usually|normally)\s+)*(?:disallowed|non[ -]deductible|not (?:tax )?deductible|not allowed as (?:a )?deduction)\b/i.test(clause) ||
+      /\b(?:private|personal)\b[^.;:]{0,18}\bexpenses?\s+cannot be deducted\b/i.test(clause) ||
+      /\b(?:income )?tax treatment of (?:a|the)\s+(?:private|personal)\s+expense is that it is not (?:tax )?deductible\b/i.test(clause);
+    const reversesDisallowance = /\b(?:not|never)\s+(?:be\s+)?disallowed\b|\bnot\s+non[ -]deductible\b|\bnot\s+true\s+that\b|\bnot\s+(?:a|an|the)?\s*private expenses?\b/i.test(clause);
+    return privateExpense && explicitDisallowance && !reversesDisallowance;
   });
 }
 
 function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: boolean): boolean {
-  return boundedRuleSourceUnits(sourceText, 'ROYALTY_WITHHOLDING_TAX').some(clause => {
-    const words = tokenize(clause);
-    const royalty = includesAny(words, new Set(['royalty', 'royalties']));
-    const withholding = includesAny(words, new Set(['withholding', 'wht'])) && includesAny(words, new Set(['tax', 'wht']));
-    const nonResident = /\bnon[ -]resident\b/i.test(clause);
-    return royalty && withholding && (!requiresNonResident || nonResident);
+  return boundedRuleSourceUnits(sourceText).some(unit => {
+    if (unit.kind !== 'statement') return false;
+    const clause = unit.text;
+    const royalty = /\broyalt(?:y|ies)\b/i.test(clause);
+    const recipient = String.raw`(?:to|for)\s+(?:(?:a|an|the)\s+)?non[ -]resident(?:\s+(?:companies?|entities?|persons?|individuals?|recipients?|payees?))?`;
+    const royaltyRecipient = String.raw`\broyalt(?:y|ies)\b(?:\s+(?:payments?|paid|payable|made|is|are|received|receivable)){0,4}\s+${recipient}`;
+    const withholdingRule = requiresNonResident
+      ? new RegExp(
+          `\\b(?:withholding tax|wht)\\s+(?:may\\s+)?appl(?:y|ies)\\s+(?:to|on)\\s+${royaltyRecipient}\\b|${royaltyRecipient}(?:\\s+(?:and\\s+)?(?:are|is|may be|will be|shall be))?\\s+(?:subject to|liable to)\\s+(?:withholding tax|wht)\\b|\\broyalty withholding tax\\s+(?:may\\s+)?apply\\s+when\\s+(?:(?:a|the)\\s+)?(?:(?:singapore\\s+)?(?:payer|company|business))\\s+pays\\s+royalties\\s+${recipient}\\b`,
+          'i'
+        ).test(clause)
+      : /\b(?:withholding tax|wht)\s+(?:may\s+)?appl(?:y|ies)\s+(?:to|on)\s+(?:royalt(?:y|ies)|(?:the )?royalty payments?)\b|\broyalt(?:y|ies)\b(?:\s+(?:payments?|paid|payable|made|is|are|received|receivable)){0,3}\s+(?:are|is|may be|will be|shall be)\s+(?:subject to|liable to)\s+(?:withholding tax|wht)\b|\b(?:payer|company)\s+(?:must|is required to)\s+withhold\s+(?:the )?tax\s+on\s+(?:that )?royalt(?:y|ies)\s+payments?\b/i.test(clause);
+    const negatesRule = /\bnot true that\b|\b(?:not|never|no)\b[^.;:]{0,35}\b(?:withholding tax|wht)\b[^.;:]{0,35}\b(?:apply|applies|applicable|due|payable)\b|\b(?:withholding tax|wht)\b[^.;:]{0,20}\b(?:does not|doesn't|never|not)\s+apply\b/i.test(clause);
+    return royalty && withholdingRule && !negatesRule;
   });
 }
 
