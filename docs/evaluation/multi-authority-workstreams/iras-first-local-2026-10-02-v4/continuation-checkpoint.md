@@ -1,5 +1,17 @@
 # Continuation control — 02/10/2026
 
+## Current resumed state (supersedes the earlier stopping-state notes below)
+
+Work resumed after the allowance recovered. Latest allowance snapshot: **49% five-hour / 41% weekly remaining**; the 7% / 3% stopping policy still applies. No reset credit was used.
+
+Reviewed local evidence fixes and fixtures were saved in `2a7b6fa`; lint/build passed, repaired smoke passed 70/70, and full passed 90/90. The separately reviewed single-use source diagnostic was preregistered in `e7ca826`. Immutable V4 source/residency observations and consumed markers were saved in `b4c06c3`.
+
+V4 used eight mapped-source GETs without model/search/discovery calls. Corporate residency passed its evidence gate; private expenses, foreign dividends, WHT royalties and GST input tax still had blocking coverage gaps. Foreign/GST quotations passed literal rendering but final claim counts were zero. A new API-free trace is testing the exact frozen contracts; historical raw page/quote text was not retained, so do not infer their exact missing words from synthetic passages.
+
+The six-call privacy-safe residency V4 diagnostic returned six valid interpretations with correct dimensions, zero exact matches, and all three company/tax/residence feature flags in every subject. A prospective bounded evaluation matcher correction is independently approved: both generic subjects must contain the three core concepts, material qualifiers remain distinct, and broader subjects preserve legacy anchors. Its focused regression and the current 71-test smoke suite passed. Full validation of that prospective revision is pending. V4 observations have not been retrospectively rescored.
+
+Next: finish the local foreign/GST and private/WHT owning-stage probes, approve only bounded source/evidence corrections, implement and independently review them, then run appropriate final local checks. Any further live measurement requires a fresh version and preregistration. All five evidence families must pass before targeted acceptance; targeted must pass before final. **Targeted and final profiles remain unrun. HOLD MERGE; no push, merge or deployment.**
+
 Branch: `codex/multi-authority-workstreams`.
 Starting clean checkpoint: `22f4ae5a4f1173dc89991d602fcf30a5129012ad`.
 **HOLD MERGE. No automatic merge, push, or deployment.**
