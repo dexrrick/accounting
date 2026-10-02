@@ -21,6 +21,118 @@ export type SemanticAuthority = 'IRAS' | 'CPF' | 'ACRA' | 'MOM' | 'MAS' | 'ACCOU
 export type SemanticConceptRole = 'PRIMARY' | 'RELATED' | 'CONTEXT_ONLY';
 export type SemanticEvidenceRequirement = 'AUTHORITATIVE_SOURCE' | 'CASE_FACTS' | 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' | 'UNRESOLVED';
 
+/** Shared V2 wire-contract metadata used by validation, prompting, diagnostics, and Gemini structured output. */
+export const SEMANTIC_POPULATION_VALUES = [
+  'INDIVIDUAL', 'EMPLOYEE', 'EMPLOYER', 'COMPANY', 'SHAREHOLDER', 'FUND', 'PROPERTY_OWNER', 'UNKNOWN'
+] as const satisfies readonly SemanticPopulation[];
+export const SEMANTIC_DOMAIN_VALUES = [
+  'ACCOUNTING', 'IRAS_INCOME_TAX', 'IRAS_GST', 'IRAS_PROPERTY_TAX', 'IRAS_STAMP_DUTY', 'IRAS_OTHER',
+  'CPF_PAYROLL', 'MOM_EMPLOYMENT', 'ACRA_CORPORATE', 'MAS_FUNDS', 'UNKNOWN'
+] as const satisfies readonly SemanticQuestionDomain[];
+export const SEMANTIC_OPERATION_VALUES = [
+  'EXPLAIN_RULE', 'EXPLAIN_INTERACTION', 'DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'CALCULATE',
+  'PREPARE_JOURNAL', 'COMPARE', 'FILING_REQUIREMENT', 'OTHER'
+] as const satisfies readonly SemanticQuestionOperation[];
+export const SEMANTIC_AUTHORITY_VALUES = [
+  'IRAS', 'CPF', 'ACRA', 'MOM', 'MAS', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION', 'SSO', 'UNKNOWN'
+] as const satisfies readonly SemanticAuthority[];
+export const SEMANTIC_CONCEPT_ROLE_VALUES = ['PRIMARY', 'RELATED', 'CONTEXT_ONLY'] as const satisfies readonly SemanticConceptRole[];
+export const SEMANTIC_EVIDENCE_REQUIREMENT_VALUES = [
+  'AUTHORITATIVE_SOURCE', 'CASE_FACTS', 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'UNRESOLVED'
+] as const satisfies readonly SemanticEvidenceRequirement[];
+
+export const SEMANTIC_V2_INTERPRETATION_KEYS = [
+  'schemaVersion', 'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject',
+  'concepts', 'requestedOperation', 'requiresUserSpecificFacts', 'factsExplicitlyProvided', 'confidence', 'issues'
+] as const;
+export const SEMANTIC_CONCEPT_KEYS = ['concept', 'role'] as const;
+export const SEMANTIC_ISSUE_KEYS = [
+  'subject', 'population', 'domain', 'governingAuthorities', 'contextualAuthorities', 'operation',
+  'mappedTopicIds', 'evidenceRequirement', 'confidence'
+] as const;
+export const SEMANTIC_V2_WIRE_LIMITS = Object.freeze({
+  jurisdictionItems: 6,
+  authorityItems: 5,
+  issueGoverningAuthorityItems: 1,
+  conceptItems: 12,
+  factItems: 12,
+  issueItemsMinimum: 1,
+  issueItemsMaximum: 12,
+  mappedTopicIdItems: 20,
+  confidenceMinimum: 0,
+  confidenceMaximum: 1
+});
+
+const stringArraySchema = (maxItems: number) => ({
+  type: 'array',
+  items: { type: 'string' },
+  maxItems
+});
+const enumSchema = (values: readonly string[]) => ({ type: 'string', enum: [...values] });
+const confidenceSchema = {
+  type: 'number', minimum: SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum,
+  maximum: SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum
+} as const;
+
+/** Gemini's supported JSON Schema subset for the exact V2 provider wire shape. */
+export const SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: [...SEMANTIC_V2_INTERPRETATION_KEYS],
+  properties: {
+    schemaVersion: { type: 'integer', enum: [SEMANTIC_QUESTION_SCHEMA_VERSION] },
+    jurisdiction: stringArraySchema(SEMANTIC_V2_WIRE_LIMITS.jurisdictionItems),
+    authorityCandidates: { ...stringArraySchema(SEMANTIC_V2_WIRE_LIMITS.authorityItems), items: enumSchema(SEMANTIC_AUTHORITY_VALUES) },
+    contextualAuthorities: { ...stringArraySchema(SEMANTIC_V2_WIRE_LIMITS.authorityItems), items: enumSchema(SEMANTIC_AUTHORITY_VALUES) },
+    domain: enumSchema(SEMANTIC_DOMAIN_VALUES),
+    population: enumSchema(SEMANTIC_POPULATION_VALUES),
+    primarySubject: { type: 'string' },
+    concepts: {
+      type: 'array',
+      maxItems: SEMANTIC_V2_WIRE_LIMITS.conceptItems,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [...SEMANTIC_CONCEPT_KEYS],
+        properties: {
+          concept: { type: 'string' },
+          role: enumSchema(SEMANTIC_CONCEPT_ROLE_VALUES)
+        }
+      }
+    },
+    requestedOperation: enumSchema(SEMANTIC_OPERATION_VALUES),
+    requiresUserSpecificFacts: { type: 'boolean' },
+    factsExplicitlyProvided: stringArraySchema(SEMANTIC_V2_WIRE_LIMITS.factItems),
+    confidence: confidenceSchema,
+    issues: {
+      type: 'array',
+      minItems: SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum,
+      maxItems: SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum,
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: [...SEMANTIC_ISSUE_KEYS],
+        properties: {
+          subject: { type: 'string' },
+          population: enumSchema(SEMANTIC_POPULATION_VALUES),
+          domain: enumSchema(SEMANTIC_DOMAIN_VALUES),
+          governingAuthorities: {
+            type: 'array',
+            minItems: SEMANTIC_V2_WIRE_LIMITS.issueGoverningAuthorityItems,
+            maxItems: SEMANTIC_V2_WIRE_LIMITS.issueGoverningAuthorityItems,
+            items: enumSchema(SEMANTIC_AUTHORITY_VALUES)
+          },
+          contextualAuthorities: { ...stringArraySchema(SEMANTIC_V2_WIRE_LIMITS.authorityItems), items: enumSchema(SEMANTIC_AUTHORITY_VALUES) },
+          operation: enumSchema(SEMANTIC_OPERATION_VALUES),
+          mappedTopicIds: stringArraySchema(SEMANTIC_V2_WIRE_LIMITS.mappedTopicIdItems),
+          evidenceRequirement: enumSchema(SEMANTIC_EVIDENCE_REQUIREMENT_VALUES),
+          confidence: confidenceSchema
+        }
+      }
+    }
+  }
+} as const;
+
 /** One material workstream identified in a compound question. IDs are assigned during reconciliation. */
 export interface SemanticQuestionIssue {
   subject: string;
@@ -83,14 +195,12 @@ export interface RequestedQuestionConcept {
   topicIds: string[];
 }
 
-const POPULATIONS = new Set<SemanticPopulation>(['INDIVIDUAL', 'EMPLOYEE', 'EMPLOYER', 'COMPANY', 'SHAREHOLDER', 'FUND', 'PROPERTY_OWNER', 'UNKNOWN']);
-const DOMAINS = new Set<SemanticQuestionDomain>(['ACCOUNTING', 'IRAS_INCOME_TAX', 'IRAS_GST', 'IRAS_PROPERTY_TAX', 'IRAS_STAMP_DUTY', 'IRAS_OTHER', 'CPF_PAYROLL', 'MOM_EMPLOYMENT', 'ACRA_CORPORATE', 'MAS_FUNDS', 'UNKNOWN']);
-const OPERATIONS = new Set<SemanticQuestionOperation>(['EXPLAIN_RULE', 'EXPLAIN_INTERACTION', 'DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'CALCULATE', 'PREPARE_JOURNAL', 'COMPARE', 'FILING_REQUIREMENT', 'OTHER']);
-const AUTHORITIES = new Set<SemanticAuthority>(['IRAS', 'CPF', 'ACRA', 'MOM', 'MAS', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION', 'SSO', 'UNKNOWN']);
-const CONCEPT_ROLES = new Set<SemanticConceptRole>(['PRIMARY', 'RELATED', 'CONTEXT_ONLY']);
-const EVIDENCE_REQUIREMENTS = new Set<SemanticEvidenceRequirement>([
-  'AUTHORITATIVE_SOURCE', 'CASE_FACTS', 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'UNRESOLVED'
-]);
+const POPULATIONS = new Set<SemanticPopulation>(SEMANTIC_POPULATION_VALUES);
+const DOMAINS = new Set<SemanticQuestionDomain>(SEMANTIC_DOMAIN_VALUES);
+const OPERATIONS = new Set<SemanticQuestionOperation>(SEMANTIC_OPERATION_VALUES);
+const AUTHORITIES = new Set<SemanticAuthority>(SEMANTIC_AUTHORITY_VALUES);
+const CONCEPT_ROLES = new Set<SemanticConceptRole>(SEMANTIC_CONCEPT_ROLE_VALUES);
+const EVIDENCE_REQUIREMENTS = new Set<SemanticEvidenceRequirement>(SEMANTIC_EVIDENCE_REQUIREMENT_VALUES);
 const MAX_LABEL_LENGTH = 160;
 
 /** Redacts a few recognizable case values only at the diagnostics boundary. */
@@ -129,7 +239,7 @@ function isSafeSemanticLabel(value: string): boolean {
 }
 
 function validAuthorities(value: unknown): value is SemanticAuthority[] {
-  return Array.isArray(value) && value.length <= 5 && value.every(item => typeof item === 'string' && AUTHORITIES.has(item as SemanticAuthority)) &&
+  return Array.isArray(value) && value.length <= SEMANTIC_V2_WIRE_LIMITS.authorityItems && value.every(item => typeof item === 'string' && AUTHORITIES.has(item as SemanticAuthority)) &&
     new Set(value).size === value.length;
 }
 
@@ -186,11 +296,6 @@ function hasSemanticContractContradiction(value: unknown): boolean {
 const LEGACY_INTERPRETATION_KEYS = [
   'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject', 'concepts',
   'requestedOperation', 'requiresUserSpecificFacts', 'calculationRequested', 'factsExplicitlyProvided', 'confidence'
-] as const;
-
-const V2_INTERPRETATION_KEYS = [
-  'schemaVersion', 'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject',
-  'concepts', 'requestedOperation', 'requiresUserSpecificFacts', 'factsExplicitlyProvided', 'confidence', 'issues'
 ] as const;
 
 function topicDomainsForIssue(domain: SemanticQuestionDomain, population: SemanticPopulation): SingaporeKnowledgeDomain[] {
@@ -261,19 +366,16 @@ function deriveEvidenceRequirement(
 }
 
 function validateSemanticQuestionIssue(value: unknown): SemanticQuestionIssue | undefined {
-  const issueKeys = [
-    'subject', 'population', 'domain', 'governingAuthorities', 'contextualAuthorities', 'operation',
-    'mappedTopicIds', 'evidenceRequirement', 'confidence'
-  ];
-  if (!isRecord(value) || !hasExactKeys(value, issueKeys) || typeof value.subject !== 'string' || !isSafeSemanticLabel(value.subject) ||
+  if (!isRecord(value) || !hasExactKeys(value, SEMANTIC_ISSUE_KEYS) || typeof value.subject !== 'string' || !isSafeSemanticLabel(value.subject) ||
       typeof value.population !== 'string' || !POPULATIONS.has(value.population as SemanticPopulation) ||
       typeof value.domain !== 'string' || !DOMAINS.has(value.domain as SemanticQuestionDomain) ||
       !validAuthorities(value.governingAuthorities) || !validAuthorities(value.contextualAuthorities) ||
       !OPERATIONS.has(value.operation as SemanticQuestionOperation) ||
-      !Array.isArray(value.mappedTopicIds) || value.mappedTopicIds.length > 20 ||
+      !Array.isArray(value.mappedTopicIds) || value.mappedTopicIds.length > SEMANTIC_V2_WIRE_LIMITS.mappedTopicIdItems ||
       !value.mappedTopicIds.every(id => typeof id === 'string' && id.trim().length > 0) ||
       typeof value.evidenceRequirement !== 'string' || !EVIDENCE_REQUIREMENTS.has(value.evidenceRequirement as SemanticEvidenceRequirement) ||
-      typeof value.confidence !== 'number' || !Number.isFinite(value.confidence) || value.confidence < 0 || value.confidence > 1 ||
+      typeof value.confidence !== 'number' || !Number.isFinite(value.confidence) ||
+      value.confidence < SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum || value.confidence > SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum ||
       value.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return undefined;
 
   const domain = value.domain as SemanticQuestionDomain;
@@ -281,7 +383,7 @@ function validateSemanticQuestionIssue(value: unknown): SemanticQuestionIssue | 
   const governingAuthorities = value.governingAuthorities as SemanticAuthority[];
   const contextualAuthorities = value.contextualAuthorities as SemanticAuthority[];
   const topicHints = value.mappedTopicIds as string[];
-  if (governingAuthorities.length !== 1 ||
+  if (governingAuthorities.length !== SEMANTIC_V2_WIRE_LIMITS.issueGoverningAuthorityItems ||
       contextualAuthorities.some(authority => governingAuthorities.includes(authority))) return undefined;
   if (domain === 'UNKNOWN') {
     if (governingAuthorities[0] !== 'UNKNOWN') return undefined;
@@ -320,22 +422,23 @@ export function validateSemanticQuestionInterpretation(value: unknown): Semantic
   if (!isRecord(value)) return undefined;
   const isVersion2 = Object.hasOwn(value, 'schemaVersion');
   const exactSchema = isVersion2
-    ? value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION && hasExactKeys(value, V2_INTERPRETATION_KEYS)
+    ? value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION && hasExactKeys(value, SEMANTIC_V2_INTERPRETATION_KEYS)
     : hasExactKeys(value, LEGACY_INTERPRETATION_KEYS) || hasExactKeys(value, [...LEGACY_INTERPRETATION_KEYS, 'issues']);
-  if (!exactSchema || (isVersion2 && (!Array.isArray(value.issues) || value.issues.length === 0)) ||
-      Object.hasOwn(value, 'issues') && (!Array.isArray(value.issues) || value.issues.length > 12)) return undefined;
-  if (!validLabelList(value.jurisdiction, 6) || !validAuthorities(value.authorityCandidates) ||
+  if (!exactSchema || (isVersion2 && (!Array.isArray(value.issues) || value.issues.length < SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum)) ||
+      Object.hasOwn(value, 'issues') && (!Array.isArray(value.issues) || value.issues.length > SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum)) return undefined;
+  if (!validLabelList(value.jurisdiction, SEMANTIC_V2_WIRE_LIMITS.jurisdictionItems) || !validAuthorities(value.authorityCandidates) ||
       !validAuthorities(value.contextualAuthorities) || typeof value.domain !== 'string' || !DOMAINS.has(value.domain as SemanticQuestionDomain) ||
       typeof value.population !== 'string' || !POPULATIONS.has(value.population as SemanticPopulation) ||
       typeof value.primarySubject !== 'string' || !isSafeSemanticLabel(value.primarySubject) ||
-      !Array.isArray(value.concepts) || value.concepts.length > 12 ||
+      !Array.isArray(value.concepts) || value.concepts.length > SEMANTIC_V2_WIRE_LIMITS.conceptItems ||
       !OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) ||
       typeof value.requiresUserSpecificFacts !== 'boolean' || !isVersion2 && typeof value.calculationRequested !== 'boolean' ||
-      !validLabelList(value.factsExplicitlyProvided, 12) || typeof value.confidence !== 'number' ||
-      !Number.isFinite(value.confidence) || value.confidence < 0 || value.confidence > 1) return undefined;
+      !validLabelList(value.factsExplicitlyProvided, SEMANTIC_V2_WIRE_LIMITS.factItems) || typeof value.confidence !== 'number' ||
+      !Number.isFinite(value.confidence) || value.confidence < SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum ||
+      value.confidence > SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum) return undefined;
 
   const concepts = value.concepts.flatMap(item => {
-    if (!isRecord(item) || !hasExactKeys(item, ['concept', 'role']) || typeof item.concept !== 'string' ||
+    if (!isRecord(item) || !hasExactKeys(item, SEMANTIC_CONCEPT_KEYS) || typeof item.concept !== 'string' ||
         !isSafeSemanticLabel(item.concept) ||
         typeof item.role !== 'string' || !CONCEPT_ROLES.has(item.role as SemanticConceptRole)) return [];
     return [{ concept: item.concept.trim(), role: item.role as SemanticConceptRole }];
@@ -378,10 +481,18 @@ function hasConfiguredProvider(provider?: ProviderSettings | string): boolean {
 }
 
 const SYSTEM_INSTRUCTION = 'Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.';
+const CONCEPT_FORMAT_EXAMPLE = JSON.stringify({
+  [SEMANTIC_CONCEPT_KEYS[0]]: '...',
+  [SEMANTIC_CONCEPT_KEYS[1]]: SEMANTIC_CONCEPT_ROLE_VALUES.join('|')
+});
+const CONCEPT_SAMPLE = JSON.stringify({
+  [SEMANTIC_CONCEPT_KEYS[0]]: 'expense recognition',
+  [SEMANTIC_CONCEPT_KEYS[1]]: SEMANTIC_CONCEPT_ROLE_VALUES[0]
+});
 
-const RESPONSE_SCHEMA = `Return a V2 JSON object with exactly these top-level keys: schemaVersion, jurisdiction, authorityCandidates, contextualAuthorities, domain, population, primarySubject, concepts, requestedOperation, requiresUserSpecificFacts, factsExplicitlyProvided, confidence, issues. Set schemaVersion=2. The application derives the calculation flag from requestedOperation; it is not included in this wire response. Include 1–12 issues, one for every requested material outcome, including exactly one for a simple single-outcome question. Do not provide issue IDs; they are assigned deterministically. Each issue has exactly: subject, population, domain, governingAuthorities, contextualAuthorities, operation, mappedTopicIds, evidenceRequirement, confidence. Each concept has exactly {"concept":"...","role":"PRIMARY|RELATED|CONTEXT_ONLY"}; labels must be safe and nonempty, for example {"concept":"expense recognition","role":"PRIMARY"}. Confidence is a number from 0 through 1.
+const RESPONSE_SCHEMA = `Return a V2 JSON object with exactly these top-level keys: ${SEMANTIC_V2_INTERPRETATION_KEYS.join(', ')}. Set schemaVersion=${SEMANTIC_QUESTION_SCHEMA_VERSION}. The application derives the calculation flag from requestedOperation; it is not included in this wire response. Include ${SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum}–${SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum} issues, one for every requested material outcome, including exactly one for a simple single-outcome question. Do not provide issue IDs; they are assigned deterministically. Each issue has exactly: ${SEMANTIC_ISSUE_KEYS.join(', ')}. Each concept has exactly ${CONCEPT_FORMAT_EXAMPLE}; labels must be safe and nonempty, for example ${CONCEPT_SAMPLE}. Confidence is a number from ${SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum} through ${SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum}.
 
-mappedTopicIds are optional candidate hints; the application derives candidates from the issue subject and maps them only when independently recognized in the original question and consistent with domain, population, and authority. Leave them empty when unsure; keep every issue even without a matching topic. evidenceRequirement is AUTHORITATIVE_SOURCE|CASE_FACTS|AUTHORITATIVE_SOURCE_AND_CASE_FACTS|UNRESOLVED; the application derives it from domain and operation. For EXPLAIN_INTERACTION, use case facts only for case-specific issues; otherwise use UNRESOLVED when unsure. Issues describe questions to resolve, never conclusions.
+mappedTopicIds are optional candidate hints; the application derives candidates from the issue subject and maps them only when independently recognized in the original question and consistent with domain, population, and authority. Leave them empty when unsure; keep every issue even without a matching topic. evidenceRequirement is ${SEMANTIC_EVIDENCE_REQUIREMENT_VALUES.join('|')}; the application derives it from domain and operation. For EXPLAIN_INTERACTION, use case facts only for case-specific issues; otherwise use UNRESOLVED when unsure. Issues describe questions to resolve, never conclusions.
 
 For compound questions, decompose every distinct material outcome the user asks about into its own issue. An issue represents a requested answer or decision, not every noun, fact, or authority mentioned. Do not omit an issue because another authority or topic is more prominent. When the question asks separately about obligations or treatment for different parties, represent those as separate issues when their outcomes can differ; do not merge them just because they share a governing authority or domain. Multiple issues may have the same governing authority but different domains, populations, or operations. Assign exactly one governing authority to each issue and ensure it matches the issue domain. Put an authority in contextualAuthorities only when it is relevant context for that issue but does not govern it; merely mentioning an authority must not create an issue or workstream. Use UNKNOWN rather than inventing unsupported certainty. If a compound question has no single accurate top-level domain or population, set the top-level domain and population to UNKNOWN and put the precise values on issues[]. Use authorityCandidates=[UNKNOWN] when no single top-level authority set applies; never mix UNKNOWN with other top-level authority values.
 
@@ -393,7 +504,7 @@ Choose each issue's operation by the requested output. Use CALCULATE when the re
 
 Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. For mixed journal and non-accounting outcomes, use top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. Record only user-supplied case facts in factsExplicitlyProvided.
 
-Enums: domain=ACCOUNTING|IRAS_INCOME_TAX|IRAS_GST|IRAS_PROPERTY_TAX|IRAS_STAMP_DUTY|IRAS_OTHER|CPF_PAYROLL|MOM_EMPLOYMENT|ACRA_CORPORATE|MAS_FUNDS|UNKNOWN; population=INDIVIDUAL|EMPLOYEE|EMPLOYER|COMPANY|SHAREHOLDER|FUND|PROPERTY_OWNER|UNKNOWN; authority values=IRAS|CPF|ACRA|MOM|MAS|ACCOUNTING_STANDARDS|IFRS_FOUNDATION|SSO|UNKNOWN; operation=EXPLAIN_RULE|EXPLAIN_INTERACTION|DETERMINE_TREATMENT|CHECK_ELIGIBILITY|CALCULATE|PREPARE_JOURNAL|COMPARE|FILING_REQUIREMENT|OTHER; concept role=PRIMARY|RELATED|CONTEXT_ONLY. CALCULATE requires requiresUserSpecificFacts=true. PREPARE_JOURNAL requires ACCOUNTING.
+Enums: domain=${SEMANTIC_DOMAIN_VALUES.join('|')}; population=${SEMANTIC_POPULATION_VALUES.join('|')}; authority values=${SEMANTIC_AUTHORITY_VALUES.join('|')}; operation=${SEMANTIC_OPERATION_VALUES.join('|')}; concept role=${SEMANTIC_CONCEPT_ROLE_VALUES.join('|')}. CALCULATE requires requiresUserSpecificFacts=true. PREPARE_JOURNAL requires ACCOUNTING.
 
 Conceptual rules may mention parties, claims, conditions, or illustrative amounts without deciding an identified case. The case-specific flag does not mean facts are missing; omit hypothetical examples and general conditions from factsExplicitlyProvided.
 
@@ -413,6 +524,7 @@ export async function interpretSemanticQuestion(
   try {
     const response = await callStructured(prompt, SYSTEM_INSTRUCTION, provider, {
       jsonMode: true,
+      responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
       timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
       temperature: 0
     });

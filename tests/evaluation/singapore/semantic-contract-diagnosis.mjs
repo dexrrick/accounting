@@ -1,6 +1,16 @@
 import {
+  SEMANTIC_AUTHORITY_VALUES,
+  SEMANTIC_CONCEPT_KEYS,
+  SEMANTIC_CONCEPT_ROLE_VALUES,
+  SEMANTIC_DOMAIN_VALUES,
+  SEMANTIC_EVIDENCE_REQUIREMENT_VALUES,
+  SEMANTIC_ISSUE_KEYS,
+  SEMANTIC_OPERATION_VALUES,
+  SEMANTIC_POPULATION_VALUES,
   SEMANTIC_QUESTION_MIN_CONFIDENCE,
   SEMANTIC_QUESTION_SCHEMA_VERSION,
+  SEMANTIC_V2_INTERPRETATION_KEYS,
+  SEMANTIC_V2_WIRE_LIMITS,
   validateSemanticQuestionInterpretation
 } from '../../../src/services/semanticQuestionUnderstanding.ts';
 
@@ -9,26 +19,20 @@ const MAX_SHAPE_ITEMS = 13;
 const MAX_SHAPE_COUNT = 10_000;
 
 const ENUMS = Object.freeze({
-  authority: new Set(['IRAS', 'CPF', 'ACRA', 'MOM', 'MAS', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION', 'SSO', 'UNKNOWN']),
-  domain: new Set(['ACCOUNTING', 'IRAS_INCOME_TAX', 'IRAS_GST', 'IRAS_PROPERTY_TAX', 'IRAS_STAMP_DUTY', 'IRAS_OTHER', 'CPF_PAYROLL', 'MOM_EMPLOYMENT', 'ACRA_CORPORATE', 'MAS_FUNDS', 'UNKNOWN']),
-  population: new Set(['INDIVIDUAL', 'EMPLOYEE', 'EMPLOYER', 'COMPANY', 'SHAREHOLDER', 'FUND', 'PROPERTY_OWNER', 'UNKNOWN']),
-  operation: new Set(['EXPLAIN_RULE', 'EXPLAIN_INTERACTION', 'DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'CALCULATE', 'PREPARE_JOURNAL', 'COMPARE', 'FILING_REQUIREMENT', 'OTHER']),
-  conceptRole: new Set(['PRIMARY', 'RELATED', 'CONTEXT_ONLY']),
-  evidenceRequirement: new Set(['AUTHORITATIVE_SOURCE', 'CASE_FACTS', 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'UNRESOLVED'])
+  authority: new Set(SEMANTIC_AUTHORITY_VALUES),
+  domain: new Set(SEMANTIC_DOMAIN_VALUES),
+  population: new Set(SEMANTIC_POPULATION_VALUES),
+  operation: new Set(SEMANTIC_OPERATION_VALUES),
+  conceptRole: new Set(SEMANTIC_CONCEPT_ROLE_VALUES),
+  evidenceRequirement: new Set(SEMANTIC_EVIDENCE_REQUIREMENT_VALUES)
 });
 
 const LEGACY_KEYS = [
   'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject', 'concepts',
   'requestedOperation', 'requiresUserSpecificFacts', 'calculationRequested', 'factsExplicitlyProvided', 'confidence'
 ];
-const V2_KEYS = [
-  'schemaVersion', 'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject',
-  'concepts', 'requestedOperation', 'requiresUserSpecificFacts', 'factsExplicitlyProvided', 'confidence', 'issues'
-];
-const ISSUE_KEYS = [
-  'subject', 'population', 'domain', 'governingAuthorities', 'contextualAuthorities', 'operation',
-  'mappedTopicIds', 'evidenceRequirement', 'confidence'
-];
+const V2_KEYS = SEMANTIC_V2_INTERPRETATION_KEYS;
+const ISSUE_KEYS = SEMANTIC_ISSUE_KEYS;
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -70,7 +74,7 @@ function labelIsSafe(value) {
 function confidenceShape(value) {
   if (typeof value !== 'number') return 'INVALID';
   if (!Number.isFinite(value)) return 'NONFINITE';
-  if (value < 0 || value > 1) return 'OUT_OF_RANGE';
+  if (value < SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum || value > SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum) return 'OUT_OF_RANGE';
   if (value < SEMANTIC_QUESTION_MIN_CONFIDENCE) return 'BELOW_MINIMUM';
   return 'VALID_RANGE';
 }
@@ -95,7 +99,7 @@ function shapeAuthorities(value) {
   return {
     type: valueType(value),
     count: Array.isArray(value) ? safeCount(value.length) : 0,
-    withinLimit: Array.isArray(value) && value.length <= 5,
+    withinLimit: Array.isArray(value) && value.length <= SEMANTIC_V2_WIRE_LIMITS.authorityItems,
     values: Array.isArray(value) ? value.slice(0, MAX_SHAPE_ITEMS).map(item => safeEnum(item, ENUMS.authority)) : []
   };
 }
@@ -116,7 +120,7 @@ function shapeIssue(value) {
     mappedTopicIds: {
       type: valueType(value.mappedTopicIds),
       count: Array.isArray(value.mappedTopicIds) ? safeCount(value.mappedTopicIds.length) : 0,
-      withinLimit: Array.isArray(value.mappedTopicIds) && value.mappedTopicIds.length <= 20,
+      withinLimit: Array.isArray(value.mappedTopicIds) && value.mappedTopicIds.length <= SEMANTIC_V2_WIRE_LIMITS.mappedTopicIdItems,
       itemTypes: Array.isArray(value.mappedTopicIds) ? value.mappedTopicIds.slice(0, MAX_SHAPE_ITEMS).map(valueType) : []
     },
     confidence: confidenceShape(value.confidence)
@@ -137,7 +141,7 @@ function makeSafeShape(value) {
       schemaVersion: isVersioned(value)
         ? { present: true, type: valueType(value.schemaVersion), valid: value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION }
         : { present: false, type: 'MISSING', valid: false },
-      jurisdiction: shapeStringList(value.jurisdiction, 6),
+      jurisdiction: shapeStringList(value.jurisdiction, SEMANTIC_V2_WIRE_LIMITS.jurisdictionItems),
       authorityCandidates: shapeAuthorities(value.authorityCandidates),
       contextualAuthorities: shapeAuthorities(value.contextualAuthorities),
       domain: safeEnum(value.domain, ENUMS.domain),
@@ -146,12 +150,12 @@ function makeSafeShape(value) {
       concepts: {
         type: valueType(value.concepts),
         count: Array.isArray(value.concepts) ? safeCount(value.concepts.length) : 0,
-        withinLimit: Array.isArray(value.concepts) && value.concepts.length <= 12,
+        withinLimit: Array.isArray(value.concepts) && value.concepts.length <= SEMANTIC_V2_WIRE_LIMITS.conceptItems,
         items: Array.isArray(value.concepts) ? value.concepts.slice(0, MAX_SHAPE_ITEMS).map(item => isRecord(item) ? {
           type: 'OBJECT',
           keyCount: safeCount(Object.keys(item).length),
-          extraKeyCount: safeCount(Object.keys(item).filter(key => !['concept', 'role'].includes(key)).length),
-          missingKeyCount: safeCount(['concept', 'role'].filter(key => !Object.hasOwn(item, key)).length),
+          extraKeyCount: safeCount(Object.keys(item).filter(key => !SEMANTIC_CONCEPT_KEYS.includes(key)).length),
+          missingKeyCount: safeCount(SEMANTIC_CONCEPT_KEYS.filter(key => !Object.hasOwn(item, key)).length),
           concept: { type: valueType(item.concept), valid: labelIsSafe(item.concept) },
           role: safeEnum(item.role, ENUMS.conceptRole)
         } : { type: valueType(item) }) : []
@@ -161,13 +165,13 @@ function makeSafeShape(value) {
       calculationRequested: isVersioned(value)
         ? 'DERIVED'
         : typeof value.calculationRequested === 'boolean' ? value.calculationRequested : 'INVALID',
-      factsExplicitlyProvided: shapeStringList(value.factsExplicitlyProvided, 12),
+      factsExplicitlyProvided: shapeStringList(value.factsExplicitlyProvided, SEMANTIC_V2_WIRE_LIMITS.factItems),
       confidence: confidenceShape(value.confidence),
       issues: {
         present: Object.hasOwn(value, 'issues'),
         type: Object.hasOwn(value, 'issues') ? valueType(value.issues) : 'MISSING',
         count: Array.isArray(value.issues) ? safeCount(value.issues.length) : 0,
-        withinLimit: Array.isArray(value.issues) && value.issues.length <= 12,
+        withinLimit: Array.isArray(value.issues) && value.issues.length <= SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum,
         items: Array.isArray(value.issues) ? value.issues.slice(0, MAX_SHAPE_ITEMS).map(shapeIssue) : []
       }
     }
@@ -195,7 +199,7 @@ function diagnoseLabelList(value, maxItems, path, add) {
 
 function diagnoseAuthorities(value, path, add) {
   if (!Array.isArray(value)) { add('WRONG_TYPE', path); return; }
-  if (value.length > 5) { add('COUNT_LIMIT', path); return; }
+  if (value.length > SEMANTIC_V2_WIRE_LIMITS.authorityItems) { add('COUNT_LIMIT', path); return; }
   const badIndex = value.findIndex(item => typeof item !== 'string' || !ENUMS.authority.has(item));
   if (badIndex >= 0) { add(typeof value[badIndex] === 'string' ? 'INVALID_AUTHORITY' : 'WRONG_TYPE', `${path}[${badIndex}]`); return; }
   if (new Set(value).size !== value.length) add('DUPLICATE_AUTHORITY', path);
@@ -241,20 +245,20 @@ function diagnoseIssue(issue, index, add) {
   diagnoseAuthorities(issue.contextualAuthorities, `${path}contextualAuthorities`, add);
   diagnoseEnum(issue.operation, ENUMS.operation, `${path}operation`, add, 'INVALID_OPERATION');
   if (!Array.isArray(issue.mappedTopicIds)) add('WRONG_TYPE', `${path}mappedTopicIds`);
-  else if (issue.mappedTopicIds.length > 20) add('COUNT_LIMIT', `${path}mappedTopicIds`);
+  else if (issue.mappedTopicIds.length > SEMANTIC_V2_WIRE_LIMITS.mappedTopicIdItems) add('COUNT_LIMIT', `${path}mappedTopicIds`);
   else if (issue.mappedTopicIds.some(id => typeof id !== 'string' || id.trim().length === 0)) {
     const bad = issue.mappedTopicIds.findIndex(id => typeof id !== 'string' || id.trim().length === 0);
     add(typeof issue.mappedTopicIds[bad] === 'string' ? 'INVALID_TOPIC_ID' : 'WRONG_TYPE', `${path}mappedTopicIds[${bad}]`);
   }
   diagnoseEnum(issue.evidenceRequirement, ENUMS.evidenceRequirement, `${path}evidenceRequirement`, add, 'INVALID_EVIDENCE_REQUIREMENT');
   if (typeof issue.confidence !== 'number' || !Number.isFinite(issue.confidence)) add('INVALID_CONFIDENCE', `${path}confidence`);
-  else if (issue.confidence < 0 || issue.confidence > 1) add('CONFIDENCE_OUT_OF_RANGE', `${path}confidence`);
+  else if (issue.confidence < SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum || issue.confidence > SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum) add('CONFIDENCE_OUT_OF_RANGE', `${path}confidence`);
   else if (issue.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) add('LOW_CONFIDENCE', `${path}confidence`);
 
   if (!Array.isArray(issue.governingAuthorities) || !Array.isArray(issue.contextualAuthorities) ||
       !issue.governingAuthorities.every(item => typeof item === 'string' && ENUMS.authority.has(item)) ||
       !issue.contextualAuthorities.every(item => typeof item === 'string' && ENUMS.authority.has(item))) return;
-  if (issue.governingAuthorities.length !== 1) { add('ISSUE_AUTHORITY_COUNT', `${path}governingAuthorities`); return; }
+  if (issue.governingAuthorities.length !== SEMANTIC_V2_WIRE_LIMITS.issueGoverningAuthorityItems) { add('ISSUE_AUTHORITY_COUNT', `${path}governingAuthorities`); return; }
   if (issue.contextualAuthorities.some(authority => issue.governingAuthorities.includes(authority))) {
     add('AUTHORITY_OVERLAP', `${path}contextualAuthorities`); return;
   }
@@ -275,11 +279,11 @@ function diagnoseObject(value) {
   diagnoseExactKeys(value, versioned ? V2_KEYS : LEGACY_KEYS, versioned ? [] : ['issues'], '', add);
   if (Object.hasOwn(value, 'issues')) {
     if (!Array.isArray(value.issues)) add('ISSUE_STRUCTURE', 'issues');
-    else if (versioned && value.issues.length === 0) add('EMPTY_ISSUES', 'issues');
-    else if (value.issues.length > 12) add('ISSUE_COUNT_LIMIT', 'issues');
+    else if (versioned && value.issues.length < SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum) add('EMPTY_ISSUES', 'issues');
+    else if (value.issues.length > SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum) add('ISSUE_COUNT_LIMIT', 'issues');
   }
 
-  diagnoseLabelList(value.jurisdiction, 6, 'jurisdiction', add);
+  diagnoseLabelList(value.jurisdiction, SEMANTIC_V2_WIRE_LIMITS.jurisdictionItems, 'jurisdiction', add);
   diagnoseAuthorities(value.authorityCandidates, 'authorityCandidates', add);
   diagnoseAuthorities(value.contextualAuthorities, 'contextualAuthorities', add);
   diagnoseEnum(value.domain, ENUMS.domain, 'domain', add, 'INVALID_DOMAIN');
@@ -287,21 +291,21 @@ function diagnoseObject(value) {
   if (typeof value.primarySubject !== 'string') add('WRONG_TYPE', 'primarySubject');
   else if (!labelIsSafe(value.primarySubject)) add('INVALID_LABEL', 'primarySubject');
   if (!Array.isArray(value.concepts)) add('WRONG_TYPE', 'concepts');
-  else if (value.concepts.length > 12) add('COUNT_LIMIT', 'concepts');
+  else if (value.concepts.length > SEMANTIC_V2_WIRE_LIMITS.conceptItems) add('COUNT_LIMIT', 'concepts');
   diagnoseEnum(value.requestedOperation, ENUMS.operation, 'requestedOperation', add, 'INVALID_OPERATION');
   if (typeof value.requiresUserSpecificFacts !== 'boolean') add('WRONG_TYPE', 'requiresUserSpecificFacts');
   if (!versioned && typeof value.calculationRequested !== 'boolean') add('WRONG_TYPE', 'calculationRequested');
-  diagnoseLabelList(value.factsExplicitlyProvided, 12, 'factsExplicitlyProvided', add);
+  diagnoseLabelList(value.factsExplicitlyProvided, SEMANTIC_V2_WIRE_LIMITS.factItems, 'factsExplicitlyProvided', add);
   if (typeof value.confidence !== 'number' || !Number.isFinite(value.confidence)) add('INVALID_CONFIDENCE', 'confidence');
-  else if (value.confidence < 0 || value.confidence > 1) add('CONFIDENCE_OUT_OF_RANGE', 'confidence');
+  else if (value.confidence < SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum || value.confidence > SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum) add('CONFIDENCE_OUT_OF_RANGE', 'confidence');
 
-  if (Array.isArray(value.concepts) && value.concepts.length <= 12) {
+  if (Array.isArray(value.concepts) && value.concepts.length <= SEMANTIC_V2_WIRE_LIMITS.conceptItems) {
     for (let index = 0; index < value.concepts.length; index += 1) {
       const concept = value.concepts[index];
       const path = `concepts[${index}]`;
       if (!isRecord(concept)) { add('CONCEPT_STRUCTURE', path); continue; }
       const badKeys = !Object.hasOwn(concept, 'concept') || !Object.hasOwn(concept, 'role') ||
-        Object.keys(concept).some(key => !['concept', 'role'].includes(key));
+        Object.keys(concept).some(key => !SEMANTIC_CONCEPT_KEYS.includes(key));
       if (badKeys) { add('CONCEPT_STRUCTURE', path); continue; }
       if (typeof concept.concept !== 'string') add('WRONG_TYPE', `${path}.concept`);
       else if (!labelIsSafe(concept.concept)) add('INVALID_LABEL', `${path}.concept`);
@@ -309,7 +313,7 @@ function diagnoseObject(value) {
     }
   }
 
-  if (Array.isArray(value.issues) && value.issues.length <= 12) {
+  if (Array.isArray(value.issues) && value.issues.length <= SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum) {
     for (let index = 0; index < value.issues.length; index += 1) diagnoseIssue(value.issues[index], index, add);
   }
 

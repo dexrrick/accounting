@@ -15,6 +15,8 @@ const testSuites = [
   { name: 'Semantic Authority & Relief Evaluation Safety', file: 'test_semantic_authority_relief_evaluation.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Semantic Authority & Relief Contract', file: 'test_semantic_authority_relief_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Versioned Semantic Question Wire Contract', file: 'test_semantic_wire_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Semantic Provider JSON Schema & Wire Contract', file: 'test_semantic_provider_schema.mjs', layer: 'provider-resilience', tier: 'smoke' },
+  { name: 'Semantic Wire-Format Evaluation Profile Safety', file: 'test_semantic_wire_format_evaluation.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Semantic Contract Follow-Up Runner', file: 'test_semantic_contract_followup_runner.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Material Issue Decomposition & Authority Ownership', file: 'test_material_issue_decomposition.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Authority Workstream Evidence Isolation & Coverage', file: 'test_authority_workstreams.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

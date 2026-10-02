@@ -3,7 +3,8 @@ import { pathToFileURL } from 'node:url';
 import { runSemanticContractFollowupEvaluation } from './semantic-contract-followup-evaluation.mjs';
 
 const SUPPORTED_PROFILES = new Set([
-  'intent-targeted', 'intent-final', 'authority-relief-targeted-live', 'authority-relief-final-live'
+  'intent-targeted', 'intent-final', 'authority-relief-targeted-live', 'authority-relief-final-live',
+  'semantic-wire-format-targeted-live', 'semantic-wire-format-final-live'
 ]);
 const SAFE_ERRORS = new Set([
   'A semantic contract follow-up output file already exists.',
@@ -11,13 +12,15 @@ const SAFE_ERRORS = new Set([
   'GEMINI_API_KEY is not configured.',
   'Source or fixture hash changed during live capture.',
   'A fixed evaluation case did not make exactly one provider request.',
-  'The authority-relief targeted profile has not passed; final live capture is gated.'
+  'The authority-relief targeted profile has not passed; final live capture is gated.',
+  'A protected semantic evaluation artifact has changed.',
+  'The semantic wire-format targeted profile has not passed; final live capture is gated.'
 ]);
 
 export function parseSemanticIntentProfileArgs(args) {
   if (!Array.isArray(args) || args.length !== 3 || args[0] !== '--profile' ||
       !SUPPORTED_PROFILES.has(args[1]) || args[2] !== '--live') {
-    throw new Error('Usage: --profile intent-targeted|intent-final|authority-relief-targeted-live|authority-relief-final-live --live');
+    throw new Error('Usage: --profile intent-targeted|intent-final|authority-relief-targeted-live|authority-relief-final-live|semantic-wire-format-targeted-live|semantic-wire-format-final-live --live');
   }
   return args[1];
 }

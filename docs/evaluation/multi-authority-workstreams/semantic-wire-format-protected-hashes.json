@@ -1,0 +1,130 @@
+[
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-followup-v2-live.json",
+    "sha256": "58787adb4f69d4db922714154b1a4448fd55e2ee9186f03dff4bbb3f44337850"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-followup-v2-live.md",
+    "sha256": "cf0ea2da3f89006bf16570c7be90e35690a4bea075a26e745cd91ec2f59d3640"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-v2-audit.md",
+    "sha256": "a4169bb880e75b24045b3c79b66ac0fbb504ac34f6ea673aab47c4df3a7c6a3e"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-v2-checkpoint.md",
+    "sha256": "1a71f3c03fcf0b652d085c16dcc41b5da3f9a5577f4148d4bae008ee4a301a4d"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\corrected-live-semantic-evaluation.json",
+    "sha256": "1494ad19fdaa7f7fa2daa9a17510791a82e669873b4effcee2874931fab92e00"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\corrected-live-semantic-evaluation.md",
+    "sha256": "0d11409c9e2bc7302078a82e51575a7af947b37b23dbba7ef414a75d07450930"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\heldout-live-semantic-evaluation.json",
+    "sha256": "370449cc53c1b3ab5d23e1e7d116d1336c11536f3e7c55404acb218d2dda0fb4"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\heldout-live-semantic-evaluation.md",
+    "sha256": "1943678d0367e85cec8ccb6f3eccff7f8b673395d527bbbfc3e186642899cff2"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\operation-reliability-audit.md",
+    "sha256": "8381725c43dece643a548a2fc24a33463d3c97fcce1912d1ef04093988c70f44"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\operation-reliability-checkpoint.md",
+    "sha256": "b166f233b7a589b4f8cbebf077d865a6e1928f52b7dfe5473312a3fa22dc9749"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\operation-reliability-comparison.json",
+    "sha256": "decd5a57bbc1f03e66f86f789ddb539bebcb7db1e5d57c647cc46512128c8f2a"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\semantic-operation-followup-live.json",
+    "sha256": "993afdcd5f45a4b06cdd5edd45295019ca466398ce0e88796b87d54cde1325cb"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\semantic-operation-followup-live.md",
+    "sha256": "e77f667b3f51fa05ca799aac7c101d8c76b5ca724862c177e6aa836dddafaaf0"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\semantic-reliability-post-guidance-live.json",
+    "sha256": "a59b3fa4bf8ffd4b784d4cf107f2a5554c12f336be9723e0e41f10ab4b3f2097"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\semantic-reliability-post-guidance-live.md",
+    "sha256": "e700604b746a8b1e11d7163e44bab0f0503460e22932fb41822e1173e3de9dec"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\semantic-timeout-controlled-baseline.json",
+    "sha256": "2808012d32a05041c364f1dec9ad3e11712aedf0fd6900cc1e7dd2764f005958"
+  },
+  {
+    "path": "docs\\evaluation\\multi-authority-workstreams\\semantic-timeout-controlled-baseline.md",
+    "sha256": "25b21a120a63512b7cdd2b521539950ae09f189ff56cad2ac315d453058f1734"
+  },
+  {
+    "path": "tests/evaluation/singapore/semantic-contract-followup.json",
+    "sha256": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1"
+  },
+  {
+    "path": "tests\\evaluation\\singapore\\multi-authority-workstreams-corrected.json",
+    "sha256": "c15aa10f9acff1e805c16d4ef703707dd46a5b1c36b0a2f23ab3886d88a390cb"
+  },
+  {
+    "path": "tests\\evaluation\\singapore\\multi-authority-workstreams-heldout.json",
+    "sha256": "297d1999dd24899833819cc0b7ee803f0680fdca9c0e35c6088a8e0e234e1c35"
+  },
+  {
+    "path": "tests\\evaluation\\singapore\\semantic-contract-followup.json",
+    "sha256": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1"
+  },
+  {
+    "path": "tests\\evaluation\\singapore\\semantic-operation-followup.json",
+    "sha256": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe"
+  },
+  {
+    "path": "tests\\evaluation\\singapore\\semantic-reliability-post-guidance.json",
+    "sha256": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-audit.md",
+    "sha256": "275652c139de2112dd6a5207c90eef6fdcfa5cbf847f39ec9bb6945196a3be60"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-checkpoint.md",
+    "sha256": "6da3dcdeb7ecbc6ce9160692b524fd2f216ca1bb179770f165c1a57cfd2d8295"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-targeted-live.json",
+    "sha256": "d829a99df8a9a464f889afd3bc40e8f4b2e29a0072bb135feedb13faa2b626f9"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-targeted-live.md",
+    "sha256": "eba86c6aad73e43f6d7d9ac819c1236bca41adf0c5c2bc0d3b7ac3e6242aacc4"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-timeout-analysis.md",
+    "sha256": "f791f6792205145cb1d9a316d054b379aa316ec37531b6d6f94335659fa04a12"
+  },
+  {
+    "path": "tests/evaluation/singapore/semantic-intent-boundaries.json",
+    "sha256": "139d418fb06820d34270c1499fbf825a3f19699121620f1a1df1f1198ba9f71a"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-checkpoint.md",
+    "sha256": "1cc2349b573908087c8532e80de47928adae4d606ab9c0d5983ef6fd8d867a0c"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-2026-10-01/authority-relief-targeted-live.json",
+    "sha256": "c2e65adad723943605d74cab8733672aa2cfb904d50174b2d669b24a963baa62"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-2026-10-01/authority-relief-targeted-live.md",
+    "sha256": "3351b1e1928a1e578af6f7f3d991e9dc5cfbe61bd7bb83984ef20f712018676b"
+  }
+]

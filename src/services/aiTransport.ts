@@ -19,6 +19,8 @@ export function toSafeProviderError(provider: string, status: number): Error {
 export interface StructuredLlmOptions {
   jsonMode?: boolean;
   model?: string;
+  /** Optional JSON Schema constraint supported by Gemini structured output. Other providers ignore it. */
+  responseJsonSchema?: Readonly<Record<string, unknown>>;
   timeoutMs?: number;
   temperature?: number;
 }
@@ -61,7 +63,7 @@ export async function executeStructuredLlmCall(
     if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       const apiKey = providerOrApiKey.trim();
       const model = options.model || 'gemini-3.5-flash-lite';
-      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false);
+      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema);
     }
 
     // 2. Structured ProviderSettings
@@ -74,7 +76,7 @@ export async function executeStructuredLlmCall(
           throw new Error('Gemini API key is not configured or too short.');
         }
         const model = options.model || providerOrApiKey.gemini?.model || 'gemini-3.5-flash-lite';
-        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false);
+        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema);
       }
 
       if (active === 'azure') {
@@ -163,7 +165,8 @@ async function callGeminiDirect(
   systemInstruction: string,
   signal: AbortSignal,
   temperature: number = 0.1,
-  jsonMode: boolean = true
+  jsonMode: boolean = true,
+  responseJsonSchema?: Readonly<Record<string, unknown>>
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
@@ -174,7 +177,11 @@ async function callGeminiDirect(
         parts: [{ text: prompt }]
       }
     ],
-    generationConfig: { ...(jsonMode ? { responseMimeType: 'application/json' } : {}), temperature }
+    generationConfig: {
+      ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+      ...(jsonMode && responseJsonSchema ? { responseJsonSchema } : {}),
+      temperature
+    }
   };
 
   if (systemInstruction) {

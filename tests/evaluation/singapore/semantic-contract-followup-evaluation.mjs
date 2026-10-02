@@ -18,6 +18,7 @@ import { matchIssues, scoreIssueDimensions } from './multi-authority-issue-scori
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(SCRIPT_DIRECTORY, '../../..');
 const REPORT_DIRECTORY = path.join(PROJECT_ROOT, 'docs', 'evaluation', 'multi-authority-workstreams');
+const SEMANTIC_WIRE_FORMAT_OUTPUT_DIRECTORY = path.join(REPORT_DIRECTORY, 'semantic-wire-format-live-2026-10-02');
 const MODEL = 'gemini-3.5-flash-lite';
 const START_GAP_MS = 15_250;
 const OUTPUT_PREFIX = 'semantic-contract-followup-v2-live';
@@ -25,12 +26,15 @@ const INTENT_BOUNDARY_OUTPUT_PREFIX = 'semantic-intent-targeted-live';
 const INTENT_FINAL_OUTPUT_PREFIX = 'semantic-intent-final-live';
 const AUTHORITY_RELIEF_TARGETED_OUTPUT_PREFIX = 'authority-relief-targeted-live';
 const AUTHORITY_RELIEF_FINAL_OUTPUT_PREFIX = 'authority-relief-final-live';
+const SEMANTIC_WIRE_FORMAT_TARGETED_OUTPUT_PREFIX = 'semantic-wire-format-targeted-live';
+const SEMANTIC_WIRE_FORMAT_FINAL_OUTPUT_PREFIX = 'semantic-wire-format-final-live';
 const PRIMARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-contract-followup.json');
 const OPERATION_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-operation-followup.json');
 const GUIDANCE_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-reliability-post-guidance.json');
 const INTENT_BOUNDARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-intent-boundaries.json');
 const AUTHORITY_RELIEF_TARGETED_FIXTURE = path.join(SCRIPT_DIRECTORY, 'authority-relief-targeted.json');
 const AUTHORITY_RELIEF_PROTECTED_HASHES = path.join(REPORT_DIRECTORY, 'authority-relief-protected-hashes.json');
+const SEMANTIC_WIRE_FORMAT_PROTECTED_HASHES = path.join(REPORT_DIRECTORY, 'semantic-wire-format-protected-hashes.json');
 const COMPARABLE_BASELINE = path.join(REPORT_DIRECTORY, 'contract-followup-comparable-baseline.json');
 const EVALUATION_RUNNER_FILE = fileURLToPath(import.meta.url);
 const INTENT_CLI_RUNNER_FILE = path.join(SCRIPT_DIRECTORY, 'semantic-intent-followup-evaluation.mjs');
@@ -86,6 +90,14 @@ const AUTHORITY_RELIEF_TARGETED_CONTROL_IDS = Object.freeze([
   'target-sfrsi-general-recognition', 'target-mixed-ifrs-singapore-accounting',
   'target-relief-entitlement', 'target-relief-amount',
   'target-cpf-general-control', 'target-mom-general-control'
+]);
+const SEMANTIC_WIRE_FORMAT_CASE_IDS = Object.freeze([
+  'target-mixed-ifrs-singapore-accounting',
+  'control-general-recognition',
+  'A-paraphrase-2',
+  'target-relief-entitlement',
+  'dev-investment-comparison',
+  'target-sfrsi-general-recognition'
 ]);
 const REJECTION_CODES = new Set([
   'NONE', 'WRONG_ROOT_TYPE', 'MISSING_KEY', 'UNEXPECTED_KEY', 'WRONG_TYPE', 'COUNT_LIMIT', 'INVALID_LABEL',
@@ -143,7 +155,9 @@ const SAFE_RUNNER_ERRORS = new Set([
   'A required fixed evaluation case is missing.',
   'Source or fixture hash changed during live capture.',
   'A fixed evaluation case did not make exactly one provider request.',
-  'The authority-relief targeted profile has not passed; final live capture is gated.'
+  'The authority-relief targeted profile has not passed; final live capture is gated.',
+  'A protected semantic evaluation artifact has changed.',
+  'The semantic wire-format targeted profile has not passed; final live capture is gated.'
 ]);
 
 function sha256(value) {
@@ -306,6 +320,21 @@ export async function loadAuthorityReliefTargetedCases() {
   const selected = [...fixedHistorical, ...controls];
   if (selected.length !== 8 || new Set(selected.map(testCase => testCase.id)).size !== selected.length ||
       !exactSameSet(controls.map(testCase => testCase.id), AUTHORITY_RELIEF_TARGETED_CONTROL_IDS)) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return selected;
+}
+
+/** Fixed six-case selection for the Gemini V2 wire-format profile, composed from frozen existing expectations. */
+export async function loadSemanticWireFormatTargetedCases() {
+  const [historical, authorityRelief] = await Promise.all([
+    loadSemanticContractFollowupCases(),
+    loadAuthorityReliefTargetedCases()
+  ]);
+  const byId = new Map([...historical, ...authorityRelief].map(testCase => [testCase.id, testCase]));
+  const selected = SEMANTIC_WIRE_FORMAT_CASE_IDS.map(id => byId.get(id));
+  if (selected.some(testCase => !testCase) || selected.length !== SEMANTIC_WIRE_FORMAT_CASE_IDS.length ||
+      new Set(selected.map(testCase => testCase.id)).size !== selected.length) {
     throw new Error('A required fixed evaluation case is missing.');
   }
   return selected;
@@ -809,9 +838,13 @@ function caseSummary(cases, group) {
 
 function renderMarkdown(document) {
   const intentProfile = document.evaluationProfile === 'intent-targeted' || document.evaluationProfile === 'intent-final';
-  const authorityReliefProfile = document.evaluationProfile === 'authority-relief-targeted-live' ||
-    document.evaluationProfile === 'authority-relief-final-live';
-  const heading = document.evaluationProfile === 'authority-relief-targeted-live' ? '# Authority and relief targeted live evaluation'
+  const strictSemanticProfile = document.evaluationProfile === 'authority-relief-targeted-live' ||
+    document.evaluationProfile === 'authority-relief-final-live' ||
+    document.evaluationProfile === 'semantic-wire-format-targeted-live' ||
+    document.evaluationProfile === 'semantic-wire-format-final-live';
+  const heading = document.evaluationProfile === 'semantic-wire-format-targeted-live' ? '# Semantic wire-format targeted live evaluation'
+    : document.evaluationProfile === 'semantic-wire-format-final-live' ? '# Semantic wire-format final live evaluation'
+    : document.evaluationProfile === 'authority-relief-targeted-live' ? '# Authority and relief targeted live evaluation'
     : document.evaluationProfile === 'authority-relief-final-live' ? '# Authority and relief final live evaluation'
       : document.evaluationProfile === 'intent-targeted' ? '# Semantic intent targeted live evaluation'
     : document.evaluationProfile === 'intent-final' ? '# Semantic intent final live evaluation'
@@ -831,14 +864,14 @@ function renderMarkdown(document) {
   for (const item of document.cases) {
     lines.push(`| ${item.caseId} | ${item.group} | ${item.validInterpretation} | ${item.scoring.matchedIssueCount} / ${item.scoring.expectedIssueCount} | ${item.scoring.predictedIssueCount} | ${item.scoring.operationCorrect} / ${item.scoring.operationMatched} | ${item.routing?.finalWorkstreamSetAccuracy ?? false} | ${item.production.failure || '—'} |`);
   }
-  if (authorityReliefProfile) {
+  if (strictSemanticProfile) {
     const acceptance = document.authorityReliefAcceptance;
     const canonical = acceptance?.canonicalContractScoring;
     lines.push(
       '',
       '## Canonical contract scoring',
       '',
-      'Raw scoring above remains unchanged. The supplemental score canonicalizes only ACCOUNTING governing IFRS Foundation authority to ACCOUNTING_STANDARDS; contextual authorities remain unchanged. Explicit authority-relief operation requirements are included.',
+      'Raw scoring above remains unchanged. The supplemental score canonicalizes only ACCOUNTING governing IFRS Foundation authority to ACCOUNTING_STANDARDS; contextual authorities remain unchanged. Fixed strict operation requirements are included.',
       '',
       `Strict acceptance passed: ${acceptance?.passed ?? false} (${acceptance?.passedCases ?? 0} / ${acceptance?.expectedCases ?? document.cases.length} cases).`,
       '',
@@ -958,6 +991,44 @@ export function profileConfiguration(evaluationProfile) {
       purpose: 'Conditional once-only authority and tax-relief evaluation using the original unchanged ten-case selection and expectations.'
     };
   }
+  if (evaluationProfile === 'semantic-wire-format-targeted-live') {
+    return {
+      evaluationProfile,
+      outputPrefix: SEMANTIC_WIRE_FORMAT_TARGETED_OUTPUT_PREFIX,
+      defaultOutputDirectory: SEMANTIC_WIRE_FORMAT_OUTPUT_DIRECTORY,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        ...AUTHORITY_RELIEF_RESOLVER_FILES,
+        semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
+        semanticWireFormatCliRunner: INTENT_CLI_RUNNER_FILE
+      },
+      fixtureFiles: {
+        ...FIXTURE_FILES,
+        authorityReliefTargeted: AUTHORITY_RELIEF_TARGETED_FIXTURE,
+        protectedWireFormatHashes: SEMANTIC_WIRE_FORMAT_PROTECTED_HASHES
+      },
+      purpose: 'Once-only strict Gemini V2 wire-format evaluation using six fixed cases selected from unchanged fixtures.'
+    };
+  }
+  if (evaluationProfile === 'semantic-wire-format-final-live') {
+    return {
+      evaluationProfile,
+      outputPrefix: SEMANTIC_WIRE_FORMAT_FINAL_OUTPUT_PREFIX,
+      defaultOutputDirectory: SEMANTIC_WIRE_FORMAT_OUTPUT_DIRECTORY,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        ...AUTHORITY_RELIEF_RESOLVER_FILES,
+        semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
+        semanticWireFormatCliRunner: INTENT_CLI_RUNNER_FILE
+      },
+      fixtureFiles: {
+        ...FIXTURE_FILES,
+        authorityReliefTargeted: AUTHORITY_RELIEF_TARGETED_FIXTURE,
+        protectedWireFormatHashes: SEMANTIC_WIRE_FORMAT_PROTECTED_HASHES
+      },
+      purpose: 'Conditional strict Gemini V2 wire-format evaluation using the original unchanged ten-case selection and expectations.'
+    };
+  }
   throw new Error('A supported fixed evaluation profile is required.');
 }
 
@@ -997,9 +1068,11 @@ function strictTargetRowPassed(row, testCase, index) {
     requestedRouting.unclassifiedRoutingGapCount === 0 &&
     AUTHORITY_RELIEF_BLOCKING_ROUTING_GAP_CODES.every(code => requestedRouting.routingGapCounts[code] === 0) &&
     row.routing.runtimeTimedOut === false && row.routing.guardChecks?.requestedIssuesMappedAndRetrieved === true;
+  const expectedSpecificity = typeof testCase.expectedRequiresUserSpecificFacts === 'boolean'
+    ? testCase.expectedRequiresUserSpecificFacts : EXPECTED_CASE_SPECIFICITY[testCase.id];
   const specificityPassed = acceptance?.caseSpecificityCorrect === true &&
-    acceptance.caseSpecificity?.expected === testCase.expectedRequiresUserSpecificFacts &&
-    acceptance.caseSpecificity?.actual === testCase.expectedRequiresUserSpecificFacts;
+    acceptance.caseSpecificity?.expected === expectedSpecificity &&
+    acceptance.caseSpecificity?.actual === expectedSpecificity;
   const rawShapePassed = row?.caseId === testCase.id &&
     exactSameSet(row.expectedIssueIds, testCase.expected.map(issue => issue.id)) &&
     row.expectedWorkstreamSetCount === testCase.expectedWorkstreamsAnyOf.length &&
@@ -1067,6 +1140,86 @@ async function requirePassingAuthorityReliefTarget(outputDirectory) {
       acceptance.zeroInvalidTimeoutProviderFailures !== true || acceptance.pacingPolicyPassed !== true ||
       acceptance.fingerprintsStable !== true) {
     throw new Error('The authority-relief targeted profile has not passed; final live capture is gated.');
+  }
+}
+
+async function assertProtectedSemanticWireFormatArtifacts() {
+  let protectedHashes;
+  try {
+    protectedHashes = await readJson(SEMANTIC_WIRE_FORMAT_PROTECTED_HASHES);
+  } catch {
+    throw new Error('A protected semantic evaluation artifact has changed.');
+  }
+  if (!Array.isArray(protectedHashes) || protectedHashes.length !== 32 ||
+      new Set(protectedHashes.map(item => item?.path)).size !== protectedHashes.length ||
+      !(await Promise.all(protectedHashes.map(async item => {
+        if (typeof item?.path !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)) return false;
+        const filePath = path.resolve(PROJECT_ROOT, item.path);
+        const relativePath = path.relative(PROJECT_ROOT, filePath);
+        if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false;
+        try {
+          return await hashFile(filePath) === item.sha256;
+        } catch {
+          return false;
+        }
+      }))).every(Boolean)) {
+    throw new Error('A protected semantic evaluation artifact has changed.');
+  }
+  return protectedHashes;
+}
+
+async function requirePassingSemanticWireFormatTarget(outputDirectory) {
+  let targeted;
+  try {
+    targeted = JSON.parse(await readFile(path.join(outputDirectory, `${SEMANTIC_WIRE_FORMAT_TARGETED_OUTPUT_PREFIX}.json`), 'utf8'));
+  } catch {
+    throw new Error('The semantic wire-format targeted profile has not passed; final live capture is gated.');
+  }
+  const currentProfile = profileConfiguration('semantic-wire-format-targeted-live');
+  let expectedCases;
+  let protectedArtifactsPassed = false;
+  try {
+    [expectedCases] = await Promise.all([
+      loadSemanticWireFormatTargetedCases(), assertProtectedSemanticWireFormatArtifacts()
+    ]);
+    protectedArtifactsPassed = true;
+  } catch {
+    throw new Error('The semantic wire-format targeted profile has not passed; final live capture is gated.');
+  }
+  const [currentSourceManifest, currentFixtureManifest] = await Promise.all([
+    hashManifest(currentProfile.sourceFiles), hashManifest(currentProfile.fixtureFiles)
+  ]);
+  const acceptance = targeted.authorityReliefAcceptance;
+  const expectedIds = SEMANTIC_WIRE_FORMAT_CASE_IDS;
+  const rowsPassed = Array.isArray(targeted.cases) && targeted.cases.length === expectedCases.length &&
+    expectedCases.every((testCase, index) => strictTargetRowPassed(targeted.cases[index], testCase, index));
+  const aggregateIssueCount = expectedCases.reduce((sum, testCase) => sum + testCase.expected.length, 0);
+  const canonical = acceptance?.canonicalContractScoring;
+  const aggregatePassed = rowsPassed && targeted.requestCount === expectedCases.length &&
+    acceptance?.completedCases === expectedCases.length && acceptance.passedCases === expectedCases.length &&
+    Array.isArray(acceptance.failedCases) && acceptance.failedCases.length === 0 &&
+    canonical?.issueRecall?.correct === aggregateIssueCount && canonical.issueRecall.total === aggregateIssueCount &&
+    canonical?.issuePrecision?.correct === aggregateIssueCount && canonical.issuePrecision.total === aggregateIssueCount &&
+    Object.values(canonical.dimensions || {}).length === 5 &&
+    Object.values(canonical.dimensions || {}).every(item => item.correct === aggregateIssueCount &&
+      item.matched === aggregateIssueCount && item.rate === 1) &&
+    canonical.operationAccuracy?.correct === aggregateIssueCount && canonical.operationAccuracy.total === aggregateIssueCount &&
+    canonical.canonicalWorkstreamRoutingAccuracy?.correct === expectedCases.length &&
+    canonical.canonicalWorkstreamRoutingAccuracy.total === expectedCases.length &&
+    canonical.canonicalWorkstreamRoutingAccuracy.rate === 1;
+  const profileAndPacingPassed = targeted.evaluationProfile === 'semantic-wire-format-targeted-live' &&
+    targeted.outputPrefix === SEMANTIC_WIRE_FORMAT_TARGETED_OUTPUT_PREFIX && targeted.completedAt !== undefined &&
+    targeted.model === MODEL && targeted.timeoutMs === SEMANTIC_QUESTION_TIMEOUT_MS &&
+    targeted.minimumStartGapMs === START_GAP_MS && targeted.minimumObservedStartGapMs >= START_GAP_MS &&
+    targeted.pacingPolicy === 'Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.' &&
+    JSON.stringify(targeted.cases?.map(item => item.caseId)) === JSON.stringify(expectedIds);
+  const manifestsPassed = sameManifest(targeted.sourceFingerprints || {}, currentSourceManifest) &&
+    sameManifest(targeted.fixtureFingerprints || {}, currentFixtureManifest) &&
+    targeted.sourceHashesConsistent === true && targeted.fixtureHashesConsistent === true && protectedArtifactsPassed;
+  if (!profileAndPacingPassed || !aggregatePassed || !manifestsPassed || acceptance?.passed !== true ||
+      acceptance.zeroInvalidTimeoutProviderFailures !== true || acceptance.pacingPolicyPassed !== true ||
+      acceptance.fingerprintsStable !== true) {
+    throw new Error('The semantic wire-format targeted profile has not passed; final live capture is gated.');
   }
 }
 
@@ -1152,7 +1305,7 @@ function intentAcceptance(testCase, validInterpretation, scoring, routing, inter
 export async function runSemanticContractFollowupEvaluation({
   live = false,
   apiKey = process.env.GEMINI_API_KEY,
-  outputDirectory = REPORT_DIRECTORY,
+  outputDirectory: requestedOutputDirectory,
   execute = executeStructuredLlmCall,
   interpret = interpretSemanticQuestion,
   buildRuntime = buildAuthorityWorkstreams,
@@ -1164,27 +1317,37 @@ export async function runSemanticContractFollowupEvaluation({
 } = {}) {
   if (!live) throw new Error('Live capture requires --live.');
   const profile = profileConfiguration(evaluationProfile);
+  const outputDirectory = requestedOutputDirectory ?? profile.defaultOutputDirectory ?? REPORT_DIRECTORY;
   if (evaluationProfile !== undefined && suppliedCases !== undefined) {
     throw new Error('A required fixed evaluation case is missing.');
   }
   if (evaluationProfile === 'authority-relief-final-live') await requirePassingAuthorityReliefTarget(outputDirectory);
+  if (evaluationProfile === 'semantic-wire-format-final-live') await requirePassingSemanticWireFormatTarget(outputDirectory);
+  const isWireFormatProfile = evaluationProfile === 'semantic-wire-format-targeted-live' ||
+    evaluationProfile === 'semantic-wire-format-final-live';
+  if (isWireFormatProfile) await assertProtectedSemanticWireFormatArtifacts();
   await mkdir(outputDirectory, { recursive: true });
   await refuseExistingOutputs(outputDirectory, profile.outputPrefix);
   if (typeof apiKey !== 'string' || apiKey.trim().length <= 10) throw new Error('GEMINI_API_KEY is not configured.');
 
-  const isAuthorityReliefProfile = evaluationProfile === 'authority-relief-targeted-live' ||
-    evaluationProfile === 'authority-relief-final-live';
+  const isStrictSemanticProfile = evaluationProfile === 'authority-relief-targeted-live' ||
+    evaluationProfile === 'authority-relief-final-live' || isWireFormatProfile;
   const selectedCases = evaluationProfile === 'intent-targeted'
     ? await loadSemanticIntentTargetedCases()
-    : evaluationProfile === 'intent-final' || evaluationProfile === 'authority-relief-final-live'
+    : evaluationProfile === 'intent-final' || evaluationProfile === 'authority-relief-final-live' ||
+      evaluationProfile === 'semantic-wire-format-final-live'
       ? await loadSemanticIntentFinalCases()
       : evaluationProfile === 'authority-relief-targeted-live'
         ? await loadAuthorityReliefTargetedCases()
+        : evaluationProfile === 'semantic-wire-format-targeted-live'
+          ? await loadSemanticWireFormatTargetedCases()
         : suppliedCases || await loadSemanticContractFollowupCases();
   const requiredIds = evaluationProfile === 'intent-targeted'
     ? [...INTENT_KNOWN_CASE_IDS, ...INTENT_BOUNDARY_CASE_IDS]
     : evaluationProfile === 'authority-relief-targeted-live'
       ? AUTHORITY_RELIEF_TARGETED_CASE_IDS
+      : evaluationProfile === 'semantic-wire-format-targeted-live'
+        ? SEMANTIC_WIRE_FORMAT_CASE_IDS
       : REQUIRED_CASE_IDS;
   if (!Array.isArray(selectedCases) || selectedCases.length !== requiredIds.length ||
       requiredIds.some(id => !selectedCases.some(item => item.id === id)) ||
@@ -1319,7 +1482,7 @@ export async function runSemanticContractFollowupEvaluation({
     if (validInterpretation) {
       try {
         routing = await summarizeRuntime(testCase, productionResult, buildRuntime, {
-          captureAuthorityReliefRouting: isAuthorityReliefProfile
+          captureAuthorityReliefRouting: isStrictSemanticProfile
         });
       } catch {
         routing = {
@@ -1349,10 +1512,10 @@ export async function runSemanticContractFollowupEvaluation({
     const fixtureHashesConsistent = sameManifest(fixturesBefore, fixturesAfter) && sameManifest(fixtureHashes, fixturesAfter);
     document.sourceHashesConsistent = document.sourceHashesConsistent && sourceHashesConsistent;
     document.fixtureHashesConsistent = document.fixtureHashesConsistent && fixtureHashesConsistent;
-    const canonicalScoring = isAuthorityReliefProfile && validInterpretation
+    const canonicalScoring = isStrictSemanticProfile && validInterpretation
       ? scoreAuthorityReliefCanonicalContract(testCase, productionResult.interpretation)
       : undefined;
-    const authorityReliefAcceptance = isAuthorityReliefProfile
+    const authorityReliefAcceptance = isStrictSemanticProfile
       ? authorityReliefCaseAcceptance({
         testCase,
         validInterpretation,
@@ -1386,7 +1549,7 @@ export async function runSemanticContractFollowupEvaluation({
       fixtureHashesConsistent,
       elapsedMs: Math.round((monotonicNow() - initialMonotonic) * 100) / 100
     });
-    if (isAuthorityReliefProfile) {
+    if (isStrictSemanticProfile) {
       document.authorityReliefAcceptance = summarizeAuthorityReliefAcceptance(document, selectedCases.length);
     }
     document.summaries = [
@@ -1402,7 +1565,7 @@ export async function runSemanticContractFollowupEvaluation({
   }
 
   document.completedAt = now().toISOString();
-  if (isAuthorityReliefProfile) {
+  if (isStrictSemanticProfile) {
     document.authorityReliefAcceptance = summarizeAuthorityReliefAcceptance(document, selectedCases.length);
   }
   await writeProgress(outputDirectory, document, profile.outputPrefix);
