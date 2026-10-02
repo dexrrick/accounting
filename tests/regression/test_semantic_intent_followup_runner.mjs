@@ -259,21 +259,19 @@ try {
   assert.equal(employerControl.intentAcceptance.correctRouting, true);
   assert.equal(employerControl.intentAcceptance.allRuntimeGuardsPassed, true, JSON.stringify(employerControl.routing.guardChecks));
   const conceptual = result.cases.find(item => item.caseId === 'control-general-recognition');
-  assert.equal(conceptual.validInterpretation, false,
-    'a model-produced true fact gate contradicts this explicitly general recognition question');
-  assert.equal(conceptual.production.failure, 'INVALID_RESPONSE');
-  assert.equal(conceptual.production.failureReason, 'CONTRADICTORY_FIELDS');
-  assert.equal(conceptual.intentAcceptance.validInterpretation, false);
-  assert.equal(conceptual.scoring.matchedIssueCount, 0, 'a contradictory interpretation is not scored or routed');
-  assert.equal(conceptual.routing, undefined);
+  assert.equal(conceptual.validInterpretation, true,
+    'an old true flag is normalized to general specificity without rejecting the requested rule issue');
+  assert.equal(conceptual.production.failure, undefined);
+  assert.equal(conceptual.intentAcceptance.validInterpretation, true);
+  assert.equal(conceptual.scoring.matchedIssueCount, 1, 'the valid general issue remains scoreable and routable');
+  assert.ok(conceptual.routing);
   const appliedBenefit = result.cases.find(item => item.caseId === 'specific-employee-benefit-treatment');
-  assert.equal(appliedBenefit.validInterpretation, false,
-    'a false fact gate contradicts the case-specific employee-benefit treatment query even under OTHER');
-  assert.equal(appliedBenefit.production.failure, 'INVALID_RESPONSE');
-  assert.equal(appliedBenefit.production.failureReason, 'CONTRADICTORY_FIELDS');
-  assert.equal(appliedBenefit.intentAcceptance.validInterpretation, false);
-  assert.equal(appliedBenefit.scoring.matchedIssueCount, 0, 'a contradictory interpretation is not scored or routed');
-  assert.equal(appliedBenefit.routing, undefined);
+  assert.equal(appliedBenefit.validInterpretation, true,
+    'an old false flag is normalized to the case-specific issue under OTHER');
+  assert.equal(appliedBenefit.production.failure, undefined);
+  assert.equal(appliedBenefit.intentAcceptance.validInterpretation, true);
+  assert.equal(appliedBenefit.scoring.matchedIssueCount, 1, 'the applied issue remains scoreable and routable');
+  assert.ok(appliedBenefit.routing);
 
   const jsonPath = path.join(outputDirectory, 'semantic-intent-targeted-live.json');
   const markdownPath = path.join(outputDirectory, 'semantic-intent-targeted-live.md');

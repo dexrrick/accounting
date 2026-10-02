@@ -48,6 +48,27 @@ function expectedEvidenceRequirement(operation, requiresFacts) {
   return 'AUTHORITATIVE_SOURCE';
 }
 
+// Evidence expectations belong to each issue. The frozen fixture's historical
+// root flag is retained as provider-compatibility input, but must not decide
+// every issue's evidence requirement in a mixed question.
+const expectedIssueSpecificity = {
+  'employer-cpf-implicit-calculation': { 'employer-cpf-amount': true },
+  'wht-payment-amount-calculation': { 'company-wht-amount': true },
+  'withholding-tax-liability-classification': { 'company-wht-applicability': true },
+  'srs-relief-eligibility-with-numbers': { 'individual-srs-relief-eligibility': true },
+  'illustrative-relief-cap-interaction': { 'individual-relief-cap-interaction': false },
+  'general-employment-benefit-rule': { 'general-employee-benefit-tax-rule': false },
+  'specific-employee-benefit-treatment': { 'employee-insurance-benefit-tax-treatment': true },
+  'foreign-dividend-receipt-treatment': { 'company-foreign-dividend-receipt-treatment': true },
+  'private-expense-treatment': { 'company-private-expense-tax-treatment': true },
+  'corporate-residency-general-rule': { 'general-company-tax-residency-rule': false },
+  'mixed-withholding-amount-and-filing': {
+    'company-wht-amount': true,
+    'company-wht-filing-duty': true
+  },
+  'unknown-cpf-population-context': { 'cpf-contribution-amount-party-unknown': true }
+};
+
 assert.equal(fixture.cases.length, 12, 'The independent boundary set retains all ten families plus mixed and UNKNOWN/context controls.');
 let capturedPrompt = '';
 for (const testCase of fixture.cases) {
@@ -79,8 +100,10 @@ for (const testCase of fixture.cases) {
     assert.ok(contract.contextualAuthoritiesAnyOf.some(authorities => JSON.stringify(authorities) === JSON.stringify(issue.contextualAuthorities)),
       `${testCase.id}/${contract.id}: contextual authorities are retained`);
     assert.deepEqual(contract.operation, [issue.operation], `${testCase.id}/${contract.id}: the requested operation is retained exactly`);
-    assert.equal(issue.evidenceRequirement, expectedEvidenceRequirement(issue.operation, testCase.mock.requiresUserSpecificFacts),
-      `${testCase.id}/${contract.id}: evidence requirements follow the operation and case-specific flag`);
+    const issueIsCaseSpecific = expectedIssueSpecificity[testCase.id]?.[contract.id];
+    assert.equal(typeof issueIsCaseSpecific, 'boolean', `${testCase.id}/${contract.id}: expected issue specificity is explicit`);
+    assert.equal(issue.evidenceRequirement, expectedEvidenceRequirement(issue.operation, issueIsCaseSpecific),
+      `${testCase.id}/${contract.id}: evidence requirements follow this issue's expected specificity, not the root flag`);
   }
 
   const workstreams = planAuthorityWorkstreams(reconciled.issuePlan).map(stream => `${stream.authority}/${stream.domain}`).sort();
@@ -92,6 +115,41 @@ const mixed = fixture.cases.find(testCase => testCase.id === 'mixed-withholding-
 assert.ok(mixed);
 assert.deepEqual(mixed.mock.issues.map(issue => issue.operation), ['CALCULATE', 'FILING_REQUIREMENT'],
   'The supplied V2 control separates a requested tax amount from its filing procedure.');
+
+async function assertMixedFilingSpecificity(suffix, expectedRequirement, label) {
+  const question = `${mixed.question.slice(0, mixed.question.lastIndexOf('and what filing/reporting procedure applies?'))}${suffix}`;
+  const control = {
+    ...mixed,
+    question,
+    mock: {
+      ...mixed.mock,
+      issues: mixed.mock.issues.map((issue, index) => index === 1
+        ? { ...issue, subject: 'filing reporting procedure' }
+        : issue)
+    }
+  };
+  const understanding = await interpretSemanticQuestion(question, provider, async (prompt, _system, _provider, options) => {
+    capturedPrompt = prompt;
+    assert.equal(options.temperature, 0);
+    return JSON.stringify(v2Payload(control));
+  });
+  const reconciled = reconcileQuestionUnderstanding(question, classifyQuestion(question), understanding);
+  const amountIssue = reconciled.issuePlan.issues.find(issue => issue.operation === 'CALCULATE');
+  const filingIssue = reconciled.issuePlan.issues.find(issue => issue.operation === 'FILING_REQUIREMENT');
+  assert.ok(amountIssue && filingIssue, `${label}: the mixed question keeps both requested issues`);
+  assert.equal(amountIssue.evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+    `${label}: the amount issue continues to require case facts`);
+  assert.equal(filingIssue.evidenceRequirement, expectedRequirement,
+    `${label}: filing specificity is determined from the linked clause and generality, independently of root=true`);
+}
+
+await assertMixedFilingSpecificity('and what filing procedure applies?', 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'A filing procedure that applies to the stated payment is case-specific');
+await assertMixedFilingSpecificity('and what are the general filing and reporting rules?', 'AUTHORITATIVE_SOURCE',
+  'Explicitly general filing rules remain source-only despite the same payment context');
+await assertMixedFilingSpecificity('and explain the general filing and reporting rules that apply to companies?', 'AUTHORITATIVE_SOURCE',
+  'General filing rules remain source-only when they also say they apply to a class of companies');
+
 const unknownContext = fixture.cases.find(testCase => testCase.id === 'unknown-cpf-population-context');
 assert.ok(unknownContext);
 assert.equal(unknownContext.mock.population, 'UNKNOWN');
@@ -103,8 +161,8 @@ assert.match(capturedPrompt, /A number merely included as a case fact or illustr
 assert.match(capturedPrompt, /a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT/i);
 assert.match(capturedPrompt, /CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement/i);
 assert.match(capturedPrompt, /EXPLAIN_RULE for general principles or conditions without applying them to a case/i);
-assert.match(capturedPrompt, /CHECK_ELIGIBILITY does only for a specific claimant or transaction/i);
-assert.match(capturedPrompt, /keeping each issue's evidence requirement specific to that issue/i);
+assert.match(capturedPrompt, /CHECK_ELIGIBILITY is so only for a specific claimant or transaction/i);
+assert.match(capturedPrompt, /keep mixed issues' evidence independent/i);
 assert.match(capturedPrompt, /a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT/i);
 assert.match(capturedPrompt, /Assign exactly one governing authority to each issue and ensure it matches the issue domain/i);
 assert.ok(capturedPrompt.length < 9_000, `Generic intent guidance and per-issue case-specificity remain within the prompt budget (${capturedPrompt.length} characters).`);

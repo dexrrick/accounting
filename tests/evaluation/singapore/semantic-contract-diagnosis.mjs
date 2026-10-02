@@ -9,9 +9,9 @@ import {
   SEMANTIC_POPULATION_VALUES,
   SEMANTIC_QUESTION_MIN_CONFIDENCE,
   SEMANTIC_QUESTION_SCHEMA_VERSION,
+  SEMANTIC_V2_COMPATIBILITY_KEYS,
   SEMANTIC_V2_INTERPRETATION_KEYS,
   SEMANTIC_V2_WIRE_LIMITS,
-  hasSemanticQueryContractContradiction,
   validateSemanticQuestionInterpretation
 } from '../../../src/services/semanticQuestionUnderstanding.ts';
 
@@ -27,13 +27,13 @@ const ENUMS = Object.freeze({
   conceptRole: new Set(SEMANTIC_CONCEPT_ROLE_VALUES),
   evidenceRequirement: new Set(SEMANTIC_EVIDENCE_REQUIREMENT_VALUES)
 });
-const CASE_FACTS_REQUIRED_OPERATIONS = new Set(['CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL']);
 
 const LEGACY_KEYS = [
   'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject', 'concepts',
   'requestedOperation', 'requiresUserSpecificFacts', 'calculationRequested', 'factsExplicitlyProvided', 'confidence'
 ];
 const V2_KEYS = SEMANTIC_V2_INTERPRETATION_KEYS;
+const V2_COMPATIBILITY_KEYS = SEMANTIC_V2_COMPATIBILITY_KEYS;
 const ISSUE_KEYS = SEMANTIC_ISSUE_KEYS;
 
 function isRecord(value) {
@@ -55,7 +55,8 @@ function valueType(value) {
 }
 
 function expectedTopLevelKeys(value) {
-  return isRecord(value) && Object.hasOwn(value, 'schemaVersion') ? V2_KEYS : LEGACY_KEYS;
+  if (isVersioned(value)) return Object.hasOwn(value, 'requiresUserSpecificFacts') ? V2_COMPATIBILITY_KEYS : V2_KEYS;
+  return LEGACY_KEYS;
 }
 
 function isVersioned(value) {
@@ -133,7 +134,7 @@ function makeSafeShape(value) {
   if (!isRecord(value)) return { rootType: valueType(value) };
   const keys = Object.keys(value);
   const requiredKeys = expectedTopLevelKeys(value);
-  const allowedKeys = new Set(isVersioned(value) ? V2_KEYS : [...LEGACY_KEYS, 'issues']);
+  const allowedKeys = new Set(isVersioned(value) ? [...V2_KEYS, ...V2_COMPATIBILITY_KEYS] : [...LEGACY_KEYS, 'issues']);
   return {
     rootType: 'OBJECT',
     keyCount: safeCount(keys.length),
@@ -163,7 +164,9 @@ function makeSafeShape(value) {
         } : { type: valueType(item) }) : []
       },
       requestedOperation: safeEnum(value.requestedOperation, ENUMS.operation),
-      requiresUserSpecificFacts: typeof value.requiresUserSpecificFacts === 'boolean' ? value.requiresUserSpecificFacts : 'INVALID',
+      requiresUserSpecificFacts: Object.hasOwn(value, 'requiresUserSpecificFacts')
+        ? typeof value.requiresUserSpecificFacts === 'boolean' ? value.requiresUserSpecificFacts : 'INVALID'
+        : 'DERIVED',
       calculationRequested: isVersioned(value)
         ? 'DERIVED'
         : typeof value.calculationRequested === 'boolean' ? value.calculationRequested : 'INVALID',
@@ -278,7 +281,7 @@ function diagnoseObject(value, query) {
 
   const versioned = isVersioned(value);
   if (versioned && value.schemaVersion !== SEMANTIC_QUESTION_SCHEMA_VERSION) add('INVALID_SCHEMA_VERSION', 'schemaVersion');
-  diagnoseExactKeys(value, versioned ? V2_KEYS : LEGACY_KEYS, versioned ? [] : ['issues'], '', add);
+  diagnoseExactKeys(value, versioned ? expectedTopLevelKeys(value) : LEGACY_KEYS, versioned ? [] : ['issues'], '', add);
   if (Object.hasOwn(value, 'issues')) {
     if (!Array.isArray(value.issues)) add('ISSUE_STRUCTURE', 'issues');
     else if (versioned && value.issues.length < SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum) add('EMPTY_ISSUES', 'issues');
@@ -295,7 +298,9 @@ function diagnoseObject(value, query) {
   if (!Array.isArray(value.concepts)) add('WRONG_TYPE', 'concepts');
   else if (value.concepts.length > SEMANTIC_V2_WIRE_LIMITS.conceptItems) add('COUNT_LIMIT', 'concepts');
   diagnoseEnum(value.requestedOperation, ENUMS.operation, 'requestedOperation', add, 'INVALID_OPERATION');
-  if (typeof value.requiresUserSpecificFacts !== 'boolean') add('WRONG_TYPE', 'requiresUserSpecificFacts');
+  if ((!versioned || Object.hasOwn(value, 'requiresUserSpecificFacts')) && typeof value.requiresUserSpecificFacts !== 'boolean') {
+    add('WRONG_TYPE', 'requiresUserSpecificFacts');
+  }
   if (!versioned && typeof value.calculationRequested !== 'boolean') add('WRONG_TYPE', 'calculationRequested');
   diagnoseLabelList(value.factsExplicitlyProvided, SEMANTIC_V2_WIRE_LIMITS.factItems, 'factsExplicitlyProvided', add);
   if (typeof value.confidence !== 'number' || !Number.isFinite(value.confidence)) add('INVALID_CONFIDENCE', 'confidence');
@@ -333,19 +338,22 @@ function diagnoseObject(value, query) {
   if (value.requestedOperation === 'PREPARE_JOURNAL' && ENUMS.domain.has(value.domain) && value.domain !== 'ACCOUNTING') {
     add('JOURNAL_DOMAIN_MISMATCH', 'domain');
   }
-  if (value.requiresUserSpecificFacts === false && (
-    CASE_FACTS_REQUIRED_OPERATIONS.has(value.requestedOperation) ||
-    Array.isArray(value.issues) && value.issues.some(issue => isRecord(issue) && CASE_FACTS_REQUIRED_OPERATIONS.has(issue.operation))
-  )) {
-    add('CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
-  }
   if (topAuthoritiesUsable && value.authorityCandidates.includes('UNKNOWN') && value.authorityCandidates.length > 1) {
     add('UNKNOWN_AUTHORITY_MIX', 'authorityCandidates');
   }
-  if (typeof query === 'string' && violations.length === 0 && hasSemanticQueryContractContradiction(query, value)) {
-    add('CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
-  }
+  // The historical flag is compatibility telemetry only; it never invalidates otherwise sound intent.
+  void query;
   return violations;
+}
+
+function specificityMismatch(value, query) {
+  if (!isRecord(value) || typeof value.requiresUserSpecificFacts !== 'boolean') return false;
+  try {
+    const normalized = validateSemanticQuestionInterpretation(value, typeof query === 'string' ? query : undefined);
+    return Boolean(normalized && normalized.requiresUserSpecificFacts !== value.requiresUserSpecificFacts);
+  } catch {
+    return false;
+  }
 }
 
 /** Returns only fixed reason codes, allowlisted field paths, and a non-sensitive shape summary. */
@@ -354,12 +362,13 @@ export function diagnoseSemanticContract(value, query) {
   const violations = diagnoseObject(value, query);
   let validatorAccepted = false;
   try {
-    validatorAccepted = Boolean(validateSemanticQuestionInterpretation(value)) &&
-      !(typeof query === 'string' && hasSemanticQueryContractContradiction(query, value));
+    validatorAccepted = Boolean(validateSemanticQuestionInterpretation(value, typeof query === 'string' ? query : undefined));
   } catch {
     validatorAccepted = false;
   }
   const confidence = isRecord(value) ? confidenceShape(value.confidence) : 'INVALID';
+  const caseFlagMismatch = specificityMismatch(value, query);
+  const nonViolationCodes = caseFlagMismatch ? ['CASE_FLAG_MISMATCH'] : [];
   const interpreted = validatorAccepted && confidence !== 'BELOW_MINIMUM';
   let rejectionCode = violations[0]?.code;
   let rejectionPath = violations[0]?.path;
@@ -379,6 +388,8 @@ export function diagnoseSemanticContract(value, query) {
     rejectionCode,
     ...(rejectionPath ? { rejectionPath } : {}),
     violations: validatorAccepted ? [] : violations.length ? violations : [{ code: 'UNCLASSIFIED_REJECTION', path: '$' }],
+    caseFlagMismatch,
+    nonViolationCodes,
     safeShape: shape
   };
 }
@@ -387,11 +398,13 @@ export function diagnoseSemanticContract(value, query) {
 export function diagnoseSemanticResponse(response, query) {
   if (typeof response !== 'string') return {
     validatorAccepted: false, interpreted: false, rejectionCode: 'MALFORMED_JSON', rejectionPath: '$',
-    violations: [{ code: 'MALFORMED_JSON', path: '$' }], safeShape: { responseType: valueType(response) }
+    violations: [{ code: 'MALFORMED_JSON', path: '$' }], caseFlagMismatch: false, nonViolationCodes: [],
+    safeShape: { responseType: valueType(response) }
   };
   if (response.length > MAX_RESPONSE_CHARS) return {
     validatorAccepted: false, interpreted: false, rejectionCode: 'RESPONSE_TOO_LARGE', rejectionPath: '$',
     violations: [{ code: 'RESPONSE_TOO_LARGE', path: '$' }],
+    caseFlagMismatch: false, nonViolationCodes: [],
     safeShape: { responseType: 'STRING', responseChars: Math.min(response.length, MAX_SHAPE_COUNT), exceedsLimit: true }
   };
   let parsed;
@@ -399,6 +412,7 @@ export function diagnoseSemanticResponse(response, query) {
     return {
       validatorAccepted: false, interpreted: false, rejectionCode: 'MALFORMED_JSON', rejectionPath: '$',
       violations: [{ code: 'MALFORMED_JSON', path: '$' }],
+      caseFlagMismatch: false, nonViolationCodes: [],
       safeShape: { responseType: 'STRING', responseChars: safeCount(response.length), malformed: true }
     };
   }

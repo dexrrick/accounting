@@ -75,8 +75,10 @@ const v2CalculationContradiction = {
   issues: [{ ...versionedBase.issues[0], operation: 'CALCULATE' }]
 };
 const v2ContradictionDiagnostic = diagnoseSemanticContract(v2CalculationContradiction);
-assert.equal(v2ContradictionDiagnostic.rejectionCode, 'CASE_FLAG_CONTRADICTION');
-assert.equal(v2ContradictionDiagnostic.rejectionPath, 'requiresUserSpecificFacts');
+assert.equal(v2ContradictionDiagnostic.validatorAccepted, true);
+assert.equal(v2ContradictionDiagnostic.rejectionCode, 'NONE');
+assert.equal(v2ContradictionDiagnostic.caseFlagMismatch, true);
+assert.deepEqual(v2ContradictionDiagnostic.nonViolationCodes, ['CASE_FLAG_MISMATCH']);
 
 const privateSentinel = 'SECRET_CASE_SENTINEL SGD 91,234.55 AIzaABCDEFGHIJKLMNOPQRSTUV';
 const unexpectedKey = verifyRejected({
@@ -101,9 +103,13 @@ verifyRejected({ ...base, population: 'CUSTOMER_SECRET' }, 'INVALID_POPULATION',
 verifyRejected({ ...base, authorityCandidates: ['ACCOUNTING_STANDARDS', 'ACCOUNTING_STANDARDS'] }, 'DUPLICATE_AUTHORITY', 'authorityCandidates');
 verifyRejected({ ...base, domain: 'CPF_PAYROLL' }, 'DOMAIN_AUTHORITY_MISMATCH', 'authorityCandidates');
 verifyRejected({ ...base, requestedOperation: 'CALCULATE' }, 'CALCULATION_FLAG_MISMATCH', 'calculationRequested');
-verifyRejected({ ...base, requestedOperation: 'CALCULATE', calculationRequested: true }, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
-verifyRejected({ ...base, requestedOperation: 'DETERMINE_TREATMENT' }, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
-verifyRejected({ ...base, requestedOperation: 'PREPARE_JOURNAL' }, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+for (const requestedOperation of ['CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL']) {
+  const derived = validateSemanticQuestionInterpretation({
+    ...base, requestedOperation, calculationRequested: requestedOperation === 'CALCULATE'
+  });
+  assert.equal(derived?.requiresUserSpecificFacts, true,
+    `${requestedOperation} specificity is a deterministic lower bound independent of the legacy flag`);
+}
 verifyRejected({ ...base, domain: 'IRAS_INCOME_TAX', authorityCandidates: ['IRAS'], requestedOperation: 'PREPARE_JOURNAL' }, 'JOURNAL_DOMAIN_MISMATCH', 'domain');
 verifyRejected({ ...base, authorityCandidates: ['UNKNOWN', 'IRAS'], domain: 'IRAS_GST' }, 'UNKNOWN_AUTHORITY_MIX', 'authorityCandidates');
 verifyRejected({ ...base, confidence: 2 }, 'CONFIDENCE_OUT_OF_RANGE', 'confidence');
@@ -124,7 +130,8 @@ const issueBase = {
 };
 for (const operation of ['CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL']) {
   const legacyIssueContradiction = { ...base, issues: [{ ...issueBase, operation }] };
-  verifyRejected(legacyIssueContradiction, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+  assert.equal(validateSemanticQuestionInterpretation(legacyIssueContradiction)?.requiresUserSpecificFacts, true,
+    `${operation} issue derives root case specificity`);
 
   const versionedIssueContradiction = {
     ...versionedBase,
@@ -132,7 +139,8 @@ for (const operation of ['CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL'])
     requiresUserSpecificFacts: false,
     issues: [{ ...versionedBase.issues[0], operation }]
   };
-  verifyRejected(versionedIssueContradiction, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+  const compatibility = validateSemanticQuestionInterpretation(versionedIssueContradiction);
+  assert.equal(compatibility?.requiresUserSpecificFacts, true, `${operation} V2 issue derives root case specificity`);
 }
 verifyRejected({ ...base, issues: [{ ...issueBase, operation: 'UNLISTED_OPERATION' }] }, 'INVALID_OPERATION', 'issues[0].operation');
 verifyRejected({ ...base, issues: [{ ...issueBase, domain: 'UNLISTED_DOMAIN' }] }, 'INVALID_DOMAIN', 'issues[0].domain');
@@ -181,9 +189,10 @@ const queryContradiction = {
   }]
 };
 const queryAwareDiagnostic = diagnoseSemanticResponse(JSON.stringify(queryContradiction), privateApplicationQuestion);
-assert.equal(queryAwareDiagnostic.validatorAccepted, false);
-assert.equal(queryAwareDiagnostic.rejectionCode, 'CASE_FLAG_CONTRADICTION');
-assert.equal(queryAwareDiagnostic.rejectionPath, 'requiresUserSpecificFacts');
+assert.equal(queryAwareDiagnostic.validatorAccepted, true);
+assert.equal(queryAwareDiagnostic.rejectionCode, 'NONE');
+assert.equal(queryAwareDiagnostic.caseFlagMismatch, true);
+assert.deepEqual(queryAwareDiagnostic.nonViolationCodes, ['CASE_FLAG_MISMATCH']);
 assert.equal(JSON.stringify(queryAwareDiagnostic).includes(privateApplicationQuestion), false,
   'query-aware diagnostics do not persist the query or supplied amount');
 assert.equal(JSON.stringify(queryAwareDiagnostic).includes(privateSentinel), false,

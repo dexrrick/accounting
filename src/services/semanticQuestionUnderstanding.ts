@@ -43,6 +43,11 @@ export const SEMANTIC_EVIDENCE_REQUIREMENT_VALUES = [
 
 export const SEMANTIC_V2_INTERPRETATION_KEYS = [
   'schemaVersion', 'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject',
+  'concepts', 'requestedOperation', 'factsExplicitlyProvided', 'confidence', 'issues'
+] as const;
+/** Accepted only for compatibility with V2 responses produced before specificity became application-derived. */
+export const SEMANTIC_V2_COMPATIBILITY_KEYS = [
+  'schemaVersion', 'jurisdiction', 'authorityCandidates', 'contextualAuthorities', 'domain', 'population', 'primarySubject',
   'concepts', 'requestedOperation', 'requiresUserSpecificFacts', 'factsExplicitlyProvided', 'confidence', 'issues'
 ] as const;
 export const SEMANTIC_CONCEPT_KEYS = ['concept', 'role'] as const;
@@ -101,7 +106,6 @@ export const SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA = {
       }
     },
     requestedOperation: enumSchema(SEMANTIC_OPERATION_VALUES),
-    requiresUserSpecificFacts: { type: 'boolean' },
     factsExplicitlyProvided: stringArraySchema(SEMANTIC_V2_WIRE_LIMITS.factItems),
     confidence: confidenceSchema,
     issues: {
@@ -163,8 +167,8 @@ export interface SemanticQuestionInterpretation {
   issues?: SemanticQuestionIssue[];
 }
 
-/** Versioned provider wire contract. The calculation flag is derived after validation. */
-export type SemanticQuestionInterpretationV2 = Omit<SemanticQuestionInterpretation, 'calculationRequested' | 'issues'> & {
+/** Versioned provider wire contract. Calculation and case specificity are application-derived. */
+export type SemanticQuestionInterpretationV2 = Omit<SemanticQuestionInterpretation, 'calculationRequested' | 'requiresUserSpecificFacts' | 'issues'> & {
   schemaVersion: typeof SEMANTIC_QUESTION_SCHEMA_VERSION;
   issues: SemanticQuestionIssue[];
 };
@@ -201,6 +205,16 @@ const OPERATIONS = new Set<SemanticQuestionOperation>(SEMANTIC_OPERATION_VALUES)
 const CASE_FACTS_REQUIRED_OPERATIONS = new Set<SemanticQuestionOperation>([
   'CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL'
 ]);
+// Internal normalized values carry app-derived specificity for query-less
+// projections. Provider objects can never enter this map. Inputs are still
+// structurally validated on every call; cached decisions are reused only while
+// the requested operations and subjects they were derived from remain stable.
+const normalizedSpecificity = new WeakMap<object, {
+  requestedOperation: SemanticQuestionOperation;
+  primarySubject: string;
+  root: boolean;
+  issues?: Array<{ operation: SemanticQuestionOperation; subject: string; required: boolean }>;
+}>();
 const AUTHORITIES = new Set<SemanticAuthority>(SEMANTIC_AUTHORITY_VALUES);
 const CONCEPT_ROLES = new Set<SemanticConceptRole>(SEMANTIC_CONCEPT_ROLE_VALUES);
 const EVIDENCE_REQUIREMENTS = new Set<SemanticEvidenceRequirement>(SEMANTIC_EVIDENCE_REQUIREMENT_VALUES);
@@ -267,15 +281,9 @@ function domainAuthorityIsPossible(value: Pick<SemanticQuestionInterpretation, '
 function hasSemanticContractContradiction(value: unknown): boolean {
   if (!isRecord(value)) return false;
   const isVersion2 = value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION;
-  const calculated = isVersion2
-    ? value.requestedOperation === 'CALCULATE'
-    : value.calculationRequested;
   if (!isVersion2 && typeof value.requestedOperation === 'string' && OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) &&
       typeof value.calculationRequested === 'boolean' &&
       value.calculationRequested !== (value.requestedOperation === 'CALCULATE')) return true;
-  if (value.requiresUserSpecificFacts === false && typeof value.requestedOperation === 'string' &&
-      CASE_FACTS_REQUIRED_OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation)) return true;
-  if (calculated === true && value.requiresUserSpecificFacts === false) return true;
   if (value.requestedOperation === 'PREPARE_JOURNAL' && typeof value.domain === 'string' &&
       DOMAINS.has(value.domain as SemanticQuestionDomain) && value.domain !== 'ACCOUNTING') return true;
   if (Array.isArray(value.authorityCandidates) && typeof value.domain === 'string' && DOMAINS.has(value.domain as SemanticQuestionDomain) &&
@@ -289,8 +297,6 @@ function hasSemanticContractContradiction(value: unknown): boolean {
       value.authorityCandidates.includes('UNKNOWN') && value.authorityCandidates.length > 1) return true;
   if (Array.isArray(value.issues)) {
     for (const issue of value.issues) {
-      if (isRecord(issue) && value.requiresUserSpecificFacts === false &&
-          typeof issue.operation === 'string' && CASE_FACTS_REQUIRED_OPERATIONS.has(issue.operation as SemanticQuestionOperation)) return true;
       if (!isRecord(issue) || typeof issue.domain !== 'string' || !DOMAINS.has(issue.domain as SemanticQuestionDomain) ||
           !Array.isArray(issue.governingAuthorities) || issue.governingAuthorities.length !== 1 ||
           !issue.governingAuthorities.every(authority => typeof authority === 'string' && AUTHORITIES.has(authority as SemanticAuthority))) continue;
@@ -426,12 +432,19 @@ function issueDomainAuthoritiesArePossible(domain: SemanticQuestionDomain, autho
   }
 }
 
-/** Strictly validates provider output; unknown keys and contradictory flags are rejected. */
-export function validateSemanticQuestionInterpretation(value: unknown): SemanticQuestionInterpretation | undefined {
+/** Strictly validates provider output, then derives case specificity from the query and requested issue operations. */
+export function validateSemanticQuestionInterpretation(value: unknown, query?: string): SemanticQuestionInterpretation | undefined {
   if (!isRecord(value)) return undefined;
+  const derivationQuery = query?.trim() ? query : undefined;
+  const cachedSpecificity = !derivationQuery ? normalizedSpecificity.get(value) : undefined;
+  const cachedRootMatches = cachedSpecificity !== undefined &&
+    cachedSpecificity?.requestedOperation === value.requestedOperation &&
+    cachedSpecificity.primarySubject === value.primarySubject &&
+    cachedSpecificity.root === value.requiresUserSpecificFacts;
   const isVersion2 = Object.hasOwn(value, 'schemaVersion');
   const exactSchema = isVersion2
-    ? value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION && hasExactKeys(value, SEMANTIC_V2_INTERPRETATION_KEYS)
+    ? value.schemaVersion === SEMANTIC_QUESTION_SCHEMA_VERSION &&
+      (hasExactKeys(value, SEMANTIC_V2_INTERPRETATION_KEYS) || hasExactKeys(value, SEMANTIC_V2_COMPATIBILITY_KEYS))
     : hasExactKeys(value, LEGACY_INTERPRETATION_KEYS) || hasExactKeys(value, [...LEGACY_INTERPRETATION_KEYS, 'issues']);
   if (!exactSchema || (isVersion2 && (!Array.isArray(value.issues) || value.issues.length < SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum)) ||
       Object.hasOwn(value, 'issues') && (!Array.isArray(value.issues) || value.issues.length > SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum)) return undefined;
@@ -441,7 +454,8 @@ export function validateSemanticQuestionInterpretation(value: unknown): Semantic
       typeof value.primarySubject !== 'string' || !isSafeSemanticLabel(value.primarySubject) ||
       !Array.isArray(value.concepts) || value.concepts.length > SEMANTIC_V2_WIRE_LIMITS.conceptItems ||
       !OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) ||
-      typeof value.requiresUserSpecificFacts !== 'boolean' || !isVersion2 && typeof value.calculationRequested !== 'boolean' ||
+      Object.hasOwn(value, 'requiresUserSpecificFacts') && typeof value.requiresUserSpecificFacts !== 'boolean' ||
+      !isVersion2 && typeof value.calculationRequested !== 'boolean' ||
       !validLabelList(value.factsExplicitlyProvided, SEMANTIC_V2_WIRE_LIMITS.factItems) || typeof value.confidence !== 'number' ||
       !Number.isFinite(value.confidence) || value.confidence < SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum ||
       value.confidence > SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum) return undefined;
@@ -454,6 +468,31 @@ export function validateSemanticQuestionInterpretation(value: unknown): Semantic
   });
   if (concepts.length !== value.concepts.length) return undefined;
 
+  const issues = Object.hasOwn(value, 'issues')
+    ? (value.issues as unknown[]).map(validateSemanticQuestionIssue) as SemanticQuestionIssue[]
+    : undefined;
+  if (issues?.some(issue => !issue)) return undefined;
+  const issueSpecificities = issues?.map((issue, index) => {
+    const cachedIssue = cachedRootMatches ? cachedSpecificity?.issues?.[index] : undefined;
+    if (!derivationQuery && cachedIssue?.operation === issue!.operation && cachedIssue.subject === issue!.subject) {
+      return cachedIssue.required;
+    }
+    return deriveRequestedIssueSpecificity(derivationQuery, issue!, issues.length > 1);
+  });
+  const normalizedIssues = issues?.map((issue, index) => {
+    return {
+      ...issue!,
+      evidenceRequirement: deriveEvidenceRequirement(issue!.domain, issue!.operation, issueSpecificities?.[index])
+    };
+  });
+  const reportedCalculation = isVersion2
+    ? value.requestedOperation === 'CALCULATE'
+    : value.calculationRequested as boolean;
+  const requiresUserSpecificFacts = CASE_FACTS_REQUIRED_OPERATIONS.has(value.requestedOperation as SemanticQuestionOperation) ||
+    (issueSpecificities?.length ? issueSpecificities.some(Boolean) :
+      cachedRootMatches ? cachedSpecificity!.root : deriveRequestedIssueSpecificity(derivationQuery, {
+        subject: value.primarySubject.trim(), operation: value.requestedOperation as SemanticQuestionOperation
+      }, false));
   const interpretation: SemanticQuestionInterpretation = {
     jurisdiction: value.jurisdiction.map(item => item.trim()),
     authorityCandidates: value.authorityCandidates as SemanticAuthority[],
@@ -463,24 +502,26 @@ export function validateSemanticQuestionInterpretation(value: unknown): Semantic
     primarySubject: value.primarySubject.trim(),
     concepts,
     requestedOperation: value.requestedOperation as SemanticQuestionOperation,
-    requiresUserSpecificFacts: value.requiresUserSpecificFacts,
-    calculationRequested: isVersion2
-      ? value.requestedOperation === 'CALCULATE'
-      : value.calculationRequested as boolean,
+    requiresUserSpecificFacts,
+    calculationRequested: reportedCalculation,
     factsExplicitlyProvided: value.factsExplicitlyProvided.map(item => item.trim()),
     confidence: value.confidence,
-    ...(Object.hasOwn(value, 'issues') ? { issues: (value.issues as unknown[]).map(validateSemanticQuestionIssue) as SemanticQuestionIssue[] } : {})
+    ...(normalizedIssues ? { issues: normalizedIssues } : {})
   };
-  if (Object.hasOwn(value, 'issues') && interpretation.issues?.some(issue => !issue)) return undefined;
   if (!domainAuthorityIsPossible(interpretation)) return undefined;
   if (interpretation.calculationRequested !== (interpretation.requestedOperation === 'CALCULATE')) return undefined;
-  if (interpretation.calculationRequested && !interpretation.requiresUserSpecificFacts) return undefined;
-  if (!interpretation.requiresUserSpecificFacts && (
-    CASE_FACTS_REQUIRED_OPERATIONS.has(interpretation.requestedOperation) ||
-    interpretation.issues?.some(issue => CASE_FACTS_REQUIRED_OPERATIONS.has(issue.operation))
-  )) return undefined;
   if (interpretation.requestedOperation === 'PREPARE_JOURNAL' && interpretation.domain !== 'ACCOUNTING') return undefined;
   if (interpretation.authorityCandidates.includes('UNKNOWN') && interpretation.authorityCandidates.length > 1) return undefined;
+  normalizedSpecificity.set(interpretation, {
+    requestedOperation: interpretation.requestedOperation,
+    primarySubject: interpretation.primarySubject,
+    root: interpretation.requiresUserSpecificFacts,
+    ...(normalizedIssues ? { issues: normalizedIssues.map((issue, index) => ({
+      operation: issue.operation,
+      subject: issue.subject,
+      required: issueSpecificities?.[index] ?? true
+    })) } : {})
+  });
   return interpretation;
 }
 
@@ -513,17 +554,17 @@ Separate requested outcomes from background facts and context. Mentioning that a
 
 Classify each issue by the subject of the requested outcome. An employee's personal relief claim or salary/employment-income tax is individual income tax (IRAS); an employee benefit/perquisite tax question is employment-benefit tax (IRAS). EMPLOYEE alone does not imply a taxable benefit. Employer reporting is a separate issue only when the employer's reporting duty is requested; if the reporter is not established, use population=UNKNOWN rather than assuming the employee or company is the reporter. A company acting as employer for employment reporting has population=EMPLOYER; COMPANY is reserved for the company's own tax position. An employee's own CPF contribution amount and an employer's CPF contribution amount are separate payroll issues when both are requested.
 
-Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. It also covers liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement, even if claimant status is unclear; for relief, "what can I claim?" or "can I claim?" asks entitlement, while "how much can I claim?" asks an amount (CALCULATE). Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries, COMPARE for requested alternatives, and otherwise OTHER. Set requiresUserSpecificFacts=true if any issue applies a rule to a specific case: CALCULATE, DETERMINE_TREATMENT, and PREPARE_JOURNAL always do; CHECK_ELIGIBILITY does only for a specific claimant or transaction. Generic employee/class eligibility, "who qualifies", conditions, and general rules use source-only evidence and set it false. Supplied facts do not make an application conceptual. For mixed OTHER, set it true if any issue needs facts, while keeping each issue's evidence requirement specific to that issue.
+Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. It also covers liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement, even if claimant status is unclear; for relief, "what can I claim?" or "can I claim?" asks entitlement, while "how much can I claim?" asks an amount (CALCULATE). Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries, COMPARE for requested alternatives, and otherwise OTHER. Do not emit a requiresUserSpecificFacts field: the application derives case specificity and per-issue evidence from the query, independent of supplied-fact counts or provider hints. CALCULATE, DETERMINE_TREATMENT, and PREPARE_JOURNAL are always case-specific; CHECK_ELIGIBILITY is so only for a specific claimant or transaction. Generic employee/class eligibility, "who can claim/qualifies", conditions, and general rules are source-only. Distinguish an audience request from a claim about the user's circumstances. The root flag is the OR of issue specificity, plus mandatory top-operation lower bounds; keep mixed issues' evidence independent.
 
 Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. For mixed journal and non-accounting outcomes, use top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. Record only user-supplied case facts in factsExplicitlyProvided.
 
 Enums: domain=${SEMANTIC_DOMAIN_VALUES.join('|')}; population=${SEMANTIC_POPULATION_VALUES.join('|')}; authority values=${SEMANTIC_AUTHORITY_VALUES.join('|')}; operation=${SEMANTIC_OPERATION_VALUES.join('|')}; concept role=${SEMANTIC_CONCEPT_ROLE_VALUES.join('|')}. PREPARE_JOURNAL requires ACCOUNTING.
 
-Conceptual rules may mention parties, claims, conditions, or illustrative amounts without deciding an identified case. The case-specific flag does not mean facts are missing; omit hypothetical examples and general conditions from factsExplicitlyProvided.
+Conceptual rules may mention parties, claims, conditions, or illustrative amounts without deciding an identified case. Case specificity does not mean facts are missing; omit hypothetical examples and general conditions from factsExplicitlyProvided.
 
 Identify whose own tax or regulatory status is at issue. First-person plural or overseas receipt alone does not establish an individual, employer, company, or fund; use UNKNOWN. Use EMPLOYEE for the employee's position, EMPLOYER for employer obligations, and COMPANY only as taxpayer or claimant; a shareholder is not the company.
 
-Full V2 mixed journal-and-tax example: {"schemaVersion":2,"jurisdiction":["Singapore"],"authorityCandidates":["UNKNOWN"],"contextualAuthorities":[],"domain":"UNKNOWN","population":"UNKNOWN","primarySubject":"expense journal and tax deductibility","concepts":[{"concept":"expense accounting","role":"RELATED"},{"concept":"income-tax deductibility","role":"PRIMARY"}],"requestedOperation":"OTHER","requiresUserSpecificFacts":true,"factsExplicitlyProvided":[],"confidence":0.9,"issues":[{"subject":"expense journal","population":"COMPANY","domain":"ACCOUNTING","governingAuthorities":["ACCOUNTING_STANDARDS"],"contextualAuthorities":[],"operation":"PREPARE_JOURNAL","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9},{"subject":"company expense deduction eligibility","population":"COMPANY","domain":"IRAS_INCOME_TAX","governingAuthorities":["IRAS"],"contextualAuthorities":["ACCOUNTING_STANDARDS"],"operation":"CHECK_ELIGIBILITY","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9}]}`;
+Full V2 mixed journal-and-tax example: {"schemaVersion":2,"jurisdiction":["Singapore"],"authorityCandidates":["UNKNOWN"],"contextualAuthorities":[],"domain":"UNKNOWN","population":"UNKNOWN","primarySubject":"expense journal and tax deductibility","concepts":[{"concept":"expense accounting","role":"RELATED"},{"concept":"income-tax deductibility","role":"PRIMARY"}],"requestedOperation":"OTHER","factsExplicitlyProvided":[],"confidence":0.9,"issues":[{"subject":"expense journal","population":"COMPANY","domain":"ACCOUNTING","governingAuthorities":["ACCOUNTING_STANDARDS"],"contextualAuthorities":[],"operation":"PREPARE_JOURNAL","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9},{"subject":"company expense deduction eligibility","population":"COMPANY","domain":"IRAS_INCOME_TAX","governingAuthorities":["IRAS"],"contextualAuthorities":["ACCOUNTING_STANDARDS"],"operation":"CHECK_ELIGIBILITY","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9}]}`;
 
 /** Calls only the configured provider with the current question; no evidence or conversation history is supplied. */
 export async function interpretSemanticQuestion(
@@ -546,16 +587,11 @@ export async function interpretSemanticQuestion(
     try { raw = JSON.parse(response); } catch {
       return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE', failureReason: 'MALFORMED_JSON' };
     }
-    const interpretation = validateSemanticQuestionInterpretation(raw);
+    const interpretation = validateSemanticQuestionInterpretation(raw, query);
     if (!interpretation) return {
       mode: 'DETERMINISTIC_FALLBACK',
       failure: 'INVALID_RESPONSE',
       failureReason: hasSemanticContractContradiction(raw) ? 'CONTRADICTORY_FIELDS' : 'SCHEMA_MISMATCH'
-    };
-    if (hasSemanticQueryContractContradiction(query, interpretation)) return {
-      mode: 'DETERMINISTIC_FALLBACK',
-      failure: 'INVALID_RESPONSE',
-      failureReason: 'CONTRADICTORY_FIELDS'
     };
     if (interpretation.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'LOW_CONFIDENCE' };
     return { mode: 'SEMANTIC_INTERPRETATION', interpretation };
@@ -609,7 +645,7 @@ function semanticCpfRoutingIsSupported(query: string, interpretation: SemanticQu
 }
 
 function hasExplicitCaseReference(query: string): boolean {
-  const ownedCaseReference = /\b(?:my|our)\s+(?:(?:[\p{L}][\p{L}'’-]*)\s+){0,3}(?:compan(?:y|ies)|business(?:es)?|income|receipts?|expenses?|costs?|claims?|transactions?|suppl(?:y|ies)|payments?|employees?|employers?|reliefs?|deductions?|allowances?|contributions?|returns?|mothers?|fathers?|parents?|spouses?|children|clients?)\b/iu.test(query);
+  const ownedCaseReference = /\b(?:my|our|your)\s+(?:(?:[\p{L}][\p{L}'’-]*)\s+){0,3}(?:compan(?:y|ies)|business(?:es)?|income|receipts?|expenses?|costs?|claims?|transactions?|suppl(?:y|ies)|payments?|employees?|employers?|reliefs?|deductions?|allowances?|contributions?|returns?|mothers?|fathers?|parents?|spouses?|children|clients?)\b/iu.test(query);
   const demonstrativeCaseReference = /\bthis\s+(?:business|company|income|receipt|expense|cost|claim|transaction|supply|payment|employee|employer)|these\s+(?:expenses|costs|claims|supplies)\b/i.test(query);
   const definitePartyOutcome = /\b(?:can|could|may|might|does|do|is|are|will|would|should)\s+the\s+(?:company|business|taxpayer|recipient)\b[^?]{0,100}\b(?:claim\w*|qualif\w*|eligib\w*|deduct\w*|taxable|liable|apply\s+for|pay\s+tax)\b/i.test(query);
   const namedEntity = /\b[A-Z][\p{L}\p{N}&.'’-]*(?:\s+[A-Z][\p{L}\p{N}&.'’-]*){0,3}\s+(?:Pte\.?\s+Ltd\.?|Private\s+Limited|Limited|Ltd\.?|LLP|LLC|Inc\.?|Corporation|Corp\.?)\b/u.test(query);
@@ -621,10 +657,11 @@ function hasFirstPersonOutcomeApplication(query: string): boolean {
 }
 
 function isClearlyGeneralRuleQuestion(query: string): boolean {
-  const explicitGeneral = /\b(?:in\s+general|generally|as\s+a\s+general\s+rule|general\s+(?:rules?|criteria|conditions)|what\s+are\s+(?:the\s+)?(?:rules|criteria|conditions)|(?:what|which)\s+conditions?\b|who\s+qualifies|interaction\s+between|interact\w*|overlap\w*|prioriti[sz]\w*|relationship\s+between)\b/i.test(query);
+  const explicitGeneral = /\b(?:in\s+general|generally|as\s+a\s+general\s+rule|general\s+(?:rules?|criteria|conditions|overview|explanation|principles?)|what\s+are\s+(?:the\s+)?(?:rules|criteria|conditions)|(?:what|which)\s+conditions?\b|who\s+qualifies|interaction\s+between|interact\w*|overlap\w*|prioriti[sz]\w*|relationship\s+between)\b/i.test(query);
+  const genericHypotheticalRule = /\b(?:if|when)\s+(?:a|an|any)\s+(?:(?:singapore|resident|individual|foreign)\s+){0,2}(?:tax\s+resident|employee|employer|company|business|individual|person|taxpayer)\b[^?]{0,220}\b(?:when|whether|what|how)\b/i.test(query);
   const capInteraction = /\b(?:cap|limit|threshold)\b/i.test(query) &&
     /\b(?:interact\w*|overlap\w*|prioriti[sz]\w*|relationship)\b/i.test(query);
-  return explicitGeneral || capInteraction;
+  return explicitGeneral || genericHypotheticalRule || capInteraction;
 }
 
 function asksForCaseOutcome(query: string): boolean {
@@ -662,7 +699,7 @@ function queryForSemanticIssue(query: string, subject: string): string | undefin
 
 function genericClassEligibilityQuestion(query: string): boolean {
   return /\b(?:can|could|may|might|does|do)\s+(?:(?:any|all)\s+|an?\s+(?!named\b|specific\b|particular\b|given\b))[^?]{0,100}\b(?:employees?|companies|individuals?|persons?|people|claimants?|taxpayers?)\b[^?]{0,80}\b(?:claim|qualif\w*|eligib\w*)\b/i.test(query) ||
-    /\b(?:who\s+qualifies|what\s+are\s+(?:the\s+)?(?:conditions|criteria)\s+for)\b/i.test(query);
+    /\b(?:who\s+(?:can|could|may|might)\s+claim|who\s+qualifies|what\s+are\s+(?:the\s+)?(?:conditions|criteria)\s+for)\b/i.test(query);
 }
 
 function issueRequiresUserSpecificFacts(
@@ -688,32 +725,44 @@ function issueRequiresUserSpecificFacts(
   if (isClearlyGeneralRuleQuestion(issueQuery)) return false;
   if (operation === 'COMPARE' && /\bcompare\b/i.test(issueQuery)) return false;
   if (operation === 'EXPLAIN_INTERACTION' && /\b(?:interact\w*|overlap\w*|prioriti[sz]\w*|relationship\s+between)\b/i.test(issueQuery)) return false;
-  if (operation === 'FILING_REQUIREMENT' && /\b(?:what\s+are|explain|general|filing requirements?)\b/i.test(issueQuery)) return false;
+  if (operation === 'FILING_REQUIREMENT') {
+    if (/\bgeneral\b/i.test(issueQuery)) return false;
+    // A short filing clause such as “what procedure applies?” can refer back
+    // to a concrete event in another clause. Keep that shared case context for
+    // this issue only; an explicit general-rules clause remains source-only.
+    const wholeQueryHasCaseContext = hasExplicitCaseReference(query) ||
+      hasCaseLinkedCircumstances(query) || hasFirstPersonOutcomeApplication(query);
+    if (wholeQueryHasCaseContext && /\bappl(?:y|ies)\b/i.test(issueQuery)) return true;
+    if (
+      /\b(?:what\s+are|explain|filing requirements?)\b/i.test(issueQuery) ||
+      /\b(?:what|which)\b[^?]{0,100}\b(?:return|filing|file|submit|notification|report)\b/i.test(issueQuery)
+    ) return false;
+  }
   return undefined;
 }
 
-/** Returns true only when a structurally valid model response contradicts the requested case specificity. */
+function deriveRequestedIssueSpecificity(
+  query: string | undefined,
+  issue: Pick<SemanticQuestionIssue, 'operation' | 'subject'>,
+  alignToIssue = true
+): boolean {
+  if (CASE_FACTS_REQUIRED_OPERATIONS.has(issue.operation)) return true;
+  if (query === undefined) return true;
+  // Unknown intent is deliberately conservative. A provider hint or the root
+  // OR flag must never turn an unresolved issue into source-only evidence.
+  return issueRequiresUserSpecificFacts(query, issue.operation, issue.subject, alignToIssue) ?? true;
+}
+
+/** Specificity metadata is derived, so disagreement with a historical provider flag is not a contradiction. */
 export function hasSemanticQueryContractContradiction(query: string, value: unknown): boolean {
-  const semantic = validateSemanticQuestionInterpretation(value);
-  if (!semantic) return false;
-  const alignToIssue = (semantic.issues?.length || 0) > 1;
-  const issueRequirements = semantic.issues?.map(issue =>
-    issueRequiresUserSpecificFacts(query, issue.operation, issue.subject, alignToIssue));
-  const inferredRequirement = issueRequirements?.length
-    ? issueRequirements.some(requirement => requirement === true)
-      ? true
-      : issueRequirements.every(requirement => requirement === false) ? false : undefined
-    : issueRequiresUserSpecificFacts(query, semantic.requestedOperation, semantic.primarySubject, false);
-  if (inferredRequirement === true) return semantic.requiresUserSpecificFacts === false;
-  if (inferredRequirement === false) return semantic.requiresUserSpecificFacts === true;
-  return false;
+  void query;
+  return isRecord(value) && hasSemanticContractContradiction(value);
 }
 
 function validatedSemanticForQuery(query: string, understanding: SemanticQuestionUnderstanding): SemanticQuestionInterpretation | undefined {
   const wrapperIsValidated = (understanding.mode === 'SEMANTIC_INTERPRETATION' || understanding.mode === 'SEMANTIC_PLUS_RULES') &&
     understanding.failure === undefined;
-  const semantic = wrapperIsValidated ? validateSemanticQuestionInterpretation(understanding.interpretation) : undefined;
-  return semantic && !hasSemanticQueryContractContradiction(query, semantic) ? semantic : undefined;
+  return wrapperIsValidated ? validateSemanticQuestionInterpretation(understanding.interpretation, query) : undefined;
 }
 
 function deterministicCaseFactGuard(
@@ -744,7 +793,7 @@ function refineUnknownEmploymentPopulation(
     /\b(?:tax(?:able|ability|ed)?|income\s+tax|perquisites?|benefits?\s+in\s+kind)\b/i.test(`${query} ${semanticSubject}`) &&
     !explicitCompanyTaxOutcome && !asksEmployerCompliance;
   if (employmentBenefitQuestion && semantic.population !== 'EMPLOYEE') {
-    return validateSemanticQuestionInterpretation({ ...semantic, population: 'EMPLOYEE' }) || semantic;
+    return validateSemanticQuestionInterpretation({ ...semantic, population: 'EMPLOYEE' }, query) || semantic;
   }
   if (semantic.domain !== 'IRAS_INCOME_TAX' || semantic.population !== 'UNKNOWN') return semantic;
   const describesEmploymentIncome = /\b(?:employment\s+income|employee\s+(?:income|earnings)|salary|wages?)\b/i.test(semanticSubject);
@@ -753,7 +802,7 @@ function refineUnknownEmploymentPopulation(
     /\b(?:salar(?:y|ies)|wages?|employment\s+income)\b[^.!?]{0,180}\b(?:taxed\s+twice|double\s+tax(?:ation)?|foreign\s+tax\s+credits?)\b/i.test(query);
   const hasTaxTreatyQuestion = /\b(?:income\s+tax|tax\s+treatment|taxable|double\s+tax(?:ation)?|tax\s+treaty|foreign\s+tax\s+credits?)\b/i.test(query);
   if (!describesEmploymentIncome || !identifiesEmployeeRecipient || !hasTaxTreatyQuestion) return semantic;
-  return validateSemanticQuestionInterpretation({ ...semantic, population: 'EMPLOYEE' }) || semantic;
+  return validateSemanticQuestionInterpretation({ ...semantic, population: 'EMPLOYEE' }, query) || semantic;
 }
 
 function explicitlyRequestsCpfPayrollOutcome(query: string): boolean {
@@ -894,14 +943,15 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
 /** Concepts derived from the complete query plus validated intent labels; never evidence by themselves. */
 export function getRequestedQuestionConcepts(query: string, understanding?: SemanticQuestionUnderstanding | SemanticQuestionInterpretation): RequestedQuestionConcept[] {
   const semantic = validateSemanticQuestionInterpretation(
-    understanding && 'interpretation' in understanding ? understanding.interpretation : understanding
+    understanding && 'interpretation' in understanding ? understanding.interpretation : understanding,
+    query
   );
   return canonicalRequestedConcepts(query, semantic);
 }
 
 /** Query terms used only to rank/fetch scoped evidence; user facts and evidence gates keep the original question. */
 export function buildSemanticDiscoveryQuery(query: string, interpretation?: SemanticQuestionInterpretation): string {
-  const semantic = validateSemanticQuestionInterpretation(interpretation);
+  const semantic = validateSemanticQuestionInterpretation(interpretation, query);
   if (!semantic || !isIrasDomain(semantic.domain)) return query;
   const concepts = semantic.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept);
   return [query, semantic.primarySubject, ...concepts, semantic.population, semantic.requestedOperation]
@@ -1151,7 +1201,7 @@ function reconcileSemanticIssuePlan(
         evidenceRequirement: deriveEvidenceRequirement(
           routedIssue.domain,
           routedIssue.operation,
-          issueRequiresUserSpecificFacts(query, routedIssue.operation, routedIssue.subject, semanticIssues.length > 1) ?? semantic.requiresUserSpecificFacts
+          deriveRequestedIssueSpecificity(query, routedIssue, semanticIssues.length > 1)
         )
       };
       const unresolvedReason: ReconciledSemanticQuestionIssue['unresolvedReason'] = mappedTopicIds.length > 0
@@ -1226,7 +1276,7 @@ export function projectQuestionUnderstandingDiagnostics(understanding: SemanticQ
 
 /** Values for a transient IRAS retrieval topic. These only affect target selection/ranking. */
 export function getSemanticIrasDiscoveryContext(understanding: SemanticQuestionUnderstanding | undefined, query = '') {
-  const semantic = validateSemanticQuestionInterpretation(understanding?.interpretation);
+  const semantic = validateSemanticQuestionInterpretation(understanding?.interpretation, query || undefined);
   if (!semantic || !isIrasDomain(semantic.domain) || !semantic.authorityCandidates.includes('IRAS')) return undefined;
   const requestedConcepts = canonicalRequestedConcepts(query, semantic);
   const semanticText = `${semantic.primarySubject} ${semantic.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept).join(' ')}`;
@@ -1295,9 +1345,9 @@ function relevantDeterministicMissingFacts(
 }
 
 function requiresCaseSpecificFacts(query: string, semantic: SemanticQuestionInterpretation): boolean {
-  if (hasExplicitCaseReference(query) && asksForCaseOutcome(query)) return true;
+  if (CASE_FACTS_REQUIRED_OPERATIONS.has(semantic.requestedOperation)) return true;
   const alignToIssue = (semantic.issues?.length || 0) > 1;
   if (semantic.issues?.length) return semantic.issues.some(issue =>
-    issueRequiresUserSpecificFacts(query, issue.operation, issue.subject, alignToIssue) ?? semantic.requiresUserSpecificFacts);
-  return issueRequiresUserSpecificFacts(query, semantic.requestedOperation, semantic.primarySubject, false) ?? semantic.requiresUserSpecificFacts;
+    deriveRequestedIssueSpecificity(query, issue, alignToIssue));
+  return deriveRequestedIssueSpecificity(query, { operation: semantic.requestedOperation, subject: semantic.primarySubject }, false);
 }

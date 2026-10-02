@@ -5,7 +5,8 @@ import { runSemanticContractFollowupEvaluation } from './semantic-contract-follo
 const SUPPORTED_PROFILES = new Set([
   'intent-targeted', 'intent-final', 'authority-relief-targeted-live', 'authority-relief-final-live',
   'semantic-wire-format-targeted-live', 'semantic-wire-format-final-live',
-  'iras-first-targeted-v1-live', 'iras-first-final-v1-live'
+  'iras-first-targeted-v1-live', 'iras-first-final-v1-live',
+  'iras-first-targeted-v2-live', 'iras-first-final-v2-live'
 ]);
 const SAFE_ERRORS = new Set([
   'A semantic contract follow-up output file already exists.',
@@ -16,13 +17,15 @@ const SAFE_ERRORS = new Set([
   'The IRAS-first targeted profile has not passed; final live capture is gated.',
   'The authority-relief targeted profile has not passed; final live capture is gated.',
   'A protected semantic evaluation artifact has changed.',
-  'The semantic wire-format targeted profile has not passed; final live capture is gated.'
+  'The semantic wire-format targeted profile has not passed; final live capture is gated.',
+  'The IRAS-first V2 targeted profile has not passed; final live capture is gated.',
+  'The IRAS-first V2 timeout experiment has not passed its fixed policy; targeted capture is gated.'
 ]);
 
 export function parseSemanticIntentProfileArgs(args) {
   if (!Array.isArray(args) || args.length !== 3 || args[0] !== '--profile' ||
       !SUPPORTED_PROFILES.has(args[1]) || args[2] !== '--live') {
-    throw new Error('Usage: --profile intent-targeted|intent-final|authority-relief-targeted-live|authority-relief-final-live|semantic-wire-format-targeted-live|semantic-wire-format-final-live|iras-first-targeted-v1-live|iras-first-final-v1-live --live');
+    throw new Error('Usage: --profile intent-targeted|intent-final|authority-relief-targeted-live|authority-relief-final-live|semantic-wire-format-targeted-live|semantic-wire-format-final-live|iras-first-targeted-v1-live|iras-first-final-v1-live|iras-first-targeted-v2-live|iras-first-final-v2-live --live');
   }
   return args[1];
 }

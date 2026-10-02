@@ -8,6 +8,7 @@ import { executeStructuredLlmCall } from '../../../src/services/aiTransport.ts';
 import { buildAuthorityWorkstreams, planAuthorityWorkstreams } from '../../../src/services/authorityWorkstreams.ts';
 import {
   canonicalAccountingWorkstreamAuthority,
+  SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
   interpretSemanticQuestion,
   reconcileQuestionUnderstanding,
   SEMANTIC_QUESTION_TIMEOUT_MS
@@ -15,6 +16,7 @@ import {
 import { diagnoseSemanticResponse } from './semantic-contract-diagnosis.mjs';
 import { matchIssues, scoreIssueDimensions } from './multi-authority-issue-scoring.mjs';
 import irasFirstConfig from './iras-first-evaluation-config-v1.json' with { type: 'json' };
+import irasFirstConfigV2 from './iras-first-evaluation-config-v2.json' with { type: 'json' };
 import {
   AUTHORITY_COVERAGE_SCOPE,
   IRAS_FIRST_GAP_CODES,
@@ -34,6 +36,7 @@ const PROJECT_ROOT = path.resolve(SCRIPT_DIRECTORY, '../../..');
 const REPORT_DIRECTORY = path.join(PROJECT_ROOT, 'docs', 'evaluation', 'multi-authority-workstreams');
 const SEMANTIC_WIRE_FORMAT_OUTPUT_DIRECTORY = path.join(REPORT_DIRECTORY, 'semantic-wire-format-live-2026-10-02');
 const IRAS_FIRST_OUTPUT_DIRECTORY = path.join(REPORT_DIRECTORY, 'iras-first-live-2026-10-02-v1');
+const IRAS_FIRST_V2_OUTPUT_DIRECTORY = path.join(REPORT_DIRECTORY, 'iras-first-live-2026-10-02-v2');
 const MODEL = 'gemini-3.5-flash-lite';
 const START_GAP_MS = 15_250;
 const OUTPUT_PREFIX = 'semantic-contract-followup-v2-live';
@@ -45,10 +48,14 @@ const SEMANTIC_WIRE_FORMAT_TARGETED_OUTPUT_PREFIX = 'semantic-wire-format-target
 const SEMANTIC_WIRE_FORMAT_FINAL_OUTPUT_PREFIX = 'semantic-wire-format-final-live';
 const IRAS_FIRST_TARGETED_PROFILE = 'iras-first-targeted-v1-live';
 const IRAS_FIRST_FINAL_PROFILE = 'iras-first-final-v1-live';
+const IRAS_FIRST_TARGETED_V2_PROFILE = 'iras-first-targeted-v2-live';
+const IRAS_FIRST_FINAL_V2_PROFILE = 'iras-first-final-v2-live';
 const IRAS_FIRST_TARGETED_OUTPUT_PREFIX = irasFirstConfig.targetedOutputPrefix;
 const IRAS_FIRST_FINAL_OUTPUT_PREFIX = irasFirstConfig.finalOutputPrefix;
 const IRAS_FIRST_CONFIG_FIXTURE = path.join(SCRIPT_DIRECTORY, 'iras-first-evaluation-config-v1.json');
+const IRAS_FIRST_V2_CONFIG_FIXTURE = path.join(SCRIPT_DIRECTORY, 'iras-first-evaluation-config-v2.json');
 const IRAS_FIRST_HISTORICAL_ARTIFACT_MANIFEST = path.join(IRAS_FIRST_OUTPUT_DIRECTORY, 'historical-artifact-hashes.json');
+const IRAS_FIRST_V2_HISTORICAL_ARTIFACT_MANIFEST = path.join(PROJECT_ROOT, irasFirstConfigV2.protectedHistoryManifest);
 const PRIMARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-contract-followup.json');
 const OPERATION_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-operation-followup.json');
 const GUIDANCE_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-reliability-post-guidance.json');
@@ -59,6 +66,7 @@ const SEMANTIC_WIRE_FORMAT_PROTECTED_HASHES = path.join(REPORT_DIRECTORY, 'seman
 const COMPARABLE_BASELINE = path.join(REPORT_DIRECTORY, 'contract-followup-comparable-baseline.json');
 const EVALUATION_RUNNER_FILE = fileURLToPath(import.meta.url);
 const INTENT_CLI_RUNNER_FILE = path.join(SCRIPT_DIRECTORY, 'semantic-intent-followup-evaluation.mjs');
+const TIMEOUT_EXPERIMENT_RUNNER_FILE = path.join(SCRIPT_DIRECTORY, 'semantic-structured-timeout-experiment-v2.mjs');
 const SOURCE_FILES = Object.freeze({
   semanticInterpretation: path.join(PROJECT_ROOT, 'src', 'services', 'semanticQuestionUnderstanding.ts'),
   transport: path.join(PROJECT_ROOT, 'src', 'services', 'aiTransport.ts'),
@@ -71,6 +79,12 @@ const IRAS_FIRST_SCOPE_FILES = Object.freeze({
   releaseContract: path.join(SCRIPT_DIRECTORY, 'iras-first-release-contract.mjs'),
   profileConfig: IRAS_FIRST_CONFIG_FIXTURE,
   historicalArtifactManifest: IRAS_FIRST_HISTORICAL_ARTIFACT_MANIFEST
+});
+const IRAS_FIRST_V2_SCOPE_FILES = Object.freeze({
+  releaseContract: path.join(SCRIPT_DIRECTORY, 'iras-first-release-contract.mjs'),
+  profileConfig: IRAS_FIRST_V2_CONFIG_FIXTURE,
+  inheritedV1ProfileConfig: IRAS_FIRST_CONFIG_FIXTURE,
+  historicalArtifactManifest: IRAS_FIRST_V2_HISTORICAL_ARTIFACT_MANIFEST
 });
 const AUTHORITY_RELIEF_RESOLVER_FILES = Object.freeze({
   queryTopicResolver: path.join(PROJECT_ROOT, 'src', 'retrieval', 'queryTopicResolver.ts'),
@@ -183,7 +197,9 @@ const SAFE_RUNNER_ERRORS = new Set([
   'A fixed evaluation case did not make exactly one provider request.',
   'The authority-relief targeted profile has not passed; final live capture is gated.',
   'A protected semantic evaluation artifact has changed.',
-  'The semantic wire-format targeted profile has not passed; final live capture is gated.'
+  'The semantic wire-format targeted profile has not passed; final live capture is gated.',
+  'The IRAS-first V2 targeted profile has not passed; final live capture is gated.',
+  'The IRAS-first V2 timeout experiment has not passed its fixed policy; targeted capture is gated.'
 ]);
 
 function sha256(value) {
@@ -223,6 +239,32 @@ async function assertHistoricalArtifactsUnchanged() {
   }));
   if (!checks.every(Boolean)) throw new Error('A protected semantic evaluation artifact has changed.');
   return { artifactCount: checks.length, verified: true };
+}
+
+async function assertV2HistoricalArtifactsUnchanged() {
+  const manifest = await readJson(IRAS_FIRST_V2_HISTORICAL_ARTIFACT_MANIFEST);
+  if (manifest?.baselineCommit !== '4bd3abc9c22619401f22aa8abba73af61b5d6217' ||
+      !Array.isArray(manifest.artifacts) || manifest.artifacts.length !== 118 ||
+      new Set(manifest.artifacts.map(item => item?.path)).size !== manifest.artifacts.length) {
+    throw new Error('A protected semantic evaluation artifact has changed.');
+  }
+  const checks = await Promise.all(manifest.artifacts.map(async item => {
+    if (typeof item?.path !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)) return false;
+    const filePath = path.resolve(PROJECT_ROOT, item.path);
+    const relativePath = path.relative(PROJECT_ROOT, filePath);
+    if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false;
+    try {
+      return await hashFile(filePath) === item.sha256;
+    } catch {
+      return false;
+    }
+  }));
+  if (!checks.every(Boolean)) throw new Error('A protected semantic evaluation artifact has changed.');
+  return { baselineCommit: manifest.baselineCommit, artifactCount: checks.length, verified: true };
+}
+
+export async function assertIrasFirstV2HistoricalArtifactsUnchanged() {
+  return assertV2HistoricalArtifactsUnchanged();
 }
 
 function sameManifest(left, right) {
@@ -527,6 +569,155 @@ export async function loadIrasFirstFinalCases() {
   return selected;
 }
 
+function validateIrasFirstV2ProfileConfig() {
+  const targeted = irasFirstConfigV2.targetedCaseIds;
+  const final = irasFirstConfigV2.finalCaseIds;
+  const fixed = irasFirstConfigV2.newTargetedCases;
+  const specificity = irasFirstConfigV2.caseSpecificityById;
+  const timeout = irasFirstConfigV2.timeoutExperiment;
+  const privateExpenseAdjudication = irasFirstConfigV2.adjudications?.['private-expense-treatment'];
+  const expectedTargeted = [
+    'target-relief-entitlement', 'target-relief-amount', 'A-paraphrase-2', 'private-expense-treatment',
+    'foreign-dividend-receipt-treatment', 'corporate-residency-general-rule', 'wht-royalty-general-rule',
+    'gst-input-tax-general-rule', 'unsupported-sfrsi-6-exploration-evaluation'
+  ];
+  const validFixedCases = Array.isArray(fixed) && fixed.length === 2 && fixed.every(testCase => {
+    try {
+      validateAuthorityReliefCase(testCase);
+      return testCase.expectedRequiresUserSpecificFacts === false;
+    } catch {
+      return false;
+    }
+  });
+  if (irasFirstConfigV2.schemaVersion !== 2 || irasFirstConfigV2.profileVersion !== 'iras-first-v2' ||
+      irasFirstConfigV2.inheritsExistingExpectationsFrom !== 'iras-first-evaluation-config-v1.json' ||
+      irasFirstConfigV2.protectedHistoryManifest !== 'docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/historical-artifact-hashes.json' ||
+      JSON.stringify(targeted) !== JSON.stringify(expectedTargeted) || new Set(targeted).size !== 9 ||
+      JSON.stringify(final) !== JSON.stringify(irasFirstConfig.finalCaseIds) || final.length !== 12 ||
+      !validFixedCases || new Set(fixed.map(testCase => testCase.id)).size !== 2 ||
+      JSON.stringify(fixed.map(testCase => testCase.id)) !== JSON.stringify(['wht-royalty-general-rule', 'gst-input-tax-general-rule']) ||
+      targeted.some(id => typeof specificity?.[id] !== 'boolean') || final.some(id => typeof specificity?.[id] !== 'boolean') ||
+      Object.values(irasFirstConfigV2.adjudications || {}).some(adjudication => adjudication?.version !== irasFirstConfigV2.profileVersion) ||
+      irasFirstConfigV2.baselineProductionTimeoutMs !== 8000 ||
+      timeout?.protocolVersion !== 'semantic-structured-timeout-v2' || timeout.model !== MODEL ||
+      JSON.stringify(timeout.caseIds) !== JSON.stringify(['corporate-residency-general-rule', 'target-mixed-ifrs-singapore-accounting', 'A-paraphrase-2']) ||
+      JSON.stringify(timeout.timeoutArmsMs) !== JSON.stringify([8000, 12000, 15000]) ||
+      timeout.observationsPerCaseArm !== 2 || timeout.minimumStartGapMs !== START_GAP_MS ||
+      timeout.recommendationPolicy?.defaultTimeoutMs !== irasFirstConfigV2.baselineProductionTimeoutMs ||
+      timeout.recommendationPolicy?.minimumTimeoutReductionVsDefault !== 2 ||
+      privateExpenseAdjudication?.version !== irasFirstConfigV2.profileVersion ||
+      JSON.stringify(privateExpenseAdjudication.contextualAuthoritiesAnyOf) !== JSON.stringify([[], ['ACCOUNTING_STANDARDS']])) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+}
+
+function applyIrasFirstV2Expectation(testCase, { historicalExpected } = {}) {
+  const copied = {
+    ...testCase,
+    expected: testCase.expected.map(issue => ({ ...issue })),
+    expectedWorkstreamsAnyOf: testCase.expectedWorkstreamsAnyOf.map(set => [...set]),
+    expectedRequiresUserSpecificFacts: irasFirstConfigV2.caseSpecificityById[testCase.id],
+    expectationVersion: irasFirstConfigV2.profileVersion
+  };
+  if (typeof copied.expectedRequiresUserSpecificFacts !== 'boolean') throw new Error('A required fixed evaluation case is missing.');
+  if (historicalExpected) copied.historicalExpected = historicalExpected.map(issue => ({ ...issue }));
+  const adjudication = irasFirstConfigV2.adjudications?.[testCase.id];
+  if (testCase.id === 'target-mixed-ifrs-singapore-accounting') {
+    if (adjudication?.version !== irasFirstConfigV2.profileVersion || !Array.isArray(adjudication.contextualAuthoritiesAnyOf)) {
+      throw new Error('A required fixed evaluation case is missing.');
+    }
+    copied.expected = copied.expected.map(issue => ({
+      ...issue,
+      contextualAuthoritiesAnyOf: adjudication.contextualAuthoritiesAnyOf.map(set => [...set])
+    }));
+    copied.adjudicationVersion = irasFirstConfigV2.profileVersion;
+  }
+  if (testCase.id === 'private-expense-treatment') {
+    if (adjudication?.version !== irasFirstConfigV2.profileVersion || !Array.isArray(adjudication.contextualAuthoritiesAnyOf)) {
+      throw new Error('A required fixed evaluation case is missing.');
+    }
+    copied.expected = copied.expected.map(issue => ({
+      ...issue,
+      contextualAuthoritiesAnyOf: adjudication.contextualAuthoritiesAnyOf.map(set => [...set])
+    }));
+    copied.adjudicationVersion = irasFirstConfigV2.profileVersion;
+  }
+  if (testCase.id === 'dev-investment-comparison') {
+    if (adjudication?.version !== irasFirstConfigV2.profileVersion || !Array.isArray(adjudication.populationAnyOf) ||
+        adjudication.coverageOutcome !== 'UNSUPPORTED') {
+      throw new Error('A required fixed evaluation case is missing.');
+    }
+    copied.expected = copied.expected.map(issue => ({ ...issue, population: [...adjudication.populationAnyOf] }));
+    copied.expectedCoverageOutcome = adjudication.coverageOutcome;
+    copied.adjudicationVersion = irasFirstConfigV2.profileVersion;
+  }
+  return copied;
+}
+
+/** Fixed V2 targeted set reuses V1 historical expectations and adds only the frozen general IRAS controls. */
+export async function loadIrasFirstV2TargetedCases() {
+  validateIrasFirstV2ProfileConfig();
+  const v1Cases = await loadIrasFirstTargetedCases();
+  const available = new Map(v1Cases.map(testCase => [testCase.id, testCase]));
+  for (const fixedCase of irasFirstConfigV2.newTargetedCases) {
+    const checked = validateAuthorityReliefCase(fixedCase);
+    if (available.has(checked.id)) throw new Error('A required fixed evaluation case is missing.');
+    available.set(checked.id, checked);
+  }
+  const selected = irasFirstConfigV2.targetedCaseIds.map(id => {
+    const testCase = available.get(id);
+    return testCase ? applyIrasFirstV2Expectation(testCase,
+      testCase.historicalExpected ? { historicalExpected: testCase.historicalExpected } : {}) : undefined;
+  });
+  if (selected.some(testCase => !testCase) || selected.length !== 9 ||
+      selected.filter(testCase => testCase.expected.some(issue => issue.governingAuthorities?.includes('IRAS'))).length !== 8 ||
+      selected.filter(testCase => testCase.expectedCoverageOutcome === 'UNSUPPORTED').length !== 1 ||
+      selected.some(testCase => testCase.expectationVersion !== irasFirstConfigV2.profileVersion)) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return selected;
+}
+
+/** Fixed V2 final set keeps the original ten historical questions and the same two IRAS relief cases. */
+export async function loadIrasFirstV2FinalCases() {
+  validateIrasFirstV2ProfileConfig();
+  const [historical, authorityCases] = await Promise.all([
+    loadSemanticContractFollowupCases(), loadAuthorityReliefTargetedCases()
+  ]);
+  const available = new Map([
+    ...historical.map(testCase => [testCase.id, testCase]),
+    ...authorityCases.map(testCase => [testCase.id, testCase])
+  ]);
+  const selected = irasFirstConfigV2.finalCaseIds.map(id => {
+    const testCase = available.get(id);
+    const original = historical.find(item => item.id === id);
+    return testCase ? applyIrasFirstV2Expectation(testCase, original ? { historicalExpected: original.expected } : {}) : undefined;
+  });
+  if (selected.some(testCase => !testCase) || selected.length !== 12 || historical.length !== 10 ||
+      historical.some(testCase => !selected.some(selectedCase => selectedCase.id === testCase.id)) ||
+      selected.some(testCase => testCase.expectationVersion !== irasFirstConfigV2.profileVersion)) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return selected;
+}
+
+/** Fixed cases for the isolated timeout pilot, drawn from the frozen V2 final set. */
+export async function loadIrasFirstV2TimeoutCases() {
+  const [finalCases, targetedCases, authorityCases] = await Promise.all([
+    loadIrasFirstV2FinalCases(), loadIrasFirstV2TargetedCases(), loadAuthorityReliefTargetedCases()
+  ]);
+  const available = new Map([...finalCases, ...targetedCases, ...authorityCases].map(testCase => [testCase.id, testCase]));
+  const selected = irasFirstConfigV2.timeoutExperiment.caseIds.map(id => {
+    const testCase = available.get(id);
+    return testCase ? applyIrasFirstV2Expectation(testCase) : undefined;
+  });
+  if (selected.some(testCase => !testCase) || selected.length !== 3 ||
+      JSON.stringify(selected.map(testCase => testCase.id)) !== JSON.stringify(irasFirstConfigV2.timeoutExperiment.caseIds)) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return selected;
+}
+
 function getExpectedIssues(fixture, testCase) {
   const issueContracts = fixture.issueContracts?.[testCase.contract];
   const requestedIds = testCase.expectedIssueIds || issueContracts?.map(issue => issue.id);
@@ -609,7 +800,7 @@ function safeResult(result) {
   };
 }
 
-function safeDiagnostic(diagnostic) {
+function safeDiagnostic(diagnostic, { includeMetadataMismatch = false } = {}) {
   if (!diagnostic || typeof diagnostic !== 'object') return undefined;
   const rawShape = diagnostic.safeShape && typeof diagnostic.safeShape === 'object' ? diagnostic.safeShape : {};
   const shapeCount = value => Number.isInteger(value) && value >= 0 ? Math.min(value, 1_000_000) : 0;
@@ -621,6 +812,11 @@ function safeDiagnostic(diagnostic) {
     violationCodes: Array.isArray(diagnostic.violations)
       ? diagnostic.violations.slice(0, 24).map(item => REJECTION_CODES.has(item?.code) ? item.code : 'UNCLASSIFIED_REJECTION')
       : [],
+    ...(includeMetadataMismatch ? {
+      caseFlagMismatch: diagnostic.caseFlagMismatch === true,
+      nonViolationCodes: Array.isArray(diagnostic.nonViolationCodes)
+        ? diagnostic.nonViolationCodes.filter(code => code === 'CASE_FLAG_MISMATCH').slice(0, 4) : []
+    } : {}),
     safeShape: {
       rootType: rootType.has(rawShape.rootType) ? rawShape.rootType : 'UNKNOWN',
       responseType: rootType.has(rawShape.responseType) ? rawShape.responseType : 'UNKNOWN',
@@ -1080,6 +1276,8 @@ function renderMarkdown(document) {
     document.evaluationProfile === 'semantic-wire-format-final-live';
   const heading = document.evaluationProfile === IRAS_FIRST_TARGETED_PROFILE ? '# IRAS-first v1 targeted evaluation'
     : document.evaluationProfile === IRAS_FIRST_FINAL_PROFILE ? '# IRAS-first v1 final evaluation'
+    : document.evaluationProfile === IRAS_FIRST_TARGETED_V2_PROFILE ? '# IRAS-first v2 targeted evaluation'
+      : document.evaluationProfile === IRAS_FIRST_FINAL_V2_PROFILE ? '# IRAS-first v2 final evaluation'
     : document.evaluationProfile === 'semantic-wire-format-targeted-live' ? '# Semantic wire-format targeted live evaluation'
     : document.evaluationProfile === 'semantic-wire-format-final-live' ? '# Semantic wire-format final live evaluation'
     : document.evaluationProfile === 'authority-relief-targeted-live' ? '# Authority and relief targeted live evaluation'
@@ -1361,6 +1559,32 @@ export function profileConfiguration(evaluationProfile) {
         : 'IRAS-first v1 fixed final semantic and release-contract evaluation; the unchanged historical ten plus two central IRAS relief cases.'
     };
   }
+  if (evaluationProfile === IRAS_FIRST_TARGETED_V2_PROFILE || evaluationProfile === IRAS_FIRST_FINAL_V2_PROFILE) {
+    const targeted = evaluationProfile === IRAS_FIRST_TARGETED_V2_PROFILE;
+    return {
+      evaluationProfile,
+      outputPrefix: targeted ? irasFirstConfigV2.targetedOutputPrefix : irasFirstConfigV2.finalOutputPrefix,
+      defaultOutputDirectory: IRAS_FIRST_V2_OUTPUT_DIRECTORY,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        ...AUTHORITY_RELIEF_RESOLVER_FILES,
+        ...IRAS_FIRST_V2_SCOPE_FILES,
+        semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
+        semanticIntentCliRunner: INTENT_CLI_RUNNER_FILE,
+        timeoutExperimentRunner: TIMEOUT_EXPERIMENT_RUNNER_FILE
+      },
+      fixtureFiles: {
+        ...FIXTURE_FILES,
+        authorityReliefTargeted: AUTHORITY_RELIEF_TARGETED_FIXTURE,
+        semanticIntentBoundaries: INTENT_BOUNDARY_FIXTURE,
+        irasFirstV1Profile: IRAS_FIRST_CONFIG_FIXTURE,
+        irasFirstV2Profile: IRAS_FIRST_V2_CONFIG_FIXTURE
+      },
+      purpose: targeted
+        ? 'IRAS-first V2 fixed targeted semantic and release-contract evaluation; six IRAS questions, two general controls, and one unsupported non-IRAS control.'
+        : 'IRAS-first V2 fixed final semantic and release-contract evaluation; the unchanged historical ten plus two central IRAS relief cases.'
+    };
+  }
   throw new Error('A supported fixed evaluation profile is required.');
 }
 
@@ -1539,7 +1763,7 @@ function irasFirstDiagnosticMatchesExpectation(diagnostic, expected, testCase) {
       expectedPair.authority === actual.authority && expectedPair.domain === actual.domain));
 }
 
-function strictIrasFirstTargetRowPassed(row, testCase, index) {
+function strictIrasFirstTargetRowPassed(row, testCase, index, profileVersion = IRAS_FIRST_PROFILE_VERSION) {
   const acceptance = row?.irasFirstAcceptance;
   const expectedCount = testCase.expected.length;
   const score = row?.canonicalScoring;
@@ -1609,6 +1833,13 @@ function strictIrasFirstTargetRowPassed(row, testCase, index) {
     });
   const diagnosticSafe = row?.responseDiagnostic?.validatorAccepted === true && row.responseDiagnostic.interpreted === true &&
     hasNoPrivatePayloadKeys(row.responseDiagnostic);
+  const v2MetadataMismatchSafe = profileVersion !== irasFirstConfigV2.profileVersion ||
+    typeof row?.responseDiagnostic?.caseFlagMismatch === 'boolean' &&
+    Array.isArray(row.responseDiagnostic.nonViolationCodes) &&
+    Array.isArray(row.responseDiagnostic.violationCodes) &&
+    exactSameSet(row.responseDiagnostic.nonViolationCodes,
+      row.responseDiagnostic.caseFlagMismatch ? ['CASE_FLAG_MISMATCH'] : []) &&
+    !row.responseDiagnostic.violationCodes.includes('CASE_FLAG_MISMATCH');
   const requiredGuardsPassed = Boolean(row?.routing?.guardChecks) &&
     IRAS_FIRST_REQUIRED_GUARDS.every(name => row.routing.guardChecks[name] === true);
   const assignmentCounts = row?.routing?.runtimeAssignmentCounts;
@@ -1633,7 +1864,7 @@ function strictIrasFirstTargetRowPassed(row, testCase, index) {
     assignmentCounts?.issuePlanResidualAccommodation === (assignmentCounts.unresolvedPlanIssueCount > 0);
   const aggregateVerifiedIsSupported = admittedEvidenceConsistent(row?.routing);
   return row?.caseId === testCase.id && JSON.stringify(row.expectedIssueIds) === JSON.stringify(testCase.expected.map(issue => issue.id)) &&
-    row.expectationVersion === IRAS_FIRST_PROFILE_VERSION &&
+    row.expectationVersion === profileVersion &&
     row.adjudicationVersion === testCase.adjudicationVersion &&
     row.expectedCoverageOutcome === testCase.expectedCoverageOutcome &&
     row.expectedWorkstreamSetCount === testCase.expectedWorkstreamsAnyOf.length && row.validInterpretation === true &&
@@ -1641,46 +1872,368 @@ function strictIrasFirstTargetRowPassed(row, testCase, index) {
     row.sourceHashesConsistent === true && row.fixtureHashesConsistent === true &&
     Object.keys(row).every(key => IRAS_FIRST_ROW_KEYS.has(key)) && hasNoPrivatePayloadKeys(row) && capturePassed &&
     diagnosticSafe && dimensionsAllCorrect && specific && acceptance?.semanticQualityPassed === true &&
+    v2MetadataMismatchSafe &&
     acceptance.releaseCoveragePassed === true && acceptance.runtimeIntegrity === true && acceptance.passed === true &&
     scopeAwareWorkstreamSetAccuracy(testCase, row.routing.runtimeIssueScopeDiagnostics, matchedExpectedIds) === true &&
     runtimeAssignmentsPassed && aggregateVerifiedIsSupported &&
     perIssuePassed && perDiagnosticExpectationsPassed && requiredGuardsPassed;
 }
 
-/** Rederive final eligibility from the fixed versioned cases, row-level scores, routing evidence, and fingerprints. */
-export async function requirePassingIrasFirstTarget(outputDirectory) {
+async function currentIrasV2TimeoutPromptFingerprints() {
+  const cases = await loadIrasFirstV2TimeoutCases();
+  const fingerprints = {};
+  for (const testCase of cases) {
+    let observed;
+    await interpretSemanticQuestion(testCase.question, 'local-no-network-profile-probe-key', async (prompt, system, _provider, options) => {
+      if (observed) throw new Error('A fixed evaluation case made more than one profile probe.');
+      const schemaJson = JSON.stringify(options?.responseJsonSchema);
+      observed = {
+        promptSha256: sha256(prompt),
+        promptChars: prompt.length,
+        systemSha256: sha256(system),
+        systemChars: system.length,
+        schemaSha256: sha256(schemaJson),
+        schemaBytes: Buffer.byteLength(schemaJson, 'utf8'),
+        jsonMode: options?.jsonMode === true,
+        temperature: options?.temperature,
+        timeoutMs: options?.timeoutMs
+      };
+      throw new Error('Local profile probe stops before provider transport.');
+    });
+    if (!observed || !observed.jsonMode || observed.temperature !== 0 ||
+        observed.timeoutMs !== SEMANTIC_QUESTION_TIMEOUT_MS ||
+        observed.schemaSha256 !== sha256(JSON.stringify(SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA))) {
+      throw new Error('The IRAS-first V2 timeout experiment has not passed its fixed policy; targeted capture is gated.');
+    }
+    const { jsonMode: _jsonMode, temperature: _temperature, timeoutMs: _timeoutMs, ...safeFingerprint } = observed;
+    fingerprints[testCase.id] = safeFingerprint;
+  }
+  return fingerprints;
+}
+
+async function normalizedSemanticInterpretationFingerprint() {
+  const source = await readFile(SOURCE_FILES.semanticInterpretation, 'utf8');
+  const pattern = /^export const SEMANTIC_QUESTION_TIMEOUT_MS = [0-9_]+;$/gm;
+  const matches = source.match(pattern) || [];
+  if (matches.length !== 1) {
+    throw new Error('The IRAS-first V2 timeout experiment has not passed its fixed policy; targeted capture is gated.');
+  }
+  return sha256(source.replace(pattern, 'export const SEMANTIC_QUESTION_TIMEOUT_MS = <approved-timeout>;'));
+}
+
+export function buildIrasV2TimeoutSchedule() {
+  const caseIds = irasFirstConfigV2.timeoutExperiment.caseIds;
+  const arms = irasFirstConfigV2.timeoutExperiment.timeoutArmsMs;
+  const schedule = [];
+  for (const replicate of [1, 2]) {
+    const caseOrder = replicate === 1 ? [0, 1, 2] : [2, 1, 0];
+    for (const caseIndex of caseOrder) {
+      const rotation = caseIndex % arms.length;
+      const rotated = [...arms.slice(rotation), ...arms.slice(0, rotation)];
+      const orderedArms = replicate === 1 ? rotated : [...rotated].reverse();
+      for (const timeoutMs of orderedArms) schedule.push({ caseId: caseIds[caseIndex], timeoutMs, replicate });
+    }
+  }
+  return schedule;
+}
+
+export function exactTimeoutObservationCells(observations) {
+  const expectedCases = irasFirstConfigV2.timeoutExperiment.caseIds;
+  const expectedArms = irasFirstConfigV2.timeoutExperiment.timeoutArmsMs;
+  const observationKeys = new Set([
+    'caseId', 'timeoutMs', 'replicate', 'requestStartGapMs', 'outcome', 'responseReceived',
+    'validInterpretation', 'semanticCorrect', 'failureCode', 'providerStatus', 'promptChars', 'systemChars',
+    'schemaChars', 'issueCount', 'outputBytes', 'completionLatencyMs', 'timeoutCensoredDurationMs',
+    'providerFailureDurationMs', 'responseChars', 'firstRequest'
+  ]);
+  if (!Array.isArray(observations) || observations.length !== 18) return false;
+  const counts = new Map();
+  for (const observation of observations) {
+    if (!observation || Object.keys(observation).some(key => !observationKeys.has(key)) ||
+        !expectedCases.includes(observation.caseId) || !expectedArms.includes(observation.timeoutMs) ||
+        !Number.isInteger(observation.replicate) || ![1, 2].includes(observation.replicate) ||
+        !['RESPONSE_RECEIVED', 'TIMEOUT', 'PROVIDER_ERROR', 'RATE_LIMITED'].includes(observation.outcome) ||
+        typeof observation.responseReceived !== 'boolean' ||
+        typeof observation.validInterpretation !== 'boolean' || typeof observation.semanticCorrect !== 'boolean' ||
+        !Number.isInteger(observation.promptChars) || observation.promptChars <= 0 ||
+        !Number.isInteger(observation.systemChars) || observation.systemChars <= 0 ||
+        !Number.isInteger(observation.schemaChars) || observation.schemaChars <= 0 ||
+        observation.failureCode !== undefined && !FAILURE_CODES.has(observation.failureCode) ||
+        observation.providerStatus !== undefined && (!Number.isInteger(observation.providerStatus) ||
+          observation.providerStatus < 100 || observation.providerStatus > 599) ||
+        observation.semanticCorrect && !observation.validInterpretation ||
+        observation.validInterpretation && (!observation.responseReceived || observation.outcome !== 'RESPONSE_RECEIVED' ||
+          observation.failureCode !== undefined || !Number.isInteger(observation.issueCount) || observation.issueCount <= 0) ||
+        !observation.responseReceived && (observation.issueCount !== undefined || observation.outputBytes !== undefined ||
+          observation.responseChars !== undefined) ||
+        observation.responseChars !== undefined && (!Number.isInteger(observation.responseChars) || observation.responseChars <= 0) ||
+        observation.responseChars !== undefined && (!Number.isInteger(observation.outputBytes) || observation.outputBytes <= 0) ||
+        Number.isInteger(observation.responseChars) !== Number.isInteger(observation.outputBytes) ||
+        observation.responseReceived !== (observation.outcome === 'RESPONSE_RECEIVED') ||
+        (observation.firstRequest !== undefined && observation.firstRequest !== true) ||
+        observation.responseReceived && (!Number.isFinite(observation.completionLatencyMs) || observation.completionLatencyMs < 0 ||
+          observation.timeoutCensoredDurationMs !== undefined || observation.providerFailureDurationMs !== undefined ||
+          ['TIMEOUT', 'PROVIDER_ERROR', 'RATE_LIMITED'].includes(observation.failureCode)) ||
+        observation.outcome === 'TIMEOUT' && (observation.failureCode !== 'TIMEOUT' ||
+          !Number.isFinite(observation.timeoutCensoredDurationMs) || observation.timeoutCensoredDurationMs < 0 ||
+          observation.completionLatencyMs !== undefined || observation.providerFailureDurationMs !== undefined) ||
+        ['PROVIDER_ERROR', 'RATE_LIMITED'].includes(observation.outcome) &&
+          (observation.failureCode !== observation.outcome || !Number.isFinite(observation.providerFailureDurationMs) ||
+            observation.providerFailureDurationMs < 0 || observation.completionLatencyMs !== undefined ||
+            observation.timeoutCensoredDurationMs !== undefined) ||
+        observation.outputBytes !== undefined && (!Number.isInteger(observation.outputBytes) || observation.outputBytes <= 0) ||
+        observation.issueCount !== undefined && (!Number.isInteger(observation.issueCount) || observation.issueCount <= 0)) return false;
+    const key = `${observation.caseId}:${observation.timeoutMs}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  const expectedSchedule = buildIrasV2TimeoutSchedule();
+  return expectedCases.every(caseId => expectedArms.every(arm => counts.get(`${caseId}:${arm}`) === 2)) &&
+    observations.every((item, index) => item.caseId === expectedSchedule[index].caseId &&
+      item.timeoutMs === expectedSchedule[index].timeoutMs && item.replicate === expectedSchedule[index].replicate &&
+      (index === 0 ? item.firstRequest === true && item.requestStartGapMs === null
+        : item.firstRequest === undefined && Number.isFinite(item.requestStartGapMs) &&
+        item.requestStartGapMs >= START_GAP_MS));
+}
+
+function percentile(values, fraction) {
+  if (!values.length) return null;
+  const ordered = [...values].sort((left, right) => left - right);
+  return ordered[Math.max(0, Math.ceil(fraction * ordered.length) - 1)];
+}
+
+function timeoutArmCounts(observations, timeoutMs) {
+  const rows = observations.filter(row => row.timeoutMs === timeoutMs);
+  return {
+    timeoutMs,
+    scheduledCount: rows.length,
+    responseReceivedCount: rows.filter(row => row.responseReceived).length,
+    validInterpretationCount: rows.filter(row => row.validInterpretation).length,
+    semanticCorrectCount: rows.filter(row => row.semanticCorrect).length,
+    timeoutCount: rows.filter(row => row.outcome === 'TIMEOUT').length,
+    providerFailureCount: rows.filter(row => ['PROVIDER_ERROR', 'RATE_LIMITED'].includes(row.outcome)).length
+  };
+}
+
+/** Recomputes the preregistered arm decision from the fixed observation rows. */
+export function computeIrasV2TimeoutRecommendation(observations, protocolGuardsPassed) {
+  const arms = irasFirstConfigV2.timeoutExperiment.timeoutArmsMs;
+  const defaultArm = irasFirstConfigV2.timeoutExperiment.recommendationPolicy.defaultTimeoutMs;
+  const baseline = timeoutArmCounts(observations, defaultArm);
+  const criteriaByArm = arms.filter(arm => arm > defaultArm).map(arm => {
+    const counts = timeoutArmCounts(observations, arm);
+    const validCompletionsAboveDefault = observations.filter(row => row.timeoutMs === arm &&
+      row.responseReceived && row.validInterpretation && row.completionLatencyMs > defaultArm);
+    const distinctCasesAboveDefault = new Set(validCompletionsAboveDefault.map(row => row.caseId)).size;
+    const timeoutReduction = baseline.timeoutCount - counts.timeoutCount;
+    const validityComparable = counts.validInterpretationCount >= baseline.validInterpretationCount;
+    const enoughLongValidCompletions = validCompletionsAboveDefault.length >=
+      irasFirstConfigV2.timeoutExperiment.recommendationPolicy.requireValidCompletionsAboveDefaultAcrossCases &&
+      distinctCasesAboveDefault >= irasFirstConfigV2.timeoutExperiment.recommendationPolicy.minimumDistinctCasesAboveDefault;
+    const enoughTimeoutReduction = timeoutReduction >=
+      irasFirstConfigV2.timeoutExperiment.recommendationPolicy.minimumTimeoutReductionVsDefault;
+    return {
+      ...counts,
+      validCompletionsAboveDefault: validCompletionsAboveDefault.length,
+      distinctCasesAboveDefault,
+      timeoutReductionVsDefault: timeoutReduction,
+      validityComparable,
+      enoughLongValidCompletions,
+      enoughTimeoutReduction,
+      meetsPolicy: protocolGuardsPassed === true && validityComparable && enoughLongValidCompletions && enoughTimeoutReduction
+    };
+  });
+  const selected = criteriaByArm.find(row => row.meetsPolicy)?.timeoutMs || defaultArm;
+  return {
+    selectedTimeoutMs: selected,
+    decision: selected === defaultArm ? 'RETAIN_8000' : `SELECT_${selected}`,
+    protocolGuardsPassed: protocolGuardsPassed === true,
+    armCounts: arms.map(arm => timeoutArmCounts(observations, arm)),
+    criteriaByArm
+  };
+}
+
+function summarizeTimeoutArmMeasurements(observations, timeoutMs) {
+  const rows = observations.filter(row => row.timeoutMs === timeoutMs);
+  const received = rows.filter(row => row.responseReceived);
+  const valid = rows.filter(row => row.validInterpretation);
+  const sizes = received.map(row => row.outputBytes).filter(Number.isInteger);
+  const issueCounts = valid.map(row => row.issueCount).filter(Number.isInteger);
+  const completionLatencies = received.map(row => row.completionLatencyMs).filter(Number.isFinite);
+  const censoredTimeouts = rows.filter(row => row.outcome === 'TIMEOUT').map(row => row.timeoutCensoredDurationMs).filter(Number.isFinite);
+  const providerFailureDurations = rows.filter(row => row.providerFailureDurationMs !== undefined)
+    .map(row => row.providerFailureDurationMs).filter(Number.isFinite);
+  const distribution = values => values.length ? {
+    count: values.length,
+    min: Math.min(...values),
+    median: percentile(values, 0.5),
+    p95: percentile(values, 0.95),
+    max: Math.max(...values)
+  } : { count: 0, min: null, median: null, p95: null, max: null };
+  return {
+    ...timeoutArmCounts(observations, timeoutMs),
+    completionLatencyMs: distribution(completionLatencies),
+    timeoutCensoredDurationMs: distribution(censoredTimeouts),
+    providerFailureDurationMs: distribution(providerFailureDurations),
+    descriptiveInputsAmongReceivedResponses: {
+      promptChars: distribution(received.map(row => row.promptChars)),
+      issueCountAmongValidInterpretations: distribution(issueCounts),
+      outputBytesForNonemptyResponses: distribution(sizes),
+      receivedResponseDescriptors: received.map(row => ({
+        caseId: row.caseId,
+        promptChars: row.promptChars,
+        ...(Number.isInteger(row.issueCount) ? { issueCount: row.issueCount } : {}),
+        ...(Number.isInteger(row.outputBytes) ? { outputBytes: row.outputBytes } : {}),
+        completionLatencyMs: row.completionLatencyMs
+      }))
+    }
+  };
+}
+
+async function assertApprovedIrasV2TimeoutExperiment() {
+  const errorMessage = 'The IRAS-first V2 timeout experiment has not passed its fixed policy; targeted capture is gated.';
+  let experiment;
+  try {
+    const experimentPath = path.join(IRAS_FIRST_V2_OUTPUT_DIRECTORY, `${irasFirstConfigV2.timeoutExperiment.outputPrefix}.json`);
+    experiment = JSON.parse(await readFile(experimentPath, 'utf8'));
+  } catch {
+    throw new Error(errorMessage);
+  }
+  let history;
+  let profile;
+  let currentSources;
+  let currentFixtures;
+  let prompts;
+  let normalizedSourceHash;
+  try {
+    [history, profile, normalizedSourceHash, prompts] = await Promise.all([
+      assertV2HistoricalArtifactsUnchanged(),
+      Promise.resolve(profileConfiguration(IRAS_FIRST_TARGETED_V2_PROFILE)),
+      normalizedSemanticInterpretationFingerprint(),
+      currentIrasV2TimeoutPromptFingerprints()
+    ]);
+    [currentSources, currentFixtures] = await Promise.all([
+      hashManifest(profile.sourceFiles), hashManifest(profile.fixtureFiles)
+    ]);
+  } catch {
+    throw new Error(errorMessage);
+  }
+  const sourcesWithoutTimeoutFile = Object.fromEntries(Object.entries(currentSources)
+    .filter(([key]) => key !== 'semanticInterpretation'));
+  const experimentSourcesWithoutTimeoutFile = Object.fromEntries(Object.entries(experiment.sourceFingerprints || {})
+    .filter(([key]) => key !== 'semanticInterpretation'));
+  const historyPassed = experiment.protectedHistoricalArtifacts?.baselineCommit === history.baselineCommit &&
+    experiment.protectedHistoricalArtifacts?.artifactCount === history.artifactCount &&
+    experiment.protectedHistoricalArtifacts?.verifiedBefore === true &&
+    experiment.protectedHistoricalArtifacts?.verifiedAfter === true;
+  const timeoutProtocol = irasFirstConfigV2.timeoutExperiment;
+  const expectedCells = timeoutProtocol.caseIds.length * timeoutProtocol.timeoutArmsMs.length * timeoutProtocol.observationsPerCaseArm;
+  const schemaJson = JSON.stringify(SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA);
+  const observedStartGaps = (experiment.observations || []).slice(1).map(row => row.requestStartGapMs);
+  const recomputedMinimumGap = observedStartGaps.length ? Math.min(...observedStartGaps) : null;
+  const recomputedArmSummaries = Object.fromEntries(timeoutProtocol.timeoutArmsMs.map(arm =>
+    [arm, summarizeTimeoutArmMeasurements(experiment.observations || [], arm)]));
+  const promptFingerprintRows = experiment.promptSchemaFingerprints || {};
+  const promptFingerprintKeys = Object.keys(promptFingerprintRows);
+  const promptFingerprintShapePassed = exactSameSet(promptFingerprintKeys, timeoutProtocol.caseIds) &&
+    timeoutProtocol.caseIds.every(caseId => {
+      const item = promptFingerprintRows[caseId];
+      return item && Object.keys(item).every(key => [
+        'promptSha256', 'promptChars', 'systemSha256', 'systemChars', 'schemaSha256', 'schemaBytes', 'schemaChars'
+      ].includes(key)) &&
+        /^[a-f0-9]{64}$/.test(item.promptSha256) && /^[a-f0-9]{64}$/.test(item.systemSha256) &&
+        item.schemaSha256 === sha256(schemaJson) && item.schemaBytes === Buffer.byteLength(schemaJson, 'utf8') &&
+        item.schemaChars === schemaJson.length && Number.isInteger(item.promptChars) && item.promptChars > 0 &&
+        Number.isInteger(item.systemChars) && item.systemChars > 0;
+    });
+  const observationInputsMatchFingerprints = promptFingerprintShapePassed && experiment.observations.every(row => {
+    const fingerprint = promptFingerprintRows[row.caseId];
+    return fingerprint && row.promptChars === fingerprint.promptChars && row.systemChars === fingerprint.systemChars &&
+      row.schemaChars === fingerprint.schemaChars;
+  });
+  const schedulePassed = experiment.protocolVersion === timeoutProtocol.protocolVersion &&
+    experiment.model === timeoutProtocol.model &&
+    JSON.stringify(experiment.caseIds) === JSON.stringify(timeoutProtocol.caseIds) &&
+    JSON.stringify(experiment.timeoutArmsMs) === JSON.stringify(timeoutProtocol.timeoutArmsMs) &&
+    experiment.observationsPerCaseArm === timeoutProtocol.observationsPerCaseArm &&
+    experiment.scheduledCallCount === expectedCells && experiment.requestCount === expectedCells &&
+    exactTimeoutObservationCells(experiment.observations) &&
+    experiment.minimumStartGapMs === timeoutProtocol.minimumStartGapMs &&
+    Number.isFinite(experiment.minimumObservedStartGapMs) &&
+    experiment.minimumObservedStartGapMs >= timeoutProtocol.minimumStartGapMs &&
+    experiment.minimumObservedStartGapMs === recomputedMinimumGap &&
+    experiment.transportOverride === 'timeoutMs-only' &&
+    experiment.sourceHashesConsistent === true && experiment.fixtureHashesConsistent === true && historyPassed &&
+    experiment.productionTimeoutAtMeasurementMs === timeoutProtocol.recommendationPolicy.defaultTimeoutMs &&
+    JSON.stringify(experiment.recommendationPolicy) === JSON.stringify(timeoutProtocol.recommendationPolicy) &&
+    sameManifest(experimentSourcesWithoutTimeoutFile, sourcesWithoutTimeoutFile) &&
+    sameManifest(experiment.fixtureFingerprints || {}, currentFixtures) &&
+    experiment.semanticInterpretationHashWithoutTimeout === normalizedSourceHash &&
+    JSON.stringify(experiment.promptSchemaFingerprints) === JSON.stringify(prompts) &&
+    observationInputsMatchFingerprints &&
+    JSON.stringify(experiment.armSummaries) === JSON.stringify(recomputedArmSummaries) &&
+    experiment.schemaComplexity?.sha256 === sha256(schemaJson) && experiment.schemaComplexity?.chars === schemaJson.length &&
+    experiment.schemaComplexity?.uniqueSchemas === 1 &&
+    experiment.schemaComplexity?.relationshipToLatency === 'Not identifiable in this experiment because schema complexity is held constant.' &&
+    experiment.protocolGuardsPassed === true;
+  const recomputedRecommendation = computeIrasV2TimeoutRecommendation(experiment.observations, schedulePassed);
+  const timeoutChoice = recomputedRecommendation.selectedTimeoutMs;
+  const valid = hasNoPrivatePayloadKeys(experiment) && schedulePassed &&
+    experiment.protocolVersion === timeoutProtocol.protocolVersion && experiment.model === timeoutProtocol.model &&
+    JSON.stringify(experiment.timeoutRecommendation) === JSON.stringify(recomputedRecommendation) &&
+    [8000, 12000, 15000].includes(timeoutChoice) && timeoutChoice === SEMANTIC_QUESTION_TIMEOUT_MS;
+  if (!valid) throw new Error(errorMessage);
+  return {
+    selectedTimeoutMs: timeoutChoice,
+    recommendation: experiment.timeoutRecommendation?.decision,
+    sourceHashesConsistent: true,
+    promptSchemaFingerprintsStable: true,
+    protectedHistoricalArtifactCount: history.artifactCount
+  };
+}
+
+/** Rederive target eligibility from the fixed profile, row-level scores, routing evidence, and fingerprints. */
+async function requirePassingIrasFirstProfileTarget(outputDirectory, {
+  targetedProfile,
+  outputPrefix,
+  profileVersion,
+  profileConfig,
+  loadTargetedCases,
+  assertProtectedHistory,
+  protectedBaselineCommit,
+  errorMessage
+}) {
   let targeted;
   try {
-    targeted = JSON.parse(await readFile(path.join(outputDirectory, `${IRAS_FIRST_TARGETED_OUTPUT_PREFIX}.json`), 'utf8'));
+    targeted = JSON.parse(await readFile(path.join(outputDirectory, `${outputPrefix}.json`), 'utf8'));
   } catch {
-    throw new Error('The IRAS-first targeted profile has not passed; final live capture is gated.');
+    throw new Error(errorMessage);
   }
   let expectedCases;
   let protectedHistory;
   try {
-    [expectedCases, protectedHistory] = await Promise.all([loadIrasFirstTargetedCases(), assertHistoricalArtifactsUnchanged()]);
+    [expectedCases, protectedHistory] = await Promise.all([loadTargetedCases(), assertProtectedHistory()]);
   } catch {
-    throw new Error('The IRAS-first targeted profile has not passed; final live capture is gated.');
+    throw new Error(errorMessage);
   }
-  const profile = profileConfiguration(IRAS_FIRST_TARGETED_PROFILE);
+  const profile = profileConfiguration(targetedProfile);
   const [currentSources, currentFixtures] = await Promise.all([
     hashManifest(profile.sourceFiles), hashManifest(profile.fixtureFiles)
   ]);
   const exactRows = Array.isArray(targeted.cases) && targeted.cases.length === expectedCases.length &&
-    expectedCases.every((testCase, index) => strictIrasFirstTargetRowPassed(targeted.cases[index], testCase, index));
+    expectedCases.every((testCase, index) => strictIrasFirstTargetRowPassed(targeted.cases[index], testCase, index, profileVersion));
   const currentSummary = summarizeIrasFirstAcceptance(targeted, expectedCases.length);
   const noPrivatePayload = hasNoPrivatePayloadKeys(targeted);
-  const completeRun = targeted.evaluationProfile === IRAS_FIRST_TARGETED_PROFILE &&
-    targeted.releaseContractVersion === IRAS_FIRST_PROFILE_VERSION && targeted.outputPrefix === IRAS_FIRST_TARGETED_OUTPUT_PREFIX &&
+  const completeRun = targeted.evaluationProfile === targetedProfile &&
+    targeted.releaseContractVersion === profileVersion && targeted.outputPrefix === outputPrefix &&
     targeted.completedAt !== undefined && targeted.model === MODEL && targeted.timeoutMs === SEMANTIC_QUESTION_TIMEOUT_MS &&
     targeted.minimumStartGapMs === START_GAP_MS && targeted.minimumObservedStartGapMs >= START_GAP_MS &&
     targeted.pacingPolicy === 'Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.' &&
     targeted.requestCount === expectedCases.length &&
-    JSON.stringify(targeted.cases?.map(row => row.caseId)) === JSON.stringify(irasFirstConfig.targetedCaseIds) &&
+    JSON.stringify(targeted.cases?.map(row => row.caseId)) === JSON.stringify(profileConfig.targetedCaseIds) &&
     targeted.coverageCountsAreCompletenessAssertions === false &&
     targeted.runtimeEvidenceScope === 'LOCAL_ONLY_PATH_AND_GUARDRAILS_NOT_LIVE_AUTHORITY_PAGES_OR_SUBSTANTIVE_ANSWER_COMPLETION' &&
     JSON.stringify(targeted.authorityCoverageScope) === JSON.stringify(AUTHORITY_COVERAGE_SCOPE) &&
-    targeted.protectedHistoricalArtifacts?.baselineCommit === 'd194d2bc7121b2c9a1deec562f77eafdfb98cd90' &&
+    targeted.protectedHistoricalArtifacts?.baselineCommit === protectedBaselineCommit &&
     targeted.protectedHistoricalArtifacts?.artifactCount === protectedHistory.artifactCount &&
     targeted.protectedHistoricalArtifacts?.verifiedBefore === true &&
     targeted.protectedHistoricalArtifacts?.verifiedDuringCapture === true &&
@@ -1692,8 +2245,37 @@ export async function requirePassingIrasFirstTarget(outputDirectory) {
       targeted.irasFirstAcceptance?.passed !== true || targeted.irasFirstAcceptance?.completedCases !== expectedCases.length ||
       targeted.irasFirstAcceptance?.semanticQuality?.validInterpretations?.count !== expectedCases.length ||
       targeted.irasFirstAcceptance?.releaseRequiredCoverage?.blockingCases !== 0) {
-    throw new Error('The IRAS-first targeted profile has not passed; final live capture is gated.');
+    throw new Error(errorMessage);
   }
+}
+
+/** V1 target gate remains tied to its historical fixed profile and manifest. */
+export async function requirePassingIrasFirstTarget(outputDirectory) {
+  return requirePassingIrasFirstProfileTarget(outputDirectory, {
+    targetedProfile: IRAS_FIRST_TARGETED_PROFILE,
+    outputPrefix: IRAS_FIRST_TARGETED_OUTPUT_PREFIX,
+    profileVersion: IRAS_FIRST_PROFILE_VERSION,
+    profileConfig: irasFirstConfig,
+    loadTargetedCases: loadIrasFirstTargetedCases,
+    assertProtectedHistory: assertHistoricalArtifactsUnchanged,
+    protectedBaselineCommit: 'd194d2bc7121b2c9a1deec562f77eafdfb98cd90',
+    errorMessage: 'The IRAS-first targeted profile has not passed; final live capture is gated.'
+  });
+}
+
+/** V2 target gate rechecks the timeout experiment, fixed cases, source path, and protected history. */
+export async function requirePassingIrasFirstV2Target(outputDirectory) {
+  await assertApprovedIrasV2TimeoutExperiment();
+  return requirePassingIrasFirstProfileTarget(outputDirectory, {
+    targetedProfile: IRAS_FIRST_TARGETED_V2_PROFILE,
+    outputPrefix: irasFirstConfigV2.targetedOutputPrefix,
+    profileVersion: irasFirstConfigV2.profileVersion,
+    profileConfig: irasFirstConfigV2,
+    loadTargetedCases: loadIrasFirstV2TargetedCases,
+    assertProtectedHistory: assertV2HistoricalArtifactsUnchanged,
+    protectedBaselineCommit: '4bd3abc9c22619401f22aa8abba73af61b5d6217',
+    errorMessage: 'The IRAS-first V2 targeted profile has not passed; final live capture is gated.'
+  });
 }
 
 async function requirePassingAuthorityReliefTarget(outputDirectory) {
@@ -1927,12 +2509,18 @@ export async function runSemanticContractFollowupEvaluation({
   }
   if (evaluationProfile === 'authority-relief-final-live') await requirePassingAuthorityReliefTarget(outputDirectory);
   if (evaluationProfile === 'semantic-wire-format-final-live') await requirePassingSemanticWireFormatTarget(outputDirectory);
-  const isIrasFirstProfile = evaluationProfile === IRAS_FIRST_TARGETED_PROFILE || evaluationProfile === IRAS_FIRST_FINAL_PROFILE;
+  const isIrasFirstV2Profile = evaluationProfile === IRAS_FIRST_TARGETED_V2_PROFILE || evaluationProfile === IRAS_FIRST_FINAL_V2_PROFILE;
+  const isIrasFirstProfile = evaluationProfile === IRAS_FIRST_TARGETED_PROFILE || evaluationProfile === IRAS_FIRST_FINAL_PROFILE || isIrasFirstV2Profile;
+  const irasFirstProfileConfig = isIrasFirstV2Profile ? irasFirstConfigV2 : irasFirstConfig;
+  const assertProtectedHistory = isIrasFirstV2Profile ? assertV2HistoricalArtifactsUnchanged : assertHistoricalArtifactsUnchanged;
+  let timeoutPolicyVerification;
+  if (isIrasFirstV2Profile) timeoutPolicyVerification = await assertApprovedIrasV2TimeoutExperiment();
   if (evaluationProfile === IRAS_FIRST_FINAL_PROFILE) await requirePassingIrasFirstTarget(outputDirectory);
+  if (evaluationProfile === IRAS_FIRST_FINAL_V2_PROFILE) await requirePassingIrasFirstV2Target(outputDirectory);
   const isWireFormatProfile = evaluationProfile === 'semantic-wire-format-targeted-live' ||
     evaluationProfile === 'semantic-wire-format-final-live';
   if (isWireFormatProfile) await assertProtectedSemanticWireFormatArtifacts();
-  if (isIrasFirstProfile) await assertHistoricalArtifactsUnchanged();
+  const protectedHistoryBefore = isIrasFirstProfile ? await assertProtectedHistory() : undefined;
   await mkdir(outputDirectory, { recursive: true });
   await refuseExistingOutputs(outputDirectory, profile.outputPrefix);
   if (typeof apiKey !== 'string' || apiKey.trim().length <= 10) throw new Error('GEMINI_API_KEY is not configured.');
@@ -1949,6 +2537,10 @@ export async function runSemanticContractFollowupEvaluation({
         ? await loadIrasFirstTargetedCases()
         : evaluationProfile === IRAS_FIRST_FINAL_PROFILE
           ? await loadIrasFirstFinalCases()
+        : evaluationProfile === IRAS_FIRST_TARGETED_V2_PROFILE
+          ? await loadIrasFirstV2TargetedCases()
+          : evaluationProfile === IRAS_FIRST_FINAL_V2_PROFILE
+            ? await loadIrasFirstV2FinalCases()
       : evaluationProfile === 'authority-relief-targeted-live'
         ? await loadAuthorityReliefTargetedCases()
         : evaluationProfile === 'semantic-wire-format-targeted-live'
@@ -1964,6 +2556,10 @@ export async function runSemanticContractFollowupEvaluation({
         ? irasFirstConfig.targetedCaseIds
         : evaluationProfile === IRAS_FIRST_FINAL_PROFILE
           ? irasFirstConfig.finalCaseIds
+      : evaluationProfile === IRAS_FIRST_TARGETED_V2_PROFILE
+        ? irasFirstConfigV2.targetedCaseIds
+        : evaluationProfile === IRAS_FIRST_FINAL_V2_PROFILE
+          ? irasFirstConfigV2.finalCaseIds
       : REQUIRED_CASE_IDS;
   if (!Array.isArray(selectedCases) || selectedCases.length !== requiredIds.length ||
       requiredIds.some((id, index) => selectedCases[index]?.id !== id) ||
@@ -1981,12 +2577,17 @@ export async function runSemanticContractFollowupEvaluation({
     model: MODEL,
     timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
     ...(isIrasFirstProfile ? {
-      releaseContractVersion: IRAS_FIRST_PROFILE_VERSION,
+      releaseContractVersion: irasFirstProfileConfig.profileVersion,
       authorityCoverageScope: AUTHORITY_COVERAGE_SCOPE,
-      benchmarkAdjudications: irasFirstConfig.adjudications,
+      benchmarkAdjudications: irasFirstProfileConfig.adjudications || {},
       coverageCountsAreCompletenessAssertions: false,
       runtimeEvidenceScope: 'LOCAL_ONLY_PATH_AND_GUARDRAILS_NOT_LIVE_AUTHORITY_PAGES_OR_SUBSTANTIVE_ANSWER_COMPLETION',
-      protectedHistoricalArtifacts: { baselineCommit: 'd194d2bc7121b2c9a1deec562f77eafdfb98cd90', artifactCount: 110, verifiedBefore: true }
+      protectedHistoricalArtifacts: {
+        baselineCommit: protectedHistoryBefore?.baselineCommit || 'd194d2bc7121b2c9a1deec562f77eafdfb98cd90',
+        artifactCount: protectedHistoryBefore?.artifactCount || 110,
+        verifiedBefore: protectedHistoryBefore?.verified === true
+      },
+      ...(isIrasFirstV2Profile ? { timeoutPolicyVerification } : {})
     } : {}),
     minimumStartGapMs: START_GAP_MS,
     pacingPolicy: 'Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.',
@@ -2013,7 +2614,7 @@ export async function runSemanticContractFollowupEvaluation({
       if (document.cases.length) await writeProgress(outputDirectory, document, profile.outputPrefix);
       throw new Error('Source or fixture hash changed during live capture.');
     }
-    if (isIrasFirstProfile) await assertHistoricalArtifactsUnchanged();
+    if (isIrasFirstProfile) await assertProtectedHistory();
     let rawResponse;
     let capture;
     let responseDiagnostic;
@@ -2086,7 +2687,9 @@ export async function runSemanticContractFollowupEvaluation({
     if (callCount !== 1) throw new Error('A fixed evaluation case did not make exactly one provider request.');
     document.requestCount += callCount;
     responseDiagnostic = typeof rawResponse === 'string'
-      ? safeDiagnostic(diagnoseSemanticResponse(rawResponse, isIrasFirstProfile ? testCase.question : undefined))
+      ? safeDiagnostic(diagnoseSemanticResponse(rawResponse, isIrasFirstProfile ? testCase.question : undefined), {
+        includeMetadataMismatch: isIrasFirstV2Profile
+      })
       : undefined;
     rawResponse = undefined;
     const validInterpretation = productionResult?.mode === 'SEMANTIC_INTERPRETATION' &&
@@ -2211,7 +2814,7 @@ export async function runSemanticContractFollowupEvaluation({
       caseSummary(document.cases, 'INDEPENDENT_CONTROL'),
       caseSummary(document.cases, 'COMBINED')
     ];
-    if (isIrasFirstProfile) document.protectedHistoricalArtifacts.verifiedDuringCapture = (await assertHistoricalArtifactsUnchanged()).verified;
+    if (isIrasFirstProfile) document.protectedHistoricalArtifacts.verifiedDuringCapture = (await assertProtectedHistory()).verified;
     await writeProgress(outputDirectory, document, profile.outputPrefix);
     if (!sourceHashesConsistent || !fixtureHashesConsistent) {
       throw new Error('Source or fixture hash changed during live capture.');
@@ -2224,10 +2827,11 @@ export async function runSemanticContractFollowupEvaluation({
     document.authorityReliefAcceptance = summarizeAuthorityReliefAcceptance(document, selectedCases.length);
   }
   if (isIrasFirstProfile) {
-    document.protectedHistoricalArtifacts.verifiedAfterCapture = (await assertHistoricalArtifactsUnchanged()).verified;
+    document.protectedHistoricalArtifacts.verifiedAfterCapture = (await assertProtectedHistory()).verified;
     document.irasFirstAcceptance = summarizeIrasFirstAcceptance(document, selectedCases.length);
     document.historicalAllAuthorityMetric = summarizeHistoricalAllAuthorityMetric(document.cases, 10,
-      evaluationProfile === IRAS_FIRST_FINAL_PROFILE ? 'original-ten-final' : 'targeted-profile-overlap');
+      evaluationProfile === IRAS_FIRST_FINAL_PROFILE || evaluationProfile === IRAS_FIRST_FINAL_V2_PROFILE
+        ? 'original-ten-final' : 'targeted-profile-overlap');
   }
   await writeProgress(outputDirectory, document, profile.outputPrefix);
   return document;

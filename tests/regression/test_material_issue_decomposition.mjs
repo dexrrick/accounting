@@ -173,7 +173,7 @@ const expectedTopicIds = {
   A: [['cpf_contribution_rates'], ['cpf_contribution_rates'], ['iras-individual-cpf-relief']],
   B: [[], ['mom-work-passes-general'], ['cpf_contribution_rates'], []],
   C: [[], []],
-  D: [[], []]
+  D: [[], ['iras-cit-deductibility']]
 };
 
 assert.ok(validateSemanticQuestionInterpretation(flatInterpretation()),
@@ -316,7 +316,7 @@ const evidenceOverrideResult = reconcileQuestionUnderstanding(prompts.D, classif
       operation: 'EXPLAIN_RULE', mappedTopicIds: [], evidenceRequirement: 'CASE_FACTS' })
   ])
 });
-assert.deepEqual(evidenceOverrideResult.issuePlan.issues.map(item => item.evidenceRequirement), [
+assert.deepEqual(evidenceOverrideResult.issuePlan.issues.slice(0, 2).map(item => item.evidenceRequirement), [
   'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'AUTHORITATIVE_SOURCE'
 ], 'Evidence requirements are derived from domain and operation, not provider-selected.');
 
@@ -326,7 +326,7 @@ const interactionIssue = issue({
   operation: 'EXPLAIN_INTERACTION', mappedTopicIds: [], evidenceRequirement: 'CASE_FACTS'
 });
 assert.equal(validateSemanticQuestionInterpretation(flatInterpretation({ issues: [interactionIssue] }))?.issues?.[0].evidenceRequirement,
-  'UNRESOLVED', 'Without case-specific context, interaction evidence is conservatively unresolved before reconciliation.');
+  'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'Without a query, an unclassified interaction conservatively requires case facts.');
 const generalInteraction = reconcileQuestionUnderstanding(
   'How do compulsory CPF contributions interact with personal income tax relief?',
   classifyQuestion('How do compulsory CPF contributions interact with personal income tax relief?'),

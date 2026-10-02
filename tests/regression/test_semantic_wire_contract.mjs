@@ -4,6 +4,7 @@ import {
   interpretSemanticQuestion,
   reconcileQuestionUnderstanding,
   SEMANTIC_QUESTION_SCHEMA_VERSION,
+  SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
   validateSemanticQuestionInterpretation
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import {
@@ -65,6 +66,10 @@ const validV2 = v2();
 assert.ok(validateSemanticQuestionInterpretation(validV2));
 assert.equal(diagnoseSemanticContract(validV2).validatorAccepted, true);
 assert.equal(diagnoseSemanticResponse(JSON.stringify(validV2)).rejectionCode, 'NONE');
+const flagFreeV2 = { ...validV2 };
+delete flagFreeV2.requiresUserSpecificFacts;
+assert.ok(validateSemanticQuestionInterpretation(flagFreeV2), 'the new exact V2 provider shape omits derived specificity');
+assert.equal(Object.hasOwn(SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA.properties, 'requiresUserSpecificFacts'), false);
 
 const normalizedV2 = await interpretMock('Explain the general income tax rule.', validV2);
 assert.equal(normalizedV2.mode, 'SEMANTIC_INTERPRETATION');
@@ -105,7 +110,7 @@ assert.equal(validateSemanticQuestionInterpretation({
   requestedOperation: 'CALCULATE',
   calculationRequested: true,
   requiresUserSpecificFacts: false
-}), undefined, 'legacy calculation/case contradictions remain rejected');
+})?.requiresUserSpecificFacts, true, 'the legacy case flag is accepted as non-authoritative compatibility metadata');
 assert.equal(validateSemanticQuestionInterpretation({ ...legacy, legacyExtra: true }), undefined,
   'legacy payloads still reject unknown keys');
 
@@ -115,10 +120,13 @@ const v2CalculationContradiction = v2({
   issues: [issue({ operation: 'CALCULATE' })]
 });
 const contradictionDiagnostic = diagnoseSemanticContract(v2CalculationContradiction);
-assert.equal(contradictionDiagnostic.validatorAccepted, false);
-assert.equal(contradictionDiagnostic.rejectionCode, 'CASE_FLAG_CONTRADICTION',
-  'diagnostics derive and identify the V2 calculation/case contradiction');
-assert.equal((await interpretMock('How much tax is due?', v2CalculationContradiction)).failureReason, 'CONTRADICTORY_FIELDS');
+assert.equal(contradictionDiagnostic.validatorAccepted, true);
+assert.equal(contradictionDiagnostic.rejectionCode, 'NONE');
+assert.equal(contradictionDiagnostic.caseFlagMismatch, true);
+assert.deepEqual(contradictionDiagnostic.nonViolationCodes, ['CASE_FLAG_MISMATCH']);
+assert.equal((await interpretMock('How much tax is due?', v2CalculationContradiction)).interpretation.requiresUserSpecificFacts, true);
+assert.equal(validateSemanticQuestionInterpretation(v2({ requiresUserSpecificFacts: 'false' })), undefined,
+  'the old V2 compatibility flag remains structurally boolean when supplied');
 
 assert.equal(validateSemanticQuestionInterpretation(v2({
   concepts: [{ concept: 'https://example.invalid/private', role: 'PRIMARY' }]

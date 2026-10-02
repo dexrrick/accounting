@@ -11,6 +11,7 @@ import {
   classifyTransportError,
   experimentCasesFromFixture,
   hashRelevantSources,
+  hasObjectiveContractContradiction,
   MIN_REQUEST_START_INTERVAL_MS,
   runReliabilityExperiment,
   summarizeExperiment,
@@ -47,6 +48,16 @@ assert.throws(() => validateOutputPrefix('OPERATION-RELIABILITY-BASELINE-INSPECT
 assert.equal(classifyStructuredResponse('not json').category, 'MALFORMED_JSON');
 assert.equal(classifyStructuredResponse(JSON.stringify({ unexpected: true })).category, 'SCHEMA_REJECTION');
 assert.equal(classifyStructuredResponse('x'.repeat(16_001)).category, 'RESPONSE_TOO_LARGE');
+const compatibilityFlagMismatch = {
+  jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: [], domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL',
+  primarySubject: 'personal tax amount', concepts: [], requestedOperation: 'CALCULATE', requiresUserSpecificFacts: false,
+  calculationRequested: true, factsExplicitlyProvided: [], confidence: 0.96
+};
+assert.equal(hasObjectiveContractContradiction(compatibilityFlagMismatch), false,
+  'a historical false specificity flag is non-authoritative metadata');
+assert.equal(classifyStructuredResponse(JSON.stringify(compatibilityFlagMismatch)).category, 'VALID_SCHEMA');
+assert.equal(classifyStructuredResponse(JSON.stringify({ ...compatibilityFlagMismatch, calculationRequested: false })).category,
+  'CONTRADICTORY_FIELDS', 'legacy calculationRequested still must agree with CALCULATE');
 const accountingAuthorityMismatch = {
   jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: [], domain: 'ACCOUNTING', population: 'UNKNOWN',
   primarySubject: 'accounting issue', concepts: [], requestedOperation: 'OTHER', requiresUserSpecificFacts: false,

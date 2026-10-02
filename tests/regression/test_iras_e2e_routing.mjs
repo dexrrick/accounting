@@ -151,14 +151,21 @@ assert.ok(individualOverseasEmploymentRouting.topicIds.includes('iras-individual
 assert.ok(!individualOverseasEmploymentRouting.topicIds.includes('iras-foreign-sourced-income'), 'An individual employee question cannot route to the corporate foreign-income topic.');
 assert.ok(!individualOverseasEmploymentRouting.topicIds.includes('iras-foreign-tax-credit'), 'An individual employee question cannot route to the corporate foreign-tax-credit topic.');
 assert.ok(!individualOverseasEmploymentRouting.topicIds.includes('iras-double-tax-agreements'), 'An individual employee question cannot route to the corporate DTA topic.');
-const unregisteredSingaporeBranchIncomeQuery = 'A Singapore company remits profits from an overseas branch into Singapore. What conditions determine whether those branch profits are exempt or taxable here?';
-const unregisteredSingaporeBranchIncomeRouting = classifyQuestion(unregisteredSingaporeBranchIncomeQuery);
-assert.equal(unregisteredSingaporeBranchIncomeRouting.primaryDomain, 'TAX');
-assert.ok(unregisteredSingaporeBranchIncomeRouting.authorities.includes('IRAS'),
-  'An unregistered Singapore income-taxability question must still route to IRAS discovery.');
-assert.ok(unregisteredSingaporeBranchIncomeRouting.domains.includes('IRAS_CORPORATE_TAX'),
-  'Explicit company population routes to corporate-tax discovery context.');
-assert.deepEqual(unregisteredSingaporeBranchIncomeRouting.topicIds, [],
+const singaporeBranchIncomeRouting = classifyQuestion('A Singapore company remits profits from an overseas branch into Singapore. What conditions determine whether those branch profits are exempt or taxable here?');
+assert.equal(singaporeBranchIncomeRouting.primaryDomain, 'TAX');
+assert.ok(singaporeBranchIncomeRouting.authorities.includes('IRAS'));
+assert.ok(singaporeBranchIncomeRouting.domains.includes('IRAS_CORPORATE_TAX'));
+assert.ok(singaporeBranchIncomeRouting.topicIds.includes('iras-foreign-sourced-income'),
+  'A branch-profit taxability question now maps to the registered corporate foreign-income topic.');
+assert.ok(singaporeBranchIncomeRouting.topicIds.includes('iras-section-13-exemptions'),
+  'An explicit exemption question can also map to the registered Section 13 exemption topic.');
+const unregisteredCorporateTaxRouting = classifyQuestion('A Singapore company incurred an overseas restructuring charge. What Singapore tax treatment applies?');
+assert.equal(unregisteredCorporateTaxRouting.primaryDomain, 'TAX');
+assert.ok(unregisteredCorporateTaxRouting.authorities.includes('IRAS'),
+  'A genuinely unregistered Singapore income-tax question must still route to IRAS discovery.');
+assert.ok(unregisteredCorporateTaxRouting.domains.includes('IRAS_CORPORATE_TAX'),
+  'Explicit company population routes the unregistered question to corporate-tax discovery context.');
+assert.deepEqual(unregisteredCorporateTaxRouting.topicIds, [],
   'Authority-level IRAS discovery does not require a benchmark-specific registered topic.');
 const mixedGstBranchIncomeRouting = classifyQuestion('A Singapore company remits profits from an overseas branch into Singapore. The company is also GST registered, but I am asking specifically whether the branch profits are exempt or taxable as corporate income.');
 assert.equal(mixedGstBranchIncomeRouting.primaryDomain, 'TAX',

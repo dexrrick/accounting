@@ -163,7 +163,10 @@ assert.match(capturedPrompt, /COMPARE for requested alternatives/i);
 assert.match(capturedPrompt, /FILING_REQUIREMENT for filing/i);
 assert.match(capturedPrompt, /Each concept has exactly \{"concept":"\.\.\.","role":"PRIMARY\|RELATED\|CONTEXT_ONLY"\}/);
 assert.match(capturedPrompt, /\{"concept":"expense recognition","role":"PRIMARY"\}/);
-assert.match(capturedPrompt, /exactly these top-level keys: schemaVersion, jurisdiction, authorityCandidates, contextualAuthorities, domain, population, primarySubject, concepts, requestedOperation, requiresUserSpecificFacts, factsExplicitlyProvided, confidence, issues/i);
+assert.match(capturedPrompt, /exactly these top-level keys: schemaVersion, jurisdiction, authorityCandidates, contextualAuthorities, domain, population, primarySubject, concepts, requestedOperation, factsExplicitlyProvided, confidence, issues/i);
+assert.match(capturedPrompt, /Do not emit a requiresUserSpecificFacts field: the application derives case specificity and per-issue evidence from the query/i);
+assert.equal(capturedPrompt.includes('"requiresUserSpecificFacts"'), false,
+  'the new V2 prompt does not ask the provider to emit derived specificity');
 assert.match(capturedPrompt, /Full V2 mixed journal-and-tax example: \{"schemaVersion":2.*?"issues":\[\{"subject":"expense journal"/s);
 assert.equal(capturedPrompt.includes('calculationRequested'), false, 'the V2 prompt leaves the calculation flag to the application');
 assert.ok(capturedPrompt.length < 9_000, `Operation guidance remains compact (${capturedPrompt.length} characters).`);

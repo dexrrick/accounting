@@ -233,7 +233,7 @@ const captureRetriever = {
   getSourceById() { return undefined; },
   findSourcesByStandardOrAct() { return []; }
 };
-await buildGroundedReasoningContext('What are the MAS and IRAS considerations for section 13O?', null, captureRetriever);
+await buildGroundedReasoningContext('What are the MAS and IRAS considerations for section 13O?', null, captureRetriever, undefined, { localOnly: true });
 assert.equal(capturedRetrieval.domain, undefined, 'The governed IRAS query does not use a coarse domain filter');
 assert.deepEqual([...capturedRetrieval.authorities].sort(), ['IRAS'],
   'The evidence-bound IRAS response retrieves only the authority it verifies');
@@ -244,7 +244,7 @@ assert.deepEqual(classifyQuestion('What are the MAS and IRAS considerations for 
 
 const financialStatementQuery = 'How should we present financial statements?';
 assert.equal(classifyQuestion(financialStatementQuery).primaryDomain, 'ACCOUNTING');
-await buildGroundedReasoningContext(financialStatementQuery, null, captureRetriever);
+await buildGroundedReasoningContext(financialStatementQuery, null, captureRetriever, undefined, { localOnly: true });
 assert.equal(capturedRetrieval.domain, undefined, 'An ACRA topic keyword must not filter out accounting-standard sources when coarse routing says ACCOUNTING');
 assert.ok(capturedRetrieval.authorities.includes('ACRA'));
 

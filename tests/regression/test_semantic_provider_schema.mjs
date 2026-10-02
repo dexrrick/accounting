@@ -175,6 +175,13 @@ assert.equal(lowConfidenceResult.failure, 'LOW_CONFIDENCE', 'application confide
 const malformedResult = await interpretSemanticQuestion('Explain a general rule.', 'synthetic-semantic-provider-key',
   async () => '{ malformed');
 assert.equal(malformedResult.failureReason, 'MALFORMED_JSON');
+const missingOperation = structuredClone(valid);
+delete missingOperation.requestedOperation;
+assert.equal(validateSemanticQuestionInterpretation(missingOperation), undefined,
+  'a missing operation fails structural validation without consulting cached specificity');
+const missingOperationResult = await interpretSemanticQuestion('Explain a general rule.', 'synthetic-semantic-provider-key',
+  async () => JSON.stringify(missingOperation));
+assert.equal(missingOperationResult.failureReason, 'SCHEMA_MISMATCH');
 
 const semanticProvider = {
   activeProvider: 'gemini',

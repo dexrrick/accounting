@@ -46,7 +46,7 @@ for (const testCase of irasFirstSemanticCases) {
   const payload = payloadFor(testCase);
   const result = await interpretSemanticQuestion(testCase.question, provider, async () => JSON.stringify(payload));
   assert.equal(result.mode, 'SEMANTIC_INTERPRETATION', `${testCase.id}: the consistent structured response remains valid`);
-  assert.equal(result.interpretation.requiresUserSpecificFacts, testCase.facts, `${testCase.id}: the model flag is preserved`);
+  assert.equal(result.interpretation.requiresUserSpecificFacts, testCase.facts, `${testCase.id}: specificity is derived from the request`);
   const reconciled = reconcileQuestionUnderstanding(testCase.question, classifyQuestion(testCase.question), result);
   const semanticIssue = reconciled.issuePlan.issues.find(issue => issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC');
   if (semanticIssue) assert.equal(semanticIssue.evidenceRequirement, testCase.facts
@@ -60,16 +60,18 @@ const falseEligibilityResult = await interpretSemanticQuestion(falseEligibility.
     facts: false,
     providedFacts: ['SGD 6,000 monthly salary']
   })));
-assert.equal(falseEligibilityResult.failureReason, 'CONTRADICTORY_FIELDS',
-  'a proven case-specific eligibility request with a false facts flag is rejected, not silently rewritten');
-assert.equal(falseEligibilityResult.interpretation, undefined);
+assert.equal(falseEligibilityResult.mode, 'SEMANTIC_INTERPRETATION',
+  'a historical false facts flag is compatibility telemetry, not an interpretation rejection');
+assert.equal(falseEligibilityResult.interpretation.requiresUserSpecificFacts, true,
+  'the personal eligibility application is derived from the query');
 const directContradictoryPlan = reconcileQuestionUnderstanding(falseEligibility.question,
   classifyQuestion(falseEligibility.question), {
     mode: 'SEMANTIC_INTERPRETATION',
     interpretation: payloadFor(falseEligibility, { facts: false })
   });
-assert.equal(directContradictoryPlan.understanding.mode, 'DETERMINISTIC_FALLBACK',
-  'reconciliation independently rejects a query/flag contradiction even when called without the interpreter');
+assert.equal(directContradictoryPlan.understanding.mode, 'SEMANTIC_PLUS_RULES',
+  'direct reconciliation normalizes the old flag from the query');
+assert.equal(directContradictoryPlan.understanding.interpretation.requiresUserSpecificFacts, true);
 
 const qualifiedClaim = irasFirstSemanticCases.find(item => item.id === 'personal-claim-with-qualification-comma');
 const punctuatedFalseFlag = await interpretSemanticQuestion(qualifiedClaim.question, provider, async () => JSON.stringify(payloadFor(qualifiedClaim, {
@@ -77,8 +79,9 @@ const punctuatedFalseFlag = await interpretSemanticQuestion(qualifiedClaim.quest
   providedFacts: ['Singapore permanent resident'],
   issue: { subject: 'CPF relief eligibility' }
 })));
-assert.equal(punctuatedFalseFlag.failureReason, 'CONTRADICTORY_FIELDS',
+assert.equal(punctuatedFalseFlag.mode, 'SEMANTIC_INTERPRETATION',
   'a qualification clause after a comma remains part of the same claimant application even when supplied facts are present');
+assert.equal(punctuatedFalseFlag.interpretation.requiresUserSpecificFacts, true);
 
 for (const id of [
   'specific-contributions-interaction',
@@ -94,7 +97,9 @@ for (const id of [
       providedFacts: ['CPF contributions'],
       issue: { subject: 'CPF/SRS relief cap interaction' }
     })));
-  assert.equal(contributionFalseFlag.failureReason, 'CONTRADICTORY_FIELDS',
+  assert.equal(contributionFalseFlag.mode, 'SEMANTIC_INTERPRETATION',
+    `${id}: a stale flag does not reject a recognized owned contribution phrase`);
+  assert.equal(contributionFalseFlag.interpretation.requiresUserSpecificFacts, true,
     `${id}: the owned contributions remain case-specific across common modifiers and plurals`);
 }
 
@@ -112,11 +117,13 @@ const ambiguousOwnedFalse = await interpretSemanticQuestion(ambiguousOwnedRefere
 assert.equal(ambiguousOwnedTrue.mode, 'SEMANTIC_INTERPRETATION',
   'an unresolved possessive phrase preserves a model-produced true flag');
 assert.equal(ambiguousOwnedFalse.mode, 'SEMANTIC_INTERPRETATION',
-  'an unresolved possessive phrase also preserves a model-produced false flag');
+  'an unresolved possessive phrase does not reject a historical false flag');
+assert.equal(ambiguousOwnedFalse.interpretation.requiresUserSpecificFacts, true,
+  'unknown specificity is conservatively derived as case-specific');
 const ambiguousFalsePlan = reconcileQuestionUnderstanding(ambiguousOwnedReference.question,
   classifyQuestion(ambiguousOwnedReference.question), ambiguousOwnedFalse).issuePlan;
-assert.equal(ambiguousFalsePlan.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
-  'unresolved owned references use the accepted model flag as the conservative evidence fallback');
+assert.equal(ambiguousFalsePlan.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'unresolved owned references use conservative source-plus-case-facts evidence');
 
 const illustrativeAmount = irasFirstSemanticCases.find(item => item.id === 'illustrative-amount-is-not-application');
 const illustrativeAmountResult = await interpretSemanticQuestion(illustrativeAmount.question, provider,
@@ -145,8 +152,9 @@ for (const operation of ['CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL'])
     })
   ];
   const result = await interpretSemanticQuestion(mixed.question, provider, async () => JSON.stringify(raw));
-  assert.equal(result.failureReason, 'CONTRADICTORY_FIELDS',
-    `top-level OTHER must still reject a false flag when a ${operation} issue requires case facts`);
+  assert.equal(result.mode, 'SEMANTIC_INTERPRETATION',
+    `top-level OTHER derives specificity from its ${operation} issue despite a stale false root flag`);
+  assert.equal(result.interpretation.requiresUserSpecificFacts, true);
 }
 
 const mixedCaseAndConceptual = {
@@ -194,7 +202,8 @@ assert.deepEqual(mixedEligibilityPlan.issues.slice(0, 2).map(issue => issue.evid
 const genericClass = irasFirstSemanticCases.find(item => item.id === 'generic-employee-class-eligibility');
 const genericClassFalse = await interpretSemanticQuestion(genericClass.question, provider,
   async () => JSON.stringify(payloadFor(genericClass, { facts: true })));
-assert.equal(genericClassFalse.failureReason, 'CONTRADICTORY_FIELDS',
+assert.equal(genericClassFalse.mode, 'SEMANTIC_INTERPRETATION');
+assert.equal(genericClassFalse.interpretation.requiresUserSpecificFacts, false,
   'a general employee-class eligibility question does not require claimant-specific facts');
 
 const legacyGeneric = payloadFor(genericClass);
@@ -206,7 +215,9 @@ assert.equal(legacyAccepted.mode, 'SEMANTIC_INTERPRETATION', 'legacy wire shape 
 const legacyContradiction = { ...legacyGeneric, requiresUserSpecificFacts: true };
 const legacyRejected = await interpretSemanticQuestion(genericClass.question, provider,
   async () => JSON.stringify(legacyContradiction));
-assert.equal(legacyRejected.failureReason, 'CONTRADICTORY_FIELDS',
-  'legacy wire shape receives the same query-aware consistency validation');
+assert.equal(legacyRejected.mode, 'SEMANTIC_INTERPRETATION',
+  'legacy wire flags remain non-authoritative after structural compatibility validation');
+assert.equal(legacyRejected.interpretation.requiresUserSpecificFacts, false,
+  'legacy query normalization ignores the supplied flag');
 
 console.log(`IRAS-first query-aware semantic contract regressions passed for ${irasFirstSemanticCases.length} operation families and mixed issues.`);

@@ -267,7 +267,7 @@ try {
       interpret: async (question, _settings, executeOnce) => {
         const testCase = casesByQuestion.get(question);
         const payload = syntheticWirePayload(testCase);
-        const parsed = validateSemanticQuestionInterpretation(payload);
+        const parsed = validateSemanticQuestionInterpretation(payload, question);
         assert.ok(parsed, `synthetic wire response validates for ${testCase.id}`);
         currentRawResponse = JSON.stringify(payload);
         await executeOnce('synthetic safe prompt', 'synthetic safe instruction', 'gemini');

@@ -171,7 +171,6 @@ export function hasObjectiveContractContradiction(value) {
   const top = value;
   if (typeof top.requestedOperation === 'string' && typeof top.calculationRequested === 'boolean' &&
       top.calculationRequested !== (top.requestedOperation === 'CALCULATE')) return true;
-  if (top.requestedOperation === 'CALCULATE' && top.requiresUserSpecificFacts === false) return true;
   if (top.requestedOperation === 'PREPARE_JOURNAL' && top.domain !== 'ACCOUNTING') return true;
   if (domainAuthorityContradiction(top.domain, top.authorityCandidates)) return true;
   if (Array.isArray(top.issues)) {
