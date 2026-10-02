@@ -221,7 +221,7 @@ function hasGstInputTaxClaimRule(sourceText: string): boolean {
   const meaningfulGeneralScope = (text: string) =>
     /\btaxable supplies\b|\bbusiness (?:purchases?|purposes?|expenses?)\b|\bused for (?:the )?(?:business|taxable supplies)\b|\b(?:conditions?|provided that|if the following)\b/i.test(text);
   const affirmativeEntitlement = (text: string) =>
-    /\b(?:may|can|is entitled to|are entitled to|is allowed to|are allowed to)\s+(?:claim|recover)\b.{0,55}\binput[ -]tax\b|\binput[ -]tax\b.{0,55}\b(?:may|can) be (?:claimed|recovered)\b/i.test(text);
+    /\b(?:may|can|is entitled to|are entitled to|is allowed to|are allowed to)\s+(?:claim|recover)\b.{0,55}\binput[ -]tax\b|\b(?:may|can|is entitled to|are entitled to|is allowed to|are allowed to)\s+make\s+(?:an?\s+)?input[ -]tax\s+claims?\b|\binput[ -]tax\b.{0,55}\b(?:may|can) be (?:claimed|recovered)\b/i.test(text);
 
   return boundedRuleSourceUnits(sourceText).some(unit => {
     if (blockedSpecificException(unit.kind === 'statement' ? unit.text : `${unit.heading} ${unit.item}`)) return false;

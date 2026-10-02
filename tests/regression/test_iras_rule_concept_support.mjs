@@ -138,6 +138,21 @@ assert.equal(check({
   sourceText: gstRule, domainId: 'IRAS_GST', topicIds: gstCase.requiredTopicIds,
   subject: gstSubject, concepts: [gstConcept]
 }), true, 'General GST rule support does not require source wording to repeat business-purchase framing.');
+const gstHistoricalPhraseMatched = 'A GST-registered business may make an input tax claim for business purchases used to make taxable supplies when the prescribed conditions are met.';
+assert.equal(check({
+  sourceText: gstHistoricalPhraseMatched, domainId: 'IRAS_GST', topicIds: gstCase.requiredTopicIds,
+  subject: gstSubject, concepts: [gstConcept]
+}), true, 'The explicit make-an-input-tax-claim wording supports the general claim rule when linked to business and taxable-supply scope.');
+assert.equal(check({
+  sourceText: 'It is not true that a GST-registered business may make an input tax claim for business purchases used to make taxable supplies when the prescribed conditions are met.',
+  domainId: 'IRAS_GST', topicIds: gstCase.requiredTopicIds,
+  subject: gstSubject, concepts: [gstConcept]
+}), false, 'Negated make-an-input-tax-claim wording remains unsupported.');
+assert.equal(check({
+  sourceText: 'A GST-registered business may make an input tax claim for entertainment purchases only under a special exception.',
+  domainId: 'IRAS_GST', topicIds: gstCase.requiredTopicIds,
+  subject: gstSubject, concepts: [gstConcept]
+}), false, 'Make-an-input-tax-claim wording tied only to a special exception does not establish general support.');
 assert.equal(check({
   sourceText: 'Input tax may be claimed.', domainId: 'IRAS_GST', topicIds: gstCase.requiredTopicIds,
   subject: gstSubject, concepts: [gstConcept]
