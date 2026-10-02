@@ -40,11 +40,12 @@ function matchesExpectedSubject(issueSubject, contract) {
 }
 
 function expectedEvidenceRequirement(operation, requiresFacts) {
+  if (operation === 'UNKNOWN') return 'UNRESOLVED';
+  if (requiresFacts) return 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS';
   if (operation === 'EXPLAIN_INTERACTION') return requiresFacts
     ? 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS'
     : 'AUTHORITATIVE_SOURCE';
-  if (operation === 'EXPLAIN_RULE' || operation === 'COMPARE' || operation === 'OTHER') return 'AUTHORITATIVE_SOURCE';
-  return 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS';
+  return 'AUTHORITATIVE_SOURCE';
 }
 
 assert.equal(fixture.cases.length, 12, 'The independent boundary set retains all ten families plus mixed and UNKNOWN/context controls.');
@@ -102,9 +103,10 @@ assert.match(capturedPrompt, /A number merely included as a case fact or illustr
 assert.match(capturedPrompt, /a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT/i);
 assert.match(capturedPrompt, /CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement/i);
 assert.match(capturedPrompt, /EXPLAIN_RULE for general principles or conditions without applying them to a case/i);
+assert.match(capturedPrompt, /CHECK_ELIGIBILITY does only for a specific claimant or transaction/i);
+assert.match(capturedPrompt, /keeping each issue's evidence requirement specific to that issue/i);
 assert.match(capturedPrompt, /a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT/i);
 assert.match(capturedPrompt, /Assign exactly one governing authority to each issue and ensure it matches the issue domain/i);
-// The existing 8,730-character prompt gains one short relief entitlement/amount distinction.
-assert.ok(capturedPrompt.length < 9_000, `Generic intent guidance and the short relief distinction remain within the adjusted prompt budget (${capturedPrompt.length} characters).`);
+assert.ok(capturedPrompt.length < 9_000, `Generic intent guidance and per-issue case-specificity remain within the prompt budget (${capturedPrompt.length} characters).`);
 
 console.log(`Semantic intent-boundary mock V2 contract and downstream regressions passed for ${fixture.cases.length} cases; promptChars=${capturedPrompt.length}. These mocks test prompt/contract/routing behavior, not model inference.`);

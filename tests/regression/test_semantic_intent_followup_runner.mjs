@@ -259,25 +259,21 @@ try {
   assert.equal(employerControl.intentAcceptance.correctRouting, true);
   assert.equal(employerControl.intentAcceptance.allRuntimeGuardsPassed, true, JSON.stringify(employerControl.routing.guardChecks));
   const conceptual = result.cases.find(item => item.caseId === 'control-general-recognition');
-  assert.equal(conceptual.validInterpretation, true);
-  assert.deepEqual(conceptual.intentAcceptance.caseSpecificity, { expected: false, actual: true });
-  assert.equal(conceptual.intentAcceptance.caseSpecificityCorrect, false);
-  assert.equal(conceptual.intentAcceptance.completeExpectedIssueCoverage, true);
-  assert.equal(conceptual.intentAcceptance.matchedDimensionsCorrect, true);
-  assert.equal(conceptual.intentAcceptance.allMatchedOperationsCorrect, true);
-  assert.equal(conceptual.intentAcceptance.correctRouting, true);
-  assert.equal(conceptual.intentAcceptance.allRuntimeGuardsPassed, true);
-  assert.equal(conceptual.intentAcceptance.passed, false, 'an incorrect true fact gate rejects a conceptual control');
+  assert.equal(conceptual.validInterpretation, false,
+    'a model-produced true fact gate contradicts this explicitly general recognition question');
+  assert.equal(conceptual.production.failure, 'INVALID_RESPONSE');
+  assert.equal(conceptual.production.failureReason, 'CONTRADICTORY_FIELDS');
+  assert.equal(conceptual.intentAcceptance.validInterpretation, false);
+  assert.equal(conceptual.scoring.matchedIssueCount, 0, 'a contradictory interpretation is not scored or routed');
+  assert.equal(conceptual.routing, undefined);
   const appliedBenefit = result.cases.find(item => item.caseId === 'specific-employee-benefit-treatment');
-  assert.equal(appliedBenefit.validInterpretation, true, 'OTHER makes requiresUserSpecificFacts=false schema-valid');
-  assert.deepEqual(appliedBenefit.intentAcceptance.caseSpecificity, { expected: true, actual: false });
-  assert.equal(appliedBenefit.intentAcceptance.caseSpecificityCorrect, false);
-  assert.equal(appliedBenefit.intentAcceptance.completeExpectedIssueCoverage, true);
-  assert.equal(appliedBenefit.intentAcceptance.matchedDimensionsCorrect, true);
-  assert.equal(appliedBenefit.intentAcceptance.allMatchedOperationsCorrect, true);
-  assert.equal(appliedBenefit.intentAcceptance.correctRouting, true);
-  assert.equal(appliedBenefit.intentAcceptance.allRuntimeGuardsPassed, true);
-  assert.equal(appliedBenefit.intentAcceptance.passed, false, 'an incorrect false fact gate rejects an applied benefit case');
+  assert.equal(appliedBenefit.validInterpretation, false,
+    'a false fact gate contradicts the case-specific employee-benefit treatment query even under OTHER');
+  assert.equal(appliedBenefit.production.failure, 'INVALID_RESPONSE');
+  assert.equal(appliedBenefit.production.failureReason, 'CONTRADICTORY_FIELDS');
+  assert.equal(appliedBenefit.intentAcceptance.validInterpretation, false);
+  assert.equal(appliedBenefit.scoring.matchedIssueCount, 0, 'a contradictory interpretation is not scored or routed');
+  assert.equal(appliedBenefit.routing, undefined);
 
   const jsonPath = path.join(outputDirectory, 'semantic-intent-targeted-live.json');
   const markdownPath = path.join(outputDirectory, 'semantic-intent-targeted-live.md');

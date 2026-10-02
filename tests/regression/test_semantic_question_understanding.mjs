@@ -102,10 +102,14 @@ const employeeBenefitsQuestions = [
   'Are employer-funded personal insurance premiums taxable as employment benefits?'
 ];
 for (const benefitQuestion of employeeBenefitsQuestions) {
+  const isSpecificCompanyPayment = benefitQuestion === employeeBenefitsQuestions[1];
   const benefitRoute = reconcile(benefitQuestion, {
     domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'tax treatment of employee benefits and reimbursements',
     concepts: [{ concept: 'employment benefits', role: 'PRIMARY' }, { concept: 'taxable perquisites', role: 'RELATED' }],
-    requestedOperation: 'EXPLAIN_INTERACTION', requiresUserSpecificFacts: false
+    // This question asks which amounts from the company's stated payments are
+    // taxable, so it applies treatment; the other controls ask general principles.
+    requestedOperation: isSpecificCompanyPayment ? 'DETERMINE_TREATMENT' : 'EXPLAIN_INTERACTION',
+    requiresUserSpecificFacts: isSpecificCompanyPayment
   });
   assert.equal(benefitRoute.understanding.interpretation.population, 'EMPLOYEE',
     `Employee benefit taxation is attributed to the employee despite contextual company/employer language: ${benefitQuestion}`);
@@ -150,7 +154,7 @@ assert.equal(employerReportingRoute.understanding.interpretation.population, 'EM
 const employeeIncomeNotBenefits = reconcile('When is my employment income from a temporary overseas posting taxable in Singapore?', {
   domain: 'IRAS_INCOME_TAX', population: 'EMPLOYEE', primarySubject: 'overseas employment income',
   concepts: [{ concept: 'employment income taxability', role: 'PRIMARY' }],
-  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: true
 });
 assert.equal(getSemanticIrasDiscoveryContext(employeeIncomeNotBenefits.understanding).domainId, 'IRAS_INDIVIDUAL_TAX',
   'Ordinary employment income questions do not get redirected into employer benefits reporting.');

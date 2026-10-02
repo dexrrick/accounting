@@ -12,8 +12,25 @@ const MODEL = 'gemini-3.5-flash-lite';
 const START_GAP_MS = 15_250;
 const SECRET = 'TEST_PRIVACY_SENTINEL_7f3d';
 const KEY_SENTINEL = 'UNRECOGNIZED_PROPERTY_SENTINEL';
+const MOCK_CASE_SPECIFICITY = Object.freeze({
+  'A-paraphrase-2': true,
+  'adversarial-C-employee-benefit': true,
+  'control-general-recognition': false,
+  'control-general-interaction': false,
+  'A-paraphrase-3': true,
+  'dev-conceptual-illustration': false,
+  'dev-training-entitlement': true,
+  'dev-mixed-entry-total': true,
+  'dev-corporate-filing': false,
+  'dev-investment-comparison': false
+});
+const FACT_DEPENDENT_OPERATIONS = new Set([
+  'CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL'
+]);
 
 function makeResponse(testCase) {
+  const requiresUserSpecificFacts = MOCK_CASE_SPECIFICITY[testCase.id];
+  assert.equal(typeof requiresUserSpecificFacts, 'boolean', `fixed mock fact-gate expectation exists for ${testCase.id}`);
   const issues = testCase.expected.map(expected => ({
     subject: `${expected.subject} ${SECRET} SUBJECT`,
     population: expected.population[0],
@@ -22,7 +39,10 @@ function makeResponse(testCase) {
     contextualAuthorities: expected.contextualAuthoritiesAnyOf?.[0] || [],
     operation: expected.operation[0],
     mappedTopicIds: [],
-    evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+    evidenceRequirement: FACT_DEPENDENT_OPERATIONS.has(expected.operation[0]) ||
+      (expected.operation[0] === 'CHECK_ELIGIBILITY' && requiresUserSpecificFacts)
+      ? 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS'
+      : 'AUTHORITATIVE_SOURCE',
     confidence: 0.93
   }));
   const response = {
@@ -35,7 +55,7 @@ function makeResponse(testCase) {
     primarySubject: `private primary subject ${SECRET}`,
     concepts: [{ concept: `private concept ${SECRET}`, role: 'PRIMARY' }],
     requestedOperation: 'OTHER',
-    requiresUserSpecificFacts: true,
+    requiresUserSpecificFacts,
     factsExplicitlyProvided: [`private case fact ${SECRET}`],
     confidence: 0.93,
     issues

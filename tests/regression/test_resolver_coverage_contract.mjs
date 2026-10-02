@@ -17,7 +17,7 @@ const issue = (subject, domain, population, governingAuthority, contextualAuthor
   confidence: 0.96
 });
 
-function reconcile(query, issues) {
+function reconcile(query, issues, interpretationOverrides = {}) {
   const authorities = [...new Set(issues.flatMap(item => item.governingAuthorities))];
   const domains = new Set(issues.map(item => item.domain));
   const populations = new Set(issues.map(item => item.population));
@@ -30,9 +30,9 @@ function reconcile(query, issues) {
     population: populations.size === 1 ? issues[0].population : 'UNKNOWN',
     primarySubject: issues[0].subject,
     concepts: [{ concept: issues[0].subject, role: 'PRIMARY' }],
-    requestedOperation: 'EXPLAIN_RULE',
-    requiresUserSpecificFacts: false,
-    factsExplicitlyProvided: [],
+    requestedOperation: interpretationOverrides.requestedOperation || 'EXPLAIN_RULE',
+    requiresUserSpecificFacts: interpretationOverrides.requiresUserSpecificFacts ?? false,
+    factsExplicitlyProvided: interpretationOverrides.factsExplicitlyProvided || [],
     confidence: 0.96,
     issues
   };
@@ -81,9 +81,18 @@ addCheck('cpf-employee-contribution-alone', 'How much CPF should an employee con
   employeeCpf('employee CPF contribution amount from wages')
 ]);
 
+const personalReliefClaim = personalRelief('individual personal tax relief on compulsory CPF contributions');
+personalReliefClaim.operation = 'CHECK_ELIGIBILITY';
+personalReliefClaim.evidenceRequirement = 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS';
 addCheck('cpf-personal-relief-alone', 'Can I claim personal tax relief on my compulsory CPF contributions?', ['iras-individual-reliefs'], [
-  personalRelief('individual personal tax relief on compulsory CPF contributions')
-]);
+  personalReliefClaim
+], {
+  interpretationOverrides: {
+    requestedOperation: 'CHECK_ELIGIBILITY',
+    requiresUserSpecificFacts: true,
+    factsExplicitlyProvided: ['compulsory CPF contributions']
+  }
+});
 
 addCheck('cpf-employee-and-employer-amounts', 'What are the employee and employer CPF contribution amounts for this monthly wage?', ['cpf_contribution_rates'], [
   employeeCpf('employee CPF contribution amount'), employerCpf('employer CPF contribution amount')
@@ -136,7 +145,7 @@ addCheck('accounting-tax-compound', 'How should an IFRS 16 lease liability be ac
 const failures = [];
 let totalIssues = 0;
 for (const row of checks) {
-  const result = reconcile(row.query, row.issues);
+  const result = reconcile(row.query, row.issues, row.interpretationOverrides);
   row.result = result.result;
   totalIssues += row.issues.length;
   const queryTopicIds = new Set(defaultQueryTopicResolver.decomposeQuery(row.query).topics.map(topic => topic.id));

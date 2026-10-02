@@ -204,7 +204,7 @@ export async function runSemanticContractDiagnosis({
     } catch {
       productionResult = { mode: 'DETERMINISTIC_FALLBACK', failure: 'PROVIDER_ERROR' };
     }
-    const diagnostic = typeof rawResponse === 'string' ? diagnoseSemanticResponse(rawResponse) : undefined;
+    const diagnostic = typeof rawResponse === 'string' ? diagnoseSemanticResponse(rawResponse, testCase.question) : undefined;
     rawResponse = undefined;
 
     const sourceHashAfter = await hashFile(PRODUCTION_SOURCE);

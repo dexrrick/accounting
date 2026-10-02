@@ -28,6 +28,12 @@ const flatInterpretation = (overrides = {}) => ({
   confidence: 0.96,
   ...overrides
 });
+const appliedInterpretation = (issues, overrides = {}) => flatInterpretation({
+  requiresUserSpecificFacts: true,
+  factsExplicitlyProvided: ['stated transaction or claimant context'],
+  issues,
+  ...overrides
+});
 
 const issue = (overrides = {}) => ({
   subject: 'material regulatory workstream',
@@ -172,11 +178,11 @@ const expectedTopicIds = {
 
 assert.ok(validateSemanticQuestionInterpretation(flatInterpretation()),
   'Legacy 12-key provider fixtures remain valid.');
-assert.ok(validateSemanticQuestionInterpretation(flatInterpretation({ issues: fixtures.A })),
+assert.ok(validateSemanticQuestionInterpretation(appliedInterpretation(fixtures.A)),
   'The optional issue array is accepted when each issue matches the taxonomy.');
 const configuredProvider = { activeProvider: 'gemini', gemini: { apiKey: '0123456789012345', model: 'test-model' } };
 const providerInterpretation = await interpretSemanticQuestion(prompts.A, configuredProvider,
-  async () => JSON.stringify(flatInterpretation({ issues: fixtures.A })));
+  async () => JSON.stringify(appliedInterpretation(fixtures.A)));
 assert.equal(providerInterpretation.mode, 'SEMANTIC_INTERPRETATION',
   'Structured provider output can carry optional per-issue semantics.');
 assert.equal(providerInterpretation.interpretation.issues.length, fixtures.A.length);
@@ -185,7 +191,7 @@ for (const [caseId, query] of Object.entries(prompts)) {
   const classification = classifyQuestion(query);
   const result = reconcileQuestionUnderstanding(query, classification, {
     mode: 'SEMANTIC_INTERPRETATION',
-    interpretation: flatInterpretation({ issues: fixtures[caseId] })
+    interpretation: appliedInterpretation(fixtures[caseId])
   });
   assert.equal(result.issuePlan.source, 'SEMANTIC_ISSUES', caseId + ': use supplied issue fixture.');
   assert.equal(result.issuePlan.issues.length, fixtures[caseId].length, caseId + ': retain each material issue.');
@@ -206,7 +212,7 @@ for (const [caseId, query] of Object.entries(prompts)) {
   assert.equal(result.issuePlan.hasUnmappedResidual, true, caseId + ': unsupported workstreams or residual query text remain visible.');
   const repeated = reconcileQuestionUnderstanding(query, classification, {
     mode: 'SEMANTIC_INTERPRETATION',
-    interpretation: flatInterpretation({ issues: fixtures[caseId] })
+    interpretation: appliedInterpretation(fixtures[caseId])
   });
   assert.deepEqual(result.issuePlan.issues.map(item => item.id), repeated.issuePlan.issues.map(item => item.id),
     caseId + ': stable inputs receive deterministic IDs.');
@@ -214,7 +220,7 @@ for (const [caseId, query] of Object.entries(prompts)) {
 
 assert.equal(
   reconcileQuestionUnderstanding(prompts.B, classifyQuestion(prompts.B), {
-    mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: fixtures.B })
+    mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation(fixtures.B)
   }).issuePlan.issues.find(item => item.subject.includes('work-pass'))?.status,
   'MAPPED',
   'A generic work-pass issue maps to the safe MOM parent topic without choosing a specific pass category.'
@@ -257,25 +263,25 @@ const hintFreeIssue = issue({
   operation: 'CHECK_ELIGIBILITY', mappedTopicIds: []
 });
 const hintFreeResult = reconcileQuestionUnderstanding(noProviderQuery, classifyQuestion(noProviderQuery), {
-  mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: [hintFreeIssue] })
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation([hintFreeIssue])
 });
 assert.deepEqual(hintFreeResult.issuePlan.issues[0].mappedTopicIds, ['iras-cit-deductibility'],
   'Issue subject can derive a topic when the original query independently recognizes it, even with empty provider hints.');
 assert.equal(hintFreeResult.issuePlan.issues[0].status, 'MAPPED');
 
 const cpfPopulationMismatch = reconcileQuestionUnderstanding(prompts.A, classifyQuestion(prompts.A), {
-  mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: [issue({
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation([issue({
     subject: 'employee CPF contribution requirements', population: 'SHAREHOLDER',
     domain: 'CPF_PAYROLL', governingAuthorities: ['CPF'], operation: 'CHECK_ELIGIBILITY',
     mappedTopicIds: ['cpf_contribution_rates']
-  })] })
+  })])
 });
 assert.equal(cpfPopulationMismatch.issuePlan.issues[0].status, 'UNRESOLVED',
   'CPF contribution topics do not map to unrelated shareholder populations.');
 assert.deepEqual(cpfPopulationMismatch.issuePlan.issues[0].mappedTopicIds, []);
 
 const partialA = reconcileQuestionUnderstanding(prompts.A, classifyQuestion(prompts.A), {
-  mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: fixtures.A.slice(0, 2) })
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation(fixtures.A.slice(0, 2))
 });
 assert.ok(partialA.issuePlan.issues.some(item => item.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
   item.mappedTopicIds.includes('iras-individual-cpf-relief')),
@@ -284,7 +290,7 @@ assert.equal(partialA.issuePlan.coverageEstablished, false);
 
 const queryCWithRecognizedBenefitTopic = "Our company pays an employee's housing allowance. Is it deductible to the company for Singapore corporate income tax, is it taxable to the employee, and what benefits-in-kind tax reporting obligation applies?";
 const partialC = reconcileQuestionUnderstanding(queryCWithRecognizedBenefitTopic, classifyQuestion(queryCWithRecognizedBenefitTopic), {
-  mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: [] })
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation([])
 });
 assert.ok(partialC.issuePlan.issues.some(item => item.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
   item.mappedTopicIds.includes('iras-employment-benefits')),
@@ -296,19 +302,19 @@ const fabricatedTopicIssue = issue({
   operation: 'CHECK_ELIGIBILITY', mappedTopicIds: ['iras-individual-cpf-relief']
 });
 const fabricatedTopicResult = reconcileQuestionUnderstanding(prompts.C, classifyQuestion(prompts.C), {
-  mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: [fabricatedTopicIssue] })
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation([fabricatedTopicIssue])
 });
 assert.equal(fabricatedTopicResult.issuePlan.issues[0].status, 'UNRESOLVED',
   'A same-authority/same-domain subject and topic hint cannot create support absent from the original query inventory.');
 assert.deepEqual(fabricatedTopicResult.issuePlan.issues[0].mappedTopicIds, []);
 
 const evidenceOverrideResult = reconcileQuestionUnderstanding(prompts.D, classifyQuestion(prompts.D), {
-  mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: [
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation([
     issue({ domain: 'IRAS_INCOME_TAX', population: 'COMPANY', governingAuthorities: ['IRAS'],
       operation: 'CALCULATE', mappedTopicIds: [], evidenceRequirement: 'CASE_FACTS' }),
-    issue({ domain: 'ACCOUNTING', population: 'COMPANY', governingAuthorities: ['ACCOUNTING_STANDARDS'],
+    issue({ subject: 'accounting for an expense recorded under SFRS(I)', domain: 'ACCOUNTING', population: 'COMPANY', governingAuthorities: ['ACCOUNTING_STANDARDS'],
       operation: 'EXPLAIN_RULE', mappedTopicIds: [], evidenceRequirement: 'CASE_FACTS' })
-  ] })
+  ])
 });
 assert.deepEqual(evidenceOverrideResult.issuePlan.issues.map(item => item.evidenceRequirement), [
   'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'AUTHORITATIVE_SOURCE'
@@ -330,7 +336,7 @@ assert.equal(generalInteraction.issuePlan.issues[0].evidenceRequirement, 'AUTHOR
   'A general rule interaction does not require case facts.');
 const caseInteraction = reconcileQuestionUnderstanding(
   prompts.A, classifyQuestion(prompts.A),
-  { mode: 'SEMANTIC_INTERPRETATION', interpretation: flatInterpretation({ issues: [interactionIssue], requiresUserSpecificFacts: true }) }
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: appliedInterpretation([interactionIssue]) }
 );
 assert.equal(caseInteraction.issuePlan.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
   'A case-specific interaction requires source evidence and case facts.');
@@ -338,15 +344,11 @@ assert.equal(caseInteraction.issuePlan.issues[0].evidenceRequirement, 'AUTHORITA
 const contextualAccountingQuery = 'A company records an employee benefit under SFRS(I) and wants to know whether it is tax deductible.';
 const taxOnlyWithAccountingContext = reconcileQuestionUnderstanding(contextualAccountingQuery, classifyQuestion(contextualAccountingQuery), {
   mode: 'SEMANTIC_INTERPRETATION',
-  interpretation: flatInterpretation({
-    domain: 'IRAS_INCOME_TAX', population: 'COMPANY', authorityCandidates: ['IRAS'],
-    primarySubject: 'corporate tax deductibility of recorded employee benefit',
-    requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true,
-    issues: [issue({
-      subject: 'company deductibility of recorded employee benefit expense', population: 'COMPANY',
-      domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], operation: 'CHECK_ELIGIBILITY'
-    })]
-  })
+  interpretation: appliedInterpretation([issue({
+    subject: 'company deductibility of recorded employee benefit expense', population: 'COMPANY',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], operation: 'CHECK_ELIGIBILITY'
+  })], { domain: 'IRAS_INCOME_TAX', population: 'COMPANY', authorityCandidates: ['IRAS'],
+    primarySubject: 'corporate tax deductibility of recorded employee benefit', requestedOperation: 'CHECK_ELIGIBILITY' })
 });
 assert.equal(taxOnlyWithAccountingContext.classification.accountingAnalysisRequired, false,
   'A validated tax-only request keeps accounting standards as context even when the original words mention recording under SFRS(I).');
@@ -355,13 +357,10 @@ assert.equal(taxOnlyWithAccountingContext.classification.journalEntryRequired, f
 const explicitJournalAccountingQuery = 'Prepare the SFRS(I) journal entry for this employee benefit and explain the corporate tax deduction.';
 const requestedJournalAccounting = reconcileQuestionUnderstanding(explicitJournalAccountingQuery, classifyQuestion(explicitJournalAccountingQuery), {
   mode: 'SEMANTIC_INTERPRETATION',
-  interpretation: flatInterpretation({
-    domain: 'UNKNOWN', population: 'UNKNOWN', authorityCandidates: ['UNKNOWN'],
-    issues: [issue({
-      subject: 'journal entry for employee benefit', population: 'COMPANY', domain: 'ACCOUNTING',
-      governingAuthorities: ['ACCOUNTING_STANDARDS'], operation: 'PREPARE_JOURNAL'
-    })]
-  })
+  interpretation: appliedInterpretation([issue({
+    subject: 'journal entry for employee benefit', population: 'COMPANY', domain: 'ACCOUNTING',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'], operation: 'PREPARE_JOURNAL'
+  })], { domain: 'UNKNOWN', population: 'UNKNOWN', authorityCandidates: ['UNKNOWN'] })
 });
 assert.equal(requestedJournalAccounting.classification.accountingAnalysisRequired, true,
   'A validated accounting/journal issue remains requested when the question asks for the entry.');
@@ -373,8 +372,13 @@ const noProvider = await interpretSemanticQuestion(noProviderQuery, undefined, a
 assert.equal(noProvider.failure, 'NO_PROVIDER');
 const deterministicClassification = classifyQuestion(noProviderQuery);
 const deterministic = reconcileQuestionUnderstanding(noProviderQuery, deterministicClassification, noProvider);
-assert.deepEqual(deterministic.classification, deterministicClassification,
-  'No-provider issue discovery does not rewrite legacy classification.');
+const { missingFacts: deterministicMissingFacts, ...deterministicLegacyFields } = deterministic.classification;
+const { missingFacts: _legacyMissingFacts, ...legacyFields } = deterministicClassification;
+assert.deepEqual(deterministicLegacyFields, legacyFields,
+  'No-provider issue discovery preserves the legacy classification fields.');
+assert.deepEqual(deterministicMissingFacts, [
+  'Facts about the specific taxpayer, claim, or transaction are needed to assess this application.'
+], 'A recognized application still identifies the facts needed when no provider is available.');
 assert.equal(deterministic.issuePlan.source, 'TAXONOMY_FALLBACK');
 assert.ok(deterministic.issuePlan.issues.some(item => item.mappedTopicIds.includes('iras-cit-deductibility')),
   'No-provider mode exposes known corporate tax topics as a material workstream.');

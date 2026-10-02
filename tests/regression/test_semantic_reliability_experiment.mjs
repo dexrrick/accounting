@@ -23,6 +23,7 @@ const fixture = JSON.parse(fixtureBytes.toString('utf8'));
 const cases = experimentCasesFromFixture(fixture);
 const fixtureSha256 = 'fixture-test-sha256';
 const sourceHashes = { semanticQuestionUnderstanding: 'source-a', aiTransport: 'source-b' };
+const FACT_DEPENDENT_OPERATIONS = new Set(['CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL']);
 const experimentPlan = buildExperimentPlan({ fixtureSha256, sourceHashes, cases });
 const schedule = buildExperimentSchedule(cases);
 const summaryMetadata = {
@@ -97,7 +98,9 @@ function payloadFor(testCase, { contradictory = false, confidence = 0.96 } = {})
     contextualAuthorities: issue.contextualAuthoritiesAnyOf[0],
     operation: issue.operation[0],
     mappedTopicIds: [],
-    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+    evidenceRequirement: FACT_DEPENDENT_OPERATIONS.has(issue.operation[0])
+      ? 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS'
+      : 'AUTHORITATIVE_SOURCE',
     confidence: 0.96
   }));
   return {
@@ -109,7 +112,8 @@ function payloadFor(testCase, { contradictory = false, confidence = 0.96 } = {})
     primarySubject: 'material requested outcomes',
     concepts: [],
     requestedOperation: contradictory ? 'CALCULATE' : 'OTHER',
-    requiresUserSpecificFacts: false,
+    requiresUserSpecificFacts: testCase.expected.some(issue =>
+      FACT_DEPENDENT_OPERATIONS.has(issue.operation[0])),
     calculationRequested: false,
     factsExplicitlyProvided: [],
     confidence,

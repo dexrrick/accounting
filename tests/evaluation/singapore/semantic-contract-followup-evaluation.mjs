@@ -14,11 +14,26 @@ import {
 } from '../../../src/services/semanticQuestionUnderstanding.ts';
 import { diagnoseSemanticResponse } from './semantic-contract-diagnosis.mjs';
 import { matchIssues, scoreIssueDimensions } from './multi-authority-issue-scoring.mjs';
+import irasFirstConfig from './iras-first-evaluation-config-v1.json' with { type: 'json' };
+import {
+  AUTHORITY_COVERAGE_SCOPE,
+  IRAS_FIRST_GAP_CODES,
+  IRAS_FIRST_PROFILE_VERSION,
+  buildPerIssueScopeDiagnostics,
+  admittedEvidenceConsistent,
+  diagnosticHasCompleteVerifiedSupport,
+  explicitUnsupported,
+  evaluateIrasFirstCase,
+  scopeAwareWorkstreamSetAccuracy,
+  summarizeRuntimeIssueAssignments,
+  summarizeIrasFirstAcceptance
+} from './iras-first-release-contract.mjs';
 
 const SCRIPT_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(SCRIPT_DIRECTORY, '../../..');
 const REPORT_DIRECTORY = path.join(PROJECT_ROOT, 'docs', 'evaluation', 'multi-authority-workstreams');
 const SEMANTIC_WIRE_FORMAT_OUTPUT_DIRECTORY = path.join(REPORT_DIRECTORY, 'semantic-wire-format-live-2026-10-02');
+const IRAS_FIRST_OUTPUT_DIRECTORY = path.join(REPORT_DIRECTORY, 'iras-first-live-2026-10-02-v1');
 const MODEL = 'gemini-3.5-flash-lite';
 const START_GAP_MS = 15_250;
 const OUTPUT_PREFIX = 'semantic-contract-followup-v2-live';
@@ -28,6 +43,12 @@ const AUTHORITY_RELIEF_TARGETED_OUTPUT_PREFIX = 'authority-relief-targeted-live'
 const AUTHORITY_RELIEF_FINAL_OUTPUT_PREFIX = 'authority-relief-final-live';
 const SEMANTIC_WIRE_FORMAT_TARGETED_OUTPUT_PREFIX = 'semantic-wire-format-targeted-live';
 const SEMANTIC_WIRE_FORMAT_FINAL_OUTPUT_PREFIX = 'semantic-wire-format-final-live';
+const IRAS_FIRST_TARGETED_PROFILE = 'iras-first-targeted-v1-live';
+const IRAS_FIRST_FINAL_PROFILE = 'iras-first-final-v1-live';
+const IRAS_FIRST_TARGETED_OUTPUT_PREFIX = irasFirstConfig.targetedOutputPrefix;
+const IRAS_FIRST_FINAL_OUTPUT_PREFIX = irasFirstConfig.finalOutputPrefix;
+const IRAS_FIRST_CONFIG_FIXTURE = path.join(SCRIPT_DIRECTORY, 'iras-first-evaluation-config-v1.json');
+const IRAS_FIRST_HISTORICAL_ARTIFACT_MANIFEST = path.join(IRAS_FIRST_OUTPUT_DIRECTORY, 'historical-artifact-hashes.json');
 const PRIMARY_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-contract-followup.json');
 const OPERATION_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-operation-followup.json');
 const GUIDANCE_FIXTURE = path.join(SCRIPT_DIRECTORY, 'semantic-reliability-post-guidance.json');
@@ -45,6 +66,11 @@ const SOURCE_FILES = Object.freeze({
   authorityWorkstreams: path.join(PROJECT_ROOT, 'src', 'services', 'authorityWorkstreams.ts'),
   responseDiagnostics: path.join(SCRIPT_DIRECTORY, 'semantic-contract-diagnosis.mjs'),
   issueScoring: path.join(SCRIPT_DIRECTORY, 'multi-authority-issue-scoring.mjs')
+});
+const IRAS_FIRST_SCOPE_FILES = Object.freeze({
+  releaseContract: path.join(SCRIPT_DIRECTORY, 'iras-first-release-contract.mjs'),
+  profileConfig: IRAS_FIRST_CONFIG_FIXTURE,
+  historicalArtifactManifest: IRAS_FIRST_HISTORICAL_ARTIFACT_MANIFEST
 });
 const AUTHORITY_RELIEF_RESOLVER_FILES = Object.freeze({
   queryTopicResolver: path.join(PROJECT_ROOT, 'src', 'retrieval', 'queryTopicResolver.ts'),
@@ -175,6 +201,28 @@ async function hashFile(filePath) {
 async function hashManifest(files) {
   const entries = await Promise.all(Object.entries(files).map(async ([key, filePath]) => [key, await hashFile(filePath)]));
   return Object.fromEntries(entries);
+}
+
+async function assertHistoricalArtifactsUnchanged() {
+  const manifest = await readJson(IRAS_FIRST_HISTORICAL_ARTIFACT_MANIFEST);
+  if (manifest?.baselineCommit !== 'd194d2bc7121b2c9a1deec562f77eafdfb98cd90' ||
+      !Array.isArray(manifest.artifacts) || manifest.artifacts.length !== 110 ||
+      new Set(manifest.artifacts.map(item => item?.path)).size !== manifest.artifacts.length) {
+    throw new Error('A protected semantic evaluation artifact has changed.');
+  }
+  const checks = await Promise.all(manifest.artifacts.map(async item => {
+    if (typeof item?.path !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)) return false;
+    const filePath = path.resolve(PROJECT_ROOT, item.path);
+    const relativePath = path.relative(PROJECT_ROOT, filePath);
+    if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false;
+    try {
+      return await hashFile(filePath) === item.sha256;
+    } catch {
+      return false;
+    }
+  }));
+  if (!checks.every(Boolean)) throw new Error('A protected semantic evaluation artifact has changed.');
+  return { artifactCount: checks.length, verified: true };
 }
 
 function sameManifest(left, right) {
@@ -340,6 +388,145 @@ export async function loadSemanticWireFormatTargetedCases() {
   return selected;
 }
 
+const IRAS_FIRST_SPECIFICITY = Object.freeze({
+  'A-paraphrase-2': true,
+  'adversarial-C-employee-benefit': true,
+  'control-general-recognition': false,
+  'control-general-interaction': false,
+  'A-paraphrase-3': true,
+  'dev-conceptual-illustration': false,
+  'dev-training-entitlement': true,
+  'dev-mixed-entry-total': true,
+  'dev-corporate-filing': false,
+  'dev-investment-comparison': false,
+  'target-relief-entitlement': true,
+  'target-relief-amount': true,
+  'private-expense-treatment': true,
+  'foreign-dividend-receipt-treatment': true,
+  'corporate-residency-general-rule': false,
+  'target-mixed-ifrs-singapore-accounting': false,
+  'unsupported-sfrsi-6-exploration-evaluation': false
+});
+
+function applyIrasFirstVersionedExpectation(testCase, { historicalExpected } = {}) {
+  const copied = {
+    ...testCase,
+    expected: testCase.expected.map(issue => ({ ...issue })),
+    expectedWorkstreamsAnyOf: testCase.expectedWorkstreamsAnyOf.map(set => [...set]),
+    expectedRequiresUserSpecificFacts: IRAS_FIRST_SPECIFICITY[testCase.id],
+    expectationVersion: IRAS_FIRST_PROFILE_VERSION
+  };
+  if (typeof copied.expectedRequiresUserSpecificFacts !== 'boolean') {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  if (historicalExpected) copied.historicalExpected = historicalExpected.map(issue => ({ ...issue }));
+  const adjudication = irasFirstConfig.adjudications?.[testCase.id];
+  if (testCase.id === 'target-mixed-ifrs-singapore-accounting') {
+    if (adjudication?.version !== IRAS_FIRST_PROFILE_VERSION || !Array.isArray(adjudication.contextualAuthoritiesAnyOf)) {
+      throw new Error('A required fixed evaluation case is missing.');
+    }
+    copied.expected = copied.expected.map(issue => ({
+      ...issue,
+      contextualAuthoritiesAnyOf: adjudication.contextualAuthoritiesAnyOf.map(set => [...set])
+    }));
+    copied.adjudicationVersion = IRAS_FIRST_PROFILE_VERSION;
+  }
+  if (testCase.id === 'dev-investment-comparison') {
+    if (adjudication?.version !== IRAS_FIRST_PROFILE_VERSION || !Array.isArray(adjudication.populationAnyOf) ||
+        adjudication.coverageOutcome !== 'UNSUPPORTED') {
+      throw new Error('A required fixed evaluation case is missing.');
+    }
+    copied.expected = copied.expected.map(issue => ({ ...issue, population: [...adjudication.populationAnyOf] }));
+    copied.expectedCoverageOutcome = adjudication.coverageOutcome;
+    copied.adjudicationVersion = IRAS_FIRST_PROFILE_VERSION;
+  }
+  return copied;
+}
+
+function validateIrasFirstProfileConfig() {
+  const targeted = irasFirstConfig.targetedCaseIds;
+  const final = irasFirstConfig.finalCaseIds;
+  if (irasFirstConfig.schemaVersion !== 1 || irasFirstConfig.profileVersion !== IRAS_FIRST_PROFILE_VERSION ||
+      !Array.isArray(targeted) || targeted.length < 8 || new Set(targeted).size !== targeted.length ||
+      !Array.isArray(final) || final.length !== 12 || new Set(final).size !== final.length ||
+      !irasFirstConfig.coverageStates || irasFirstConfig.coverageStates.IRAS?.state !== 'RELEASE_REQUIRED' ||
+      Object.values(irasFirstConfig.coverageStates).some(item => !['RELEASE_REQUIRED', 'PARTIAL', 'NOT_YET_COVERED'].includes(item?.state)) ||
+      irasFirstConfig.unsupportedNonIrasControl?.expectedCoverageOutcome !== 'UNSUPPORTED') {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+}
+
+/** Fixed IRAS-first targeted set; profile cases cannot be supplied by the caller. */
+export async function loadIrasFirstTargetedCases() {
+  validateIrasFirstProfileConfig();
+  const [historical, authorityCases, boundaryFixture] = await Promise.all([
+    loadSemanticContractFollowupCases(), loadAuthorityReliefTargetedCases(), readJson(INTENT_BOUNDARY_FIXTURE)
+  ]);
+  const boundaryById = new Map((Array.isArray(boundaryFixture?.cases) ? boundaryFixture.cases : []).map(item => [item?.id, item]));
+  const historicalById = new Map(historical.map(testCase => [testCase.id, testCase]));
+  const authorityById = new Map(authorityCases.map(testCase => [testCase.id, testCase]));
+  const boundaryCases = ['private-expense-treatment', 'foreign-dividend-receipt-treatment', 'corporate-residency-general-rule']
+    .map(id => {
+      const source = boundaryById.get(id);
+      if (!source) return undefined;
+      const valid = validateIntentBoundaryCase(source);
+      return {
+        ...valid,
+        expectedRequiresUserSpecificFacts: source.mock?.requiresUserSpecificFacts,
+        group: 'INDEPENDENT_CONTROL'
+      };
+    });
+  const unsupported = irasFirstConfig.unsupportedNonIrasControl;
+  const unsupportedCase = {
+    ...unsupported,
+    group: 'INDEPENDENT_CONTROL'
+  };
+  const available = new Map([
+    ...historical.map(testCase => [testCase.id, testCase]),
+    ...authorityCases.map(testCase => [testCase.id, testCase]),
+    ...boundaryCases.filter(Boolean).map(testCase => [testCase.id, testCase]),
+    [unsupportedCase.id, unsupportedCase]
+  ]);
+  const selected = irasFirstConfig.targetedCaseIds.map(id => {
+    const testCase = available.get(id);
+    if (!testCase) return undefined;
+    const original = historicalById.get(id);
+    return applyIrasFirstVersionedExpectation(testCase, original ? { historicalExpected: original.expected } : {});
+  });
+  if (selected.some(item => !item) || selected.length !== 9 ||
+      selected.filter(item => item.expected.some(issue => issue.governingAuthorities?.includes('IRAS'))).length < 6 ||
+      selected.filter(item => item.expectedCoverageOutcome === 'UNSUPPORTED').length !== 2 ||
+      selected.filter(item => item.expected.some(issue => issue.governingAuthorities?.includes('ACCOUNTING_STANDARDS'))).length < 3) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return selected;
+}
+
+/** Fixed final set: original ten historical questions plus the two central IRAS relief cases. */
+export async function loadIrasFirstFinalCases() {
+  validateIrasFirstProfileConfig();
+  const [historical, authorityCases] = await Promise.all([
+    loadSemanticContractFollowupCases(), loadAuthorityReliefTargetedCases()
+  ]);
+  const authorityById = new Map(authorityCases.map(testCase => [testCase.id, testCase]));
+  const available = new Map([
+    ...historical.map(testCase => [testCase.id, testCase]),
+    ...authorityCases.map(testCase => [testCase.id, testCase])
+  ]);
+  const selected = irasFirstConfig.finalCaseIds.map(id => {
+    const testCase = available.get(id);
+    if (!testCase) return undefined;
+    const original = historical.find(item => item.id === id);
+    return applyIrasFirstVersionedExpectation(testCase, original ? { historicalExpected: original.expected } : {});
+  });
+  if (selected.some(item => !item) || selected.length !== 12 ||
+      historical.length !== 10 || historical.some(item => !selected.some(selectedItem => selectedItem.id === item.id)) ||
+      !authorityById.has('target-relief-entitlement') || !authorityById.has('target-relief-amount')) {
+    throw new Error('A required fixed evaluation case is missing.');
+  }
+  return selected;
+}
+
 function getExpectedIssues(fixture, testCase) {
   const issueContracts = fixture.issueContracts?.[testCase.contract];
   const requestedIds = testCase.expectedIssueIds || issueContracts?.map(issue => issue.id);
@@ -424,6 +611,9 @@ function safeResult(result) {
 
 function safeDiagnostic(diagnostic) {
   if (!diagnostic || typeof diagnostic !== 'object') return undefined;
+  const rawShape = diagnostic.safeShape && typeof diagnostic.safeShape === 'object' ? diagnostic.safeShape : {};
+  const shapeCount = value => Number.isInteger(value) && value >= 0 ? Math.min(value, 1_000_000) : 0;
+  const rootType = new Set(['OBJECT', 'ARRAY', 'STRING', 'NUMBER', 'BOOLEAN', 'NULL', 'UNDEFINED']);
   return {
     validatorAccepted: diagnostic.validatorAccepted === true,
     interpreted: diagnostic.interpreted === true,
@@ -431,7 +621,18 @@ function safeDiagnostic(diagnostic) {
     violationCodes: Array.isArray(diagnostic.violations)
       ? diagnostic.violations.slice(0, 24).map(item => REJECTION_CODES.has(item?.code) ? item.code : 'UNCLASSIFIED_REJECTION')
       : [],
-    safeShape: diagnostic.safeShape
+    safeShape: {
+      rootType: rootType.has(rawShape.rootType) ? rawShape.rootType : 'UNKNOWN',
+      responseType: rootType.has(rawShape.responseType) ? rawShape.responseType : 'UNKNOWN',
+      keyCount: shapeCount(rawShape.keyCount),
+      extraKeyCount: shapeCount(rawShape.extraKeyCount),
+      missingKeyCount: shapeCount(rawShape.missingKeyCount),
+      issueCount: shapeCount(rawShape.fields?.issues?.count),
+      conceptCount: shapeCount(rawShape.fields?.concepts?.count),
+      responseChars: shapeCount(rawShape.responseChars),
+      exceedsLimit: rawShape.exceedsLimit === true,
+      malformed: rawShape.malformed === true
+    }
   };
 }
 
@@ -479,7 +680,10 @@ function authorityReliefRoutingDiagnostics(semanticIssues, reconciledIssues, run
   return { requestedIssueCoverage, requestedIssuesMappedAndRetrieved, runtimeTimedOut };
 }
 
-function summarizeRuntime(testCase, understanding, buildRuntime, { captureAuthorityReliefRouting = false } = {}) {
+function summarizeRuntime(testCase, understanding, buildRuntime, {
+  captureAuthorityReliefRouting = false,
+  captureIrasFirstScope = false
+} = {}) {
   const semanticIssues = understanding.interpretation?.issues || [];
   try {
     const classification = classifyQuestion(testCase.question);
@@ -535,6 +739,12 @@ function summarizeRuntime(testCase, understanding, buildRuntime, { captureAuthor
       const authorityReliefRouting = captureAuthorityReliefRouting
         ? authorityReliefRoutingDiagnostics(semanticIssues, reconciledIssues, runtime, runtimeIssues)
         : undefined;
+      const runtimeIssueScopeDiagnostics = captureIrasFirstScope
+        ? buildPerIssueScopeDiagnostics(semanticIssues, issuePlan, runtime)
+        : undefined;
+      const runtimeIssueAssignments = captureIrasFirstScope
+        ? summarizeRuntimeIssueAssignments(semanticIssues, issuePlan, runtimeWorkstreams, runtime?.gaps || [])
+        : undefined;
       return {
         plannedWorkstreamCount: planned.length,
         finalWorkstreamCount: runtimeWorkstreams.length,
@@ -557,6 +767,13 @@ function summarizeRuntime(testCase, understanding, buildRuntime, { captureAuthor
         ...(authorityReliefRouting ? {
           requestedIssueCoverage: authorityReliefRouting.requestedIssueCoverage,
           runtimeTimedOut: authorityReliefRouting.runtimeTimedOut
+        } : {}),
+        ...(captureIrasFirstScope ? {
+          runtimeIssueScopeDiagnostics,
+          runtimeAssignmentIntegrity: runtimeIssueAssignments?.runtimeAssignmentIntegrity === true,
+          runtimeAssignmentCounts: runtimeIssueAssignments?.runtimeAssignmentCounts,
+          runtimeTimedOut: authorityReliefRouting?.runtimeTimedOut === true || runtime?.timedOut === true ||
+            runtime?.timeout === true || runtime?.status === 'TIMEOUT'
         } : {})
       };
     });
@@ -578,7 +795,25 @@ function summarizeRuntime(testCase, understanding, buildRuntime, { captureAuthor
         caseSpecificApplicationsUnresolved: false,
         unresolvedApplicationNotVerified: false
       },
-      applicationStatusCounts: { NOT_REQUIRED: 0, UNRESOLVED: 0, UNKNOWN: 0, requiredPlanIssues: 0, routedRequiredIssues: 0 }
+      applicationStatusCounts: { NOT_REQUIRED: 0, UNRESOLVED: 0, UNKNOWN: 0, requiredPlanIssues: 0, routedRequiredIssues: 0 },
+      ...(captureIrasFirstScope ? {
+        runtimeAssignmentIntegrity: false,
+        runtimeAssignmentCounts: {
+          semanticIssueCount: semanticIssues.length,
+          plannedIssueCount: 0,
+          runtimeIssueCount: 0,
+          runtimeIssueIdMismatchCount: 0,
+          duplicateRuntimeIssueIdCount: 0,
+          unknownGapIssueIdCount: 0,
+          emptyWorkstreamCount: 0,
+          unresolvedPlanIssueCount: 0,
+          unresolvedIrasPlanIssueCount: 0,
+          knownUnsupportedNonIrasPlanIssueCount: 0,
+          unrepresentedResidualPlanIssueCount: 0,
+          issuePlanResidualAccommodation: false
+        },
+        runtimeIssueScopeDiagnostics: []
+      } : {})
     });
   }
 }
@@ -838,11 +1073,14 @@ function caseSummary(cases, group) {
 
 function renderMarkdown(document) {
   const intentProfile = document.evaluationProfile === 'intent-targeted' || document.evaluationProfile === 'intent-final';
+  const irasFirstProfile = document.evaluationProfile === IRAS_FIRST_TARGETED_PROFILE || document.evaluationProfile === IRAS_FIRST_FINAL_PROFILE;
   const strictSemanticProfile = document.evaluationProfile === 'authority-relief-targeted-live' ||
     document.evaluationProfile === 'authority-relief-final-live' ||
     document.evaluationProfile === 'semantic-wire-format-targeted-live' ||
     document.evaluationProfile === 'semantic-wire-format-final-live';
-  const heading = document.evaluationProfile === 'semantic-wire-format-targeted-live' ? '# Semantic wire-format targeted live evaluation'
+  const heading = document.evaluationProfile === IRAS_FIRST_TARGETED_PROFILE ? '# IRAS-first v1 targeted evaluation'
+    : document.evaluationProfile === IRAS_FIRST_FINAL_PROFILE ? '# IRAS-first v1 final evaluation'
+    : document.evaluationProfile === 'semantic-wire-format-targeted-live' ? '# Semantic wire-format targeted live evaluation'
     : document.evaluationProfile === 'semantic-wire-format-final-live' ? '# Semantic wire-format final live evaluation'
     : document.evaluationProfile === 'authority-relief-targeted-live' ? '# Authority and relief targeted live evaluation'
     : document.evaluationProfile === 'authority-relief-final-live' ? '# Authority and relief final live evaluation'
@@ -893,6 +1131,76 @@ function renderMarkdown(document) {
         ? `${requestedRouting.mappedIssueCount} / ${requestedRouting.requestedIssueCount} / ${requestedRouting.inCanonicalRuntimeCount} / ${requestedRouting.retrievalAttemptedCount}`
         : '—';
       lines.push(`| ${item.caseId} | ${score?.matchedIssueCount ?? 0} / ${score?.expectedIssueCount ?? 0} | ${allDimensions ?? false} | ${score?.operationCorrect ?? 0} / ${score?.operationMatched ?? 0} | ${accepted?.caseSpecificityCorrect ?? false} | ${accepted?.routingCorrect ?? false} | ${requestedRoutingText} | ${accepted?.guardsCorrect ?? false} | ${accepted?.passed ?? false} |`);
+    }
+  }
+  if (irasFirstProfile) {
+    const acceptance = document.irasFirstAcceptance;
+    const quality = acceptance?.semanticQuality;
+    const coverage = acceptance?.releaseRequiredCoverage;
+    lines.push(
+      '',
+      '## IRAS-first release contract',
+      '',
+      `- Profile: ${document.releaseContractVersion}`,
+      `- Acceptance passed: ${acceptance?.passed ?? false}`,
+      '- Topic and record counts describe current registry inventory only; they do not assert completeness or source admission.',
+      '- Runtime evidence uses the localOnly retrieval path and guardrails; it does not establish current live authority-page retrieval or substantive answer completion.',
+      '',
+      '| Authority | Scope state | Topics | Records | Note |',
+      '| --- | --- | ---: | ---: | --- |'
+    );
+    for (const [authority, scope] of Object.entries(document.authorityCoverageScope || {})) {
+      lines.push(`| ${authority} | ${scope.state} | ${scope.topics ?? '—'} | ${scope.records ?? '—'} | ${scope.aliasOf ? `alias of ${scope.aliasOf}` : scope.providerSupported ? 'provider available' : 'no supported provider'} |`);
+    }
+    lines.push(
+      '',
+      'Semantic quality across all authorities:',
+      '',
+      '| Valid responses | Issue recall | Issue precision | Case-specific facts | Governing authority | Contextual authority | Domain | Population | Operation |',
+      '| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+      `| ${quality?.validInterpretations?.count ?? 0} / ${quality?.validInterpretations?.total ?? 0} | ${quality?.issueRecall?.matched ?? 0} / ${quality?.issueRecall?.expected ?? 0} | ${quality?.issuePrecision?.matched ?? 0} / ${quality?.issuePrecision?.predicted ?? 0} | ${quality?.caseSpecificityCorrect?.correct ?? 0} / ${quality?.caseSpecificityCorrect?.total ?? 0} | ${quality?.dimensions?.governingAuthority?.correct ?? 0} / ${quality?.dimensions?.governingAuthority?.matched ?? 0} | ${quality?.dimensions?.contextualAuthority?.correct ?? 0} / ${quality?.dimensions?.contextualAuthority?.matched ?? 0} | ${quality?.dimensions?.domain?.correct ?? 0} / ${quality?.dimensions?.domain?.matched ?? 0} | ${quality?.dimensions?.population?.correct ?? 0} / ${quality?.dimensions?.population?.matched ?? 0} | ${quality?.dimensions?.operation?.correct ?? 0} / ${quality?.dimensions?.operation?.matched ?? 0} |`,
+      '',
+      'Release-required coverage (IRAS only):',
+      '',
+      '| Issues | Topic mapped | Canonical workstream | Provider path reached | Retrieval attempted | Evidence supported | Blocking gaps | Blocking cases |',
+      '| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+      `| ${coverage?.irasIssues ?? 0} | ${coverage?.topicMapped ?? 0} | ${coverage?.canonicalProviderPathReached ?? 0} | ${coverage?.providerPathReached ?? 0} | ${coverage?.retrievalAttempted ?? 0} | ${coverage?.evidenceSupported ?? 0} | ${coverage?.blockingGapCount ?? 0} | ${coverage?.blockingCases ?? 0} |`,
+      '',
+      'Non-IRAS semantic checks:',
+      '',
+      `- Correctly recognized and routed or explicitly unsupported: ${acceptance?.nonIrasSemantic?.recognizedAndRoutedOrExplicitlyUnsupported ?? 0} / ${acceptance?.nonIrasSemantic?.issues ?? 0}.`,
+      '- Non-IRAS coverage gaps by authority are recorded below; explicit insufficient outcomes remain visible.',
+      '',
+      '| Authority | Issues | Explicit unsupported | Gap-code counts |',
+      '| --- | ---: | ---: | --- |'
+    );
+    for (const [authority, metrics] of Object.entries(acceptance?.nonIrasCoverageGaps || {})) {
+      lines.push(`| ${authority} | ${metrics.issueCount} | ${metrics.explicitUnsupportedCount} | ${JSON.stringify(metrics.gapCounts)} |`);
+    }
+    lines.push('', '| Case | Versioned expectation | IRAS issues passed / total | Non-IRAS passed / total | Semantic quality | Case accepted |', '| --- | --- | ---: | ---: | --- | --- |');
+    for (const item of document.cases) {
+      const result = item.irasFirstAcceptance;
+      lines.push(`| ${item.caseId} | ${item.expectationVersion}${item.adjudicationVersion ? ` / ${item.adjudicationVersion}` : ''} | ${result?.irasIssuesPassed ?? 0} / ${result?.irasIssueCount ?? 0} | ${result?.nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported ?? 0} / ${result?.nonIrasIssueCount ?? 0} | ${result?.semanticQualityPassed ?? false} | ${result?.passed ?? false} |`);
+    }
+    if (document.historicalAllAuthorityMetric) {
+      const historical = document.historicalAllAuthorityMetric;
+      lines.push(
+        '',
+        'All-authority recognition against unchanged historical expectations:',
+        '',
+        `- Scope: ${historical.scope === 'original-ten-final' ? 'original-ten final profile' : 'targeted-profile historical overlap'} (${historical.cases} / ${historical.expectedCases} historical cases).`,
+        '- This recognition metric is not the original strict-gate acceptance result.',
+        `- Cases scored: ${historical.cases} / ${historical.expectedCases}.`,
+        `- Issue recall: ${historical.originalIssueRecall.matched} / ${historical.originalIssueRecall.expected} (${historical.originalIssueRecall.rate}).`,
+        `- Issue precision: ${historical.originalIssuePrecision.matched} / ${historical.originalIssuePrecision.predicted} (${historical.originalIssuePrecision.rate}).`,
+        `- All five dimensions correct: ${historical.allDimensionCases.correct} / ${historical.allDimensionCases.total} (${historical.allDimensionCases.rate}).`,
+        `- Original strict-gate acceptance: ${historical.originalStrictGateAcceptance}.`,
+        '| Historical dimension | Correct / matched / expected | Rate on expected |',
+        '| --- | ---: | ---: |',
+        ...Object.entries(historical.dimensions).map(([dimension, metrics]) =>
+          `| ${dimension} | ${metrics.correct} / ${metrics.matched} / ${metrics.expected} | ${metrics.rate} |`),
+        `- Complete cases: ${historical.originalExpectationCaseCoverage.complete} / ${historical.originalExpectationCaseCoverage.total} (${historical.originalExpectationCaseCoverage.rate}).`
+      );
     }
   }
   lines.push('', '| Group | Valid / cases | Valid recall | All-case recall | Valid precision | Operation accuracy | Complete coverage | Routing / valid | Routing / all | Invalid / calls | Timeout | Provider failure |', '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |');
@@ -1029,6 +1337,30 @@ export function profileConfiguration(evaluationProfile) {
       purpose: 'Conditional strict Gemini V2 wire-format evaluation using the original unchanged ten-case selection and expectations.'
     };
   }
+  if (evaluationProfile === IRAS_FIRST_TARGETED_PROFILE || evaluationProfile === IRAS_FIRST_FINAL_PROFILE) {
+    const targeted = evaluationProfile === IRAS_FIRST_TARGETED_PROFILE;
+    return {
+      evaluationProfile,
+      outputPrefix: targeted ? IRAS_FIRST_TARGETED_OUTPUT_PREFIX : IRAS_FIRST_FINAL_OUTPUT_PREFIX,
+      defaultOutputDirectory: IRAS_FIRST_OUTPUT_DIRECTORY,
+      sourceFiles: {
+        ...SOURCE_FILES,
+        ...AUTHORITY_RELIEF_RESOLVER_FILES,
+        ...IRAS_FIRST_SCOPE_FILES,
+        semanticContractEvaluationRunner: EVALUATION_RUNNER_FILE,
+        semanticIntentCliRunner: INTENT_CLI_RUNNER_FILE
+      },
+      fixtureFiles: {
+        ...FIXTURE_FILES,
+        authorityReliefTargeted: AUTHORITY_RELIEF_TARGETED_FIXTURE,
+        semanticIntentBoundaries: INTENT_BOUNDARY_FIXTURE,
+        irasFirstProfile: IRAS_FIRST_CONFIG_FIXTURE
+      },
+      purpose: targeted
+        ? 'IRAS-first v1 fixed targeted semantic and release-contract evaluation; nine versioned cases, including explicit unsupported controls.'
+        : 'IRAS-first v1 fixed final semantic and release-contract evaluation; the unchanged historical ten plus two central IRAS relief cases.'
+    };
+  }
   throw new Error('A supported fixed evaluation profile is required.');
 }
 
@@ -1090,6 +1422,278 @@ function strictTargetRowPassed(row, testCase, index) {
     acceptance.runtimeTimedOut === false && requestedRoutingPassed && acceptance.singleProviderCallPassed === true &&
     acceptance.fingerprintsStable === true && acceptance.passed === true &&
     row.sourceHashesConsistent === true && row.fixtureHashesConsistent === true;
+}
+
+const IRAS_FIRST_ROW_KEYS = new Set([
+  'caseId', 'group', 'expectationVersion', 'adjudicationVersion', 'expectedCoverageOutcome', 'expectedIssueIds',
+  'expectedWorkstreamSetCount', 'validInterpretation', 'production', 'capture',
+  'responseDiagnostic', 'scoring', 'canonicalScoring', 'irasFirstAcceptance', 'historicalScoring', 'routing',
+  'sourceHashesConsistent', 'fixtureHashesConsistent', 'elapsedMs'
+]);
+const IRAS_FIRST_CAPTURE_KEYS = new Set([
+  'promptSha256', 'promptChars', 'systemSha256', 'systemChars', 'model', 'timeoutMs', 'temperature', 'jsonMode',
+  'requestCount', 'startGapMs', 'responseReceived', 'responseChars', 'responseUtf8Bytes', 'latencyMs', 'transportCategory'
+]);
+const IRAS_FIRST_SCOPE_DIAGNOSTIC_KEYS = new Set([
+  'issueIndex', 'presentInIssuePlan', 'governingAuthorities', 'contextualAuthorities', 'domain', 'population', 'operation',
+  'evidenceRequirement', 'runtimeMetadataConsistent', 'runtimeMetadataMatchCount', 'runtimeMetadataMismatchCount',
+  'runtimeMetadataCounts', 'planStatus', 'unresolvedReason', 'mappedTopicCount', 'canonicalWorkstreams', 'runtimeIssueCount',
+  'lifecycleCounts', 'evidenceStatusCounts', 'applicationStatusCounts', 'evidenceFoundCount', 'admittedRecordCount',
+  'verifiedClaimCount', 'gapCounts'
+]);
+
+function hasNoPrivatePayloadKeys(value, depth = 0) {
+  if (depth > 12) return false;
+  if (Array.isArray(value)) return value.every(item => hasNoPrivatePayloadKeys(item, depth + 1));
+  if (!value || typeof value !== 'object') return true;
+  const forbidden = new Set([
+    'question', 'questionText', 'facts', 'factsExplicitlyProvided', 'rawResponse', 'responseText', 'prompt',
+    'systemInstruction', 'apiKey', 'credential', 'credentials', 'authorization', 'url', 'candidateUrl', 'finalUrl',
+    'sourceText', 'sourceTitle', 'quote', 'subject', 'primarySubject', 'concept', 'labels', 'issueLabel'
+  ]);
+  return Object.entries(value).every(([key, child]) => !forbidden.has(key) && hasNoPrivatePayloadKeys(child, depth + 1));
+}
+
+const IRAS_FIRST_REQUIRED_GUARDS = [
+  'operationsPreserved', 'incompletePlanNotVerified', 'contextualAuthorityNotRouted', 'residualHasNoWorkstream',
+  'requiredApplicationStatusesUnresolved', 'unresolvedApplicationNotVerified'
+];
+
+function canonicalIrasFirstAuthority(domain, authority) {
+  return domain === 'ACCOUNTING' && authority === 'IFRS_FOUNDATION' ? 'ACCOUNTING_STANDARDS' : authority;
+}
+
+function enumCountsMatch(counts, expectedValues, total) {
+  if (!counts || !Number.isInteger(total) || total <= 0 || Object.values(counts).some(value => !Number.isInteger(value) || value < 0)) return false;
+  const activeValues = Object.entries(counts).filter(([, count]) => count > 0);
+  return Object.values(counts).reduce((sum, count) => sum + count, 0) === total && activeValues.length > 0 &&
+    activeValues.every(([value]) => expectedValues.includes(value));
+}
+
+/** Recognition-only score against unchanged historical expectations, including invalid rows. */
+export function summarizeHistoricalAllAuthorityMetric(rows, expectedCases = 10, scope = 'original-ten-final') {
+  const historicalRows = rows.filter(row => row?.historicalScoring);
+  const expectedIssueCount = historicalRows.reduce((sum, row) => sum + row.historicalScoring.expectedIssueCount, 0);
+  const matchedIssueCount = historicalRows.reduce((sum, row) => sum + row.historicalScoring.matchedIssueCount, 0);
+  const predictedIssueCount = historicalRows.reduce((sum, row) => sum + row.historicalScoring.predictedIssueCount, 0);
+  const dimensionKeys = ['governingAuthority', 'contextualAuthority', 'domain', 'population', 'operation'];
+  const dimensions = Object.fromEntries(dimensionKeys.map(key => {
+    const correct = historicalRows.reduce((sum, row) => sum + (row.historicalScoring.dimensionsCorrect?.[key] || 0), 0);
+    return [key, { correct, matched: matchedIssueCount, expected: expectedIssueCount, rate: ratio(correct, expectedIssueCount) }];
+  }));
+  const allDimensionCases = historicalRows.filter(row => row.historicalScoring.completeQuestionIssueCoverage &&
+    dimensionKeys.every(key => row.historicalScoring.dimensionsCorrect?.[key] === row.historicalScoring.matchedIssueCount)).length;
+  return {
+    scope,
+    cases: historicalRows.length,
+    expectedCases,
+    originalTenCaseFinalRun: scope === 'original-ten-final' && historicalRows.length === 10,
+    originalStrictGateAcceptance: 'NOT_REEVALUATED',
+    recognitionMetricOnly: true,
+    originalIssueRecall: { matched: matchedIssueCount, expected: expectedIssueCount, rate: ratio(matchedIssueCount, expectedIssueCount) },
+    originalIssuePrecision: { matched: matchedIssueCount, predicted: predictedIssueCount, rate: ratio(matchedIssueCount, predictedIssueCount) },
+    dimensions,
+    allDimensionCases: { correct: allDimensionCases, total: historicalRows.length, rate: ratio(allDimensionCases, historicalRows.length) },
+    originalExpectationCaseCoverage: {
+      complete: historicalRows.filter(row => row.historicalScoring.completeQuestionIssueCoverage).length,
+      total: historicalRows.length,
+      rate: ratio(historicalRows.filter(row => row.historicalScoring.completeQuestionIssueCoverage).length, historicalRows.length)
+    }
+  };
+}
+
+function irasFirstDiagnosticMatchesExpectation(diagnostic, expected, testCase) {
+  if (!diagnostic || !expected || diagnostic.presentInIssuePlan !== true || diagnostic.runtimeMetadataConsistent !== true) return false;
+  const expectedAuthorities = expected.governingAuthorities.map(authority => canonicalIrasFirstAuthority(expected.domain[0], authority));
+  const actualAuthorities = diagnostic.governingAuthorities.map(authority => canonicalIrasFirstAuthority(diagnostic.domain, authority));
+  const metadataCounts = diagnostic.runtimeMetadataCounts;
+  const runtimeCount = diagnostic.runtimeIssueCount;
+  const semanticMatches = JSON.stringify([...actualAuthorities].sort()) === JSON.stringify([...expectedAuthorities].sort()) &&
+    expected.domain.includes(diagnostic.domain) && expected.operation.includes(diagnostic.operation) &&
+    expected.population.includes(diagnostic.population) &&
+    expected.contextualAuthoritiesAnyOf.some(values => JSON.stringify([...diagnostic.contextualAuthorities].sort()) === JSON.stringify([...values].sort()));
+  const acceptedWorkstreams = testCase.expectedWorkstreamsAnyOf;
+  if (runtimeCount === 0) {
+    const zeroCounts = counts => counts && Object.values(counts).every(value => value === 0);
+    return testCase.expectedCoverageOutcome === 'UNSUPPORTED' && semanticMatches &&
+      !expectedAuthorities.includes('IRAS') && diagnostic.planStatus === 'UNRESOLVED' &&
+      diagnostic.unresolvedReason === 'NO_COVERAGE_TOPIC' && diagnostic.mappedTopicCount === 0 &&
+      diagnostic.canonicalWorkstreams.length === 0 && diagnostic.gapCounts.NO_COVERAGE_TOPIC > 0 &&
+      zeroCounts(metadataCounts?.domain) && zeroCounts(metadataCounts?.population) && zeroCounts(metadataCounts?.operation) &&
+      zeroCounts(metadataCounts?.governingAuthority) && zeroCounts(metadataCounts?.evidenceRequirement) &&
+      zeroCounts(diagnostic.lifecycleCounts) && zeroCounts(diagnostic.evidenceStatusCounts) &&
+      zeroCounts(diagnostic.applicationStatusCounts) && diagnostic.admittedRecordCount === 0 && diagnostic.verifiedClaimCount === 0;
+  }
+  const metadataMatches = enumCountsMatch(metadataCounts?.domain, [diagnostic.domain], runtimeCount) &&
+    enumCountsMatch(metadataCounts?.population, [diagnostic.population], runtimeCount) &&
+    enumCountsMatch(metadataCounts?.operation, [diagnostic.operation], runtimeCount) &&
+    enumCountsMatch(metadataCounts?.governingAuthority, diagnostic.governingAuthorities, runtimeCount) &&
+    enumCountsMatch(metadataCounts?.evidenceRequirement, [diagnostic.evidenceRequirement], runtimeCount);
+  if (!metadataMatches || !semanticMatches) return false;
+  const expectedPairs = acceptedWorkstreams.flatMap(set => set.map(value => {
+    const separator = value.indexOf('/');
+    return separator < 0 ? undefined : { authority: value.slice(0, separator), domain: value.slice(separator + 1) };
+  }).filter(Boolean)).filter(pair => expectedAuthorities.includes(pair.authority));
+  return expectedPairs.length > 0 && diagnostic.canonicalWorkstreams.length > 0 &&
+    diagnostic.canonicalWorkstreams.every(actual => expectedPairs.some(expectedPair =>
+      expectedPair.authority === actual.authority && expectedPair.domain === actual.domain));
+}
+
+function strictIrasFirstTargetRowPassed(row, testCase, index) {
+  const acceptance = row?.irasFirstAcceptance;
+  const expectedCount = testCase.expected.length;
+  const score = row?.canonicalScoring;
+  const dimensionsPassed = score && Object.keys(score.dimensionsCorrect || {}).length === 5 &&
+    Object.values(score.dimensionsCorrect).every(count => count === expectedCount);
+  const specific = acceptance?.caseSpecificityCorrect === true &&
+    acceptance.caseSpecificity?.expected === testCase.expectedRequiresUserSpecificFacts &&
+    acceptance.caseSpecificity?.actual === testCase.expectedRequiresUserSpecificFacts;
+  const capture = row?.capture;
+  const capturePassed = capture && Object.keys(capture).every(key => IRAS_FIRST_CAPTURE_KEYS.has(key)) &&
+    capture.requestCount === 1 && capture.model === MODEL && capture.timeoutMs === SEMANTIC_QUESTION_TIMEOUT_MS &&
+    capture.temperature === 0 && capture.jsonMode === true && capture.responseReceived === true && !capture.transportCategory &&
+    typeof capture.promptSha256 === 'string' && /^[a-f0-9]{64}$/.test(capture.promptSha256) &&
+    typeof capture.systemSha256 === 'string' && /^[a-f0-9]{64}$/.test(capture.systemSha256) &&
+    Number.isInteger(capture.promptChars) && capture.promptChars > 0 && capture.promptChars < 9_000 &&
+    Number.isInteger(capture.systemChars) && capture.systemChars > 0 && capture.systemChars < 9_000 &&
+    Number.isInteger(capture.responseChars) && capture.responseChars > 0 && capture.responseChars < 16_000 &&
+    Number.isInteger(capture.responseUtf8Bytes) && capture.responseUtf8Bytes > 0 &&
+    Number.isFinite(capture.latencyMs) && (index === 0 ? capture.startGapMs === null :
+      Number.isFinite(capture.startGapMs) && capture.startGapMs >= START_GAP_MS);
+  const dimensionsAllCorrect = score?.completeQuestionIssueCoverage === true && score.expectedIssueCount === expectedCount &&
+    score.predictedIssueCount === expectedCount && score.matchedIssueCount === expectedCount &&
+    score.operationMatched === expectedCount && score.operationCorrect === expectedCount && dimensionsPassed;
+  const perIssue = acceptance?.perIssueResults;
+  const perIssuePassed = Array.isArray(perIssue) && perIssue.length === expectedCount && perIssue.every((item, issueIndex) => {
+    const expectedAuthorities = testCase.expected[issueIndex]?.governingAuthorities || [];
+    const releaseRequired = expectedAuthorities.includes('IRAS');
+    const safeShape = item && Object.keys(item).every(key => new Set([
+      'expectedAuthority', 'releaseRequired', 'semanticIssueMatched', 'semanticDimensionsCorrect', 'authorityCorrect',
+      'noFalseIrasRoute', 'issuePlanPresent', 'irasEvidenceComplete', 'mappedTopicCount', 'canonicalProviderPathReached',
+      'providerPathReached', 'retrievalAttemptedCount', 'blockingGapCount', 'issueApplicationStatusCorrect', 'evidenceSafeguardsPassed',
+      'explicitUnsupportedState', 'expectedUnsupportedState', 'canonicalRoute', 'canonicalWorkstreamCorrect',
+      'canonicalWorkstreamCount', 'runtimeMetadataConsistent', 'authorityScopeKnown', 'nonIrasCoverageAcceptable', 'passed'
+    ]).has(key)) && hasNoPrivatePayloadKeys(item);
+    if (!safeShape || item.releaseRequired !== releaseRequired || item.passed !== true || item.semanticIssueMatched !== true ||
+        item.authorityCorrect !== true || item.issuePlanPresent !== true || item.issueApplicationStatusCorrect !== true ||
+        item.evidenceSafeguardsPassed !== true || item.authorityScopeKnown !== true || item.runtimeMetadataConsistent !== true) return false;
+    const diagnosticIndex = row?.canonicalScoring?.matchedExpectedIssueIds?.findIndex(id => id === testCase.expected[issueIndex]?.id);
+    const diagnostic = diagnosticIndex >= 0 ? row.routing.runtimeIssueScopeDiagnostics[diagnosticIndex] : undefined;
+    if (!diagnostic) return false;
+    if (!admittedEvidenceConsistent({ runtimeIssueScopeDiagnostics: [diagnostic] })) return false;
+    if (releaseRequired) return diagnostic.planStatus === 'MAPPED' && diagnostic.mappedTopicCount > 0 &&
+      item.canonicalProviderPathReached === true && item.providerPathReached === true &&
+      item.canonicalWorkstreamCorrect === true && item.runtimeMetadataConsistent === true &&
+      item.retrievalAttemptedCount > 0 && item.blockingGapCount === 0 && diagnosticHasCompleteVerifiedSupport(diagnostic);
+    if (!item.noFalseIrasRoute || !item.nonIrasCoverageAcceptable ||
+        !(item.canonicalWorkstreamCorrect || item.explicitUnsupportedState && item.canonicalWorkstreamCount === 0)) return false;
+    if (item.explicitUnsupportedState !== explicitUnsupported(diagnostic)) return false;
+    return testCase.expectedCoverageOutcome !== 'UNSUPPORTED' ||
+      item.expectedUnsupportedState === true && item.explicitUnsupportedState === true;
+  });
+  const routingDiagnosticsSafe = Array.isArray(row?.routing?.runtimeIssueScopeDiagnostics) &&
+    row.routing.runtimeIssueScopeDiagnostics.length === expectedCount &&
+    row.routing.runtimeIssueScopeDiagnostics.every(item => Object.keys(item).every(key => IRAS_FIRST_SCOPE_DIAGNOSTIC_KEYS.has(key)) &&
+      hasNoPrivatePayloadKeys(item) && Array.isArray(item.canonicalWorkstreams) &&
+      item.canonicalWorkstreams.every(stream => Object.keys(stream).every(key => key === 'authority' || key === 'domain')) &&
+      item.runtimeMetadataConsistent === true && item.runtimeMetadataMismatchCount === 0 &&
+      item.runtimeMetadataMatchCount === item.runtimeIssueCount &&
+      Object.keys(item.gapCounts || {}).length === IRAS_FIRST_GAP_CODES.length &&
+      IRAS_FIRST_GAP_CODES.every(code => Number.isInteger(item.gapCounts?.[code]) && item.gapCounts[code] >= 0));
+  const matchedExpectedIds = row?.canonicalScoring?.matchedExpectedIssueIds;
+  const perDiagnosticExpectationsPassed = routingDiagnosticsSafe && Array.isArray(matchedExpectedIds) &&
+    matchedExpectedIds.length === expectedCount && row.routing.runtimeIssueScopeDiagnostics.every((diagnostic, diagnosticIndex) => {
+      const expectedIndex = testCase.expected.findIndex(issue => issue.id === matchedExpectedIds[diagnosticIndex]);
+      return diagnostic.issueIndex === diagnosticIndex && expectedIndex >= 0 &&
+        irasFirstDiagnosticMatchesExpectation(diagnostic, testCase.expected[expectedIndex], testCase);
+    });
+  const diagnosticSafe = row?.responseDiagnostic?.validatorAccepted === true && row.responseDiagnostic.interpreted === true &&
+    hasNoPrivatePayloadKeys(row.responseDiagnostic);
+  const requiredGuardsPassed = Boolean(row?.routing?.guardChecks) &&
+    IRAS_FIRST_REQUIRED_GUARDS.every(name => row.routing.guardChecks[name] === true);
+  const assignmentCounts = row?.routing?.runtimeAssignmentCounts;
+  const assignmentCountKeys = [
+    'semanticIssueCount', 'plannedIssueCount', 'runtimeIssueCount', 'runtimeIssueIdMismatchCount',
+    'duplicateRuntimeIssueIdCount', 'unknownGapIssueIdCount', 'emptyWorkstreamCount', 'unresolvedPlanIssueCount',
+    'unresolvedIrasPlanIssueCount', 'knownUnsupportedNonIrasPlanIssueCount', 'unrepresentedResidualPlanIssueCount',
+    'issuePlanResidualAccommodation'
+  ];
+  const runtimeAssignmentsPassed = assignmentCounts && Object.keys(assignmentCounts).length === assignmentCountKeys.length &&
+    assignmentCountKeys.every(key => Object.hasOwn(assignmentCounts, key)) &&
+    assignmentCountKeys.filter(key => key !== 'issuePlanResidualAccommodation')
+      .every(key => Number.isInteger(assignmentCounts[key]) && assignmentCounts[key] >= 0) &&
+    typeof assignmentCounts.issuePlanResidualAccommodation === 'boolean' &&
+    row?.routing?.runtimeAssignmentIntegrity === true &&
+    assignmentCounts?.semanticIssueCount === expectedCount && assignmentCounts?.plannedIssueCount === expectedCount &&
+    assignmentCounts?.runtimeIssueCount === (row.routing.runtimeIssueScopeDiagnostics || []).reduce((sum, item) => sum + item.runtimeIssueCount, 0) &&
+    assignmentCounts?.runtimeIssueIdMismatchCount === 0 && assignmentCounts?.duplicateRuntimeIssueIdCount === 0 &&
+    assignmentCounts?.unknownGapIssueIdCount === 0 && assignmentCounts?.emptyWorkstreamCount === 0 &&
+    assignmentCounts?.unrepresentedResidualPlanIssueCount === 0 && assignmentCounts?.unresolvedIrasPlanIssueCount === 0 &&
+    assignmentCounts?.unresolvedPlanIssueCount === assignmentCounts?.knownUnsupportedNonIrasPlanIssueCount &&
+    assignmentCounts?.issuePlanResidualAccommodation === (assignmentCounts.unresolvedPlanIssueCount > 0);
+  const aggregateVerifiedIsSupported = admittedEvidenceConsistent(row?.routing);
+  return row?.caseId === testCase.id && JSON.stringify(row.expectedIssueIds) === JSON.stringify(testCase.expected.map(issue => issue.id)) &&
+    row.expectationVersion === IRAS_FIRST_PROFILE_VERSION &&
+    row.adjudicationVersion === testCase.adjudicationVersion &&
+    row.expectedCoverageOutcome === testCase.expectedCoverageOutcome &&
+    row.expectedWorkstreamSetCount === testCase.expectedWorkstreamsAnyOf.length && row.validInterpretation === true &&
+    row.production?.mode === 'SEMANTIC_INTERPRETATION' && row.production?.failure === undefined &&
+    row.sourceHashesConsistent === true && row.fixtureHashesConsistent === true &&
+    Object.keys(row).every(key => IRAS_FIRST_ROW_KEYS.has(key)) && hasNoPrivatePayloadKeys(row) && capturePassed &&
+    diagnosticSafe && dimensionsAllCorrect && specific && acceptance?.semanticQualityPassed === true &&
+    acceptance.releaseCoveragePassed === true && acceptance.runtimeIntegrity === true && acceptance.passed === true &&
+    scopeAwareWorkstreamSetAccuracy(testCase, row.routing.runtimeIssueScopeDiagnostics, matchedExpectedIds) === true &&
+    runtimeAssignmentsPassed && aggregateVerifiedIsSupported &&
+    perIssuePassed && perDiagnosticExpectationsPassed && requiredGuardsPassed;
+}
+
+/** Rederive final eligibility from the fixed versioned cases, row-level scores, routing evidence, and fingerprints. */
+export async function requirePassingIrasFirstTarget(outputDirectory) {
+  let targeted;
+  try {
+    targeted = JSON.parse(await readFile(path.join(outputDirectory, `${IRAS_FIRST_TARGETED_OUTPUT_PREFIX}.json`), 'utf8'));
+  } catch {
+    throw new Error('The IRAS-first targeted profile has not passed; final live capture is gated.');
+  }
+  let expectedCases;
+  let protectedHistory;
+  try {
+    [expectedCases, protectedHistory] = await Promise.all([loadIrasFirstTargetedCases(), assertHistoricalArtifactsUnchanged()]);
+  } catch {
+    throw new Error('The IRAS-first targeted profile has not passed; final live capture is gated.');
+  }
+  const profile = profileConfiguration(IRAS_FIRST_TARGETED_PROFILE);
+  const [currentSources, currentFixtures] = await Promise.all([
+    hashManifest(profile.sourceFiles), hashManifest(profile.fixtureFiles)
+  ]);
+  const exactRows = Array.isArray(targeted.cases) && targeted.cases.length === expectedCases.length &&
+    expectedCases.every((testCase, index) => strictIrasFirstTargetRowPassed(targeted.cases[index], testCase, index));
+  const currentSummary = summarizeIrasFirstAcceptance(targeted, expectedCases.length);
+  const noPrivatePayload = hasNoPrivatePayloadKeys(targeted);
+  const completeRun = targeted.evaluationProfile === IRAS_FIRST_TARGETED_PROFILE &&
+    targeted.releaseContractVersion === IRAS_FIRST_PROFILE_VERSION && targeted.outputPrefix === IRAS_FIRST_TARGETED_OUTPUT_PREFIX &&
+    targeted.completedAt !== undefined && targeted.model === MODEL && targeted.timeoutMs === SEMANTIC_QUESTION_TIMEOUT_MS &&
+    targeted.minimumStartGapMs === START_GAP_MS && targeted.minimumObservedStartGapMs >= START_GAP_MS &&
+    targeted.pacingPolicy === 'Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.' &&
+    targeted.requestCount === expectedCases.length &&
+    JSON.stringify(targeted.cases?.map(row => row.caseId)) === JSON.stringify(irasFirstConfig.targetedCaseIds) &&
+    targeted.coverageCountsAreCompletenessAssertions === false &&
+    targeted.runtimeEvidenceScope === 'LOCAL_ONLY_PATH_AND_GUARDRAILS_NOT_LIVE_AUTHORITY_PAGES_OR_SUBSTANTIVE_ANSWER_COMPLETION' &&
+    JSON.stringify(targeted.authorityCoverageScope) === JSON.stringify(AUTHORITY_COVERAGE_SCOPE) &&
+    targeted.protectedHistoricalArtifacts?.baselineCommit === 'd194d2bc7121b2c9a1deec562f77eafdfb98cd90' &&
+    targeted.protectedHistoricalArtifacts?.artifactCount === protectedHistory.artifactCount &&
+    targeted.protectedHistoricalArtifacts?.verifiedBefore === true &&
+    targeted.protectedHistoricalArtifacts?.verifiedDuringCapture === true &&
+    targeted.protectedHistoricalArtifacts?.verifiedAfterCapture === true;
+  const fingerprintMatch = sameManifest(targeted.sourceFingerprints || {}, currentSources) &&
+    sameManifest(targeted.fixtureFingerprints || {}, currentFixtures) &&
+    targeted.sourceHashesConsistent === true && targeted.fixtureHashesConsistent === true;
+  if (!exactRows || !completeRun || !noPrivatePayload || !fingerprintMatch || currentSummary.passed !== true ||
+      targeted.irasFirstAcceptance?.passed !== true || targeted.irasFirstAcceptance?.completedCases !== expectedCases.length ||
+      targeted.irasFirstAcceptance?.semanticQuality?.validInterpretations?.count !== expectedCases.length ||
+      targeted.irasFirstAcceptance?.releaseRequiredCoverage?.blockingCases !== 0) {
+    throw new Error('The IRAS-first targeted profile has not passed; final live capture is gated.');
+  }
 }
 
 async function requirePassingAuthorityReliefTarget(outputDirectory) {
@@ -1323,20 +1927,28 @@ export async function runSemanticContractFollowupEvaluation({
   }
   if (evaluationProfile === 'authority-relief-final-live') await requirePassingAuthorityReliefTarget(outputDirectory);
   if (evaluationProfile === 'semantic-wire-format-final-live') await requirePassingSemanticWireFormatTarget(outputDirectory);
+  const isIrasFirstProfile = evaluationProfile === IRAS_FIRST_TARGETED_PROFILE || evaluationProfile === IRAS_FIRST_FINAL_PROFILE;
+  if (evaluationProfile === IRAS_FIRST_FINAL_PROFILE) await requirePassingIrasFirstTarget(outputDirectory);
   const isWireFormatProfile = evaluationProfile === 'semantic-wire-format-targeted-live' ||
     evaluationProfile === 'semantic-wire-format-final-live';
   if (isWireFormatProfile) await assertProtectedSemanticWireFormatArtifacts();
+  if (isIrasFirstProfile) await assertHistoricalArtifactsUnchanged();
   await mkdir(outputDirectory, { recursive: true });
   await refuseExistingOutputs(outputDirectory, profile.outputPrefix);
   if (typeof apiKey !== 'string' || apiKey.trim().length <= 10) throw new Error('GEMINI_API_KEY is not configured.');
 
-  const isStrictSemanticProfile = evaluationProfile === 'authority-relief-targeted-live' ||
+  const isLegacyStrictSemanticProfile = evaluationProfile === 'authority-relief-targeted-live' ||
     evaluationProfile === 'authority-relief-final-live' || isWireFormatProfile;
+  const isStrictSemanticProfile = isLegacyStrictSemanticProfile || isIrasFirstProfile;
   const selectedCases = evaluationProfile === 'intent-targeted'
     ? await loadSemanticIntentTargetedCases()
     : evaluationProfile === 'intent-final' || evaluationProfile === 'authority-relief-final-live' ||
       evaluationProfile === 'semantic-wire-format-final-live'
       ? await loadSemanticIntentFinalCases()
+      : evaluationProfile === IRAS_FIRST_TARGETED_PROFILE
+        ? await loadIrasFirstTargetedCases()
+        : evaluationProfile === IRAS_FIRST_FINAL_PROFILE
+          ? await loadIrasFirstFinalCases()
       : evaluationProfile === 'authority-relief-targeted-live'
         ? await loadAuthorityReliefTargetedCases()
         : evaluationProfile === 'semantic-wire-format-targeted-live'
@@ -1348,9 +1960,13 @@ export async function runSemanticContractFollowupEvaluation({
       ? AUTHORITY_RELIEF_TARGETED_CASE_IDS
       : evaluationProfile === 'semantic-wire-format-targeted-live'
         ? SEMANTIC_WIRE_FORMAT_CASE_IDS
+      : evaluationProfile === IRAS_FIRST_TARGETED_PROFILE
+        ? irasFirstConfig.targetedCaseIds
+        : evaluationProfile === IRAS_FIRST_FINAL_PROFILE
+          ? irasFirstConfig.finalCaseIds
       : REQUIRED_CASE_IDS;
   if (!Array.isArray(selectedCases) || selectedCases.length !== requiredIds.length ||
-      requiredIds.some(id => !selectedCases.some(item => item.id === id)) ||
+      requiredIds.some((id, index) => selectedCases[index]?.id !== id) ||
       new Set(selectedCases.map(item => item.id)).size !== selectedCases.length) {
     throw new Error('A required fixed evaluation case is missing.');
   }
@@ -1364,6 +1980,14 @@ export async function runSemanticContractFollowupEvaluation({
     ...(profile.evaluationProfile ? { outputPrefix: profile.outputPrefix } : {}),
     model: MODEL,
     timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
+    ...(isIrasFirstProfile ? {
+      releaseContractVersion: IRAS_FIRST_PROFILE_VERSION,
+      authorityCoverageScope: AUTHORITY_COVERAGE_SCOPE,
+      benchmarkAdjudications: irasFirstConfig.adjudications,
+      coverageCountsAreCompletenessAssertions: false,
+      runtimeEvidenceScope: 'LOCAL_ONLY_PATH_AND_GUARDRAILS_NOT_LIVE_AUTHORITY_PAGES_OR_SUBSTANTIVE_ANSWER_COMPLETION',
+      protectedHistoricalArtifacts: { baselineCommit: 'd194d2bc7121b2c9a1deec562f77eafdfb98cd90', artifactCount: 110, verifiedBefore: true }
+    } : {}),
     minimumStartGapMs: START_GAP_MS,
     pacingPolicy: 'Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.',
     sourceFingerprints: sourceHashes,
@@ -1389,6 +2013,7 @@ export async function runSemanticContractFollowupEvaluation({
       if (document.cases.length) await writeProgress(outputDirectory, document, profile.outputPrefix);
       throw new Error('Source or fixture hash changed during live capture.');
     }
+    if (isIrasFirstProfile) await assertHistoricalArtifactsUnchanged();
     let rawResponse;
     let capture;
     let responseDiagnostic;
@@ -1460,7 +2085,9 @@ export async function runSemanticContractFollowupEvaluation({
     }
     if (callCount !== 1) throw new Error('A fixed evaluation case did not make exactly one provider request.');
     document.requestCount += callCount;
-    responseDiagnostic = typeof rawResponse === 'string' ? safeDiagnostic(diagnoseSemanticResponse(rawResponse)) : undefined;
+    responseDiagnostic = typeof rawResponse === 'string'
+      ? safeDiagnostic(diagnoseSemanticResponse(rawResponse, isIrasFirstProfile ? testCase.question : undefined))
+      : undefined;
     rawResponse = undefined;
     const validInterpretation = productionResult?.mode === 'SEMANTIC_INTERPRETATION' &&
       productionResult.failure === undefined && Boolean(productionResult.interpretation) && responseDiagnostic?.interpreted === true;
@@ -1482,7 +2109,8 @@ export async function runSemanticContractFollowupEvaluation({
     if (validInterpretation) {
       try {
         routing = await summarizeRuntime(testCase, productionResult, buildRuntime, {
-          captureAuthorityReliefRouting: isStrictSemanticProfile
+          captureAuthorityReliefRouting: isLegacyStrictSemanticProfile,
+          captureIrasFirstScope: isIrasFirstProfile
         });
       } catch {
         routing = {
@@ -1515,7 +2143,7 @@ export async function runSemanticContractFollowupEvaluation({
     const canonicalScoring = isStrictSemanticProfile && validInterpretation
       ? scoreAuthorityReliefCanonicalContract(testCase, productionResult.interpretation)
       : undefined;
-    const authorityReliefAcceptance = isStrictSemanticProfile
+    const authorityReliefAcceptance = isLegacyStrictSemanticProfile
       ? authorityReliefCaseAcceptance({
         testCase,
         validInterpretation,
@@ -1529,9 +2157,32 @@ export async function runSemanticContractFollowupEvaluation({
         fixtureHashesConsistent
       })
       : undefined;
+    const irasFirstAcceptance = isIrasFirstProfile
+      ? evaluateIrasFirstCase({
+        testCase,
+        validInterpretation,
+        scoring: canonicalScoring || scoring,
+        interpretation: productionResult?.interpretation,
+        routing,
+        production: productionResult,
+        capture,
+        requestCount: callCount,
+        sourceHashesConsistent,
+        fixtureHashesConsistent
+      })
+      : undefined;
+    const historicalScoring = isIrasFirstProfile && testCase.historicalExpected
+      ? scoreValidInterpretation({ ...testCase, expected: testCase.historicalExpected },
+        validInterpretation ? productionResult.interpretation : { issues: [] })
+      : undefined;
     document.cases.push({
       caseId: testCase.id,
       group: testCase.group,
+      ...(isIrasFirstProfile ? {
+        expectationVersion: testCase.expectationVersion,
+        ...(testCase.adjudicationVersion ? { adjudicationVersion: testCase.adjudicationVersion } : {}),
+        ...(testCase.expectedCoverageOutcome ? { expectedCoverageOutcome: testCase.expectedCoverageOutcome } : {})
+      } : {}),
       expectedIssueIds: testCase.expected.map(issue => issue.id),
       expectedWorkstreamSetCount: testCase.expectedWorkstreamsAnyOf.length,
       validInterpretation,
@@ -1541,6 +2192,8 @@ export async function runSemanticContractFollowupEvaluation({
       scoring,
       ...(canonicalScoring ? { canonicalScoring } : {}),
       ...(authorityReliefAcceptance ? { authorityReliefAcceptance } : {}),
+      ...(irasFirstAcceptance ? { irasFirstAcceptance } : {}),
+      ...(historicalScoring ? { historicalScoring } : {}),
       ...(profile.evaluationProfile === 'intent-targeted' || profile.evaluationProfile === 'intent-final'
         ? { intentAcceptance: intentAcceptance(testCase, validInterpretation, scoring, routing, productionResult?.interpretation) }
         : {}),
@@ -1549,14 +2202,16 @@ export async function runSemanticContractFollowupEvaluation({
       fixtureHashesConsistent,
       elapsedMs: Math.round((monotonicNow() - initialMonotonic) * 100) / 100
     });
-    if (isStrictSemanticProfile) {
+    if (isLegacyStrictSemanticProfile) {
       document.authorityReliefAcceptance = summarizeAuthorityReliefAcceptance(document, selectedCases.length);
     }
+    if (isIrasFirstProfile) document.irasFirstAcceptance = summarizeIrasFirstAcceptance(document, selectedCases.length);
     document.summaries = [
       caseSummary(document.cases, 'PRESELECTED_KNOWN_FAILURE'),
       caseSummary(document.cases, 'INDEPENDENT_CONTROL'),
       caseSummary(document.cases, 'COMBINED')
     ];
+    if (isIrasFirstProfile) document.protectedHistoricalArtifacts.verifiedDuringCapture = (await assertHistoricalArtifactsUnchanged()).verified;
     await writeProgress(outputDirectory, document, profile.outputPrefix);
     if (!sourceHashesConsistent || !fixtureHashesConsistent) {
       throw new Error('Source or fixture hash changed during live capture.');
@@ -1565,8 +2220,14 @@ export async function runSemanticContractFollowupEvaluation({
   }
 
   document.completedAt = now().toISOString();
-  if (isStrictSemanticProfile) {
+  if (isLegacyStrictSemanticProfile) {
     document.authorityReliefAcceptance = summarizeAuthorityReliefAcceptance(document, selectedCases.length);
+  }
+  if (isIrasFirstProfile) {
+    document.protectedHistoricalArtifacts.verifiedAfterCapture = (await assertHistoricalArtifactsUnchanged()).verified;
+    document.irasFirstAcceptance = summarizeIrasFirstAcceptance(document, selectedCases.length);
+    document.historicalAllAuthorityMetric = summarizeHistoricalAllAuthorityMetric(document.cases, 10,
+      evaluationProfile === IRAS_FIRST_FINAL_PROFILE ? 'original-ten-final' : 'targeted-profile-overlap');
   }
   await writeProgress(outputDirectory, document, profile.outputPrefix);
   return document;

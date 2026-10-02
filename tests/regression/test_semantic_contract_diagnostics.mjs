@@ -102,6 +102,8 @@ verifyRejected({ ...base, authorityCandidates: ['ACCOUNTING_STANDARDS', 'ACCOUNT
 verifyRejected({ ...base, domain: 'CPF_PAYROLL' }, 'DOMAIN_AUTHORITY_MISMATCH', 'authorityCandidates');
 verifyRejected({ ...base, requestedOperation: 'CALCULATE' }, 'CALCULATION_FLAG_MISMATCH', 'calculationRequested');
 verifyRejected({ ...base, requestedOperation: 'CALCULATE', calculationRequested: true }, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+verifyRejected({ ...base, requestedOperation: 'DETERMINE_TREATMENT' }, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+verifyRejected({ ...base, requestedOperation: 'PREPARE_JOURNAL' }, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
 verifyRejected({ ...base, domain: 'IRAS_INCOME_TAX', authorityCandidates: ['IRAS'], requestedOperation: 'PREPARE_JOURNAL' }, 'JOURNAL_DOMAIN_MISMATCH', 'domain');
 verifyRejected({ ...base, authorityCandidates: ['UNKNOWN', 'IRAS'], domain: 'IRAS_GST' }, 'UNKNOWN_AUTHORITY_MIX', 'authorityCandidates');
 verifyRejected({ ...base, confidence: 2 }, 'CONFIDENCE_OUT_OF_RANGE', 'confidence');
@@ -120,6 +122,18 @@ const issueBase = {
   evidenceRequirement: 'AUTHORITATIVE_SOURCE',
   confidence: 0.91
 };
+for (const operation of ['CALCULATE', 'DETERMINE_TREATMENT', 'PREPARE_JOURNAL']) {
+  const legacyIssueContradiction = { ...base, issues: [{ ...issueBase, operation }] };
+  verifyRejected(legacyIssueContradiction, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+
+  const versionedIssueContradiction = {
+    ...versionedBase,
+    requestedOperation: 'OTHER',
+    requiresUserSpecificFacts: false,
+    issues: [{ ...versionedBase.issues[0], operation }]
+  };
+  verifyRejected(versionedIssueContradiction, 'CASE_FLAG_CONTRADICTION', 'requiresUserSpecificFacts');
+}
 verifyRejected({ ...base, issues: [{ ...issueBase, operation: 'UNLISTED_OPERATION' }] }, 'INVALID_OPERATION', 'issues[0].operation');
 verifyRejected({ ...base, issues: [{ ...issueBase, domain: 'UNLISTED_DOMAIN' }] }, 'INVALID_DOMAIN', 'issues[0].domain');
 verifyRejected({ ...base, issues: [{ ...issueBase, contextualAuthorities: ['ACCOUNTING_STANDARDS'] }] }, 'AUTHORITY_OVERLAP', 'issues[0].contextualAuthorities');
@@ -148,6 +162,32 @@ const malformedShape = diagnoseSemanticResponse(JSON.stringify({ ...base, domain
 assert.equal(malformedShape.rejectionCode, 'INVALID_DOMAIN');
 assert.equal(JSON.stringify(malformedShape).includes(privateSentinel), false);
 assert.equal(malformedShape.safeShape.fields.domain, 'INVALID');
+
+const privateApplicationQuestion = `Can I claim tax relief on this payment of SGD 91,234.55 with note ${privateSentinel}?`;
+const queryContradiction = {
+  schemaVersion: SEMANTIC_QUESTION_SCHEMA_VERSION,
+  ...legacyWithoutCalculationFlag,
+  authorityCandidates: ['IRAS'],
+  domain: 'IRAS_INCOME_TAX',
+  population: 'INDIVIDUAL',
+  primarySubject: 'personal tax relief claim',
+  concepts: [{ concept: 'personal tax relief', role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY',
+  requiresUserSpecificFacts: false,
+  issues: [{
+    subject: 'personal tax relief claim', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY',
+    mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.92
+  }]
+};
+const queryAwareDiagnostic = diagnoseSemanticResponse(JSON.stringify(queryContradiction), privateApplicationQuestion);
+assert.equal(queryAwareDiagnostic.validatorAccepted, false);
+assert.equal(queryAwareDiagnostic.rejectionCode, 'CASE_FLAG_CONTRADICTION');
+assert.equal(queryAwareDiagnostic.rejectionPath, 'requiresUserSpecificFacts');
+assert.equal(JSON.stringify(queryAwareDiagnostic).includes(privateApplicationQuestion), false,
+  'query-aware diagnostics do not persist the query or supplied amount');
+assert.equal(JSON.stringify(queryAwareDiagnostic).includes(privateSentinel), false,
+  'query-aware diagnostics do not persist private labels or sentinel values');
 
 await assert.rejects(() => main([]), /requires --live/);
 assert.equal(safeRunnerErrorMessage(new Error('RAW_FIXTURE_AND_PROVIDER_SECRET')), 'Semantic contract diagnosis runner failed.');
