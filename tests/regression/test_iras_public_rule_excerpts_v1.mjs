@@ -54,6 +54,14 @@ try {
   assert.equal(oversize.excerpts.length, 0);
   assert.equal(oversize.skipped.OVERSIZE_COMPLETE_UNIT, 1);
   assert.equal(oversize.truncated, false, 'Oversized complete units are skipped explicitly, never text-truncated.');
+  const oversizeFirstFive = selectPublicExcerptUnits('IRAS_CIT_EXPENSES_SOURCE_MAP', [
+    ...Array.from({ length: 5 }, (_, index) => `Private expenses ${'x'.repeat(3100)} are disallowed in case ${index}.`),
+    'Private expenses are not deductible under the general corporate income-tax rule.'
+  ].join('\n\n'));
+  assert.equal(oversizeFirstFive.excerpts.length, 1);
+  assert.match(oversizeFirstFive.excerpts[0].text, /not deductible under the general corporate/,
+    'Five oversized high-priority units do not hide a later complete target unit.');
+  assert.equal(oversizeFirstFive.skipped.OVERSIZE_COMPLETE_UNIT, 5);
   const pageOversize = selectPublicExcerptUnits('IRAS_CIT_EXPENSES_SOURCE_MAP', 'x'.repeat(200001));
   assert.equal(pageOversize.truncated, true);
   assert.deepEqual(pageOversize.skipped, { PAGE_CHARACTER_LIMIT: 1 });
@@ -81,7 +89,12 @@ try {
     'An immediate attached qualification remains with the complete selected paragraph.');
 
   const successDir = path.join(scratch, 'success');
-  await runIrasPublicRuleExcerptDiagnostic({ mode: 'plan', outputDirectory: successDir });
+  const successPlan = await runIrasPublicRuleExcerptDiagnostic({ mode: 'plan', outputDirectory: successDir });
+  const fingerprintPaths = successPlan.preregistration.codeFingerprints.map(item => item.path);
+  assert.ok(fingerprintPaths.includes('src/verification/claimEvidenceVerifier.ts'));
+  assert.ok(fingerprintPaths.includes('src/standards/unifiedSourceModel.ts'));
+  assert.ok(successPlan.preregistration.v6Integrity.v1v2Fingerprints.length > 0,
+    'Frozen preregistration includes the existing V1/V2 protected-artifact fingerprint set.');
   let calls = 0;
   const successfulFetch = async url => {
     calls += 1;
@@ -137,15 +150,12 @@ try {
 
   const postHistoryDir = path.join(scratch, 'post-history-drift');
   await runIrasPublicRuleExcerptDiagnostic({ mode: 'plan', outputDirectory: postHistoryDir });
-  const postHistoryPlan = JSON.parse(await readFile(path.join(postHistoryDir, PLAN_FILENAME), 'utf8'));
-  const pinnedRows = postHistoryPlan.preregistration.v6Integrity.pinnedHistory;
-  let historyChecks = 0;
+  let protectedChecks = 0;
   let postHistoryCalls = 0;
   await assert.rejects(runIrasPublicRuleExcerptDiagnostic({ mode: 'live-source', outputDirectory: postHistoryDir,
-    checkHistory: async () => {
-      historyChecks += 1;
-      if (historyChecks === 3) throw new Error('synthetic post-run historical mismatch');
-      return pinnedRows;
+    checkV1V2History: async () => {
+      protectedChecks += 1;
+      if (protectedChecks === 2) throw new Error('synthetic post-run V1/V2 historical mismatch');
     },
     fetchImpl: async url => {
       postHistoryCalls += 1;
@@ -162,7 +172,7 @@ try {
   await runIrasPublicRuleExcerptDiagnostic({ mode: 'plan', outputDirectory: historyDir });
   let historyCalls = 0;
   await assert.rejects(runIrasPublicRuleExcerptDiagnostic({ mode: 'live-source', outputDirectory: historyDir,
-    checkHistory: async () => { throw new Error('synthetic history mismatch'); },
+    checkV1V2History: async () => { throw new Error('synthetic V1/V2 history mismatch'); },
     fetchImpl: async () => { historyCalls += 1; return response(''); } }));
   assert.equal(historyCalls, 0, 'Historical-integrity failure refuses every request.');
   assert.equal(await exists(path.join(historyDir, CONSUMED_FILENAME)), false);

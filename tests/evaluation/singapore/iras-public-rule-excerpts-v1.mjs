@@ -7,7 +7,7 @@ import { IRAS_SOURCE_MAP_DEFINITIONS, getCoverageTopicsByIds } from '../../../sr
 import { UNIFIED_SOURCE_REGISTRY } from '../../../src/standards/unifiedSourceModel.ts';
 import { ExternalSourceValidator } from '../../../src/retrieval/externalSourceValidator.ts';
 import { startsAttachedEvidenceQualification } from '../../../src/verification/claimEvidenceVerifier.ts';
-import { createMappedOnlyTransport } from './iras-mapped-source-diagnostic-v3.mjs';
+import { assertProtectedArtifactsUnchanged, createMappedOnlyTransport, fingerprintProtectedArtifacts } from './iras-mapped-source-diagnostic-v3.mjs';
 import {
   assertPinnedHistoricalArtifactsUnchanged,
   V6_OUTPUT_DIRECTORY,
@@ -39,8 +39,10 @@ const CODE_PATHS = Object.freeze([
   'tests/regression/test_iras_public_rule_excerpts_v1.mjs',
   'tests/evaluation/singapore/iras-mapped-source-diagnostic-v3.mjs',
   'tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v6.mjs',
+  'src/verification/claimEvidenceVerifier.ts',
   'src/retrieval/externalSourceValidator.ts',
-  'src/standards/coverageRegistry.ts'
+  'src/standards/coverageRegistry.ts',
+  'src/standards/unifiedSourceModel.ts'
 ]);
 const ALLOWED_REDIRECT_HOSTS = new Set(['www.iras.gov.sg', 'iras.gov.sg']);
 const FAMILY_PATTERNS = Object.freeze({
@@ -76,12 +78,14 @@ async function fingerprintPaths(paths, readFileImpl = readFile) {
   })));
 }
 
-async function v6Integrity(readFileImpl = readFile, checkHistory = assertPinnedHistoricalArtifactsUnchanged) {
+async function v6Integrity(readFileImpl = readFile, checkHistory = assertPinnedHistoricalArtifactsUnchanged,
+  readV1V2Fingerprints = fingerprintProtectedArtifacts) {
   const v6Plan = JSON.parse((await readFileImpl(repoPath(V6_ARTIFACTS[0]))).toString('utf8'));
   assert.ok(v6Plan?.preregistration?.sourceMaps, 'Frozen V6 map plan is malformed');
   const hashes = await fingerprintPaths(V6_ARTIFACTS, readFileImpl);
   const pinnedHistory = await checkHistory();
-  return { hashes, pinnedHistory };
+  const v1v2Fingerprints = await readV1V2Fingerprints();
+  return { hashes, pinnedHistory, v1v2Fingerprints };
 }
 
 function selectedPages(v6Plan) {
@@ -107,10 +111,11 @@ function selectedPages(v6Plan) {
 }
 
 async function buildPreregis({ readFileImpl = readFile, checkHistory = assertPinnedHistoricalArtifactsUnchanged,
+  readV1V2Fingerprints = fingerprintProtectedArtifacts,
   readCodeFingerprints = paths => fingerprintPaths(paths, readFileImpl) } = {}) {
   const v6Bytes = await readFileImpl(repoPath(V6_ARTIFACTS[0]));
   const v6Plan = JSON.parse(v6Bytes.toString('utf8'));
-  const historical = await v6Integrity(readFileImpl, checkHistory);
+  const historical = await v6Integrity(readFileImpl, checkHistory, readV1V2Fingerprints);
   return {
     schemaVersion: 1,
     profileVersion: 'iras-public-rule-excerpts-v1',
@@ -237,16 +242,22 @@ export function selectPublicExcerptUnits(mapId, substantiveText) {
   const excerpts = [];
   const skipped = {};
   let totalChars = 0;
-  const selected = [...candidates].sort((left, right) => left.priority - right.priority || left.blockIndex - right.blockIndex).slice(0, 5)
-    .sort((left, right) => left.blockIndex - right.blockIndex);
-  skipped.EXCERPT_COUNT_LIMIT = Math.max(0, candidates.length - selected.length);
-  if (!skipped.EXCERPT_COUNT_LIMIT) delete skipped.EXCERPT_COUNT_LIMIT;
-  for (const candidate of selected) {
+  const ranked = [...candidates].sort((left, right) => left.priority - right.priority || left.blockIndex - right.blockIndex);
+  const selected = [];
+  for (let index = 0; index < ranked.length; index += 1) {
+    const candidate = ranked[index];
+    if (selected.length >= 5) {
+      skipped.EXCERPT_COUNT_LIMIT = ranked.length - index;
+      break;
+    }
     if (candidate.text.length > 3000) { skipped.OVERSIZE_COMPLETE_UNIT = (skipped.OVERSIZE_COMPLETE_UNIT || 0) + 1; continue; }
     if (totalChars + candidate.text.length > 12000) { skipped.PAGE_EXCERPT_CHAR_LIMIT = (skipped.PAGE_EXCERPT_CHAR_LIMIT || 0) + 1; continue; }
     excerpts.push({ blockIndex: candidate.blockIndex, unitKind: candidate.kind, text: candidate.text, truncated: false });
+    selected.push(candidate);
     totalChars += candidate.text.length;
   }
+  selected.sort((left, right) => left.blockIndex - right.blockIndex);
+  excerpts.sort((left, right) => left.blockIndex - right.blockIndex);
   return { excerpts, blockCount: rawBlockCount, truncated: false, skipped };
 }
 
@@ -304,6 +315,8 @@ function assertSafe(value) {
 export async function runIrasPublicRuleExcerptDiagnostic({ mode, outputDirectory = OUTPUT_DIRECTORY,
   fetchImpl = globalThis.fetch, readFileImpl = readFile,
   checkHistory = assertPinnedHistoricalArtifactsUnchanged,
+  checkV1V2History = assertProtectedArtifactsUnchanged,
+  readV1V2Fingerprints = fingerprintProtectedArtifacts,
   readCodeFingerprints = paths => fingerprintPaths(paths, readFileImpl),
   now = () => new Date().toISOString() } = {}) {
   assert.ok(mode === 'plan' || mode === 'live-source', 'Mode must be --plan or --live-source');
@@ -312,7 +325,7 @@ export async function runIrasPublicRuleExcerptDiagnostic({ mode, outputDirectory
   const markerPath = path.join(outputDirectory, CONSUMED_FILENAME);
   if (mode === 'plan') {
     await assertAbsent(planPath);
-    const preregistration = await buildPreregis({ readFileImpl, checkHistory, readCodeFingerprints });
+    const preregistration = await buildPreregis({ readFileImpl, checkHistory, readV1V2Fingerprints, readCodeFingerprints });
     const envelope = { preregistration, preregistrationSha256: planHash(preregistration) };
     await writeExclusive(planPath, envelope);
     return envelope;
@@ -323,7 +336,8 @@ export async function runIrasPublicRuleExcerptDiagnostic({ mode, outputDirectory
   const envelope = JSON.parse(planBytes.toString('utf8'));
   assert.ok(envelope?.preregistration && envelope.preregistrationSha256 === planHash(envelope.preregistration),
     'PREREGISTRATION_MISMATCH');
-  const current = await buildPreregis({ readFileImpl, checkHistory, readCodeFingerprints });
+  await checkV1V2History(envelope.preregistration.v6Integrity.v1v2Fingerprints);
+  const current = await buildPreregis({ readFileImpl, checkHistory, readV1V2Fingerprints, readCodeFingerprints });
   assert.equal(canonicalJson(current), canonicalJson(envelope.preregistration), 'PREREGISTRATION_MISMATCH');
   await assertAbsent(reportPath);
   try {
@@ -380,7 +394,8 @@ export async function runIrasPublicRuleExcerptDiagnostic({ mode, outputDirectory
   assert.ok(snapshot.events.every(event => event.mapIds.length > 0), 'Every request must belong to a selected source map');
   assert.equal(await readFileImpl(repoPath(V6_ARTIFACTS[0])).then(sha256), envelope.preregistration.v6PlanSha256,
     'PREREGISTRATION_MISMATCH');
-  const after = await buildPreregis({ readFileImpl, checkHistory, readCodeFingerprints });
+  await checkV1V2History(envelope.preregistration.v6Integrity.v1v2Fingerprints);
+  const after = await buildPreregis({ readFileImpl, checkHistory, readV1V2Fingerprints, readCodeFingerprints });
   assert.equal(canonicalJson(after), canonicalJson(envelope.preregistration), 'PREREGISTRATION_MISMATCH');
   const report = assertSafe({
     schemaVersion: 1,
