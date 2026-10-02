@@ -1753,10 +1753,14 @@ export async function buildGroundedReasoningContext(
     referenceDate: retrievalOptions.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE
   }), classification.missingFacts) : undefined;
   const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
+  const locallyUncoveredConcepts = new Set(localQuality?.uncoveredConcepts || []);
   const fallbackTopicIds = (retrievalOptions.localOnly ? [] : initiallyMatchedCoverage
     .filter(topic => !irasPolicy || topic.id.startsWith('iras-'))
     .filter(topic => localQuality && topic.id.startsWith('iras-')
-      ? localQuality.uncoveredTopicIds.includes(topic.id)
+      ? localQuality.uncoveredTopicIds.includes(topic.id) ||
+        requestedConcepts.some(concept => locallyUncoveredConcepts.has(concept.label) &&
+          evidenceTopicIds.includes(topic.id) &&
+          (concept.topicIds.length === 0 || concept.topicIds.includes(topic.id)))
       : topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
     .map(topic => topic.id));
   const needsAuthorityFallback = Boolean(irasPolicy && localQuality &&
@@ -1766,7 +1770,10 @@ export async function buildGroundedReasoningContext(
     questionUnderstanding,
     semanticDiscoveryQuery: semanticIrasContext ? semanticDiscoveryQuery : undefined,
     authorityLevelDiscovery: retrievalOptions.localOnly ? false : retrievalOptions.authorityLevelDiscovery ?? needsAuthorityFallback,
-    localEvidenceAdequate: localQuality ? localQuality.uncoveredTopicIds.length === 0 && localQuality.eligibleRecords.length > 0 : false
+    localEvidenceAdequate: localQuality
+      ? localQuality.uncoveredTopicIds.length === 0 && (localQuality.uncoveredConcepts?.length || 0) === 0 &&
+        localQuality.eligibleRecords.length > 0
+      : false
   });
   const allRetrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
   const evidenceQuality = irasPolicy ? applyStandaloneGstCalculationCoverage(userInput, evaluateEvidenceQuality({
