@@ -26,6 +26,8 @@ const testSuites = [
   { name: 'Semantic Contract Follow-Up Runner', file: 'test_semantic_contract_followup_runner.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Material Issue Decomposition & Authority Ownership', file: 'test_material_issue_decomposition.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Authority Workstream Evidence Isolation & Coverage', file: 'test_authority_workstreams.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS Multi-authority Local Evidence Stages V4', file: 'test_iras_multi_authority_evidence_v4.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Semantic Residency Subject Diagnostic V4', file: 'test_semantic_residency_subject_diagnostic_v4.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Multi-authority Issue Scoring', file: 'test_multi_authority_issue_scoring.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Multi-authority Evaluation Runner Output Safety', file: 'test_multi_authority_runner_safety.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Semantic Reliability Experiment Harness', file: 'test_semantic_reliability_experiment.mjs', layer: 'evaluation-safety', tier: 'smoke' },

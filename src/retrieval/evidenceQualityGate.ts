@@ -444,6 +444,7 @@ function isVerifiedLiveCandidate(record: AuthoritativeSourceRecord, topic: Singa
     record.lifecycleState === 'CANDIDATE' && (record.recordRole as string | undefined) === 'DISCOVERED_EVIDENCE' &&
     record.groundingEligible === true && record.sourceType !== 'APPLICATION_RULE' &&
     record.evidenceTier !== 'APPLICATION_RULE' && record.sourceAuthority === 'IRAS' &&
+    topic.authorities.includes(record.authority) && topic.legacyDomains.includes(record.domain) &&
     (!targetDate || isWithinTargetPeriod(record, targetDate)) && traceProvesLiveRecord(record, topic, trace) &&
     Boolean(record.sourceText?.trim());
 }

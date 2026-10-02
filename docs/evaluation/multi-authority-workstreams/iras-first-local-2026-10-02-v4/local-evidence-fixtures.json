@@ -1,0 +1,99 @@
+{
+  "fixtureKind": "synthetic-local-excerpts",
+  "notice": "Hand-authored passages are synthetic stage probes, not retained IRAS HTML or verbatim IRAS quotations. They are mapped to reviewed local IRAS source-map pointers only for API-free testing.",
+  "referenceDate": "2026-10-02",
+  "cases": {
+    "private-deductibility-general": {
+      "topicId": "iras-cit-deductibility",
+      "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+      "query": "What are the corporate income tax rules for expenses incurred wholly and exclusively for business, and is a private expense deductible?",
+      "subject": "corporate tax deductibility of private business expenses",
+      "passage": "Business expenses are deductible only when incurred wholly and exclusively in producing income. The corporate income tax treatment of a private expense is that it is not tax deductible because it does not serve a business purpose."
+    },
+    "private-disallowed-general": {
+      "topicId": "iras-cit-disallowed-expenses",
+      "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+      "query": "What are the corporate income tax rules for expenses incurred wholly and exclusively for business, and is a private expense deductible?",
+      "subject": "corporate tax treatment of private and disallowed expenses",
+      "passage": "Business expenses are deductible only when incurred wholly and exclusively in producing income. The corporate income tax treatment of a private expense is that it is not tax deductible because it does not serve a business purpose."
+    },
+    "foreign-dividend-conditional-rule": {
+      "topicId": "iras-foreign-sourced-income",
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "query": "Can a Singapore company qualify for exemption on a foreign-sourced dividend from an overseas subsidiary?",
+      "subject": "corporate income tax treatment of a foreign dividend",
+      "passage": "For corporate income tax, specified foreign-sourced income received in Singapore, including a foreign dividend from an overseas subsidiary, may qualify for exemption if the statutory conditions are met."
+    },
+    "foreign-income-without-dividend-negative": {
+      "topicId": "iras-foreign-sourced-income",
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "query": "Can a Singapore company qualify for exemption on a foreign-sourced dividend from an overseas subsidiary?",
+      "subject": "corporate income tax treatment of a foreign dividend",
+      "passage": "For corporate income tax, specified foreign-sourced income received in Singapore may qualify for exemption if the statutory conditions are met."
+    },
+    "company-residency-natural": {
+      "topicId": "iras-corporate-tax-residency",
+      "mapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+      "query": "How does Singapore determine whether a company is tax resident?",
+      "subject": "how Singapore determines company tax residence",
+      "passage": "For a company, tax residence for a year of assessment is determined by where control and management of the business is exercised in that year."
+    },
+    "company-residency-phrase-matched": {
+      "topicId": "iras-corporate-tax-residency",
+      "mapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+      "query": "How does Singapore determine whether a company is tax resident?",
+      "subject": "how Singapore determines company tax residence",
+      "passage": "Company tax residency for a year of assessment depends on where control and management of the business is exercised."
+    },
+    "wht-royalty-hyphenated-query": {
+      "topicId": "iras-withholding-tax-interest-royalties",
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "query": "What are the general Singapore withholding-tax rules when a company pays royalties to a non-resident company?",
+      "subject": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+      "passage": "Royalty withholding tax may apply when a Singapore company pays royalties to a non-resident company. The payer must withhold tax on that royalty payment under the applicable rules."
+    },
+    "wht-royalty-spaced-query-control": {
+      "topicId": "iras-withholding-tax-interest-royalties",
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "query": "What are the general Singapore withholding tax rules when a company pays royalties to a non-resident company?",
+      "subject": "general Singapore withholding tax rules for company royalty payments to a non-resident company",
+      "passage": "Royalty withholding tax may apply when a Singapore company pays royalties to a non-resident company. The payer must withhold tax on that royalty payment under the applicable rules."
+    },
+    "gst-input-tax-natural": {
+      "topicId": "iras-gst-input-tax",
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "query": "What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?",
+      "subject": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+      "passage": "A GST-registered business may recover input tax paid on purchases used to make taxable supplies when the prescribed conditions are met."
+    },
+    "gst-input-tax-phrase-matched": {
+      "topicId": "iras-gst-input-tax",
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "query": "What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?",
+      "subject": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+      "passage": "A GST-registered business may make an input tax claim for business purchases used to make taxable supplies when the prescribed conditions are met."
+    }
+  },
+  "negativeControls": {
+    "unrelatedIrasTopicText": "For corporate income tax, specified foreign-sourced income received in Singapore, including a foreign dividend from an overseas subsidiary, may qualify for exemption if the statutory conditions are met.",
+    "unrelatedSibling": {
+      "topicId": "iras-cit-renovation-refurbishment",
+      "mapId": "IRAS_CIT_RR_SOURCE_MAP",
+      "query": "How are renovation and refurbishment expenses treated for corporate income tax?",
+      "subject": "corporate income tax treatment of renovation and refurbishment expenses",
+      "passage": "Business expenses are deductible only when incurred wholly and exclusively in producing income. The corporate income tax treatment of a private expense is that it is not tax deductible because it does not serve a business purpose."
+    }
+  }
+}

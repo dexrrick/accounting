@@ -585,7 +585,7 @@ function irasCandidateDomainMismatch(query: string, topic: MappedCoverageTopic, 
   const pageIsWithholdingTaxRoute = /^\/taxes\/withholding-tax(?:\/|$)/.test(path);
   const pageIsPropertyTaxRoute = /^\/taxes\/property-tax(?:\/|$)/.test(path);
   const pageIsStampDutyRoute = /^\/taxes\/stamp-duty(?:\/|$)/.test(path);
-  const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
+  const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding[-\s]+tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
   if (isEmployeeBenefitTaxTopic(topic) && pageIsCorporateIncomeTaxRoute) {
     return 'The fetched IRAS page is in the corporate income-tax domain, which does not match employee benefit tax treatment.';
   }
@@ -632,7 +632,7 @@ function candidateMatchesIrasPopulation(query: string, topic: MappedCoverageTopi
   const pageIsCorporateTaxRoute = /^\/taxes\/corporate-income-tax(?:\/|$)/.test(path);
   const topicRequiresEmploymentPage = topic.id === 'iras-individual-overseas-employment' ||
     topic.id === 'iras-individual-foreign-employment-income';
-  const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
+  const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding[-\s]+tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
   // Individual residence and foreign-tax-credit guidance can apply to an
   // employment query without repeating employee wording on every page. Require
   // employment-specific page content only for the employment topics themselves.
