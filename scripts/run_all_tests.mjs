@@ -32,6 +32,7 @@ const testSuites = [
   { name: 'IRAS Mapped Evidence Diagnostic V5', file: 'test_iras_mapped_evidence_diagnostic_v5.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'IRAS Source Term Compatibility', file: 'test_iras_source_term_compatibility.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS General Rule Concept Support', file: 'test_iras_rule_concept_support.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS Public Rule Forms', file: 'test_iras_public_rule_forms.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Scoped Concept Coverage', file: 'test_iras_scoped_concept_coverage.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Requested Concept Fallback', file: 'test_iras_requested_concept_fallback.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Shared Page Claim Bindings', file: 'test_iras_shared_page_claim_bindings.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

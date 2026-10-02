@@ -237,7 +237,7 @@ function hasGstInputTaxClaimRule(sourceText: string): boolean {
 }
 
 function hasPrivateExpenseDeductibilityRule(sourceText: string): boolean {
-  return boundedRuleSourceUnits(sourceText).some(unit => {
+  const directlyStatesRule = boundedRuleSourceUnits(sourceText).some(unit => {
     if (unit.kind !== 'statement') return false;
     const clause = unit.text;
     const words = tokenize(clause).map(canonicalWord);
@@ -249,6 +249,36 @@ function hasPrivateExpenseDeductibilityRule(sourceText: string): boolean {
     const reversesDisallowance = /\b(?:not|never)\s+(?:be\s+)?disallowed\b|\bnot\s+non[ -]deductible\b|\bnot\s+true\s+that\b|\bnot\s+(?:a|an|the)?\s*private expenses?\b/i.test(clause);
     return privateExpense && explicitDisallowance && !reversesDisallowance;
   });
+  if (directlyStatesRule) return true;
+
+  // IRAS also states the general category first, then names private/personal
+  // expenses in an immediately following "These include" sentence. Keep this
+  // relationship within one paragraph and two consecutive sentences so a
+  // nearby but unrelated example cannot supply the category's antecedent.
+  const paragraphs = sourceText.normalize('NFC').replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/).map(paragraph => paragraph.trim()).filter(Boolean);
+  return paragraphs.some(paragraph => {
+    const sentences = sentenceParts(paragraph);
+    for (let index = 0; index + 1 < sentences.length; index += 1) {
+      const categoryDefinition = sentences[index];
+      const inclusion = sentences[index + 1];
+      const definesNonDeductibleCategory = /^\s*non[ -]deductible business expenses?\s+(?:are|mean|refer to)\s+(?:expenses?|costs?)\b[^.!?;:]{0,180}\b(?:do not|does not|fail to)\s+(?:fulfil|fulfill|meet|satisfy)\b[^.!?;:]{0,45}\bconditions?(?:\s+above)?[.!?]?\s*$/i.test(categoryDefinition);
+      const inclusionMatch = /^\s*these include\b[^.!?;:]{0,100}\b(?:private|personal)\s+expenses?\b/i.exec(inclusion);
+      if (!definesNonDeductibleCategory || !inclusionMatch) continue;
+      const privateExpenseMatch = /\b(?:private|personal)\s+expenses?\b/i.exec(inclusionMatch[0]);
+      if (!privateExpenseMatch) continue;
+      const privateExpenseStart = privateExpenseMatch.index;
+      const privateExpenseEnd = privateExpenseStart + privateExpenseMatch[0].length;
+      const beforeExpense = inclusion.slice(0, privateExpenseStart);
+      const afterExpense = inclusion.slice(privateExpenseEnd);
+      const excludesPrivateExpense = /\b(?:no|not|never|except|excluding|other than)\b/i.test(beforeExpense) ||
+        /\b(?:except|excluding|other than|but not|unless|not included|excluded|not disallowed|not deductible)\b/i.test(afterExpense) ||
+        /\b(?:are|is|may be|can be|could be|remain|remains)\b[^.!?;:]{0,35}\b(?:deductible|deducted|claimable|allowed as a deduction|not disallowed|not non[ -]deductible)\b/i.test(afterExpense);
+      if (excludesPrivateExpense) continue;
+      return true;
+    }
+    return false;
+  });
 }
 
 function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: boolean): boolean {
@@ -258,13 +288,58 @@ function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: bool
     const royalty = /\broyalt(?:y|ies)\b/i.test(clause);
     const recipient = String.raw`(?:to|for)\s+(?:(?:a|an|the)\s+)?non[ -]resident(?:\s+(?:companies?|entities?|persons?|individuals?|recipients?|payees?))?`;
     const royaltyRecipient = String.raw`\broyalt(?:y|ies)\b(?:\s+(?:payments?|paid|payable|made|is|are|received|receivable)){0,4}\s+${recipient}`;
-    const withholdingRule = requiresNonResident
+    const existingWithholdingRule = requiresNonResident
       ? new RegExp(
           `\\b(?:withholding tax|wht)\\s+(?:may\\s+)?appl(?:y|ies)\\s+(?:to|on)\\s+${royaltyRecipient}\\b|${royaltyRecipient}(?:\\s+(?:and\\s+)?(?:are|is|may be|will be|shall be))?\\s+(?:subject to|liable to)\\s+(?:withholding tax|wht)\\b|\\broyalty withholding tax\\s+(?:may\\s+)?apply\\s+when\\s+(?:(?:a|the)\\s+)?(?:(?:singapore\\s+)?(?:payer|company|business))\\s+pays\\s+royalties\\s+${recipient}\\b`,
           'i'
         ).test(clause)
       : /\b(?:withholding tax|wht)\s+(?:may\s+)?appl(?:y|ies)\s+(?:to|on)\s+(?:royalt(?:y|ies)|(?:the )?royalty payments?)\b|\broyalt(?:y|ies)\b(?:\s+(?:payments?|paid|payable|made|is|are|received|receivable)){0,3}\s+(?:are|is|may be|will be|shall be)\s+(?:subject to|liable to)\s+(?:withholding tax|wht)\b|\b(?:payer|company)\s+(?:must|is required to)\s+withhold\s+(?:the )?tax\s+on\s+(?:that )?royalt(?:y|ies)\s+payments?\b/i.test(clause);
-    const negatesRule = /\bnot true that\b|\b(?:not|never|no)\b[^.;:]{0,35}\b(?:withholding tax|wht)\b[^.;:]{0,35}\b(?:apply|applies|applicable|due|payable)\b|\b(?:withholding tax|wht)\b[^.;:]{0,20}\b(?:does not|doesn't|never|not)\s+apply\b/i.test(clause);
+    const specifiedNaturePayment = /^\s*(?:(?:a|an|the)\s+)?(?:person|payer|company|business)\b(?:\s*\(\s*known as (?:the\s+)?payer\s*\))?(?:\s+(?:who\s+)?(?:makes?|making))\s+(?:(?:payments?|a payment)\s+of\s+(?:a\s+)?specified\s+nature|specified\s+payments?)\b/i.exec(clause);
+    let specifiedNatureRoyaltyRule = false;
+    if (specifiedNaturePayment) {
+      const afterPayment = clause.slice(specifiedNaturePayment.index + specifiedNaturePayment[0].length);
+      const royaltyExample = /(?:\be\.g\.|\bfor example\b|\bsuch as\b|\bincluding\b)[^.;:)]{0,70}\broyalt(?:y|ies)\b/i.exec(afterPayment);
+      if (royaltyExample) {
+        const afterRoyaltyExample = afterPayment.slice(royaltyExample.index + royaltyExample[0].length);
+        const payeeBridge = /^\s*(?:,\s*(?:(?:interest|technical service fees?|service fees?|etc\.?)\s*,?\s*){0,4})?\)?\s*to\s+(?:(?:a|an|the)\s+)?non[ -]resident\b/i.exec(afterRoyaltyExample);
+        if (payeeBridge) {
+          const afterPayee = afterRoyaltyExample.slice(payeeBridge[0].length);
+          const obligation = /\b(?:must|shall|will|is required to|are required to|has to|have to)\s+withhold\b/i.exec(afterPayee.slice(0, 120));
+          if (obligation) {
+            const obligationObject = afterPayee.slice(obligation.index + obligation[0].length, obligation.index + obligation[0].length + 45);
+            const obligationTail = afterPayee.slice(obligation.index);
+            const recipientBridge = afterPayee.slice(0, obligation.index);
+            const payeeType = '(?:companies|company|entities|entity|persons?|individuals?|recipients?|payees?)';
+            const recognizedPayeeBridge = new RegExp(`^\\s*(?:${payeeType}\\b(?:\\s+or\\s+(?:(?:a|an|the)\\s+)?${payeeType}\\b)?)?(?:\\s*\\(\\s*known as (?:the\\s+)?payee\\s*\\))?(?:\\s*,?\\s+and)?\\s*$`, 'i').test(recipientBridge);
+            const explicitTaxObjectMatch = /^\s+(?:(?:a|the)\s+)?(?:withholding\s+tax|tax|wht)\b/i.exec(obligationObject);
+            const taxObjectRemainder = explicitTaxObjectMatch
+              ? obligationTail.slice(obligation[0].length + explicitTaxObjectMatch[0].length)
+              : '';
+            const taxObjectEndsHere = /^\s*[.!?)]?\s*$/.test(taxObjectRemainder);
+            const taxObjectTargetsSamePayment = /^\s+(?:on|for)\s+(?:(?:the|this|that|such)\s+)?(?:royalt(?:y|ies)|payment|amount)\b(?:\s+payment)?\s*[.!?)]?\s*$/i.test(taxObjectRemainder);
+            const taxObjectSamePaymentRemittance = /^\s*(?:and\s+)?pay(?:s|ing)?\s+(?:the\s+)?amount withheld\b[^.;:]{0,50}\b(?:to iras|as (?:wht|withholding tax))\b\s*[.!?)]?\s*$/i.test(taxObjectRemainder);
+            const explicitTaxObject = Boolean(explicitTaxObjectMatch &&
+              (taxObjectEndsHere || taxObjectTargetsSamePayment || taxObjectSamePaymentRemittance));
+            const paymentLinkedAmountObjectMatch = /^\s+(?:(?:a|the)\s+)?(?:percentage|amount|portion|part)\b[^.;:]{0,45}\bof\s+(?:(?:the|such)\s+)?(?:royalt(?:y|ies)\s+)?payment\b/i.exec(obligationObject);
+            const afterPaymentObject = paymentLinkedAmountObjectMatch
+              ? obligationTail.slice(obligation[0].length + paymentLinkedAmountObjectMatch[0].length)
+              : '';
+            const samePaymentRemittance = /^\s*(?:and\s+)?pay(?:s|ing)?\s+(?:the\s+)?amount withheld\b[^.;:]{0,50}\b(?:to iras|as (?:wht|withholding tax))\b/i.test(afterPaymentObject);
+            specifiedNatureRoyaltyRule = recognizedPayeeBridge &&
+              (explicitTaxObject || Boolean(paymentLinkedAmountObjectMatch && samePaymentRemittance));
+          }
+        }
+        const exampleClose = afterPayment.indexOf(')', royaltyExample.index);
+        const exampleContextEnd = exampleClose >= 0 && exampleClose - royaltyExample.index <= 100
+          ? exampleClose + 1
+          : Math.min(afterPayment.length, royaltyExample.index + 100);
+        const exampleContext = afterPayment.slice(royaltyExample.index, exampleContextEnd);
+        const exampleWithRoyaltyNegated = /\b(?:not|excluding|exclude|except|other than)\b[^.;:)]{0,40}\broyalt(?:y|ies)\b|\broyalt(?:y|ies)\b[^.;:)]{0,30}\b(?:excluded|not included)\b/i.test(exampleContext);
+        if (exampleWithRoyaltyNegated) specifiedNatureRoyaltyRule = false;
+      }
+    }
+    const withholdingRule = existingWithholdingRule || specifiedNatureRoyaltyRule;
+    const negatesRule = /\bnot true that\b|\b(?:not|never|no)\b[^.;:]{0,35}\b(?:withholding tax|wht)\b[^.;:]{0,35}\b(?:apply|applies|applicable|due|payable)\b|\b(?:withholding tax|wht)\b[^.;:]{0,20}\b(?:does not|doesn't|never|not)\s+apply\b|\b(?:must|shall|will|should|may)\s+not\s+withhold\b|\b(?:is|are)\s+not\s+required\s+to\s+withhold\b|\b(?:does|do)\s+not\s+require\s+withholding\b/i.test(clause);
     return royalty && withholdingRule && !negatesRule;
   });
 }
