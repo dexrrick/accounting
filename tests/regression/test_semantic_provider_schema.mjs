@@ -67,7 +67,10 @@ assert.deepEqual(schema.properties.factsExplicitlyProvided.items, { type: 'strin
 assert.equal(schema.properties.confidence.minimum, SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum);
 assert.equal(schema.properties.confidence.maximum, SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum);
 assert.equal(schema.properties.issues.minItems, SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum);
-assert.equal(schema.properties.issues.maxItems, SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum);
+assert.equal(Object.hasOwn(schema.properties.issues, 'maxItems'), false,
+  'the Gemini provider schema omits only the issues array cap rejected by the provider');
+assert.equal(SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum, 12,
+  'the application-level V2 issue maximum remains twelve');
 assert.equal(issueSchema.additionalProperties, false);
 assert.deepEqual(issueSchema.required, [...SEMANTIC_ISSUE_KEYS]);
 assert.deepEqual(Object.keys(issueSchema.properties), [...SEMANTIC_ISSUE_KEYS]);
@@ -98,6 +101,13 @@ for (const key of SEMANTIC_V2_INTERPRETATION_KEYS) {
   delete missing[key];
   assert.equal(validateSemanticQuestionInterpretation(missing), undefined, `V2 rejects missing root key ${key}`);
 }
+const tooManyIssues = structuredClone(valid);
+tooManyIssues.issues = Array.from(
+  { length: SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum + 1 },
+  () => structuredClone(issue)
+);
+assert.equal(validateSemanticQuestionInterpretation(tooManyIssues), undefined,
+  'application validation still rejects more issues than the configured maximum');
 for (const key of SEMANTIC_ISSUE_KEYS) {
   const missing = structuredClone(valid);
   delete missing.issues[0][key];
@@ -192,6 +202,11 @@ for (const provider of ['synthetic-gemini-provider-key', semanticProvider]) {
 const previousFetch = globalThis.fetch;
 const requests = [];
 const providerText = JSON.stringify(valid);
+const minimalSchema = {
+  type: 'object',
+  required: ['value'],
+  properties: { value: { type: 'string' } }
+};
 globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
   const body = JSON.parse(init.body);
@@ -208,21 +223,31 @@ try {
   await executeStructuredLlmCall('prompt', 'system', semanticProvider, {
     model: 'gemini-3.5-flash-lite', jsonMode: true, temperature: 0, responseJsonSchema: schema
   });
-  assert.deepEqual(requests[0].body.generationConfig.responseJsonSchema, schema,
-    'Gemini API-key string path includes responseJsonSchema');
-  assert.deepEqual(requests[1].body.generationConfig.responseJsonSchema, schema,
-    'Gemini ProviderSettings path includes responseJsonSchema');
-  assert.equal(requests[0].body.generationConfig.responseMimeType, 'application/json');
-  assert.equal(requests[1].body.generationConfig.responseMimeType, 'application/json');
+  await executeStructuredLlmCall('prompt', 'system', 'synthetic-gemini-provider-key', {
+    model: 'gemini-3.5-flash-lite', jsonMode: true, temperature: 0, responseJsonSchema: minimalSchema
+  });
+  await executeStructuredLlmCall('prompt', 'system', semanticProvider, {
+    model: 'gemini-3.5-flash-lite', jsonMode: true, temperature: 0, responseJsonSchema: minimalSchema
+  });
+  for (const [index, requestSchema] of [[0, schema], [1, schema], [2, minimalSchema], [3, minimalSchema]]) {
+    assert.deepEqual(requests[index].body.generationConfig, {
+      responseFormat: { text: { mimeType: 'APPLICATION_JSON', schema: requestSchema } },
+      temperature: 0
+    }, `Gemini request ${index} sends the schema through responseFormat.text.schema`);
+    for (const legacyField of ['responseMimeType', 'responseJsonSchema', 'responseSchema', '_responseJsonSchema']) {
+      assert.equal(Object.hasOwn(requests[index].body.generationConfig, legacyField), false,
+        `Gemini schema request omits legacy generationConfig.${legacyField}`);
+    }
+  }
 
   await executeStructuredLlmCall('unrelated Gemini prompt', 'system', semanticProvider, { jsonMode: true });
   await executeStructuredLlmCall('non-JSON Gemini prompt', 'system', semanticProvider, {
     jsonMode: false, responseJsonSchema: schema
   });
-  assert.deepEqual(requests[2].body.generationConfig, {
+  assert.deepEqual(requests[4].body.generationConfig, {
     responseMimeType: 'application/json', temperature: 0.1
   }, 'unrelated Gemini JSON calls keep their existing generation config without a schema');
-  assert.deepEqual(requests[3].body.generationConfig, { temperature: 0.1 },
+  assert.deepEqual(requests[5].body.generationConfig, { temperature: 0.1 },
     'jsonMode false suppresses both MIME mode and the optional schema');
 
   const openai = {
@@ -239,10 +264,10 @@ try {
     openai: semanticProvider.openai
   };
   await executeStructuredLlmCall('prompt', 'system', azure, { jsonMode: true, responseJsonSchema: schema });
-  assert.deepEqual(requests[4].body.response_format, { type: 'json_object' });
-  assert.equal(Object.hasOwn(requests[4].body, 'responseJsonSchema'), false, 'OpenAI payload stays unchanged');
-  assert.deepEqual(requests[5].body.response_format, { type: 'json_object' });
-  assert.equal(Object.hasOwn(requests[5].body, 'responseJsonSchema'), false, 'Azure OpenAI payload stays unchanged');
+  assert.deepEqual(requests[6].body.response_format, { type: 'json_object' });
+  assert.equal(Object.hasOwn(requests[6].body, 'responseJsonSchema'), false, 'OpenAI payload stays unchanged');
+  assert.deepEqual(requests[7].body.response_format, { type: 'json_object' });
+  assert.equal(Object.hasOwn(requests[7].body, 'responseJsonSchema'), false, 'Azure OpenAI payload stays unchanged');
 } finally {
   globalThis.fetch = previousFetch;
 }

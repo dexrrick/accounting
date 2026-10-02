@@ -107,7 +107,7 @@ export const SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA = {
     issues: {
       type: 'array',
       minItems: SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum,
-      maxItems: SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum,
+      // Gemini rejects this cap in the combined V2 schema; the application validator still enforces it.
       items: {
         type: 'object',
         additionalProperties: false,
