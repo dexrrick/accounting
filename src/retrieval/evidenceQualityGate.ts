@@ -679,13 +679,22 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
 
   const derivedConcepts = requestedConcepts.length > 0 ? requestedConcepts : targetTopics.flatMap(scopedConcepts);
   const requestedTopicIds = new Set(targetTopics.map(topic => topic.id));
+  const explicitlyScopedMappedTopicIds = new Set(targetTopics
+    .filter(topic => topic.id.startsWith('iras-authority-query-'))
+    .flatMap(topic => scopedMappedTopicIds(topic))
+    .filter(topicId => Boolean(getCoverageTopicById(topicId))));
+  const requestedConceptTopicIds = new Set([...requestedTopicIds, ...explicitlyScopedMappedTopicIds]);
   const associatedTopicsForConcept = (record: AuthoritativeSourceRecord, concept: RequestedQuestionConcept): SingaporeCoverageTopic[] => {
     const explicitlyRequestedTopicIds = concept.topicIds.length > 0
-      ? new Set(concept.topicIds.filter(topicId => requestedTopicIds.has(topicId)))
+      ? new Set(concept.topicIds.filter(topicId => requestedConceptTopicIds.has(topicId)))
       : undefined;
     if (explicitlyRequestedTopicIds && explicitlyRequestedTopicIds.size === 0) return [];
-    return targetTopics.filter(topic => (!explicitlyRequestedTopicIds || explicitlyRequestedTopicIds.has(topic.id)) &&
-      metadataAssociatesRecord(record, topic));
+    return targetTopics.filter(topic => {
+      const inExplicitScope = !explicitlyRequestedTopicIds || explicitlyRequestedTopicIds.has(topic.id) ||
+        topic.id.startsWith('iras-authority-query-') &&
+          scopedMappedTopicIds(topic).some(topicId => explicitlyRequestedTopicIds.has(topicId));
+      return inExplicitScope && metadataAssociatesRecord(record, topic);
+    });
   };
   const requestedConceptSupportForRecord = (
     record: AuthoritativeSourceRecord,
@@ -694,7 +703,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     const associatedTopics = associatedTopicsForConcept(record, concept);
     if (associatedTopics.length === 0) return undefined;
     const sourceText = record.sourceText || '';
-    const inScopeConceptTopicIds = concept.topicIds.filter(topicId => requestedTopicIds.has(topicId));
+    const inScopeConceptTopicIds = concept.topicIds.filter(topicId => requestedConceptTopicIds.has(topicId));
     const scopedResults = associatedTopics.map(topic => supportGeneralIrasRuleConcept({
       sourceText,
       domainId: topic.domainId,
@@ -756,11 +765,13 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     concept: RequestedQuestionConcept,
     topic: SingaporeCoverageTopic
   ): boolean => {
-    const applicableConceptTopicIds = concept.topicIds.filter(topicId => requestedTopicIds.has(topicId));
+    const mappedTopicIds = scopedMappedTopicIds(topic).filter(topicId => explicitlyScopedMappedTopicIds.has(topicId));
+    const applicableConceptTopicIds = concept.topicIds.filter(topicId =>
+      topicId === topic.id || mappedTopicIds.includes(topicId));
     if (concept.topicIds.length > 0 && applicableConceptTopicIds.length === 0) return false;
     const scopedTopicIds = [...new Set([
       topic.id,
-      ...scopedMappedTopicIds(topic).filter(topicId => requestedTopicIds.has(topicId)),
+      ...mappedTopicIds,
       ...applicableConceptTopicIds
     ])];
     const scope = { domainId: topic.domainId, topicIds: scopedTopicIds, subject: concept.label };
@@ -771,10 +782,15 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     const groups = topicConcepts.length > 0
       ? topicConcepts.map(concept => [...new Set(words(concept.label).filter(word => word.length >= 3 && !GENERIC_TOPIC_WORDS.has(word)))])
       : queryMaterialConceptGroups(input.query);
-    const conceptRecords = eligibleRecords.filter(record => metadataAssociatesRecord(record, topic));
+    const conceptRecords = eligibleRecords.filter(record => {
+      const associations = recordTopicAssociations(record);
+      if (associations.has(topic.id) || scopedMappedTopicIds(topic).some(topicId => associations.has(topicId))) return true;
+      return getCoverageTopicsByIds([...associations]).some(associatedTopic => associatedTopic.domainId === topic.domainId);
+    });
+    const combinedConceptWords = new Set(conceptRecords.flatMap(record => words(record.sourceText || '')));
     const supportingGroupIndexes = groups.map((group, index) => topicConcepts.length > 0
       ? conceptRecords.some(record => provisionalConceptSupportForRecord(record, topicConcepts[index], topic))
-      : conceptRecords.some(record => supportsQueryConceptGroup(new Set(words(record.sourceText || '')), group))
+      : supportsQueryConceptGroup(combinedConceptWords, group)
     ).map((matched, index) => matched ? index : -1).filter(index => index >= 0);
     const missingGroupIndexes = groups.map((_, index) => index).filter(index => !supportingGroupIndexes.includes(index));
     const missingGroups = missingGroupIndexes.map(index => groups[index]);
@@ -793,8 +809,8 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     const everyGroupHasLocalSupport = groups.every((group, index) => topicConcepts.length > 0
       ? conceptRecords.some(record => record.provenance === 'LOCAL_STATIC' &&
         provisionalConceptSupportForRecord(record, topicConcepts[index], topic))
-      : conceptRecords.some(record => record.provenance === 'LOCAL_STATIC' &&
-        supportsQueryConceptGroup(new Set(words(record.sourceText || '')), group)));
+      : supportsQueryConceptGroup(new Set(conceptRecords.filter(record => record.provenance === 'LOCAL_STATIC')
+        .flatMap(record => words(record.sourceText || ''))), group));
     if (everyGroupHasLocalSupport) localByTopic.add(topic.id);
     else liveByTopic.add(topic.id);
   }

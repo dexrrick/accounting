@@ -4,7 +4,7 @@ import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriev
 import { defaultAdvancedSourceRetriever } from '../../src/retrieval/advancedSourceRetriever.ts';
 import { evaluateEvidenceQuality } from '../../src/retrieval/evidenceQualityGate.ts';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
-import { IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistry.ts';
+import { getCoverageTopicById, IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistry.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { getRequestedQuestionConcepts, reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
@@ -92,6 +92,8 @@ const sourceMapsByUrl = new Map(sourceMaps.map(definition => [definition.canonic
 const mappedFetchCalls = [];
 const discoveryCalls = [];
 const searchCalls = [];
+let syntheticLocalRecords = [];
+let mappedBody = mappedRule;
 const webRetriever = new ControlledWebRetriever(undefined, new SourceCache());
 const discoveryAdapter = {
   async discoverOfficialSourceCandidates(request) { discoveryCalls.push(request.topicId); return []; },
@@ -108,7 +110,7 @@ const retriever = {
   async retrieveSources(retrievalQuery) {
     const retrieved = await defaultAdvancedSourceRetriever.retrieveSources(retrievalQuery);
     if (!retrievalQuery.topicIds?.includes(topicId)) return retrieved;
-    return [...new Map([...retrieved, localRecord].map(record => [record.id, record])).values()];
+    return [...new Map([...retrieved, localRecord, ...syntheticLocalRecords].map(record => [record.id, record])).values()];
   },
   getSourceById(id) { return defaultAdvancedSourceRetriever.getSourceById(id); },
   findSourcesByStandardOrAct(standardOrActCode, paragraphOrSection) {
@@ -116,11 +118,11 @@ const retriever = {
   }
 };
 
-const previousFetch = globalThis.fetch;
-globalThis.fetch = async () => { throw new Error('AMBIENT_NETWORK_BLOCKED'); };
-let result;
-try {
-  result = await buildAuthorityWorkstreams(testCase.query, reconciled.issuePlan, {
+async function runWorkstream() {
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new Error('AMBIENT_NETWORK_BLOCKED'); };
+  try {
+    return await buildAuthorityWorkstreams(testCase.query, reconciled.issuePlan, {
     retriever,
     questionUnderstanding,
     referenceDate: REFERENCE_DATE,
@@ -135,7 +137,7 @@ try {
           mappedFetchCalls.push(url);
           const html = `<!doctype html><html><head><title>${sourceMap.pageTitle} | IRAS</title></head><body><main>
             <h1>${sourceMap.pageTitle}</h1>
-            <p>${mappedRule}</p>
+            <p>${mappedBody}</p>
           </main></body></html>`;
           return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
         },
@@ -146,10 +148,12 @@ try {
       officialDomainSearchAdapter,
       authorityLevelDiscovery: false
     }
-  });
-} finally {
-  globalThis.fetch = previousFetch;
+    });
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
 }
+let result = await runWorkstream();
 
 const finalIssue = result.workstreams.flatMap(workstream => workstream.issues)
   .find(issue => issue.issueId === reconciled.issuePlan.issues[0].id);
@@ -178,5 +182,105 @@ assert.equal(finalIssue.evidenceStatus, 'VERIFIED',
 assert.equal(finalIssue.lifecycle.covered, true);
 assert.deepEqual(discoveryCalls, [], 'The mapped page is sufficient; discovery remains closed.');
 assert.deepEqual(searchCalls, [], 'The mapped page is sufficient; search remains closed.');
+
+// The same frozen request is sufficient when a local source record supports
+// the concept, so it must not make a mapped GET. The changed passage is a
+// test-only synthetic fixture; it is neither registered nor persisted.
+const localGeneralRule = {
+  ...localRecord,
+  id: 'SYNTHETIC_LOCAL_GST_INPUT_TAX_GENERAL_RULE',
+  sourceText: mappedRule,
+  principleSummary: 'Synthetic focused-control general input-tax rule',
+  tags: [topicId, 'input tax claim', 'gst business purchases']
+};
+syntheticLocalRecords = [localGeneralRule];
+mappedFetchCalls.length = 0;
+result = await runWorkstream();
+const locallySufficientIssue = result.workstreams.flatMap(workstream => workstream.issues)
+  .find(issue => issue.issueId === reconciled.issuePlan.issues[0].id);
+assert.ok(locallySufficientIssue);
+assert.equal(mappedFetchCalls.length, 0, 'Locally sufficient topic and concept coverage must avoid mapped fetches.');
+assert.equal(locallySufficientIssue.evidenceStatus, 'VERIFIED');
+
+// A mapped page that is topically relevant but omits the requested general
+// entitlement must not close the concept gap.
+syntheticLocalRecords = [];
+mappedBody = 'This GST page explains input tax claim records and tax invoice filing for registered businesses.';
+mappedFetchCalls.length = 0;
+result = await runWorkstream();
+const unsupportedMappedIssue = result.workstreams.flatMap(workstream => workstream.issues)
+  .find(issue => issue.issueId === reconciled.issuePlan.issues[0].id);
+assert.ok(unsupportedMappedIssue);
+assert.ok(mappedFetchCalls.length > 0, 'The unsupported mapped control still exercises the injected mapped path.');
+assert.notEqual(unsupportedMappedIssue.evidenceStatus, 'VERIFIED',
+  'Topical mapped evidence without support for the requested rule must remain insufficient.');
+
+// Verify an actual retained live source through a provisional scope whose only
+// registered association is the explicit mapped topic ID.
+mappedBody = mappedRule;
+mappedFetchCalls.length = 0;
+result = await runWorkstream();
+const liveSource = result.workstreams.flatMap(workstream => workstream.issues)
+  .find(issue => issue.issueId === reconciled.issuePlan.issues[0].id)?.sources
+  .find(record => record.provenance === 'LIVE_EXTERNAL');
+assert.ok(liveSource, 'The positive control supplies a retained live record for the provisional scope test.');
+const sourceMap = sourceMaps.find(definition => definition.canonicalSourceUrl === liveSource.canonicalSourceUrl);
+assert.ok(sourceMap);
+const liveTrace = {
+  path: 'MAPPED_SOURCE',
+  sourceMapIds: [sourceMap.id],
+  selectedRecordIds: [liveSource.id],
+  finalVerifiedUrls: [liveSource.canonicalSourceUrl],
+  attempts: [{
+    topicId,
+    sourceMapId: sourceMap.id,
+    fetchStatus: 'SUCCESS',
+    finalUrl: liveSource.canonicalSourceUrl,
+    pageTitle: sourceMap.pageTitle,
+    titleMatched: true,
+    contentMatched: true
+  }]
+};
+const registeredTopic = getCoverageTopicById(topicId);
+assert.ok(registeredTopic);
+const provisionalTopic = {
+  ...registeredTopic,
+  id: 'iras-authority-query-provisional-gst-input-tax-control',
+  sourceRecordIds: [],
+  mappedTopicIds: [topicId],
+  requestedConcepts: [requestedConcept]
+};
+const provisionalPositive = evaluateEvidenceQuality({
+  query: testCase.query,
+  topicIds: [],
+  records: [liveSource],
+  missingFacts: [],
+  sourceMapFallbackTrace: liveTrace,
+  provisionalTopics: [provisionalTopic],
+  requestedConcepts: [requestedConcept],
+  authorities: ['IRAS'],
+  domain: 'IRAS_GST',
+  referenceDate: REFERENCE_DATE
+});
+assert.deepEqual(provisionalPositive.uncoveredConcepts, [],
+  'A requested registered concept explicitly bound by an existing provisional mapped topic is covered.');
+assert.equal(provisionalPositive.status, 'RETRIEVED_SUFFICIENT',
+  'Live-only concept evidence remains usable without being misclassified as local sufficiency.');
+
+const unrelatedConcept = { ...requestedConcept, id: `${requestedConcept.id}-unrelated`, topicIds: ['iras-gst-registration'] };
+const unrelatedBinding = evaluateEvidenceQuality({
+  query: testCase.query,
+  topicIds: [],
+  records: [liveSource],
+  missingFacts: [],
+  sourceMapFallbackTrace: liveTrace,
+  provisionalTopics: [{ ...provisionalTopic, requestedConcepts: [] }],
+  requestedConcepts: [unrelatedConcept],
+  authorities: ['IRAS'],
+  domain: 'IRAS_GST',
+  referenceDate: REFERENCE_DATE
+});
+assert.deepEqual(unrelatedBinding.uncoveredConcepts, [unrelatedConcept.label],
+  'A sibling topic ID outside the provisional mapped scope cannot inherit the source concept.');
 
 process.stdout.write('IRAS requested-concept fallback regression passed.\n');
