@@ -1,0 +1,440 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "foreign-gst-central-filter-diagnostic-v1",
+  "mode": "API_FREE_LOCAL_AND_SYNTHETIC_MAPPED_PAGE_PROBES",
+  "referenceDate": "2026-10-02",
+  "selectedCaseIds": [
+    "foreign-dividend-treatment",
+    "gst-input-tax-general-rule"
+  ],
+  "modelRequests": 0,
+  "ambientFetchCalls": 0,
+  "caveats": [
+    "The default local-only section uses the production local retriever with network blocked.",
+    "Mapped-page sections use hand-authored synthetic paragraphs and a local-only custom transport; they are not IRAS quotations or retained live HTML.",
+    "The frozen V4 live response body was not retained, so synthetic probes identify current matching conditions but cannot name the exact absent token in that live excerpt."
+  ],
+  "cases": [
+    {
+      "caseId": "foreign-dividend-treatment",
+      "fixtureCaseId": "foreign-dividend-treatment",
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "DETERMINE_TREATMENT",
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+      "topicIds": [
+        "iras-foreign-sourced-income"
+      ],
+      "requestedConcepts": [
+        {
+          "id": "semantic_singapore_corporate_tax_treatment_of_dividend_fr",
+          "label": "Singapore corporate tax treatment of dividend from overseas subsidiary",
+          "terms": [
+            "Singapore corporate tax treatment of dividend from overseas subsidiary"
+          ],
+          "topicIds": [
+            "iras-foreign-sourced-income"
+          ]
+        }
+      ],
+      "finalClaimMatchingRoute": "topic-plus-issue-subject OR matchesRequestedQuestionConcept",
+      "localOnlyDefaultRetriever": {
+        "localFetchAttempts": 0,
+        "localEligibleRecordCount": 0,
+        "eligibleRecordIds": [],
+        "rendererAcceptedClaimCount": 0,
+        "rendererAcceptedClaimMatches": [],
+        "rendererRejectedClaimCount": 0,
+        "centralAdmittedRecordCount": 0,
+        "centralCoveredTopicIds": [],
+        "centralUncoveredTopicIds": [
+          "iras-foreign-sourced-income"
+        ],
+        "centralUncoveredConcepts": [
+          "Singapore corporate tax treatment of dividend from overseas subsidiary"
+        ],
+        "finalVerifiedClaimCount": 0,
+        "applicationStatus": "UNRESOLVED",
+        "firstUnresolvedStage": "LOCAL_CANDIDATE_SELECTION",
+        "gapCodes": [
+          "NO_CANDIDATE_EVIDENCE",
+          "IRAS_SCOPE_NOT_COVERED",
+          "NO_VERIFIED_CLAIM",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ]
+      },
+      "syntheticMappedPageProbes": [
+        {
+          "fixtureCaseId": "foreign-dividend-conditional-rule",
+          "syntheticQuoteSha256Prefix": "947dabe3e452",
+          "syntheticQuoteLength": 202,
+          "fixtureFetchCount": 1,
+          "fixtureFetchUrlSha256Prefixes": [
+            "99c5a463bf0e"
+          ],
+          "expectedMapUrlSha256Prefixes": [
+            "99c5a463bf0e"
+          ],
+          "sourceMapAttemptStatuses": [
+            {
+              "topicId": "iras-foreign-sourced-income",
+              "fetchStatus": "SUCCESS",
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "candidateRecordCount": 1,
+          "renderer": {
+            "acceptedClaimCount": 1,
+            "rejectedClaimCount": 0,
+            "acceptedClaimMatches": [
+              {
+                "claimIndex": 0,
+                "quoteLength": 202,
+                "quoteSha256Prefix": "947dabe3e452",
+                "evidenceQualityConceptMatcherIds": [
+                  "semantic_singapore_corporate_tax_treatment_of_dividend_fr"
+                ]
+              }
+            ]
+          },
+          "centralAdmission": {
+            "inputRecordCount": 1,
+            "eligibleRecordCount": 1,
+            "rejected": []
+          },
+          "centralIssue": {
+            "finalVerifiedClaimCount": 1,
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "UNRESOLVED",
+            "firstUnresolvedStage": "NONE",
+            "lifecycle": {
+              "requested": true,
+              "mapped": true,
+              "retrievalAttempted": true,
+              "evidenceFound": true,
+              "admitted": true,
+              "verified": true,
+              "covered": true
+            },
+            "gaps": []
+          },
+          "topicCoverage": {
+            "coveredTopicIds": [
+              "iras-foreign-sourced-income"
+            ],
+            "uncoveredTopicIds": []
+          },
+          "uncoveredConceptIds": []
+        },
+        {
+          "fixtureCaseId": "foreign-income-without-dividend-negative",
+          "syntheticQuoteSha256Prefix": "7671d026f783",
+          "syntheticQuoteLength": 143,
+          "fixtureFetchCount": 1,
+          "fixtureFetchUrlSha256Prefixes": [
+            "99c5a463bf0e"
+          ],
+          "expectedMapUrlSha256Prefixes": [
+            "99c5a463bf0e"
+          ],
+          "sourceMapAttemptStatuses": [
+            {
+              "topicId": "iras-foreign-sourced-income",
+              "fetchStatus": "SUCCESS",
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "candidateRecordCount": 1,
+          "renderer": {
+            "acceptedClaimCount": 1,
+            "rejectedClaimCount": 0,
+            "acceptedClaimMatches": [
+              {
+                "claimIndex": 0,
+                "quoteLength": 143,
+                "quoteSha256Prefix": "7671d026f783",
+                "evidenceQualityConceptMatcherIds": []
+              }
+            ]
+          },
+          "centralAdmission": {
+            "inputRecordCount": 1,
+            "eligibleRecordCount": 1,
+            "rejected": []
+          },
+          "centralIssue": {
+            "finalVerifiedClaimCount": 0,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "firstUnresolvedStage": "CENTRAL_POST_LITERAL_CLAIM_TOPIC_OR_SUBJECT_FILTER",
+            "lifecycle": {
+              "requested": true,
+              "mapped": true,
+              "retrievalAttempted": true,
+              "evidenceFound": true,
+              "admitted": true,
+              "verified": false,
+              "covered": false
+            },
+            "gaps": [
+              {
+                "stage": "covered",
+                "code": "IRAS_SCOPE_NOT_COVERED"
+              },
+              {
+                "stage": "verified",
+                "code": "NO_VERIFIED_CLAIM"
+              },
+              {
+                "stage": "covered",
+                "code": "ISSUE_CONCEPT_UNCOVERED"
+              },
+              {
+                "stage": "covered",
+                "code": "ISSUE_CONCEPT_UNCOVERED"
+              }
+            ]
+          },
+          "topicCoverage": {
+            "coveredTopicIds": [
+              "iras-foreign-sourced-income"
+            ],
+            "uncoveredTopicIds": []
+          },
+          "uncoveredConceptIds": [
+            "semantic_singapore_corporate_tax_treatment_of_dividend_fr"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "fixtureCaseId": "gst-input-tax-general-rule",
+      "authority": "IRAS",
+      "domain": "IRAS_GST",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+      "topicIds": [
+        "iras-gst-input-tax"
+      ],
+      "requestedConcepts": [
+        {
+          "id": "semantic_general_gst_input_tax_recovery_rules_for_busines",
+          "label": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+          "terms": [
+            "general GST input-tax recovery rules for business purchases by a GST-registered company"
+          ],
+          "topicIds": [
+            "iras-gst-input-tax"
+          ]
+        }
+      ],
+      "finalClaimMatchingRoute": "topic-plus-issue-subject OR distinctive-concept-phrase-plus-issue-subject",
+      "localOnlyDefaultRetriever": {
+        "localFetchAttempts": 0,
+        "localEligibleRecordCount": 1,
+        "eligibleRecordIds": [
+          "GST_REG26_BLOCKED_INPUT_TAX"
+        ],
+        "rendererAcceptedClaimCount": 1,
+        "rendererAcceptedClaimMatches": [
+          {
+            "claimIndex": 0,
+            "quoteLength": 220,
+            "quoteSha256Prefix": "3ff480730196",
+            "evidenceQualityConceptMatcherIds": []
+          }
+        ],
+        "rendererRejectedClaimCount": 0,
+        "centralAdmittedRecordCount": 1,
+        "centralCoveredTopicIds": [
+          "iras-gst-input-tax"
+        ],
+        "centralUncoveredTopicIds": [],
+        "centralUncoveredConcepts": [
+          "general GST input-tax recovery rules for business purchases by a GST-registered company"
+        ],
+        "finalVerifiedClaimCount": 0,
+        "applicationStatus": "NOT_REQUIRED",
+        "firstUnresolvedStage": "CENTRAL_POST_LITERAL_CLAIM_TOPIC_OR_SUBJECT_FILTER",
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "NO_VERIFIED_CLAIM",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ]
+      },
+      "syntheticMappedPageProbes": [
+        {
+          "fixtureCaseId": "gst-input-tax-natural",
+          "syntheticQuoteSha256Prefix": "b5f33cf07690",
+          "syntheticQuoteLength": 135,
+          "fixtureFetchCount": 2,
+          "fixtureFetchUrlSha256Prefixes": [
+            "27a0c7c5d4bb",
+            "f469027e136c"
+          ],
+          "expectedMapUrlSha256Prefixes": [
+            "27a0c7c5d4bb",
+            "f469027e136c"
+          ],
+          "sourceMapAttemptStatuses": [
+            {
+              "topicId": "iras-gst-input-tax",
+              "fetchStatus": "SUCCESS",
+              "titleMatched": true,
+              "contentMatched": true
+            },
+            {
+              "topicId": "iras-gst-input-tax",
+              "fetchStatus": "SUCCESS",
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "candidateRecordCount": 2,
+          "renderer": {
+            "acceptedClaimCount": 2,
+            "rejectedClaimCount": 0,
+            "acceptedClaimMatches": [
+              {
+                "claimIndex": 0,
+                "quoteLength": 135,
+                "quoteSha256Prefix": "b5f33cf07690",
+                "evidenceQualityConceptMatcherIds": []
+              },
+              {
+                "claimIndex": 1,
+                "quoteLength": 135,
+                "quoteSha256Prefix": "b5f33cf07690",
+                "evidenceQualityConceptMatcherIds": []
+              }
+            ]
+          },
+          "centralAdmission": {
+            "inputRecordCount": 2,
+            "eligibleRecordCount": 2,
+            "rejected": []
+          },
+          "centralIssue": {
+            "finalVerifiedClaimCount": 2,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "firstUnresolvedStage": "CENTRAL_REQUESTED_CONCEPT_COVERAGE",
+            "lifecycle": {
+              "requested": true,
+              "mapped": true,
+              "retrievalAttempted": true,
+              "evidenceFound": true,
+              "admitted": true,
+              "verified": true,
+              "covered": false
+            },
+            "gaps": [
+              {
+                "stage": "covered",
+                "code": "IRAS_SCOPE_NOT_COVERED"
+              }
+            ]
+          },
+          "topicCoverage": {
+            "coveredTopicIds": [
+              "iras-gst-input-tax"
+            ],
+            "uncoveredTopicIds": []
+          },
+          "uncoveredConceptIds": [
+            "semantic_general_gst_input_tax_recovery_rules_for_busines"
+          ]
+        },
+        {
+          "fixtureCaseId": "gst-input-tax-phrase-matched",
+          "syntheticQuoteSha256Prefix": "0a28198887bf",
+          "syntheticQuoteLength": 146,
+          "fixtureFetchCount": 2,
+          "fixtureFetchUrlSha256Prefixes": [
+            "27a0c7c5d4bb",
+            "f469027e136c"
+          ],
+          "expectedMapUrlSha256Prefixes": [
+            "27a0c7c5d4bb",
+            "f469027e136c"
+          ],
+          "sourceMapAttemptStatuses": [
+            {
+              "topicId": "iras-gst-input-tax",
+              "fetchStatus": "SUCCESS",
+              "titleMatched": true,
+              "contentMatched": true
+            },
+            {
+              "topicId": "iras-gst-input-tax",
+              "fetchStatus": "SUCCESS",
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "candidateRecordCount": 2,
+          "renderer": {
+            "acceptedClaimCount": 2,
+            "rejectedClaimCount": 0,
+            "acceptedClaimMatches": [
+              {
+                "claimIndex": 0,
+                "quoteLength": 146,
+                "quoteSha256Prefix": "0a28198887bf",
+                "evidenceQualityConceptMatcherIds": []
+              },
+              {
+                "claimIndex": 1,
+                "quoteLength": 146,
+                "quoteSha256Prefix": "0a28198887bf",
+                "evidenceQualityConceptMatcherIds": []
+              }
+            ]
+          },
+          "centralAdmission": {
+            "inputRecordCount": 2,
+            "eligibleRecordCount": 2,
+            "rejected": []
+          },
+          "centralIssue": {
+            "finalVerifiedClaimCount": 2,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "firstUnresolvedStage": "CENTRAL_REQUESTED_CONCEPT_COVERAGE",
+            "lifecycle": {
+              "requested": true,
+              "mapped": true,
+              "retrievalAttempted": true,
+              "evidenceFound": true,
+              "admitted": true,
+              "verified": true,
+              "covered": false
+            },
+            "gaps": [
+              {
+                "stage": "covered",
+                "code": "IRAS_SCOPE_NOT_COVERED"
+              }
+            ]
+          },
+          "topicCoverage": {
+            "coveredTopicIds": [
+              "iras-gst-input-tax"
+            ],
+            "uncoveredTopicIds": []
+          },
+          "uncoveredConceptIds": [
+            "semantic_general_gst_input_tax_recovery_rules_for_busines"
+          ]
+        }
+      ]
+    }
+  ]
+}

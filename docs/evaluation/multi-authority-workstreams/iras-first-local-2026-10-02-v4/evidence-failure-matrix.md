@@ -53,3 +53,19 @@ Counts below are `fetched fixture paragraphs / candidate records / admitted reco
 | CPF relief unchanged synthetic control | NR / 1 / 1 / 1 / 1 / 1 | NONE |
 
 The wrong-domain row begins from the admitted foreign-dividend record, so its one eligible record is a reproduced admission-gate failure rather than a vacuous test. The foreign-income-only row is an intentional subject-negative: selection and literal quotation pass, while final issue support correctly rejects the missing dividend concept.
+
+## Subsequent V4 observations and exact-contract local probes
+
+The immutable V4 source measurement is in `../iras-first-live-2026-10-02-v4/`. It used eight actual mapped GETs, no model/search/discovery requests. The report normalized HTTP codes, so use its successful mapping results rather than claiming that every event recorded HTTP 200.
+
+| Frozen case | Literal renderer accepted claims | Final issue claims | Rule status | Application | Remaining observation |
+| --- | --- | --- | --- | --- | --- |
+| Private expense | 3 | 1 | INSUFFICIENT | UNRESOLVED | Disallowed sibling still TOPIC_MISMATCH; scope/concept gap |
+| Foreign dividend | 3 | 0 | INSUFFICIENT | UNRESOLVED | Loss after literal rendering; scope/concept gap |
+| Corporate residency | 3 | 3 | VERIFIED | NOT_REQUIRED | No blocking gap |
+| WHT royalty | 2 | 1 | INSUFFICIENT | NOT_REQUIRED | Royalty sibling still TOPIC_MISMATCH; scope/concept gap |
+| GST input tax | 1 | 0 | INSUFFICIENT | NOT_REQUIRED | Loss after literal rendering; scope/concept gap |
+
+The later API-free trace `foreign-gst-central-filter-diagnostic-v1.json` uses the **complete frozen semantic subjects**, unlike the shorter earlier fixture subjects. Its default local GST record passes admission and literal quotation verification, then yields zero final claims at the central subject/concept filter. Synthetic mapped GST rules retain two final claims but still leave the full semantic concept uncovered. The central GST branch uses distinctive phrase support instead of the shared concept matcher. Foreign dividend conditional synthetic prose already passes, while general foreign income without dividend wording correctly loses final support. Default local foreign retrieval finds no eligible record, a separate upstream state.
+
+These probes establish current gate behaviour; they cannot reconstruct the missing words in V4 live quotations because those bodies were intentionally not retained. Literal quotation verification itself remains unchanged. The proposed next correction is bounded general-rule concept equivalence at the evidence/filter layer, with material additional meanings kept uncovered and application eligibility unresolved.

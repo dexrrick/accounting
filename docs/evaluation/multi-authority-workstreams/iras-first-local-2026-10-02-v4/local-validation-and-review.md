@@ -1,5 +1,11 @@
 # Local V4 validation — 02/10/2026
 
+## Subsequent resumed checks and measurements
+
+The sections below record the earlier pre-live checkpoint. Subsequently the V4 source harness passed its focused safety regression and independent review, was preregistered in `e7ca826`, and ran once. Its source observation and the one-use six-call privacy-safe residency measurement were saved in `b4c06c3`; their original results remain immutable. Four evidence families still had blocking coverage gaps. Targeted and final acceptance remain unrun.
+
+The prospective bounded residency evaluation matcher was independently approved and saved in `23b0140`. Its focused regression passed, then the current smoke suite passed **71/71** in 44.65 seconds. Full validation of that subsequent revision is pending; the earlier 90/90 result below must not be attributed to later source/matcher revisions. The exact-contract API-free foreign/GST trace and its stage summary were separately reviewed with no material findings. Further bounded source/evidence corrections are in progress and require their own review and final validation.
+
 **HOLD MERGE.** Local evidence behavior is reviewed and validated. This does not establish live source completeness, targeted acceptance, or final-profile acceptance.
 
 Node 22.23.1 was used throughout. Final production lint/build passed after the IRAS content-admission fix. Smoke passed **70/70** in 40.77 seconds; full passed **90/90** in 130.16 seconds. Existing unrelated lint warnings and build chunk/deprecation warnings remain nonblocking. The new bounded source-diagnostic harness is still awaiting its separate focused safety validation and independent review; it was not included in these suite counts.
