@@ -6,6 +6,7 @@ import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { findRecordEligibilityRejection } from '../verification/claimEvidenceVerifier';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
+import { supportGeneralIrasRuleConcept } from './irasRuleConceptSupport';
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 
 export interface EvidenceQualityTraceAttempt {
@@ -134,7 +135,22 @@ function directlyStatesReliefPriority(text: string): boolean {
   });
 }
 
-export function matchesRequestedQuestionConcept(text: string, concept: RequestedQuestionConcept): boolean {
+export function matchesRequestedQuestionConcept(
+  text: string,
+  concept: RequestedQuestionConcept,
+  scope?: { domainId: string; topicIds: readonly string[]; subject: string; population?: string }
+): boolean {
+  if (scope) {
+    const ruleSupport = supportGeneralIrasRuleConcept({
+      sourceText: text,
+      domainId: scope.domainId,
+      topicIds: [...scope.topicIds, ...concept.topicIds],
+      subject: scope.subject,
+      population: scope.population,
+      concepts: [concept]
+    });
+    if (ruleSupport !== undefined) return ruleSupport;
+  }
   const normalizedText = normalizeText(text);
   if (concept.id === 'relief_claim_prioritization') {
     return directlyStatesReliefPriority(text);
@@ -217,7 +233,11 @@ function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: Singap
   const text = normalizeText(record.sourceText || '');
   if (text.length < 24) return false;
   const concepts = scopedConcepts(topic);
-  if (concepts.length > 0) return concepts.every(concept => matchesRequestedQuestionConcept(text, concept));
+  if (concepts.length > 0) return concepts.every(concept => matchesRequestedQuestionConcept(text, concept, {
+    domainId: topic.domainId,
+    topicIds: [topic.id, ...scopedMappedTopicIds(topic)],
+    subject: concept.label
+  }));
   if (topic.id === 'iras-individual-foreign-tax-credit') {
     // DTA and general double-tax guidance may mention the same income being
     // taxed twice, but that does not establish the separate FTC conditions.
@@ -666,7 +686,11 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     });
     const combinedConceptWords = new Set(conceptRecords.flatMap(record => words(record.sourceText || '')));
     const supportingGroupIndexes = groups.map((group, index) => topicConcepts.length > 0
-      ? conceptRecords.some(record => matchesRequestedQuestionConcept(record.sourceText || '', topicConcepts[index]))
+      ? conceptRecords.some(record => matchesRequestedQuestionConcept(record.sourceText || '', topicConcepts[index], {
+        domainId: topic.domainId,
+        topicIds: [topic.id, ...scopedMappedTopicIds(topic)],
+        subject: topicConcepts[index].label
+      }))
       : supportsQueryConceptGroup(combinedConceptWords, group) ? true : false
     ).map((matched, index) => matched ? index : -1).filter(index => index >= 0);
     const missingGroupIndexes = groups.map((_, index) => index).filter(index => !supportingGroupIndexes.includes(index));
@@ -712,9 +736,17 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   const uncoveredTopicIds = targetTopics.map(topic => topic.id).filter(id => !covered.has(id));
   const derivedConcepts = requestedConcepts.length > 0 ? requestedConcepts : targetTopics.flatMap(scopedConcepts);
   for (const concept of derivedConcepts) {
-    const matchedRecord = [...eligibleById.values()].some(record => matchesRequestedQuestionConcept(record.sourceText || '', concept) &&
-      (concept.topicIds.length === 0 || concept.topicIds.some(id => recordTopicAssociations(record).has(id)) ||
-        targetTopics.some(topic => scopedConcepts(topic).some(scoped => scoped.id === concept.id) && metadataAssociatesRecord(record, topic))));
+    const matchedRecord = [...eligibleById.values()].some(record => {
+      const associatedTopics = targetTopics.filter(topic => metadataAssociatesRecord(record, topic));
+      const topicScopedMatch = associatedTopics.some(topic => matchesRequestedQuestionConcept(record.sourceText || '', concept, {
+        domainId: topic.domainId,
+        topicIds: [topic.id, ...scopedMappedTopicIds(topic), ...concept.topicIds],
+        subject: concept.label
+      }));
+      const conceptAssociation = concept.topicIds.length === 0 || concept.topicIds.some(id => recordTopicAssociations(record).has(id)) ||
+        targetTopics.some(topic => scopedConcepts(topic).some(scoped => scoped.id === concept.id) && metadataAssociatesRecord(record, topic));
+      return conceptAssociation && (topicScopedMatch || matchesRequestedQuestionConcept(record.sourceText || '', concept));
+    });
     if (matchedRecord) coveredConceptIds.add(concept.id);
   }
   const coveredConcepts = derivedConcepts.filter(concept => coveredConceptIds.has(concept.id)).map(concept => concept.label);

@@ -29,7 +29,7 @@ import {
   OfficialSitemapDiscoveryAdapter
 } from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
-import { defaultExternalSourceValidator } from '../retrieval/externalSourceValidator';
+import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
@@ -1118,7 +1118,8 @@ export async function resolveMappedOfficialSourceFallback(
         .filter((value): value is string => Boolean(value)),
       topicTerms: getTopicContentTerms(topic),
       minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
-        topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1
+        topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1,
+      allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_')
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
@@ -1185,7 +1186,11 @@ export async function resolveMappedOfficialSourceFallback(
     const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', [...expectation.topicTerms, ...requiredContentTerms], 5_000, query);
     const requiredContentPresent = containsRequiredContentTermsInOneBlock(contentValidation.substantiveText || '', requiredContentTerms) &&
       containsRequiredContentTermsInOneBlock(excerpt, requiredContentTerms);
-    const excerptTopicMatches = expectation.topicTerms.filter(term => containsTopicTerm(excerpt, term)).length;
+    const excerptTopicMatches = expectation.topicTerms.filter(term => matchesTopicContentTerm(
+      excerpt,
+      term,
+      expectation.allowIrasTopicTokenEquivalence === true
+    )).length;
     if (!excerpt || excerptTopicMatches < (expectation.minimumTopicTermMatches ?? 1) || !requiredContentPresent) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;

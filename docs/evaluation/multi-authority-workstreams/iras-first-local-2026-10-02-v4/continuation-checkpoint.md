@@ -2,6 +2,20 @@
 
 ## Current resumed state (supersedes the earlier stopping-state notes below)
 
+### Latest saved stopping point — limit reminder
+
+**STOPPED BEFORE THE RESERVE.** Latest snapshot: **9% five-hour / 35% weekly remaining** (91% / 65% used). The user reiterated the limit; no new work, tests, agent dispatches, preregistration or live calls will start. The V5 builder was interrupted; other builders/reviewer had finished their current turns. No reset credit used. Keep the 7% / 3% policy on resume.
+
+Reviewed checkpoints: `23b0140` preserves bounded prospective residency scoring and `6a43de5783151a9d33e8f91e6f23f139b027bffc` preserves the exact-contract API-free foreign/GST diagnosis. The commit containing this stopping note additionally saves incomplete production/helper/V5 work; it is **not acceptance**.
+
+Completed this phase: the corrected private singular/plural and WHT heading/table baseline, plus their runner, passed independent review; the IRAS-only exact-first/all-token source compatibility correction and focused regression passed review. The compatibility fallback only canonicalizes expense/expenses and royalty/royalties, and is shared by page and excerpt validation. Required-content blocks and the other gates stay unchanged. The new bounded rule helper and evidence/workstream integrations are saved but **not independently approved**. Build passed on this saved production state; existing chunk/deprecation warnings remain.
+
+The expanded general-rule regression currently fails at synthetic GST `PROVIDER_ERROR`; private/WHT final outcomes are unobserved. Supervisor found that its setup is not the required frozen-contract proof: private label is shortened/root domain forced to IRAS_OTHER, issue plans are manually constructed, and its web adapter hardcodes successful topic/content validation. Its mapped URL allowlist omits GST invoicing; discovery/search adapters lack trace methods. Do not change production to satisfy this setup. On resume replace this portion with valid V2 fixture-derived interpretations, original full labels, public classify/reconcile, real ControlledWebRetriever/SourceCache with injected synthetic customFetch for all actual mapped URLs, complete empty adapters, and blocked ambient network/model calls. Preserve topicless concepts. Prove all four final rule statuses and the expected unresolved applications.
+
+V5 runner/test are saved without a preregistration or live capture. Its focused safety test passed **before** the last review repairs; review found dropped topicless concepts and absent lifecycle observations converted to false. Repairs were in progress when stopped and require inspection, focused verification and reviewer clearance. Transport/privacy/history pinning were otherwise reviewed sound. Do not call V5 live until these findings and production validation are cleared.
+
+Current test registration includes three new regressions (source compatibility, rule helper, V5 safety); expected suite counts are 74 smoke / 94 full. These suites and lint have **not run on the latest revision**. Earlier 71/71 smoke and 90/90 full results remain earlier-revision observations. No new targeted/final profile or live capture was run in this phase. **HOLD MERGE. No push, merge or deployment.**
+
 Work resumed after the allowance recovered. Latest allowance snapshot: **49% five-hour / 41% weekly remaining**; the 7% / 3% stopping policy still applies. No reset credit was used.
 
 Reviewed local evidence fixes and fixtures were saved in `2a7b6fa`; lint/build passed, repaired smoke passed 70/70, and full passed 90/90. The separately reviewed single-use source diagnostic was preregistered in `e7ca826`. Immutable V4 source/residency observations and consumed markers were saved in `b4c06c3`.

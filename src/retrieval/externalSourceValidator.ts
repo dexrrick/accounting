@@ -60,6 +60,8 @@ export interface TopicContentExpectation {
   expectedTitles: string[];
   topicTerms: string[];
   minimumTopicTermMatches?: number;
+  /** Allows strict all-token source wording equivalence for IRAS topic validation only. */
+  allowIrasTopicTokenEquivalence?: boolean;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -163,6 +165,31 @@ function containsTopicTerm(content: string, term: string): boolean {
   const normalizedContent = normalizeTopicTerm(content);
   const normalizedTerm = normalizeTopicTerm(term);
   return Boolean(normalizedTerm && ` ${normalizedContent} `.includes(` ${normalizedTerm} `));
+}
+
+function canonicalIrasTopicToken(token: string): string {
+  if (token === 'royalty' || token === 'royalties') return 'royalty';
+  if (token === 'expense' || token === 'expenses') return 'expense';
+  return token;
+}
+
+/**
+ * Match an exact topic phrase first. IRAS may opt into a bounded fallback that
+ * requires every token from a multiword term to appear in the visible text,
+ * allowing word-order changes and only the reviewed royalty/expense number forms.
+ */
+export function matchesTopicContentTerm(
+  content: string,
+  term: string,
+  allowIrasTopicTokenEquivalence = false
+): boolean {
+  if (containsTopicTerm(content, term)) return true;
+  if (!allowIrasTopicTokenEquivalence) return false;
+
+  const termTokens = normalizeTopicTerm(term).split(/\s+/).filter(Boolean);
+  if (termTokens.length < 2) return false;
+  const contentTokens = new Set(normalizeTopicTerm(content).split(/\s+/).filter(Boolean).map(canonicalIrasTopicToken));
+  return termTokens.every(token => contentTokens.has(canonicalIrasTopicToken(token)));
 }
 
 /**
@@ -324,7 +351,11 @@ export class ExternalSourceValidator {
     }
 
     const terms = [...new Set(expectation.topicTerms.map(normalize).filter(term => term.length > 2))];
-    const matchingTerms = terms.filter(term => containsTopicTerm(substantiveText, term));
+    const matchingTerms = terms.filter(term => matchesTopicContentTerm(
+      substantiveText,
+      term,
+      expectation.allowIrasTopicTokenEquivalence === true
+    ));
     const minimumMatches = expectation.minimumTopicTermMatches ?? 1;
     if (matchingTerms.length < minimumMatches) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page does not contain enough topic-specific terms to support the mapped topic', pageTitle, substantiveText };

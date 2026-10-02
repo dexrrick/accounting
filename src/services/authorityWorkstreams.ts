@@ -26,6 +26,7 @@ import {
   matchesReviewedLocalRegistryRecord,
   matchesRequestedQuestionConcept
 } from '../retrieval/evidenceQualityGate';
+import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import {
   findRecordEligibilityRejection,
   verifyEvidenceClaims,
@@ -438,7 +439,40 @@ function isGeneralCompanyTaxResidencySubject(subject: string): boolean {
   return hasCompanyTaxResidencyAnchors(normalized) && words.every(word => GENERAL_COMPANY_TAX_RESIDENCY_CONCEPT_WORDS.has(word));
 }
 
-function supportsIssueSubject(text: string, issue: ReconciledSemanticQuestionIssue, topic: SingaporeCoverageTopic): boolean {
+function generalIrasRuleConceptSupport(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  topics: SingaporeCoverageTopic[],
+  concepts: RequestedQuestionConcept[] = []
+): boolean | undefined {
+  if (!issue.governingAuthorities.includes('IRAS') || issue.population !== 'COMPANY') return undefined;
+  const expectedDomainId = issue.domain === 'IRAS_INCOME_TAX' ? 'IRAS_CORPORATE_TAX'
+    : issue.domain === 'IRAS_GST' ? 'IRAS_GST' : undefined;
+  if (!expectedDomainId) return undefined;
+  for (const topic of topics) {
+    if (topic.domainId !== expectedDomainId) continue;
+    const associatedTopicIds = [...new Set([...issue.mappedTopicIds, topic.id, ...concepts.flatMap(concept => concept.topicIds)])];
+    const support = supportGeneralIrasRuleConcept({
+      sourceText: text,
+      domainId: topic.domainId,
+      topicIds: associatedTopicIds,
+      subject: issue.subject,
+      population: issue.population,
+      concepts
+    });
+    if (support !== undefined) return support;
+  }
+  return undefined;
+}
+
+function supportsIssueSubject(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  topic: SingaporeCoverageTopic,
+  concepts: RequestedQuestionConcept[] = []
+): boolean {
+  const generalRuleSupport = generalIrasRuleConceptSupport(text, issue, [topic], concepts);
+  if (generalRuleSupport !== undefined) return generalRuleSupport;
   const companyTaxResidencyScope = issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
     topic.id === 'iras-corporate-tax-residency' && topic.domainId === 'IRAS_CORPORATE_TAX';
   if (companyTaxResidencyScope && isGeneralCompanyTaxResidencySubject(issue.subject)) {
@@ -477,6 +511,7 @@ function eligibleLocalRecords(
   issue: ReconciledSemanticQuestionIssue,
   authority: SemanticAuthority,
   topics: SingaporeCoverageTopic[],
+  concepts: RequestedQuestionConcept[],
   targetDate: string | undefined,
   referenceDate: string
 ): { admitted: AuthoritativeSourceRecord[]; rejectedCount: number } {
@@ -491,7 +526,7 @@ function eligibleLocalRecords(
     }
     const matchingTopic = topics.find(topic => topicBoundToRecord(record, topic) &&
       recordMatchesGovernorAndDomain(record, authority, topic) && textSupportsTopic(record.sourceText, topic) &&
-      supportsIssueSubject(record.sourceText, issue, topic));
+      supportsIssueSubject(record.sourceText, issue, topic, concepts));
     if (!matchingTopic) {
       rejectedCount += 1;
       continue;
@@ -527,21 +562,24 @@ function issueClaimCoverage(
       claims.some(claim => {
         const record = recordById.get(claim.recordId);
         return Boolean(record && topicBoundToRecord(record, topic) && textSupportsTopic(claim.quote, topic) &&
-          supportsIssueSubject(claim.quote, issue, topic));
+          supportsIssueSubject(claim.quote, issue, topic, concepts));
       }));
   for (const topic of topics) {
     const topicClaim = claims.some(claim => {
       const record = recordById.get(claim.recordId);
       return Boolean(record && topicBoundToRecord(record, topic) &&
-        textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic));
+        textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts));
     });
     if (!topicClaim) missing.push(`topic:${topic.id}`);
   }
   for (const concept of concepts) {
-    const conceptClaim = claims.some(claim =>
-      issue.domain === 'IRAS_INCOME_TAX'
+    const conceptClaim = claims.some(claim => {
+      const ruleSupport = generalIrasRuleConceptSupport(claim.quote, issue, topics, [concept]);
+      if (ruleSupport !== undefined) return ruleSupport;
+      return issue.domain === 'IRAS_INCOME_TAX'
         ? matchesRequestedQuestionConcept(claim.quote, concept)
-        : [concept.label, ...concept.terms].some(term => textSupportsPhrase(claim.quote, term)) && textSupportsPhrase(claim.quote, issue.subject));
+        : [concept.label, ...concept.terms].some(term => textSupportsPhrase(claim.quote, term)) && textSupportsPhrase(claim.quote, issue.subject);
+    });
     const companyTaxResidencyConcept = isGeneralCompanyTaxResidencyConcept(concept);
     if (!conceptClaim && !(residencySubjectClaim && companyTaxResidencyConcept)) missing.push(`concept:${concept.id}`);
   }
@@ -695,7 +733,7 @@ async function evaluateIssue(
     admitted = irasQuality.eligibleRecords;
     localRejectedCount = irasQuality.rejectedRecords.length;
   } else {
-    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, targetDate, referenceDate);
+    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, targetDate, referenceDate);
     admitted = result.admitted;
     localRejectedCount = result.rejectedCount;
   }
@@ -716,10 +754,14 @@ async function evaluateIssue(
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
     const supportsTopic = evidenceTopics.some(topic => topicBoundToRecord(record, topic) &&
-      textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic));
-    const supportsConcept = concepts.some(concept => issue.domain === 'IRAS_INCOME_TAX'
-      ? matchesRequestedQuestionConcept(claim.quote, concept)
-      : [concept.label, ...concept.terms].some(term => textSupportsPhrase(claim.quote, term)) && textSupportsPhrase(claim.quote, issue.subject));
+      textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts));
+    const supportsConcept = concepts.some(concept => {
+      const ruleSupport = generalIrasRuleConceptSupport(claim.quote, issue, evidenceTopics, [concept]);
+      if (ruleSupport !== undefined) return ruleSupport;
+      return issue.domain === 'IRAS_INCOME_TAX'
+        ? matchesRequestedQuestionConcept(claim.quote, concept)
+        : [concept.label, ...concept.terms].some(term => textSupportsPhrase(claim.quote, term)) && textSupportsPhrase(claim.quote, issue.subject);
+    });
     return supportsTopic || supportsConcept;
   });
   if (plan.authority === 'IRAS' && irasQuality) {
