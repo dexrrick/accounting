@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 3,
+  "profileVersion": "semantic-residency-diagnostic-v3",
+  "diagnosticOnly": true,
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "temperature": 0,
+  "scheduledCallCount": 6,
+  "requestCount": 6,
+  "transportCallCount": 6,
+  "minimumStartGapMs": 15250,
+  "minimumObservedStartGapMs": 17329,
+  "promptSchemaFingerprints": {
+    "corporate-residency-original-general": {
+      "promptSha256": "374f5c4258820ac75cddcf4c0742ff009efa29a794a462af2973560d748a641d",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    },
+    "corporate-residency-general-paraphrase": {
+      "promptSha256": "7a55d785512f43ff3c241138862ab5379877db5f335eecaf9a461ea6ea037c89",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    },
+    "corporate-residency-case-applied-control": {
+      "promptSha256": "88982afd1eec6bb5a974a2f9cc05dfa8e693a005ee5cc68dd1de8b7b74e31e1c",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    }
+  },
+  "sourceFingerprints": {
+    "semanticInterpretation": "ad9400db0f4debf5c395cbc689849a49168543b0ffcd834e51d79edc51a6f7bd",
+    "transport": "80a7000cda3df7de0659613a9097aef32f32aa0618624c3c5770b90778e5e51c",
+    "responseDiagnostics": "ddf799863e4c296c09e536865334d633522918a85fbf351846678cb879ab2448",
+    "issueScoring": "e0d88769b0248f77c358fbb4a2363ab835d0ba8defc71a37988d4f2deafeb63e",
+    "diagnosticRunner": "427fa2930314c8a9428b0b87578a4787d3c8de590644fa5992359bf07e581f5c"
+  },
+  "fixtureFingerprints": {
+    "fixedConfiguration": "304fa005a233a56161a8a964842d6582e9b21ad19224f2d7863aaafa66778408",
+    "protectedObservationBaseline": "346ff7580ea716a051de54bbede0be7c0689894ef1c87568688992d87fbb5700"
+  },
+  "protectedObservationBaseline": {
+    "baselineSha256": "346ff7580ea716a051de54bbede0be7c0689894ef1c87568688992d87fbb5700",
+    "protectedArtifactCount": 125,
+    "verifiedBefore": true,
+    "verifiedAfter": true
+  },
+  "observations": [
+    {
+      "questionId": "corporate-residency-original-general",
+      "replicate": 1,
+      "requestStartGapMs": null,
+      "requestCount": 1,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "rejectionCode": "NONE",
+      "expected": {
+        "rootOperation": [
+          "EXPLAIN_RULE"
+        ],
+        "rootPopulation": [
+          "COMPANY"
+        ],
+        "rootDomain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "rootAuthorities": [
+          "IRAS"
+        ],
+        "rootContextualAuthoritiesAnyOf": [
+          []
+        ],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ]
+      },
+      "actual": {
+        "operation": "EXPLAIN_RULE",
+        "population": "COMPANY",
+        "domain": "IRAS_INCOME_TAX",
+        "authorities": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "operation": "EXPLAIN_RULE",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": []
+          }
+        ]
+      },
+      "actualIssueCount": 1,
+      "issueSubjectMatches": [
+        false
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": false
+      },
+      "requestDurationMs": 2090.35,
+      "completionLatencyMs": 2090.35,
+      "promptSha256": "374f5c4258820ac75cddcf4c0742ff009efa29a794a462af2973560d748a641d",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    },
+    {
+      "questionId": "corporate-residency-general-paraphrase",
+      "replicate": 1,
+      "requestStartGapMs": 17379,
+      "requestCount": 1,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "rejectionCode": "NONE",
+      "expected": {
+        "rootOperation": [
+          "EXPLAIN_RULE"
+        ],
+        "rootPopulation": [
+          "COMPANY"
+        ],
+        "rootDomain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "rootAuthorities": [
+          "IRAS"
+        ],
+        "rootContextualAuthoritiesAnyOf": [
+          []
+        ],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ]
+      },
+      "actual": {
+        "operation": "EXPLAIN_RULE",
+        "population": "COMPANY",
+        "domain": "IRAS_INCOME_TAX",
+        "authorities": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "operation": "EXPLAIN_RULE",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": []
+          }
+        ]
+      },
+      "actualIssueCount": 1,
+      "issueSubjectMatches": [
+        false
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": false
+      },
+      "requestDurationMs": 2182.31,
+      "completionLatencyMs": 2182.31,
+      "promptSha256": "7a55d785512f43ff3c241138862ab5379877db5f335eecaf9a461ea6ea037c89",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    },
+    {
+      "questionId": "corporate-residency-case-applied-control",
+      "replicate": 1,
+      "requestStartGapMs": 17472,
+      "requestCount": 1,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "rejectionCode": "NONE",
+      "expected": {
+        "rootOperation": [
+          "DETERMINE_TREATMENT"
+        ],
+        "rootPopulation": [
+          "COMPANY"
+        ],
+        "rootDomain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "rootAuthorities": [
+          "IRAS"
+        ],
+        "rootContextualAuthoritiesAnyOf": [
+          []
+        ],
+        "requiresUserSpecificFacts": true,
+        "issueCount": 1,
+        "issues": [
+          {
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "DETERMINE_TREATMENT"
+            ]
+          }
+        ]
+      },
+      "actual": {
+        "operation": "DETERMINE_TREATMENT",
+        "population": "COMPANY",
+        "domain": "IRAS_INCOME_TAX",
+        "authorities": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "requiresUserSpecificFacts": true,
+        "issueCount": 1,
+        "issues": [
+          {
+            "operation": "DETERMINE_TREATMENT",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": []
+          }
+        ]
+      },
+      "actualIssueCount": 1,
+      "issueSubjectMatches": [
+        false
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": false
+      },
+      "requestDurationMs": 2215.87,
+      "completionLatencyMs": 2215.87,
+      "promptSha256": "88982afd1eec6bb5a974a2f9cc05dfa8e693a005ee5cc68dd1de8b7b74e31e1c",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    },
+    {
+      "questionId": "corporate-residency-case-applied-control",
+      "replicate": 2,
+      "requestStartGapMs": 17493,
+      "requestCount": 1,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "rejectionCode": "NONE",
+      "expected": {
+        "rootOperation": [
+          "DETERMINE_TREATMENT"
+        ],
+        "rootPopulation": [
+          "COMPANY"
+        ],
+        "rootDomain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "rootAuthorities": [
+          "IRAS"
+        ],
+        "rootContextualAuthoritiesAnyOf": [
+          []
+        ],
+        "requiresUserSpecificFacts": true,
+        "issueCount": 1,
+        "issues": [
+          {
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "DETERMINE_TREATMENT"
+            ]
+          }
+        ]
+      },
+      "actual": {
+        "operation": "DETERMINE_TREATMENT",
+        "population": "COMPANY",
+        "domain": "IRAS_INCOME_TAX",
+        "authorities": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "requiresUserSpecificFacts": true,
+        "issueCount": 1,
+        "issues": [
+          {
+            "operation": "DETERMINE_TREATMENT",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": []
+          }
+        ]
+      },
+      "actualIssueCount": 1,
+      "issueSubjectMatches": [
+        false
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": false
+      },
+      "requestDurationMs": 2170.83,
+      "completionLatencyMs": 2170.83,
+      "promptSha256": "88982afd1eec6bb5a974a2f9cc05dfa8e693a005ee5cc68dd1de8b7b74e31e1c",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    },
+    {
+      "questionId": "corporate-residency-general-paraphrase",
+      "replicate": 2,
+      "requestStartGapMs": 17454,
+      "requestCount": 1,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "rejectionCode": "NONE",
+      "expected": {
+        "rootOperation": [
+          "EXPLAIN_RULE"
+        ],
+        "rootPopulation": [
+          "COMPANY"
+        ],
+        "rootDomain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "rootAuthorities": [
+          "IRAS"
+        ],
+        "rootContextualAuthoritiesAnyOf": [
+          []
+        ],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ]
+      },
+      "actual": {
+        "operation": "EXPLAIN_RULE",
+        "population": "COMPANY",
+        "domain": "IRAS_INCOME_TAX",
+        "authorities": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "operation": "EXPLAIN_RULE",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": []
+          }
+        ]
+      },
+      "actualIssueCount": 1,
+      "issueSubjectMatches": [
+        false
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": false
+      },
+      "requestDurationMs": 2047.06,
+      "completionLatencyMs": 2047.06,
+      "promptSha256": "7a55d785512f43ff3c241138862ab5379877db5f335eecaf9a461ea6ea037c89",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    },
+    {
+      "questionId": "corporate-residency-original-general",
+      "replicate": 2,
+      "requestStartGapMs": 17329,
+      "requestCount": 1,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "rejectionCode": "NONE",
+      "expected": {
+        "rootOperation": [
+          "EXPLAIN_RULE"
+        ],
+        "rootPopulation": [
+          "COMPANY"
+        ],
+        "rootDomain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "rootAuthorities": [
+          "IRAS"
+        ],
+        "rootContextualAuthoritiesAnyOf": [
+          []
+        ],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ]
+      },
+      "actual": {
+        "operation": "EXPLAIN_RULE",
+        "population": "COMPANY",
+        "domain": "IRAS_INCOME_TAX",
+        "authorities": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "operation": "EXPLAIN_RULE",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": []
+          }
+        ]
+      },
+      "actualIssueCount": 1,
+      "issueSubjectMatches": [
+        true
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": true
+      },
+      "requestDurationMs": 2012.8,
+      "completionLatencyMs": 2012.8,
+      "promptSha256": "374f5c4258820ac75cddcf4c0742ff009efa29a794a462af2973560d748a641d",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda"
+    }
+  ],
+  "startedAt": "2026-10-02T08:53:33.747Z",
+  "completedAt": "2026-10-02T08:55:02.911Z"
+}
