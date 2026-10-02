@@ -1,0 +1,850 @@
+{
+  "schemaVersion": 1,
+  "evaluationProfile": "semantic-wire-format-targeted-live",
+  "purpose": "Once-only strict Gemini V2 wire-format evaluation using six fixed cases selected from unchanged fixtures.",
+  "outputPrefix": "semantic-wire-format-targeted-live",
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "minimumStartGapMs": 15250,
+  "pacingPolicy": "Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.",
+  "sourceFingerprints": {
+    "semanticInterpretation": "b134a7fa737f02969fcc612ee4249d0857fcedcffdd02e4c3f5659d789f3552b",
+    "transport": "957f52d57627c108bc65e1e64fbc47ad937c3acdeadb8f22bc8c0622e7f75b3d",
+    "classifier": "f58bf13f0a553b9681ae12c771bcd27cbf70611b7ed82aa401af40e34ed03883",
+    "authorityWorkstreams": "28d880c3c67e3a5d36cc9d88b9afd05b0a2d0a5ebc28e793f284c9f9910b7f1e",
+    "responseDiagnostics": "5a57167081b3163e88cff7ad67af97ead3fa78b8637c03940dc6b5a6ad967911",
+    "issueScoring": "e0d88769b0248f77c358fbb4a2363ab835d0ba8defc71a37988d4f2deafeb63e",
+    "queryTopicResolver": "a72c3bb7215d44cfad54464b63b86d4c39007e2b1f4b1a711562fe8f6342ca9e",
+    "coverageRegistry": "221bcc48e088f7f2c0e4dca67b4dd0f96b2a0fe493d85727d26743b369541a25",
+    "semanticContractEvaluationRunner": "8f9b5407cd76557fc72f2ff9ca636567b3538b7d0808c0bf2706f420043b991d",
+    "semanticWireFormatCliRunner": "527ed084e3f0820ddcf243909d87f8a038433f02cb3fb47e77811d07fda89c13"
+  },
+  "fixtureFingerprints": {
+    "semanticContractFollowup": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1",
+    "semanticOperationFollowup": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe",
+    "semanticReliabilityPostGuidance": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6",
+    "comparableBaseline": "a44bfc81373f3baf6505efaf80825c8bbbd26e33c25006d83969e4b70db7c4b1",
+    "authorityReliefTargeted": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb",
+    "protectedWireFormatHashes": "dba02105671fed2e170daf099094b7ee2962331e11b8d67260a6650ade5fe758"
+  },
+  "sourceHashesConsistent": true,
+  "fixtureHashesConsistent": true,
+  "startedAt": "2026-10-02T00:13:35.234Z",
+  "requestCount": 6,
+  "minimumObservedStartGapMs": 16602,
+  "cases": [
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "mixed-standard-recognition"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": false,
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "PROVIDER_ERROR",
+        "providerStatus": 400
+      },
+      "capture": {
+        "promptSha256": "80189547d5aa20eb87e7e20775f3c603d19462a9e94fff3a7ec5be9ceba2c7fa",
+        "promptChars": 8728,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": null,
+        "responseReceived": false,
+        "responseChars": 0,
+        "responseUtf8Bytes": 0,
+        "transportCategory": "PROVIDER_ERROR",
+        "latencyMs": 1717.31
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 0,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": null,
+        "issuePrecision": null,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": false,
+        "validInterpretation": false,
+        "issueCoverageCorrect": false,
+        "allDimensionsCorrect": false,
+        "operationsCorrect": false,
+        "caseSpecificity": {
+          "expected": false
+        },
+        "caseSpecificityCorrect": false,
+        "topLevelCalculationFlagCorrect": false,
+        "routingCorrect": false,
+        "guardsCorrect": false,
+        "requestedIssueCoverageCorrect": false,
+        "runtimeTimedOut": true,
+        "singleProviderCallPassed": false,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 1721.55
+    },
+    {
+      "caseId": "control-general-recognition",
+      "group": "PRESELECTED_KNOWN_FAILURE",
+      "expectedIssueIds": [
+        "general-recognition"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": false,
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "PROVIDER_ERROR",
+        "providerStatus": 400
+      },
+      "capture": {
+        "promptSha256": "36d24d0969c652259f1d8a857d08ff71ead2107b8b9d576d1812d1b032f2bf43",
+        "promptChars": 8690,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 16976,
+        "responseReceived": false,
+        "responseChars": 0,
+        "responseUtf8Bytes": 0,
+        "transportCategory": "PROVIDER_ERROR",
+        "latencyMs": 1340.88
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 0,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": null,
+        "issuePrecision": null,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": false,
+        "validInterpretation": false,
+        "issueCoverageCorrect": false,
+        "allDimensionsCorrect": false,
+        "operationsCorrect": false,
+        "caseSpecificity": {
+          "expected": false
+        },
+        "caseSpecificityCorrect": false,
+        "topLevelCalculationFlagCorrect": false,
+        "routingCorrect": false,
+        "guardsCorrect": false,
+        "requestedIssueCoverageCorrect": false,
+        "runtimeTimedOut": true,
+        "singleProviderCallPassed": false,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 18319.38
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "group": "PRESELECTED_KNOWN_FAILURE",
+      "expectedIssueIds": [
+        "employer-cpf-contribution",
+        "individual-cpf-tax-relief"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": false,
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "PROVIDER_ERROR",
+        "providerStatus": 400
+      },
+      "capture": {
+        "promptSha256": "4253d941c61dbb9052b7dc80a5ea9d5bb4dbdb07e6d645c5c01405f8eaf98720",
+        "promptChars": 8763,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 16602,
+        "responseReceived": false,
+        "responseChars": 0,
+        "responseUtf8Bytes": 0,
+        "transportCategory": "PROVIDER_ERROR",
+        "latencyMs": 1356.22
+      },
+      "scoring": {
+        "expectedIssueCount": 2,
+        "predictedIssueCount": 0,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": null,
+        "issuePrecision": null,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": false,
+        "validInterpretation": false,
+        "issueCoverageCorrect": false,
+        "allDimensionsCorrect": false,
+        "operationsCorrect": false,
+        "caseSpecificity": {
+          "expected": true
+        },
+        "caseSpecificityCorrect": false,
+        "topLevelCalculationFlagCorrect": false,
+        "routingCorrect": false,
+        "guardsCorrect": false,
+        "requestedIssueCoverageCorrect": false,
+        "runtimeTimedOut": true,
+        "singleProviderCallPassed": false,
+        "fingerprintsStable": true,
+        "strictOperationChecks": [
+          {
+            "expectedIssueId": "employer-cpf-contribution",
+            "expectedOperation": "CALCULATE",
+            "matched": false,
+            "passed": false
+          },
+          {
+            "expectedIssueId": "individual-cpf-tax-relief",
+            "expectedOperation": "CHECK_ELIGIBILITY",
+            "matched": false,
+            "passed": false
+          }
+        ]
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 34936.32
+    },
+    {
+      "caseId": "target-relief-entitlement",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "personal-cpf-relief"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": false,
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "PROVIDER_ERROR",
+        "providerStatus": 400
+      },
+      "capture": {
+        "promptSha256": "de41774e3c7556ba0ecdce714e5a56242a093879f2ebc8f584f4f1deb7df98bd",
+        "promptChars": 8680,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 16626,
+        "responseReceived": false,
+        "responseChars": 0,
+        "responseUtf8Bytes": 0,
+        "transportCategory": "PROVIDER_ERROR",
+        "latencyMs": 1344.8
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 0,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": null,
+        "issuePrecision": null,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": false,
+        "validInterpretation": false,
+        "issueCoverageCorrect": false,
+        "allDimensionsCorrect": false,
+        "operationsCorrect": false,
+        "caseSpecificity": {
+          "expected": true
+        },
+        "caseSpecificityCorrect": false,
+        "topLevelCalculationFlagCorrect": false,
+        "routingCorrect": false,
+        "guardsCorrect": false,
+        "requestedIssueCoverageCorrect": false,
+        "runtimeTimedOut": true,
+        "singleProviderCallPassed": false,
+        "fingerprintsStable": true,
+        "strictOperationChecks": [
+          {
+            "expectedIssueId": "personal-cpf-relief",
+            "expectedOperation": "CHECK_ELIGIBILITY",
+            "matched": false,
+            "passed": false
+          }
+        ]
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 51550.84
+    },
+    {
+      "caseId": "dev-investment-comparison",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "investment-cost-fair-value"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": false,
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "PROVIDER_ERROR",
+        "providerStatus": 400
+      },
+      "capture": {
+        "promptSha256": "96adf2494c598584d8bb9d171ff005f5dcf1b807c03f7f66fef470dd15c6fb55",
+        "promptChars": 8704,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 16613,
+        "responseReceived": false,
+        "responseChars": 0,
+        "responseUtf8Bytes": 0,
+        "transportCategory": "PROVIDER_ERROR",
+        "latencyMs": 1854.72
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 0,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": null,
+        "issuePrecision": null,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": false,
+        "validInterpretation": false,
+        "issueCoverageCorrect": false,
+        "allDimensionsCorrect": false,
+        "operationsCorrect": false,
+        "caseSpecificity": {
+          "expected": false
+        },
+        "caseSpecificityCorrect": false,
+        "topLevelCalculationFlagCorrect": false,
+        "routingCorrect": false,
+        "guardsCorrect": false,
+        "requestedIssueCoverageCorrect": false,
+        "runtimeTimedOut": true,
+        "singleProviderCallPassed": false,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 68673.7
+    },
+    {
+      "caseId": "target-sfrsi-general-recognition",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "sfrsi-general-recognition"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": false,
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "PROVIDER_ERROR",
+        "providerStatus": 400
+      },
+      "capture": {
+        "promptSha256": "27ac4ddc1585739854694a4770595da08a8a189a1ac9162abbc5542054198014",
+        "promptChars": 8693,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17111,
+        "responseReceived": false,
+        "responseChars": 0,
+        "responseUtf8Bytes": 0,
+        "transportCategory": "PROVIDER_ERROR",
+        "latencyMs": 4185.23
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 0,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": null,
+        "issuePrecision": null,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": false,
+        "validInterpretation": false,
+        "issueCoverageCorrect": false,
+        "allDimensionsCorrect": false,
+        "operationsCorrect": false,
+        "caseSpecificity": {
+          "expected": false
+        },
+        "caseSpecificityCorrect": false,
+        "topLevelCalculationFlagCorrect": false,
+        "routingCorrect": false,
+        "guardsCorrect": false,
+        "requestedIssueCoverageCorrect": false,
+        "runtimeTimedOut": true,
+        "singleProviderCallPassed": false,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 88114.52
+    }
+  ],
+  "summaries": [
+    {
+      "group": "PRESELECTED_KNOWN_FAILURE",
+      "cases": 2,
+      "validInterpretations": {
+        "count": 0,
+        "total": 2,
+        "rate": 0
+      },
+      "issueRecallValidInterpretations": {
+        "matched": 0,
+        "expected": 0,
+        "rate": null
+      },
+      "issueRecallAllCases": {
+        "matched": 0,
+        "expected": 3,
+        "rate": 0
+      },
+      "issuePrecisionValidInterpretations": {
+        "matched": 0,
+        "predicted": 0,
+        "rate": null
+      },
+      "operationAccuracy": {
+        "correct": 0,
+        "matched": 0,
+        "rate": null
+      },
+      "completeQuestionCoverage": {
+        "complete": 0,
+        "allCases": 2,
+        "rate": 0
+      },
+      "routingWorkstreamCorrectness": {
+        "correct": 0,
+        "validCases": 0,
+        "allCases": 2,
+        "rateAmongValid": null,
+        "rateAllCases": 0
+      },
+      "matchedDimensionAccuracy": {
+        "governingAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        }
+      },
+      "invalidResponses": {
+        "count": 0,
+        "calls": 2,
+        "rate": 0,
+        "lowConfidence": {
+          "count": 0,
+          "calls": 2,
+          "rate": 0
+        },
+        "timeout": {
+          "count": 0,
+          "calls": 2,
+          "rate": 0
+        },
+        "providerFailure": {
+          "count": 2,
+          "calls": 2,
+          "rate": 1
+        },
+        "rateLimited": {
+          "count": 0,
+          "calls": 2,
+          "rate": 0
+        }
+      },
+      "nonValidOutcomes": {
+        "count": 2,
+        "calls": 2,
+        "rate": 1
+      }
+    },
+    {
+      "group": "INDEPENDENT_CONTROL",
+      "cases": 4,
+      "validInterpretations": {
+        "count": 0,
+        "total": 4,
+        "rate": 0
+      },
+      "issueRecallValidInterpretations": {
+        "matched": 0,
+        "expected": 0,
+        "rate": null
+      },
+      "issueRecallAllCases": {
+        "matched": 0,
+        "expected": 4,
+        "rate": 0
+      },
+      "issuePrecisionValidInterpretations": {
+        "matched": 0,
+        "predicted": 0,
+        "rate": null
+      },
+      "operationAccuracy": {
+        "correct": 0,
+        "matched": 0,
+        "rate": null
+      },
+      "completeQuestionCoverage": {
+        "complete": 0,
+        "allCases": 4,
+        "rate": 0
+      },
+      "routingWorkstreamCorrectness": {
+        "correct": 0,
+        "validCases": 0,
+        "allCases": 4,
+        "rateAmongValid": null,
+        "rateAllCases": 0
+      },
+      "matchedDimensionAccuracy": {
+        "governingAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        }
+      },
+      "invalidResponses": {
+        "count": 0,
+        "calls": 4,
+        "rate": 0,
+        "lowConfidence": {
+          "count": 0,
+          "calls": 4,
+          "rate": 0
+        },
+        "timeout": {
+          "count": 0,
+          "calls": 4,
+          "rate": 0
+        },
+        "providerFailure": {
+          "count": 4,
+          "calls": 4,
+          "rate": 1
+        },
+        "rateLimited": {
+          "count": 0,
+          "calls": 4,
+          "rate": 0
+        }
+      },
+      "nonValidOutcomes": {
+        "count": 4,
+        "calls": 4,
+        "rate": 1
+      }
+    },
+    {
+      "group": "COMBINED",
+      "cases": 6,
+      "validInterpretations": {
+        "count": 0,
+        "total": 6,
+        "rate": 0
+      },
+      "issueRecallValidInterpretations": {
+        "matched": 0,
+        "expected": 0,
+        "rate": null
+      },
+      "issueRecallAllCases": {
+        "matched": 0,
+        "expected": 7,
+        "rate": 0
+      },
+      "issuePrecisionValidInterpretations": {
+        "matched": 0,
+        "predicted": 0,
+        "rate": null
+      },
+      "operationAccuracy": {
+        "correct": 0,
+        "matched": 0,
+        "rate": null
+      },
+      "completeQuestionCoverage": {
+        "complete": 0,
+        "allCases": 6,
+        "rate": 0
+      },
+      "routingWorkstreamCorrectness": {
+        "correct": 0,
+        "validCases": 0,
+        "allCases": 6,
+        "rateAmongValid": null,
+        "rateAllCases": 0
+      },
+      "matchedDimensionAccuracy": {
+        "governingAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        }
+      },
+      "invalidResponses": {
+        "count": 0,
+        "calls": 6,
+        "rate": 0,
+        "lowConfidence": {
+          "count": 0,
+          "calls": 6,
+          "rate": 0
+        },
+        "timeout": {
+          "count": 0,
+          "calls": 6,
+          "rate": 0
+        },
+        "providerFailure": {
+          "count": 6,
+          "calls": 6,
+          "rate": 1
+        },
+        "rateLimited": {
+          "count": 0,
+          "calls": 6,
+          "rate": 0
+        }
+      },
+      "nonValidOutcomes": {
+        "count": 6,
+        "calls": 6,
+        "rate": 1
+      }
+    }
+  ],
+  "authorityReliefAcceptance": {
+    "passed": false,
+    "completedCases": 6,
+    "passedCases": 0,
+    "expectedCases": 6,
+    "failedCases": [
+      "target-mixed-ifrs-singapore-accounting",
+      "control-general-recognition",
+      "A-paraphrase-2",
+      "target-relief-entitlement",
+      "dev-investment-comparison",
+      "target-sfrsi-general-recognition"
+    ],
+    "canonicalContractScoring": {
+      "issueRecall": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "issuePrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "dimensions": {
+        "governingAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "matched": 0,
+          "rate": null
+        }
+      },
+      "operationAccuracy": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "canonicalWorkstreamRoutingAccuracy": {
+        "correct": 0,
+        "total": 6,
+        "rate": 0
+      }
+    },
+    "invalidResponses": 6,
+    "timeouts": 0,
+    "providerFailures": 6,
+    "zeroInvalidTimeoutProviderFailures": false,
+    "pacingPolicyPassed": true,
+    "fingerprintsStable": true
+  },
+  "completedAt": "2026-10-02T00:15:03.351Z"
+}
