@@ -230,10 +230,11 @@ export function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRe
 }
 
 function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic, query: string): boolean {
-  const text = normalizeText(record.sourceText || '');
+  const sourceText = record.sourceText || '';
+  const text = normalizeText(sourceText);
   if (text.length < 24) return false;
   const concepts = scopedConcepts(topic);
-  if (concepts.length > 0) return concepts.every(concept => matchesRequestedQuestionConcept(text, concept, {
+  if (concepts.length > 0) return concepts.every(concept => matchesRequestedQuestionConcept(sourceText, concept, {
     domainId: topic.domainId,
     topicIds: [topic.id, ...scopedMappedTopicIds(topic)],
     subject: concept.label
@@ -738,14 +739,21 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   for (const concept of derivedConcepts) {
     const matchedRecord = [...eligibleById.values()].some(record => {
       const associatedTopics = targetTopics.filter(topic => metadataAssociatesRecord(record, topic));
-      const topicScopedMatch = associatedTopics.some(topic => matchesRequestedQuestionConcept(record.sourceText || '', concept, {
-        domainId: topic.domainId,
-        topicIds: [topic.id, ...scopedMappedTopicIds(topic), ...concept.topicIds],
-        subject: concept.label
-      }));
       const conceptAssociation = concept.topicIds.length === 0 || concept.topicIds.some(id => recordTopicAssociations(record).has(id)) ||
         targetTopics.some(topic => scopedConcepts(topic).some(scoped => scoped.id === concept.id) && metadataAssociatesRecord(record, topic));
-      return conceptAssociation && (topicScopedMatch || matchesRequestedQuestionConcept(record.sourceText || '', concept));
+      if (!conceptAssociation) return false;
+
+      const sourceText = record.sourceText || '';
+      const scopedRuleSupport = associatedTopics.map(topic => supportGeneralIrasRuleConcept({
+        sourceText,
+        domainId: topic.domainId,
+        topicIds: [topic.id, ...scopedMappedTopicIds(topic), ...concept.topicIds],
+        subject: concept.label,
+        concepts: [concept]
+      }));
+      if (scopedRuleSupport.includes(true)) return true;
+      if (scopedRuleSupport.includes(false)) return false;
+      return matchesRequestedQuestionConcept(sourceText, concept);
     });
     if (matchedRecord) coveredConceptIds.add(concept.id);
   }
