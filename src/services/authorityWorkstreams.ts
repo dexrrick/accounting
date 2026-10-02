@@ -620,6 +620,76 @@ function makeGap(
   return { issueId: issue.id, authority, domain, subject: issue.subject, operation: issue.operation, stage, code, reason };
 }
 
+function canonicalSourceIdentity(record: AuthoritativeSourceRecord): string | undefined {
+  if (!record.canonicalSourceUrl) return undefined;
+  try {
+    const url = new URL(record.canonicalSourceUrl);
+    if (url.protocol !== 'https:' || url.username || url.password || url.port) return undefined;
+    url.hash = '';
+    return url.href;
+  } catch {
+    return undefined;
+  }
+}
+
+function sameLiveIrasPage(left: AuthoritativeSourceRecord, right: AuthoritativeSourceRecord): boolean {
+  if (left.provenance !== 'LIVE_EXTERNAL' || right.provenance !== 'LIVE_EXTERNAL' ||
+      left.authority !== 'IRAS' || right.authority !== 'IRAS' ||
+      left.sourceAuthority !== 'IRAS' || right.sourceAuthority !== 'IRAS' ||
+      left.domain !== right.domain) return false;
+
+  const leftUrl = canonicalSourceIdentity(left);
+  const rightUrl = canonicalSourceIdentity(right);
+  if (!leftUrl || leftUrl !== rightUrl) return false;
+
+  let comparableHashFound = false;
+  let matchingHashFound = false;
+  for (const field of ['documentHash', 'contentHash'] as const) {
+    const leftHash = left[field];
+    const rightHash = right[field];
+    if (!/^[a-f\d]{64}$/i.test(leftHash || '') || !/^[a-f\d]{64}$/i.test(rightHash || '')) continue;
+    comparableHashFound = true;
+    if (leftHash!.toLowerCase() !== rightHash!.toLowerCase()) return false;
+    matchingHashFound = true;
+  }
+  return comparableHashFound && matchingHashFound;
+}
+
+function bindAcceptedIrasQuotesToSiblingPageRecords(
+  accepted: VerifiedEvidenceClaim[],
+  records: AuthoritativeSourceRecord[],
+  targetDate: string | undefined
+): VerifiedEvidenceClaim[] {
+  const recordById = new Map(records.map(record => [record.id, record]));
+  const additionalBindings: Array<{ kind: 'RULE'; text: string; quote: string; recordId: string; citationUrl?: string }> = [];
+  const attemptedBindings = new Set<string>();
+
+  // Only independently accepted original claims can seed sibling bindings.
+  // Added bindings are verified once and never become seeds themselves.
+  for (const claim of accepted) {
+    const originalRecord = recordById.get(claim.recordId);
+    if (!originalRecord || originalRecord.provenance !== 'LIVE_EXTERNAL' || originalRecord.authority !== 'IRAS') continue;
+    for (const sibling of records) {
+      if (sibling.id === originalRecord.id || !sameLiveIrasPage(originalRecord, sibling)) continue;
+      const bindingKey = JSON.stringify([sibling.id, claim.quote]);
+      if (attemptedBindings.has(bindingKey)) continue;
+      attemptedBindings.add(bindingKey);
+      additionalBindings.push({
+        kind: 'RULE',
+        text: claim.text,
+        quote: claim.quote,
+        recordId: sibling.id,
+        ...(claim.canonicalUrl ? { citationUrl: claim.canonicalUrl } : {})
+      });
+    }
+  }
+
+  const rebound = additionalBindings.length > 0
+    ? verifyEvidenceClaims(additionalBindings, records, { missingFacts: [], targetDate }).accepted
+    : [];
+  return [...new Map([...accepted, ...rebound].map(claim => [JSON.stringify([claim.recordId, claim.quote]), claim])).values()];
+}
+
 async function evaluateIssue(
   query: string,
   plan: InternalPlan,
@@ -750,7 +820,10 @@ async function evaluateIssue(
   const verification = verifyEvidenceClaims(suggestedClaims, admitted, {
     missingFacts: [], targetDate
   });
-  const verifiedClaims = verification.accepted.filter(claim => {
+  const acceptedClaims = plan.authority === 'IRAS'
+    ? bindAcceptedIrasQuotesToSiblingPageRecords(verification.accepted, admitted, targetDate)
+    : verification.accepted;
+  const verifiedClaims = acceptedClaims.filter(claim => {
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
     const supportsTopic = evidenceTopics.some(topic => topicBoundToRecord(record, topic) &&
