@@ -43,3 +43,13 @@
 ## Current bounded next step
 
 Prepare independent V6 harness and API-free safety test. Fixed presence flags/counts/shapes at direct retained-excerpt, render-context retained-excerpt and selected-quote stages plus opaque public-source hashes may compare selections. PRESENCE_ONLY_NOT_ENTAILMENT never satisfies a production rule. Review and preregister before requests. Same five cases/eight mapped pages; no model/search/discovery/retry; permanent one-use marker. Preserve V5 and all prior history. No reconstruction of full-page wording from old flags.
+
+## Usage stopping point — authoritative latest state
+
+Stopped at **9% five-hour / 53% weekly remaining**, before starting another live capture, preserving the requested 7% / 3% reserves. The allowance is shared across the account; do not assume unused margin is still available on resume.
+
+V6 harness and safety regression were completed by builder and independently approved by reviewer with no material findings. The normalized V5-to-V6 diff preserves transport, integrity, privacy and one-use safeguards; only prospective version identity, V5 pins, V6 fingerprints, fixed structural projections and explicit measurement contract were added. Source/quote observations are non-vacuously exercised by the API-free tests. Both V6 focused regressions PASS; whole-repository lint and final changed-file lint PASS with inherited warnings; diff check PASS. Production remained unchanged, so prior build/smoke/full results still apply.
+
+Approved harness commit: `25a1547` (resolve its full SHA in Git). The new preregistration is `../iras-first-live-2026-10-02-v6/iras-mapped-evidence-plan-v6.json`, envelope hash `ba24448c4d2e487a5c88886dc321cc14d322affb58c8447a1e33c26c018b55dc`. It selects five fixed cases/eight mapped pages with maximum 16 actual GETs, zero model/discovery/search requests and retries, unchanged timeouts/redirect/cache safeguards, and frozen code/history fingerprints. **V6 live is NOT RUN; no V6 consumed marker or report exists.** Targeted and final profiles are NOT RUN and remain gated by five-family evidence success.
+
+On resume, check reliable allowance first. Revalidate existing preregistration and fingerprint integrity without rewriting or replacing it. If sufficient margin exists, execute its one-use V6 mapped source diagnostic, independently audit the capture, and inspect fixed feature differences without treating vocabulary presence as entailment. Do not rerequest consumed V5, rescore history, infer missing raw wording, broaden production rule acceptance blindly, or bypass targeted/final gates. If current fingerprints drift, preserve this plan and use a separately reviewed prospective version rather than replacing the frozen plan.
