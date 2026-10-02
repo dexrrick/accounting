@@ -548,6 +548,8 @@ async function evaluateIssue(
   const issue = plannedIssue.issue;
   const topicIds = plannedIssue.topicIds;
   const topics = getCoverageTopicsByIds(topicIds);
+  const evidenceTopics = plan.authority === 'IRAS' ? topics.filter(topic => !topic.routingOnly) : topics;
+  const evidenceTopicIds = evidenceTopics.map(topic => topic.id);
   const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding);
   const mapped = topicIds.length > 0 && plan.domain !== 'UNKNOWN';
   const lifecycle = initialLifecycle(issue, mapped);
@@ -635,7 +637,7 @@ async function evaluateIssue(
   if (plan.authority === 'IRAS') {
     irasQuality = evaluateEvidenceQuality({
       query,
-      topicIds,
+      topicIds: evidenceTopicIds,
       records: uniqueCandidates,
       missingFacts: [],
       targetDate,
@@ -667,7 +669,7 @@ async function evaluateIssue(
   const verifiedClaims = verification.accepted.filter(claim => {
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
-    const supportsTopic = topics.some(topic => topicBoundToRecord(record, topic) &&
+    const supportsTopic = evidenceTopics.some(topic => topicBoundToRecord(record, topic) &&
       textSupportsTopic(claim.quote, topic) && textSupportsPhrase(claim.quote, issue.subject));
     const supportsConcept = concepts.some(concept => issue.domain === 'IRAS_INCOME_TAX'
       ? matchesRequestedQuestionConcept(claim.quote, concept)
@@ -676,7 +678,7 @@ async function evaluateIssue(
   });
   if (plan.authority === 'IRAS' && irasQuality) {
     // The per-issue IRAS gate must cover its own topics and concepts; global query coverage is never substituted.
-    const uncoveredForScope = topicIds.some(topicId => irasQuality!.uncoveredTopicIds.includes(topicId)) ||
+    const uncoveredForScope = evidenceTopicIds.some(topicId => irasQuality!.uncoveredTopicIds.includes(topicId)) ||
       (irasQuality.uncoveredConcepts?.length || 0) > 0;
     if (uncoveredForScope) {
       gaps.push(makeGap(issue, plan.authority, plan.domain, 'covered', 'IRAS_SCOPE_NOT_COVERED',
@@ -687,9 +689,9 @@ async function evaluateIssue(
   if (!lifecycle.verified) gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'NO_VERIFIED_CLAIM',
     'No complete source quotation passed claim verification for this issue.'));
 
-  const coverage = issueClaimCoverage(verifiedClaims, admitted, topics, concepts, issue);
+  const coverage = issueClaimCoverage(verifiedClaims, admitted, evidenceTopics, concepts, issue);
   lifecycle.covered = coverage.covered && !(plan.authority === 'IRAS' && irasQuality &&
-    (topicIds.some(topicId => irasQuality!.uncoveredTopicIds.includes(topicId)) || (irasQuality.uncoveredConcepts?.length || 0) > 0));
+    (evidenceTopicIds.some(topicId => irasQuality!.uncoveredTopicIds.includes(topicId)) || (irasQuality.uncoveredConcepts?.length || 0) > 0));
   for (const missing of coverage.missing) gaps.push(makeGap(issue, plan.authority, plan.domain, 'covered', 'ISSUE_CONCEPT_UNCOVERED',
     `Verified quotations do not support the requested ${missing.replace(':', ' ')}.`));
   const sourceIds = new Set(verifiedClaims.map(claim => claim.recordId));

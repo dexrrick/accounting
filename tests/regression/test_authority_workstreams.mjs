@@ -250,6 +250,103 @@ assert.equal(irasResult.workstreams[0].evidenceStatus, 'VERIFIED');
 assert.deepEqual(irasResult.workstreams[0].sources.map(record => record.id), ['ITA_SEC14_GENERAL_DEDUCTION']);
 assert.equal(irasResult.workstreams[0].verifiedClaims[0].supportKind, 'EXACT_SOURCE_QUOTE');
 
+// A routing-only umbrella topic stays in IRAS retrieval scope, but does not
+// become an additional evidence requirement beside a mapped relief topic.
+const syntheticCpfReliefText = 'TEST-ONLY SYNTHETIC EVIDENCE: Employees may claim CPF relief for their compulsory CPF contributions. This test fixture describes CPF relief for employees.';
+const syntheticCpfRelief = {
+  ...section14,
+  id: 'TEST_ONLY_SYNTHETIC_IRAS_CPF_RELIEF',
+  authority: 'IRAS',
+  authorityName: 'IRAS (test-only synthetic fixture)',
+  sourcePublisher: 'Test-only synthetic fixture',
+  legalOrStandardInstrument: 'Test-only synthetic fixture',
+  documentTitle: 'Test-only synthetic CPF relief evidence',
+  standardOrActCode: 'TEST_ONLY',
+  paragraphOrSection: 'TEST_ONLY',
+  sourceText: syntheticCpfReliefText,
+  principleSummary: 'Test-only synthetic evidence; not authoritative guidance.',
+  domain: 'IRAS_INCOME_TAX',
+  tags: ['iras-individual-cpf-relief', 'cpf relief for employees'],
+  relatedTopicIds: ['iras-individual-cpf-relief'],
+  sourceMapTopicIds: [],
+  retrievalHints: [],
+  provenance: 'LOCAL_STATIC',
+  recordRole: 'EVIDENCE',
+  groundingEligible: true
+};
+const cpfReliefQuery = 'Does an employee receive personal income tax relief for compulsory CPF contributions?';
+const cpfReliefIssue = (id, mappedTopicIds) => issue(id, {
+  subject: 'employee personal income tax relief for compulsory CPF contributions',
+  population: 'EMPLOYEE',
+  domain: 'IRAS_INCOME_TAX',
+  governingAuthorities: ['IRAS'],
+  mappedTopicIds
+});
+const runCpfReliefIssue = async (mappedTopicIds, { candidates = [syntheticCpfRelief], claims } = {}) => {
+  let requestedTopicIds = [];
+  const result = await buildAuthorityWorkstreams(
+    cpfReliefQuery,
+    issuePlan([cpfReliefIssue(`cpf-relief-${mappedTopicIds.join('-')}`, mappedTopicIds)]),
+    { providers: { IRAS: provider('IRAS', async request => {
+      requestedTopicIds = request.retrievalIntent.topicIds;
+      return { candidates, claims: claims ?? candidates.map(exactClaim) };
+    }) }, referenceDate }
+  );
+  return { result, requestedTopicIds };
+};
+
+const cpfReliefChildOnly = await runCpfReliefIssue(['iras-individual-cpf-relief']);
+const cpfReliefWithParent = await runCpfReliefIssue(['iras-individual-reliefs', 'iras-individual-cpf-relief']);
+const childIssueResult = cpfReliefChildOnly.result.workstreams[0].issues[0];
+const parentAndChildIssueResult = cpfReliefWithParent.result.workstreams[0].issues[0];
+assert.equal(childIssueResult.evidenceStatus, 'VERIFIED');
+assert.equal(parentAndChildIssueResult.evidenceStatus, 'VERIFIED');
+assert.deepEqual(
+  [parentAndChildIssueResult.evidenceStatus, parentAndChildIssueResult.lifecycle.covered, parentAndChildIssueResult.verifiedClaims.map(claim => claim.quote)],
+  [childIssueResult.evidenceStatus, childIssueResult.lifecycle.covered, childIssueResult.verifiedClaims.map(claim => claim.quote)],
+  'Adding the IRAS routing-only parent must not change the child evidence outcome.'
+);
+assert.deepEqual(cpfReliefWithParent.requestedTopicIds, ['iras-individual-reliefs', 'iras-individual-cpf-relief'],
+  'The provider request retains routing topics in the planned scope.');
+assert.deepEqual(cpfReliefWithParent.result.issuePlan.issues[0].mappedTopicIds,
+  ['iras-individual-reliefs', 'iras-individual-cpf-relief'],
+  'The reconciled issue plan retains the routing parent metadata.');
+
+const cpfReliefParentOnly = await runCpfReliefIssue(['iras-individual-reliefs']);
+assert.equal(cpfReliefParentOnly.result.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT',
+  'A routing-only parent cannot be verified by an injected child candidate.');
+assert.equal(cpfReliefParentOnly.result.workstreams[0].issues[0].lifecycle.verified, false);
+assert.equal(cpfReliefParentOnly.result.workstreams[0].issues[0].lifecycle.covered, false);
+
+const cpfReliefMissingCandidate = await runCpfReliefIssue(
+  ['iras-individual-reliefs', 'iras-individual-cpf-relief'], { candidates: [], claims: [] }
+);
+assert.equal(cpfReliefMissingCandidate.result.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT',
+  'A routing parent does not make a missing child candidate sufficient.');
+const cpfReliefUnsupportedQuote = await runCpfReliefIssue(
+  ['iras-individual-reliefs', 'iras-individual-cpf-relief'],
+  { claims: [{ text: 'Employees receive a housing benefit exemption.', quote: 'Employees receive a housing benefit exemption.', recordId: syntheticCpfRelief.id }] }
+);
+assert.equal(cpfReliefUnsupportedQuote.result.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT',
+  'An unsupported quote remains insufficient with a routing parent present.');
+
+const cpfAndSrsIssue = issue('cpf-and-srs-relief', {
+  subject: 'employee CPF relief and SRS relief',
+  population: 'EMPLOYEE',
+  domain: 'IRAS_INCOME_TAX',
+  governingAuthorities: ['IRAS'],
+  mappedTopicIds: ['iras-individual-reliefs', 'iras-individual-cpf-relief', 'iras-individual-srs-relief']
+});
+const cpfOnlyForCpfAndSrs = await buildAuthorityWorkstreams(
+  'Explain employee CPF relief and SRS relief.',
+  issuePlan([cpfAndSrsIssue]),
+  { providers: { IRAS: provider('IRAS', async () => ({ candidates: [syntheticCpfRelief] })) }, referenceDate }
+);
+assert.equal(cpfOnlyForCpfAndSrs.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT',
+  'The IRAS routing parent cannot substitute for a second substantive required topic.');
+assert.ok(cpfOnlyForCpfAndSrs.workstreams[0].issues[0].gaps.some(gap => gap.reason.includes('iras-individual-srs-relief')),
+  'The uncovered SRS topic remains visible in the issue coverage gaps.');
+
 // Exact canonical payload, correct authority/domain and substantive scoped text
 // are all required. Shared words, a wrong authority/domain, and altered payloads
 // cannot turn a candidate into admitted evidence.

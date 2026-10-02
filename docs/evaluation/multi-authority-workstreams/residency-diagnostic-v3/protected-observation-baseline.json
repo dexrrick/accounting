@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 3,
+  "baselineVersion": "semantic-residency-diagnostic-v3-protected-observations",
+  "artifactCount": 14,
+  "protectedArtifacts": [
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/benchmark-adjudications.md",
+      "sha256": "228c943f358740732e51dbcdc375a6d016d67c350789d753ae9fd1e4a383fbb3",
+      "bytes": 1548
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/historical-artifact-hashes.json",
+      "sha256": "69af7d5f44f676e6af7228b8a59851f9c14007fc278a2b95fd4efc17a8d74217",
+      "bytes": 22201
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/iras-first-targeted-v1-live.json",
+      "sha256": "28f5b8a55a4751d53c8d347f758e9c577925e75f6c5958ccc3bcdd8127ced911",
+      "bytes": 70364
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/iras-first-targeted-v1-live.md",
+      "sha256": "e8f14b38e7e314364a442573ebce2a3ef2a5c318b81e0db666eac6f9df2a6c76",
+      "bytes": 6043
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/local-validation-and-review.md",
+      "sha256": "7b66e592eab60b026ecb43c8b8f38a2e754284bf24857efbad221e54a0469fb4",
+      "bytes": 4136
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/release-contract.md",
+      "sha256": "fc8303c0d010d3df14228bb8f76b1420198816d472c36eb6561d6e6d48cb152f",
+      "bytes": 5156
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/supervisor-final-report.md",
+      "sha256": "ac238173361525d6018fdcdddacc00d328725941eb57b4499f034d2698029ec6",
+      "bytes": 12246
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/historical-artifact-hashes.json",
+      "sha256": "5adcd54a3118c1fab8eca88cae896035b158b9f54dddf1f3e133b33cfc08c18f",
+      "bytes": 24026
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/iras-topic-mapping-audit.md",
+      "sha256": "b64f89cd6290621edafba7b860fc6a27ba01aecd4d6d0c95173128fe43a502e5",
+      "bytes": 9943
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/iras-topic-source-path-v2.json",
+      "sha256": "bcd9a9cec0a254ad1724f69cd0985dceca3cd25e09946e832577126188dd8ce4",
+      "bytes": 21353
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/semantic-structured-timeout-experiment-v2.json",
+      "sha256": "61f5e0a921c629efaacdde092e2b70a7c8f8f35089120a754ea0bcca4d8ef83e",
+      "bytes": 23770
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/semantic-structured-timeout-experiment-v2.md",
+      "sha256": "a31ba89cda6d0531ee3f75d1c6eed64dd32ac1f99a3f9621469161bd8890ae92",
+      "bytes": 3350
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/specificity-architecture.md",
+      "sha256": "5d5fec24ffbccc65a6e5817f4b0094dccdee3a8ca98b18718ad7415ce2ad0653",
+      "bytes": 2486
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/supervisor-final-report.md",
+      "sha256": "31bd84e941e3f4c269da6d6c6aed18bce781cd1d99822ecdf8b7885644fc6213",
+      "bytes": 11161
+    }
+  ]
+}
