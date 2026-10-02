@@ -1,0 +1,1175 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-mapped-evidence-diagnostic-v5",
+  "mode": "LIVE_SOURCE_MAPPED_PAGES_ONLY_NO_MODEL",
+  "referenceDate": "2026-10-02",
+  "selectedCaseIds": [
+    "private-holiday-expense",
+    "foreign-dividend-treatment",
+    "company-residency-general",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule"
+  ],
+  "sourceMaps": [
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-corporate-tax-residency"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-foreign-sourced-income"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    }
+  ],
+  "modelRequests": 0,
+  "discoveryRequests": 0,
+  "searchRequests": 0,
+  "suppressedDiscoveryAdapterInvocations": 0,
+  "suppressedSearchAdapterInvocations": 0,
+  "maximumActualGets": 16,
+  "actualGetCount": 8,
+  "cacheReuseCount": 4,
+  "policyRejectionCount": 0,
+  "transportEvents": [
+    {
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:26.736Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:27.213Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:27.559Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:27.755Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:27.850Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:27.996Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:28.228Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "httpStatus": 200,
+      "fetchedAt": "2026-10-02T14:42:28.399Z"
+    }
+  ],
+  "directMapProbes": [
+    {
+      "caseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-cit-deductibility",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_corporate_income_tax_treatment_of_director_s_pri": true
+                    },
+                    "supported": {
+                      "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 65,
+                    "firstColonEndedBlockIndex": 10,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 2,
+                    "completeProseBlockCountAfterFirstColon": 7,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_corporate_income_tax_treatment_of_director_s_pri": true
+                    },
+                    "supported": {
+                      "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 60,
+                    "firstColonEndedBlockIndex": 10,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 2,
+                    "completeProseBlockCountAfterFirstColon": 7,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "candidateCount": 2,
+      "admittedCount": 2,
+      "uncoveredTopicCount": 0,
+      "uncoveredConceptIds": [
+        "semantic_corporate_income_tax_treatment_of_director_s_pri"
+      ]
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_singapore_corporate_tax_treatment_of_dividend_fr": true
+                    },
+                    "supported": {
+                      "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 40,
+                    "firstColonEndedBlockIndex": 0,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 16,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "candidateCount": 1,
+      "admittedCount": 1,
+      "uncoveredTopicCount": 0,
+      "uncoveredConceptIds": [
+        "semantic_singapore_corporate_tax_treatment_of_dividend_fr"
+      ]
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_how_singapore_determines_company_tax_residence": true
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_how_singapore_determines_company_tax_residence": true
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_how_singapore_determines_company_tax_residence": true
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_how_singapore_determines_company_tax_residence": false
+                    },
+                    "supported": {
+                      "semantic_how_singapore_determines_company_tax_residence": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 24,
+                    "firstColonEndedBlockIndex": 2,
+                    "nextBlockHasVisibleListMarker": false,
+                    "completeProseBlockCountBeforeFirstColon": 1,
+                    "completeProseBlockCountAfterFirstColon": 9,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "candidateCount": 1,
+      "admittedCount": 1,
+      "uncoveredTopicCount": 0,
+      "uncoveredConceptIds": []
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-withholding-tax",
+          "maps": [
+            {
+              "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": true
+                    },
+                    "supported": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 51,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 10,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            },
+            {
+              "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": true
+                    },
+                    "supported": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 37,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 12,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            },
+            {
+              "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": true
+                    },
+                    "supported": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 40,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 17,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "maps": [
+            {
+              "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": true
+                    },
+                    "supported": {
+                      "semantic_general_singapore_withholding_tax_rules_for_comp": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 51,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 11,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            },
+            {
+              "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "attemptStatuses": [
+                "TOPIC_MISMATCH"
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0,
+              "candidateConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_general_singapore_withholding_tax_rules_for_comp": false
+              },
+              "sourceBlockSummaries": []
+            }
+          ]
+        }
+      ],
+      "candidateCount": 4,
+      "admittedCount": 4,
+      "uncoveredTopicCount": 0,
+      "uncoveredConceptIds": [
+        "semantic_general_singapore_withholding_tax_rules_for_comp"
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "maps": [
+            {
+              "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+                    },
+                    "supported": {
+                      "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 36,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": false,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 19,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            },
+            {
+              "mapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptSupportFlags": {
+                "semantic_general_gst_input_tax_recovery_rules_for_busines": false
+              },
+              "admittedConceptSupportFlags": {
+                "semantic_general_gst_input_tax_recovery_rules_for_busines": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+                  "conceptSupportFlags": {
+                    "semantic_general_gst_input_tax_recovery_rules_for_busines": false
+                  },
+                  "generalRuleConceptSupport": {
+                    "recognized": {
+                      "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+                    },
+                    "supported": {
+                      "semantic_general_gst_input_tax_recovery_rules_for_busines": false
+                    }
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 41,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": false,
+                    "completeProseBlockCountBeforeFirstColon": 1,
+                    "completeProseBlockCountAfterFirstColon": 20,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "candidateCount": 2,
+      "admittedCount": 2,
+      "uncoveredTopicCount": 0,
+      "uncoveredConceptIds": []
+    }
+  ],
+  "renderedEvidence": [
+    {
+      "caseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "acceptedClaimCount": 3,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "uncoveredConceptIds": [
+        "semantic_corporate_income_tax_treatment_of_director_s_pri"
+      ],
+      "directProbeCandidateConceptFlags": {
+        "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+      },
+      "renderContextAdmittedConceptFlags": {
+        "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+      },
+      "acceptedQuoteSupport": [
+        {
+          "quoteIndex": 0,
+          "conceptSupportFlags": {
+            "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_corporate_income_tax_treatment_of_director_s_pri": true
+            },
+            "supported": {
+              "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 1,
+          "conceptSupportFlags": {
+            "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_corporate_income_tax_treatment_of_director_s_pri": true
+            },
+            "supported": {
+              "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 2,
+          "conceptSupportFlags": {
+            "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_corporate_income_tax_treatment_of_director_s_pri": true
+            },
+            "supported": {
+              "semantic_corporate_income_tax_treatment_of_director_s_pri": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "acceptedClaimCount": 3,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "uncoveredConceptIds": [
+        "semantic_singapore_corporate_tax_treatment_of_dividend_fr"
+      ],
+      "directProbeCandidateConceptFlags": {
+        "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+      },
+      "renderContextAdmittedConceptFlags": {
+        "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+      },
+      "acceptedQuoteSupport": [
+        {
+          "quoteIndex": 0,
+          "conceptSupportFlags": {
+            "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_singapore_corporate_tax_treatment_of_dividend_fr": true
+            },
+            "supported": {
+              "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 1,
+          "conceptSupportFlags": {
+            "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_singapore_corporate_tax_treatment_of_dividend_fr": true
+            },
+            "supported": {
+              "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 2,
+          "conceptSupportFlags": {
+            "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_singapore_corporate_tax_treatment_of_dividend_fr": true
+            },
+            "supported": {
+              "semantic_singapore_corporate_tax_treatment_of_dividend_fr": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueIndex": 0,
+      "acceptedClaimCount": 3,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "uncoveredConceptIds": [],
+      "directProbeCandidateConceptFlags": {
+        "semantic_how_singapore_determines_company_tax_residence": true
+      },
+      "renderContextAdmittedConceptFlags": {
+        "semantic_how_singapore_determines_company_tax_residence": true
+      },
+      "acceptedQuoteSupport": [
+        {
+          "quoteIndex": 0,
+          "conceptSupportFlags": {
+            "semantic_how_singapore_determines_company_tax_residence": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            },
+            "supported": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 1,
+          "conceptSupportFlags": {
+            "semantic_how_singapore_determines_company_tax_residence": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            },
+            "supported": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 2,
+          "conceptSupportFlags": {
+            "semantic_how_singapore_determines_company_tax_residence": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            },
+            "supported": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "acceptedClaimCount": 2,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "uncoveredConceptIds": [
+        "semantic_general_singapore_withholding_tax_rules_for_comp"
+      ],
+      "directProbeCandidateConceptFlags": {
+        "semantic_general_singapore_withholding_tax_rules_for_comp": false
+      },
+      "renderContextAdmittedConceptFlags": {
+        "semantic_general_singapore_withholding_tax_rules_for_comp": false
+      },
+      "acceptedQuoteSupport": [
+        {
+          "quoteIndex": 0,
+          "conceptSupportFlags": {
+            "semantic_general_singapore_withholding_tax_rules_for_comp": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_general_singapore_withholding_tax_rules_for_comp": true
+            },
+            "supported": {
+              "semantic_general_singapore_withholding_tax_rules_for_comp": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 1,
+          "conceptSupportFlags": {
+            "semantic_general_singapore_withholding_tax_rules_for_comp": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_general_singapore_withholding_tax_rules_for_comp": true
+            },
+            "supported": {
+              "semantic_general_singapore_withholding_tax_rules_for_comp": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "acceptedClaimCount": 1,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "uncoveredConceptIds": [
+        "semantic_general_gst_input_tax_recovery_rules_for_busines"
+      ],
+      "directProbeCandidateConceptFlags": {
+        "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+      },
+      "renderContextAdmittedConceptFlags": {
+        "semantic_general_gst_input_tax_recovery_rules_for_busines": false
+      },
+      "acceptedQuoteSupport": [
+        {
+          "quoteIndex": 0,
+          "conceptSupportFlags": {
+            "semantic_general_gst_input_tax_recovery_rules_for_busines": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_general_gst_input_tax_recovery_rules_for_busines": true
+            },
+            "supported": {
+              "semantic_general_gst_input_tax_recovery_rules_for_busines": false
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "runtimeIssues": [
+    {
+      "caseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "UNRESOLVED",
+      "finalVerifiedClaimCount": 0,
+      "finalSourceCount": 0,
+      "lifecycleFlags": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false
+      },
+      "gapStageCounts": {
+        "requested": 0,
+        "mapped": 0,
+        "retrievalAttempted": 0,
+        "evidenceFound": 0,
+        "admitted": 0,
+        "verified": 1,
+        "covered": 4
+      },
+      "uncoveredConceptIds": [
+        "semantic_corporate_income_tax_treatment_of_director_s_pri"
+      ],
+      "finalVerifiedQuoteSupport": [],
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_ZERO_VERIFIED"
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "UNRESOLVED",
+      "finalVerifiedClaimCount": 0,
+      "finalSourceCount": 0,
+      "lifecycleFlags": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false
+      },
+      "gapStageCounts": {
+        "requested": 0,
+        "mapped": 0,
+        "retrievalAttempted": 0,
+        "evidenceFound": 0,
+        "admitted": 0,
+        "verified": 1,
+        "covered": 3
+      },
+      "uncoveredConceptIds": [
+        "semantic_singapore_corporate_tax_treatment_of_dividend_fr"
+      ],
+      "finalVerifiedQuoteSupport": [],
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_ZERO_VERIFIED"
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueIndex": 0,
+      "overallStatus": "VERIFIED",
+      "evidenceStatus": "VERIFIED",
+      "applicationStatus": "NOT_REQUIRED",
+      "finalVerifiedClaimCount": 3,
+      "finalSourceCount": 1,
+      "lifecycleFlags": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true
+      },
+      "gapStageCounts": {
+        "requested": 0,
+        "mapped": 0,
+        "retrievalAttempted": 0,
+        "evidenceFound": 0,
+        "admitted": 0,
+        "verified": 0,
+        "covered": 0
+      },
+      "uncoveredConceptIds": [],
+      "finalVerifiedQuoteSupport": [
+        {
+          "quoteIndex": 0,
+          "conceptSupportFlags": {
+            "semantic_how_singapore_determines_company_tax_residence": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            },
+            "supported": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 1,
+          "conceptSupportFlags": {
+            "semantic_how_singapore_determines_company_tax_residence": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            },
+            "supported": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            }
+          }
+        },
+        {
+          "quoteIndex": 2,
+          "conceptSupportFlags": {
+            "semantic_how_singapore_determines_company_tax_residence": false
+          },
+          "generalRuleConceptSupport": {
+            "recognized": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            },
+            "supported": {
+              "semantic_how_singapore_determines_company_tax_residence": false
+            }
+          }
+        }
+      ],
+      "gapCodes": [],
+      "inferredStageFromCounts": "FINAL_RUNTIME_HAS_VERIFIED_CLAIMS"
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "NOT_REQUIRED",
+      "finalVerifiedClaimCount": 0,
+      "finalSourceCount": 0,
+      "lifecycleFlags": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false
+      },
+      "gapStageCounts": {
+        "requested": 0,
+        "mapped": 0,
+        "retrievalAttempted": 0,
+        "evidenceFound": 0,
+        "admitted": 0,
+        "verified": 1,
+        "covered": 4
+      },
+      "uncoveredConceptIds": [
+        "semantic_general_singapore_withholding_tax_rules_for_comp"
+      ],
+      "finalVerifiedQuoteSupport": [],
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_ZERO_VERIFIED"
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "NOT_REQUIRED",
+      "finalVerifiedClaimCount": 0,
+      "finalSourceCount": 0,
+      "lifecycleFlags": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false
+      },
+      "gapStageCounts": {
+        "requested": 0,
+        "mapped": 0,
+        "retrievalAttempted": 0,
+        "evidenceFound": 0,
+        "admitted": 0,
+        "verified": 1,
+        "covered": 3
+      },
+      "uncoveredConceptIds": [
+        "semantic_general_gst_input_tax_recovery_rules_for_busines"
+      ],
+      "finalVerifiedQuoteSupport": [],
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_ZERO_VERIFIED"
+    }
+  ],
+  "preregistrationSha256": "d0b6ae6ee072f704d9c39c958213c719bd158ab704302a93a67fd37feec8ab2e",
+  "preregistrationFileSha256": "c2c0db73c7a87dc193c06c0d495703b5c9156a3194c372eded284de9b26f62f7",
+  "sourceFingerprintCount": 18,
+  "historicalFingerprintCount": 161
+}
