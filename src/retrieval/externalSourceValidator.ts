@@ -188,6 +188,9 @@ export function matchesTopicContentTerm(
 
   const termTokens = normalizeTopicTerm(term).split(/\s+/).filter(Boolean);
   if (termTokens.length < 2) return false;
+  const hasReviewedIrasVariant = termTokens.some(token =>
+    token === 'expense' || token === 'expenses' || token === 'royalty' || token === 'royalties');
+  if (!hasReviewedIrasVariant) return false;
   const contentTokens = new Set(normalizeTopicTerm(content).split(/\s+/).filter(Boolean).map(canonicalIrasTopicToken));
   return termTokens.every(token => contentTokens.has(canonicalIrasTopicToken(token)));
 }

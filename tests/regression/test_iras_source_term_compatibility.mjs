@@ -69,6 +69,11 @@ assert.equal(validate('iras-cit-disallowed-expenses', 'IRAS_CIT_EXPENSES_SOURCE_
 assert.equal(matchesTopicContentTerm('private expenses are not deductible', 'private expense', true), true);
 assert.equal(matchesTopicContentTerm('private expenses are not deductible', 'expense', true), false,
   'the alternate is unavailable for a single-word topic term');
+assert.equal(matchesTopicContentTerm('company tax residence depends on control and management', 'tax residence company control management', true), false,
+  'generic corporate-residency words cannot use the IRAS token-order alternate');
+assert.equal(validate('iras-corporate-tax-residency', 'IRAS_CIT_RESIDENCY_SOURCE_MAP',
+  `<p>${escape(privateFixtures.cases['foreign-dividend-conditional-rule'].passage)}</p>`).isValid, false,
+  'a residency page title cannot borrow generic company/tax/residence tokens from a foreign-dividend body');
 
 const whtExpectation = {
   standardIdentifiers: ['IRAS_WHT_RATES_SOURCE_MAP', 'Withholding Tax Rates'],
