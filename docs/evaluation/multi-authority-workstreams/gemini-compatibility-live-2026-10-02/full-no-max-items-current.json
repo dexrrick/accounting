@@ -1,0 +1,22 @@
+{
+  "mode": "full-no-max-items-current",
+  "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 0,
+  "timeoutMs": 8000,
+  "startedAt": "2026-10-02T01:03:52.987Z",
+  "requestCount": 1,
+  "validJson": true,
+  "matchesSchema": false,
+  "providerConstraintsOmitted": [
+    "maxItems"
+  ],
+  "generationConfigFields": [
+    "temperature",
+    "responseFormat"
+  ],
+  "requestFormat": "generationConfig.responseFormat.text.schema",
+  "httpStatus": 200,
+  "diagnostic": null,
+  "finishedAt": "2026-10-02T01:03:54.373Z"
+}

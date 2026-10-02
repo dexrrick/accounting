@@ -1,0 +1,34 @@
+{
+  "verifiedAt": "2026-10-02T01:28:27.8236728Z",
+  "implementationCommit": "35118fb00e2f1fe35e053e950bba9e4b5d2fbd7a",
+  "nodeVersion": "v22.23.1",
+  "focusedProviderSchema": "PASS",
+  "focusedGeminiDiagnosticsPrivacy": "PASS",
+  "coveredRequiredRegressions": [
+    "transport/provider",
+    "semantic provider schema",
+    "semantic wire contract",
+    "semantic wire-format evaluation",
+    "semantic question understanding",
+    "diagnostics/privacy",
+    "resolver/authority"
+  ],
+  "lint": "PASS with unrelated generated/existing warnings",
+  "build": "PASS with bundle/deprecated-option warnings",
+  "smoke": {
+    "total": 60,
+    "durationSeconds": 69.03,
+    "passed": 60
+  },
+  "full": {
+    "total": 80,
+    "durationSeconds": 120.38,
+    "passed": 80
+  },
+  "diffCheck": "PASS",
+  "independentReview": "APPROVED",
+  "keyChanged": false,
+  "modelChanged": false,
+  "merged": false,
+  "deployed": false
+}

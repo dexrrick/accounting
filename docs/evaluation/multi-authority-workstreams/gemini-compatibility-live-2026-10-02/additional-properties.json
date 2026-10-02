@@ -1,0 +1,19 @@
+{
+  "mode": "additional-properties",
+  "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 0,
+  "timeoutMs": 8000,
+  "startedAt": "2026-10-02T00:52:55.229Z",
+  "requestCount": 1,
+  "validJson": true,
+  "matchesSchema": true,
+  "generationConfigFields": [
+    "responseMimeType",
+    "responseJsonSchema",
+    "temperature"
+  ],
+  "httpStatus": 200,
+  "diagnostic": null,
+  "finishedAt": "2026-10-02T00:52:56.099Z"
+}
