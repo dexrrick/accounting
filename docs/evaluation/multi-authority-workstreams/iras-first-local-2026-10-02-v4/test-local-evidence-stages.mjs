@@ -120,7 +120,7 @@ async function runCase(id, fixture, passageOverride, subjectOverride, questionUn
         undefined,
         {
           referenceDate,
-          questionUnderstanding: { mode: 'DETERMINISTIC_FALLBACK' },
+          questionUnderstanding: questionUnderstandingOverride || { mode: 'DETERMINISTIC_FALLBACK' },
           evidenceScope: scope,
           webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
           fetchOptions: { timeoutMs: 3000, useCache: false, customFetch },
@@ -226,6 +226,8 @@ globalThis.fetch = async () => {
 let caseResults;
 let negativeControls;
 let residencySubjectNegativeControls;
+let residencyPositiveControl;
+let missingResidencyQuoteAnchors;
 let cpfControl;
 try {
   caseResults = [];
@@ -253,9 +255,14 @@ try {
   const generalResidencyPositiveSubject = await runCase(
     'positive-residency-general-subject', residencyPhraseProbe, undefined, 'general company tax residence rule'
   );
-  const missingResidencyQuoteAnchors = [];
+  residencyPositiveControl = {
+    id: 'general-company-tax-residence-subject',
+    finalIssueClaimCount: generalResidencyPositiveSubject.finalIssueClaimCount,
+    issueEvidenceStatus: generalResidencyPositiveSubject.issueEvidenceStatus
+  };
+  missingResidencyQuoteAnchors = [];
   for (const [id, passage] of [
-    ['missing-tax-in-quote', 'A company tax residence test depends on where control and management of the business is exercised.'],
+    ['missing-tax-in-quote', 'A company residence test depends on where control and management of the business is exercised.'],
     ['missing-company-in-quote', 'Tax residence for a year is determined by where control and management of the business is exercised.'],
     ['missing-residence-in-quote', 'A company tax test depends on where control and management of the business is exercised.']
   ]) {
@@ -412,11 +419,7 @@ const diagnostic = {
   cases: compactCaseResults,
   negativeControls,
   residencySubjectNegativeControls,
-  residencyPositiveControl: {
-    id: 'general-company-tax-residence-subject',
-    finalIssueClaimCount: generalResidencyPositiveSubject.finalIssueClaimCount,
-    issueEvidenceStatus: generalResidencyPositiveSubject.issueEvidenceStatus
-  },
+  residencyPositiveControl,
   residencyMissingQuoteAnchors: missingResidencyQuoteAnchors,
   cpfUnchangedControl: cpfControl
 };
@@ -442,8 +445,8 @@ for (const item of residencySubjectNegativeControls) {
 }
 const extraMaterialConcept = residencySubjectNegativeControls.find(item => item.id === 'extra-material-concept');
 assert.notEqual(extraMaterialConcept?.issueEvidenceStatus, 'VERIFIED', 'A general residency quote cannot satisfy a detailed certificate/treaty concept.');
-assert.ok(extraMaterialConcept?.uncoveredConceptIds.length > 0,
-  'A general company-residency quote does not cover a supplied certificate/treaty concept.');
+assert.ok(extraMaterialConcept?.finalIssueGapCodes.includes('ISSUE_CONCEPT_UNCOVERED'),
+  'The final issue retains an uncovered-concept gap for the supplied certificate/treaty requirement.');
 assert.equal(diagnostic.residencyPositiveControl.issueEvidenceStatus, 'VERIFIED',
   'The general company tax residence wording remains supported by the company tax residency quote.');
 for (const item of missingResidencyQuoteAnchors) {

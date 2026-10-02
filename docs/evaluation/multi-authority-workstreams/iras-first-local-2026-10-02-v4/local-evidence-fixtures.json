@@ -14,7 +14,7 @@
       "topicId": "iras-cit-disallowed-expenses",
       "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
       "query": "What are the corporate income tax rules for expenses incurred wholly and exclusively for business, and is a private expense deductible?",
-      "subject": "corporate tax treatment of private and disallowed expenses",
+      "subject": "corporate tax treatment of private expenses",
       "passage": "Business expenses are deductible only when incurred wholly and exclusively in producing income. The corporate income tax treatment of a private expense is that it is not tax deductible because it does not serve a business purpose."
     },
     "foreign-dividend-conditional-rule": {

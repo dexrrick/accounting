@@ -236,7 +236,10 @@ function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: Singap
     // group below; sitemap/search metadata never participates.
     return queryMaterialConceptGroups(query).some(group => supportsQueryConceptGroup(textWords, group));
   }
-  const registryPhrases = [topic.title, ...topic.keywords, ...(topic.aliases || [])];
+  const sourceFacingHints = topic.domainId.startsWith('IRAS_')
+    ? [...(topic.paragraphHints || []), ...(topic.sectionHints || [])]
+    : [];
+  const registryPhrases = [topic.title, ...topic.keywords, ...(topic.aliases || []), ...sourceFacingHints];
   for (const phrase of registryPhrases) {
     const normalizedPhrase = normalizeText(phrase);
     if (normalizedPhrase.length >= 9 && text.includes(normalizedPhrase)) return true;

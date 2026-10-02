@@ -583,7 +583,7 @@ const parentReliefUnderstanding = semantic({ requestedOperation: 'CHECK_ELIGIBIL
   primarySubject: 'individual parent relief eligibility', concepts: [{ concept: 'parent relief', role: 'PRIMARY' }] });
 const boundaryContext = await buildGroundedReasoningContext(parentReliefQuery, priorPpe, {
   async retrieveSources() { return []; }, getSourceById() { return undefined; }, findSourcesByStandardOrAct() { return []; }
-}, undefined, { authorityLevelDiscovery: false, questionUnderstanding: parentReliefUnderstanding });
+}, undefined, { localOnly: true, authorityLevelDiscovery: false, questionUnderstanding: parentReliefUnderstanding });
 assert.equal(boundaryContext.userFacts.some(fact => /machine|90000|machinery/i.test(fact)), false,
   'Standalone tax eligibility questions do not inherit unrelated prior accounting facts.');
 assert.equal(boundaryContext.missingFacts.some(fact => /useful life|asset/i.test(fact)), false);
@@ -596,7 +596,7 @@ const followUpUnderstanding = semantic({ domain: 'IRAS_GST', population: 'COMPAN
   concepts: [{ concept: 'GST input tax', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true });
 const followUpContext = await buildGroundedReasoningContext(shortAnaphoricFollowUp, priorPpe, {
   async retrieveSources() { return []; }, getSourceById() { return undefined; }, findSourcesByStandardOrAct() { return []; }
-}, undefined, { authorityLevelDiscovery: false, questionUnderstanding: followUpUnderstanding });
+}, undefined, { localOnly: true, authorityLevelDiscovery: false, questionUnderstanding: followUpUnderstanding });
 assert.equal(followUpContext.userFacts.some(fact => /machine|90000|machinery/i.test(fact)), true,
   'A short explicit anaphoric question retains relevant active transaction facts.');
 assert.equal(isShortSemanticFollowUp(parentReliefQuery), false,
@@ -606,7 +606,7 @@ assert.equal(isShortSemanticFollowUp(parentReliefThisYear), false,
   'Temporal wording such as “this year” does not turn a self-contained tax question into a follow-up.');
 const temporalBoundaryContext = await buildGroundedReasoningContext(parentReliefThisYear, priorPpe, {
   async retrieveSources() { return []; }, getSourceById() { return undefined; }, findSourcesByStandardOrAct() { return []; }
-}, undefined, { authorityLevelDiscovery: false, questionUnderstanding: parentReliefUnderstanding });
+}, undefined, { localOnly: true, authorityLevelDiscovery: false, questionUnderstanding: parentReliefUnderstanding });
 assert.equal(temporalBoundaryContext.userFacts.some(fact => /machine|90000|machinery/i.test(fact)), false,
   'A self-contained Parent Relief question with a tax-year reference clears prior PPE facts.');
 
