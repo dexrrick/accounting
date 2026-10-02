@@ -8,6 +8,7 @@ import {
   V5_REPORT_FILENAME,
   V5_SELECTED_CASE_IDS,
   assertPinnedHistoricalArtifactsUnchanged,
+  requestedConceptsForIssue,
   runIrasMappedEvidenceDiagnostic,
   safeLifecycleFlags
 } from '../evaluation/singapore/iras-mapped-evidence-diagnostic-v5.mjs';
@@ -96,6 +97,24 @@ function strictLifecycleProjectionChecks() {
     error => error?.code === 'RUNTIME_LIFECYCLE_MALFORMED');
 }
 
+function topiclessConceptSelectionCheck() {
+  const topiclessConcept = {
+    id: 'synthetic_topicless_rule_request',
+    label: 'Synthetic topicless rule request',
+    terms: ['synthetic topicless rule request'],
+    topicIds: []
+  };
+  const mappedConcept = {
+    id: 'synthetic_related_mapped_request',
+    label: 'Synthetic related mapped request',
+    terms: ['synthetic related mapped request'],
+    topicIds: ['iras-gst-input-tax']
+  };
+  const retained = requestedConceptsForIssue(['iras-cit-deductibility'], [topiclessConcept, mappedConcept]);
+  assert.deepEqual(retained.map(concept => concept.id), [topiclessConcept.id],
+    'A single-issue scope retains a public-shaped topicless concept and excludes an unrelated mapped concept');
+}
+
 async function createPlan(directory) {
   let networkCalls = 0;
   const plan = await runIrasMappedEvidenceDiagnostic({
@@ -146,25 +165,25 @@ async function successfulPrivacyAndHistoryChecks() {
     const report = await runIrasMappedEvidenceDiagnostic({ mode: 'live-source', outputDirectory: directory, fetchImpl });
     const privateCase = irasResolverCases.find(item => item.id === 'private-holiday-expense');
     assert.ok(privateCase && privateCase.issues.length === 1, 'The frozen private-expense contract must remain single-issue');
-    const privateTopiclessConcepts = getRequestedQuestionConcepts(privateCase.query, syntheticUnderstanding(privateCase))
-      .filter(concept => concept.topicIds.length === 0);
-    assert.ok(privateTopiclessConcepts.length > 0,
-      'The public concept getter must expose the frozen private-expense topicless concept');
-    const privateTopiclessConceptId = privateTopiclessConcepts[0].id;
+    const privateRequestedConcept = getRequestedQuestionConcepts(privateCase.query, syntheticUnderstanding(privateCase))
+      .find(concept => concept.topicIds.some(topicId => ['iras-cit-deductibility', 'iras-cit-disallowed-expenses'].includes(topicId)));
+    assert.ok(privateRequestedConcept,
+      'The public concept getter must expose the frozen private-expense issue concept');
+    const privateRequestedConceptId = privateRequestedConcept.id;
     const privateProbe = report.directMapProbes.find(row => row.caseId === privateCase.id);
     const privateRender = report.renderedEvidence.find(row => row.caseId === privateCase.id);
     const privateRuntime = report.runtimeIssues.find(row => row.caseId === privateCase.id);
     assert.ok(privateProbe && privateRender && privateRuntime);
-    assert.equal(typeof privateRender.directProbeCandidateConceptFlags[privateTopiclessConceptId], 'boolean',
-      'The direct-probe production concept flag must retain the topicless concept ID');
-    assert.equal(typeof privateRender.renderContextAdmittedConceptFlags[privateTopiclessConceptId], 'boolean',
-      'The rendered quality projection must retain the topicless concept ID');
-    assert.ok(privateProbe.uncoveredConceptIds.includes(privateTopiclessConceptId),
-      'Direct evidence quality must report the topicless concept as uncovered for synthetic generic text');
-    assert.ok(privateRender.uncoveredConceptIds.includes(privateTopiclessConceptId),
-      'Rendered evidence quality must report the topicless concept as uncovered for synthetic generic text');
-    assert.ok(privateRuntime.uncoveredConceptIds.includes(privateTopiclessConceptId),
-      'Central issue coverage must expose only the known topicless concept ID as uncovered');
+    assert.equal(typeof privateRender.directProbeCandidateConceptFlags[privateRequestedConceptId], 'boolean',
+      'The direct-probe production concept flag must retain the public private-expense concept ID');
+    assert.equal(typeof privateRender.renderContextAdmittedConceptFlags[privateRequestedConceptId], 'boolean',
+      'The rendered quality projection must retain the public private-expense concept ID');
+    assert.ok(privateProbe.uncoveredConceptIds.includes(privateRequestedConceptId),
+      'Direct evidence quality must report the requested private-expense concept as uncovered for generic synthetic text');
+    assert.ok(privateRender.uncoveredConceptIds.includes(privateRequestedConceptId),
+      'Rendered evidence quality must report the requested private-expense concept as uncovered for generic synthetic text');
+    assert.ok(privateRuntime.uncoveredConceptIds.includes(privateRequestedConceptId),
+      'Central issue coverage must expose only the known private-expense concept ID as uncovered');
     assert.equal(report.directMapProbes.length, V5_SELECTED_CASE_IDS.length);
     assert.equal(report.renderedEvidence.length, V5_SELECTED_CASE_IDS.length);
     assert.equal(report.runtimeIssues.length, V5_SELECTED_CASE_IDS.length);
@@ -378,6 +397,7 @@ async function parentDirectoryGuardCheck() {
 
 await successfulPrivacyAndHistoryChecks();
 strictLifecycleProjectionChecks();
+topiclessConceptSelectionCheck();
 await invalidPageAndClosedTransportChecks();
 await collisionAndPrereqChecks();
 await concurrentReservationCheck();

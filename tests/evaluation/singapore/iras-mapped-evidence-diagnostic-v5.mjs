@@ -87,7 +87,7 @@ const PINNED_HISTORICAL_HASHES = Object.freeze({
   'docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v4/iras-mapped-evidence-live-v4-consumed.json': '9d5131e0b4ad7afc176274f63020bbe9c46c0644532f4abbd17b8b1a3d6353b2',
   'docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v4/iras-mapped-evidence-plan-v4.json': 'c881761866a4ccb04ad6763a17496ecd23ab588e14f1930986d453a9dad04a4b',
   'docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v4/supervisor-observations.md': '0121ac9bd60b910688cbd3351353d948c7e14ddb7ee5d50a6eb7db2694e02bc9',
-  'docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/continuation-checkpoint.md': '1f369dd74a989fed498a5f1506b681c26b48a673fc5a6744d0befff259cdfb7c',
+  'docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/continuation-checkpoint.md': '6cab2cdc9151ce915e1b9a3360665a1300a4d633e3658e03ab288395b66ba15e',
   'docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/diagnose-foreign-gst-final-filters-v1.mjs': '6c8ebafb18cd86125bbbb487eacd3bf71679747d5ec65ef22071812f7d7921fa',
   'docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/diagnose-private-wht-source-phrase-v1.mjs': '7621693a525438889f7e4e2d44198a56383f5d91a46177150a4d5720204c4e23',
   'docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/evidence-failure-matrix.md': '8b3ce9630f8587c07f68c9975b64c92d19f319d223893ae6a18997eddc27fdb5',
@@ -211,6 +211,12 @@ function syntheticInterpretation(testCase) {
   };
 }
 
+export function requestedConceptsForIssue(topicIds, requestedConcepts) {
+  const scopedTopicIds = new Set(topicIds);
+  return requestedConcepts.filter(concept => concept.topicIds.length === 0 ||
+    concept.topicIds.some(topicId => scopedTopicIds.has(topicId)));
+}
+
 function casePlansWithMaps() {
   const mapsByTopic = new Map();
   const mapsById = new Map(IRAS_SOURCE_MAP_DEFINITIONS.map(item => [item.id, item]));
@@ -256,8 +262,8 @@ function casePlansWithMaps() {
       // otherwise-unmapped concept can be attributed only to that one issue.
       // Keep topicless concepts in the evidence request; they remain subject
       // to the production quotation matcher like mapped concepts.
-      const requestedConcepts = getRequestedQuestionConcepts(testCase.query, understanding)
-        .filter(concept => concept.topicIds.length === 0 || concept.topicIds.some(topicId => topicIds.includes(topicId)));
+      const requestedConcepts = requestedConceptsForIssue(topicIds,
+        getRequestedQuestionConcepts(testCase.query, understanding));
       const sourceDomain = topics[0]?.domainId;
       const evidenceScope = sourceDomain ? {
         authority: 'IRAS',
