@@ -160,3 +160,43 @@ Two diagnostic work items are **WIP, NOT independently approved**:
 WHT reviewer findings pending closure: derive conclusion/missing topics from retained final central claim bindings, not union of direct/render records; count closed discovery/search/ambient invocations instead of hardcoded zero/false; assert final supported claim and missing royalty topic unconditionally. At interruption, code had some final outcome assertions and an ambient counter, but conclusion still used earlier overview bindings and discovery count remained hardcoded; the saved JSON was still the initial uncorrected report. Complete only these scoped corrections, rerun API-free, review the final script/report together. `actualGetCount` in that initial synthetic report counts injected transport calls, not external GETs; correct the label. Public document/excerpt hashes and length match saved V1 per initial reviewer; no production/history file edits occurred. Avoid inventing alternative rate/scope rule text or promoting a binding union into final claim coverage.
 
 The next architectural decision belongs to the supervisor: prove foreign/GST quote selection at its owning layer and WHT final topic binding before choosing a minimal fix. A registered overview-topic association may be considered only after completed proof/review; no registry/source-map/routing extension is authorized by the current WIP findings. Do not weaken literal verification, source boundaries, date/provenance, per-topic coverage or unresolved application to force success. Finish one scoped cycle with required validation, then preregister a NEW version; V7 is permanently consumed. All five NEW rule families must pass before NEW targeted acceptance, and targeted must fully pass before final. HOLD MERGE.
+
+## Latest validated quote selection and V8 audit — authoritative continuation
+
+This section supersedes previous current-state/WIP/next-step claims. Branch `codex/multi-authority-workstreams`; HOLD MERGE; no push/merge/deploy. Current shared allowance at this update: 49% five-hour / 77% weekly remaining. Preserve the user's 7% / 3% reserves, with a larger checkpoint buffer; recheck on resume.
+
+1. **Five diagnoses.** V8 rule evidence is VERIFIED for private expense, foreign income, corporate residency and WHT royalty. GST alone remains INSUFFICIENT. Private application and global planning residual remain separate blockers.
+
+2. **First failing boundary.** GST admitted direct/render-context text supports its requested concept, while all four selected literal-accepted quotes do not. This establishes an observable quote-selection/support gap, not its precise structural cause. No missing wording is inferred from flags.
+
+3. **Evidence matching.** No rule matcher was changed in this cycle. Previously approved private/WHT grammar and foreign complete parent-rule forms remain. The frozen pre-fix probes are now completed and reviewed; never rerun them against repaired production.
+
+4. **Claim verification.** Literal, date, provenance, sibling and attached-qualification safeguards remain unchanged. Quote selection prioritizes complete eligible paragraphs that independently support the same requested concept in both the whole record and paragraph, scoped to the actual IRAS authority, legacy domain, requested issue and topic association.
+
+5. **Domain/topic normalization.** The existing WHT overview map now also associates the existing interest/royalty topic, supported by intact saved public overview wording and the approved final-binding probe. No URL, map ID, domain, alias, query pattern or routing change. The source-term compatibility regression now expects the three exact mapped IDs rather than the obsolete count of two.
+
+6. **Residency.** V8 has three verified claims and application NOT_REQUIRED. Historical semantic diagnostics remain unchanged; no new model calls or retrospective scoring.
+
+7. **Subject matching.** Prospective bounded residency scoring remains previously approved. Model, prompts, routing and eight-second semantic timeout are unchanged. Foreign origin and exemption eligibility are not inferred; application remains UNRESOLVED.
+
+8. **Negative controls.** Quote-priority regressions cover full-record exclusion, wrong authority/domain, unrelated associations, incomplete rules, helper-false/undefined fallback, caps and stable ordering. WHT binding controls reject unsupported text and wrong-domain/non-resident omissions. All relevant checks pass.
+
+9. **Rule/application separation.** V8 evidence/application: private VERIFIED/UNRESOLVED, foreign VERIFIED/UNRESOLVED, residency and WHT VERIFIED/NOT_REQUIRED, GST INSUFFICIENT/NOT_REQUIRED. Private overall INSUFFICIENT and foreign CONDITIONAL are preserved. No application or global-plan gate is bypassed.
+
+10. **Files changed.** Production `src/services/irasEvidencePolicy.ts` and one source-map association in `src/standards/coverageRegistry.ts`; new quote-priority and WHT-binding regressions; exact expected map changes in source-map/source-term regressions; V8 harness/safety regression and smoke registration. New probe/report and V8 artifacts are separate evaluation work. No parser/arithmetic/UI changes.
+
+11. **API-free proofs.** Frozen source-only quote probe proves complete foreign/GST rules lose to six lexical distractors at the per-record top-five cut in disclosed synthetic compositions. Frozen WHT probe proves a retained supporting claim lacked the required final royalty-topic binding. Saved public units, synthetic-composition limits and measured closed counters are explicit. Both script/report pairs independently approved before production repair.
+
+12. **Validation.** Final lint/build PASS with inherited warnings; changed-file lint clean; diff check PASS; smoke 82/82 (65.12s); full 102/102 (130.74s). Initial smoke's sole source-term expected-count failure was corrected and independently reviewed before final validation. Logs in system temp: `accounting-rule-selection-final-{lint,build,full}.log`, `accounting-rule-selection-final-smoke-r2.log`. No production edit since validation.
+
+13. **V8 live capture.** Five fixed cases/eight mapped pages; envelope `c5fccaba0a0ecf6ede1a781386c78028a70c91e1f7cf2f94983c6266f9a32b3b`, committed before GETs. Eight actual GETs all HTTP 200; sixteen cache reuses; no model/discovery/search/retry/policy rejection; cap16. Literal accepted counts 5/3/3/5/4, rejected zero; final claims 2/1/3/2/0. Permanently consumed; never overwrite or rerun.
+
+14. **Targeted acceptance.** NOT RUN; GST rule evidence remains insufficient. A NEW five-family evidence pass is required first, preserving the private residual.
+
+15. **Final profile.** NOT RUN; additionally requires fully passing NEW targeted acceptance. Original final-ten, all V1–V8 and public V1/V2 artifacts remain preserved.
+
+16. **Reviewer verdict.** Scoped production repairs, V8 harness and actual capture independently approved with no remaining material findings. All223 fingerprints match disk (26 current/197 historical); envelope/report/marker agreement and recorded ordering pass. All56 presence projections satisfy bounds; four WHT projections truncate only reported blocks. This is artifact integrity approval, not GST evidence or release approval.
+
+17. **Checkpoints.** Validated production/harness `68cac9c1d3cf96c9cf99bb51d80cd4854a36f350`; WHT probe `f47293b`; quote probe `9546218`; V8 plan `e2406dc`; audited V8 capture/observations `7147ad5`. Earlier validated production and all consumed captures are preserved. Final continuation SHA is reported separately to avoid self-reference.
+
+18. **Next bounded work.** NEW API-free GST structural probe using intact saved public V1 block7, including its standalone bullet, with body-only comparison and explicitly synthetic arrangements. Previous positive fixtures removed that bullet and do not establish original live HTML structure. Probe-only builder work is active; no production change is authorized by the current structural hypothesis. Require owning-layer proof, independent review and final validation before a prospective V9 plan/live capture. Keep all literal/scope/qualification/application/privacy gates. HOLD MERGE.
