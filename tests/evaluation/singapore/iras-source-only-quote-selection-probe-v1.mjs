@@ -18,7 +18,7 @@ import { irasResolverCases } from '../../fixtures/irasResolverCases.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const OUTPUT_PATH = path.join(ROOT,
   'docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v6/source-only-quote-selection-probe-v1.json');
-const REFERENCE_DATE = new Date().toISOString().slice(0, 10);
+const REFERENCE_DATE = '2026-10-02';
 const SYNTHETIC_COMPOSITION = 'SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY';
 const sha256 = value => createHash('sha256').update(value).digest('hex');
 const normalize = value => value.normalize('NFC').replace(/\s+/g, ' ').trim();
@@ -146,10 +146,10 @@ function understandingFor(testCase) {
   return { questionUnderstanding, classification, reconciled, issue, topicIds, requestedConcepts };
 }
 
-function supportFor(text, sourceCase, issue, topicIds, requestedConcepts) {
+function supportFor(text, domainId, issue, topicIds, requestedConcepts) {
   return requestedConcepts.map(concept => supportGeneralIrasRuleConcept({
     sourceText: text,
-    domainId: issue.domain,
+    domainId,
     topicIds: [...new Set([...topicIds, ...(concept.topicIds || [])])],
     subject: issue.subject,
     population: issue.population,
@@ -170,8 +170,8 @@ const cases = [
     incompleteRule: foreignRule.split(/(?<=[.!?])\s+/).slice(0, 2).join(' '),
     bodyFor: (variant, distractors) => {
       const ruleBlock = `<section><h2>${escapeHtml(foreignParts[0])}</h2><p>${escapeHtml(variant === 'incomplete_only' ? foreignRule.split(/(?<=[.!?])\s+/).slice(0, 2).join(' ') : foreignRule)}</p></section>`;
-      const before = variant === 'distractors' ? distractors.slice(0, 3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
-      const after = variant === 'distractors' ? distractors.slice(3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
+      const before = variant === 'distractors_before_and_after' ? distractors.slice(0, 3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
+      const after = variant === 'distractors_before_and_after' ? distractors.slice(3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
       return `${before}${ruleBlock}${after}`;
     },
     bulletOmitted: false
@@ -188,15 +188,28 @@ const cases = [
     incompleteRule: gstRule.slice(0, gstRule.indexOf('. ') + 1),
     bodyFor: (variant, distractors) => {
       const rule = variant === 'incomplete_only' ? gstRule.slice(0, gstRule.indexOf('. ') + 1) : gstRule;
-      const before = variant === 'distractors' ? distractors.slice(0, 3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
-      const after = variant === 'distractors' ? distractors.slice(3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
+      const before = variant === 'distractors_before_and_after' ? distractors.slice(0, 3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
+      const after = variant === 'distractors_before_and_after' ? distractors.slice(3).map(text => `<p>${escapeHtml(text)}</p>`).join('') : '';
       return `${before}<p>${escapeHtml(rule)}</p>${after}`;
     },
     bulletOmitted: true
   }
 ];
 
-const closedCalls = { ambientFetch: 0, mappedFetch: 0, discovery: 0, search: 0 };
+const closedCalls = {
+  ambientFetch: 0,
+  mappedFetch: 0,
+  closedKnownMapFetch: 0,
+  unexpectedMappedFetch: 0,
+  discovery: 0,
+  search: 0
+};
+const closedKnownMaps = new Map(['IRAS_GST_INVOICING_SOURCE_MAP'].map(id => {
+  const definition = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === id);
+  assert.ok(definition, `Frozen closed source map ${id} remains registered.`);
+  return [definition.canonicalSourceUrl, id];
+}));
+const observedClosedKnownMapIds = new Set();
 const actualFetch = globalThis.fetch;
 globalThis.fetch = async () => {
   closedCalls.ambientFetch += 1;
@@ -205,16 +218,18 @@ globalThis.fetch = async () => {
 
 try {
   const variantResults = [];
+  const caseDiagnoses = [];
   for (const sourceCase of cases) {
     const { testCase } = sourceCase;
+    const caseResultStart = variantResults.length;
     const { questionUnderstanding, classification, reconciled, issue, topicIds, requestedConcepts } = understandingFor(testCase);
     assert.ok(classification.authorities.includes('IRAS'));
     assert.ok(topicIds.includes(sourceCase.topicId));
     const sourceMap = IRAS_SOURCE_MAP_DEFINITIONS.find(definition => definition.id === sourceCase.mapId);
     assert.ok(sourceMap && sourceMap.topicIds.includes(sourceCase.topicId));
-    const sourceRuleSupport = supportFor(sourceCase.savedRule, sourceCase, issue, topicIds, requestedConcepts);
+    const sourceRuleSupport = supportFor(sourceCase.savedRule, sourceMap.domainId, issue, topicIds, requestedConcepts);
     assert.ok(sourceRuleSupport.includes(true), `${testCase.id} saved complete source rule is helper-supported.`);
-    const incompleteSupport = supportFor(sourceCase.incompleteRule, sourceCase, issue, topicIds, requestedConcepts);
+    const incompleteSupport = supportFor(sourceCase.incompleteRule, sourceMap.domainId, issue, topicIds, requestedConcepts);
     assert.equal(incompleteSupport.includes(true), false, `${testCase.id} incomplete source-only control is unsupported.`);
     const distractorScoreTrace = selectorScoreTrace(testCase.query, topicIds, sourceCase.savedRule,
       sourceCase.distractors, { before: 3 });
@@ -228,9 +243,23 @@ try {
       const sourceMapUrl = sourceMap.canonicalSourceUrl;
       const fetchEvents = [];
       const customFetch = async (urlValue, init = {}) => {
-        assert.equal(String(urlValue), sourceMapUrl, 'The synthetic transport serves only the frozen mapped URL.');
-        assert.equal((init.method || 'GET').toUpperCase(), 'GET');
+        const requestedUrl = String(urlValue);
+        const method = (init.method || 'GET').toUpperCase();
         closedCalls.mappedFetch += 1;
+        if (requestedUrl !== sourceMapUrl) {
+          const frozenMapId = closedKnownMaps.get(requestedUrl);
+          if (frozenMapId) {
+            closedCalls.closedKnownMapFetch += 1;
+            observedClosedKnownMapIds.add(frozenMapId);
+          } else {
+            closedCalls.unexpectedMappedFetch += 1;
+          }
+          return new Response(null, { status: 503 });
+        }
+        if (method !== 'GET') {
+          closedCalls.unexpectedMappedFetch += 1;
+          return new Response(null, { status: 503 });
+        }
         fetchEvents.push({ status: 200 });
         const title = `${sourceMap.pageTitle} | IRAS`;
         const pageBody = sourceCase.bodyFor(variant.id, sourceCase.distractors);
@@ -263,7 +292,7 @@ try {
           topicIds,
           requestedConcepts,
           context: {
-            domainId: issue.domain,
+            domainId: sourceMap.domainId,
             population: issue.population,
             primarySubject: issue.subject,
             concepts: [issue.subject],
@@ -288,7 +317,7 @@ try {
         eligibleRecords.some(record => record.id === claim.recordId));
       const finalClaims = finalIssue.verifiedClaims || [];
       const acceptedFlags = acceptedQuotes.map(claim => {
-        const supportFlags = supportFor(claim.quote, sourceCase, issue, topicIds, requestedConcepts);
+        const supportFlags = supportFor(claim.quote, sourceMap.domainId, issue, topicIds, requestedConcepts);
         const normalizedQuote = normalize(claim.quote);
         return {
           quoteSha256: sha256(normalizedQuote),
@@ -298,14 +327,15 @@ try {
         };
       });
       const supportedEligibleRecords = eligibleRecords.filter(record =>
-        supportFor(record.sourceText || '', sourceCase, issue, topicIds, requestedConcepts).includes(true));
+        supportFor(record.sourceText || '', sourceMap.domainId, issue, topicIds, requestedConcepts).includes(true));
+      const eligibleRecordsPreservingSavedRule = eligibleRecords.filter(record =>
+        normalize(record.sourceText || '').includes(normalize(sourceCase.savedRule)));
       const acceptedPerSource = new Map();
       for (const claim of acceptedQuotes) {
         const record = eligibleRecords.find(candidate => candidate.id === claim.recordId);
         const key = record?.canonicalSourceUrl || 'UNKNOWN_SOURCE';
         acceptedPerSource.set(key, (acceptedPerSource.get(key) || 0) + 1);
       }
-      const expectedSourceRule = variant.pageRuleKind === 'complete';
       const result = {
         caseId: testCase.id,
         topicId: sourceCase.topicId,
@@ -324,6 +354,7 @@ try {
         eligibleMappedRecordCount: eligibleRecords.length,
         eligibleMappedRecordSourceTextSha256: eligibleRecords.map(record => sha256(normalize(record.sourceText || ''))),
         eligibleMappedRecordHelperSupportedCount: supportedEligibleRecords.length,
+        eligibleMappedRecordPreservingCompleteRuleCount: eligibleRecordsPreservingSavedRule.length,
         rendererAcceptedMappedQuoteCount: acceptedQuotes.length,
         rendererRejectedClaimCount: rendered.claimVerification?.rejected?.length || 0,
         rendererAcceptedMappedHelperSupportedQuoteCount: acceptedFlags.filter(flag => flag.supportedRequestedConceptCount > 0).length,
@@ -332,24 +363,78 @@ try {
         rendererAcceptedWithinThreePerSource: [...acceptedPerSource.values()].every(count => count <= 3),
         centralFinalVerifiedClaimCount: finalClaims.length,
         centralFinalHelperSupportedClaimCount: finalClaims.filter(claim =>
-          supportFor(claim.quote, sourceCase, issue, topicIds, requestedConcepts).includes(true)).length,
+          supportFor(claim.quote, sourceMap.domainId, issue, topicIds, requestedConcepts).includes(true)).length,
         finalEvidenceStatus: finalIssue.evidenceStatus,
         finalApplicationStatus: finalIssue.applicationStatus,
         finalGapCodes: (finalIssue.gaps || []).map(gap => gap.code)
       };
       variantResults.push(result);
-      if (variant.id === 'source_only' && expectedSourceRule) {
-        assert.ok(result.eligibleMappedRecordHelperSupportedCount > 0, `${testCase.id} admits helper-supported source text.`);
-        assert.ok(result.rendererAcceptedMappedHelperSupportedQuoteCount > 0, `${testCase.id} renderer retains a supported literal quote without distractors.`);
-      }
       if (variant.id === 'incomplete_only') {
         assert.equal(result.rendererAcceptedMappedHelperSupportedQuoteCount, 0,
           `${testCase.id} incomplete-only content produces no helper-supported renderer quote.`);
       }
     }
+
+    const caseResults = variantResults.slice(caseResultStart);
+    const sourceOnly = caseResults.find(result => result.variant === 'source_only');
+    const withDistractors = caseResults.find(result => result.variant === 'distractors_before_and_after');
+    const incompleteOnly = caseResults.find(result => result.variant === 'incomplete_only');
+    assert.ok(sourceOnly && withDistractors && incompleteOnly);
+    assert.ok(sourceOnly.eligibleMappedRecordHelperSupportedCount > 0,
+      `${testCase.id} source-only mapped record contains complete helper-supported evidence.`);
+    assert.ok(sourceOnly.rendererAcceptedMappedHelperSupportedQuoteCount > 0 &&
+      sourceOnly.rendererAcceptedMappedQuotesPreservingCompleteRuleCount > 0,
+      `${testCase.id} source-only renderer keeps the complete supported rule.`);
+    assert.ok(sourceOnly.centralFinalVerifiedClaimCount > 0 && sourceOnly.centralFinalHelperSupportedClaimCount > 0,
+      `${testCase.id} source-only central workstream retains a supported rule claim.`);
+    assert.ok(withDistractors.eligibleMappedRecordHelperSupportedCount > 0 &&
+      withDistractors.eligibleMappedRecordPreservingCompleteRuleCount > 0,
+      `${testCase.id} the complete supported rule remains in admitted record text after distractors are added.`);
+    const projection = withDistractors.syntheticDistractorScoreProjection;
+    assert.ok(projection && projection.higherScoringSyntheticCandidateCount >= 5 &&
+      projection.savedRuleRank > 5 && !projection.savedRuleInsidePerRecordTopFive,
+      `${testCase.id} synthetic distractors rank the complete rule below the per-record top five.`);
+    assert.equal(withDistractors.rendererAcceptedMappedHelperSupportedQuoteCount, 0);
+    assert.equal(withDistractors.rendererAcceptedMappedQuotesPreservingCompleteRuleCount, 0);
+    assert.ok(withDistractors.rendererAcceptedMappedQuoteCount <= 3 && withDistractors.rendererAcceptedWithinThreePerSource,
+      `${testCase.id} distractor quotes stay within the per-source cap.`);
+    assert.ok(withDistractors.acceptedQuoteHashesAndFlags.length > 0 &&
+      withDistractors.acceptedQuoteHashesAndFlags.every(flag => flag.matchesSyntheticDistractor),
+      `${testCase.id} accepted distractor-variant quotes match synthetic paragraphs.`);
+    assert.equal(withDistractors.centralFinalVerifiedClaimCount, 0);
+    assert.equal(withDistractors.centralFinalHelperSupportedClaimCount, 0);
+    assert.equal(incompleteOnly.incompleteControlHelperSupport, false);
+    assert.equal(incompleteOnly.rendererAcceptedMappedHelperSupportedQuoteCount, 0);
+    assert.equal(incompleteOnly.centralFinalHelperSupportedClaimCount, 0);
+    caseDiagnoses.push({
+      caseId: testCase.id,
+      sourceOnly: {
+        admittedHelperSupportedRecordCount: sourceOnly.eligibleMappedRecordHelperSupportedCount,
+        rendererAcceptedCompleteSupportedRuleCount: sourceOnly.rendererAcceptedMappedQuotesPreservingCompleteRuleCount,
+        centralFinalHelperSupportedClaimCount: sourceOnly.centralFinalHelperSupportedClaimCount
+      },
+      syntheticDistractors: {
+        composition: SYNTHETIC_COMPOSITION,
+        paragraphCount: withDistractors.syntheticDistractorCount,
+        higherScoringSyntheticParagraphCount: projection.higherScoringSyntheticCandidateCount,
+        completeRuleProjectedRank: projection.savedRuleRank,
+        completeRuleWithinPerRecordTopFive: projection.savedRuleInsidePerRecordTopFive,
+        acceptedQuoteCount: withDistractors.rendererAcceptedMappedQuoteCount,
+        acceptedQuotesMatchingSyntheticParagraphs: withDistractors.acceptedQuoteHashesAndFlags.filter(flag => flag.matchesSyntheticDistractor).length,
+        rendererAcceptedHelperSupportedQuoteCount: withDistractors.rendererAcceptedMappedHelperSupportedQuoteCount,
+        centralFinalHelperSupportedClaimCount: withDistractors.centralFinalHelperSupportedClaimCount
+      },
+      incompleteControl: {
+        helperSupported: incompleteOnly.incompleteControlHelperSupport,
+        rendererAcceptedHelperSupportedQuoteCount: incompleteOnly.rendererAcceptedMappedHelperSupportedQuoteCount,
+        centralFinalHelperSupportedClaimCount: incompleteOnly.centralFinalHelperSupportedClaimCount
+      },
+      interpretation: 'In this synthetic composition, the complete rule falls outside the per-record top five before the separate three-per-source cap is applied.'
+    });
   }
 
   assert.equal(closedCalls.ambientFetch, 0, 'All network access remains closed except the injected mapped transport.');
+  assert.equal(closedCalls.unexpectedMappedFetch, 0, 'Only the selected frozen mapped source and enumerated closed maps are requested.');
   assert.equal(closedCalls.discovery, 0);
   assert.equal(closedCalls.search, 0);
   const report = {
@@ -368,9 +453,13 @@ try {
       totalQuoteBoundForOneTopic: 5,
       scoreTraceIsDiagnosticOnly: true
     },
+    caseDiagnoses,
     transportAndModel: {
       ambientFetchCalls: closedCalls.ambientFetch,
       injectedMappedGetCalls: closedCalls.mappedFetch,
+      closedKnownMappedGetCalls: closedCalls.closedKnownMapFetch,
+      closedKnownMappedSourceMapIds: [...observedClosedKnownMapIds],
+      unexpectedMappedGetCalls: closedCalls.unexpectedMappedFetch,
       discoveryCalls: closedCalls.discovery,
       searchCalls: closedCalls.search,
       modelCalls: 0,
