@@ -1,0 +1,1139 @@
+{
+  "preregistration": {
+    "schemaVersion": 1,
+    "profileVersion": "iras-mapped-evidence-diagnostic-v8",
+    "referenceDate": "2026-10-02",
+    "measurementContract": {
+      "sourceUnit": "RETAINED_EXCERPTS_NOT_FULL_HTML",
+      "projectorSchema": "IRAS_SOURCE_STRUCTURE_FEATURES_V6",
+      "interpretation": "PRESENCE_ONLY_NOT_ENTAILMENT",
+      "stageIds": [
+        "DIRECT_PROBE_SOURCE_TEXT",
+        "RENDER_CONTEXT_SOURCE_TEXT",
+        "SELECTED_CLAIM_QUOTE"
+      ],
+      "featureIds": [
+        "private_personal_expense_noun",
+        "expense_disallowance_predicate",
+        "disallowed_expense_heading",
+        "foreign_income",
+        "dividend",
+        "singapore_receipt",
+        "taxability_heading",
+        "exemption_heading",
+        "withholding_tax",
+        "royalty",
+        "non_resident",
+        "subject_to",
+        "withhold_verb",
+        "wht_rate_table_shape",
+        "gst_input_tax",
+        "gst_claim_or_recover_verb",
+        "gst_make_claim_verb",
+        "gst_conditions_heading",
+        "requirement_modal",
+        "business_use",
+        "taxable_supplies",
+        "tax_invoice",
+        "blocked_input_tax",
+        "exception",
+        "negation_present"
+      ],
+      "publicTextFingerprint": "SHA256",
+      "absenceUnderTruncationNotProof": true
+    },
+    "selection": {
+      "caseIds": [
+        "private-holiday-expense",
+        "foreign-dividend-treatment",
+        "company-residency-general",
+        "wht-royalty-general-rule",
+        "gst-input-tax-general-rule"
+      ],
+      "issueCount": 5,
+      "cases": [
+        {
+          "caseId": "private-holiday-expense",
+          "fixtureCaseId": "private-holiday-expense",
+          "issues": [
+            {
+              "issueIndex": 0,
+              "topicIds": [
+                "iras-cit-deductibility",
+                "iras-cit-disallowed-expenses"
+              ],
+              "mapIds": [
+                "IRAS_CIT_EXPENSES_SOURCE_MAP"
+              ]
+            }
+          ]
+        },
+        {
+          "caseId": "foreign-dividend-treatment",
+          "fixtureCaseId": "foreign-dividend-treatment",
+          "issues": [
+            {
+              "issueIndex": 0,
+              "topicIds": [
+                "iras-foreign-sourced-income"
+              ],
+              "mapIds": [
+                "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+              ]
+            }
+          ]
+        },
+        {
+          "caseId": "company-residency-general",
+          "fixtureCaseId": "company-residency-general",
+          "issues": [
+            {
+              "issueIndex": 0,
+              "topicIds": [
+                "iras-corporate-tax-residency"
+              ],
+              "mapIds": [
+                "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+              ]
+            }
+          ]
+        },
+        {
+          "caseId": "wht-royalty-general-rule",
+          "fixtureCaseId": "wht-royalty-general-rule",
+          "issues": [
+            {
+              "issueIndex": 0,
+              "topicIds": [
+                "iras-withholding-tax",
+                "iras-withholding-tax-interest-royalties"
+              ],
+              "mapIds": [
+                "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+                "IRAS_WHT_RATES_SOURCE_MAP",
+                "IRAS_WHT_SCOPE_SOURCE_MAP"
+              ]
+            }
+          ]
+        },
+        {
+          "caseId": "gst-input-tax-general-rule",
+          "fixtureCaseId": "gst-input-tax-general-rule",
+          "issues": [
+            {
+              "issueIndex": 0,
+              "topicIds": [
+                "iras-gst-input-tax"
+              ],
+              "mapIds": [
+                "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+                "IRAS_GST_INVOICING_SOURCE_MAP"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "sourceMaps": [
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-corporate-tax-residency"
+        ]
+      },
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_CIT_EXPENSES_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ]
+      },
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-foreign-sourced-income"
+        ]
+      },
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_GST_INVOICING_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-gst-input-tax"
+        ]
+      },
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-gst-input-tax"
+        ]
+      },
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-interest-royalties"
+        ]
+      },
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_WHT_RATES_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-interest-royalties"
+        ]
+      },
+      {
+        "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+        "host": "www.iras.gov.sg",
+        "mapIds": [
+          "IRAS_WHT_SCOPE_SOURCE_MAP"
+        ],
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-interest-royalties"
+        ]
+      }
+    ],
+    "bounds": {
+      "modelRequests": 0,
+      "discoveryRequests": 0,
+      "searchRequests": 0,
+      "fetchTimeoutMs": 10000,
+      "modelTimeoutMs": 8000,
+      "allowedRedirectsPerUrl": 1,
+      "redirectPolicy": "SAME_PATH_IRAS_PEER_HOST_ONLY",
+      "retries": 0,
+      "maximumActualGets": 16,
+      "transportCache": "ONE_SHARED_CACHE_ACROSS_DIRECT_PROBE_RENDER_AND_RUNTIME"
+    },
+    "sourceFingerprints": [
+      {
+        "path": "src/classification/questionClassifier.ts",
+        "sha256": "f58bf13f0a553b9681ae12c771bcd27cbf70611b7ed82aa401af40e34ed03883"
+      },
+      {
+        "path": "src/retrieval/advancedSourceRetriever.ts",
+        "sha256": "8664777265b3bd092ac6f2ccbd8809793e8b49552b7f47256ba5a3573a2126cf"
+      },
+      {
+        "path": "src/retrieval/controlledWebRetriever.ts",
+        "sha256": "f92cca4e8890542b1e7c82ca216a92df3120f20e233005379d3c9904c7fca898"
+      },
+      {
+        "path": "src/retrieval/evidenceQualityGate.ts",
+        "sha256": "6e51d92bfd1e665d48dbc180c86e21d01c7f1c28b7e99ead41e9edc61258259f"
+      },
+      {
+        "path": "src/retrieval/externalSourceValidator.ts",
+        "sha256": "e6d74cca917864f3c4111a85a644c2fb7ac215d662f8c46613a005db0c8fe13f"
+      },
+      {
+        "path": "src/retrieval/irasRuleConceptSupport.ts",
+        "sha256": "7a68990e9820536910e313d3cf794abcf886fd860883898e8f4789c39d32201d"
+      },
+      {
+        "path": "src/retrieval/sourceCache.ts",
+        "sha256": "187f1e97a1418facef78e2fd4e084cb8a5ac380d7ca78e6805c6df7ab5cb2c06"
+      },
+      {
+        "path": "src/services/authorityWorkstreams.ts",
+        "sha256": "234466cc7c33f887c891f95a484d7bd469a7cc6737cd59862ee8e784182cbd32"
+      },
+      {
+        "path": "src/services/groundingContextBuilder.ts",
+        "sha256": "34d87dbabb55f0bf9bacb7257764d513bca767736222ca8483b42f0462ed892a"
+      },
+      {
+        "path": "src/services/irasEvidencePolicy.ts",
+        "sha256": "e35abfe394022403be035e0b5bcee1fe72508148a236c56ce118632146f53016"
+      },
+      {
+        "path": "src/services/semanticQuestionUnderstanding.ts",
+        "sha256": "ad9400db0f4debf5c395cbc689849a49168543b0ffcd834e51d79edc51a6f7bd"
+      },
+      {
+        "path": "src/standards/approvedSourceRegistry.ts",
+        "sha256": "c43d964e05ba5497e284a25c2127d29a1bd09a7185af20f963b68d44c3a803cc"
+      },
+      {
+        "path": "src/standards/coverageRegistry.ts",
+        "sha256": "3132591a0ad2cc2caa53e23eaf1e271b58631aeb981b3d1bacd024b483749b9a"
+      },
+      {
+        "path": "src/verification/claimEvidenceVerifier.ts",
+        "sha256": "e59362a3c3b0058433408240d9d1a5be2f291f9b57ee20e00be5777641163412"
+      },
+      {
+        "path": "tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v6.mjs",
+        "sha256": "2d00397e8188232542354cb54ba6fd6d086bfb10d31a9f2b7d310151efddf924"
+      },
+      {
+        "path": "tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v8.mjs",
+        "sha256": "d608b7526fe698d90687983900e722f900be46a5525b006fa183dde508c66d79"
+      },
+      {
+        "path": "tests/evaluation/singapore/iras-mapped-source-diagnostic-v3.mjs",
+        "sha256": "7856e454cfcade1a1440a5618efa4943e1dbce3ddd954e50c84b7a8bcafa1fb2"
+      },
+      {
+        "path": "tests/evaluation/singapore/iras-public-rule-excerpts-v1.mjs",
+        "sha256": "c47b16b3ca631526f3d5a2279591b73977bb048330fef59b62bd464e0287219f"
+      },
+      {
+        "path": "tests/evaluation/singapore/iras-public-rule-excerpts-v2.mjs",
+        "sha256": "b286aa31c650cf81ad0e1a18b4f49e82591b98ef4ad7061574163a9f6c94e572"
+      },
+      {
+        "path": "tests/evaluation/singapore/iras-source-structure-features-v6.mjs",
+        "sha256": "d3ec0b30a3bf8025406922b42f89074574917423e05590219b29dd26c1ed5579"
+      },
+      {
+        "path": "tests/fixtures/irasResolverCases.mjs",
+        "sha256": "3f7b1d8f4e7af1bda05bb017b589b71fec8a65f95fbfde67350876d5af32e2f6"
+      },
+      {
+        "path": "tests/regression/test_iras_mapped_evidence_diagnostic_v6.mjs",
+        "sha256": "edac5b6a4ad9116deffaec2ebd03f958aa1993dccc5456c8849ed28a28811da8"
+      },
+      {
+        "path": "tests/regression/test_iras_mapped_evidence_diagnostic_v8.mjs",
+        "sha256": "ee961d0e79fd2e8afe3d6ff9fe8c11e6bbc0e741581655284b958f38e56aff8b"
+      },
+      {
+        "path": "tests/regression/test_iras_public_rule_excerpts_v1.mjs",
+        "sha256": "f337d291b351a12d6f9843f0f565511a7137524cd665677903a95e958586c99b"
+      },
+      {
+        "path": "tests/regression/test_iras_public_rule_excerpts_v2.mjs",
+        "sha256": "4b3f4a978f565133207252894c8b4c6518517e973a7a079b3055ad1884dd8acf"
+      },
+      {
+        "path": "tests/regression/test_iras_source_structure_features_v6.mjs",
+        "sha256": "0faf8ee31cdf2c9de4371107219aa9dcf108f1dc89928f336d4b93cb238cf70d"
+      }
+    ],
+    "historicalFingerprints": {
+      "v1v2": [
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/authority-relief-local-routing-diagnosis.json",
+          "sha256": "aec9695b1c999b82530770f0b52f3ffbe4feabeca16517a554dc0b3379b93fa1"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/authority-relief-protected-hashes.json",
+          "sha256": "b42b76c662b234b3c27760704f7f3dc79ee2c7160f414226186542d6c12fdc46"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/authority-relief-resume-checkpoint.md",
+          "sha256": "3dc243233aa54c0430c5c8321f7abce064d3fd7abb3be7f627aa56cb0ba4731b"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/contract-consistency-audit.md",
+          "sha256": "60a6b4e45a96d3abf03f842b9ffcdd8c66d91b38950ef6baa8711520b15347ac"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/contract-consistency-checkpoint.md",
+          "sha256": "7ddca903f175e4d3736fd50cd67447cca62da4bf19495ea580a11afac1a71e3a"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/contract-followup-comparable-baseline.json",
+          "sha256": "a44bfc81373f3baf6505efaf80825c8bbbd26e33c25006d83969e4b70db7c4b1"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/contract-followup-protected-hashes.json",
+          "sha256": "66272a79e5e3d7f91ace37ee978b6b3a798b42839fe6a175e2fd17505f6264c9"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-live-semantic-evaluation.json",
+          "sha256": "1494ad19fdaa7f7fa2daa9a17510791a82e669873b4effcee2874931fab92e00"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-live-semantic-evaluation.md",
+          "sha256": "0d11409c9e2bc7302078a82e51575a7af947b37b23dbba7ef414a75d07450930"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-replay.json",
+          "sha256": "2317d84372a8a401e5fb3fbda506041281c256fe115ccab32e738deb4d794bc6"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-replay.md",
+          "sha256": "304922ba82145e5cc53ccd676efbdadb79980363537f1d1a725e9249b5509590"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-rescore.json",
+          "sha256": "47eb56c702981348e706dcdfb9d262574284ca83718eadfa115c23e7a16b2c97"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-rescore.md",
+          "sha256": "34e68a98bca2273e8b45f7851b6be5e38b35f6dd717247762b350bf55ab785e3"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-routing-replay.json",
+          "sha256": "2317d84372a8a401e5fb3fbda506041281c256fe115ccab32e738deb4d794bc6"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-routing-replay.md",
+          "sha256": "304922ba82145e5cc53ccd676efbdadb79980363537f1d1a725e9249b5509590"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/additional-properties.json",
+          "sha256": "088d9c4c47d589375e38931654273458ddc15bca7f012f6241847b8b3e176362"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/array-bounds.json",
+          "sha256": "79b7e92f467c468e0c5f68d15b2a9c2170990863d286fcbd881824f0cda15673"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/array.json",
+          "sha256": "066a752a8317f9c841dd89fd3068419873e823043755d5fa3fe3edd061fd0383"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/artifact-review.json",
+          "sha256": "fab931281c27a462684623425d25e3ca5010b38ed7bc566e420e8eafa5c2c202"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/enum-numeric.json",
+          "sha256": "364117b76424591e22cfe3e1ebda8d01f5c469feb8828796e17c687dd05bf827"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/enum-string.json",
+          "sha256": "45b409193c8e962a8dc6b940c330581ebdc68e064470144b4024d3e0d3025f00"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/final-checkpoint.json",
+          "sha256": "1911c5ea7dfca1670023e709c59691f431d31e4154f0facb3c92944aaa4e0381"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-current.json",
+          "sha256": "aeff2a79fcfc6e20c43db9df35a22c517a61599ccc11f681529b2d6005b52226"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-no-issue-max-items-current.json",
+          "sha256": "bd351febc686828f84056a0d387f3f9e667b2c525000279f5c003c031b9a5fef"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-no-max-items-current.json",
+          "sha256": "20acc96a23e88c6204e3603bb14c8a982e6bcdd8d4da16ce651fe22ccda8982f"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-old.json",
+          "sha256": "776eb075281145b796a05969f711e240567be7fb6e5b3928d4f5ab89cd91cc95"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/local-validation.json",
+          "sha256": "50de8e0a97ce8a4a515112eb6e3e8f6f19141dc5d43da73dbdbf6ee761daa773"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/minimal-current.json",
+          "sha256": "f9a1c5213569e65e02a0856e4701a7ec9903d5ae0551bc2d673a75a518f6f77e"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/minimal-old.json",
+          "sha256": "49a4fc163b0e3a957d4f6f2a80a642fd30fb7a5e6963e5a77a915a191f24dcea"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/nested-object.json",
+          "sha256": "d3ebc92918a16850f4331078f2f7f6c29417fde591de9adcd757154ee75f05d6"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/numeric-bounds.json",
+          "sha256": "62e8473ecde25c72f696056cac8455f570b912e6fcb92a93a9ebb7a939b94f66"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/semantic-wire-format-targeted-live.json",
+          "sha256": "88e9b32f4ef588afe8a4f18bdd23b8964ff2a8b0dde28d2fc700906df75e2c04"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/semantic-wire-format-targeted-live.md",
+          "sha256": "2e109e58f9517326050582134cfefdc67379db42bab759ec6b7f6b2c7e637f2e"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/targeted-post-live-verification.json",
+          "sha256": "f7b4036ca901fe4c2ed3801a52b3ae838c0c1832eeae268fb2b3b5f77a7474fe"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/targeted-pre-live-fingerprints.json",
+          "sha256": "85c624da6d0c224581400a80dc00720b7957e7e4c68e4bead82cdfc08530c652"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/targeted-pre-live-usage.json",
+          "sha256": "8454c670e36beeb943433ee24c4791f1dc53d32cca923185caf70eafb44b78bc"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/gemini-structured-output-compatibility-diagnosis.md",
+          "sha256": "932fb42e96982bad9773303e562b2fc0d6ee1e7a80f26e33a7cdc0b93fbda16b"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/heldout-live-semantic-evaluation.json",
+          "sha256": "370449cc53c1b3ab5d23e1e7d116d1336c11536f3e7c55404acb218d2dda0fb4"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/heldout-live-semantic-evaluation.md",
+          "sha256": "1943678d0367e85cec8ccb6f3eccff7f8b673395d527bbbfc3e186642899cff2"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/benchmark-adjudications.md",
+          "sha256": "228c943f358740732e51dbcdc375a6d016d67c350789d753ae9fd1e4a383fbb3"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/historical-artifact-hashes.json",
+          "sha256": "69af7d5f44f676e6af7228b8a59851f9c14007fc278a2b95fd4efc17a8d74217"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/iras-first-targeted-v1-live.json",
+          "sha256": "28f5b8a55a4751d53c8d347f758e9c577925e75f6c5958ccc3bcdd8127ced911"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/iras-first-targeted-v1-live.md",
+          "sha256": "e8f14b38e7e314364a442573ebce2a3ef2a5c318b81e0db666eac6f9df2a6c76"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/local-validation-and-review.md",
+          "sha256": "7b66e592eab60b026ecb43c8b8f38a2e754284bf24857efbad221e54a0469fb4"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/release-contract.md",
+          "sha256": "fc8303c0d010d3df14228bb8f76b1420198816d472c36eb6561d6e6d48cb152f"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v1/supervisor-final-report.md",
+          "sha256": "ac238173361525d6018fdcdddacc00d328725941eb57b4499f034d2698029ec6"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/historical-artifact-hashes.json",
+          "sha256": "5adcd54a3118c1fab8eca88cae896035b158b9f54dddf1f3e133b33cfc08c18f"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/iras-topic-mapping-audit.md",
+          "sha256": "b64f89cd6290621edafba7b860fc6a27ba01aecd4d6d0c95173128fe43a502e5"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/iras-topic-source-path-v2.json",
+          "sha256": "bcd9a9cec0a254ad1724f69cd0985dceca3cd25e09946e832577126188dd8ce4"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/semantic-structured-timeout-experiment-v2.json",
+          "sha256": "61f5e0a921c629efaacdde092e2b70a7c8f8f35089120a754ea0bcca4d8ef83e"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/semantic-structured-timeout-experiment-v2.md",
+          "sha256": "a31ba89cda6d0531ee3f75d1c6eed64dd32ac1f99a3f9621469161bd8890ae92"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/specificity-architecture.md",
+          "sha256": "5d5fec24ffbccc65a6e5817f4b0094dccdee3a8ca98b18718ad7415ce2ad0653"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/supervisor-final-report.md",
+          "sha256": "31bd84e941e3f4c269da6d6c6aed18bce781cd1d99822ecdf8b7885644fc6213"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/live-semantic-evaluation.json",
+          "sha256": "8ccad78f9623da692c8ac39fd950330864ff25ae0383fe05e1d60c8a2af22120"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/live-semantic-evaluation.md",
+          "sha256": "e642c6ba01b7c9ec4d014630927b4adabdc318424084dd52251cc8649eefe6c7"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/live-sources-evaluation.json",
+          "sha256": "46b51a07ff897937e01ecff8b67328157acbe342b053ace3fcb919b42edb56a5"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/live-sources-evaluation.md",
+          "sha256": "37ad7f5abfbd6a99a257f5d7009d6bad39a66971e7c340f890e3ca66f410e3f7"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/operation-followup-comparable-baseline.json",
+          "sha256": "537736bd79d9616562b30214544b8d4811318efc54dafd9455f941ce5cabbb6c"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-audit.md",
+          "sha256": "8381725c43dece643a548a2fc24a33463d3c97fcce1912d1ef04093988c70f44"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-baseline-inspection.json",
+          "sha256": "f5861a11e63f9e262187e998aec0328734ed830af2f2c63e3c3f1439eecc91c2"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-checkpoint.md",
+          "sha256": "b166f233b7a589b4f8cbebf077d865a6e1928f52b7dfe5473312a3fa22dc9749"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-comparison.json",
+          "sha256": "decd5a57bbc1f03e66f86f789ddb539bebcb7db1e5d57c647cc46512128c8f2a"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-post-inspection.json",
+          "sha256": "3fe63f1a7f0ab02a3fbcdb11701128d0658db879b762b7128adfdc02f65eb21c"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-protected-hashes.json",
+          "sha256": "42122bfc4ed59c0f3ab47c2130989a2a4874ea76bfca9980777a94e212d24256"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/oracle-evaluation.json",
+          "sha256": "f5d3b2ce9de0947f913bee35a5b6f5f8b2779f4e1c558310709830178789557e"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/oracle-evaluation.md",
+          "sha256": "913f572a301b4da02a5ddc1d724c1baddd33b6c510c04a8edf100e15548b791a"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-baseline-diagnosis.json",
+          "sha256": "84a55eebbb45a77785899ba3fa98e43a7960840edfdbdb96428281f1a7565979"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-contract-audit.md",
+          "sha256": "d7eb8955a7dd41a6c8e5213bae9b23a32a7ebafbc7553f7a82a4558860eb72fd"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-final-local-routing-diagnosis.json",
+          "sha256": "376ff7982c009845c927027ad6981902043e6f4d902250c1c972286b94da4e64"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-2026-10-01/authority-relief-targeted-live.json",
+          "sha256": "c2e65adad723943605d74cab8733672aa2cfb904d50174b2d669b24a963baa62"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-2026-10-01/authority-relief-targeted-live.md",
+          "sha256": "3351b1e1928a1e578af6f7f3d991e9dc5cfbe61bd7bb83984ef20f712018676b"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-checkpoint.md",
+          "sha256": "1cc2349b573908087c8532e80de47928adae4d606ab9c0d5983ef6fd8d867a0c"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-local-routing-diagnosis.json",
+          "sha256": "36bed43b75683a193f060cec29a9003bd3f1721f2ec94c2d152d3ea1b6ff4151"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-resume-checkpoint.md",
+          "sha256": "c615f81dc1e1eccfac991b6ccb3b1241629f5686a87e6098eb35ae29124603ac"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-audit.md",
+          "sha256": "09a40a2334f4bddeb7d9a0d474bb309dd583ece65f908ac6e74ca2a3efe1e9be"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-authority-relief-contract-audit.md",
+          "sha256": "c83de57fe98f366f053cfc105a8ae01346fd5b3d5a5891baf7de726dabd37329"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-checkpoint.md",
+          "sha256": "62f27acf8e3d192eb1048c5595bae45b84112d4aeb9d629e3ded8be77e22f2df"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-diagnosis-baseline.json",
+          "sha256": "f84dca5335be1312d709e5867688485aa174ea5c938ccb9777ae72de3e6ced44"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-diagnosis-baseline.md",
+          "sha256": "52fde5b0c89f61edd9dc5cb43cd9ba7a9991aaf1ab4ed1596d58ea3021f1aa1a"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-followup-v2-live.json",
+          "sha256": "58787adb4f69d4db922714154b1a4448fd55e2ee9186f03dff4bbb3f44337850"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-followup-v2-live.md",
+          "sha256": "cf0ea2da3f89006bf16570c7be90e35690a4bea075a26e745cd91ec2f59d3640"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-v2-audit.md",
+          "sha256": "a4169bb880e75b24045b3c79b66ac0fbb504ac34f6ea673aab47c4df3a7c6a3e"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-v2-checkpoint.md",
+          "sha256": "1a71f3c03fcf0b652d085c16dcc41b5da3f9a5577f4148d4bae008ee4a301a4d"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-audit.md",
+          "sha256": "275652c139de2112dd6a5207c90eef6fdcfa5cbf847f39ec9bb6945196a3be60"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-checkpoint.md",
+          "sha256": "6da3dcdeb7ecbc6ce9160692b524fd2f216ca1bb179770f165c1a57cfd2d8295"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-start.md",
+          "sha256": "aecc2d5469edca3a9a1248559cf5e3238ae6789627430e138afe63096610812f"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-protected-hashes.json",
+          "sha256": "26b1a04f7af97905e828394602ad7c64b6bb45b22103049e9578a55305695eb2"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-targeted-live.json",
+          "sha256": "d829a99df8a9a464f889afd3bc40e8f4b2e29a0072bb135feedb13faa2b626f9"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-targeted-live.md",
+          "sha256": "eba86c6aad73e43f6d7d9ac819c1236bca41adf0c5c2bc0d3b7ac3e6242aacc4"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-timeout-analysis.md",
+          "sha256": "f791f6792205145cb1d9a316d054b379aa316ec37531b6d6f94335659fa04a12"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-live-adjudications.json",
+          "sha256": "24d9ce9057495ef37684fe8c7c5c8eac569b888624a99198b55ccad8ee2cf89b"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-live-audit.md",
+          "sha256": "844094afb94c7ad4f15a99fc36316fe99dae66ca94842abfa2679e861f8fe6c5"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-operation-followup-live.json",
+          "sha256": "993afdcd5f45a4b06cdd5edd45295019ca466398ce0e88796b87d54cde1325cb"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-operation-followup-live.md",
+          "sha256": "e77f667b3f51fa05ca799aac7c101d8c76b5ca724862c177e6aa836dddafaaf0"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-provider-schema-diagnosis.md",
+          "sha256": "1c71258d8290d6758452e9b1da71c29c0e135ee035e4f7d0e07b961376b46a26"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-reliability-post-guidance-live.json",
+          "sha256": "a59b3fa4bf8ffd4b784d4cf107f2a5554c12f336be9723e0e41f10ab4b3f2097"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-reliability-post-guidance-live.md",
+          "sha256": "e700604b746a8b1e11d7163e44bab0f0503460e22932fb41822e1173e3de9dec"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-timeout-controlled-baseline.json",
+          "sha256": "2808012d32a05041c364f1dec9ad3e11712aedf0fd6900cc1e7dd2764f005958"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-timeout-controlled-baseline.md",
+          "sha256": "25b21a120a63512b7cdd2b521539950ae09f189ff56cad2ac315d453058f1734"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/post-live-verification.json",
+          "sha256": "676fff42c4841b2d593712c938aaaeeda30bd3948683a2b70b61678d14cc4a14"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/pre-live-fingerprints.json",
+          "sha256": "89644b169568b12465c5d8526c3c945e23604cfaa6a78ff4fad43060e17472e2"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/semantic-wire-format-targeted-live.json",
+          "sha256": "2b50c9726a302bf86355cb4034739134587b03c3c578ac5075de158bb0d2490c"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/semantic-wire-format-targeted-live.md",
+          "sha256": "a0b9213ea99a7bea02dd5896b4defd38b23a6c48fef65f07fc0ce886f34fa673"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-checkpoint.md",
+          "sha256": "d92b4048002d75c5cc17644947c4f2a89a03686f824143fba61c2102200058ce"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-local-checkpoint.md",
+          "sha256": "dc4f8f2a7f6813d128eb7891a341e4a0507ee6c8d7c900d77d985dc53f4cd717"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-protected-hashes.json",
+          "sha256": "dba02105671fed2e170daf099094b7ee2962331e11b8d67260a6650ade5fe758"
+        },
+        {
+          "path": "tests/evaluation/singapore/authority-relief-targeted.json",
+          "sha256": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb"
+        },
+        {
+          "path": "tests/evaluation/singapore/consolidation-source-map.json",
+          "sha256": "9400817641c8ee00ead1c71de28e9d0e9f5a3fde775ad560b0d2362e4a431bec"
+        },
+        {
+          "path": "tests/evaluation/singapore/gemini-seed.json",
+          "sha256": "896be8815f59ec6bdd64306eea5ebe4efdb2dba12b8cde5ca5470b9788d1393d"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-answer-e2e-review.md",
+          "sha256": "e0c2947af1016e188cf5cf4d4c5d38d775ee08a07e5bf4c00ba8e471f4ab050f"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-answer-e2e.json",
+          "sha256": "c957096c65b690e2852c64eb4b8fb08ffa46bdd174a98aeb0169fa867620227c"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-first-evaluation-config-v1.json",
+          "sha256": "c8e5341ef4fc0962b82f6545622d8a9e790d73b5d646de4af3381f37ed2f2ed4"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-first-evaluation-config-v2.json",
+          "sha256": "0128d2643a3f5278c73070ed33a5b6053ccb68bf3edbb0396cc407b75545f4bf"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-source-map.json",
+          "sha256": "ac8b4aff5e5796219d7d2a132e1871157e82d1b769056fd563c8e55228b79027"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-unseen-live.json",
+          "sha256": "2d225fb945d1fb34a62c7cf29b34647eb1c25d9fd220045a6002dd0371c4bb0c"
+        },
+        {
+          "path": "tests/evaluation/singapore/multi-authority-workstreams-corrected.json",
+          "sha256": "c15aa10f9acff1e805c16d4ef703707dd46a5b1c36b0a2f23ab3886d88a390cb"
+        },
+        {
+          "path": "tests/evaluation/singapore/multi-authority-workstreams-heldout.json",
+          "sha256": "297d1999dd24899833819cc0b7ee803f0680fdca9c0e35c6088a8e0e234e1c35"
+        },
+        {
+          "path": "tests/evaluation/singapore/multi-authority-workstreams-live.json",
+          "sha256": "92d54edad671d537cd4c38467a49663fcef3e5463ac79d14f81450dcb7de1b18"
+        },
+        {
+          "path": "tests/evaluation/singapore/multi-authority-workstreams.json",
+          "sha256": "ef71d58687e8b13be55ce1b07e5c0cc32458c3cd52bc511ab396f4c3058face1"
+        },
+        {
+          "path": "tests/evaluation/singapore/reviewed-knowledge.json",
+          "sha256": "8ffbf724b5e3a694f07decd73c70901d7e3b2adc6f633530e459b9573e337190"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-contract-followup.json",
+          "sha256": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-intent-boundaries.json",
+          "sha256": "139d418fb06820d34270c1499fbf825a3f19699121620f1a1df1f1198ba9f71a"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-operation-followup.json",
+          "sha256": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-question-adversarial.json",
+          "sha256": "1916e93a6b25354f194aa3f52833bebb7225cb3dd45863b0ee10cf67a8b43c81"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-question-heldout.json",
+          "sha256": "8b33031fdedd731654cf4e07596a2388f751815bd7267ad5c05aac40429aaddd"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-reliability-post-guidance.json",
+          "sha256": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6"
+        }
+      ],
+      "pinnedV3AndBaseline": [
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v3/iras-mapped-source-diagnostic-v3.json",
+          "sha256": "09c99fb5023807d186661d203a04e463f0f5a0dd14ef2ecda1a16f3fc624f075"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v3/iras-mapped-source-plan-v3.json",
+          "sha256": "a78c70a5805361dfc645230537fb01c66b1303451c37a7ee533c6307315011fe"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v3/measurement-source-fingerprints-v3.json",
+          "sha256": "360638d0ea3b7cbdcc76202c6b8f9ad22835670ca8f58a56e10d1569b6208316"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v3/supervisor-final-report.md",
+          "sha256": "60c23a22906bdc96853e8de53708200d883e8df8ca5d62dbc4466cdbc80becf8"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v4/iras-mapped-evidence-diagnostic-v4.json",
+          "sha256": "83326fd559eb2e72f465587033f5d829cb594341dfd985c78cec31a6a432c2f9"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v4/iras-mapped-evidence-live-v4-consumed.json",
+          "sha256": "9d5131e0b4ad7afc176274f63020bbe9c46c0644532f4abbd17b8b1a3d6353b2"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v4/iras-mapped-evidence-plan-v4.json",
+          "sha256": "c881761866a4ccb04ad6763a17496ecd23ab588e14f1930986d453a9dad04a4b"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v4/supervisor-observations.md",
+          "sha256": "0121ac9bd60b910688cbd3351353d948c7e14ddb7ee5d50a6eb7db2694e02bc9"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v5/independent-audit.md",
+          "sha256": "e26176bd07c87f494b9b37b8a71f54f5e5a521d2b44404da5e9b8c802338c2ff"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v5/iras-mapped-evidence-diagnostic-v5.json",
+          "sha256": "1a3e0cc1d2d5f2c88f36dc8d30a7922b1b8a8b2630b0bfb4c7673808094c72ee"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v5/iras-mapped-evidence-live-v5-consumed.json",
+          "sha256": "4ddcd82124e32b2f725ef808765630fdcbce8533e6fabc92f1d70adcfef92454"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v5/iras-mapped-evidence-plan-v5.json",
+          "sha256": "c2c0db73c7a87dc193c06c0d495703b5c9156a3194c372eded284de9b26f62f7"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v5/supervisor-observations.md",
+          "sha256": "013fa394abbd5064cd4aef27402a2ba1592a8dc9fe63458fd312260dd74de9b4"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/continuation-checkpoint.md",
+          "sha256": "6cab2cdc9151ce915e1b9a3360665a1300a4d633e3658e03ab288395b66ba15e"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/diagnose-foreign-gst-final-filters-v1.mjs",
+          "sha256": "6c8ebafb18cd86125bbbb487eacd3bf71679747d5ec65ef22071812f7d7921fa"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/diagnose-private-wht-source-phrase-v1.mjs",
+          "sha256": "7621693a525438889f7e4e2d44198a56383f5d91a46177150a4d5720204c4e23"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/evidence-failure-matrix.md",
+          "sha256": "8b3ce9630f8587c07f68c9975b64c92d19f319d223893ae6a18997eddc27fdb5"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/foreign-gst-central-filter-diagnostic-v1.json",
+          "sha256": "34dcc9c03c9e373084425157005f39459f4bf0dff87d348b63c0724326972b75"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/local-evidence-fixtures.json",
+          "sha256": "cf4893aedfbe94f492d9d2291aabab9a0180d4cecd9e3eec9bc1c41d970fb105"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/local-validation-and-review.md",
+          "sha256": "76a0aae68cc5f0b1be8de605da6be5f804967d5c963a1cc5b7611df5a6d1610b"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/private-wht-source-phrase-diagnostic-v1.json",
+          "sha256": "cdb54ce0829d8c4b2d13096222a0a879ae668f7b451407f125722eaf5010cfc1"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/residency-diagnostic-design.md",
+          "sha256": "31c4dae7141ba764e62f8f61b389d32d0a3326c75ae28ee9ce62097e5c138014"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/semantic-residency-subject-diagnostic-v4-live-consumed.json",
+          "sha256": "dbb5359fd4c53ee4b67ee5c8d9580b422b63180a033166374e5176d4af43aa03"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/semantic-residency-subject-diagnostic-v4-preregistration.json",
+          "sha256": "a731c79cc2e38c696282e64dbff73f014174c00699e5bd195fee388fa7ada83a"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/semantic-residency-subject-diagnostic-v4.json",
+          "sha256": "5c5ff3ca80837acbae91712c13575bca933c057e96860e9259b8f17c407e0ee2"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/semantic-residency-subject-diagnostic-v4.md",
+          "sha256": "fb8f030d86ad6dab6cb22f5e182d44d3ba297493531b4b023ae96720bf2f8d4f"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/synthetic-stage-trace-after-approved-fixes-v1.json",
+          "sha256": "b2234f5596efbc3280dc719b0c202976ee582dc1ec1bf6b84941e8abf2c137f7"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/synthetic-stage-trace-after-approved-fixes-v2.json",
+          "sha256": "bb59e8af0deee6fd47408d77f328cf5b66e9ce1168048cb56fa5660cdae9e30d"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/synthetic-stage-trace-baseline-v2.json",
+          "sha256": "17f49deb1906d2117f60e65a933636f63a88ded87f4ae6961e07410c17c7add9"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/synthetic-stage-trace-baseline-v3.json",
+          "sha256": "4175cecb9712eaf64eaf25fca57db596f8da13c72dafb4f04b40a6601d99f9fe"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/synthetic-stage-trace-v1.json",
+          "sha256": "9001ec6d129bd8dfeb084d47cd08cb4e124279e5300419d34f093951897f8fa8"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/test-local-evidence-stages.mjs",
+          "sha256": "68894d3c93bf9fb30c5f62c041128d0380bd6f5ce2d73a6b30e9fe58efb2d475"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v4.mjs",
+          "sha256": "e2a34bcc8ab8cb847d6fad3214165a4ffab926b8729259535b30fdf3068fc759"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v5.mjs",
+          "sha256": "47c687a5d3bcb5aab3e1fd34682251cb0fc960f1968a022e477a9602d335eaad"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-mapped-source-diagnostic-v3.mjs",
+          "sha256": "7856e454cfcade1a1440a5618efa4943e1dbce3ddd954e50c84b7a8bcafa1fb2"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-residency-subject-diagnostic-v4-config.json",
+          "sha256": "3e8a9152fbd5a5f4b4c1af8954f055ea600901ecec19a95c3f116c8e6a189936"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-residency-subject-diagnostic-v4-runner.mjs",
+          "sha256": "5ff291519d36ff046a428173142643d7edee6b9dd1fc1cc2f8e0be08d3df2840"
+        },
+        {
+          "path": "tests/evaluation/singapore/semantic-residency-subject-diagnostic-v4.mjs",
+          "sha256": "26e3424fcdf4fc76b57c5913e1ea6e8bed23411927b2dd524b2c61bd5ed3fc9f"
+        },
+        {
+          "path": "tests/fixtures/irasResolverCases.mjs",
+          "sha256": "3f7b1d8f4e7af1bda05bb017b589b71fec8a65f95fbfde67350876d5af32e2f6"
+        },
+        {
+          "path": "tests/regression/test_iras_mapped_evidence_diagnostic_v4.mjs",
+          "sha256": "c3a1567019d90e994cd12220d69d9ed2cdbde07a5da39a45ecf5a553dde0d26a"
+        },
+        {
+          "path": "tests/regression/test_iras_mapped_evidence_diagnostic_v5.mjs",
+          "sha256": "cabbfeb2ca25b832a594892a15ca0606ebb160533ff1062c58eeea30b0436597"
+        },
+        {
+          "path": "tests/regression/test_semantic_residency_subject_diagnostic_v4.mjs",
+          "sha256": "b14888ce0e8e23536b8cc98043d6e76760c4e3644f367a9f3d0164e38ba6a608"
+        }
+      ],
+      "additionalImmutableHistory": [
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v6/iras-mapped-evidence-diagnostic-v6.json",
+          "sha256": "32e4f04966e37e969fd192b533c5596f9543d3cb6c5a06ef427c0426175cc244"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v6/iras-mapped-evidence-live-v6-consumed.json",
+          "sha256": "394f1886b6fe96244cc4e7eba619895dd4d0cfa7d2640e3e8017f511d139e1ae"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v6/iras-mapped-evidence-plan-v6.json",
+          "sha256": "b924f7196ba16bb4647a9b4685be45ba9e1cc4636d4510870d451ce9e50952ab"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v6/supervisor-observations.md",
+          "sha256": "fda72d6551d141015fd04cf9c0e39953fd1fd80a3edfda0a25e412b0721d5026"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v7/iras-mapped-evidence-diagnostic-v7.json",
+          "sha256": "5e3376aac1af5338e483ea94fbbc7a4ff904196b25d64b4c94f72ef668f85702"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v7/iras-mapped-evidence-live-v7-consumed.json",
+          "sha256": "cc8c574025b895658a086347df54631e861bc4e24d177a5cc91eba18d0842df4"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v7/iras-mapped-evidence-plan-v7.json",
+          "sha256": "1572d83332a71e0eaddcd198fdcb9611fc275de48f45f0065f5a11faaa4d7987"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v7/supervisor-observations.md",
+          "sha256": "a3dddd095ecb977e15cce13df1c193d7c13a01751b48e39d9a9b65428d492e4d"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v6/source-only-quote-selection-probe-v1.json",
+          "sha256": "b29f45fe6c960336f7b835a951d318b4470028fd9c84bdc43255398f8ddf1cc1"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v6/wht-public-coverage-probe-v1.json",
+          "sha256": "960b1b762330726cbe8334aee2f380bd6b0f008b5c9ad299a3e96318e6750420"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v1/iras-public-rule-excerpts-live-consumed-v1.json",
+          "sha256": "14be2314801cba94b183d4e5cab9bc476dc1c3f4da918ad0005839d212cafc29"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v1/iras-public-rule-excerpts-plan-v1.json",
+          "sha256": "ebd5f103fe907614238de60c80792ff10690089dd26a994d5541ed7e7719b3cb"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v1/iras-public-rule-excerpts-report-v1.json",
+          "sha256": "f3fd15c221194d8a686c8f095d65e9f4de0ba269c4be5ccbf329cb4fae9b31e0"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v1/supervisor-observations.md",
+          "sha256": "2cdabd630557fae9055710a64d7a4fb399b354bbffbf02f588fd06da770a3c1d"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v2/iras-public-rule-excerpts-live-consumed-v2.json",
+          "sha256": "fe324417f3b1036dfcdf38d762647f93e3556d05fb5c50bfbc3bc9e8581319b2"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v2/iras-public-rule-excerpts-plan-v2.json",
+          "sha256": "c8adb9f51cef8166b37691364e5d91471c52294fbba854918d6fee76da0e9ce9"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v2/iras-public-rule-excerpts-report-v2.json",
+          "sha256": "710ed027a11b5583a136960e15115001f4bf50c5ca4e54995b46bfa6e69f481c"
+        },
+        {
+          "path": "docs/evaluation/multi-authority-workstreams/iras-public-excerpts-2026-10-03-v2/supervisor-observations.md",
+          "sha256": "16e3159af4ac5961bdd8838c9642c464684416d0f1597c0b6ea471ea7e79ec85"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v6.mjs",
+          "sha256": "2d00397e8188232542354cb54ba6fd6d086bfb10d31a9f2b7d310151efddf924"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v7.mjs",
+          "sha256": "da970470f7d43b10df64d0a2ae7be191b86ceab8fed547eb769a2e65cbb85652"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-public-rule-excerpts-v1.mjs",
+          "sha256": "c47b16b3ca631526f3d5a2279591b73977bb048330fef59b62bd464e0287219f"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-public-rule-excerpts-v2.mjs",
+          "sha256": "b286aa31c650cf81ad0e1a18b4f49e82591b98ef4ad7061574163a9f6c94e572"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-source-only-quote-selection-probe-v1.mjs",
+          "sha256": "e65069dfc3df025ea416d779b577a6ffbe0559febdb50616fd099464f859baff"
+        },
+        {
+          "path": "tests/evaluation/singapore/iras-wht-public-coverage-probe-v1.mjs",
+          "sha256": "e166c4fdf8c68be010879b56404f344ec6d0019549b5481b6f4c9b15d7dc7331"
+        },
+        {
+          "path": "tests/regression/test_iras_mapped_evidence_diagnostic_v6.mjs",
+          "sha256": "edac5b6a4ad9116deffaec2ebd03f958aa1993dccc5456c8849ed28a28811da8"
+        },
+        {
+          "path": "tests/regression/test_iras_mapped_evidence_diagnostic_v7.mjs",
+          "sha256": "badafe46bfe7313bd72ab86793f3392c7a1f8b11d887577aef25b472382e34f9"
+        },
+        {
+          "path": "tests/regression/test_iras_public_rule_excerpts_v1.mjs",
+          "sha256": "f337d291b351a12d6f9843f0f565511a7137524cd665677903a95e958586c99b"
+        },
+        {
+          "path": "tests/regression/test_iras_public_rule_excerpts_v2.mjs",
+          "sha256": "4b3f4a978f565133207252894c8b4c6518517e973a7a079b3055ad1884dd8acf"
+        },
+        {
+          "path": "tests/regression/test_iras_wht_overview_topic_binding.mjs",
+          "sha256": "aa050c06eb19c3eeb312b6321345fee6a74201755fb3f6a536c1636bba1edf31"
+        }
+      ]
+    }
+  },
+  "preregistrationSha256": "c5fccaba0a0ecf6ede1a781386c78028a70c91e1f7cf2f94983c6266f9a32b3b"
+}
