@@ -213,6 +213,32 @@ function hasForeignDividendReceiptTaxRule(sourceText: string): boolean {
   });
 }
 
+function hasDefinedForeignIncomeReceiptTaxRule(sourceText: string): boolean {
+  const definition = /^\s*Foreign income refers to income derived from outside Singapore\.?\s*$/i;
+  const generalTaxRule = /^\s*Generally, such income is taxable in Singapore when remitted to and received in Singapore\.?\s*$/i;
+  const tradeBusinessQualification = /^\s*Where the foreign income arises from a trade or business carried on in Singapore, it is taxable in Singapore upon accrual, regardless of whether it is received in Singapore\.?\s*$/i;
+  const paragraphs = sourceText.normalize('NFC').replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/).map(paragraph => paragraph.trim()).filter(Boolean);
+  const dividend = String.raw`(?:(?:foreign(?:[ -]sourced)?|overseas)\s+)?dividends?`;
+  const ruleReference = String.raw`(?:this|the)\s+(?:(?:general|foreign income)\s+)?(?:definition|rule|category)`;
+  const dividendExclusion = new RegExp([
+    String.raw`\b${dividend}\b[^.!?]{0,40}\b(?:are|is)\s+(?:not\s+(?:included|covered)\s+(?:in|under|by)|(?!(?:not|never)\b)(?:expressly\s+)?excluded\s+(?:from|in|under|by))\s+${ruleReference}\b`,
+    String.raw`\b${ruleReference}[^.!?]{0,45}\b(?:expressly\s+)?(?:excludes?|does\s+not\s+(?:include|cover)|doesn't\s+(?:include|cover))\b[^.!?]{0,25}\b${dividend}\b`,
+    String.raw`\b${dividend}\s+(?:are|is)\s+(?!(?:not|never)\b)(?:expressly\s+)?excluded\b`
+  ].join('|'), 'i');
+  if (dividendExclusion.test(sourceText)) return false;
+
+  return paragraphs.some(paragraph => {
+    // The saved excerpt title may be joined to the paragraph by a renderer,
+    // so discard only that exact title when it appears as a prefix. The three
+    // source sentences themselves must still be the complete paragraph.
+    const paragraphWithoutTitle = paragraph.replace(/^Tax Reliefs on Foreign Income\s+/i, '');
+    const sentences = sentenceParts(paragraphWithoutTitle);
+    return sentences.length === 3 && definition.test(sentences[0]) && generalTaxRule.test(sentences[1]) &&
+      tradeBusinessQualification.test(sentences[2]);
+  });
+}
+
 function hasGstInputTaxClaimRule(sourceText: string): boolean {
   const blockedSpecificException = (text: string) =>
     /\b(?:motor cars?|vehicles?|clubs?|staff medical|medical expenses?|blocked input tax|exceptions?|(?:special|specific|particular) exceptions?|limited restrictions?|only under this exception)\b/i.test(text);
@@ -379,7 +405,8 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
   const requiresNonResident = family === 'ROYALTY_WITHHOLDING_TAX' && hasPhrase(words, ['non', 'resident']);
 
   switch (family) {
-    case 'FOREIGN_DIVIDEND': return hasForeignDividendReceiptTaxRule(input.sourceText);
+    case 'FOREIGN_DIVIDEND': return hasForeignDividendReceiptTaxRule(input.sourceText) ||
+      hasDefinedForeignIncomeReceiptTaxRule(input.sourceText);
     case 'GST_INPUT_TAX': return hasGstInputTaxClaimRule(input.sourceText);
     case 'PRIVATE_EXPENSE_DEDUCTIBILITY': return hasPrivateExpenseDeductibilityRule(input.sourceText);
     case 'ROYALTY_WITHHOLDING_TAX': return hasRoyaltyWithholdingRule(input.sourceText, requiresNonResident);

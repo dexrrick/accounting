@@ -543,9 +543,24 @@ try {
           const quote = claim?.quote;
           const comparison = eligible.find(candidate => candidate.id !== sibling.id && candidate.canonicalSourceUrl === sibling.canonicalSourceUrl &&
             (candidate.contentHash || candidate.documentHash) === (sibling.contentHash || sibling.documentHash));
+          const siblingCapturedDate = sibling.retrievedAt?.slice(0, 10) || '';
+          assert.match(siblingCapturedDate, /^\d{4}-\d{2}-\d{2}$/, 'A live sibling record has a captured calendar date.');
+          const siblingCapturedTimestamp = Date.parse(`${siblingCapturedDate}T00:00:00.000Z`);
+          assert.ok(Number.isFinite(siblingCapturedTimestamp));
+          assert.equal(new Date(siblingCapturedTimestamp).toISOString().slice(0, 10), siblingCapturedDate,
+            'The live sibling capture date is a valid calendar date.');
           const siblingLiteralCheck = quote ? verifyEvidenceClaims([{
             kind: 'RULE', text: quote, quote, recordId: sibling.id
-          }], [sibling], { targetDate: '2026-10-02' }) : undefined;
+          }], [sibling], { targetDate: siblingCapturedDate }) : undefined;
+          if (quote) {
+            const priorDayTargetDate = new Date(siblingCapturedTimestamp - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const priorDaySiblingCheck = verifyEvidenceClaims([{
+              kind: 'RULE', text: quote, quote, recordId: sibling.id
+            }], [sibling], { targetDate: priorDayTargetDate });
+            assert.equal(priorDaySiblingCheck.accepted.length, 0);
+            assert.equal(priorDaySiblingCheck.rejected[0]?.reason, 'LIVE_HISTORICAL_PAGE_SCOPE_UNVERIFIED',
+              'The same captured live page cannot substantiate a prior-day target.');
+          }
           siblingDocumentChecks.push({
             topicId,
             recordId: sibling.id,
