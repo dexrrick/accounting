@@ -31,6 +31,7 @@ const testSuites = [
   { name: 'IRAS Mapped Evidence Diagnostic V4', file: 'test_iras_mapped_evidence_diagnostic_v4.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'IRAS Mapped Evidence Diagnostic V5', file: 'test_iras_mapped_evidence_diagnostic_v5.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'IRAS Mapped Evidence Diagnostic V8', file: 'test_iras_mapped_evidence_diagnostic_v8.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+  { name: 'IRAS Public GST Selection V3', file: 'test_iras_public_gst_selection_v3.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'IRAS Source Term Compatibility', file: 'test_iras_source_term_compatibility.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS General Rule Concept Support', file: 'test_iras_rule_concept_support.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Public Rule Forms', file: 'test_iras_public_rule_forms.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
