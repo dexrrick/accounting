@@ -19,6 +19,7 @@ const testSuites = [
   { name: 'IRAS-First Semantic Contract', file: 'test_iras_first_semantic_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Application-Derived Semantic Specificity', file: 'test_derived_semantic_specificity.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS Natural-Language Topic Resolution', file: 'test_iras_natural_language_resolution.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Factual Conjunction Residual Safety', file: 'test_factual_conjunction_residual.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS V2 Measurement and Timeout Safety', file: 'test_iras_v2_measurement_safety.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Versioned Semantic Question Wire Contract', file: 'test_semantic_wire_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Provider JSON Schema & Wire Contract', file: 'test_semantic_provider_schema.mjs', layer: 'provider-resilience', tier: 'smoke' },

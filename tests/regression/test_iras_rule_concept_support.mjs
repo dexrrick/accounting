@@ -686,14 +686,11 @@ for (const { item, issue, workstreams, requestedConcepts, topicIds, mappedUrlCou
   assert.ok(mappedUrlCount > 0, `${item.id} had a derived set of approved mapped URLs.`);
   if (item.id === 'private-holiday-expense') {
     assert.equal(result.issuePlanOrigin, 'SEMANTIC_ISSUES');
-    assert.equal(result.issuePlanCoverageEstablished, false);
-    assert.equal(result.issuePlanHasUnmappedResidual, true);
-    assert.equal(result.topicInventory.hasUnparsedText, true);
+    assert.equal(result.issuePlanCoverageEstablished, true);
+    assert.equal(result.issuePlanHasUnmappedResidual, false);
+    assert.equal(result.topicInventory.hasUnparsedText, false);
     assert.deepEqual(result.topicInventory.topicIds.sort(), ['iras-cit-deductibility', 'iras-cit-disallowed-expenses']);
-    assert.equal(workstreams.gaps.length, 1);
-    assert.deepEqual(workstreams.gaps.map(gap => ({ issueId: gap.issueId, stage: gap.stage, code: gap.code })), [
-      { issueId: 'issue-plan', stage: 'covered', code: 'ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL' }
-    ]);
+    assert.equal(workstreams.gaps.length, 0);
     assert.equal(result.issuePlanIssues.length, 1);
     assert.equal(result.issuePlanIssues[0].status, 'MAPPED');
   } else {
