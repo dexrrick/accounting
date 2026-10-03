@@ -107,3 +107,43 @@ V2 block 10 retains the general foreign-income definition, Singapore receipt tax
 Current next steps: an API-free foreign-family trace using intact saved units in explicitly synthetic composition; identify the owning boundary before any additional production edit. Separately prepare a prospective V7 five-family harness with reviewed V6 safeguards and all new public captures pinned; no real V7 plan/capture yet. Any foreign fix requires review and necessary validation before live requests. All five NEW bounded evidence families must pass before NEW targeted acceptance; targeted must pass before final. Private global planning residual remains visible. Targeted/final remain unrun; HOLD MERGE; no push/merge/deploy.
 
 Latest measured allowance: **61% five-hour / 47% weekly remaining**. User reserves remain 7% / 3%; finish a safe checkpoint with a larger buffer instead of launching an optional large cycle near those limits. Agent work is currently active on the two API-free diagnostics; inspect status on resume.
+
+## Latest validated production and V7 audit — authoritative 03/10/2026 report
+
+This section supersedes prior current-state/next-step claims. Historical captures and reports remain immutable. Branch `codex/multi-authority-workstreams`; HOLD MERGE; no push, merge or deploy. User reserves remain 7% five-hour / 3% weekly; check shared allowance before resuming.
+
+1. **Five gap diagnoses.** New V7 establishes private and residency evidence success. Foreign/GST admitted retained text supports the requested rule, but selected literal quotes do not. WHT retains one supporting claim but required coverage remains incomplete. No exact missing wording or WHT root is inferred from presence projections.
+
+2. **First failing stages.** V7 foreign/GST: requested-concept support after quote selection/literal acceptance. WHT: required sibling scope map still TOPIC_MISMATCH; final topic/concept coverage is incomplete despite one supporting claim. Private application/global planning residual remains separate. Residency has no recorded evidence blocker.
+
+3. **Evidence matcher.** Validated foreign parent-rule path requires the exact saved unrestricted foreign-income definition, immediately linked Singapore receipt taxability, and complete trade/business accrual qualification, as the entire three-sentence paragraph. Only the exact saved title may be discarded as a renderer prefix. Separate-paragraph dividend exclusions/noncoverage block support. Existing direct-dividend path and other family matchers are preserved.
+
+4. **Claim verification.** Literal verifier and provenance/date/sibling safeguards are unchanged. UTC date rollover exposed an existing regression's historical target for a current synthetic snapshot; the test now verifies on the validated captured date and explicitly requires prior-day rejection with LIVE_HISTORICAL_PAGE_SCOPE_UNVERIFIED. No production date weakening.
+
+5. **Domain/topic normalization.** One public source-facing paragraph hint was added to the existing foreign-income topic. Keywords, query patterns, aliases, source-map IDs and classification selection remain unchanged. The hint also becomes the existing live candidate's paragraphOrSection label; it is actual public body wording, not an invented paragraph number.
+
+6. **Residency diagnosis.** Historical six-call V4 diagnostic remains untouched. New V7 has three verified claims and VERIFIED evidence/application NOT_REQUIRED. No new model calls or retrospective subject rescoring.
+
+7. **Subject matcher.** Prospective bounded residency synonym scoring remains as previously approved. Foreign parent guidance is conditional source law, not proof that an overseas subsidiary's dividend is foreign-sourced; origin/application remains UNRESOLVED. Prompts, model, routing and 8-second semantic timeout are unchanged.
+
+8. **Negative controls.** Foreign regression covers missing/restricted/negated definition, broken antecedent, missing/negated qualification, same- and separate-paragraph exclusions, material-specific requests and no origin inference. Both reviewer counterexamples are false. Earlier public private/WHT, scoped evidence, wrong-domain, sibling and privacy controls remain green in smoke/full.
+
+9. **Rule/application separation.** V7 private VERIFIED/UNRESOLVED; foreign INSUFFICIENT/UNRESOLVED; residency VERIFIED/NOT_REQUIRED; WHT and GST INSUFFICIENT/NOT_REQUIRED. Private overall INSUFFICIENT is not erased by rule success. The known global ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL is not bypassed.
+
+10. **Files changed in the production cycle.** `src/retrieval/irasRuleConceptSupport.ts`, `src/standards/coverageRegistry.ts`, `scripts/run_all_tests.mjs`, new `tests/regression/test_iras_foreign_defined_income_rule.mjs`, and date-only correction in `tests/regression/test_iras_rule_concept_support.mjs`. Prospective V7 harness/regression and its new plan/report/marker/observations are separate evaluation artifacts. No accounting parser/arithmetic/UI change.
+
+11. **Tests.** New foreign regression is registered once in smoke. It uses intact saved public units in explicitly synthetic composition, including an unchanged frozen overseas-subsidiary request and closed injected transport. Final rule VERIFIED with complete qualification, no exemption-opening claim, no evidence gaps and application UNRESOLVED. Frozen pre-fix probe/report remains unchanged and must not be rerun against repaired production.
+
+12. **Validation.** Final lint/build PASS with inherited warnings; changed-file lint clean; diff check PASS. Smoke **79/79**, 54.27s; full **99/99**, 115.30s. Initial smoke 77/79 exposed the date test and an unsettled-await routing test; date cause was corrected/reviewed, routing passed narrow rerun unchanged, then final smoke/full both passed. Logs in system temp: `accounting-foreign-defined-final-{lint,build,full}.log` and `accounting-foreign-defined-final-smoke-r2.log`. No additional full run needed for documentation/API-free diagnostic additions unless production changes.
+
+13. **New V7 live.** Same five frozen cases/eight mapped pages; preregistration hash `b396c480292cb9ba6c0df19cc14b649c0f6eaadd3be71ebe77e9c918a6084363`, committed before GETs. Eight GETs all HTTP 200, sixteen cache reuses, zero model/search/discovery/retry/policy rejection; cap16. Independent audit: all **212** fingerprints match (26 current,186 historical), envelope/report/marker agree, marker timestamp precedes first GET. Literal accepted counts private/foreign/residency/WHT/GST **5/3/3/5/4**, zero rejected. Final claims **2/0/3/1/0**. Permanently consumed; never rerun or overwrite. See `../iras-first-live-2026-10-02-v7/supervisor-observations.md` for bounds and limitations.
+
+14. **Targeted acceptance.** NOT RUN. Three new bounded rule evidence families remain insufficient. Do not launch targeted model acceptance before all five pass; preserve private global planning residual explicitly.
+
+15. **Final profile.** NOT RUN; requires fully passing NEW targeted acceptance. Original historical final-ten and all V1–V7/public V1/V2 captures are preserved.
+
+16. **Reviewer verdict.** Foreign production, exclusion repair and date-only test correction independently approved with no remaining material findings. V7 preregistration-ready harness and actual capture audit approved. Artifact integrity is not release/evidence sufficiency approval. All52 presence projections satisfy schema/bounds; four WHT reported-block projections truncate at32, no input/scan truncation. Presence cannot prove entailment, source completeness or eligibility.
+
+17. **Exact checkpoints.** Current validated production **`f09202f6383e1220d9bcd475276b8c9c5c971619`**; V7 harness `00a046b`; plan `c11b936`; audited capture **`1bb835451c536eeab6bf397f2126f1c05e7dadb3`**. Earlier validated private/WHT baseline `080bcf29da25a479d2a3947ad9efcd97963056c5`; fallback baseline `92dc97de2704bcdc3095df839af8b0abfadf0225`. Final continuation SHA is reported separately to avoid self-reference.
+
+18. **Recommendation.** HOLD MERGE. Preserve all source, literal, scoped coverage, application and privacy gates. Current bounded next work is API-free source-derived quote-selection diagnosis for foreign/GST and independent WHT coverage diagnosis, not a new source/model request or production patch. New probes are in progress; inspect their actual files/results/review status before relying on them. Any future fix requires an owning-layer proof, independent review, necessary validation and separately preregistered capture; never replace consumed V7.
