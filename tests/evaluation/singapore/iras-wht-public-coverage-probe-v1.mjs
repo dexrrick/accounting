@@ -283,9 +283,9 @@ export async function runWhtPublicCoverageProbe() {
     const syntheticTransportSnapshot = transport.snapshot();
     assert.equal(syntheticTransportSnapshot.actualGetCount, syntheticFetchCounts.size,
       'Synthetic mapped transport unexpectedly bypassed its response stub');
-    assert.ok(renderConceptSupport.some(item => item.supportedByOverview),
-      'Saved public overview block must support the bounded requested WHT concept');
-    assert.ok(finalVerifiedHelperSupport.some(item => item.conceptSupported),
+    assert.equal(ambientFetchAttempts, 0,
+      'No ambient fetch attempts are allowed outside the synthetic mapped transport');
+    assert.equal(finalVerifiedHelperSupport.filter(item => item.conceptSupported).length, 1,
       'The final retained public quotation must retain WHT concept support');
     assert.ok(uncoveredFinalTopicIds.includes('iras-withholding-tax-interest-royalties'),
       'Final retained claim must leave the requested interest-and-royalties topic uncovered');
@@ -311,18 +311,13 @@ export async function runWhtPublicCoverageProbe() {
         conceptIds: issuePlan.requestedConcepts.map(concept => concept.id).sort()
       },
       bounds: {
-        modelRequests: 0,
-        searchRequests: 0,
-        discoveryRequests: 0,
         fetchTimeoutMs: FETCH_TIMEOUT_MS,
         syntheticTransportCalls: transportSnapshot.actualGetCount,
         mapUrlCount: canonicalUrls.length,
-        externalNetworkRequests: 0,
         discoveryAdapterInvocations: adapterCounters.discoveryInvocations,
         searchAdapterInvocations: adapterCounters.searchInvocations,
         closedMapIds,
-        ambientFetchAttempts,
-        discoveryAdaptersClosed: true
+        ambientFetchAttempts
       },
       direct: {
         candidateCount: fallback.records.length,
@@ -363,10 +358,9 @@ export async function runWhtPublicCoverageProbe() {
         uncoveredRequestTopics: issuePlan.topicIds.filter(topicId => !finalTopicBindings.some(flags => flags[topicId]))
       },
       conclusion: {
-        conceptSupportPresent: renderConceptSupport.some(item => item.supportedByOverview),
-        requestedTopicBindingMissing: issuePlan.topicIds.some(topicId => !overviewBoundTopicIds.includes(topicId)) &&
-          uncoveredFinalTopicIds.length > 0,
-        unrelatedBindingCannotBorrowConceptSupport: finalVerifiedHelperSupport.some(item => item.conceptSupported) &&
+        conceptSupportPresent: finalVerifiedHelperSupport.some(item => item.conceptSupported),
+        requestedTopicBindingMissing: uncoveredFinalTopicIds.length > 0,
+        supportedFinalClaimLeavesRequestedTopicUncovered: finalVerifiedHelperSupport.some(item => item.conceptSupported) &&
           uncoveredFinalTopicIds.length > 0 &&
           (runtimeIssue.gaps || []).some(gap => gap.code === 'ISSUE_CONCEPT_UNCOVERED'),
         missingTopicIds: uncoveredFinalTopicIds

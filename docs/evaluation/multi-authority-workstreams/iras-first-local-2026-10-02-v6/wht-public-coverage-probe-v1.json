@@ -26,18 +26,16 @@
     ]
   },
   "bounds": {
-    "modelRequests": 0,
-    "searchRequests": 0,
-    "discoveryRequests": 0,
     "fetchTimeoutMs": 10000,
-    "actualGetCount": 3,
+    "syntheticTransportCalls": 3,
     "mapUrlCount": 3,
+    "discoveryAdapterInvocations": 3,
+    "searchAdapterInvocations": 3,
     "closedMapIds": [
       "IRAS_WHT_RATES_SOURCE_MAP",
       "IRAS_WHT_SCOPE_SOURCE_MAP"
     ],
-    "ambientFetchAttempted": false,
-    "discoveryAdaptersClosed": true
+    "ambientFetchAttempts": 0
   },
   "direct": {
     "candidateCount": 1,
@@ -47,10 +45,17 @@
       "semantic_general_singapore_withholding_tax_rules_for_comp": true
     },
     "boundTopicIds": [
-      "iras-withholding-tax",
+      "iras-withholding-tax"
+    ],
+    "unboundRequestedTopicIds": [
       "iras-withholding-tax-interest-royalties"
     ],
-    "unboundRequestedTopicIds": []
+    "overviewRecordTopicBindingFlags": [
+      {
+        "iras-withholding-tax": true,
+        "iras-withholding-tax-interest-royalties": false
+      }
+    ]
   },
   "renderer": {
     "acceptedClaimCount": 3,
@@ -109,8 +114,10 @@
   },
   "conclusion": {
     "conceptSupportPresent": true,
-    "requestedTopicBindingMissing": false,
-    "unrelatedBindingCannotBorrowConceptSupport": false,
-    "missingTopicIds": []
+    "requestedTopicBindingMissing": true,
+    "supportedFinalClaimLeavesRequestedTopicUncovered": true,
+    "missingTopicIds": [
+      "iras-withholding-tax-interest-royalties"
+    ]
   }
 }
