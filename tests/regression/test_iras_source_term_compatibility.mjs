@@ -226,10 +226,18 @@ try {
   const admittedTable = await runMappedTableProbe();
   const royaltyTopicSuccesses = admittedTable.context.sourceMapFallbackTrace?.attempts.filter(attempt =>
     attempt.topicId === 'iras-withholding-tax-interest-royalties' && attempt.fetchStatus === 'SUCCESS') || [];
-  assert.equal(royaltyTopicSuccesses.length, 2,
-    'the split heading/table phrase admits both mapped royalty-topic pages for downstream excerpt checks');
+  const expectedRoyaltyTopicSuccessMapIds = [
+    'IRAS_WHT_RATES_SOURCE_MAP',
+    'IRAS_WHT_SCOPE_SOURCE_MAP',
+    'IRAS_WHT_OVERVIEW_SOURCE_MAP'
+  ];
+  assert.equal(royaltyTopicSuccesses.length, expectedRoyaltyTopicSuccessMapIds.length,
+    'the split heading/table phrase admits the reviewed royalty-topic maps for compatibility checks');
+  assert.deepEqual(royaltyTopicSuccesses.map(attempt => attempt.sourceMapId).sort(),
+    [...expectedRoyaltyTopicSuccessMapIds].sort(),
+    'the exact successful map set reflects the overview topic association without asserting tax-rule support');
   assert.ok(admittedTable.context.evidenceQuality?.eligibleRecords.length > 0);
-  // This fixture establishes compatibility/admission only; it asserts no tax rate or verified rule.
+  // These synthetic successes establish compatibility/admission only; they assert no supported rate or verified tax rule.
 
   const unrelated = await runMappedTableProbe({ unrelated: true });
   assert.equal(unrelated.context.sourceMapFallbackTrace?.attempts.some(attempt => attempt.fetchStatus === 'SUCCESS'), false,

@@ -284,7 +284,7 @@ export const IRAS_SOURCE_MAP_DEFINITIONS: readonly IrasSourceMapDefinition[] = [
   irasSourceMap('IRAS_WHT_SCOPE_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-withholding-tax', 'iras-withholding-tax-management-fees', 'iras-withholding-tax-interest-royalties'],
     'https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax',
     'Payments that are subject to withholding tax', 'withholding-tax', 'IRAS guidance on payment categories that may trigger withholding tax for non-resident companies.'),
-  irasSourceMap('IRAS_WHT_OVERVIEW_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-withholding-tax'],
+  irasSourceMap('IRAS_WHT_OVERVIEW_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-withholding-tax', 'iras-withholding-tax-interest-royalties'],
     'https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)',
     'Overview of Withholding Tax (WHT)', 'withholding-tax', 'IRAS overview of payer and non-resident recipient obligations, filing and payment.'),
   irasSourceMap('IRAS_WHT_DUE_DATE_SOURCE_MAP', 'IRAS_CORPORATE_TAX', ['iras-wht-deemed-payment-date', 'iras-wht-filing-payment-due-date', 'iras-wht-treaty-relief'],
