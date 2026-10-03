@@ -1,0 +1,423 @@
+{
+  "protocol": "API_FREE_LOCAL_CONTRACT_DIAGNOSTIC",
+  "profile": "iras-first-targeted-acceptance-v3",
+  "referenceDate": "2026-10-03",
+  "rawFrozenProviderSubjectsAndClaimsRetained": false,
+  "note": "This report reruns only deterministic local evidence functions using fixture query text and frozen route/topic expectations. It does not reconstruct unretained provider subjects. localOnly=true suppresses mapped source/network fallback; no provider, fetch, harness, or consumed artifact is called.",
+  "cases": [
+    {
+      "caseId": "private-expense-treatment",
+      "query": "Our Singapore company paid SGD 900 for the director's private holiday and recorded it as travel expense. What is its corporate income-tax treatment?",
+      "syntheticIssueScope": {
+        "id": "company-private-expense-tax-treatment",
+        "subject": "corporate income-tax treatment of company expense for director private holiday",
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ]
+      },
+      "requestedConcepts": [],
+      "localOnly": true,
+      "evidenceQuality": {
+        "status": "LIMITED",
+        "candidateIds": [
+          "ITA_SEC14_GENERAL_DEDUCTION",
+          "ITA_SEC15_1_K_MOTOR_CAR",
+          "ITA_SEC15_PROHIBITED_DEDUCTIONS"
+        ],
+        "eligibleRecords": [
+          {
+            "id": "ITA_SEC14_GENERAL_DEDUCTION",
+            "authority": "IRAS",
+            "sourceAuthority": "AGC",
+            "domain": "IRAS_TAX",
+            "provenance": "LOCAL_STATIC",
+            "sourceStatus": "VERIFIED",
+            "lifecycleState": "ACTIVE",
+            "verificationMethod": "STATUTORY_LEGISLATION_AUDIT",
+            "sourceType": "AUTHORITATIVE_SOURCE",
+            "evidenceTier": "PRIMARY_SOURCE",
+            "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-",
+            "tags": [
+              "tax deduction",
+              "deductible expenses",
+              "section 14",
+              "business expenses",
+              "p&l deduction"
+            ],
+            "sourceText": "For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income."
+          },
+          {
+            "id": "ITA_SEC15_1_K_MOTOR_CAR",
+            "authority": "IRAS",
+            "sourceAuthority": "AGC",
+            "domain": "IRAS_TAX",
+            "provenance": "LOCAL_STATIC",
+            "sourceStatus": "VERIFIED",
+            "lifecycleState": "ACTIVE",
+            "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+            "sourceType": "CURATED_SUMMARY",
+            "evidenceTier": "OFFICIAL_GUIDANCE",
+            "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+            "tags": [
+              "car expenses",
+              "passenger car",
+              "motor car",
+              "s-plate",
+              "car depreciation",
+              "section 15(1)(k)"
+            ],
+            "sourceText": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available."
+          },
+          {
+            "id": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+            "authority": "IRAS",
+            "sourceAuthority": "AGC",
+            "domain": "IRAS_TAX",
+            "provenance": "LOCAL_STATIC",
+            "sourceStatus": "VERIFIED",
+            "lifecycleState": "ACTIVE",
+            "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+            "sourceType": "CURATED_SUMMARY",
+            "evidenceTier": "CURATED_SUMMARY",
+            "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+            "tags": [
+              "non-deductible",
+              "prohibited expenses",
+              "section 15",
+              "add-back"
+            ],
+            "sourceText": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+          }
+        ],
+        "rejectedRecords": [],
+        "coveredTopicIds": [
+          "iras-cit-disallowed-expenses",
+          "iras-cit-deductibility"
+        ],
+        "uncoveredTopicIds": [
+          "iras-authority-query-our-singapore-company-paid-sgd-900-for-the-direc"
+        ],
+        "coveredConcepts": [],
+        "uncoveredConcepts": []
+      },
+      "suggestedClaims": [
+        {
+          "kind": "RULE",
+          "text": "For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income.",
+          "quote": "For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income.",
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION"
+        },
+        {
+          "kind": "RULE",
+          "text": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available.",
+          "quote": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available.",
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR"
+        },
+        {
+          "kind": "RULE",
+          "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+          "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS"
+        }
+      ],
+      "initialLiteralRejections": [],
+      "secondPassQuality": {
+        "status": "LOCAL_SUFFICIENT",
+        "eligibleRecordIds": [
+          "ITA_SEC14_GENERAL_DEDUCTION",
+          "ITA_SEC15_1_K_MOTOR_CAR",
+          "ITA_SEC15_PROHIBITED_DEDUCTIONS"
+        ],
+        "rejectedRecords": [],
+        "coveredTopicIds": [
+          "iras-cit-disallowed-expenses",
+          "iras-cit-deductibility"
+        ],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      "secondLiteralAccepted": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "text": "For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income.",
+          "quote": "For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income."
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "text": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available.",
+          "quote": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available."
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+          "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+        }
+      ],
+      "secondLiteralRejected": [],
+      "postfilterSupportDiagnostics": [
+        {
+          "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+          "quote": "For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income.",
+          "topicChecks": [
+            {
+              "topicId": "iras-cit-deductibility",
+              "topicBound": true,
+              "generalRuleSupport": false
+            },
+            {
+              "topicId": "iras-cit-disallowed-expenses",
+              "topicBound": false,
+              "generalRuleSupport": false
+            }
+          ]
+        },
+        {
+          "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+          "quote": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available.",
+          "topicChecks": [
+            {
+              "topicId": "iras-cit-deductibility",
+              "topicBound": false,
+              "generalRuleSupport": false
+            },
+            {
+              "topicId": "iras-cit-disallowed-expenses",
+              "topicBound": true,
+              "generalRuleSupport": false
+            }
+          ]
+        },
+        {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+          "topicChecks": [
+            {
+              "topicId": "iras-cit-deductibility",
+              "topicBound": false,
+              "generalRuleSupport": false
+            },
+            {
+              "topicId": "iras-cit-disallowed-expenses",
+              "topicBound": true,
+              "generalRuleSupport": false
+            }
+          ]
+        }
+      ],
+      "finalIssueLifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false
+      },
+      "finalVerifiedClaims": [],
+      "finalSources": [],
+      "finalGaps": [
+        {
+          "code": "NO_VERIFIED_CLAIM",
+          "stage": "verified",
+          "reason": "No complete source quotation passed claim verification for this issue."
+        },
+        {
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "stage": "covered",
+          "reason": "Verified quotations do not support the requested topic iras-cit-disallowed-expenses."
+        },
+        {
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "stage": "covered",
+          "reason": "Verified quotations do not support the requested topic iras-cit-deductibility."
+        }
+      ],
+      "finalEvidenceStatus": "INSUFFICIENT",
+      "finalApplicationStatus": "UNRESOLVED"
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "query": "What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?",
+      "syntheticIssueScope": {
+        "id": "general-gst-input-tax-recovery-rules",
+        "subject": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+        "topicIds": [
+          "iras-gst-input-tax"
+        ]
+      },
+      "requestedConcepts": [],
+      "localOnly": true,
+      "evidenceQuality": {
+        "status": "LIMITED",
+        "candidateIds": [
+          "GST_REG26_BLOCKED_INPUT_TAX"
+        ],
+        "eligibleRecords": [
+          {
+            "id": "GST_REG26_BLOCKED_INPUT_TAX",
+            "authority": "IRAS",
+            "sourceAuthority": "IRAS",
+            "domain": "IRAS_GST",
+            "provenance": "LOCAL_STATIC",
+            "sourceStatus": "VERIFIED",
+            "lifecycleState": "ACTIVE",
+            "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+            "sourceType": "CURATED_SUMMARY",
+            "evidenceTier": "OFFICIAL_GUIDANCE",
+            "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+            "tags": [
+              "blocked input tax",
+              "regulation 26",
+              "regulation 27",
+              "gst car claim",
+              "medical insurance gst",
+              "club subscriptions"
+            ],
+            "sourceText": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable."
+          }
+        ],
+        "rejectedRecords": [],
+        "coveredTopicIds": [
+          "iras-gst-input-tax"
+        ],
+        "uncoveredTopicIds": [
+          "iras-authority-query-what-are-the-general-singapore-gst-rules-for-cla"
+        ],
+        "coveredConcepts": [],
+        "uncoveredConcepts": []
+      },
+      "suggestedClaims": [
+        {
+          "kind": "RULE",
+          "text": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "quote": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+          "citationUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+        }
+      ],
+      "initialLiteralRejections": [],
+      "secondPassQuality": {
+        "status": "LOCAL_SUFFICIENT",
+        "eligibleRecordIds": [
+          "GST_REG26_BLOCKED_INPUT_TAX"
+        ],
+        "rejectedRecords": [],
+        "coveredTopicIds": [
+          "iras-gst-input-tax"
+        ],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": []
+      },
+      "secondLiteralAccepted": [
+        {
+          "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+          "text": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "quote": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable."
+        }
+      ],
+      "secondLiteralRejected": [],
+      "postfilterSupportDiagnostics": [
+        {
+          "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+          "quote": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "topicChecks": [
+            {
+              "topicId": "iras-gst-input-tax",
+              "topicBound": false,
+              "generalRuleSupport": false
+            }
+          ]
+        }
+      ],
+      "finalIssueLifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false
+      },
+      "finalVerifiedClaims": [],
+      "finalSources": [],
+      "finalGaps": [
+        {
+          "code": "NO_VERIFIED_CLAIM",
+          "stage": "verified",
+          "reason": "No complete source quotation passed claim verification for this issue."
+        },
+        {
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "stage": "covered",
+          "reason": "Verified quotations do not support the requested topic iras-gst-input-tax."
+        }
+      ],
+      "finalEvidenceStatus": "INSUFFICIENT",
+      "finalApplicationStatus": "NOT_REQUIRED"
+    }
+  ],
+  "cpfMixedCase": {
+    "query": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+    "issueId": "employer-cpf-contribution",
+    "retrievedCandidateIds": [],
+    "candidate": {
+      "id": "CPF_RATES_BY_AGE_2026",
+      "authority": "CPF",
+      "sourceAuthority": "CPF",
+      "domain": "CPF_BOARD",
+      "provenance": "LOCAL_STATIC",
+      "sourceStatus": "NEEDS_REVIEW",
+      "lifecycleState": "ACTIVE",
+      "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+      "sourceType": "CURATED_SUMMARY",
+      "evidenceTier": "CURATED_SUMMARY",
+      "canonicalSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "tags": [
+        "cpf rates by age",
+        "cpf contribution table",
+        "senior worker cpf",
+        "cpf 55 60",
+        "cpf rates 2026",
+        "cpf age brackets"
+      ],
+      "sourceText": "Mandatory CPF contributions for Singapore Citizens and Permanent Residents (from 3rd year of PR status onwards) are calculated using tiered statutory percentage rates based on the employee's age."
+    },
+    "exactEligibilityRejection": "LOCAL_SOURCE_NOT_VERIFIED",
+    "finalLifecycle": {
+      "requested": true,
+      "mapped": true,
+      "retrievalAttempted": true,
+      "evidenceFound": true,
+      "admitted": false,
+      "verified": false,
+      "covered": false
+    },
+    "finalVerifiedClaims": [],
+    "finalSources": [],
+    "finalGaps": [
+      {
+        "code": "CANDIDATE_REJECTED",
+        "stage": "admitted",
+        "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks."
+      },
+      {
+        "code": "NO_ADMITTED_EVIDENCE",
+        "stage": "admitted",
+        "reason": "No candidate passed the evidence admission checks for this issue."
+      },
+      {
+        "code": "NO_VERIFIED_CLAIM",
+        "stage": "verified",
+        "reason": "No complete source quotation passed claim verification for this issue."
+      },
+      {
+        "code": "ISSUE_CONCEPT_UNCOVERED",
+        "stage": "covered",
+        "reason": "Verified quotations do not support the requested topic cpf_contribution_rates."
+      }
+    ],
+    "finalEvidenceStatus": "INSUFFICIENT",
+    "finalApplicationStatus": "UNRESOLVED"
+  }
+}
