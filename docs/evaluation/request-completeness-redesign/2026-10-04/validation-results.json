@@ -1,0 +1,66 @@
+{
+  "kind": "API_FREE_BOUNDED_FEASIBILITY",
+  "startingSha": "9f7682a6ba32fd3b39ea84bec8391d1e1421db4f",
+  "branch": "codex/request-completeness-redesign",
+  "baseCases": 28,
+  "productionIntegrated": false,
+  "preregistered": false,
+  "liveAcceptanceConsumed": false,
+  "supervisorTests": {
+    "runtime": "Node 22.23.2",
+    "total": 48,
+    "passed": 48,
+    "failed": 0,
+    "skipped": 0,
+    "capture": "api-free-node22.txt"
+  },
+  "reviewer": {
+    "agent": "/root/completeness_design_review",
+    "verdict": "APPROVED_BOUNDED_API_FREE_FEASIBILITY",
+    "runtime": "Node 24.19.0",
+    "total": 48,
+    "passed": 48,
+    "materialFindingsRemaining": 0
+  },
+  "geminiRequests": 0,
+  "liveIrasRequests": 0,
+  "providerAllowanceQueried": false,
+  "guard": {
+    "publicTransportSelfChecks": "PASS",
+    "telemetryLimit": "Zero-request field is a stub/static assertion, not universal OS telemetry."
+  },
+  "integrity": {
+    "baseline": "9f7682a6ba32fd3b39ea84bec8391d1e1421db4f",
+    "frozenRows": 389,
+    "distinctPaths": 221,
+    "originalByteFingerprints": "PASS",
+    "storedGitContent": "PASS_WITH_EOL_ACCOUNTING",
+    "originalToGitEolDifferences": 21,
+    "checkoutByteFingerprints": "CRLF_CHECKOUT_DIFFERENCES",
+    "crlfOnlyPaths": 221,
+    "protectedProductionV4AndHistoryDiff": "UNCHANGED",
+    "diffScope": "TRACKED_AND_NONIGNORED_UNTRACKED",
+    "originalBranch": "UNCHANGED",
+    "permittedChanges": [
+      "docs/evaluation/request-completeness-redesign/2026-10-04/api-free-node22.txt",
+      "docs/evaluation/request-completeness-redesign/2026-10-04/check-integrity.mjs",
+      "docs/evaluation/request-completeness-redesign/2026-10-04/grammar-contract.md",
+      "docs/evaluation/request-completeness-redesign/2026-10-04/next-production-scope.md",
+      "docs/evaluation/request-completeness-redesign/2026-10-04/review-record.md",
+      "docs/evaluation/request-completeness-redesign/2026-10-04/specification.md",
+      "docs/evaluation/request-completeness-redesign/2026-10-04/supervisor-final-report.md",
+      "tests/evaluation/request-completeness/guard-loader.mjs",
+      "tests/evaluation/request-completeness/guard-preload.mjs",
+      "tests/evaluation/request-completeness/oracle.mjs",
+      "tests/evaluation/request-completeness/prototype.mjs",
+      "tests/evaluation/request-completeness/prototype.test.mjs"
+    ]
+  },
+  "filesSha256": {
+    "tests/evaluation/request-completeness/guard-loader.mjs": "80110e80bd7e9179991cbcb497e0ec35af1358311978328417c226119d3ada34",
+    "tests/evaluation/request-completeness/guard-preload.mjs": "09509015050ddc9e4a8b324b6a7d0647b6f0dc4e4b699216c00508c0d86f5e95",
+    "tests/evaluation/request-completeness/oracle.mjs": "716bff93e359e07ff9cb47636dd47bc45e629fc11588cac03cdc8971dedbafab",
+    "tests/evaluation/request-completeness/prototype.mjs": "5fd06b2bee9113f1a5a8c1bab97d2e2b95e57a6f442544173c889402cb0fd798",
+    "tests/evaluation/request-completeness/prototype.test.mjs": "6c51848f78591dc15f5142df77bca5c72278c1918a82f59b12a50f65acd76a1d"
+  }
+}

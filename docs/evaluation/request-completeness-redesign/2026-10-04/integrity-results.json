@@ -1,0 +1,27 @@
+{
+  "baseline": "9f7682a6ba32fd3b39ea84bec8391d1e1421db4f",
+  "frozenRows": 389,
+  "distinctPaths": 221,
+  "originalByteFingerprints": "PASS",
+  "storedGitContent": "PASS_WITH_EOL_ACCOUNTING",
+  "originalToGitEolDifferences": 21,
+  "checkoutByteFingerprints": "CRLF_CHECKOUT_DIFFERENCES",
+  "crlfOnlyPaths": 221,
+  "protectedProductionV4AndHistoryDiff": "UNCHANGED",
+  "diffScope": "TRACKED_AND_NONIGNORED_UNTRACKED",
+  "originalBranch": "UNCHANGED",
+  "permittedChanges": [
+    "docs/evaluation/request-completeness-redesign/2026-10-04/api-free-node22.txt",
+    "docs/evaluation/request-completeness-redesign/2026-10-04/check-integrity.mjs",
+    "docs/evaluation/request-completeness-redesign/2026-10-04/grammar-contract.md",
+    "docs/evaluation/request-completeness-redesign/2026-10-04/next-production-scope.md",
+    "docs/evaluation/request-completeness-redesign/2026-10-04/review-record.md",
+    "docs/evaluation/request-completeness-redesign/2026-10-04/specification.md",
+    "docs/evaluation/request-completeness-redesign/2026-10-04/supervisor-final-report.md",
+    "tests/evaluation/request-completeness/guard-loader.mjs",
+    "tests/evaluation/request-completeness/guard-preload.mjs",
+    "tests/evaluation/request-completeness/oracle.mjs",
+    "tests/evaluation/request-completeness/prototype.mjs",
+    "tests/evaluation/request-completeness/prototype.test.mjs"
+  ]
+}
