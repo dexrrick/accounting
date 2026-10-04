@@ -1,0 +1,1417 @@
+{
+  "schemaVersion": 1,
+  "profile": "iras-first-targeted-acceptance-v4",
+  "contractStage": "PROSPECTIVE_DESIGN_ONLY",
+  "targetedAcceptanceExecuted": false,
+  "semanticScorer": {
+    "version": "V2",
+    "path": "tests/evaluation/singapore/multi-authority-issue-scoring-v2.mjs",
+    "matching": "MAXIMUM_ONE_TO_ONE"
+  },
+  "layers": {
+    "semanticInterpretationAndOwnership": "REQUIRED",
+    "reviewedLocalCapability": "SEPARATE_LOCAL_ONLY_OBSERVATION",
+    "governedRuleEvidence": {
+      "mode": "governedProductionEvidence",
+      "transportMode": "frozenContemporaneousCapture"
+    },
+    "applicationStatus": "SEPARATE_FROM_RULE_VERIFICATION"
+  },
+  "resourcePolicy": {
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "expectedCalls": 9,
+    "callsPerCase": 1,
+    "retries": 0,
+    "timeoutMs": 8000,
+    "temperature": 0,
+    "jsonMode": true,
+    "minimumStartGapMs": 15250,
+    "reserveFloor": {
+      "fiveHourRemainingPercent": 7,
+      "weeklyRemainingPercent": 3,
+      "checkpointBufferPercentagePoints": 1
+    },
+    "allowanceRequiredBeforeReservation": true,
+    "sharedAllowanceMustBeIndependentlyReadable": true,
+    "authorizedGeminiCalls": 9,
+    "geminiQuotaMustNotBeAssumed": true,
+    "executionNodeMajor": 22,
+    "finalProfileSupported": false
+  },
+  "futureEvidencePolicy": {
+    "evidenceMode": "governedProductionEvidence",
+    "transportMode": "frozenContemporaneousCapture",
+    "maximumCaptureAgeHours": 24,
+    "captureMaximumRequests": 60,
+    "captureMaximumRequestsPerFamily": 10,
+    "captureRetries": 0,
+    "liveNetworkDuringSemanticRun": false,
+    "missingResponseBehavior": "FAIL_CLOSED",
+    "ambientFetchBehavior": "THROW",
+    "productionRetriever": "defaultAdvancedSourceRetriever",
+    "replayReentersProductionAdmissionVerificationAndCoverage": true,
+    "captureBindsContractProductionSourceSchemaPromptAndProvenance": true,
+    "syntheticFixturesProveCurrentIrasContent": false
+  },
+  "failureStages": [
+    "SEMANTIC_VALIDATION",
+    "SEMANTIC_ISSUE_IDENTITY",
+    "SEMANTIC_DIMENSIONS",
+    "TOPIC_OWNERSHIP",
+    "REQUESTED_CONCEPT_OWNERSHIP",
+    "WORKSTREAM_ROUTING",
+    "LOCAL_CAPABILITY",
+    "GOVERNED_RETRIEVAL",
+    "EVIDENCE_ADMISSION",
+    "CLAIM_VERIFICATION",
+    "REQUESTED_CONCEPT_COVERAGE",
+    "APPLICATION_STATUS",
+    "OVERALL_STATUS",
+    "INTEGRITY"
+  ],
+  "cases": [
+    {
+      "caseId": "target-relief-entitlement",
+      "question": "Can I claim personal tax relief on my compulsory CPF contributions?",
+      "questionSha256": "5f05c34208ae51f0774f5692cf720f405d1f6ff68d598353fb56618471fee6c6",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "personal-cpf-relief",
+            "subject": "individual entitlement to personal tax relief for compulsory CPF contributions",
+            "matchAny": [
+              [
+                "personal",
+                "tax",
+                "relief"
+              ],
+              [
+                "cpf",
+                "relief"
+              ]
+            ],
+            "population": [
+              "INDIVIDUAL",
+              "EMPLOYEE"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              [
+                "CPF"
+              ],
+              []
+            ],
+            "operation": [
+              "CHECK_ELIGIBILITY"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": true,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "IRAS/IRAS_INDIVIDUAL_TAX"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "personal-cpf-relief",
+            "all": [
+              "tax",
+              "relief",
+              "cpf"
+            ]
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-individual-cpf-relief",
+              "issueId": "personal-cpf-relief",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [
+            {
+              "topicId": "cpf_contribution_rates",
+              "issueId": "personal-cpf-relief"
+            }
+          ],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "cpf_relief",
+            "issueId": "personal-cpf-relief",
+            "topicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "allTerms": [
+              "cpf",
+              "relief"
+            ],
+            "requireExtractedConcept": true
+          }
+        ],
+        "negatives": [
+          "contextual CPF must not create a CPF payroll issue",
+          "cpf_contribution_rates must not remain an unrepresented material residual",
+          "application must remain UNRESOLVED"
+        ]
+      },
+      "factsRequired": true,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "personal-cpf-relief": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {
+          "iras-individual-cpf-relief": "EXPECTED_LOCAL_GAP"
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "personal-cpf-relief": "VERIFIED"
+        }
+      },
+      "application": {
+        "expectedByIssue": {
+          "personal-cpf-relief": "UNRESOLVED"
+        },
+        "allowedOverallStatuses": [
+          "CONDITIONAL"
+        ]
+      },
+      "forbiddenConditions": [
+        "contextual CPF must not create a CPF payroll issue",
+        "cpf_contribution_rates must not remain an unrepresented material residual",
+        "application must remain UNRESOLVED"
+      ]
+    },
+    {
+      "caseId": "target-relief-amount",
+      "question": "How much personal tax relief can I claim for compulsory CPF contributions?",
+      "questionSha256": "a145946061af28f2116155a1a9e6b80d57a2115b70e8f8d96e2dc3f1af9e4e11",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "personal-cpf-relief-amount",
+            "subject": "numeric amount of individual tax relief for compulsory CPF contributions",
+            "matchAny": [
+              [
+                "personal",
+                "tax",
+                "relief"
+              ],
+              [
+                "cpf",
+                "relief"
+              ]
+            ],
+            "population": [
+              "INDIVIDUAL",
+              "EMPLOYEE"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              [
+                "CPF"
+              ],
+              []
+            ],
+            "operation": [
+              "CALCULATE"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": true,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "IRAS/IRAS_INDIVIDUAL_TAX"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "personal-cpf-relief-amount",
+            "all": [
+              "tax",
+              "relief",
+              "cpf"
+            ]
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-individual-cpf-relief",
+              "issueId": "personal-cpf-relief-amount",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [
+            {
+              "topicId": "cpf_contribution_rates",
+              "issueId": "personal-cpf-relief-amount"
+            }
+          ],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "cpf_relief",
+            "issueId": "personal-cpf-relief-amount",
+            "topicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "allTerms": [
+              "cpf",
+              "relief"
+            ],
+            "requireExtractedConcept": true
+          }
+        ],
+        "negatives": [
+          "tax-relief amount must not become CPF contribution-rate calculation",
+          "contextual CPF must not create a payroll issue",
+          "application must remain UNRESOLVED"
+        ]
+      },
+      "factsRequired": true,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "personal-cpf-relief-amount": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {
+          "iras-individual-cpf-relief": "EXPECTED_LOCAL_GAP"
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "personal-cpf-relief-amount": "VERIFIED"
+        }
+      },
+      "application": {
+        "expectedByIssue": {
+          "personal-cpf-relief-amount": "UNRESOLVED"
+        },
+        "allowedOverallStatuses": [
+          "CONDITIONAL"
+        ]
+      },
+      "forbiddenConditions": [
+        "tax-relief amount must not become CPF contribution-rate calculation",
+        "contextual CPF must not create a payroll issue",
+        "application must remain UNRESOLVED"
+      ]
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "question": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+      "questionSha256": "08f824db1b93f9ded908c4e960425e241ba4b98952410478f36c0b85ba2b1541",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "employer-cpf-contribution",
+            "subject": "employer CPF contribution obligation/calculation",
+            "matchAny": [
+              [
+                "employer",
+                "cpf",
+                "contribut"
+              ],
+              [
+                "company",
+                "cpf",
+                "contribut"
+              ],
+              [
+                "employer",
+                "provident",
+                "contribut"
+              ]
+            ],
+            "rejectAny": [
+              "relief",
+              "deductible",
+              "taxable"
+            ],
+            "population": [
+              "EMPLOYER"
+            ],
+            "domain": [
+              "CPF_PAYROLL"
+            ],
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "CALCULATE"
+            ],
+            "aliases": [
+              [
+                "employer",
+                "cpf",
+                "position"
+              ],
+              [
+                "employer",
+                "contribution",
+                "amount"
+              ]
+            ]
+          },
+          {
+            "id": "individual-cpf-tax-relief",
+            "subject": "individual income tax relief for compulsory CPF",
+            "matchAny": [
+              [
+                "income",
+                "tax",
+                "relief"
+              ],
+              [
+                "personal",
+                "tax",
+                "relief"
+              ],
+              [
+                "cpf",
+                "relief"
+              ],
+              [
+                "tax",
+                "claim",
+                "cpf"
+              ]
+            ],
+            "population": [
+              "INDIVIDUAL",
+              "EMPLOYEE"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              [
+                "CPF"
+              ]
+            ],
+            "operation": [
+              "CHECK_ELIGIBILITY"
+            ]
+          }
+        ],
+        "expectedIssueCount": 2,
+        "expectedRequiresUserSpecificFacts": true,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "CPF/CPF_PAYROLL",
+            "IRAS/IRAS_INDIVIDUAL_TAX"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "individual-cpf-tax-relief",
+            "all": [
+              "tax",
+              "relief",
+              "cpf"
+            ]
+          },
+          {
+            "issueId": "employer-cpf-contribution",
+            "all": [
+              "employer",
+              "cpf",
+              "contribution"
+            ]
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-individual-cpf-relief",
+              "issueId": "individual-cpf-tax-relief",
+              "role": "GOVERNING"
+            },
+            {
+              "topicId": "cpf_contribution_rates",
+              "issueId": "employer-cpf-contribution",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "cpf_relief",
+            "issueId": "individual-cpf-tax-relief",
+            "topicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "allTerms": [
+              "cpf",
+              "relief"
+            ],
+            "requireExtractedConcept": true
+          },
+          {
+            "id": "cpf_employer_contribution",
+            "issueId": "employer-cpf-contribution",
+            "topicIds": [
+              "cpf_contribution_rates"
+            ],
+            "allTerms": [
+              "employer",
+              "cpf",
+              "contribution"
+            ],
+            "requireExtractedConcept": false
+          }
+        ],
+        "negatives": [
+          "IRAS relief and CPF employer obligation must remain separate",
+          "NEEDS_REVIEW CPF record must remain rejected",
+          "no unsupported CPF calculation may be verified",
+          "CPF insufficiency cannot excuse an IRAS failure"
+        ]
+      },
+      "factsRequired": true,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP",
+          "CPF": "INVALID_LOCAL_EVIDENCE"
+        },
+        "expectedIssueStates": {
+          "individual-cpf-tax-relief": "EXPECTED_LOCAL_GAP",
+          "employer-cpf-contribution": "INVALID_LOCAL_EVIDENCE"
+        },
+        "expectedTopicStates": {
+          "iras-individual-cpf-relief": "EXPECTED_LOCAL_GAP",
+          "cpf_contribution_rates": "INVALID_LOCAL_EVIDENCE"
+        },
+        "rejectionExpectation": {
+          "authority": "CPF",
+          "requiredRejectedStatus": "NEEDS_REVIEW",
+          "forbiddenAdmission": true
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "individual-cpf-tax-relief": "VERIFIED",
+          "employer-cpf-contribution": "INSUFFICIENT"
+        },
+        "acceptablePartialNonIrasBehaviour": {
+          "permitted": true,
+          "cpfIssueMustRemainSeparate": true,
+          "cpfOperation": "CALCULATE",
+          "cpfEvidenceStatus": "INSUFFICIENT",
+          "verifiedCpfAmountForbidden": true,
+          "irasIssueMustBeVerified": true
+        }
+      },
+      "application": {
+        "expectedByIssue": {
+          "individual-cpf-tax-relief": "UNRESOLVED",
+          "employer-cpf-contribution": "UNRESOLVED"
+        },
+        "allowedOverallStatuses": [
+          "INSUFFICIENT"
+        ]
+      },
+      "forbiddenConditions": [
+        "IRAS relief and CPF employer obligation must remain separate",
+        "NEEDS_REVIEW CPF record must remain rejected",
+        "no unsupported CPF calculation may be verified",
+        "CPF insufficiency cannot excuse an IRAS failure"
+      ]
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "question": "Our Singapore company paid SGD 900 for the director's private holiday and recorded it as travel expense. What is its corporate income-tax treatment?",
+      "questionSha256": "f94f8f18d37146b7785568c6bfc52058785b1ae7406a240841d5ecf68e44c261",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "company-private-expense-tax-treatment",
+            "subject": "corporate income-tax treatment of company expense for director's private holiday",
+            "matchAny": [
+              [
+                "company",
+                "private",
+                "holiday",
+                "tax"
+              ],
+              [
+                "corporate",
+                "expense",
+                "treatment"
+              ]
+            ],
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              [],
+              [
+                "ACCOUNTING_STANDARDS"
+              ]
+            ],
+            "operation": [
+              "DETERMINE_TREATMENT"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": true,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "company-private-expense-tax-treatment",
+            "all": [
+              "company",
+              "expense",
+              "private",
+              "tax"
+            ]
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-cit-deductibility",
+              "issueId": "company-private-expense-tax-treatment",
+              "role": "GOVERNING"
+            },
+            {
+              "topicId": "iras-cit-disallowed-expenses",
+              "issueId": "company-private-expense-tax-treatment",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "private-expense-deductibility",
+            "issueId": "company-private-expense-tax-treatment",
+            "topicIds": [
+              "iras-cit-deductibility"
+            ],
+            "allTerms": [
+              "company",
+              "expense"
+            ]
+          },
+          {
+            "id": "private-expense-disallowance",
+            "issueId": "company-private-expense-tax-treatment",
+            "topicIds": [
+              "iras-cit-disallowed-expenses"
+            ],
+            "allTerms": [
+              "private",
+              "expense"
+            ]
+          }
+        ],
+        "negatives": [
+          "Section 14 alone is insufficient",
+          "motor-car-only material is insufficient",
+          "negated or reversed wording cannot pass",
+          "required statutory exceptions and scope qualifications must be retained",
+          "factual conjunction is not a separate material issue"
+        ]
+      },
+      "factsRequired": true,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "company-private-expense-tax-treatment": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {
+          "iras-cit-disallowed-expenses": "VERIFIED_LOCAL_RULE",
+          "iras-cit-deductibility": "EXPECTED_LOCAL_GAP"
+        },
+        "requiredEvidence": {
+          "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+          "supportKind": "REVIEWED_SUBSTANTIVE_SECTION_15",
+          "caveatsRequired": true
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "company-private-expense-tax-treatment": "VERIFIED"
+        },
+        "fallbackForUncoveredTopics": true
+      },
+      "application": {
+        "expectedByIssue": {
+          "company-private-expense-tax-treatment": "UNRESOLVED"
+        },
+        "allowedOverallStatuses": [
+          "CONDITIONAL"
+        ]
+      },
+      "forbiddenConditions": [
+        "Section 14 alone is insufficient",
+        "motor-car-only material is insufficient",
+        "negated or reversed wording cannot pass",
+        "required statutory exceptions and scope qualifications must be retained",
+        "factual conjunction is not a separate material issue"
+      ]
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "question": "Our Singapore company received a dividend from its Thai subsidiary in the current year. Explain the company's Singapore corporate income-tax treatment for this receipt.",
+      "questionSha256": "01517fb3ed50478f505a82e8743986ad2a167f0695a1d6c150fd3a39023f2a5d",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "company-foreign-dividend-receipt-treatment",
+            "subject": "corporate income-tax treatment of foreign dividend received by company",
+            "matchAny": [
+              [
+                "company",
+                "foreign",
+                "dividend",
+                "tax"
+              ],
+              [
+                "corporate",
+                "dividend",
+                "receipt"
+              ]
+            ],
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "DETERMINE_TREATMENT"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": true,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "company-foreign-dividend-receipt-treatment",
+            "all": [
+              "company",
+              "tax",
+              "dividend"
+            ],
+            "any": [
+              [
+                "foreign"
+              ],
+              [
+                "overseas"
+              ]
+            ],
+            "anyReceipt": [
+              [
+                "received"
+              ],
+              [
+                "receipt"
+              ],
+              [
+                "income"
+              ]
+            ]
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-foreign-sourced-income",
+              "issueId": "company-foreign-dividend-receipt-treatment",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "foreign-dividend-receipt",
+            "issueId": "company-foreign-dividend-receipt-treatment",
+            "topicIds": [
+              "iras-foreign-sourced-income"
+            ],
+            "allTerms": [
+              "dividend"
+            ],
+            "anyTerms": [
+              "foreign",
+              "overseas"
+            ]
+          }
+        ],
+        "negatives": [
+          "bounded foreign or overseas dividend receipt wording is accepted",
+          "domestic dividend is rejected",
+          "company paying or distributing a dividend is a different direction",
+          "other income classes do not match"
+        ]
+      },
+      "factsRequired": true,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "company-foreign-dividend-receipt-treatment": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {
+          "iras-foreign-sourced-income": "EXPECTED_LOCAL_GAP"
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "company-foreign-dividend-receipt-treatment": "VERIFIED"
+        }
+      },
+      "application": {
+        "expectedByIssue": {
+          "company-foreign-dividend-receipt-treatment": "UNRESOLVED"
+        },
+        "allowedOverallStatuses": [
+          "CONDITIONAL"
+        ]
+      },
+      "forbiddenConditions": [
+        "bounded foreign or overseas dividend receipt wording is accepted",
+        "domestic dividend is rejected",
+        "company paying or distributing a dividend is a different direction",
+        "other income classes do not match"
+      ]
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "question": "How do Singapore tax rules determine whether a company is tax resident here?",
+      "questionSha256": "8b98c0d57b6a021cc606ac30c65b5182725e0d15048571abe336cb6580d7eeb9",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "general-company-tax-residency-rule",
+            "subject": "general rule for company tax residency in Singapore",
+            "matchAny": [
+              [
+                "company",
+                "tax",
+                "residency"
+              ],
+              [
+                "tax",
+                "residency",
+                "singapore"
+              ]
+            ],
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": false,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "general-company-tax-residency-rule",
+            "all": [
+              "company",
+              "tax"
+            ],
+            "any": [
+              [
+                "resident"
+              ],
+              [
+                "residency"
+              ],
+              [
+                "residence"
+              ]
+            ]
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-corporate-tax-residency",
+              "issueId": "general-company-tax-residency-rule",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "company-tax-residency",
+            "issueId": "general-company-tax-residency-rule",
+            "topicIds": [
+              "iras-corporate-tax-residency"
+            ],
+            "allTerms": [
+              "company",
+              "tax"
+            ],
+            "anyTerms": [
+              "resident",
+              "residency",
+              "residence"
+            ]
+          }
+        ],
+        "negatives": [
+          "do not reconstruct unretained V9 quotations",
+          "application remains NOT_REQUIRED"
+        ]
+      },
+      "factsRequired": false,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "general-company-tax-residency-rule": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {
+          "iras-corporate-tax-residency": "EXPECTED_LOCAL_GAP"
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "general-company-tax-residency-rule": "VERIFIED"
+        }
+      },
+      "application": {
+        "expectedByIssue": {
+          "general-company-tax-residency-rule": "NOT_REQUIRED"
+        },
+        "allowedOverallStatuses": [
+          "VERIFIED"
+        ]
+      },
+      "forbiddenConditions": [
+        "do not reconstruct unretained V9 quotations",
+        "application remains NOT_REQUIRED"
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "question": "What are the general Singapore withholding-tax rules when a company pays royalties to a non-resident company?",
+      "questionSha256": "69fc585a139b462c28595515cac8adeb4f6dfe9a0aafe58e7670711c3914c2a0",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "general-wht-royalty-rules",
+            "subject": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+            "matchAny": [
+              [
+                "withholding",
+                "tax",
+                "royalty"
+              ],
+              [
+                "withholding",
+                "tax",
+                "royalties"
+              ],
+              [
+                "wht",
+                "royalty",
+                "non-resident"
+              ]
+            ],
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_INCOME_TAX"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": false,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "general-wht-royalty-rules",
+            "all": [
+              "company",
+              "royalt"
+            ],
+            "any": [
+              [
+                "withholding",
+                "tax"
+              ],
+              [
+                "wht"
+              ]
+            ],
+            "nonresidentCompanyRequired": true
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-withholding-tax",
+              "issueId": "general-wht-royalty-rules",
+              "role": "GOVERNING"
+            },
+            {
+              "topicId": "iras-withholding-tax-interest-royalties",
+              "issueId": "general-wht-royalty-rules",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "withholding-tax",
+            "issueId": "general-wht-royalty-rules",
+            "topicIds": [
+              "iras-withholding-tax"
+            ],
+            "anyTerms": [
+              "withholding tax",
+              "wht"
+            ]
+          },
+          {
+            "id": "royalty-payment",
+            "issueId": "general-wht-royalty-rules",
+            "topicIds": [
+              "iras-withholding-tax-interest-royalties"
+            ],
+            "allTerms": [
+              "royalt"
+            ]
+          },
+          {
+            "id": "nonresident-company-recipient",
+            "issueId": "general-wht-royalty-rules",
+            "topicIds": [
+              "iras-withholding-tax-interest-royalties"
+            ],
+            "nonresidentCompanyRequired": true
+          }
+        ],
+        "negatives": [
+          "Section 45 or 45A summaries alone do not prove the complete royalty rule",
+          "non-resident and nonresident are bounded equivalents",
+          "resident-company recipient does not match",
+          "verified claims cannot bypass requested-concept completeness"
+        ]
+      },
+      "factsRequired": false,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "general-wht-royalty-rules": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {
+          "iras-withholding-tax": "EXPECTED_LOCAL_GAP",
+          "iras-withholding-tax-interest-royalties": "EXPECTED_LOCAL_GAP"
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "general-wht-royalty-rules": "VERIFIED"
+        },
+        "requestedConceptCoverageRequired": true
+      },
+      "application": {
+        "expectedByIssue": {
+          "general-wht-royalty-rules": "NOT_REQUIRED"
+        },
+        "allowedOverallStatuses": [
+          "VERIFIED"
+        ]
+      },
+      "forbiddenConditions": [
+        "Section 45 or 45A summaries alone do not prove the complete royalty rule",
+        "non-resident and nonresident are bounded equivalents",
+        "resident-company recipient does not match",
+        "verified claims cannot bypass requested-concept completeness"
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "question": "What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?",
+      "questionSha256": "01df855036dccf15f7ab5c52aaae3a77907784dd7ae7138dbb77cbf9c537bd42",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "general-gst-input-tax-recovery-rules",
+            "subject": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+            "matchAny": [
+              [
+                "gst",
+                "input",
+                "tax",
+                "business",
+                "purchases"
+              ],
+              [
+                "input",
+                "tax",
+                "recovery",
+                "gst-registered",
+                "company"
+              ]
+            ],
+            "population": [
+              "COMPANY"
+            ],
+            "domain": [
+              "IRAS_GST"
+            ],
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": false,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "IRAS/IRAS_GST"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "general-gst-input-tax-recovery-rules",
+            "all": [
+              "gst",
+              "input",
+              "tax",
+              "company"
+            ],
+            "any": [
+              [
+                "claim"
+              ],
+              [
+                "recover"
+              ],
+              [
+                "recovery"
+              ]
+            ],
+            "anyPurchase": [
+              [
+                "purchase"
+              ],
+              [
+                "acquisition"
+              ],
+              [
+                "acquire"
+              ]
+            ],
+            "registeredRequired": true
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [
+            {
+              "topicId": "iras-gst-input-tax",
+              "issueId": "general-gst-input-tax-recovery-rules",
+              "role": "GOVERNING"
+            }
+          ],
+          "contextualTopicOwners": [],
+          "noUnrepresentedMaterialResidual": true
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "affirmative-input-tax-recovery",
+            "issueId": "general-gst-input-tax-recovery-rules",
+            "topicIds": [
+              "iras-gst-input-tax"
+            ],
+            "allTerms": [
+              "input",
+              "tax"
+            ],
+            "anyTerms": [
+              "claim",
+              "recover",
+              "recovery"
+            ]
+          }
+        ],
+        "negatives": [
+          "blocked-input-tax-only evidence does not prove affirmative general recovery",
+          "unregistered and private-only scopes do not match",
+          "input tax recovery/acquisition equivalents are bounded"
+        ]
+      },
+      "factsRequired": false,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "IRAS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "general-gst-input-tax-recovery-rules": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {
+          "iras-gst-input-tax": "EXPECTED_LOCAL_GAP"
+        }
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": true,
+        "expectedRuleEvidenceByIssue": {
+          "general-gst-input-tax-recovery-rules": "VERIFIED"
+        }
+      },
+      "application": {
+        "expectedByIssue": {
+          "general-gst-input-tax-recovery-rules": "NOT_REQUIRED"
+        },
+        "allowedOverallStatuses": [
+          "VERIFIED"
+        ]
+      },
+      "forbiddenConditions": [
+        "blocked-input-tax-only evidence does not prove affirmative general recovery",
+        "unregistered and private-only scopes do not match",
+        "input tax recovery/acquisition equivalents are bounded"
+      ]
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "question": "Explain the general accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6.",
+      "questionSha256": "7b0ca0f666d38cf202ff0e934ee877bb031d5a8d68713d166d4171ac9621cbda",
+      "semantic": {
+        "expectedIssues": [
+          {
+            "id": "sfrsi-6-mineral-exploration-evaluation",
+            "subject": "general SFRS(I) 6 accounting rules for exploration and evaluation expenditure",
+            "matchAny": [
+              [
+                "exploration",
+                "evaluation",
+                "mineral"
+              ],
+              [
+                "sfrsi",
+                "6"
+              ]
+            ],
+            "population": [
+              "COMPANY",
+              "UNKNOWN"
+            ],
+            "domain": [
+              "ACCOUNTING"
+            ],
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthoritiesAnyOf": [
+              []
+            ],
+            "operation": [
+              "EXPLAIN_RULE"
+            ]
+          }
+        ],
+        "expectedIssueCount": 1,
+        "expectedRequiresUserSpecificFacts": false,
+        "acceptableWorkstreamsAnyOf": [
+          [
+            "ACCOUNTING_STANDARDS/ACCOUNTING"
+          ]
+        ],
+        "requiredSubjectMarkers": [
+          {
+            "issueId": "sfrsi-6-mineral-exploration-evaluation",
+            "all": [
+              "exploration",
+              "evaluation"
+            ],
+            "any": [
+              [
+                "sfrsi",
+                "6"
+              ],
+              [
+                "mineral"
+              ]
+            ]
+          }
+        ],
+        "independentTopicAccounting": {
+          "requiredTopicOwners": [],
+          "contextualTopicOwners": [],
+          "noUnrepresentedMaterialResidual": false
+        },
+        "materialRequestedConcepts": [
+          {
+            "id": "sfrsi-6-exploration-evaluation",
+            "issueId": "sfrsi-6-mineral-exploration-evaluation",
+            "unsupportedVisibleIssue": true
+          }
+        ],
+        "negatives": [
+          "no IRAS governing authority or IRAS workstream",
+          "NO_COVERAGE_TOPIC remains visible",
+          "no invented source, evidence, claim or fallback",
+          "INSUFFICIENT remains fail-closed"
+        ]
+      },
+      "factsRequired": false,
+      "reviewedLocalCapability": {
+        "mode": "localOnly",
+        "expectedAuthorityStates": {
+          "ACCOUNTING_STANDARDS": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedIssueStates": {
+          "sfrsi-6-mineral-exploration-evaluation": "EXPECTED_LOCAL_GAP"
+        },
+        "expectedTopicStates": {}
+      },
+      "governedProductionEvidence": {
+        "mode": "governedProductionEvidence",
+        "required": false,
+        "expectedRuleEvidenceByIssue": {},
+        "expectedNoCoverageTopic": true,
+        "expectedNoClaims": true
+      },
+      "application": {
+        "expectedByIssue": {
+          "sfrsi-6-mineral-exploration-evaluation": "NOT_REQUIRED"
+        },
+        "allowedOverallStatuses": [
+          "INSUFFICIENT"
+        ]
+      },
+      "forbiddenConditions": [
+        "no IRAS governing authority or IRAS workstream",
+        "NO_COVERAGE_TOPIC remains visible",
+        "no invented source, evidence, claim or fallback",
+        "INSUFFICIENT remains fail-closed"
+      ]
+    }
+  ]
+}
