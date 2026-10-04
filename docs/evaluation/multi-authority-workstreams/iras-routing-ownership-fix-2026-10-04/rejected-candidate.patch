@@ -1,0 +1,218 @@
+diff --git a/scripts/run_all_tests.mjs b/scripts/run_all_tests.mjs
+index 5357fd2..929f8e1 100644
+--- a/scripts/run_all_tests.mjs
++++ b/scripts/run_all_tests.mjs
+@@ -16,6 +16,7 @@ const testSuites = [
+   { name: 'IRAS-First Release Gate', file: 'test_iras_first_release_gate.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+   { name: 'IRAS-First Runner Safety', file: 'test_iras_first_runner_safety.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+   { name: 'Semantic Authority & Relief Contract', file: 'test_semantic_authority_relief_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
++  { name: 'Routing-only Umbrella Ownership', file: 'test_routing_umbrella_ownership.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'IRAS-First Semantic Contract', file: 'test_iras_first_semantic_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'CPF Relief Context and Private Expense Enumeration', file: 'test_iras_cpf_context_private_enumeration.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'Application-Derived Semantic Specificity', file: 'test_derived_semantic_specificity.mjs', layer: 'input-understanding', tier: 'smoke' },
+diff --git a/src/retrieval/queryTopicResolver.ts b/src/retrieval/queryTopicResolver.ts
+index 487b290..8a97005 100644
+--- a/src/retrieval/queryTopicResolver.ts
++++ b/src/retrieval/queryTopicResolver.ts
+@@ -267,6 +267,25 @@ function splitResidualFragments(query: string): string[] {
+   return fragments;
+ }
+ 
++/** Raw request scopes used by reconciliation to keep unrelated asks separate. */
++export function getQueryScopeFragments(query: string): string[] {
++  if (!query || typeof query !== 'string') return [];
++  const normalizedQuery = query.toLowerCase();
++  const fragments = splitResidualFragments(normalizedQuery);
++  if (fragments.length === 0) return [normalizedQuery.trim()].filter(Boolean);
++
++  // splitResidualFragments focuses on unresolved suffixes after sentence
++  // boundaries. Include the initial request as a scope for ownership checks.
++  const primaryRequest = PRIMARY_REQUEST_START.exec(normalizedQuery);
++  if (primaryRequest) {
++    const firstTerminator = /[.!?;](?=\s|$)/g;
++    firstTerminator.lastIndex = (primaryRequest.index ?? 0) + primaryRequest[0].length;
++    const requestEnd = firstTerminator.exec(normalizedQuery);
++    if (requestEnd) fragments.push(normalizedQuery.slice(0, requestEnd.index).trim());
++  }
++  return [...new Set(fragments.map(fragment => fragment.trim()).filter(Boolean))];
++}
++
+ function keywordMatches(text: string, keyword: string): boolean {
+   const normalizedKeyword = keyword.toLowerCase();
+   // Statute section labels are identifiers: section 14 must not match
+diff --git a/src/services/semanticQuestionUnderstanding.ts b/src/services/semanticQuestionUnderstanding.ts
+index 96dc4ba..e58046c 100644
+--- a/src/services/semanticQuestionUnderstanding.ts
++++ b/src/services/semanticQuestionUnderstanding.ts
+@@ -1,7 +1,7 @@
+ import { isExplicitForeignTaxOnlyQuestion, type QuestionClassificationResult } from '../classification/questionClassifier';
+-import type { SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
++import type { SingaporeCoverageTopic, SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
+ import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
+-import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
++import { defaultQueryTopicResolver, getQueryScopeFragments } from '../retrieval/queryTopicResolver';
+ import type { ProviderSettings } from '../types/provider';
+ import { executeStructuredLlmCall } from './aiTransport';
+ 
+@@ -989,6 +989,8 @@ export interface ReconciledSemanticQuestionIssue extends SemanticQuestionIssue {
+   unresolvedReason?: 'NO_COVERAGE_TOPIC' | 'UNASSIGNED_QUERY_TOPIC' | 'UNKNOWN_DOMAIN';
+   /** Raw query topics recognized as context for this issue; never used as governing/source scope. */
+   contextualTopicIds?: string[];
++  /** Routing-only parents owned by this issue for query accounting; never evidence/source scope. */
++  routingTopicIds?: string[];
+ }
+ 
+ export interface SemanticIssueReconciliation {
+@@ -1192,6 +1194,66 @@ function independentlyRecognizedTopics(query: string, classification: QuestionCl
+   return { topics, hasUnparsedText: (decomposition.unresolvedTopics?.length || 0) > 0 };
+ }
+ 
++function resolveIssueRoutingTopicIds(
++  issue: SemanticQuestionIssue,
++  mappedTopicIds: readonly string[],
++  inventoryIds: ReadonlySet<string>,
++  scopeTopicIds: readonly ReadonlySet<string>[]
++): string[] {
++  const mappedTopics = getCoverageTopicsByIds(mappedTopicIds);
++  const parentsById = new Map<string, ReturnType<typeof getCoverageTopicsByIds>[number]>();
++  for (const child of mappedTopics) {
++    for (const parentId of child.routingParentTopicIds || []) {
++      const parent = getCoverageTopicsByIds([parentId])[0];
++      if (!parent || !parent.routingOnly || parent.domainId !== child.domainId ||
++          !child.authorities.some(authority => parent.authorities.includes(authority) && issue.governingAuthorities.includes(authority as SemanticAuthority)) ||
++          !semanticAuthorityCoversTopic(issue.governingAuthorities, child.authorities, issue.domain) ||
++          !semanticAuthorityCoversTopic(issue.governingAuthorities, parent.authorities, issue.domain) ||
++          !inventoryIds.has(parent.id)) continue;
++      if (scopeTopicIds.some(scope => scope.has(child.id) && scope.has(parent.id)) &&
++          !scopeTopicIds.some(scope => isIndependentGenericParentScope(scope, parent))) {
++        parentsById.set(parent.id, parent);
++      }
++    }
++  }
++  return [...parentsById.keys()].sort();
++}
++
++function isIndependentGenericParentScope(
++  scopeTopicIds: ReadonlySet<string>,
++  parent: SingaporeCoverageTopic
++): boolean {
++  if (!scopeTopicIds.has(parent.id)) return false;
++  const sameParentChildren = getCoverageTopicsByIds([...scopeTopicIds]).filter(topic =>
++    topic.routingParentTopicIds?.includes(parent.id) && topic.domainId === parent.domainId &&
++    topic.authorities.some(authority => parent.authorities.includes(authority)));
++  return sameParentChildren.length === 0;
++}
++
++function removeUnownedRoutingParents(
++  issue: SemanticQuestionIssue,
++  mappedTopicIds: readonly string[],
++  routingTopicIds: readonly string[],
++  scopeTopicIds: readonly ReadonlySet<string>[]
++): string[] {
++  const mappedTopics = getCoverageTopicsByIds(mappedTopicIds);
++  const mappedIds = new Set(mappedTopicIds);
++  const subjectSpecificTopicIds = new Set(defaultQueryTopicResolver.decomposeQuery(issue.subject).topics
++    .map(topic => topic.id).filter(id => !getCoverageTopicsByIds([id])[0]?.routingOnly));
++  const unownedParents = mappedTopics.filter(topic => topic.routingOnly).filter(parent => {
++    const relatedMappedChild = mappedTopics.some(child => child.routingParentTopicIds?.includes(parent.id) &&
++      child.domainId === parent.domainId &&
++      child.authorities.some(authority => parent.authorities.includes(authority) && issue.governingAuthorities.includes(authority as SemanticAuthority)));
++    if (relatedMappedChild) {
++      return scopeTopicIds.some(scope => isIndependentGenericParentScope(scope, parent)) || !routingTopicIds.includes(parent.id);
++    }
++    // A routing parent can still be mapped as a generic issue on its own.
++    return subjectSpecificTopicIds.size > 0 || mappedTopics.some(topic => topic.id !== parent.id && mappedIds.has(topic.id));
++  });
++  const removeIds = new Set(unownedParents.map(topic => topic.id));
++  return mappedTopicIds.filter(id => !removeIds.has(id));
++}
++
+ function reconcileSemanticIssuePlan(
+   query: string,
+   classification: QuestionClassificationResult,
+@@ -1200,6 +1262,9 @@ function reconcileSemanticIssuePlan(
+   const semantic = validatedSemanticForQuery(query, understanding);
+   const inventory = independentlyRecognizedTopics(query, classification);
+   const inventoryIds = new Set(inventory.topics.map(topic => topic.id));
++  const scopeTopicIds = getQueryScopeFragments(query).map(fragment => new Set(
++    defaultQueryTopicResolver.decomposeQuery(fragment).topics.map(topic => topic.id)
++  ));
+   const seenIds = new Map<string, number>();
+   const addId = (issue: SemanticQuestionIssue): string => {
+     const baseId = stableIssueId(issue);
+@@ -1219,7 +1284,9 @@ function reconcileSemanticIssuePlan(
+         governingAuthorities: issue.governingAuthorities.map(authority =>
+           canonicalAccountingWorkstreamAuthority(issue.domain, authority))
+       };
+-      const mappedTopicIds = resolveIssueTopicIds(routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.governingAuthorities, inventoryIds);
++      const directlyMappedTopicIds = resolveIssueTopicIds(routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.governingAuthorities, inventoryIds);
++      const routingTopicIds = resolveIssueRoutingTopicIds(routedIssue, directlyMappedTopicIds, inventoryIds, scopeTopicIds);
++      const mappedTopicIds = removeUnownedRoutingParents(routedIssue, directlyMappedTopicIds, routingTopicIds, scopeTopicIds);
+       const reconciledIssue = {
+         ...routedIssue,
+         mappedTopicIds,
+@@ -1242,10 +1309,11 @@ function reconcileSemanticIssuePlan(
+         id: addId(reconciledIssue),
+         status: unresolvedReason ? 'UNRESOLVED' : 'MAPPED',
+         ...(unresolvedReason ? { unresolvedReason } : {}),
+-        ...(contextualTopicIds.length ? { contextualTopicIds } : {})
++        ...(contextualTopicIds.length ? { contextualTopicIds } : {}),
++        ...(routingTopicIds.length ? { routingTopicIds } : {})
+       };
+     });
+-    const mappedInventory = new Set(issues.flatMap(issue => [...issue.mappedTopicIds, ...(issue.contextualTopicIds || [])]));
++    const mappedInventory = new Set(issues.flatMap(issue => [...issue.mappedTopicIds, ...(issue.contextualTopicIds || []), ...(issue.routingTopicIds || [])]));
+     for (const topic of inventory.topics) {
+       if (mappedInventory.has(topic.id)) continue;
+       const residual = issueFromTaxonomyGroup([topic]);
+diff --git a/src/standards/coverageRegistry.ts b/src/standards/coverageRegistry.ts
+index 9ec248d..5cc252a 100644
+--- a/src/standards/coverageRegistry.ts
++++ b/src/standards/coverageRegistry.ts
+@@ -76,6 +76,8 @@ export interface SingaporeCoverageTopic {
+   exclusionKeywords: string[];
+   /** Broad taxonomy entries can help route discovery without being required evidence coverage. */
+   routingOnly?: boolean;
++  /** Routing-only taxonomy parents that a specific topic may own for bounded query routing. */
++  routingParentTopicIds?: string[];
+   /** Shared concept ID for legacy/new topic aliases that should count once in ranking. */
+   canonicalConceptId?: string;
+   actOrStandard?: string;
+@@ -131,6 +133,7 @@ interface TopicSpec {
+   requiredContentTerms?: string[];
+   exclusionKeywords?: string[];
+   routingOnly?: boolean;
++  routingParentTopicIds?: string[];
+   canonicalConceptId?: string;
+   priority?: CoveragePriority;
+   status?: CoverageStatus;
+@@ -178,6 +181,7 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
+     ...(spec.requiredContentTerms ? { requiredContentTerms: [...spec.requiredContentTerms] } : {}),
+     exclusionKeywords: spec.exclusionKeywords ?? [],
+     ...(spec.routingOnly ? { routingOnly: true } : {}),
++    ...(spec.routingParentTopicIds ? { routingParentTopicIds: [...spec.routingParentTopicIds] } : {}),
+     ...(spec.canonicalConceptId ? { canonicalConceptId: spec.canonicalConceptId } : {}),
+     ...(spec.actOrStandard ? { actOrStandard: spec.actOrStandard } : {}),
+     ...(spec.sectionMatch ? { sectionMatch: spec.sectionMatch } : {}),
+@@ -584,13 +588,14 @@ const topicSpecs: TopicSpec[] = [
+   { id: 'iras-individual-double-tax-agreements', title: 'Individual Double Tax Agreement Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual double tax agreement', 'individual dta relief', 'employment income dta exemption', 'dependent services treaty relief', 'double taxation relief individual', 'individual double taxation relief', 'double taxation agreements'], aliases: ['Claiming exemptions under Avoidance of Double Taxation Agreements', 'Double Taxation Agreements (DTA)'], queryPatterns: [String.raw`\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b[\s\S]{0,100}\b(?:relief|exemption|employment|income|foreign|overseas)\b`, String.raw`\b(?:relief|exemption|employment|income|foreign|overseas)\b[\s\S]{0,100}\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b`] },
+   { id: 'iras-individual-certificate-of-residence', title: 'Certificate of Residence for Individuals', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['individual certificate of residence', 'apply for certificate of residence', 'certificate of residence individual', 'cor for dta benefits'], aliases: ['Apply for COR'], queryPatterns: [String.raw`\b(?:certificate of residence|\bcor\b)[\s\S]{0,80}\b(?:dta|treaty|individual|tax resident)\b`] },
+   { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
+-  { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'], queryPatterns: INDIVIDUAL_RELIEF_CAP_PATTERNS },
+-  { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'], queryPatterns: INDIVIDUAL_CPF_RELIEF_PATTERNS },
+-  { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['srs relief', 'supplementary retirement scheme relief'], queryPatterns: INDIVIDUAL_SRS_RELIEF_PATTERNS },
+-  { id: 'iras-individual-parent-relief', title: 'Parent Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['parent relief', 'parent relief disability', 'parent tax relief', 'tax relief for parents', 'parental tax relief'] },
+-  { id: 'iras-individual-grandparent-caregiver-relief', title: 'Grandparent Caregiver Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['grandparent caregiver relief', 'caregiver relief'] },
+-  { id: 'iras-individual-wmcr', title: "Working Mother's Child Relief", domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['working mother child relief', 'wmcr'] },
+-  { id: 'iras-individual-qcr', title: 'Qualifying Child Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['qualifying child relief', 'qcr'] },
++  { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'], queryPatterns: INDIVIDUAL_RELIEF_CAP_PATTERNS, routingParentTopicIds: ['iras-individual-reliefs'] },
++  { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'], queryPatterns: INDIVIDUAL_CPF_RELIEF_PATTERNS, routingParentTopicIds: ['iras-individual-reliefs'] },
++  // This existing broad discovery phrase also resolves to the specific SRS child for bounded routing.
++  { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['srs relief', 'srs contribution relief', 'supplementary retirement scheme relief'], queryPatterns: INDIVIDUAL_SRS_RELIEF_PATTERNS, routingParentTopicIds: ['iras-individual-reliefs'] },
++  { id: 'iras-individual-parent-relief', title: 'Parent Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['parent relief', 'parent relief disability', 'parent tax relief', 'tax relief for parents', 'parental tax relief'], routingParentTopicIds: ['iras-individual-reliefs'] },
++  { id: 'iras-individual-grandparent-caregiver-relief', title: 'Grandparent Caregiver Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['grandparent caregiver relief', 'caregiver relief'], routingParentTopicIds: ['iras-individual-reliefs'] },
++  { id: 'iras-individual-wmcr', title: "Working Mother's Child Relief", domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['working mother child relief', 'wmcr'], routingParentTopicIds: ['iras-individual-reliefs'] },
++  { id: 'iras-individual-qcr', title: 'Qualifying Child Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['qualifying child relief', 'qcr'], routingParentTopicIds: ['iras-individual-reliefs'] },
+   { id: 'iras-property-tax-annual-value', title: 'Property Tax and Annual Value', domainId: 'IRAS_PROPERTY_TAX', priority: 'P1', keywords: ['property tax', 'annual value', 'owner-occupied property tax', 'non-owner-occupied property tax'] },
+   { id: 'iras-stamp-duty-bsd', title: 'Buyer’s Stamp Duty', domainId: 'IRAS_STAMP_DUTY', priority: 'P1', keywords: ['bsd', 'buyers stamp duty', 'buyer’s stamp duty', 'buyer stamp duty'] },
+   { id: 'iras-stamp-duty-absd', title: 'Additional Buyer’s Stamp Duty', domainId: 'IRAS_STAMP_DUTY', priority: 'P1', keywords: ['absd', 'additional buyers stamp duty', 'additional buyer’s stamp duty'] },
