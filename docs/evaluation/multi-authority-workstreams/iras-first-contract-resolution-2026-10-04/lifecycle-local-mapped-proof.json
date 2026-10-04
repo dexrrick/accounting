@@ -1,0 +1,49 @@
+{
+  "provenance": "API-free semantic V2 mock; production defaultSourceRetriever; synthetic HTML through injected ControlledWebRetriever fetch; no provider/network access",
+  "referenceDate": "2026-10-03",
+  "query": "Our company wants to deduct a private or domestic expense for corporate income tax. Is the expense deductible?",
+  "issuePlan": {
+    "coverageEstablished": false,
+    "hasUnmappedResidual": true,
+    "issueTopics": [
+      []
+    ]
+  },
+  "requestedConcepts": [
+    {
+      "id": "semantic_private_or_domestic_expense_deductibility",
+      "label": "private or domestic expense deductibility",
+      "topicIds": [
+        "iras-cit-deductibility"
+      ]
+    }
+  ],
+  "local": {
+    "candidateIds": [],
+    "status": "INSUFFICIENT",
+    "eligibleIds": [],
+    "coveredTopicIds": [],
+    "uncoveredTopicIds": [
+      "iras-cit-disallowed-expenses",
+      "iras-cit-deductibility"
+    ],
+    "uncoveredConcepts": [
+      "private or domestic expense deductibility"
+    ]
+  },
+  "fallback": {
+    "requestedSearches": [],
+    "fetchedUrls": []
+  },
+  "finalIssue": {
+    "evidenceStatus": "INSUFFICIENT",
+    "verifiedClaimQuotes": [],
+    "gaps": [
+      {
+        "stage": "mapped",
+        "code": "NO_COVERAGE_TOPIC",
+        "reason": "The issue has no resolved authority and topic mapping for this workstream."
+      }
+    ]
+  }
+}

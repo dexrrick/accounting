@@ -97,11 +97,14 @@ assert.ok(visibleFixtureText.length > 5000,
 assert.ok(distractors.every(text => text.startsWith('Synthetic lexical-index entry, not source guidance:')),
   'All competitors are explicitly disclosed non-entailing synthetic metadata.');
 const completeParagraphNormalized = normalize(completeOpeningParagraph);
-const closed = { selectedGets: 0, closedKnownMappedGets: 0, unexpectedMappedGets: 0, discovery: 0, search: 0, ambient: 0 };
+const controlTransportCounts = new Map();
+let activeControlCounts;
+const aggregate = { ambient: 0 };
 const knownMapsByUrl = new Map(IRAS_SOURCE_MAP_DEFINITIONS.map(row => [row.canonicalSourceUrl, row]));
 const previousFetch = globalThis.fetch;
 globalThis.fetch = async () => {
-  closed.ambient += 1;
+  aggregate.ambient += 1;
+  if (activeControlCounts) activeControlCounts.ambient += 1;
   throw new Error('AMBIENT_NETWORK_BLOCKED');
 };
 
@@ -144,7 +147,20 @@ function understandingFor(testCase) {
   return { questionUnderstanding, reconciled, issue, topicIds, requestedConcepts };
 }
 
-async function runPipeline(testCase, ruleText) {
+async function runPipeline(testCase, ruleText, controlId = testCase.id) {
+  const counts = {
+    selectedGets: 0,
+    closedKnownMappedGets: 0,
+    unexpectedMappedGets: 0,
+    discovery: 0,
+    search: 0,
+    discoveryResultCount: 0,
+    searchResultCount: 0,
+    ambient: 0
+  };
+  assert.equal(controlTransportCounts.has(controlId), false, `Control label is unique: ${controlId}`);
+  controlTransportCounts.set(controlId, counts);
+  activeControlCounts = counts;
   const { questionUnderstanding, reconciled, issue, topicIds, requestedConcepts } = understandingFor(testCase);
   const selectedPageHtml = `<html><head><title>${escapeHtml(mapPointer.documentTitle)} | IRAS</title></head>` +
     `<body><main><h1>${escapeHtml(mapPointer.documentTitle)} | IRAS</h1>` +
@@ -152,25 +168,35 @@ async function runPipeline(testCase, ruleText) {
       ? `<p>${escapeHtml(ruleText)}</p>` : `<p>${escapeHtml(text)}</p>`).join('') +
     `</main></body></html>`;
   const discoveryAdapter = {
-    async discoverOfficialSourceCandidates() { closed.discovery += 1; return []; },
+    async discoverOfficialSourceCandidates() {
+      counts.discovery += 1;
+      const results = [];
+      counts.discoveryResultCount += results.length;
+      return results;
+    },
     getLastFetchTrace() { return []; }
   };
   const officialDomainSearchAdapter = {
-    async searchOfficialDomainCandidates() { closed.search += 1; return []; },
+    async searchOfficialDomainCandidates() {
+      counts.search += 1;
+      const results = [];
+      counts.searchResultCount += results.length;
+      return results;
+    },
     getLastSearchTrace() { return []; }
   };
   const customFetch = async (urlValue, init = {}) => {
     const url = new URL(String(urlValue)).toString();
     assert.equal((init.method || 'GET').toUpperCase(), 'GET');
     if (url === mapDefinition.canonicalSourceUrl) {
-      closed.selectedGets += 1;
+      counts.selectedGets += 1;
       return new Response(selectedPageHtml, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
     }
     if (knownMapsByUrl.has(url) && knownMapsByUrl.get(url).domainId === 'IRAS_GST') {
-      closed.closedKnownMappedGets += 1;
+      counts.closedKnownMappedGets += 1;
       return new Response(null, { status: 503 });
     }
-    closed.unexpectedMappedGets += 1;
+    counts.unexpectedMappedGets += 1;
     return new Response(null, { status: 503 });
   };
   const webRetriever = new ControlledWebRetriever(undefined, new SourceCache());
@@ -212,13 +238,18 @@ async function runPipeline(testCase, ruleText) {
   const finalIssue = workstreams.workstreams.flatMap(stream => stream.issues)
     .find(row => row.issueId === issue.id);
   assert.ok(finalIssue, 'The central workstream retains the frozen issue.');
-  return { context, liveRecords, rendered, finalIssue };
+  activeControlCounts = undefined;
+  return { context, liveRecords, rendered, finalIssue, transportCounts: counts };
 }
 
 const generalCase = irasResolverCases.find(row => row.id === 'gst-input-tax-general-rule');
 assert.ok(generalCase);
 try {
-  const complete = await runPipeline(generalCase, completeOpeningParagraph);
+  const complete = await runPipeline(generalCase, completeOpeningParagraph, 'complete-positive');
+  assert.equal(complete.transportCounts.discovery, 0,
+    'The complete positive is sufficient from the selected mapped source without discovery fallback.');
+  assert.equal(complete.transportCounts.search, 0,
+    'The complete positive is sufficient from the selected mapped source without search fallback.');
   assert.ok(complete.liveRecords.length > 0, 'The selected registered GST map supplies an eligible live record.');
   assert.ok(complete.liveRecords.some(record => normalize(record.sourceText).includes(completeParagraphNormalized)),
     'The full live page retention preserves the complete original opening paragraph.');
@@ -238,8 +269,8 @@ try {
   assert.deepEqual(complete.finalIssue.gaps, []);
   assert.ok(complete.finalIssue.verifiedClaims?.some(claim => normalize(claim.quote).includes(completeParagraphNormalized)));
 
-  const firstSentenceOnly = await runPipeline(generalCase, openingSentences[0]);
-  const missingCondition = await runPipeline(generalCase, `${openingSentences[0]} ${openingSentences[2]}`);
+  const firstSentenceOnly = await runPipeline(generalCase, openingSentences[0], 'first-sentence-only');
+  const missingCondition = await runPipeline(generalCase, `${openingSentences[0]} ${openingSentences[2]}`, 'missing-condition-sentence');
   for (const [label, control] of [['first-sentence-only', firstSentenceOnly], ['missing-condition-sentence', missingCondition]]) {
     assert.equal(control.liveRecords.some(record => supportGeneralIrasRuleConcept({
       sourceText: record.sourceText,
@@ -257,7 +288,7 @@ try {
 
   const specificCase = irasResolverCases.find(row => row.id === 'private-holiday-gst-no-corporate-income-tax');
   assert.ok(specificCase, 'The adjacent private-holiday GST eligibility fixture exists.');
-  const specific = await runPipeline(specificCase, completeOpeningParagraph);
+  const specific = await runPipeline(specificCase, completeOpeningParagraph, 'specific-private-expense');
   assert.equal(specific.finalIssue.applicationStatus, 'UNRESOLVED',
     'A general input-tax rule does not decide eligibility for a specific private-expense request without its application facts.');
   assert.ok(specific.finalIssue.gaps.length > 0,
@@ -266,20 +297,39 @@ try {
   globalThis.fetch = previousFetch;
 }
 
-assert.equal(closed.ambient, 0, 'Ambient fetch remains blocked.');
-assert.equal(closed.unexpectedMappedGets, 0, 'Only registered GST maps enter the closed injected transport.');
-assert.equal(closed.discovery, 0, 'Official source discovery stays closed.');
-assert.equal(closed.search, 0, 'Official-domain search stays closed.');
-assert.ok(closed.selectedGets > 0, 'The registered IRAS GST input-tax page uses the injected synthetic response.');
+const aggregateTransportCounts = [...controlTransportCounts.values()].reduce((totals, counts) => {
+  for (const key of Object.keys(counts)) totals[key] += counts[key];
+  return totals;
+}, {
+  selectedGets: 0, closedKnownMappedGets: 0, unexpectedMappedGets: 0,
+  discovery: 0, search: 0, discoveryResultCount: 0, searchResultCount: 0, ambient: 0
+});
+assert.equal(aggregate.ambient, 0, 'Ambient fetch remains blocked across all controls.');
+assert.equal(aggregateTransportCounts.ambient, 0, 'No control escaped through ambient fetch.');
+for (const [controlId, counts] of controlTransportCounts) {
+  assert.equal(counts.ambient, 0, `${controlId}: ambient fetch stays blocked.`);
+  assert.equal(counts.unexpectedMappedGets, 0, `${controlId}: no unregistered map fetch is allowed.`);
+  assert.equal(counts.discoveryResultCount, 0, `${controlId}: the injected discovery adapter returns no candidates.`);
+  assert.equal(counts.searchResultCount, 0, `${controlId}: the injected search adapter returns no candidates.`);
+  assert.ok(counts.discovery <= 2 * knownMapsByUrl.size,
+    `${controlId}: registered fallback discovery calls stay bounded.`);
+  assert.ok(counts.search <= 2 * knownMapsByUrl.size,
+    `${controlId}: registered fallback search calls stay bounded.`);
+  assert.ok(counts.selectedGets + counts.closedKnownMappedGets <= 2 * knownMapsByUrl.size,
+    `${controlId}: registered mapped fallback remains within its bounded transport cap.`);
+}
+assert.ok(aggregateTransportCounts.selectedGets > 0,
+  'The registered IRAS GST input-tax page uses the injected synthetic response.');
 process.stdout.write(`${JSON.stringify({
   status: 'OK',
   syntheticVisibleInputCharacterCount: visibleFixtureText.length,
-  selectedRegisteredMapGetCount: closed.selectedGets,
-  closedOtherGstMapGetCount: closed.closedKnownMappedGets,
-  unexpectedMappedGetCount: closed.unexpectedMappedGets,
-  ambientFetchCount: closed.ambient,
-  discoveryCount: closed.discovery,
-  searchCount: closed.search,
+  selectedRegisteredMapGetCount: aggregateTransportCounts.selectedGets,
+  closedOtherGstMapGetCount: aggregateTransportCounts.closedKnownMappedGets,
+  unexpectedMappedGetCount: aggregateTransportCounts.unexpectedMappedGets,
+  ambientFetchCount: aggregateTransportCounts.ambient,
+  discoveryCount: aggregateTransportCounts.discovery,
+  searchCount: aggregateTransportCounts.search,
+  controlTransportCounts: Object.fromEntries(controlTransportCounts),
   positiveRetainedLiveRecordCount: 1,
   completeOpeningAcceptedAndVerified: true,
   incompleteControlsRemainUnverified: true,

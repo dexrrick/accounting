@@ -1055,6 +1055,14 @@ export async function resolveMappedOfficialSourceFallback(
     mappedTopicIds: options.evidenceScope.topicIds,
     requestedOperation: options.evidenceScope.context.requestedOperation
   } : getSemanticIrasDiscoveryContext(options.questionUnderstanding, query);
+  const scopedEvidenceRuleInput = {
+    ...(options.evidenceScope?.context.primarySubject.trim()
+      ? { scopedSubject: options.evidenceScope.context.primarySubject }
+      : semanticIrasContext?.primarySubject?.trim() ? { scopedSubject: semanticIrasContext.primarySubject } : {}),
+    ...(options.evidenceScope?.context.population
+      ? { scopedPopulation: options.evidenceScope.context.population }
+      : semanticIrasContext?.population ? { scopedPopulation: semanticIrasContext.population } : {})
+  };
   const requestedConcepts = options.evidenceScope?.requestedConcepts ||
     semanticIrasContext?.requestedConcepts || getRequestedQuestionConcepts(query, options.questionUnderstanding);
   const authorityDiscoveryTopics = authorityFallbackPermitted
@@ -1274,6 +1282,7 @@ export async function resolveMappedOfficialSourceFallback(
       records,
       missingFacts: [],
       requestedConcepts,
+      ...scopedEvidenceRuleInput,
       authorities: ['IRAS'],
       referenceDate: options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE,
       sourceMapFallbackTrace: currentTrace()
@@ -1288,6 +1297,7 @@ export async function resolveMappedOfficialSourceFallback(
     records,
     missingFacts: [],
     requestedConcepts,
+    ...scopedEvidenceRuleInput,
     authorities: ['IRAS'],
     referenceDate: options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE,
     sourceMapFallbackTrace: currentTrace()
@@ -1719,6 +1729,14 @@ export async function buildGroundedReasoningContext(
     mappedTopicIds: retrievalOptions.evidenceScope.topicIds,
     requestedOperation: retrievalOptions.evidenceScope.context.requestedOperation
   } : getSemanticIrasDiscoveryContext(questionUnderstanding, userInput) : undefined;
+  const scopedEvidenceRuleInput = {
+    ...(retrievalOptions.evidenceScope?.context.primarySubject.trim()
+      ? { scopedSubject: retrievalOptions.evidenceScope.context.primarySubject }
+      : semanticIrasContext?.primarySubject?.trim() ? { scopedSubject: semanticIrasContext.primarySubject } : {}),
+    ...(retrievalOptions.evidenceScope?.context.population
+      ? { scopedPopulation: retrievalOptions.evidenceScope.context.population }
+      : semanticIrasContext?.population ? { scopedPopulation: semanticIrasContext.population } : {})
+  };
   const requestedConcepts = retrievalOptions.evidenceScope?.requestedConcepts ||
     semanticIrasContext?.requestedConcepts || getRequestedQuestionConcepts(userInput, questionUnderstanding);
   const semanticDiscoveryQuery = retrievalOptions.semanticDiscoveryQuery || (retrievalOptions.evidenceScope
@@ -1749,6 +1767,7 @@ export async function buildGroundedReasoningContext(
     missingFacts: classification.missingFacts,
     provisionalTopics: authorityDiscoveryContexts,
     requestedConcepts,
+    ...scopedEvidenceRuleInput,
     authorities: ['IRAS'],
     referenceDate: retrievalOptions.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE
   }), classification.missingFacts) : undefined;
@@ -1781,6 +1800,7 @@ export async function buildGroundedReasoningContext(
     missingFacts: classification.missingFacts, sourceMapFallbackTrace: mappedFallback.trace,
     provisionalTopics: mappedFallback.provisionalTopics.length ? mappedFallback.provisionalTopics : authorityDiscoveryContexts,
     requestedConcepts,
+    ...scopedEvidenceRuleInput,
     authorities: ['IRAS'],
     referenceDate: retrievalOptions.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE
   }), classification.missingFacts) : undefined;

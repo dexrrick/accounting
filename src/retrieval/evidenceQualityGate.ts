@@ -44,6 +44,9 @@ export interface EvidenceQualityInput {
   provisionalTopics?: SingaporeCoverageTopic[];
   /** Query-scoped material concepts, used for conservative relevance and coverage checks. */
   requestedConcepts?: RequestedQuestionConcept[];
+  /** Validated issue scope used to distinguish the requested subject from incidental source mentions. */
+  scopedSubject?: string;
+  scopedPopulation?: string;
 }
 
 export interface EvidenceQualityAssessment {
@@ -665,6 +668,38 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       }
       accepted = true;
       eligibleById.set(record.id, record);
+      const scopedTopicIds = [topic.id, ...scopedMappedTopicIds(topic)];
+      const ruleSupportResults = input.scopedSubject?.trim()
+        ? [
+          supportGeneralIrasRuleConcept({
+            sourceText: record.sourceText,
+            domainId: topic.domainId,
+            topicIds: scopedTopicIds,
+            subject: input.scopedSubject,
+            population: input.scopedPopulation
+          }),
+          ...requestedConcepts
+            .filter(concept => concept.topicIds.length === 0 || concept.topicIds.some(id => scopedTopicIds.includes(id)))
+            .map(concept => supportGeneralIrasRuleConcept({
+              sourceText: record.sourceText,
+              domainId: topic.domainId,
+              topicIds: scopedTopicIds,
+              subject: input.scopedSubject!,
+              population: input.scopedPopulation,
+              concepts: [concept]
+            }))
+        ]
+        : [];
+      const scopedRuleSupport = ruleSupportResults.includes(false) ? false
+        : ruleSupportResults.includes(true) ? true : undefined;
+      // A recognized rule family can reject a record as support for this
+      // scoped topic without making the otherwise eligible source unusable.
+      // Undefined preserves existing topic-association behaviour.
+      if (scopedRuleSupport === false) {
+        rejectedCode = 'TOPIC_RULE_SCOPE_NOT_SUPPORTED';
+        rejectedReason = 'The source is eligible, but its text does not support the scoped rule requested for this topic.';
+        continue;
+      }
       const acceptedTopicIds = acceptedTopicIdsByRecord.get(record.id) || new Set<string>();
       acceptedTopicIds.add(topic.id);
       acceptedTopicIdsByRecord.set(record.id, acceptedTopicIds);
@@ -708,7 +743,8 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       sourceText,
       domainId: topic.domainId,
       topicIds: [...new Set([topic.id, ...scopedMappedTopicIds(topic), ...inScopeConceptTopicIds])],
-      subject: concept.label,
+      subject: input.scopedSubject?.trim() || concept.label,
+      population: input.scopedPopulation,
       concepts: [concept]
     }));
     if (scopedResults.includes(true)) return true;
@@ -774,7 +810,12 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       ...mappedTopicIds,
       ...applicableConceptTopicIds
     ])];
-    const scope = { domainId: topic.domainId, topicIds: scopedTopicIds, subject: concept.label };
+    const scope = {
+      domainId: topic.domainId,
+      topicIds: scopedTopicIds,
+      subject: input.scopedSubject?.trim() || concept.label,
+      population: input.scopedPopulation
+    };
     return matchesRequestedQuestionConcept(record.sourceText || '', concept, scope);
   };
   for (const topic of targetTopics.filter(candidate => candidate.id.startsWith('iras-authority-query-'))) {

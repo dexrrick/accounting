@@ -213,8 +213,8 @@ function topiclessConceptBelongsToIssue(concept: RequestedQuestionConcept, issue
       issue.mappedTopicIds.some(id => id.startsWith('iras-individual-'));
   }
   const issueText = `${issue.subject} ${issue.mappedTopicIds.join(' ')}`;
-  const uniqueTerms = [...new Set([...concept.terms, concept.label].flatMap(distinctiveTerms))];
-  const normalizedIssue = new Set(normalizeEvidenceText(issueText).split(' ').map(normalizeWord));
+  const uniqueTerms = [...new Set([...concept.terms, concept.label].flatMap(conceptOwnershipTerms))];
+  const normalizedIssue = new Set(conceptOwnershipTerms(issueText));
   return uniqueTerms.length > 0 && uniqueTerms.filter(term => normalizedIssue.has(term)).length >= Math.min(2, uniqueTerms.length);
 }
 
@@ -402,6 +402,15 @@ function normalizeWord(value: string): string {
 
 function distinctiveTerms(value: string): string[] {
   return [...new Set(normalizeEvidenceText(value).split(' ')
+    .filter(word => word.length >= 4 && !GENERIC_SUPPORT_WORDS.has(word) && !GENERIC_SUPPORT_WORDS.has(normalizeWord(word)))
+    .map(normalizeWord))];
+}
+
+function conceptOwnershipTerms(value: string): string[] {
+  // Treat the joined and hyphenated spellings as the same recipient qualifier
+  // without collapsing ordinary "resident" into the non-resident concept.
+  const normalized = normalizeEvidenceText(value).replace(/\bnon\s+resident\b/g, 'nonresident');
+  return [...new Set(normalized.split(' ')
     .filter(word => word.length >= 4 && !GENERIC_SUPPORT_WORDS.has(word) && !GENERIC_SUPPORT_WORDS.has(normalizeWord(word)))
     .map(normalizeWord))];
 }
@@ -798,6 +807,8 @@ async function evaluateIssue(
       referenceDate,
       authorities: ['IRAS'],
       requestedConcepts: concepts,
+      scopedSubject: issue.subject,
+      scopedPopulation: issue.population,
       sourceMapFallbackTrace: safeEvidenceQualityTrace(providerResult.evidenceQualityTrace)
     });
     admitted = irasQuality.eligibleRecords;

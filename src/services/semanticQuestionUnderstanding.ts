@@ -806,35 +806,44 @@ function refineUnknownEmploymentPopulation(
 }
 
 function explicitlyRequestsCpfPayrollOutcome(query: string): boolean {
-  const asksForRate = /\b(?:what|which|current|applicable)\b[^.!?]{0,45}\b(?:cpf|central provident fund)\b[^.!?]{0,40}\b(?:contribution\s+)?rates?\b/i.test(query) ||
-    /\b(?:calculate|compute|work\s+out|determine|estimate)\b[^.!?]{0,35}\b(?:cpf|central provident fund)\b[^.!?]{0,25}\b(?:contribution\s+)?rates?\b/i.test(query);
-  const asksApplicableRate = /\b(?:current|applicable)\b[^.!?]{0,45}\b(?:cpf|central provident fund)\b[^.!?]{0,40}\b(?:contribution\s+)?rates?\b/i.test(query) ||
-    /\b(?:what|which)\b[^.!?]{0,25}\b(?:cpf|central provident fund)\b[^.!?]{0,25}\b(?:contribution\s+)?rates?\s+(?:currently\s+)?appl(?:y|ies)\b/i.test(query);
-  const asksForObligation = /\b(?:how much|what amount|what|which|calculate|compute|work\s+out|determine|estimate|must|should)\b[^.!?]{0,60}\b(?:employer|employee|cpf|central provident fund)\b[^.!?]{0,50}\b(?:contribution|contribute|payroll)\b[^.!?]{0,30}\b(?:due|payable|owe|owed|pay|paid|obligation|amount)\b/i.test(query) ||
-    /\b(?:employer|employee)\b[^.!?]{0,50}\b(?:must|should|will|needs? to)\s+(?:pay|contribute)\b[^.!?]{0,40}\b(?:cpf|central provident fund)\b/i.test(query);
-  const calculatesSeparatePayroll = /\b(?:calculate|compute|work\s+out|determine|estimate)\b[^.!?]{0,45}\b(?:employer|employee)\b[^.!?]{0,35}\b(?:cpf|central provident fund)\s+(?:contributions?|payroll)\b/i.test(query);
-  const asksCalculatedCpfOutcome = /\b(?:calculate|compute|work\s+out|determine|estimate)\b[^.!?]{0,45}\b(?:employer|employee|cpf|central provident fund)\b[^.!?]{0,40}\b(?:contribution|contribute|payroll|amount|rate)\b/i.test(query);
-  const asksConceptualRelationship = /\b(?:relationship|interact\w*|overlap\w*|interplay)\b/i.test(query);
-  const asksExplicitObligationAmount = /\b(?:how much|what amount)\b[^.!?]{0,100}\b(?:cpf|central provident fund|employer|employee)\b[^.!?]{0,60}\b(?:contributions?|contribute|payroll|pay|obligation)\b/i.test(query) ||
-    /\bwhat\s+must\s+(?:the\s+)?(?:employer|employee)\s+(?:pay|contribute)\b[^.!?]{0,40}\b(?:cpf|central provident fund)\b/i.test(query) ||
-    /\b(?:what|which)\s+(?:is\s+)?(?:the\s+)?(?:cpf|central provident fund)\b[^.!?]{0,25}\b(?:obligation|contribution amount|amount payable|contributions? due)\b/i.test(query);
-  const directRateRequest = asksForRate && (!asksConceptualRelationship || asksApplicableRate || asksCalculatedCpfOutcome);
-  const directObligationRequest = asksExplicitObligationAmount || asksForObligation && !asksConceptualRelationship;
-  return directRateRequest || directObligationRequest || calculatesSeparatePayroll;
+  const requestBoundary = /\s+\b(?:and|or|but|also)\s+(?=(?:what|which|who|where|when|why|how|can|could|do|does|did|is|are|will|would|should|must|calculate|compute|work\s+out|determine|estimate|explain|tell|state|identify)\b)/i;
+  const clauses = query.split(/[.!?;\n]+/).flatMap(sentence => sentence.split(requestBoundary))
+    .map(clause => clause.trim()).filter(Boolean);
+  return clauses.some(clause => {
+    const cpf = String.raw`(?:cpf|central provident fund)`;
+    const ask = String.raw`(?:what|which|how much|what amount|calculate|compute|work\s+out|determine|estimate|current|applicable)`;
+    const rateMentionAsked = new RegExp(`\\b${ask}\\b[^,]{0,65}\\b${cpf}\\b[^,]{0,55}\\b(?:contribution\\s+)?rates?\\b|\\b${ask}\\b[^,]{0,65}\\b(?:contribution\\s+)?rates?\\b[^,]{0,55}\\b${cpf}\\b`, 'i').test(clause);
+    const conceptualReliefInteraction = /\b(?:relationship|interact\w*|overlap\w*|interplay)\b/i.test(clause) &&
+      /\b(?:cap|limit|threshold)\b/i.test(clause);
+    const explicitApplicableOrCalculatedRate = /\b(?:current|applicable)\b[^,]{0,65}\b(?:cpf|central provident fund)\b[^,]{0,55}\b(?:contribution\s+)?rates?\b|\b(?:calculate|compute|work\s+out|determine|estimate)\b[^,]{0,65}\b(?:cpf|central provident fund)\b[^,]{0,55}\b(?:contribution\s+)?rates?\b/i.test(clause);
+    const rateRequest = rateMentionAsked && (!conceptualReliefInteraction || explicitApplicableOrCalculatedRate);
+    const payerOutcome = new RegExp(`\\b(?:employer|employee)\\b[^,]{0,70}\\b${cpf}\\b[^,]{0,45}\\b(?:contributions?|rates?|amounts?|payroll|obligations?|(?:must|should|will|needs? to|has to|have to)\\s+(?:pay|contribute|make))\\b|\\b(?:employer|employee)\\b[^,]{0,45}\\b(?:must|should|will|needs? to|has to|have to|pay|contribute|owe|calculate|compute|work\\s+out)\\b[^,]{0,65}\\b${cpf}\\b|\\b${cpf}\\b[^,]{0,45}\\b(?:employer|employee)\\b[^,]{0,45}\\b(?:contributions?|rates?|amounts?|payroll|obligations?|(?:must|should|will|needs? to|has to|have to)\\s+(?:pay|contribute|make))\\b`, 'i').test(clause);
+    const directPayerContributionAsk = /\b(?:what|which|how much|calculate|compute|work\s+out|determine|estimate)\b[^,]{0,65}\b(?:employer|employee)\b[^,]{0,55}\b(?:must|should|will|needs? to|has to|have to)\s+(?:pay|contribute|make)\b[^,]{0,45}\b(?:cpf|central provident fund)\b|\b(?:employer|employee)\b[^,]{0,35}\b(?:must|should|will|needs? to|has to|have to)\s+(?:pay|contribute|make)\b[^,]{0,55}\b(?:cpf|central provident fund)\b|\b(?:calculate|compute|work\s+out|determine|estimate)\b[^,]{0,45}\b(?:employer|employee)\b[^,]{0,45}\b${cpf}[^,]{0,30}\bcontributions?\b/i.test(clause);
+    const directFirstPersonCpfAmountAsk = /\b(?:how\s+much|what\s+amount)\b[^,;.!?]{0,40}\b(?:(?:do|must|should|will)\s+(?:i|we)|am\s+i|required\s+to)\s+(?:pay|contribute|owe)\b[^,;.!?]{0,45}\b(?:(?:into|to|for)\s+(?:the\s+)?)?(?:cpf|central provident fund)\b|\b(?:how\s+much|what\s+amount)\b[^,;.!?]{0,25}\b(?:cpf|central provident fund)\b[^,;.!?]{0,35}\b(?:do|must|should|will)\s+(?:i|we)\s+(?:pay|contribute|owe)\b|\bwhat\s+(?:cpf|central provident fund)\s+amount\b[^,;.!?]{0,30}\b(?:do|must|should|will)\s+(?:i|we)\s+owe\b/i.test(clause);
+    const explicitCpfAmount = new RegExp(`\\b(?:how much|what amount|calculate|compute|work\\s+out|determine|estimate)\\b[^,]{0,70}\\b${cpf}\\b[^,]{0,45}\\b(?:contributions?|contribute|payroll|amount payable|amount due)\\b[^,]{0,35}\\b(?:due|payable|owe|owed|amount|rate|payroll)\\b|\\b(?:how much|what amount)\\b[^,]{0,70}\\b${cpf}\\b[^,]{0,45}\\bcontributions?\\s+(?:are\\s+)?(?:due|payable)\\b|\\b(?:how much|what amount|calculate|compute|work\\s+out|determine|estimate)\\b[^,]{0,70}\\b(?:contributions?|contribute|payroll|amount payable|amount due)\\b[^,]{0,45}\\b${cpf}\\b`, 'i').test(clause);
+    const requestedContributionMandate = new RegExp(`\\b${cpf}\\b[^.!?]{0,45}\\bcontributions?\\b[^.!?]{0,45}\\b(?:must|should|will|need\\s+to|has\\s+to|have\\s+to)\\b[^.!?]{0,45}\\b(?:make|pay|contribute)\\b`, 'i').test(clause);
+    const explicitReliefRequest = /\b(?:personal|individual|income\s+tax)\s+(?:tax\s+)?relief\b|\brelief\s+(?:claim|amount|cap)\b/i.test(clause);
+    const explicitContributionObligation = new RegExp(`\\b${cpf}\\b[^,]{0,40}\\bcontributions?\\b[^,]{0,35}\\b(?:due|payable|owe|owed|payroll)\\b`, 'i').test(clause);
+    const explicitPayrollAskCue = /^\s*(?:what|which|who|how much|what amount|does|do|did|is|are|will|would|should|must|can|could|calculate|compute|work\s+out|determine|estimate|explain|tell|state|identify|check|find\s+out)\b/i.test(clause);
+    return rateRequest || directPayerContributionAsk || directFirstPersonCpfAmountAsk ||
+      explicitPayrollAskCue && !conceptualReliefInteraction && (payerOutcome || requestedContributionMandate) ||
+      (explicitContributionObligation || !explicitReliefRequest) && explicitCpfAmount;
+  });
 }
 
 function isContextualCpfInPersonalReliefQuestion(query: string, semantic: SemanticQuestionInterpretation): boolean {
-  const isReliefCalculation = semantic.calculationRequested && semantic.requestedOperation === 'CALCULATE';
-  const isConceptualReliefInteraction = semantic.requestedOperation === 'EXPLAIN_INTERACTION' &&
-    !semantic.requiresUserSpecificFacts &&
-    /\b(?:relationship|interact\w*|overlap\w*|interplay)\b/i.test(query) &&
-    /\b(?:cap|limit|threshold)\b/i.test(query);
   return semantic.domain === 'IRAS_INCOME_TAX' &&
     (semantic.population === 'INDIVIDUAL' || semantic.population === 'EMPLOYEE') &&
-    (isReliefCalculation || isConceptualReliefInteraction) &&
     /\b(?:personal\s+(?:income\s+)?tax(?:\s+relief)?|income\s+tax\s+relief|personal\s+relief|relief\s+cap|tax\s+relief\s+cap)\b/i.test(query) &&
     /\b(?:cpf|central provident fund)\b/i.test(query) &&
     !explicitlyRequestsCpfPayrollOutcome(query);
+}
+
+function isMappedIndividualCpfReliefIssue(issue: SemanticQuestionIssue, mappedTopicIds: readonly string[]): boolean {
+  return issue.domain === 'IRAS_INCOME_TAX' &&
+    (issue.population === 'INDIVIDUAL' || issue.population === 'EMPLOYEE') &&
+    issue.governingAuthorities.includes('IRAS') &&
+    mappedTopicIds.includes('iras-individual-cpf-relief');
 }
 
 function toRegistryDomain(domain: SemanticQuestionDomain, population: SemanticPopulation): SingaporeKnowledgeDomain | undefined {
@@ -978,6 +987,8 @@ export interface ReconciledSemanticQuestionIssue extends SemanticQuestionIssue {
   /** MAPPED means taxonomy mapping succeeded; it does not mean the issue is answered. */
   status: 'MAPPED' | 'UNRESOLVED';
   unresolvedReason?: 'NO_COVERAGE_TOPIC' | 'UNASSIGNED_QUERY_TOPIC' | 'UNKNOWN_DOMAIN';
+  /** Raw query topics recognized as context for this issue; never used as governing/source scope. */
+  contextualTopicIds?: string[];
 }
 
 export interface SemanticIssueReconciliation {
@@ -1038,6 +1049,17 @@ function reconcileLegacyQuestionUnderstanding(
     !(authority === 'CPF' && isContextualCpfInPersonalReliefQuestion(query, semantic)));
   const deterministicCpfOutcomeRequested = classification.authorities.includes('CPF') && explicitlyRequestsCpfPayrollOutcome(query);
   if (corroboratedNonIrasGovernors.length > 0 || deterministicCpfOutcomeRequested) {
+    const semanticHasCpfReliefIssue = semantic.issues?.some(issue => issue.domain === 'IRAS_INCOME_TAX' &&
+      (issue.population === 'INDIVIDUAL' || issue.population === 'EMPLOYEE') &&
+      issue.governingAuthorities.includes('IRAS') && /\b(?:cpf|central provident fund)\b/i.test(issue.subject) &&
+      /\brelief\b/i.test(issue.subject));
+    const semanticHasCpfPayrollIssue = semantic.issues?.some(issue => issue.domain === 'CPF_PAYROLL' ||
+      issue.governingAuthorities.includes('CPF'));
+    if (deterministicCpfOutcomeRequested && semanticHasCpfReliefIssue && semantic.issues !== undefined && !semanticHasCpfPayrollIssue) {
+      // Keep the mapped IRAS outcome so the independent raw CPF inventory can
+      // remain as an unresolved payroll issue when the model omitted it.
+      return { classification, understanding: { ...understanding, interpretation: semantic, mode: 'SEMANTIC_PLUS_RULES' } };
+    }
     return { classification, understanding: { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE' } };
   }
   if (!semanticRoutingIsSupported(query, semantic)) {
@@ -1188,6 +1210,9 @@ function reconcileSemanticIssuePlan(
 
   if (semantic && semantic.issues !== undefined) {
     const semanticIssues = semantic.issues;
+    const separateCpfPayrollOutcomeRequested = explicitlyRequestsCpfPayrollOutcome(query);
+    const semanticHasCpfGoverningIssue = semanticIssues.some(issue => issue.domain === 'CPF_PAYROLL' ||
+      issue.governingAuthorities.includes('CPF'));
     const issues: ReconciledSemanticQuestionIssue[] = semanticIssues.map(issue => {
       const routedIssue = {
         ...issue,
@@ -1207,14 +1232,20 @@ function reconcileSemanticIssuePlan(
       const unresolvedReason: ReconciledSemanticQuestionIssue['unresolvedReason'] = mappedTopicIds.length > 0
         ? undefined
         : routedIssue.domain === 'UNKNOWN' ? 'UNKNOWN_DOMAIN' : 'NO_COVERAGE_TOPIC';
+      const contextualTopicIds = !semanticHasCpfGoverningIssue && !separateCpfPayrollOutcomeRequested &&
+        inventoryIds.has('cpf_contribution_rates') &&
+        isMappedIndividualCpfReliefIssue(routedIssue, mappedTopicIds)
+        ? ['cpf_contribution_rates']
+        : [];
       return {
         ...reconciledIssue,
         id: addId(reconciledIssue),
         status: unresolvedReason ? 'UNRESOLVED' : 'MAPPED',
-        ...(unresolvedReason ? { unresolvedReason } : {})
+        ...(unresolvedReason ? { unresolvedReason } : {}),
+        ...(contextualTopicIds.length ? { contextualTopicIds } : {})
       };
     });
-    const mappedInventory = new Set(issues.flatMap(issue => issue.mappedTopicIds));
+    const mappedInventory = new Set(issues.flatMap(issue => [...issue.mappedTopicIds, ...(issue.contextualTopicIds || [])]));
     for (const topic of inventory.topics) {
       if (mappedInventory.has(topic.id)) continue;
       const residual = issueFromTaxonomyGroup([topic]);

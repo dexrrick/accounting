@@ -43,23 +43,25 @@ const GST_INPUT_TAX_SUBJECT_WORDS = new Set([
 
 const PRIVATE_EXPENSE_SUBJECT_WORDS = new Set([
   'a', 'an', 'the', 'our', 'its', 's', 'company', 'corporate', 'business', 'singapore', 'income', 'tax', 'treatment',
-  'rule', 'general', 'guidance', 'overview', 'private', 'personal', 'expense', 'director', 'holiday', 'travel',
+  'rule', 'general', 'guidance', 'overview', 'private', 'personal', 'domestic', 'expense', 'director', 'holiday', 'travel',
   'trip', 'cost', 'payment', 'incurred', 'deductibility', 'deductible', 'deduction', 'disallowed',
   'wholly', 'exclusively', 'producing', 'income', 'for', 'of', 'from', 'in', 'by', 'on', 'to', 'whether', 'when',
-  'if', 'is', 'are', 'be', 'and', 'as', 'may', 'explain', 'what', 'how', 'does', 'do', 'year', 'current'
+  'if', 'is', 'are', 'be', 'and', 'or', 'as', 'may', 'explain', 'what', 'how', 'does', 'do', 'year', 'current'
 ]);
 
 const ROYALTY_WITHHOLDING_SUBJECT_WORDS = new Set([
   'a', 'an', 'the', 'our', 'its', 's', 'company', 'companies', 'corporate', 'business', 'singapore', 'general', 'rule',
   'rules', 'guidance', 'overview', 'withholding', 'withhold', 'wht', 'tax', 'royalty', 'payment', 'pay', 'payer',
-  'recipient', 'non', 'resident', 'foreign', 'to', 'for', 'of', 'from', 'in', 'by', 'on', 'whether', 'when', 'if',
+  'recipient', 'non', 'resident', 'nonresident', 'foreign', 'to', 'for', 'of', 'from', 'in', 'by', 'on', 'whether', 'when', 'if',
   'is', 'are', 'be', 'and', 'as', 'may', 'explain', 'what', 'how', 'does', 'do'
 ]);
 
 const SPECIFIC_TOPIC_IDS = new Set(['iras-section-13-exemptions', 'iras-gst-blocked-input-tax']);
 
 function tokenize(value: string): string[] {
-  return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  return value.toLowerCase().normalize('NFKD')
+    .replace(/\bnon(?:[\s\-\u2010-\u2015\u2212]+)?residents?\b/giu, 'nonresident')
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
 }
 
 function canonicalWord(value: string): string {
@@ -272,8 +274,16 @@ function hasPrivateExpenseDeductibilityRule(sourceText: string): boolean {
       /\b(?:private|personal)\b[^.;:]{0,18}\bexpenses?\s+(?:are|is|will be|shall be|remain|considered|treated as)\s+(?:(?:generally|usually|normally)\s+)*(?:disallowed|non[ -]deductible|not (?:tax )?deductible|not allowed as (?:a )?deduction)\b/i.test(clause) ||
       /\b(?:private|personal)\b[^.;:]{0,18}\bexpenses?\s+cannot be deducted\b/i.test(clause) ||
       /\b(?:income )?tax treatment of (?:a|the)\s+(?:private|personal)\s+expense is that it is not (?:tax )?deductible\b/i.test(clause);
-    const reversesDisallowance = /\b(?:not|never)\s+(?:be\s+)?disallowed\b|\bnot\s+non[ -]deductible\b|\bnot\s+true\s+that\b|\bnot\s+(?:a|an|the)?\s*private expenses?\b/i.test(clause);
-    return privateExpense && explicitDisallowance && !reversesDisallowance;
+    const reversesDisallowance = /\b(?:not|never)\s+(?:be\s+)?disallowed\b|\bnot\s+non[ -]deductible\b|\bnot\s+true\s+that\b|\b(?:it is )?false that\b|\bnot\s+(?:a|an|the)?\s*private expenses?\b/i.test(clause);
+    const enumerativeDisallowance =
+      /\b(?:disallows?|prohibits?|bars?)\b[^.;:!?]{0,85}\b(?:deductions?|expenses?)\b[^.;:!?]{0,65}\b(?:including|such as|which include|among(?:st)? other things)\b[^.;:!?]{0,75}\b(?:private|personal|domestic)\b[^.;:!?]{0,30}\b(?:expenses?|costs?)\b/i.test(clause);
+    const reversesEnumerativeDisallowance =
+      /\b(?:it is )?(?:not true|false) that\b[^.;:!?]{0,65}\b(?:disallows?|prohibits?|bars?)\b|\b(?:does not|do not|did not|has not|have not|doesn't|don't|didn't|hasn't|haven't|cannot|can't|never|no longer|fails? to)\s+(?:disallow|prohibit|bar)\b/i.test(clause) ||
+      /\b(?:whether|if|may|might|could|would|should|possibly|apparently|seemingly)\b[^.;:!?]{0,65}\b(?:disallows?|prohibits?|bars?)\b/i.test(clause) ||
+      /\b(?:not|never|except|excluding|other than|but not|unless)\b[^.;:!?]{0,65}\b(?:private|personal|domestic)\s+(?:expenses?|costs?)\b/i.test(clause) ||
+      /\b(?:private|personal|domestic)\s+(?:expenses?|costs?)\b[^.;:!?]{0,65}\b(?:are|is|may be|can be|could be|remain|remains)\s+(?:deductible|deducted|claimable|allowed as a deduction|not disallowed|not non[ -]deductible)\b/i.test(clause);
+    return privateExpense && (explicitDisallowance && !reversesDisallowance ||
+      enumerativeDisallowance && !reversesEnumerativeDisallowance);
   });
   if (directlyStatesRule) return true;
 
@@ -312,7 +322,7 @@ function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: bool
     if (unit.kind !== 'statement') return false;
     const clause = unit.text;
     const royalty = /\broyalt(?:y|ies)\b/i.test(clause);
-    const recipient = String.raw`(?:to|for)\s+(?:(?:a|an|the)\s+)?non[ -]resident(?:\s+(?:companies?|entities?|persons?|individuals?|recipients?|payees?))?`;
+    const recipient = String.raw`(?:to|for)\s+(?:(?:a|an|the)\s+)?non[ -]?resident(?:\s+(?:companies?|entities?|persons?|individuals?|recipients?|payees?))?`;
     const royaltyRecipient = String.raw`\broyalt(?:y|ies)\b(?:\s+(?:payments?|paid|payable|made|is|are|received|receivable)){0,4}\s+${recipient}`;
     const existingWithholdingRule = requiresNonResident
       ? new RegExp(
@@ -327,7 +337,7 @@ function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: bool
       const royaltyExample = /(?:\be\.g\.|\bfor example\b|\bsuch as\b|\bincluding\b)[^.;:)]{0,70}\broyalt(?:y|ies)\b/i.exec(afterPayment);
       if (royaltyExample) {
         const afterRoyaltyExample = afterPayment.slice(royaltyExample.index + royaltyExample[0].length);
-        const payeeBridge = /^\s*(?:,\s*(?:(?:interest|technical service fees?|service fees?|etc\.?)\s*,?\s*){0,4})?\)?\s*to\s+(?:(?:a|an|the)\s+)?non[ -]resident\b/i.exec(afterRoyaltyExample);
+        const payeeBridge = /^\s*(?:,\s*(?:(?:interest|technical service fees?|service fees?|etc\.?)\s*,?\s*){0,4})?\)?\s*to\s+(?:(?:a|an|the)\s+)?non[ -]?resident\b/i.exec(afterRoyaltyExample);
         if (payeeBridge) {
           const afterPayee = afterRoyaltyExample.slice(payeeBridge[0].length);
           const obligation = /\b(?:must|shall|will|is required to|are required to|has to|have to)\s+withhold\b/i.exec(afterPayee.slice(0, 120));
@@ -393,7 +403,8 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
     const requestedPhrases = [input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])];
     const hasResidentWithoutNonresidentQualifier = requestedPhrases.some(phrase => {
       const phraseWords = tokenize(phrase).map(canonicalWord);
-      return phraseWords.some((word, index) => word === 'resident' && phraseWords[index - 1] !== 'non');
+      return phraseWords.some((word, index) => word === 'resident' && phraseWords[index - 1] !== 'non' &&
+        !(index > 0 && phraseWords[index - 1] === 'nonresident'));
     });
     if (hasResidentWithoutNonresidentQualifier) return undefined;
   }
@@ -402,7 +413,8 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
       : family === 'PRIVATE_EXPENSE_DEDUCTIBILITY' ? PRIVATE_EXPENSE_SUBJECT_WORDS : ROYALTY_WITHHOLDING_SUBJECT_WORDS;
   if (words.some(word => !allowedWords.has(word))) return undefined;
 
-  const requiresNonResident = family === 'ROYALTY_WITHHOLDING_TAX' && hasPhrase(words, ['non', 'resident']);
+  const requiresNonResident = family === 'ROYALTY_WITHHOLDING_TAX' &&
+    (words.includes('nonresident') || hasPhrase(words, ['non', 'resident']));
 
   switch (family) {
     case 'FOREIGN_DIVIDEND': return hasForeignDividendReceiptTaxRule(input.sourceText) ||

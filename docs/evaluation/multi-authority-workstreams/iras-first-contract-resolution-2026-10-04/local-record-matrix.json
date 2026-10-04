@@ -1,0 +1,695 @@
+{
+  "protocol": "API_FREE_LOCAL_INVENTORY_WITH_EXPLICIT_MOCK_CONCEPTS",
+  "historicalCaptureUnmodified": true,
+  "sourceMode": "CURRENT_REVIEWED_LOCAL_REGISTRY_NO_EXTERNAL_FETCH",
+  "cases": [
+    {
+      "caseId": "target-relief-entitlement",
+      "independentInventoryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "explicitlyRetainedTopicRows": [
+        {
+          "issueId": "personal-cpf-relief",
+          "expectedTopicIds": [
+            "iras-individual-cpf-relief"
+          ],
+          "actualTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "passed": true
+        }
+      ],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "cpf_relief",
+          "label": "CPF Relief / compulsory CPF contributions",
+          "terms": [
+            "cpf relief",
+            "central provident fund relief",
+            "compulsory cpf contributions"
+          ],
+          "topicIds": [
+            "iras-individual-cpf-relief"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "cpf_contribution_rates",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "CPF_RATES_BY_AGE_2026"
+          ],
+          "records": [
+            {
+              "id": "CPF_RATES_BY_AGE_2026",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": null,
+              "sourceType": "CURATED_SUMMARY",
+              "evidenceTier": "CURATED_SUMMARY",
+              "groundingEligible": true,
+              "eligibilityRejection": "LOCAL_SOURCE_NOT_VERIFIED",
+              "sourceText": "Mandatory CPF contributions for Singapore Citizens and Permanent Residents (from 3rd year of PR status onwards) are calculated using tiered statutory percentage rates based on the employee's age."
+            }
+          ]
+        },
+        {
+          "topicId": "iras-individual-reliefs",
+          "routingOnly": true,
+          "sourceRecordIds": [],
+          "records": []
+        },
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "target-relief-amount",
+      "independentInventoryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "explicitlyRetainedTopicRows": [
+        {
+          "issueId": "personal-cpf-relief-amount",
+          "expectedTopicIds": [
+            "iras-individual-cpf-relief"
+          ],
+          "actualTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "passed": true
+        }
+      ],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "cpf_relief",
+          "label": "CPF Relief / compulsory CPF contributions",
+          "terms": [
+            "cpf relief",
+            "central provident fund relief",
+            "compulsory cpf contributions"
+          ],
+          "topicIds": [
+            "iras-individual-cpf-relief"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "cpf_contribution_rates",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "CPF_RATES_BY_AGE_2026"
+          ],
+          "records": [
+            {
+              "id": "CPF_RATES_BY_AGE_2026",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": null,
+              "sourceType": "CURATED_SUMMARY",
+              "evidenceTier": "CURATED_SUMMARY",
+              "groundingEligible": true,
+              "eligibilityRejection": "LOCAL_SOURCE_NOT_VERIFIED",
+              "sourceText": "Mandatory CPF contributions for Singapore Citizens and Permanent Residents (from 3rd year of PR status onwards) are calculated using tiered statutory percentage rates based on the employee's age."
+            }
+          ]
+        },
+        {
+          "topicId": "iras-individual-reliefs",
+          "routingOnly": true,
+          "sourceRecordIds": [],
+          "records": []
+        },
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "independentInventoryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "explicitlyRetainedTopicRows": [
+        {
+          "issueId": "individual-cpf-tax-relief",
+          "expectedTopicIds": [
+            "iras-individual-cpf-relief"
+          ],
+          "actualTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "passed": true
+        },
+        {
+          "issueId": "employer-cpf-contribution",
+          "expectedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "actualTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "passed": true
+        }
+      ],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "cpf_relief",
+          "label": "CPF Relief / compulsory CPF contributions",
+          "terms": [
+            "cpf relief",
+            "central provident fund relief",
+            "compulsory cpf contributions"
+          ],
+          "topicIds": [
+            "iras-individual-cpf-relief"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "cpf_contribution_rates",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "CPF_RATES_BY_AGE_2026"
+          ],
+          "records": [
+            {
+              "id": "CPF_RATES_BY_AGE_2026",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": null,
+              "sourceType": "CURATED_SUMMARY",
+              "evidenceTier": "CURATED_SUMMARY",
+              "groundingEligible": true,
+              "eligibilityRejection": "LOCAL_SOURCE_NOT_VERIFIED",
+              "sourceText": "Mandatory CPF contributions for Singapore Citizens and Permanent Residents (from 3rd year of PR status onwards) are calculated using tiered statutory percentage rates based on the employee's age."
+            }
+          ]
+        },
+        {
+          "topicId": "iras-individual-reliefs",
+          "routingOnly": true,
+          "sourceRecordIds": [],
+          "records": []
+        },
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "independentInventoryTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "explicitlyRetainedTopicRows": [
+        {
+          "issueId": "company-private-expense-tax-treatment",
+          "expectedTopicIds": [
+            "iras-cit-disallowed-expenses",
+            "iras-cit-deductibility"
+          ],
+          "actualTopicIds": [
+            "iras-cit-deductibility",
+            "iras-cit-disallowed-expenses"
+          ],
+          "passed": true
+        }
+      ],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "semantic_corporate_income_tax_treatment_of_company_expens",
+          "label": "corporate income-tax treatment of company expense for director's private holiday",
+          "terms": [
+            "corporate income-tax treatment of company expense for director's private holiday"
+          ],
+          "topicIds": [
+            "iras-cit-deductibility"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+            "ITA_SEC15_1_K_MOTOR_CAR",
+            "IRAS_CIT_EXPENSES_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+              "sourceStatus": "VERIFIED",
+              "recordRole": null,
+              "sourceType": "CURATED_SUMMARY",
+              "evidenceTier": "CURATED_SUMMARY",
+              "groundingEligible": true,
+              "eligibilityRejection": null,
+              "sourceText": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+            },
+            {
+              "id": "ITA_SEC15_1_K_MOTOR_CAR",
+              "sourceStatus": "VERIFIED",
+              "recordRole": null,
+              "sourceType": "CURATED_SUMMARY",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": true,
+              "eligibilityRejection": null,
+              "sourceText": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available."
+            },
+            {
+              "id": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        },
+        {
+          "topicId": "iras-cit-deductibility",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "ITA_SEC14_GENERAL_DEDUCTION",
+            "IRAS_CIT_EXPENSES_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "ITA_SEC14_GENERAL_DEDUCTION",
+              "sourceStatus": "VERIFIED",
+              "recordRole": null,
+              "sourceType": "AUTHORITATIVE_SOURCE",
+              "evidenceTier": "PRIMARY_SOURCE",
+              "groundingEligible": true,
+              "eligibilityRejection": null,
+              "sourceText": "For the purpose of ascertaining the income of any person for any period, there shall be deducted all outgoings and expenses wholly and exclusively incurred during that period by that person in the production of the income."
+            },
+            {
+              "id": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "independentInventoryTopicIds": [
+        "iras-foreign-sourced-income"
+      ],
+      "explicitlyRetainedTopicRows": [],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "semantic_corporate_income_tax_treatment_of_foreign_divide",
+          "label": "corporate income-tax treatment of foreign dividend received by company",
+          "terms": [
+            "corporate income-tax treatment of foreign dividend received by company"
+          ],
+          "topicIds": [
+            "iras-foreign-sourced-income"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "independentInventoryTopicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "explicitlyRetainedTopicRows": [
+        {
+          "issueId": "general-company-tax-residency-rule",
+          "expectedTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "actualTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "passed": true
+        }
+      ],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "semantic_general_rule_for_company_tax_residency_in_singap",
+          "label": "general rule for company tax residency in Singapore",
+          "terms": [
+            "general rule for company tax residency in Singapore"
+          ],
+          "topicIds": [
+            "iras-corporate-tax-residency"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "independentInventoryTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "explicitlyRetainedTopicRows": [
+        {
+          "issueId": "general-wht-royalty-rules",
+          "expectedTopicIds": [
+            "iras-withholding-tax-interest-royalties"
+          ],
+          "actualTopicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ],
+          "passed": true
+        }
+      ],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "terms": [
+            "general Singapore withholding-tax rules for company royalty payments to a non-resident company"
+          ],
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "iras-withholding-tax",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "IRAS_WHT_RATES_SOURCE_MAP",
+            "IRAS_WHT_SCOPE_SOURCE_MAP",
+            "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "IRAS_WHT_RATES_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            },
+            {
+              "id": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            },
+            {
+              "id": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "ITA_SEC45_WITHHOLDING_TAX",
+            "IRAS_WHT_RATES_SOURCE_MAP",
+            "IRAS_WHT_SCOPE_SOURCE_MAP",
+            "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "ITA_SEC45_WITHHOLDING_TAX",
+              "sourceStatus": "VERIFIED",
+              "recordRole": null,
+              "sourceType": "CURATED_SUMMARY",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": true,
+              "eligibilityRejection": null,
+              "sourceText": "Interest and other specified loan-related payments to a non-resident may be subject to Singapore withholding tax under Section 45. Confirm Singapore source, recipient status, applicable exemption or treaty relief, the payment date and the applicable rate before concluding that tax must be withheld."
+            },
+            {
+              "id": "IRAS_WHT_RATES_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            },
+            {
+              "id": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            },
+            {
+              "id": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "independentInventoryTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "explicitlyRetainedTopicRows": [],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "semantic_general_gst_input_tax_recovery_rules_for_busines",
+          "label": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+          "terms": [
+            "general GST input-tax recovery rules for business purchases by a GST-registered company"
+          ],
+          "topicIds": [
+            "iras-gst-input-tax"
+          ]
+        }
+      ],
+      "localRegistryTopics": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "routingOnly": false,
+          "sourceRecordIds": [
+            "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+            "IRAS_GST_INVOICING_SOURCE_MAP"
+          ],
+          "records": [
+            {
+              "id": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            },
+            {
+              "id": "IRAS_GST_INVOICING_SOURCE_MAP",
+              "sourceStatus": "NEEDS_REVIEW",
+              "recordRole": "SOURCE_MAP_POINTER",
+              "sourceType": "OFFICIAL_GUIDANCE",
+              "evidenceTier": "OFFICIAL_GUIDANCE",
+              "groundingEligible": false,
+              "eligibilityRejection": "SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE",
+              "sourceText": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "independentInventoryTopicIds": [],
+      "explicitlyRetainedTopicRows": [
+        {
+          "issueId": "sfrsi-6-mineral-exploration-evaluation",
+          "expectedTopicIds": [],
+          "actualTopicIds": [],
+          "passed": true
+        }
+      ],
+      "historicalRequestedConceptIds": null,
+      "historicalRawCandidateRecordIds": null,
+      "historicalRawClaimQuotes": null,
+      "reason": "Those fields were intentionally not retained. The following requested concepts are from validated deterministic expected-scope mocks, not reconstructed Gemini output.",
+      "controlledMockRequestedConcepts": [
+        {
+          "id": "semantic_general_sfrs_i_6_accounting_rules_for_exploratio",
+          "label": "general SFRS(I) 6 accounting rules for exploration and evaluation expenditure",
+          "terms": [
+            "general SFRS(I) 6 accounting rules for exploration and evaluation expenditure"
+          ],
+          "topicIds": []
+        }
+      ],
+      "localRegistryTopics": []
+    }
+  ]
+}
