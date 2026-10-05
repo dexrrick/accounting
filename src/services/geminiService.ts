@@ -41,6 +41,7 @@ import { buildAuthorityWorkstreams } from './authorityWorkstreams';
 import { createAuthorityEvidencePresentation, type AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
 import { shouldUseAuthorityEvidenceRuntime } from '../utils/authorityEvidenceRouting';
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
+import { createRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
 
 export interface GeminiResponse {
   messageText: string;
@@ -471,8 +472,9 @@ export async function processAccountingQuery(
   let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
   let authorityEvidenceMessage: string | undefined;
   let authorityEvidenceQueryIntent: AccountingScenarioState['queryIntent'];
+  let requestCompletenessContext: RequestCompletenessContext | undefined;
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
-    if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation) return response;
+    if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation && !requestCompletenessContext) return response;
     const balancedJournalAvailable = Boolean(response.scenarioState.directGroups?.some(group =>
       group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
     ));
@@ -490,16 +492,19 @@ export async function processAccountingQuery(
       queryIntent: authorityEvidenceQueryIntent || response.scenarioState.queryIntent,
       authorityEvidencePresentation
     } : response.scenarioState;
+    const scenarioWithCompleteness = requestCompletenessContext
+      ? { ...scenarioState, requestCompletenessContext }
+      : scenarioState;
     return {
       ...response,
       ...(authorityMessage || authorityEvidenceMessage ? { messageText: authorityMessage || authorityEvidenceMessage } : {}),
       scenarioState: amendmentResolution.amendments?.length ? {
-        ...scenarioState,
+        ...scenarioWithCompleteness,
         factAmendments: [
           ...(activeScenario?.factAmendments || []),
           ...amendmentResolution.amendments
         ]
-      } : scenarioState
+      } : scenarioWithCompleteness
     };
   };
 
@@ -574,6 +579,7 @@ export async function processAccountingQuery(
     }
   }
   const questionUnderstandingStarted = performance.now();
+  requestCompletenessContext = createRequestCompletenessContext(userInput);
   const rawQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
   if (!['NO_PROVIDER', 'QUERY_TOO_LONG'].includes(rawQuestionUnderstanding.failure || '')) {
     profiler.recordGeminiCall({ durationMs: performance.now() - questionUnderstandingStarted });
@@ -582,7 +588,10 @@ export async function processAccountingQuery(
   else if (rawQuestionUnderstanding.failure && rawQuestionUnderstanding.failure !== 'NO_PROVIDER') profiler.recordFallback();
   const classificationStarted = performance.now();
   const deterministicClassification = classifyQuestion(userInput);
-  const reconciledQuestionUnderstanding = reconcileQuestionUnderstanding(userInput, deterministicClassification, rawQuestionUnderstanding);
+  const reconciledQuestionUnderstanding = reconcileQuestionUnderstanding(
+    userInput, deterministicClassification, rawQuestionUnderstanding, requestCompletenessContext
+  );
+  requestCompletenessContext = reconciledQuestionUnderstanding.requestCompletenessContext;
   const classification = reconciledQuestionUnderstanding.classification;
   const questionUnderstanding = reconciledQuestionUnderstanding.understanding;
   profiler.recordClassification(performance.now() - classificationStarted);
@@ -598,7 +607,8 @@ export async function processAccountingQuery(
   if (authorityEvidenceRuntimeEnabled) {
     authorityEvidenceQueryIntent = classification.intent;
     const authorityResult = await buildAuthorityWorkstreams(userInput, reconciledQuestionUnderstanding.issuePlan, {
-      questionUnderstanding
+      questionUnderstanding,
+      requestCompletenessContext
     });
     diagnostics?.onAuthorityWorkstreams?.(authorityResult);
     authorityEvidencePresentation = createAuthorityEvidencePresentation(authorityResult);
@@ -634,7 +644,8 @@ export async function processAccountingQuery(
           missingFields: [],
           isComplete: authorityEvidencePresentation.status !== 'INSUFFICIENT',
           queryIntent: classification.intent,
-          primaryDomain: 'MULTI_AUTHORITY'
+          primaryDomain: 'MULTI_AUTHORITY',
+          requestCompletenessContext
         }
       });
     }
@@ -655,7 +666,9 @@ export async function processAccountingQuery(
   const irasEvidenceRequired = usesIrasEvidencePolicy(classification, userInput);
   const governedOfflineResponse = async (scenario: AccountingScenarioState): Promise<GeminiResponse> => {
     if (!irasEvidenceRequired) return renderStructuredOfflineResponse(scenario, standard);
-    const context = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, { questionUnderstanding });
+    const context = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, {
+      questionUnderstanding, requestCompletenessContext
+    });
     if (context.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(context.sourceMapFallbackTrace);
     diagnostics?.onGroundedContext?.(context);
     return renderIrasEvidenceResponse(
@@ -821,7 +834,9 @@ export async function processAccountingQuery(
 
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
-  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, { questionUnderstanding });
+  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, {
+    questionUnderstanding, requestCompletenessContext
+  });
   if (groundedContext.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(groundedContext.sourceMapFallbackTrace);
   diagnostics?.onGroundedContext?.(groundedContext);
   profiler.recordStage('grounding', Date.now() - tGround0);
@@ -860,10 +875,10 @@ export async function processAccountingQuery(
     if (typeof providerOrApiKey === 'object') {
       const active = providerOrApiKey.activeProvider;
       if (hasImages && active !== 'gemini') {
-        return {
+        return attachAmendmentProvenance({
           messageText: '### Image analysis unavailable\n\nThe selected AI model cannot analyse images. Select a Gemini model in Settings, then retry; your screenshots remain attached to this message.',
           scenarioState: deterministicScenario
-        };
+        });
       }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {

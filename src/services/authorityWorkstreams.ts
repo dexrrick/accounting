@@ -39,6 +39,10 @@ import {
 } from './groundingContextBuilder';
 import { renderIrasEvidenceResponse } from './irasEvidencePolicy';
 import {
+  ensureRequestCompletenessContext,
+  type RequestCompletenessContext
+} from './requestCompleteness';
+import {
   canonicalAccountingWorkstreamAuthority,
   getRequestedQuestionConcepts,
   type ReconciledSemanticQuestionIssue,
@@ -66,8 +70,9 @@ const GENERIC_SUPPORT_WORDS = new Set([
 export interface AuthorityWorkstreamOptions {
   retriever?: ISourceRetriever;
   /** Grounding controls for the IRAS adapter. Per-issue evidence scope is always supplied internally. */
-  groundingOptions?: Omit<MappedFallbackOptions, 'evidenceScope' | 'questionUnderstanding' | 'semanticDiscoveryQuery'>;
+  groundingOptions?: Omit<MappedFallbackOptions, 'evidenceScope' | 'questionUnderstanding' | 'requestCompletenessContext' | 'semanticDiscoveryQuery'>;
   questionUnderstanding?: SemanticQuestionUnderstanding;
+  requestCompletenessContext?: RequestCompletenessContext;
   providers?: Partial<Record<SemanticAuthority, AuthorityEvidenceProvider>>;
   localOnly?: boolean;
   referenceDate?: string;
@@ -371,6 +376,7 @@ function defaultIrasProvider(
           localOnly: options.localOnly ?? options.groundingOptions?.localOnly,
           referenceDate,
           questionUnderstanding: understanding,
+          requestCompletenessContext: options.requestCompletenessContext,
           evidenceScope: scope,
           fetchOptions: options.groundingOptions?.fetchOptions
         }
@@ -891,6 +897,9 @@ export async function buildAuthorityWorkstreams(
 ): Promise<AuthorityWorkstreamsResult> {
   const referenceDate = options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE;
   const understanding = options.questionUnderstanding || { mode: 'DETERMINISTIC_FALLBACK' as const };
+  const requestCompletenessContext = ensureRequestCompletenessContext(
+    query, options.requestCompletenessContext, options.questionUnderstanding
+  );
   const retriever = options.retriever || defaultAdvancedSourceRetriever;
   const internalPlans = toInternalPlan(issuePlan);
   const plannedIssueIds = new Set(internalPlans.flatMap(plan => plan.issueIds));
@@ -961,5 +970,5 @@ export async function buildAuthorityWorkstreams(
   const status: AuthorityOverallStatus = gaps.length > 0 || evidenceStatus !== 'VERIFIED'
     ? 'INSUFFICIENT'
     : applicationStatus === 'UNRESOLVED' ? 'CONDITIONAL' : 'VERIFIED';
-  return { query, issuePlan, workstreams, evidenceStatus, applicationStatus, status, gaps };
+  return { query, issuePlan, requestCompletenessContext, workstreams, evidenceStatus, applicationStatus, status, gaps };
 }

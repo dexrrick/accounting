@@ -49,6 +49,7 @@ const testSuites = [
   { name: 'IRAS Verified Source Map and Fallback', file: 'test_iras_source_map.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Authority Workstream Evidence Isolation & Coverage', file: 'test_authority_workstreams.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Whole-Question Authority Evidence Presentation', file: 'test_authority_evidence_presentation.mjs', layer: 'ux-resilience', tier: 'smoke' },
+  { name: 'Exact-Query Request Completeness Diagnostics', file: 'test_request_completeness_diagnostics.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS Scoped Concept Coverage', file: 'test_iras_scoped_concept_coverage.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Scoped Rule-Concept Support', file: 'test_iras_scoped_rule_concept_support.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Scoped Topic-Term Matching', file: 'test_iras_scoped_topic_token_match.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

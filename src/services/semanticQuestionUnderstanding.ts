@@ -5,6 +5,10 @@ import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall } from './aiTransport';
 import {
+  ensureRequestCompletenessContext,
+  type RequestCompletenessContext
+} from './requestCompleteness';
+import {
   describeRawRequestSubject,
   inventoryRawRequest,
   rawRequestMatchesIssue,
@@ -970,6 +974,8 @@ export interface ReconciledQuestionUnderstanding {
   understanding: SemanticQuestionUnderstanding;
   /** Separate workstream plan for future orchestration; it does not replace classification. */
   issuePlan: SemanticIssueReconciliation;
+  /** Immutable exact-query representation diagnostics, separate from taxonomy coverage. */
+  requestCompletenessContext: RequestCompletenessContext;
 }
 
 export interface ReconciledSemanticQuestionIssue extends SemanticQuestionIssue {
@@ -997,7 +1003,7 @@ function reconcileLegacyQuestionUnderstanding(
   query: string,
   classification: QuestionClassificationResult,
   understanding: SemanticQuestionUnderstanding
-): Omit<ReconciledQuestionUnderstanding, 'issuePlan'> {
+): Omit<ReconciledQuestionUnderstanding, 'issuePlan' | 'requestCompletenessContext'> {
   const validatedSemantic = validatedSemanticForQuery(query, understanding);
   const semantic = validatedSemantic ? refineUnknownEmploymentPopulation(query, validatedSemantic) : undefined;
   if (!semantic || semantic.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) {
@@ -1363,10 +1369,16 @@ function reconcileSemanticIssuePlan(
 export function reconcileQuestionUnderstanding(
   query: string,
   classification: QuestionClassificationResult,
-  understanding: SemanticQuestionUnderstanding
+  understanding: SemanticQuestionUnderstanding,
+  requestCompletenessContext?: RequestCompletenessContext
 ): ReconciledQuestionUnderstanding {
+  const currentRequestCompletenessContext = ensureRequestCompletenessContext(query, requestCompletenessContext, understanding);
   const reconciled = reconcileLegacyQuestionUnderstanding(query, classification, understanding);
-  return { ...reconciled, issuePlan: reconcileSemanticIssuePlan(query, classification, understanding) };
+  return {
+    ...reconciled,
+    issuePlan: reconcileSemanticIssuePlan(query, classification, understanding),
+    requestCompletenessContext: currentRequestCompletenessContext
+  };
 }
 
 /** Safe allowlisted telemetry projection; user facts and contextual authority mentions are deliberately excluded. */

@@ -238,6 +238,8 @@ export interface AccountingScenarioState {
   committedDirectGroups?: JournalEntryGroup[];
   projectedGroups?: JournalEntryGroup[];
   factAmendments?: import('../services/factAmendmentService').FactAmendment[];
+  /** Exact-query request representation diagnostics; never evidence or application status. */
+  requestCompletenessContext?: import('../services/requestCompleteness').RequestCompletenessContext;
   authorityStatus?: JournalAuthorityStatus;
 
   // Event-Sourced Accounting State & Multi-Turn History

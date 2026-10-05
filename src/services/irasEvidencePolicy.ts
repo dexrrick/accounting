@@ -11,6 +11,7 @@ import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegis
 import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { getRequestedQuestionConcepts } from './semanticQuestionUnderstanding';
+import { ensureRequestCompletenessContext } from './requestCompleteness';
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
@@ -719,6 +720,7 @@ export function renderIrasEvidenceResponse(
     hasApplicationUncertainty: !calculation && applicationConclusions.length === 0,
     calculationLead: calculation ? lines.find(line => line.startsWith('Output GST:')) : undefined
   });
+  const requestCompletenessContext = ensureRequestCompletenessContext(query, context.requestCompletenessContext);
   const missingFacts = [...context.missingFacts];
   const scenarioState: AccountingScenarioState = {
     scenarioType: treatment || groups.length ? (deterministicScenario?.scenarioType || 'UNIVERSAL') : 'SINGAPORE_STATUTORY_ADVISORY',
@@ -732,6 +734,7 @@ export function renderIrasEvidenceResponse(
     accountingTreatmentSummary: treatment || undefined,
     directGroups: groups, keyParameters: [],
     irasEvidencePresentation,
+    requestCompletenessContext,
     uncertaintyDisclaimer: missingFacts.length ? `Required facts remain unresolved: ${missingFacts.join('; ')}.` : calculation ? undefined : 'Only the admitted source evidence and reviewed summaries have been checked; their application is not independently established.',
     // Do not spread model/current/offline state: unsupported metadata is not evidence.
     statutoryAdvisory: presentationClaims.map(claim => ({
