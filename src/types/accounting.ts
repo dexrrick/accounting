@@ -265,6 +265,8 @@ export interface AccountingScenarioState {
   statutoryAdvisory?: StatutoryAdvisoryInfo[];
   /** Presentation-only view of already verified IRAS evidence; evidence records remain separate. */
   irasEvidencePresentation?: IrasEvidencePresentation;
+  /** Query-bound whole-question evidence projection for material multi-workstream answers. */
+  authorityEvidencePresentation?: import('../utils/authorityEvidencePresentation').AuthorityEvidencePresentation;
   officialAnswerLinks?: import('../utils/chatPresentation').OfficialAnswerLink[];
   shareTransferAnalysis?: ShareTransferAnalysis;
 
