@@ -1,5 +1,5 @@
 // API-free V4 harness draft, deliberately unregistered; no preregistration or live authorization.
-// Nine-case localOnly runtime observations and the complete governed negative-control matrix remain outstanding.
+// Nine-case localOnly runtime observations and synthetic discovery outcomes are checked; the full governed negative-control matrix remains pending.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { access, open, readFile, readdir } from 'node:fs/promises';
@@ -558,6 +558,15 @@ export function scoreWorkstreamRoutingV4(caseContract, issuePlan, runtime) {
 function classifyLocalObservation(observation) {
   if (!observation) return 'PIPELINE_FAILURE';
   if (observation.pipelineFailure === true || observation.localOnly !== true) return 'PIPELINE_FAILURE';
+  if (observation.actualRuntime === true) {
+    if (observation.governedWorkstreamObserved !== true) return observation.noGoverningWorkstream === true
+      ? 'EXPECTED_LOCAL_GAP' : 'PIPELINE_FAILURE';
+    if (observation.retrievalCompleted !== true) return 'PIPELINE_FAILURE';
+    if (observation.needsReviewCandidate === true && observation.admitted !== true) return 'INVALID_LOCAL_EVIDENCE';
+    if (observation.admitted === true && observation.literalVerified === true && observation.topicCovered === true) return 'VERIFIED_LOCAL_RULE';
+    if (observation.noEligibleCandidate === true || observation.substantiveScopeIncomplete === true) return 'EXPECTED_LOCAL_GAP';
+    return 'PIPELINE_FAILURE';
+  }
   if (observation.admitted === true && observation.literalVerified === true && observation.topicCovered === true) return 'VERIFIED_LOCAL_RULE';
   if ((observation.candidateStatus === 'NEEDS_REVIEW' || observation.state === 'INVALID_LOCAL_EVIDENCE') && observation.admitted !== true) return 'INVALID_LOCAL_EVIDENCE';
   if (observation.noSubstantiveCandidate === true || observation.sourceMapPointerOnly === true) return 'EXPECTED_LOCAL_GAP';
