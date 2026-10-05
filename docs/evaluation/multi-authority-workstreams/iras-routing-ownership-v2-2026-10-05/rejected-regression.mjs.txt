@@ -1,0 +1,186 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
+import { reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
+import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
+
+const retained = JSON.parse(readFileSync(fileURLToPath(new URL(
+  '../../docs/evaluation/multi-authority-workstreams/iras-first-targeted-acceptance-2026-10-04-v4/routing-classification-proof.json', import.meta.url
+)), 'utf8'));
+
+function issue(subject, overrides = {}) {
+  return {
+    subject,
+    population: 'INDIVIDUAL',
+    domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'],
+    contextualAuthorities: [],
+    operation: 'EXPLAIN_RULE',
+    mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+    confidence: 0.96,
+    ...overrides
+  };
+}
+
+function run(query, issues, root = {}) {
+  const interpretation = validateSemanticQuestionInterpretation({
+    schemaVersion: 2,
+    jurisdiction: ['Singapore'],
+    authorityCandidates: ['IRAS'],
+    contextualAuthorities: [],
+    domain: 'IRAS_INCOME_TAX',
+    population: 'INDIVIDUAL',
+    primarySubject: issues.map(value => value.subject).join(' and '),
+    concepts: issues.map((value, index) => ({ concept: value.subject, role: index === 0 ? 'PRIMARY' : 'RELATED' })),
+    requestedOperation: 'EXPLAIN_RULE',
+    factsExplicitlyProvided: [],
+    confidence: 0.96,
+    issues,
+    ...root
+  }, query);
+  assert.ok(interpretation, `Fixture must pass production semantic validation: ${query}`);
+  return reconcileQuestionUnderstanding(query, classifyQuestion(query), {
+    mode: 'SEMANTIC_INTERPRETATION', interpretation
+  }).issuePlan;
+}
+
+assert.equal(retained.rows.length, 4, 'Use the four retained raw diagnostic mocks unchanged.');
+for (const row of retained.rows) {
+  const interpretation = validateSemanticQuestionInterpretation(row.rawMock, retained.question);
+  assert.ok(interpretation, `Retained ${row.rootMode} mock validates.`);
+  const plan = reconcileQuestionUnderstanding(retained.question, classifyQuestion(retained.question), {
+    mode: 'SEMANTIC_INTERPRETATION', interpretation
+  }).issuePlan;
+  assert.equal(plan.issues.length, 2, 'The employer CPF and individual CPF-relief requests remain separate.');
+  assert.equal(plan.coverageEstablished, true, `Retained ${row.rootMode}/${row.subject} has no false residual.`);
+  assert.equal(plan.hasUnmappedResidual, false);
+  const relief = plan.issues.find(value => value.domain === 'IRAS_INCOME_TAX');
+  assert.ok(relief?.mappedTopicIds.includes('iras-individual-cpf-relief'));
+  assert.equal(relief?.mappedTopicIds.includes('iras-individual-reliefs'), false,
+    'The routing umbrella is not substantive issue scope.');
+  assert.deepEqual(relief?.routingTopicIds, ['iras-individual-reliefs']);
+}
+
+const omittedBroadQueries = [
+  'What individual tax relief categories are available, plus explain CPF relief for employees?',
+  'I need an overview of individual tax relief categories. Can I claim CPF relief for employees?',
+  'Explain individual tax relief categories, including CPF relief for employees.'
+];
+const childSubjects = ['CPF relief for employees', 'individual personal tax relief on compulsory CPF contributions'];
+for (const query of omittedBroadQueries) {
+  for (const subject of childSubjects) {
+    const plan = run(query, [issue(subject)]);
+    assert.equal(plan.coverageEstablished, false, `Omitted broad request stays incomplete: ${query}`);
+    assert.equal(plan.hasUnmappedResidual, true);
+    assert.ok(plan.issues.some(value => value.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
+      value.mappedTopicIds.includes('iras-individual-reliefs')),
+    'An omitted broad request remains an explicit unresolved routing-parent residual.');
+    assert.equal(plan.issues.find(value => value.domain === 'IRAS_INCOME_TAX')?.routingTopicIds, undefined);
+  }
+}
+
+const representedBroadQuery = omittedBroadQueries[2];
+const representedBroad = run(representedBroadQuery, [
+  issue('individual tax relief categories'),
+  issue('CPF relief for employees', { operation: 'CHECK_ELIGIBILITY', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' })
+]);
+assert.equal(representedBroad.coverageEstablished, true,
+  'A separate generic issue can account for a broad request alongside its child.');
+assert.ok(representedBroad.issues.some(value => value.domain === 'IRAS_INCOME_TAX' &&
+  value.subject === 'individual tax relief categories' && value.mappedTopicIds.includes('iras-individual-reliefs')));
+
+const repeatedParent = run(
+  'Can I claim personal tax relief on compulsory CPF, and what personal tax relief can I claim?',
+  [issue('individual personal tax relief on compulsory CPF contributions')]
+);
+assert.equal(repeatedParent.coverageEstablished, false,
+  'A second unassociated parent occurrence cannot be absorbed by the first child association.');
+assert.ok(repeatedParent.issues.some(value => value.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
+  value.mappedTopicIds.includes('iras-individual-reliefs')));
+
+const omittedOtherChildren = run(
+  'Can I claim personal tax relief on compulsory CPF and SRS relief, overall relief cap, Parent Relief, WMCR, QCR and caregiver relief?',
+  [issue('individual personal tax relief on compulsory CPF contributions')]
+);
+assert.equal(omittedOtherChildren.coverageEstablished, false);
+for (const id of [
+  'iras-individual-srs-relief', 'iras-individual-relief-cap', 'iras-individual-parent-relief',
+  'iras-individual-wmcr', 'iras-individual-qcr', 'iras-individual-grandparent-caregiver-relief'
+]) {
+  assert.ok(omittedOtherChildren.issues.some(value => value.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' && value.mappedTopicIds.includes(id)),
+    `Unrepresented individual relief child remains material: ${id}`);
+}
+
+const onlyReliefIssue = retained.rows[0].rawMock.issues.find(value => value.domain === 'IRAS_INCOME_TAX');
+const omittedEmployer = run(retained.question, [onlyReliefIssue], {
+  domain: 'UNKNOWN', population: 'UNKNOWN', authorityCandidates: ['UNKNOWN'], requestedOperation: 'OTHER'
+});
+assert.equal(omittedEmployer.coverageEstablished, false);
+assert.ok(omittedEmployer.issues.some(value => value.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
+  value.mappedTopicIds.includes('cpf_contribution_rates')), 'Omitting the employer outcome leaves its CPF topic unresolved.');
+
+const unsupportedTail = run(
+  'Can I claim personal tax relief on compulsory CPF contributions? I enjoy purple elephants.',
+  [issue('individual personal tax relief on compulsory CPF contributions')]
+);
+assert.equal(unsupportedTail.coverageEstablished, false, 'Unparsed raw text remains fail-closed.');
+assert.equal(unsupportedTail.hasUnmappedResidual, true);
+
+const noRawChildSupport = run('Can I claim individual tax relief?', [
+  issue('individual personal tax relief on compulsory CPF contributions')
+]);
+assert.equal(noRawChildSupport.coverageEstablished, false, 'A provider subject cannot invent absent raw child support.');
+assert.ok(noRawChildSupport.issues.some(value => value.unresolvedReason === 'NO_COVERAGE_TOPIC'));
+
+const wrongDomain = run('Can I claim personal tax relief on compulsory CPF contributions?', [
+  issue('individual personal tax relief on compulsory CPF contributions', { domain: 'IRAS_GST' })
+], { domain: 'IRAS_GST' });
+assert.equal(wrongDomain.coverageEstablished, false, 'The IRAS GST domain cannot own an individual-tax routing parent.');
+assert.equal(wrongDomain.issues.some(value => value.routingTopicIds?.includes('iras-individual-reliefs')), false);
+
+const wrongAuthority = validateSemanticQuestionInterpretation({
+  schemaVersion: 2,
+  jurisdiction: ['Singapore'],
+  authorityCandidates: ['CPF'],
+  contextualAuthorities: [],
+  domain: 'IRAS_INCOME_TAX',
+  population: 'INDIVIDUAL',
+  primarySubject: 'individual personal tax relief on compulsory CPF contributions',
+  concepts: [{ concept: 'individual personal tax relief on compulsory CPF contributions', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE',
+  factsExplicitlyProvided: [],
+  confidence: 0.96,
+  issues: [issue('individual personal tax relief on compulsory CPF contributions', { governingAuthorities: ['CPF'] })]
+}, 'Can I claim personal tax relief on compulsory CPF contributions?');
+assert.equal(wrongAuthority, undefined, 'CPF cannot be declared the governing authority for an IRAS individual-tax issue.');
+
+const beforeAfterBroad = run(
+  'Can I claim CPF relief for employees? Please provide a general overview of individual tax relief categories.',
+  [issue('CPF relief for employees')]
+);
+assert.equal(beforeAfterBroad.coverageEstablished, false, 'A broad ask after the child remains material.');
+
+const retainedPlan = (() => {
+  const value = validateSemanticQuestionInterpretation(retained.rows[0].rawMock, retained.question);
+  return reconcileQuestionUnderstanding(retained.question, classifyQuestion(retained.question), {
+    mode: 'SEMANTIC_INTERPRETATION', interpretation: value
+  }).issuePlan;
+})();
+let requestedReliefTopics = [];
+const noEvidenceProvider = authority => ({
+  authority,
+  async retrieve(request) {
+    if (request.issue.domain === 'IRAS_INCOME_TAX') requestedReliefTopics = request.retrievalIntent.topicIds;
+    return { candidates: [], claims: [] };
+  }
+});
+await buildAuthorityWorkstreams(retained.question, retainedPlan, {
+  providers: { IRAS: noEvidenceProvider('IRAS'), CPF: noEvidenceProvider('CPF') },
+  referenceDate: '2026-01-01'
+});
+assert.deepEqual(requestedReliefTopics, ['iras-individual-cpf-relief'],
+  'Evidence retrieval receives only the substantive child topic, never its routing owner.');
+
+console.log('Routing umbrella ownership v2 regression passed.');

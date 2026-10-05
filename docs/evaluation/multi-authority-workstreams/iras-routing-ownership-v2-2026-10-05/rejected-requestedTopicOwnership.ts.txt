@@ -1,0 +1,89 @@
+import {
+  SINGAPORE_COVERAGE_REGISTRY,
+  getCoverageTopicById
+} from '../standards/coverageRegistry';
+
+const ROUTING_SCOPE_WIDENERS = /\b(?:overview|categories?|types?|all|every|various|list(?:ing)?|enumerat\w*|generally|in general|including|plus)\b/i;
+
+function keywordPattern(keyword: string): RegExp {
+  const words = keyword.trim().split(/\s+/).map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`\\b${words.join('\\s+')}\\b`, 'giu');
+}
+
+function rawKeywordOccurrences(query: string, keywords: readonly string[]): Array<{ start: number; end: number; phrase: string }> {
+  const occurrences: Array<{ start: number; end: number; phrase: string }> = [];
+  for (const keyword of keywords) {
+    for (const match of query.matchAll(keywordPattern(keyword))) {
+      if (match.index === undefined) continue;
+      occurrences.push({ start: match.index, end: match.index + match[0].length, phrase: match[0] });
+    }
+  }
+  return occurrences.filter((occurrence, index, all) =>
+    all.findIndex(candidate => candidate.start === occurrence.start && candidate.end === occurrence.end) === index);
+}
+
+function queryPatternCoversOccurrence(pattern: string, query: string, occurrence: { start: number; end: number }): boolean {
+  const matcher = new RegExp(pattern, 'giu');
+  for (const match of query.matchAll(matcher)) {
+    if (match.index === undefined) continue;
+    const start = match.index;
+    const end = start + match[0].length;
+    if (start <= occurrence.start && occurrence.end <= end) return true;
+  }
+  return false;
+}
+
+function childAliasCoversOccurrence(childTopicId: string, query: string, occurrence: { start: number; end: number }): boolean {
+  const child = getCoverageTopicById(childTopicId);
+  if (!child) return false;
+  return rawKeywordOccurrences(query, child.keywords).some(candidate =>
+    candidate.start === occurrence.start && candidate.end === occurrence.end);
+}
+
+/** Parent IDs that must remain routing-only when this issue has a mapped specific child. */
+export function getRoutingParentsForMappedChildren(childTopicIds: readonly string[]): Set<string> {
+  const childIds = new Set(childTopicIds);
+  const parentIds = new Set<string>();
+  for (const parent of SINGAPORE_COVERAGE_REGISTRY) {
+    if (!parent.routingOnly) continue;
+    if ((parent.routingOwnershipRules ?? []).some(rule => {
+      const child = getCoverageTopicById(rule.childTopicId);
+      return childIds.has(rule.childTopicId) && child?.domainId === parent.domainId &&
+        child.authorities.some(authority => parent.authorities.includes(authority));
+    })) parentIds.add(parent.id);
+  }
+  return parentIds;
+}
+
+/**
+ * Returns routing-only parent topics whose every raw lexical occurrence is
+ * positively associated with a child mapped from this issue and recognized
+ * independently in the original query. Widening language vetoes ownership.
+ */
+export function resolveOwnedRoutingParentTopicIds(
+  rawQuery: string,
+  mappedChildTopicIds: readonly string[],
+  independentlyRecognizedTopicIds: ReadonlySet<string>
+): string[] {
+  if (ROUTING_SCOPE_WIDENERS.test(rawQuery) || (rawQuery.match(/\?/g)?.length ?? 0) > 1) return [];
+  const mappedChildren = new Set(mappedChildTopicIds);
+  const ownedParentIds: string[] = [];
+
+  for (const parent of SINGAPORE_COVERAGE_REGISTRY) {
+    if (!parent.routingOnly || !independentlyRecognizedTopicIds.has(parent.id)) continue;
+    const occurrences = rawKeywordOccurrences(rawQuery, parent.keywords);
+    if (occurrences.length === 0) continue;
+    const ownershipRules = parent.routingOwnershipRules ?? [];
+    const allOccurrencesOwned = occurrences.every(occurrence => ownershipRules.some(rule => {
+      if (!mappedChildren.has(rule.childTopicId) || !independentlyRecognizedTopicIds.has(rule.childTopicId)) return false;
+      const child = getCoverageTopicById(rule.childTopicId);
+      if (!child || child.domainId !== parent.domainId ||
+          !child.authorities.some(authority => parent.authorities.includes(authority))) return false;
+      if (childAliasCoversOccurrence(child.id, rawQuery, occurrence)) return true;
+      return rule.queryPatterns.some(pattern => queryPatternCoversOccurrence(pattern, rawQuery, occurrence));
+    }));
+    if (allOccurrencesOwned) ownedParentIds.push(parent.id);
+  }
+
+  return ownedParentIds.sort();
+}
