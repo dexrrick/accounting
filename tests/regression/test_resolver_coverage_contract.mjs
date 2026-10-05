@@ -84,7 +84,7 @@ addCheck('cpf-employee-contribution-alone', 'How much CPF should an employee con
 const personalReliefClaim = personalRelief('individual personal tax relief on compulsory CPF contributions');
 personalReliefClaim.operation = 'CHECK_ELIGIBILITY';
 personalReliefClaim.evidenceRequirement = 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS';
-addCheck('cpf-personal-relief-alone', 'Can I claim personal tax relief on my compulsory CPF contributions?', ['iras-individual-reliefs'], [
+addCheck('cpf-personal-relief-alone', 'Can I claim personal tax relief on my compulsory CPF contributions?', ['iras-individual-cpf-relief'], [
   personalReliefClaim
 ], {
   interpretationOverrides: {
@@ -188,6 +188,24 @@ for (const row of checks) {
     }
   }
 }
+
+const standalonePersonalRelief = checks.find(row => row.caseId === 'cpf-personal-relief-alone')?.result.issuePlan;
+const standaloneCpfIssue = standalonePersonalRelief?.issues.find(item => item.mappedTopicIds.includes('iras-individual-cpf-relief'));
+assert.ok(standaloneCpfIssue, 'The standalone CPF relief request maps its specific substantive child topic.');
+assert.equal(standaloneCpfIssue.mappedTopicIds.includes('iras-individual-reliefs'), false,
+  'The routing umbrella does not become substantive evidence scope for the child issue.');
+assert.deepEqual(standaloneCpfIssue.routingTopicIds, ['iras-individual-reliefs'],
+  'A complete standalone CPF relief request records its supported routing parent explicitly.');
+assert.equal(standalonePersonalRelief.coverageEstablished, true,
+  'The standalone child request remains fully covered after routing-parent projection.');
+assert.equal(standalonePersonalRelief.hasUnmappedResidual, false);
+
+const genericMixedRelief = checks.find(row => row.caseId === 'cpf-iras-mixed-frozen-case')?.result.issuePlan;
+const genericMixedIssue = genericMixedRelief?.issues.find(item => item.subject === reliefSubject);
+assert.ok(genericMixedIssue?.mappedTopicIds.includes('iras-individual-reliefs'),
+  'A generic mixed-plan relief subject retains its direct substantive parent mapping.');
+assert.equal(genericMixedIssue?.routingTopicIds, undefined,
+  'A generic subject without child-specific ownership does not infer the routing parent.');
 
 const genericMomCoverage = getCoverageTopicsByIds(['mom-work-passes-general'])[0];
 assert.ok(genericMomCoverage, 'A generic MOM work-pass parent coverage topic is registered.');

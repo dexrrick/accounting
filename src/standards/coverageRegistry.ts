@@ -76,6 +76,11 @@ export interface SingaporeCoverageTopic {
   exclusionKeywords: string[];
   /** Broad taxonomy entries can help route discovery without being required evidence coverage. */
   routingOnly?: boolean;
+  /** Registry relationship for bounded request-scope ownership. */
+  routingChildTopicIds?: string[];
+  routingParentTopicIds?: string[];
+  /** Bounded noun-phrase patterns used only by the request-scope grammar. */
+  routingRequestPatterns?: string[];
   /** Shared concept ID for legacy/new topic aliases that should count once in ranking. */
   canonicalConceptId?: string;
   actOrStandard?: string;
@@ -131,6 +136,9 @@ interface TopicSpec {
   requiredContentTerms?: string[];
   exclusionKeywords?: string[];
   routingOnly?: boolean;
+  routingChildTopicIds?: string[];
+  routingParentTopicIds?: string[];
+  routingRequestPatterns?: string[];
   canonicalConceptId?: string;
   priority?: CoveragePriority;
   status?: CoverageStatus;
@@ -178,6 +186,9 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
     ...(spec.requiredContentTerms ? { requiredContentTerms: [...spec.requiredContentTerms] } : {}),
     exclusionKeywords: spec.exclusionKeywords ?? [],
     ...(spec.routingOnly ? { routingOnly: true } : {}),
+    ...(spec.routingChildTopicIds ? { routingChildTopicIds: [...spec.routingChildTopicIds] } : {}),
+    ...(spec.routingParentTopicIds ? { routingParentTopicIds: [...spec.routingParentTopicIds] } : {}),
+    ...(spec.routingRequestPatterns ? { routingRequestPatterns: [...spec.routingRequestPatterns] } : {}),
     ...(spec.canonicalConceptId ? { canonicalConceptId: spec.canonicalConceptId } : {}),
     ...(spec.actOrStandard ? { actOrStandard: spec.actOrStandard } : {}),
     ...(spec.sectionMatch ? { sectionMatch: spec.sectionMatch } : {}),
@@ -583,14 +594,17 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-individual-foreign-tax-credit', title: 'Individual Foreign Tax Credit and Double Tax Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual foreign tax credit', 'foreign tax credit individual', 'foreign tax credit', 'claim foreign tax credit individual', 'double taxation relief', 'double tax relief individual', 'taxed in the foreign country', 'taxed twice on the same income'], aliases: ['Claiming foreign tax credit'] },
   { id: 'iras-individual-double-tax-agreements', title: 'Individual Double Tax Agreement Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual double tax agreement', 'individual dta relief', 'employment income dta exemption', 'dependent services treaty relief', 'double taxation relief individual', 'individual double taxation relief', 'double taxation agreements'], aliases: ['Claiming exemptions under Avoidance of Double Taxation Agreements', 'Double Taxation Agreements (DTA)'], queryPatterns: [String.raw`\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b[\s\S]{0,100}\b(?:relief|exemption|employment|income|foreign|overseas)\b`, String.raw`\b(?:relief|exemption|employment|income|foreign|overseas)\b[\s\S]{0,100}\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b`] },
   { id: 'iras-individual-certificate-of-residence', title: 'Certificate of Residence for Individuals', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['individual certificate of residence', 'apply for certificate of residence', 'certificate of residence individual', 'cor for dta benefits'], aliases: ['Apply for COR'], queryPatterns: [String.raw`\b(?:certificate of residence|\bcor\b)[\s\S]{0,80}\b(?:dta|treaty|individual|tax resident)\b`] },
-  { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
-  { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'], queryPatterns: INDIVIDUAL_RELIEF_CAP_PATTERNS },
-  { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'], queryPatterns: INDIVIDUAL_CPF_RELIEF_PATTERNS },
-  { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['srs relief', 'supplementary retirement scheme relief'], queryPatterns: INDIVIDUAL_SRS_RELIEF_PATTERNS },
-  { id: 'iras-individual-parent-relief', title: 'Parent Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['parent relief', 'parent relief disability', 'parent tax relief', 'tax relief for parents', 'parental tax relief'] },
-  { id: 'iras-individual-grandparent-caregiver-relief', title: 'Grandparent Caregiver Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['grandparent caregiver relief', 'caregiver relief'] },
-  { id: 'iras-individual-wmcr', title: "Working Mother's Child Relief", domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['working mother child relief', 'wmcr'] },
-  { id: 'iras-individual-qcr', title: 'Qualifying Child Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['qualifying child relief', 'qcr'] },
+  { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, routingChildTopicIds: [
+    'iras-individual-relief-cap', 'iras-individual-cpf-relief', 'iras-individual-srs-relief', 'iras-individual-parent-relief',
+    'iras-individual-grandparent-caregiver-relief', 'iras-individual-wmcr', 'iras-individual-qcr'
+  ], keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
+  { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingParentTopicIds: ['iras-individual-reliefs'], routingRequestPatterns: [String.raw`(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+cap`, String.raw`(?:personal\s+)?relief\s+cap`, String.raw`overall\s+relief\s+cap`], keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'], queryPatterns: INDIVIDUAL_RELIEF_CAP_PATTERNS },
+  { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingParentTopicIds: ['iras-individual-reliefs'], routingRequestPatterns: [String.raw`(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+(?:(?:my|their|employee)\s+)?(?:compulsory|mandatory)\s+cpf(?:\s+contributions?)?`, String.raw`cpf\s+relief\s+for\s+employees?`, String.raw`employee\s+cpf\s+relief`], keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'], queryPatterns: INDIVIDUAL_CPF_RELIEF_PATTERNS },
+  { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingParentTopicIds: ['iras-individual-reliefs'], routingRequestPatterns: [String.raw`srs\s+contribution\s+relief`, String.raw`(?:srs|supplementary\s+retirement\s+scheme)(?:\s+contributions?)?\s+relief`, String.raw`(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+(?:srs|supplementary\s+retirement\s+scheme)\s+contributions?`], keywords: ['srs relief', 'srs contribution relief', 'supplementary retirement scheme relief'], queryPatterns: INDIVIDUAL_SRS_RELIEF_PATTERNS },
+  { id: 'iras-individual-parent-relief', title: 'Parent Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingParentTopicIds: ['iras-individual-reliefs'], routingRequestPatterns: [String.raw`parent\s+relief(?:\s+disability)?`, String.raw`parent\s+tax\s+relief`, String.raw`tax\s+relief\s+for\s+parents?`], keywords: ['parent relief', 'parent relief disability', 'parent tax relief', 'tax relief for parents', 'parental tax relief'] },
+  { id: 'iras-individual-grandparent-caregiver-relief', title: 'Grandparent Caregiver Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingParentTopicIds: ['iras-individual-reliefs'], routingRequestPatterns: [String.raw`grandparent\s+caregiver\s+relief`, String.raw`caregiver\s+relief`], keywords: ['grandparent caregiver relief', 'caregiver relief'] },
+  { id: 'iras-individual-wmcr', title: "Working Mother's Child Relief", domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingParentTopicIds: ['iras-individual-reliefs'], routingRequestPatterns: [String.raw`working\s+mother(?:'s|’s)?\s+child\s+relief`, String.raw`wmcr`], keywords: ['working mother child relief', 'wmcr'] },
+  { id: 'iras-individual-qcr', title: 'Qualifying Child Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingParentTopicIds: ['iras-individual-reliefs'], routingRequestPatterns: [String.raw`qualifying\s+child\s+relief`, String.raw`qcr`], keywords: ['qualifying child relief', 'qcr'] },
   { id: 'iras-property-tax-annual-value', title: 'Property Tax and Annual Value', domainId: 'IRAS_PROPERTY_TAX', priority: 'P1', keywords: ['property tax', 'annual value', 'owner-occupied property tax', 'non-owner-occupied property tax'] },
   { id: 'iras-stamp-duty-bsd', title: 'Buyer’s Stamp Duty', domainId: 'IRAS_STAMP_DUTY', priority: 'P1', keywords: ['bsd', 'buyers stamp duty', 'buyer’s stamp duty', 'buyer stamp duty'] },
   { id: 'iras-stamp-duty-absd', title: 'Additional Buyer’s Stamp Duty', domainId: 'IRAS_STAMP_DUTY', priority: 'P1', keywords: ['absd', 'additional buyers stamp duty', 'additional buyer’s stamp duty'] },

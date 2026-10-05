@@ -4,6 +4,11 @@ import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall } from './aiTransport';
+import {
+  getRoutingChildTopicIdsMentionedInSubject,
+  getRoutingParentIdsForChild,
+  proveRequestedTopicOwnership
+} from './requestedTopicOwnership';
 
 export const SEMANTIC_QUESTION_MIN_CONFIDENCE = 0.72;
 export const SEMANTIC_QUESTION_TIMEOUT_MS = 8_000;
@@ -355,13 +360,24 @@ function resolveIssueTopicIds(
   population: SemanticPopulation,
   governingAuthorities: SemanticAuthority[],
   independentlyRecognizedTopicIds: ReadonlySet<string>
-): string[] {
+): { mappedTopicIds: string[]; routingChildTopicIds: string[] } {
   const allowedDomains = topicDomainsForIssue(domain, population);
   const subjectTopicIds = defaultQueryTopicResolver.decomposeQuery(subject).topics.map(topic => topic.id);
-  return getCoverageTopicsByIds(subjectTopicIds).filter(topic =>
-    independentlyRecognizedTopicIds.has(topic.id) && allowedDomains.includes(topic.domainId) &&
-    semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain))
-    .map(topic => topic.id).sort();
+  const subjectTopics = getCoverageTopicsByIds(subjectTopicIds);
+  const routingChildTopicIds = [...new Set([
+    ...subjectTopics.filter(topic => getRoutingParentIdsForChild(topic.id).length > 0).map(topic => topic.id),
+    ...getRoutingChildTopicIdsMentionedInSubject(subject)
+  ])].sort();
+  const eligibleTopics = subjectTopics.filter(topic =>
+    allowedDomains.includes(topic.domainId) &&
+    semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain));
+  const childParents = new Set(routingChildTopicIds.flatMap(getRoutingParentIdsForChild));
+  return {
+    mappedTopicIds: eligibleTopics
+      .filter(topic => independentlyRecognizedTopicIds.has(topic.id) && !childParents.has(topic.id))
+      .map(topic => topic.id).sort(),
+    routingChildTopicIds
+  };
 }
 
 function deriveEvidenceRequirement(
@@ -989,6 +1005,8 @@ export interface ReconciledSemanticQuestionIssue extends SemanticQuestionIssue {
   unresolvedReason?: 'NO_COVERAGE_TOPIC' | 'UNASSIGNED_QUERY_TOPIC' | 'UNKNOWN_DOMAIN';
   /** Raw query topics recognized as context for this issue; never used as governing/source scope. */
   contextualTopicIds?: string[];
+  /** Routing-only parent topics inferred after complete clause ownership proof. */
+  routingTopicIds?: string[];
 }
 
 export interface SemanticIssueReconciliation {
@@ -998,6 +1016,8 @@ export interface SemanticIssueReconciliation {
   coverageEstablished: boolean;
   /** Fail-closed signal for unsupported query text, unresolved issues, or absent recognized topic coverage. */
   hasUnmappedResidual: boolean;
+  /** Internal diagnostic for the bounded routing-parent ownership proof. */
+  routingOwnershipFailure?: 'INCOMPLETE_SCOPE_PARTITION' | 'UNOWNED_REQUEST_ATOM';
 }
 
 /** Deterministically guards and projects the semantic interpretation into existing IRAS routing fields. */
@@ -1213,13 +1233,14 @@ function reconcileSemanticIssuePlan(
     const separateCpfPayrollOutcomeRequested = explicitlyRequestsCpfPayrollOutcome(query);
     const semanticHasCpfGoverningIssue = semanticIssues.some(issue => issue.domain === 'CPF_PAYROLL' ||
       issue.governingAuthorities.includes('CPF'));
-    const issues: ReconciledSemanticQuestionIssue[] = semanticIssues.map(issue => {
+    const issueMappings: Array<ReconciledSemanticQuestionIssue & { subjectRoutingChildTopicIds: string[] }> = semanticIssues.map(issue => {
       const routedIssue = {
         ...issue,
         governingAuthorities: issue.governingAuthorities.map(authority =>
           canonicalAccountingWorkstreamAuthority(issue.domain, authority))
       };
-      const mappedTopicIds = resolveIssueTopicIds(routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.governingAuthorities, inventoryIds);
+      const mapping = resolveIssueTopicIds(routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.governingAuthorities, inventoryIds);
+      const mappedTopicIds = mapping.mappedTopicIds;
       const reconciledIssue = {
         ...routedIssue,
         mappedTopicIds,
@@ -1242,10 +1263,34 @@ function reconcileSemanticIssuePlan(
         id: addId(reconciledIssue),
         status: unresolvedReason ? 'UNRESOLVED' : 'MAPPED',
         ...(unresolvedReason ? { unresolvedReason } : {}),
-        ...(contextualTopicIds.length ? { contextualTopicIds } : {})
+        ...(contextualTopicIds.length ? { contextualTopicIds } : {}),
+        subjectRoutingChildTopicIds: mapping.routingChildTopicIds
       };
     });
+
+    const relatedChildSubjectIds = [...new Set(issueMappings.flatMap(issue => issue.subjectRoutingChildTopicIds))];
+    const ownershipGuardApplies = relatedChildSubjectIds.some(childTopicId =>
+      getRoutingParentIdsForChild(childTopicId).some(parentTopicId => inventoryIds.has(parentTopicId)));
+    let routingOwnershipFailure: SemanticIssueReconciliation['routingOwnershipFailure'];
+    let routingTopicIdsByIssue = new Map<number, readonly string[]>();
+    if (ownershipGuardApplies) {
+      const ownership = proveRequestedTopicOwnership(
+        query,
+        issueMappings,
+        inventoryIds,
+        relatedChildSubjectIds
+      );
+      if (ownership.complete) routingTopicIdsByIssue = new Map(ownership.routingTopicIdsByIssue);
+      else routingOwnershipFailure = ownership.failure;
+    }
+
+    const issues: ReconciledSemanticQuestionIssue[] = issueMappings.map((issue, index) => {
+      const routingTopicIds = routingTopicIdsByIssue.get(index) || [];
+      const { subjectRoutingChildTopicIds: _subjectRoutingChildTopicIds, ...publicIssue } = issue;
+      return { ...publicIssue, ...(routingTopicIds.length ? { routingTopicIds: [...routingTopicIds] } : {}) };
+    });
     const mappedInventory = new Set(issues.flatMap(issue => [...issue.mappedTopicIds, ...(issue.contextualTopicIds || [])]));
+    for (const issue of issues) for (const topicId of issue.routingTopicIds || []) mappedInventory.add(topicId);
     for (const topic of inventory.topics) {
       if (mappedInventory.has(topic.id)) continue;
       const residual = issueFromTaxonomyGroup([topic]);
@@ -1256,13 +1301,14 @@ function reconcileSemanticIssuePlan(
         unresolvedReason: 'UNASSIGNED_QUERY_TOPIC'
       });
     }
-    const hasUnmappedResidual = inventory.hasUnparsedText || inventory.topics.length === 0 ||
+    const hasUnmappedResidual = Boolean(routingOwnershipFailure) || inventory.hasUnparsedText || inventory.topics.length === 0 ||
       issues.some(issue => issue.status === 'UNRESOLVED');
     return {
       source: 'SEMANTIC_ISSUES',
       issues,
       coverageEstablished: inventory.topics.length > 0 && !hasUnmappedResidual,
-      hasUnmappedResidual
+      hasUnmappedResidual,
+      ...(routingOwnershipFailure ? { routingOwnershipFailure } : {})
     };
   }
 

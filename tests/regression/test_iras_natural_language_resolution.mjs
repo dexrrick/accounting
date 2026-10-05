@@ -75,6 +75,22 @@ function traceIssueMapping(query, issue) {
   };
 }
 
+function substantiveIntersectionTopicIds(trace) {
+  const eligibleSubjectTopics = getCoverageTopicsByIds(trace.authorityTopicIds);
+  const childOwnedRoutingParents = new Set();
+  for (const child of eligibleSubjectTopics) {
+    for (const parentId of child.routingParentTopicIds || []) {
+      const parent = getCoverageTopicsByIds([parentId])[0];
+      if (parent?.routingOnly && parent.domainId === child.domainId &&
+          parent.routingChildTopicIds?.includes(child.id) && child.routingParentTopicIds.includes(parent.id) &&
+          parent.authorities.some(authority => child.authorities.includes(authority))) {
+        childOwnedRoutingParents.add(parent.id);
+      }
+    }
+  }
+  return trace.intersectionTopicIds.filter(topicId => !childOwnedRoutingParents.has(topicId));
+}
+
 for (const testCase of irasResolverCases) {
   const queryTopics = defaultQueryTopicResolver.decomposeQuery(testCase.query).topics.map(topic => topic.id);
   const tracedIssues = testCase.issues.map(issue => ({ issue, trace: traceIssueMapping(testCase.query, issue) }));
@@ -96,8 +112,19 @@ for (const testCase of irasResolverCases) {
     const actual = mappedIssues[index];
     const trace = tracedIssues[index].trace;
     assert.equal(actual.subject, expected.subject, `${testCase.id}: semantic issue order is preserved`);
-    assert.deepEqual(actual.mappedTopicIds, trace.intersectionTopicIds,
-      `${testCase.id}: production issue mapping matches query/subject/domain/population/authority intersection`);
+    assert.deepEqual(actual.mappedTopicIds, substantiveIntersectionTopicIds(trace),
+      `${testCase.id}: production substantive mapping matches the lexical intersection after child-owned routing parents are removed`);
+  }
+
+  if (['target-relief-entitlement', 'target-relief-amount', 'A-paraphrase-2'].includes(testCase.id)) {
+    const cpfRelief = mappedIssues.find(issue => issue.mappedTopicIds.includes('iras-individual-cpf-relief'));
+    assert.ok(cpfRelief, `${testCase.id}: specific CPF relief remains substantively mapped`);
+    assert.equal(cpfRelief.mappedTopicIds.includes('iras-individual-reliefs'), false,
+      `${testCase.id}: umbrella is not substantive child evidence scope`);
+    assert.deepEqual(cpfRelief.routingTopicIds, ['iras-individual-reliefs'],
+      `${testCase.id}: complete child scope records its reciprocal routing parent explicitly`);
+    assert.equal(reconciled.issuePlan.coverageEstablished, true, `${testCase.id}: bounded ownership establishes coverage`);
+    assert.equal(reconciled.issuePlan.hasUnmappedResidual, false, `${testCase.id}: no false umbrella residual remains`);
   }
 
   for (const topicId of testCase.requiredTopicIds) {

@@ -18,6 +18,7 @@ const testSuites = [
   { name: 'Semantic Authority & Relief Contract', file: 'test_semantic_authority_relief_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS-First Semantic Contract', file: 'test_iras_first_semantic_contract.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'CPF Relief Context and Private Expense Enumeration', file: 'test_iras_cpf_context_private_enumeration.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Routing Clause Topic Ownership', file: 'test_routing_clause_ownership.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Application-Derived Semantic Specificity', file: 'test_derived_semantic_specificity.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS Natural-Language Topic Resolution', file: 'test_iras_natural_language_resolution.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Factual Conjunction Residual Safety', file: 'test_factual_conjunction_residual.mjs', layer: 'input-understanding', tier: 'smoke' },
