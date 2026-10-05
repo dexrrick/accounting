@@ -76,6 +76,8 @@ export interface SingaporeCoverageTopic {
   exclusionKeywords: string[];
   /** Broad taxonomy entries can help route discovery without being required evidence coverage. */
   routingOnly?: boolean;
+  /** Parent topics that a recognized child request may consume only for routing. */
+  routingParentTopicIds?: string[];
   /** Shared concept ID for legacy/new topic aliases that should count once in ranking. */
   canonicalConceptId?: string;
   actOrStandard?: string;
@@ -131,6 +133,7 @@ interface TopicSpec {
   requiredContentTerms?: string[];
   exclusionKeywords?: string[];
   routingOnly?: boolean;
+  routingParentTopicIds?: string[];
   canonicalConceptId?: string;
   priority?: CoveragePriority;
   status?: CoverageStatus;
@@ -178,6 +181,7 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
     ...(spec.requiredContentTerms ? { requiredContentTerms: [...spec.requiredContentTerms] } : {}),
     exclusionKeywords: spec.exclusionKeywords ?? [],
     ...(spec.routingOnly ? { routingOnly: true } : {}),
+    ...(spec.routingParentTopicIds ? { routingParentTopicIds: [...spec.routingParentTopicIds] } : {}),
     ...(spec.canonicalConceptId ? { canonicalConceptId: spec.canonicalConceptId } : {}),
     ...(spec.actOrStandard ? { actOrStandard: spec.actOrStandard } : {}),
     ...(spec.sectionMatch ? { sectionMatch: spec.sectionMatch } : {}),
@@ -400,7 +404,7 @@ const topicSpecs: TopicSpec[] = [
   { id: 'mom_sick_leave', title: 'Outpatient Sick & Hospitalisation Leave', domainId: 'MOM_EMPLOYMENT', priority: 'P1', status: 'PARTIAL', keywords: ['sick leave', 'medical leave', 'hospitalisation leave', 'hospitalization', 'mc', 'section 89'], actOrStandard: 'Employment Act 1968', sectionMatch: '89' },
   { id: 'mom_overtime', title: 'Overtime & Working Hours (Part IV)', domainId: 'MOM_EMPLOYMENT', priority: 'P1', status: 'PARTIAL', keywords: ['overtime', 'part iv', 'working hours', 'rest day', '1.5 times', 'section 38'], actOrStandard: 'Employment Act 1968', sectionMatch: '38', canonicalConceptId: 'mom-part-iv-overtime' },
   { id: 'cpf_wage_ceiling', title: 'CPF Ordinary Wage Ceiling', domainId: 'CPF_CONTRIBUTIONS', priority: 'P1', status: 'IMPLEMENTING', keywords: ['cpf ceiling', 'ordinary wage ceiling', 'ow ceiling', 'cpf limit', 'monthly ceiling'], actOrStandard: 'Central Provident Fund Act 1953', sectionMatch: 'first schedule', sourceRecordIds: ['CPF_WAGE_CEILINGS_2026'], legacyPackIds: ['cpf-and-sdl-payroll'] },
-  { id: 'cpf_contribution_rates', title: 'CPF Tiered Contribution Rates by Age', domainId: 'CPF_CONTRIBUTIONS', priority: 'P1', status: 'IMPLEMENTING', keywords: ['cpf rate', 'cpf contribution', 'employee contribution', 'employer contribution', 'age 55'], actOrStandard: 'Central Provident Fund Act 1953', sectionMatch: 'rates', sourceRecordIds: ['CPF_RATES_BY_AGE_2026'], legacyPackIds: ['cpf-and-sdl-payroll'] },
+  { id: 'cpf_contribution_rates', title: 'CPF Tiered Contribution Rates by Age', domainId: 'CPF_CONTRIBUTIONS', priority: 'P1', status: 'IMPLEMENTING', keywords: ['cpf rate', 'cpf contribution', 'employee contribution', 'employer contribution', 'age 55'], queryPatterns: [String.raw`\b(?:cpf|central provident fund)\b[\s\S]{0,80}\b(?:contribut\w*|pay\w*|remit\w*|owe[ds]?|obligation\w*|rates?|amounts?)\b`, String.raw`\b(?:contribut\w*|pay\w*|remit\w*|owe[ds]?|obligation\w*|rates?|amounts?)\b[\s\S]{0,80}\b(?:cpf|central provident fund)\b`], actOrStandard: 'Central Provident Fund Act 1953', sectionMatch: 'rates', sourceRecordIds: ['CPF_RATES_BY_AGE_2026'], legacyPackIds: ['cpf-and-sdl-payroll'] },
   { id: 'gst_compulsory_registration', title: 'GST Compulsory Registration Threshold', domainId: 'IRAS_GST', priority: 'P1', status: 'IMPLEMENTING', keywords: ['gst registration', 'compulsory registration', '1 million turnover', '1m turnover', 'gst threshold', 'taxable turnover', 'taxable supplies', 'liable to be registered', 'retrospective test', 'prospective test'], exclusionKeywords: ['gst registration number'], actOrStandard: 'Goods and Services Tax Act 1993', sectionMatch: 'first schedule', sourceRecordIds: ['GST_REGISTRATION_COMPULSORY_THRESHOLD'], legacyPackIds: ['gst-registration-and-input-tax'] },
   { id: 'gst_reverse_charge', title: 'GST Reverse Charge on Imported Services', domainId: 'IRAS_GST', priority: 'P1', status: 'IMPLEMENTING', keywords: ['reverse charge', 'imported services', 'b2b imported', 'section 14'], actOrStandard: 'Goods and Services Tax Act 1993', sectionMatch: '14', sourceRecordIds: ['GST_SEC14_REVERSE_CHARGE'], legacyPackIds: ['gst-registration-and-input-tax'], canonicalConceptId: 'gst-reverse-charge-imported-services' },
   { id: 'gst_bad_debt_relief', title: 'GST Bad Debt Relief', domainId: 'IRAS_GST', priority: 'P2', status: 'MISSING', keywords: ['bad debt relief', 'bad debt', 'insolvent customer', 'regulations 82', 'reg 82'], actOrStandard: 'Goods and Services Tax (General) Regulations', sectionMatch: '82', semanticCriteriaKey: 'gst_bad_debt_relief' },
@@ -554,7 +558,7 @@ const topicSpecs: TopicSpec[] = [
   { id: 'iras-individual-certificate-of-residence', title: 'Certificate of Residence for Individuals', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['individual certificate of residence', 'apply for certificate of residence', 'certificate of residence individual', 'cor for dta benefits'], aliases: ['Apply for COR'], queryPatterns: [String.raw`\b(?:certificate of residence|\bcor\b)[\s\S]{0,80}\b(?:dta|treaty|individual|tax resident)\b`] },
   { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
   { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'] },
-  { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'] },
+  { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'], queryPatterns: [String.raw`(?=[\s\S]*\b(?:cpf|central provident fund)\b)(?=[\s\S]*\b(?:relief|claim\w*)\b)(?=[\s\S]*\b(?:personal|individual|income tax|employee)\b)`], routingParentTopicIds: ['iras-individual-reliefs'] },
   { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['srs relief', 'supplementary retirement scheme relief'] },
   { id: 'iras-individual-parent-relief', title: 'Parent Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['parent relief', 'parent relief disability'] },
   { id: 'iras-individual-grandparent-caregiver-relief', title: 'Grandparent Caregiver Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['grandparent caregiver relief', 'caregiver relief'] },

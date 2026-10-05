@@ -1,0 +1,248 @@
+{
+  "provenance": "Extracted from c252309:docs/evaluation/multi-authority-workstreams/iras-first-targeted-acceptance-2026-10-04-v4/routing-classification-proof.json; retains only the fixture question and four raw V2 mock rows used by the routing regression.",
+  "question": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+  "rows": [
+    {
+      "rootMode": "CPF_FIRST",
+      "subject": "individual income tax relief for compulsory CPF",
+      "rawMock": {
+        "schemaVersion": 2,
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "CPF",
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "CPF_PAYROLL",
+        "population": "EMPLOYER",
+        "primarySubject": "employer CPF contribution amount and individual personal tax relief for compulsory CPF contributions",
+        "concepts": [
+          {
+            "concept": "employer CPF contribution amount",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "personal tax relief on compulsory CPF contributions",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "CALCULATE",
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "individual income tax relief for compulsory CPF",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    },
+    {
+      "rootMode": "UNKNOWN_MIXED",
+      "subject": "individual income tax relief for compulsory CPF",
+      "rawMock": {
+        "schemaVersion": 2,
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "employer CPF contribution amount and individual personal tax relief for compulsory CPF contributions",
+        "concepts": [
+          {
+            "concept": "employer CPF contribution amount",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "personal tax relief on compulsory CPF contributions",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "OTHER",
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "individual income tax relief for compulsory CPF",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    },
+    {
+      "rootMode": "CPF_FIRST",
+      "subject": "individual personal tax relief claim for compulsory CPF contributions",
+      "rawMock": {
+        "schemaVersion": 2,
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "CPF",
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "CPF_PAYROLL",
+        "population": "EMPLOYER",
+        "primarySubject": "employer CPF contribution amount and individual personal tax relief for compulsory CPF contributions",
+        "concepts": [
+          {
+            "concept": "employer CPF contribution amount",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "personal tax relief on compulsory CPF contributions",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "CALCULATE",
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "individual personal tax relief claim for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    },
+    {
+      "rootMode": "UNKNOWN_MIXED",
+      "subject": "individual personal tax relief claim for compulsory CPF contributions",
+      "rawMock": {
+        "schemaVersion": 2,
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "employer CPF contribution amount and individual personal tax relief for compulsory CPF contributions",
+        "concepts": [
+          {
+            "concept": "employer CPF contribution amount",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "personal tax relief on compulsory CPF contributions",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "OTHER",
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "individual personal tax relief claim for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    }
+  ]
+}
