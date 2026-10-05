@@ -700,6 +700,39 @@ const reliefHtml = '<html><head><title>Central Provident Fund (CPF) Relief for E
 const sitemapHtml = `<?xml version="1.0"?><urlset><url><loc>${discoveredUrl}</loc><lastmod>2026-10-04</lastmod></url></urlset>`;
 const fixtureManifest = [mappedHtml, reliefHtml, sitemapHtml].map(text => ({ synthetic: true, sha256: createHash('sha256').update(text).digest('hex') }));
 assert.equal(fixtureManifest.every(item => item.synthetic && /^[a-f0-9]{64}$/.test(item.sha256)), true);
+const controlledRuleFixtureBodies = [];
+function syntheticIrasPage(family, polarity, urls, title, ruleText) {
+  const body = `<html><head><title>${title}</title></head><body><!-- SYNTHETIC API-FREE FIXTURE --><main><h1>${title}</h1><p>${ruleText}</p></main></body></html>`;
+  controlledRuleFixtureBodies.push({ family, polarity, urls, body });
+  return { body, status: 200 };
+}
+function syntheticIrasResponses(family, polarity, pages, ruleText) {
+  return Object.fromEntries(pages.map(([url, title]) => [url,
+    syntheticIrasPage(family, polarity, [url], title, ruleText)]));
+}
+function normalizeFixtureEvidence(value) {
+  return String(value).normalize('NFC').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
+}
+function assertClaimsBoundToSyntheticResponses(issue, responses, family) {
+  assert.ok(issue.verifiedClaims.length > 0, `${family} positive must expose actual verified claims.`);
+  const sourcesById = new Map(issue.sources.map(source => [source.id, source]));
+  for (const claim of issue.verifiedClaims) {
+    const source = sourcesById.get(claim.recordId);
+    assert.ok(source, `${family} verified claim ${claim.recordId} must link to a returned source record.`);
+    const response = responses[source.officialSourceUrl];
+    assert.ok(response, `${family} claim source URL must be one of the supplied controlled response URLs: ${source.officialSourceUrl}`);
+    assert.equal(source.sourceStatus, 'NEEDS_REVIEW', `${family} synthetic content cannot upgrade source trust.`);
+    assert.equal(source.provenance, 'LIVE_EXTERNAL', `${family} claim must be bound to the production controlled-transport record.`);
+    const visibleFixtureText = response.body.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&');
+    assert.equal(typeof claim.quote, 'string', `${family} verified claim must carry a string quote.`);
+    const normalizedQuote = normalizeFixtureEvidence(claim.quote);
+    assert.ok(normalizedQuote.length > 0, `${family} verified claim quote must be nonempty after normalization.`);
+    assert.ok(normalizeFixtureEvidence(visibleFixtureText).includes(normalizedQuote),
+      `${family} claim quote must occur literally in the supplied synthetic response body.`);
+    assert.ok(normalizeFixtureEvidence(source.sourceText).includes(normalizedQuote),
+      `${family} claim quote must occur literally in its associated returned source text.`);
+  }
+}
 
 async function runControlledIras(query, issuePlan, questionUnderstanding, responseByUrl) {
   const requests = [];
@@ -911,4 +944,193 @@ console.log(`V4_DISCOVERY_RUNTIME ${JSON.stringify({ route: discoveredRun.reques
   issueStatus: reliefEvidence.evidenceStatus, applicationStatus: reliefEvidence.applicationStatus,
   overallStatus: discoveredRun.result.status, sourceStatus: reliefEvidence.sources[0].sourceStatus })}`);
 
-console.log(`V4 API-free contract, local-only runtime, one-use guards, controlled discovery and evidence-gate checks passed (${fixtureManifest.length} explicitly synthetic fixture hashes).`);
+const foreignIncomeUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income';
+const foreignRow = semanticRows.find(row => row.item.caseId === 'foreign-dividend-receipt-treatment');
+const foreignPositiveFixture = syntheticIrasPage('foreign-dividend-receipt-treatment', 'positive', [foreignIncomeUrl], 'Companies Receiving Foreign Income | IRAS',
+  'Foreign-sourced income includes dividends. For a company, foreign-sourced dividends received in Singapore are taxable when received, unless an applicable statutory exemption applies. The company must satisfy the specified conditions for that exemption.');
+const foreignNegativeFixture = syntheticIrasPage('foreign-dividend-receipt-treatment', 'negative', [foreignIncomeUrl], 'Companies Receiving Foreign Income | IRAS',
+  'Foreign-sourced income is considered under corporate income tax. Dividends received by a Singapore company from a domestic source are recorded as dividend income. This page describes dividends paid by a company to shareholders, not foreign-sourced dividends received by a company.');
+const foreignPositiveResponses = { [foreignIncomeUrl]: foreignPositiveFixture };
+const foreignPositiveRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation }, foreignPositiveResponses);
+const foreignNegativeRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation }, { [foreignIncomeUrl]: foreignNegativeFixture });
+const foreignPositiveIssue = foreignPositiveRun.result.workstreams.flatMap(stream => stream.issues)[0];
+const foreignNegativeIssue = foreignNegativeRun.result.workstreams.flatMap(stream => stream.issues)[0];
+const foreignPositiveDiagnostic = { requests: foreignPositiveRun.transportObservations, retrievalTrace: foreignPositiveIssue.retrievalTrace,
+  lifecycle: foreignPositiveIssue.lifecycle, gaps: foreignPositiveIssue.gaps, evidenceStatus: foreignPositiveIssue.evidenceStatus,
+  claims: foreignPositiveIssue.verifiedClaims?.length, sourceIds: foreignPositiveIssue.sources?.map(source => source.id) };
+assert.ok(foreignPositiveRun.requests.includes(foreignIncomeUrl));
+assert.equal(foreignPositiveIssue.evidenceStatus, 'VERIFIED',
+  `The synthetic received-foreign-dividend rule passes the actual governed evidence path: ${JSON.stringify(foreignPositiveDiagnostic)}`);
+assert.deepEqual(foreignPositiveIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: true, admitted: true, verified: true, covered: true });
+assertClaimsBoundToSyntheticResponses(foreignPositiveIssue, foreignPositiveResponses, 'foreign-dividend-receipt-treatment');
+assert.equal(foreignPositiveIssue.applicationStatus, 'UNRESOLVED');
+assert.equal(foreignPositiveRun.result.status, 'CONDITIONAL');
+assert.equal(foreignPositiveRun.result.applicationStatus, 'UNRESOLVED');
+assert.equal(foreignPositiveIssue.sources[0].sourceStatus, 'NEEDS_REVIEW', 'Synthetic transport never upgrades source trust.');
+assert.ok(foreignNegativeRun.requests.includes(foreignIncomeUrl));
+assert.equal(foreignNegativeIssue.lifecycle.evidenceFound, true);
+assert.equal(foreignNegativeIssue.lifecycle.admitted, false);
+assert.equal(foreignNegativeIssue.lifecycle.verified, false);
+assert.equal(foreignNegativeIssue.lifecycle.covered, false);
+assert.equal(foreignNegativeIssue.evidenceStatus, 'INSUFFICIENT', 'Domestic and payer-side wording cannot prove the foreign-dividend receipt rule.');
+assert.equal(foreignNegativeIssue.verifiedClaims.length, 0);
+assert.ok(foreignNegativeIssue.gaps.some(gap => gap.code === 'NO_ADMITTED_EVIDENCE'));
+assert.equal(foreignNegativeIssue.applicationStatus, 'UNRESOLVED');
+assert.equal(foreignNegativeRun.result.status, 'INSUFFICIENT');
+assert.equal(foreignNegativeRun.result.applicationStatus, 'UNRESOLVED');
+console.log(`V4_CONTROLLED_FOREIGN_DIVIDEND ${JSON.stringify({ positive: { lifecycle: foreignPositiveIssue.lifecycle,
+  evidenceStatus: foreignPositiveIssue.evidenceStatus, applicationStatus: foreignPositiveIssue.applicationStatus,
+  overall: foreignPositiveRun.result.status }, negative: { lifecycle: foreignNegativeIssue.lifecycle,
+  evidenceStatus: foreignNegativeIssue.evidenceStatus, claims: foreignNegativeIssue.verifiedClaims.length,
+  stages: foreignNegativeIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus), gaps: foreignNegativeIssue.gaps.map(gap => gap.code),
+  applicationStatus: foreignNegativeIssue.applicationStatus, overall: foreignNegativeRun.result.status } })}`);
+
+const residencyUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence';
+const residencyRow = semanticRows.find(row => row.item.caseId === 'corporate-residency-general-rule');
+const residencyTitle = 'Tax Residency of a Company/ Certificate of Residence | IRAS';
+const residencyPositiveFixture = syntheticIrasPage('corporate-residency-general-rule', 'positive', [residencyUrl], residencyTitle,
+  'For Singapore corporate income tax, a company is tax resident in Singapore when its control and management are exercised in Singapore. The residence analysis concerns where the company’s control and management is exercised, rather than relying only on its place of incorporation. A certificate of residence confirms a company’s tax-resident status.');
+const residencyNegativeFixture = syntheticIrasPage('corporate-residency-general-rule', 'negative', [residencyUrl], residencyTitle,
+  'This section describes individual income-tax residency based on an individual’s days of presence in Singapore during the relevant year. It does not state a corporate tax-residency test.');
+const residencyResponses = fixture => ({ [residencyUrl]: fixture });
+const residencyPositiveResponses = residencyResponses(residencyPositiveFixture);
+const residencyPositiveRun = await runControlledIras(residencyRow.item.question, residencyRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: residencyRow.interpretation }, residencyPositiveResponses);
+const residencyNegativeRun = await runControlledIras(residencyRow.item.question, residencyRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: residencyRow.interpretation }, residencyResponses(residencyNegativeFixture));
+const residencyPositiveIssue = residencyPositiveRun.result.workstreams.flatMap(stream => stream.issues)[0];
+const residencyNegativeIssue = residencyNegativeRun.result.workstreams.flatMap(stream => stream.issues)[0];
+assert.ok(residencyPositiveRun.requests.includes(residencyUrl));
+assert.deepEqual(residencyPositiveIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: true, admitted: true, verified: true, covered: true });
+assertClaimsBoundToSyntheticResponses(residencyPositiveIssue, residencyPositiveResponses, 'corporate-residency-general-rule');
+assert.equal(residencyPositiveIssue.evidenceStatus, 'VERIFIED');
+assert.equal(residencyPositiveIssue.applicationStatus, 'NOT_REQUIRED');
+assert.equal(residencyPositiveRun.result.status, 'VERIFIED');
+assert.equal(residencyPositiveRun.result.applicationStatus, 'NOT_REQUIRED');
+assert.equal(residencyPositiveIssue.sources[0].sourceStatus, 'NEEDS_REVIEW');
+assert.ok(residencyNegativeRun.requests.includes(residencyUrl));
+assert.equal(residencyNegativeIssue.evidenceStatus, 'INSUFFICIENT', 'Individual residency material cannot prove company tax residency.');
+assert.deepEqual(residencyNegativeIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: false, admitted: false, verified: false, covered: false });
+assert.ok(residencyNegativeIssue.retrievalTrace?.attempts?.some(attempt => attempt.fetchStatus === 'TOPIC_MISMATCH'));
+assert.equal(residencyNegativeIssue.verifiedClaims.length, 0);
+assert.equal(residencyNegativeIssue.applicationStatus, 'NOT_REQUIRED');
+assert.equal(residencyNegativeRun.result.status, 'INSUFFICIENT');
+assert.equal(residencyNegativeRun.result.applicationStatus, 'NOT_REQUIRED');
+console.log(`V4_CONTROLLED_RESIDENCY ${JSON.stringify({ positive: { lifecycle: residencyPositiveIssue.lifecycle,
+  evidenceStatus: residencyPositiveIssue.evidenceStatus, applicationStatus: residencyPositiveIssue.applicationStatus,
+  overall: residencyPositiveRun.result.status }, negative: { lifecycle: residencyNegativeIssue.lifecycle,
+  evidenceStatus: residencyNegativeIssue.evidenceStatus, claims: residencyNegativeIssue.verifiedClaims.length,
+  stages: residencyNegativeIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus), gaps: residencyNegativeIssue.gaps.map(gap => gap.code),
+  applicationStatus: residencyNegativeIssue.applicationStatus, overall: residencyNegativeRun.result.status } })}`);
+
+const whtUrlsAndTitles = [
+  ['https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates',
+    'Types of Payment & the Applicable Withholding Tax Rates | IRAS'],
+  ['https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax',
+    'Payments that are subject to withholding tax | IRAS'],
+  ['https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)',
+    'Overview of Withholding Tax (WHT) | IRAS']
+];
+const whtRow = semanticRows.find(row => row.item.caseId === 'wht-royalty-general-rule');
+const whtPositiveText = 'Withholding tax applies to royalty payments to a non-resident company. This synthetic summary is limited to a royalty payment by a Singapore company to a non-resident corporate recipient; the applicable treatment depends on the payment facts and any available relief.';
+const whtInterestOnlyText = 'Withholding tax applies to interest payments to non-resident companies. Royalties are listed as a payment type, but this text does not establish a royalty rule for payments to non-resident companies.';
+const whtMissingRecipientText = 'Withholding tax applies to royalty payments to a foreign recipient. This description does not state that the recipient is a non-resident company.';
+const whtPositiveResponses = syntheticIrasResponses('wht-royalty-general-rule', 'positive', whtUrlsAndTitles, whtPositiveText);
+const whtPositiveRun = await runControlledIras(whtRow.item.question, whtRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: whtRow.interpretation }, whtPositiveResponses);
+const whtInterestOnlyRun = await runControlledIras(whtRow.item.question, whtRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: whtRow.interpretation },
+  syntheticIrasResponses('wht-royalty-general-rule', 'negative-interest-only', whtUrlsAndTitles, whtInterestOnlyText));
+const whtMissingRecipientRun = await runControlledIras(whtRow.item.question, whtRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: whtRow.interpretation },
+  syntheticIrasResponses('wht-royalty-general-rule', 'negative-missing-recipient', whtUrlsAndTitles, whtMissingRecipientText));
+const whtPositiveIssue = whtPositiveRun.result.workstreams.flatMap(stream => stream.issues)[0];
+const whtNegativeIssues = [whtInterestOnlyRun, whtMissingRecipientRun].map(run => ({
+  run, issue: run.result.workstreams.flatMap(stream => stream.issues)[0]
+}));
+assert.deepEqual(whtPositiveIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: true, admitted: true, verified: true, covered: true });
+assertClaimsBoundToSyntheticResponses(whtPositiveIssue, whtPositiveResponses, 'wht-royalty-general-rule');
+assert.equal(whtPositiveIssue.evidenceStatus, 'VERIFIED');
+assert.equal(whtPositiveIssue.applicationStatus, 'NOT_REQUIRED');
+assert.equal(whtPositiveRun.result.status, 'VERIFIED');
+assert.equal(whtPositiveRun.result.applicationStatus, 'NOT_REQUIRED');
+assert.equal(whtPositiveIssue.sources[0].sourceStatus, 'NEEDS_REVIEW');
+for (const { run, issue } of whtNegativeIssues) {
+  assert.equal(issue.evidenceStatus, 'INSUFFICIENT', 'Interest-only or unspecified recipient text cannot complete royalty WHT scope.');
+  assert.deepEqual(issue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+    evidenceFound: true, admitted: true, verified: false, covered: false });
+  assert.equal(issue.verifiedClaims.length, 0);
+  assert.ok(issue.retrievalTrace?.attempts?.length && issue.retrievalTrace.attempts.every(attempt => attempt.fetchStatus === 'SUCCESS'));
+  assert.ok(issue.gaps.some(gap => gap.code === 'IRAS_SCOPE_NOT_COVERED'));
+  assert.ok(issue.gaps.some(gap => gap.code === 'NO_VERIFIED_CLAIM'));
+  assert.ok(issue.gaps.some(gap => gap.code === 'ISSUE_CONCEPT_UNCOVERED'));
+  assert.equal(issue.applicationStatus, 'NOT_REQUIRED');
+  assert.equal(run.result.status, 'INSUFFICIENT');
+  assert.equal(run.result.applicationStatus, 'NOT_REQUIRED');
+}
+console.log(`V4_CONTROLLED_WHT ${JSON.stringify({ positive: { lifecycle: whtPositiveIssue.lifecycle,
+  evidenceStatus: whtPositiveIssue.evidenceStatus, applicationStatus: whtPositiveIssue.applicationStatus,
+  overall: whtPositiveRun.result.status, attempts: whtPositiveIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus) },
+  negatives: whtNegativeIssues.map(({ run, issue }) => ({ lifecycle: issue.lifecycle, evidenceStatus: issue.evidenceStatus,
+    claims: issue.verifiedClaims.length, stages: issue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus),
+    gaps: issue.gaps.map(gap => gap.code), applicationStatus: issue.applicationStatus, overall: run.result.status })) })}`);
+
+const gstUrlsAndTitles = [
+  ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax',
+    'Conditions for Claiming Input Tax | IRAS'],
+  ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers',
+    'Invoicing Customers | IRAS']
+];
+const gstRow = semanticRows.find(row => row.item.caseId === 'gst-input-tax-general-rule');
+const gstPositiveText = 'A GST-registered business may claim input tax on business purchases used to make taxable supplies, subject to the applicable conditions and a valid tax invoice.';
+const gstBlockedOnlyText = 'Input tax on the purchase and running expenses of a motor car is generally blocked from claim, subject to the vehicle definition and exceptions. Business purpose alone does not make a blocked motor-car claim recoverable. This page describes blocked input tax and does not establish the general recovery conditions for a GST-registered company’s business purchases.';
+const gstPositiveResponses = syntheticIrasResponses('gst-input-tax-general-rule', 'positive', gstUrlsAndTitles, gstPositiveText);
+const gstPositiveRun = await runControlledIras(gstRow.item.question, gstRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: gstRow.interpretation }, gstPositiveResponses);
+const gstNegativeRun = await runControlledIras(gstRow.item.question, gstRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: gstRow.interpretation },
+  syntheticIrasResponses('gst-input-tax-general-rule', 'negative-blocked-only', gstUrlsAndTitles, gstBlockedOnlyText));
+const gstPositiveIssue = gstPositiveRun.result.workstreams.flatMap(stream => stream.issues)[0];
+const gstNegativeIssue = gstNegativeRun.result.workstreams.flatMap(stream => stream.issues)[0];
+assert.deepEqual(gstPositiveIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: true, admitted: true, verified: true, covered: true });
+assertClaimsBoundToSyntheticResponses(gstPositiveIssue, gstPositiveResponses, 'gst-input-tax-general-rule');
+assert.equal(gstPositiveIssue.evidenceStatus, 'VERIFIED');
+assert.equal(gstPositiveIssue.applicationStatus, 'NOT_REQUIRED');
+assert.equal(gstPositiveRun.result.status, 'VERIFIED');
+assert.equal(gstPositiveRun.result.applicationStatus, 'NOT_REQUIRED');
+assert.equal(gstPositiveIssue.sources[0].sourceStatus, 'NEEDS_REVIEW');
+assert.equal(gstNegativeIssue.evidenceStatus, 'INSUFFICIENT', 'Blocked-only input-tax evidence cannot establish general recovery conditions.');
+assert.deepEqual(gstNegativeIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: true, admitted: true, verified: false, covered: false });
+assert.equal(gstNegativeIssue.verifiedClaims.length, 0);
+assert.ok(gstNegativeIssue.retrievalTrace?.attempts?.some(attempt => attempt.fetchStatus === 'SUCCESS'));
+assert.ok(gstNegativeIssue.gaps.some(gap => gap.code === 'IRAS_SCOPE_NOT_COVERED'));
+assert.ok(gstNegativeIssue.gaps.some(gap => gap.code === 'NO_VERIFIED_CLAIM'));
+assert.ok(gstNegativeIssue.gaps.some(gap => gap.code === 'ISSUE_CONCEPT_UNCOVERED'));
+assert.equal(gstNegativeIssue.applicationStatus, 'NOT_REQUIRED');
+assert.equal(gstNegativeRun.result.status, 'INSUFFICIENT');
+assert.equal(gstNegativeRun.result.applicationStatus, 'NOT_REQUIRED');
+console.log(`V4_CONTROLLED_GST ${JSON.stringify({ positive: { lifecycle: gstPositiveIssue.lifecycle,
+  evidenceStatus: gstPositiveIssue.evidenceStatus, applicationStatus: gstPositiveIssue.applicationStatus,
+  overall: gstPositiveRun.result.status, attempts: gstPositiveIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus) },
+  negative: { lifecycle: gstNegativeIssue.lifecycle, evidenceStatus: gstNegativeIssue.evidenceStatus,
+    claims: gstNegativeIssue.verifiedClaims.length, stages: gstNegativeIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus),
+    gaps: gstNegativeIssue.gaps.map(gap => gap.code), applicationStatus: gstNegativeIssue.applicationStatus,
+    overall: gstNegativeRun.result.status } })}`);
+
+const allFixtureHashes = [...fixtureManifest, ...controlledRuleFixtureBodies.map(({ family, polarity, urls, body }) => ({
+  family, polarity, urls, bodyBytes: Buffer.byteLength(body), synthetic: true,
+  provenance: 'synthetic API-free test body; not live or authoritative IRAS content',
+  sha256: createHash('sha256').update(body).digest('hex')
+}))];
+assert.equal(allFixtureHashes.every(item => item.synthetic && /^[a-f0-9]{64}$/.test(item.sha256)), true);
+assert.equal(allFixtureHashes.slice(3).every(item => item.family && item.polarity && item.urls.length && item.provenance), true);
+console.log(`V4_SYNTHETIC_FIXTURE_MANIFEST ${JSON.stringify(allFixtureHashes.slice(3))}`);
+console.log(`V4 API-free contract, local-only runtime, one-use guards, controlled discovery and evidence-gate checks passed (${allFixtureHashes.length} explicitly synthetic fixture hashes).`);
