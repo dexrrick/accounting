@@ -26,6 +26,7 @@
     "timeoutMs": 8000,
     "temperature": 0,
     "jsonMode": true,
+    "maximumSemanticResponseBytes": 65536,
     "minimumStartGapMs": 15250,
     "reserveFloor": {
       "fiveHourRemainingPercent": 7,
@@ -141,6 +142,15 @@
             {
               "topicId": "cpf_contribution_rates",
               "issueId": "personal-cpf-relief"
+            }
+          ],
+          "routingTopicOwners": [
+            {
+              "topicId": "iras-individual-reliefs",
+              "issueId": "personal-cpf-relief",
+              "childTopicIds": [
+                "iras-individual-cpf-relief"
+              ]
             }
           ],
           "noUnrepresentedMaterialResidual": true
@@ -269,6 +279,15 @@
             {
               "topicId": "cpf_contribution_rates",
               "issueId": "personal-cpf-relief-amount"
+            }
+          ],
+          "routingTopicOwners": [
+            {
+              "topicId": "iras-individual-reliefs",
+              "issueId": "personal-cpf-relief-amount",
+              "childTopicIds": [
+                "iras-individual-cpf-relief"
+              ]
             }
           ],
           "noUnrepresentedMaterialResidual": true
@@ -470,6 +489,15 @@
             }
           ],
           "contextualTopicOwners": [],
+          "routingTopicOwners": [
+            {
+              "topicId": "iras-individual-reliefs",
+              "issueId": "individual-cpf-tax-relief",
+              "childTopicIds": [
+                "iras-individual-cpf-relief"
+              ]
+            }
+          ],
           "noUnrepresentedMaterialResidual": true
         },
         "materialRequestedConcepts": [
@@ -633,6 +661,7 @@
             }
           ],
           "contextualTopicOwners": [],
+          "routingTopicOwners": [],
           "noUnrepresentedMaterialResidual": true
         },
         "materialRequestedConcepts": [
@@ -794,6 +823,7 @@
             }
           ],
           "contextualTopicOwners": [],
+          "routingTopicOwners": [],
           "noUnrepresentedMaterialResidual": true
         },
         "materialRequestedConcepts": [
@@ -928,6 +958,7 @@
             }
           ],
           "contextualTopicOwners": [],
+          "routingTopicOwners": [],
           "noUnrepresentedMaterialResidual": true
         },
         "materialRequestedConcepts": [
@@ -1069,6 +1100,7 @@
             }
           ],
           "contextualTopicOwners": [],
+          "routingTopicOwners": [],
           "noUnrepresentedMaterialResidual": true
         },
         "materialRequestedConcepts": [
@@ -1238,6 +1270,7 @@
             }
           ],
           "contextualTopicOwners": [],
+          "routingTopicOwners": [],
           "noUnrepresentedMaterialResidual": true
         },
         "materialRequestedConcepts": [
@@ -1364,6 +1397,7 @@
         "independentTopicAccounting": {
           "requiredTopicOwners": [],
           "contextualTopicOwners": [],
+          "routingTopicOwners": [],
           "noUnrepresentedMaterialResidual": false
         },
         "materialRequestedConcepts": [

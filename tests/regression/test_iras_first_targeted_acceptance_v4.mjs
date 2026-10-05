@@ -1,8 +1,8 @@
-// INCOMPLETE HOLD DRAFT, deliberately unregistered: mixed-case ownership assertion currently fails.
-// This is not a passing acceptance suite. See the V4 supervisor report and read-only diagnostic replay.
+// Passing API-free development checks, deliberately unregistered; live acceptance remains on HOLD.
+// Nine-case local runtime observations, full governed controls and explicit discovery outcomes remain unfinished.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +16,8 @@ import {
   validateSemanticQuestionInterpretation
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
+import { getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
+import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 import {
   assertV4ContractMatchesFrozenQuestions,
   buildV4Contract,
@@ -26,6 +28,7 @@ import {
   evaluateV4Stages,
   firstFailureV4,
   parseSemanticResponseSafelyV4,
+  PROFILE,
   readV4Contract,
   reserveConsumption,
   scoreApplicationStatusV4,
@@ -63,18 +66,29 @@ function fixtureInterpretation(caseContract, overrides = {}) {
     evidenceRequirement: 'AUTHORITATIVE_SOURCE',
     confidence: 0.96
   }));
+  if (caseContract.caseId === 'private-expense-treatment' && !overrides.subjects) {
+    issues[0].subject = 'corporate tax deductibility and disallowed expense treatment of company private holiday expense';
+  }
+  if (caseContract.caseId === 'unsupported-sfrsi-6-exploration-evaluation' && !overrides.subjects) {
+    issues[0].subject = 'general SFRS(I) 6 accounting rules for mineral exploration and evaluation expenditure';
+  }
   if (overrides.subjects) issues.forEach((issue, index) => { if (overrides.subjects[index]) issue.subject = overrides.subjects[index]; });
+  const mixedMode = overrides.rootMode;
+  const cpfIssue = issues.find(issue => issue.domain === 'CPF_PAYROLL');
+  const rootIssue = mixedMode === 'CPF_FIRST' && cpfIssue ? cpfIssue : issues[0];
+  const isUnknownMixed = mixedMode === 'UNKNOWN_MIXED';
+  const rootIssues = isUnknownMixed ? [] : issues;
   const raw = {
     schemaVersion: 2,
     jurisdiction: ['Singapore'],
-    authorityCandidates: [...new Set(issues.flatMap(issue => issue.governingAuthorities))],
-    contextualAuthorities: [...new Set(issues.flatMap(issue => issue.contextualAuthorities))]
-      .filter(authority => !issues.some(issue => issue.governingAuthorities.includes(authority))),
-    domain: issues[0].domain,
-    population: issues[0].population,
-    primarySubject: issues[0].subject,
-    concepts: [],
-    requestedOperation: issues[0].operation,
+    authorityCandidates: isUnknownMixed ? ['UNKNOWN'] : [...new Set(rootIssues.flatMap(issue => issue.governingAuthorities))],
+    contextualAuthorities: isUnknownMixed ? [] : [...new Set(rootIssue.contextualAuthorities)]
+      .filter(authority => !rootIssue.governingAuthorities.includes(authority)),
+    domain: isUnknownMixed ? 'UNKNOWN' : rootIssue.domain,
+    population: isUnknownMixed ? 'UNKNOWN' : rootIssue.population,
+    primarySubject: isUnknownMixed ? issues.map(issue => issue.subject).join(' and ') : rootIssue.subject,
+    concepts: issues.map((issue, index) => ({ concept: issue.subject, role: index === 0 ? 'PRIMARY' : 'RELATED' })),
+    requestedOperation: isUnknownMixed ? 'OTHER' : rootIssue.operation,
     factsExplicitlyProvided: [],
     confidence: 0.96,
     issues
@@ -119,8 +133,59 @@ const reliefAmount = semanticRows.find(row => row.item.caseId === 'target-relief
 assert.equal(reliefAmount.interpretation.issues[0].operation, 'CALCULATE');
 const mixed = semanticRows.find(row => row.item.caseId === 'A-paraphrase-2');
 assert.equal(mixed.issuePlan.issues.length, 2, 'Relief and employer obligations stay independent.');
-assert.deepEqual(mixed.item.semantic.expectedIssues.map(issue => issue.operation), [['CHECK_ELIGIBILITY'], ['CALCULATE']]);
+assert.deepEqual(mixed.item.semantic.expectedIssues.map(issue => issue.operation), [['CALCULATE'], ['CHECK_ELIGIBILITY']],
+  'The frozen mixed-case issue order keeps the employer calculation first.');
 assert.ok(mixed.item.semantic.materialRequestedConcepts.some(concept => concept.id === 'cpf_employer_contribution'));
+for (const rootMode of ['CPF_FIRST', 'UNKNOWN_MIXED']) {
+  const mixedInterpretation = fixtureInterpretation(mixed.item, { rootMode });
+  assert.ok(mixedInterpretation, `${rootMode} mixed semantic envelope is valid`);
+  assert.equal(mixedInterpretation.issues.length, 2, `${rootMode} preserves both requested issues`);
+  assert.equal(mixedInterpretation.concepts.length, 2, `${rootMode} preserves both requested concepts`);
+  if (rootMode === 'UNKNOWN_MIXED') {
+    assert.equal(mixedInterpretation.domain, 'UNKNOWN');
+    assert.deepEqual(mixedInterpretation.authorityCandidates, ['UNKNOWN']);
+    assert.equal(mixedInterpretation.requestedOperation, 'OTHER');
+  } else {
+    assert.equal(mixedInterpretation.domain, 'CPF_PAYROLL');
+    assert.equal(mixedInterpretation.population, 'EMPLOYER');
+  }
+  const mixedPlan = reconcileQuestionUnderstanding(mixed.item.question, classifyQuestion(mixed.item.question), {
+    mode: 'SEMANTIC_INTERPRETATION', interpretation: mixedInterpretation
+  }).issuePlan;
+  const mixedScore = scoreSemanticV4(mixed.item, mixedInterpretation, mixedPlan);
+  assert.equal(mixedScore.stages.TOPIC_OWNERSHIP, true, `${rootMode} mixed inventory retains independently proved routing parent`);
+}
+
+function scoreAlteredPlan(item, interpretation, alter) {
+  const base = reconcileQuestionUnderstanding(item.question, classifyQuestion(item.question), {
+    mode: 'SEMANTIC_INTERPRETATION', interpretation
+  }).issuePlan;
+  const altered = structuredClone(base);
+  alter(altered);
+  return scoreSemanticV4(item, interpretation, altered);
+}
+const reliefRoute = relief.issuePlan.issues[0].routingTopicIds || [];
+assert.ok(reliefRoute.includes('iras-individual-reliefs'), 'Production re-reconciliation proves the parent relief routing topic.');
+assert.equal(scoreAlteredPlan(relief.item, relief.interpretation, plan => { delete plan.issues[0].routingTopicIds; })
+  .stages.TOPIC_OWNERSHIP, false, 'Omitting the broad routing parent fails closed.');
+assert.equal(scoreAlteredPlan(relief.item, relief.interpretation, plan => { plan.issues[0].mappedTopicIds = []; })
+  .stages.TOPIC_OWNERSHIP, false, 'Omitting the child topic fails closed even when the parent route is retained.');
+assert.equal(scoreAlteredPlan(relief.item, relief.interpretation, plan => { plan.issues[0].operation = 'EXPLAIN_RULE'; })
+  .stages.TOPIC_OWNERSHIP, false, 'A wrong operation cannot own the routing parent.');
+assert.equal(scoreAlteredPlan(mixed.item, mixed.interpretation, plan => {
+  const irasIssue = plan.issues.find(issue => issue.domain === 'IRAS_INCOME_TAX');
+  const employerIssue = plan.issues.find(issue => issue.domain === 'CPF_PAYROLL');
+  delete irasIssue.routingTopicIds;
+  employerIssue.routingTopicIds = ['iras-individual-reliefs'];
+}).stages.TOPIC_OWNERSHIP, false, 'An unrelated employer issue cannot satisfy the IRAS routing-parent owner.');
+const missingEmployerInterpretation = validateSemanticQuestionInterpretation({ ...mixed.interpretation,
+  issues: mixed.interpretation.issues.filter(issue => !issue.subject.includes('employer'))
+}, mixed.item.question);
+const missingEmployerPlan = reconcileQuestionUnderstanding(mixed.item.question, classifyQuestion(mixed.item.question), {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: missingEmployerInterpretation
+}).issuePlan;
+assert.equal(scoreSemanticV4(mixed.item, missingEmployerInterpretation, missingEmployerPlan).stages.TOPIC_OWNERSHIP, false,
+  'Omitting the separate employer obligation cannot be hidden by the broader IRAS routing parent.');
 
 const wht = contract.cases.find(row => row.caseId === 'wht-royalty-general-rule');
 const whtMatched = matchIssuesV2(wht.semantic.expectedIssues, [{ subject: 'company withholding tax on royalties paid to a nonresident corporate entity' }]);
@@ -145,7 +210,8 @@ assert.equal(matchIssuesV2([employerExpected], [{ subject: 'employer CPF contrib
 assert.equal(matchIssuesV2([relief.item.semantic.expectedIssues[0]], [{ subject: employerControl }]).ownerByExpected.size, 0,
   'Employer contributions do not match personal tax relief.');
 
-function localObservations(item) {
+// This controlled evaluator input proves scoreLocalCapability behavior only; it is not a runtime observation.
+function syntheticLocalCapabilityObservations(item) {
   const observations = [];
   const topicStates = item.reviewedLocalCapability.expectedTopicStates;
   for (const [topicId, expected] of Object.entries(topicStates)) observations.push({ topicId, localOnly: true,
@@ -168,18 +234,19 @@ function localObservations(item) {
 }
 
 for (const item of contract.cases) {
-  const local = classifyLocalCapabilityV4(item, localObservations(item));
+  const local = classifyLocalCapabilityV4(item, syntheticLocalCapabilityObservations(item));
   assert.equal(local.passed, true, `explicit local states pass independently: ${item.caseId}`);
   assert.equal(classifyLocalCapabilityV4(item, []).passed, false, `missing local capability observations fail closed: ${item.caseId}`);
 }
-const localPrivate = classifyLocalCapabilityV4(contract.cases.find(row => row.caseId === 'private-expense-treatment'), localObservations(
+const localPrivate = classifyLocalCapabilityV4(contract.cases.find(row => row.caseId === 'private-expense-treatment'), syntheticLocalCapabilityObservations(
   contract.cases.find(row => row.caseId === 'private-expense-treatment')));
 assert.equal(localPrivate.topicStates['iras-cit-disallowed-expenses'].actual, 'VERIFIED_LOCAL_RULE');
 assert.equal(localPrivate.topicStates['iras-cit-deductibility'].actual, 'EXPECTED_LOCAL_GAP');
 const mixedCase = contract.cases.find(row => row.caseId === 'A-paraphrase-2');
-const invalidCpf = classifyLocalCapabilityV4(mixedCase, localObservations(mixedCase).filter(item => item.topicId !== 'cpf_contribution_rates' && item.issueId !== 'employer-cpf-contribution'));
+const invalidCpf = classifyLocalCapabilityV4(mixedCase, syntheticLocalCapabilityObservations(mixedCase).filter(item => item.topicId !== 'cpf_contribution_rates' && item.issueId !== 'employer-cpf-contribution'));
 assert.equal(invalidCpf.passed, false, 'The required CPF NEEDS_REVIEW rejection observation cannot be omitted.');
 
+// Synthetic evaluator observations exercise scorer predicates; they are not production workstream evidence.
 function governedObservations(item) {
   return Object.entries(item.governedProductionEvidence.expectedRuleEvidenceByIssue || {}).map(([issueId, status]) => {
     const complete = status === 'VERIFIED';
@@ -226,6 +293,16 @@ assert.equal(evaluateV4Stages({ semantic: { stages: Object.fromEntries(['SEMANTI
     'EVIDENCE_ADMISSION', 'CLAIM_VERIFICATION', 'REQUESTED_CONCEPT_COVERAGE'].map(stage => [stage, true])) },
   application: overallOnlyFailure }).earliestFailure, 'OVERALL_STATUS');
 assert.equal(parseSemanticResponseSafelyV4('{not json', relief.item.question).error, 'MALFORMED_SEMANTIC_RESPONSE');
+assert.equal(parseSemanticResponseSafelyV4('x'.repeat(65_537), relief.item.question).error, 'SEMANTIC_RESPONSE_TOO_LARGE',
+  'The evaluator bounds oversized responses without changing the provider schema.');
+
+const missingGoverned = scoreGovernedEvidenceV4(relief.item, []);
+assert.deepEqual(missingGoverned.stages, { GOVERNED_RETRIEVAL: false, EVIDENCE_ADMISSION: false,
+  CLAIM_VERIFICATION: false, REQUESTED_CONCEPT_COVERAGE: false }, 'Every governed stage fails closed when no observation exists.');
+const missingRetrieval = scoreGovernedEvidenceV4(relief.item, [{ ...governedObservations(relief.item)[0], providerError: true }]);
+assert.equal(missingRetrieval.stages.GOVERNED_RETRIEVAL, false);
+assert.equal(missingRetrieval.stages.EVIDENCE_ADMISSION, false, 'Admission cannot pass after a retrieval failure.');
+assert.equal(missingRetrieval.stages.CLAIM_VERIFICATION, false, 'Verification cannot pass after a retrieval failure.');
 
 const guardClock = { value: 0 };
 let sent = 0;
@@ -234,13 +311,31 @@ const requestGuard = createRequestBudgetGuard({ clock: () => guardClock.value,
 for (const caseId of CASE_IDS) await requestGuard.invoke(caseId, async () => { sent += 1; return '{}'; });
 assert.equal(sent, 9);
 assert.deepEqual([...requestGuard.counts.values()], Array(9).fill(1));
+assert.equal(guardClock.value, 8 * 15_250, 'Fake-clock pacing observes all eight inter-call gaps without wall-clock waits.');
 await assert.rejects(() => requestGuard.invoke(CASE_IDS[8], async () => { sent += 1; }), /V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED/);
 assert.equal(sent, 9, 'The exact-nine guard blocks a retry before it reaches the callback.');
+
+let releasePacing;
+const concurrentClock = { value: 0 };
+const concurrentGuard = createRequestBudgetGuard({ caseIds: CASE_IDS.slice(0, 2), clock: () => concurrentClock.value,
+  sleep: ms => new Promise(resolve => { releasePacing = () => { concurrentClock.value += ms; resolve(); }; }) });
+await concurrentGuard.invoke(CASE_IDS[0], async () => 'first');
+let concurrentSent = 0;
+const secondRequest = concurrentGuard.invoke(CASE_IDS[1], async () => { concurrentSent += 1; return 'second'; });
+await assert.rejects(() => concurrentGuard.invoke(CASE_IDS[1], async () => { concurrentSent += 1; }), /V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED/,
+  'A concurrent duplicate is reserved out before the pacing await.');
+releasePacing();
+assert.equal(await secondRequest, 'second');
+assert.equal(concurrentSent, 1);
+const failedGuard = createRequestBudgetGuard({ caseIds: [CASE_IDS[0]], clock: () => 0, sleep: async () => {} });
+await assert.rejects(() => failedGuard.invoke(CASE_IDS[0], async () => { throw new Error('synthetic transport failure'); }), /synthetic transport failure/);
+await assert.rejects(() => failedGuard.invoke(CASE_IDS[0], async () => 'retry'), /V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED/,
+  'A failed send remains consumed and cannot be retried.');
 
 const hash = 'a'.repeat(64);
 const futureBinding = {
   contractSha256: hash, productionFingerprintSha256: hash, sourceFingerprintSha256: hash,
-  schemaPromptFingerprintSha256: hash, protectedHistorySha256: hash
+  schemaPromptFingerprintSha256: hash, protectedHistorySha256: hash, evaluationFingerprintSha256: hash
 };
 const now = new Date('2026-10-04T00:10:00.000Z');
 const captureLock = { mode: 'frozenContemporaneousCapture', frozen: true, synthetic: false,
@@ -252,32 +347,52 @@ const allowance = { source: 'codex', readable: true, observedAt: now.toISOString
 const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'iras-v4-api-free-'));
 try {
   const namespace = path.join(tempRoot, 'run');
+  await mkdir(namespace);
   const preregPath = path.join(tempRoot, 'preregistration.json');
+  await assert.rejects(() => writeFrozenV4Preregistration(path.join(tempRoot, 'invalid-preregistration.json'), {
+    profile: 'caller-cannot-override', frozen: true, ...futureBinding
+  }), /V4_PREREG_PROFILE_MISMATCH/, 'The invalid caller profile is explicitly rejected before a valid preregistration is written.');
   const preregResult = await writeFrozenV4Preregistration(preregPath, {
-    profile: 'caller-cannot-override', frozen: true, status: 'caller-cannot-override', ...futureBinding
+    profile: PROFILE, frozen: true, ...futureBinding
   });
   const preregBytes = await readFile(preregPath, 'utf8');
   const prereg = JSON.parse(preregBytes);
+  const boundCaptureLock = { ...captureLock, preregistrationSha256: preregResult.sha256 };
   assert.equal(prereg.profile, 'iras-first-targeted-acceptance-v4');
   assert.equal(prereg.status, 'FROZEN_PREREGISTRATION');
   assert.equal(prereg.targetedAcceptanceExecuted, false);
-  await assert.rejects(() => writeFrozenV4Preregistration(preregPath, { frozen: true, ...futureBinding }), error => error.code === 'EEXIST');
+  await assert.rejects(() => writeFrozenV4Preregistration(preregPath, { profile: PROFILE, frozen: true, ...futureBinding }),
+    error => error.code === 'EEXIST');
   const validPreflight = await validateV4LivePreflight({ preregistration: prereg, preregistrationSha256: preregResult.sha256,
-    evidenceLock: captureLock, sharedAllowance: allowance, authorizedGeminiCalls: 9,
+    evidenceLock: boundCaptureLock, sharedAllowance: allowance, authorizedGeminiCalls: 9,
     namespaceDirectory: namespace, now });
   assert.equal(validPreflight.passed, true, validPreflight.failures.join(','));
   assert.equal((await validateV4LivePreflight({ preregistration: prereg, preregistrationSha256: preregResult.sha256,
-    evidenceLock: captureLock, sharedAllowance: { ...allowance, fiveHourRemainingPercent: Number.NaN },
+    evidenceLock: boundCaptureLock, sharedAllowance: { ...allowance, fiveHourRemainingPercent: Number.NaN },
     authorizedGeminiCalls: 9, namespaceDirectory: namespace, now })).passed, false, 'NaN or missing shared allowance fails closed.');
+  const missingAllowance = await validateV4LivePreflight({ preregistration: prereg, preregistrationSha256: preregResult.sha256,
+    evidenceLock: boundCaptureLock, authorizedGeminiCalls: 9, namespaceDirectory: namespace, now });
+  assert.equal(missingAllowance.passed, false);
+  assert.ok(missingAllowance.failures.includes('SHARED_ALLOWANCE_UNAVAILABLE_OR_STALE'));
+  const missingBinding = await validateV4LivePreflight({ preregistration: { ...prereg, evaluationFingerprintSha256: undefined },
+    preregistrationSha256: preregResult.sha256, evidenceLock: { ...boundCaptureLock, evaluationFingerprintSha256: undefined },
+    sharedAllowance: allowance, authorizedGeminiCalls: 9, namespaceDirectory: namespace, now });
+  assert.equal(missingBinding.failures.includes('PREREGISTRATION_BINDING_INVALID:evaluationFingerprintSha256'), true);
+  assert.equal(missingBinding.failures.includes('EVIDENCE_LOCK_BINDING_INVALID:evaluationFingerprintSha256'), true);
+  const tamperedBinding = await validateV4LivePreflight({ preregistration: prereg, preregistrationSha256: preregResult.sha256,
+    evidenceLock: { ...boundCaptureLock, evaluationFingerprintSha256: 'b'.repeat(64) },
+    sharedAllowance: allowance, authorizedGeminiCalls: 9, namespaceDirectory: namespace, now });
+  assert.equal(tamperedBinding.failures.includes('EVIDENCE_LOCK_BINDING_MISMATCH:evaluationFingerprintSha256'), true);
   assert.equal((await validateV4LivePreflight({ preregistration: prereg, preregistrationSha256: preregResult.sha256,
-    evidenceLock: { ...captureLock, capturedAt: '2026-10-05T00:00:00.000Z', sourceReferenceDate: '2026-10-05' },
+    evidenceLock: { ...boundCaptureLock, capturedAt: '2026-10-05T00:00:00.000Z', sourceReferenceDate: '2026-10-05' },
     sharedAllowance: allowance, authorizedGeminiCalls: 9, namespaceDirectory: namespace, now })).failures.includes('EVIDENCE_LOCK_EXPIRED'), true);
   assert.equal((await validateV4LivePreflight({ preregistration: prereg, preregistrationSha256: preregResult.sha256,
-    evidenceLock: captureLock, sharedAllowance: allowance, authorizedGeminiCalls: 8, namespaceDirectory: namespace, now }))
+    evidenceLock: boundCaptureLock, sharedAllowance: allowance, authorizedGeminiCalls: 8, namespaceDirectory: namespace, now }))
     .failures.includes('NINE_CALL_AUTHORIZATION_REQUIRED'), true);
   const markerBinding = { preregistrationSha256: preregResult.sha256, contractSha256: hash, evidenceLockSha256: hash,
     productionFingerprintSha256: hash, sourceFingerprintSha256: hash, schemaPromptFingerprintSha256: hash,
-    protectedHistorySha256: hash, sharedAllowanceObservation: { authorizedGeminiCalls: 9 } };
+    protectedHistorySha256: hash, evaluationFingerprintSha256: hash,
+    sharedAllowanceObservation: { authorizedGeminiCalls: 9 } };
   await assert.rejects(() => reserveConsumption(namespace, markerBinding, { passed: false }), /V4_PREFLIGHT_NOT_PASSED/);
   const consumption = await reserveConsumption(namespace, markerBinding, validPreflight);
   const marker = JSON.parse(await readFile(consumption.markerPath, 'utf8'));
@@ -285,7 +400,7 @@ try {
   assert.equal(marker.status, 'CONSUMED_NO_RETRY');
   await assert.rejects(() => reserveConsumption(namespace, markerBinding, validPreflight), /V4_NAMESPACE_ALREADY_USED/);
   assert.equal((await validateV4LivePreflight({ preregistration: prereg, preregistrationSha256: preregResult.sha256,
-    evidenceLock: captureLock, sharedAllowance: allowance, authorizedGeminiCalls: 9,
+    evidenceLock: boundCaptureLock, sharedAllowance: allowance, authorizedGeminiCalls: 9,
     namespaceDirectory: namespace, now })).passed, false, 'A marker in the actual namespace blocks reuse.');
 } finally {
   await rm(tempRoot, { recursive: true, force: true });
@@ -305,7 +420,7 @@ const referenceDate = '2026-10-04';
 const fixturePageUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses';
 const privateQuery = contract.cases.find(row => row.caseId === 'private-expense-treatment').question;
 const mappedHtml = '<html><head><title>Business Expenses | IRAS</title></head><body><!-- SYNTHETIC API-FREE FIXTURE -->' +
-  '<main><h1>Business Expenses</h1><p>For income tax, companies may deduct expenses wholly and exclusively incurred in producing income under the general deduction rule in section 14. Private and domestic expenses are not deductible under section 15, subject to the statutory exceptions and qualifications. This guidance explains the treatment of business expenses for corporate income tax.</p></main></body></html>';
+  '<main><h1>Business Expenses</h1><p>For income tax, companies may deduct expenses wholly and exclusively incurred in producing income under the general deduction rule in section 14. This explains whether a company expense is tax deductible and whether it is deductible for tax purposes. Private and domestic expenses are not deductible under section 15, subject to the statutory exceptions and qualifications. This guidance explains the treatment of business expenses for corporate income tax.</p></main></body></html>';
 const discoveredUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/cpf-relief-employees';
 const mappedReliefUrl = 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees';
 const reliefQuery = contract.cases.find(row => row.caseId === 'target-relief-entitlement').question;
@@ -317,11 +432,13 @@ assert.equal(fixtureManifest.every(item => item.synthetic && /^[a-f0-9]{64}$/.te
 
 async function runControlledIras(query, issuePlan, questionUnderstanding, responseByUrl) {
   const requests = [];
+  const transportObservations = [];
   const customFetch = async url => {
     const key = String(url);
     requests.push(key);
     if (!Object.hasOwn(responseByUrl, key)) throw new Error(`API_FREE_FIXTURE_MISSING:${key}`);
     const response = responseByUrl[key];
+    transportObservations.push({ url: key, status: response.status, bodyBytes: Buffer.byteLength(response.body), synthetic: true });
     return new Response(response.body, { status: response.status, headers: { 'content-type': response.type || 'text/html' } });
   };
   const retriever = new ControlledWebRetriever(undefined, new SourceCache());
@@ -336,7 +453,7 @@ async function runControlledIras(query, issuePlan, questionUnderstanding, respon
         discoveryAdapter, officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; }, getLastSearchTrace() { return []; } },
         fetchOptions: { customFetch, useCache: false, timeoutMs: 50 } }
     });
-    return { result, requests, discoveryAdapter };
+    return { result, requests, transportObservations, discoveryAdapter };
   } finally { globalThis.fetch = priorFetch; }
 }
 
@@ -348,7 +465,24 @@ const mappedRun = await runControlledIras(privateQuery, privateResolved.issuePla
 const privateEvidence = mappedRun.result.workstreams.flatMap(workstream => workstream.issues)[0];
 assert.ok(mappedRun.requests.includes(fixturePageUrl), 'The real default advanced retriever follows the reviewed mapped IRAS pointer.');
 assert.equal(mappedRun.result.workstreams.length, 1);
-assert.ok(privateEvidence.retrievalTrace?.attempts?.some(attempt => attempt.fetchStatus === 'SUCCESS'));
+const privateObservation = {
+  evidenceKeys: Object.keys(privateEvidence), retrievalTrace: privateEvidence.retrievalTrace,
+  lifecycle: privateEvidence.lifecycle, admission: privateEvidence.admission,
+  evidenceQuality: privateEvidence.evidenceQuality, gaps: privateEvidence.gaps,
+  evidenceStatus: privateEvidence.evidenceStatus, verifiedClaims: privateEvidence.verifiedClaims?.length,
+  sources: privateEvidence.sources?.map(source => source.id), requests: mappedRun.transportObservations,
+  validator: (() => {
+    const topic = getCoverageTopicById('iras-cit-deductibility');
+    const allTerms = [...new Set([topic.title, ...(topic.aliases || []), ...topic.keywords,
+      ...(topic.requiredContentTerms || []), ...(topic.paragraphHints || []), ...(topic.sectionHints || [])])];
+    return defaultExternalSourceValidator.validateTopicContent(mappedHtml, {
+      standardIdentifiers: ['Business Expenses'], expectedTitles: ['Business Expenses'], topicTerms: allTerms,
+      allowIrasTopicTokenEquivalence: true
+    });
+  })()
+};
+assert.ok(privateEvidence.retrievalTrace?.attempts?.some(attempt => attempt.fetchStatus === 'SUCCESS'),
+  `Mapped synthetic retrieval should expose a successful production attempt: ${JSON.stringify(privateObservation)}`);
 assert.equal(privateEvidence.evidenceStatus, 'VERIFIED', 'Synthetic mapped evidence passes production admission, literal verification and topic/concept coverage.');
 assert.equal(privateEvidence.applicationStatus, 'UNRESOLVED', 'Verified rule evidence leaves case-specific application unresolved.');
 assert.ok(privateEvidence.sources.some(source => source.id === 'ITA_SEC15_PROHIBITED_DEDUCTIONS'),

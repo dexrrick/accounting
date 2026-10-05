@@ -1,5 +1,5 @@
-// INCOMPLETE HOLD DRAFT: new production ownership defect; no preregistration or live authorization.
-// Mandatory real-gate evidence controls and independent full harness review remain outstanding.
+// API-free V4 harness draft, deliberately unregistered; no preregistration or live authorization.
+// Nine-case localOnly runtime observations and the complete governed negative-control matrix remain outstanding.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { access, open, readFile, readdir } from 'node:fs/promises';
@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { classifyQuestion } from '../../../src/classification/questionClassifier.ts';
 import { defaultQueryTopicResolver } from '../../../src/retrieval/queryTopicResolver.ts';
+import { getCoverageTopicById } from '../../../src/standards/coverageRegistry.ts';
 import {
   SEMANTIC_QUESTION_TIMEOUT_MS,
   SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
@@ -35,7 +36,7 @@ export const FAILURE_STAGES = Object.freeze([
 ]);
 export const RESOURCE_POLICY = Object.freeze({
   provider: 'gemini', model: 'gemini-3.5-flash-lite', expectedCalls: 9, callsPerCase: 1, retries: 0,
-  timeoutMs: 8000, temperature: 0, jsonMode: true, minimumStartGapMs: 15_250,
+  timeoutMs: 8000, temperature: 0, jsonMode: true, maximumSemanticResponseBytes: 65_536, minimumStartGapMs: 15_250,
   reserveFloor: { fiveHourRemainingPercent: 7, weeklyRemainingPercent: 3, checkpointBufferPercentagePoints: 1 },
   allowanceRequiredBeforeReservation: true, sharedAllowanceMustBeIndependentlyReadable: true,
   authorizedGeminiCalls: 9, geminiQuotaMustNotBeAssumed: true,
@@ -54,6 +55,7 @@ export const FUTURE_EVIDENCE_POLICY = Object.freeze({
 const POLICY = Object.freeze({
   'target-relief-entitlement': {
     topicOwners: [{ topicId: 'iras-individual-cpf-relief', issueId: 'personal-cpf-relief', role: 'GOVERNING' }],
+    routingTopicOwners: [{ topicId: 'iras-individual-reliefs', issueId: 'personal-cpf-relief', childTopicIds: ['iras-individual-cpf-relief'] }],
     contextualTopicOwners: [{ topicId: 'cpf_contribution_rates', issueId: 'personal-cpf-relief' }],
     requiredSubjectMarkers: [{ issueId: 'personal-cpf-relief', all: ['tax', 'relief', 'cpf'] }],
     materialConcepts: [{ id: 'cpf_relief', issueId: 'personal-cpf-relief', topicIds: ['iras-individual-cpf-relief'], allTerms: ['cpf', 'relief'], requireExtractedConcept: true }],
@@ -67,6 +69,7 @@ const POLICY = Object.freeze({
   },
   'target-relief-amount': {
     topicOwners: [{ topicId: 'iras-individual-cpf-relief', issueId: 'personal-cpf-relief-amount', role: 'GOVERNING' }],
+    routingTopicOwners: [{ topicId: 'iras-individual-reliefs', issueId: 'personal-cpf-relief-amount', childTopicIds: ['iras-individual-cpf-relief'] }],
     contextualTopicOwners: [{ topicId: 'cpf_contribution_rates', issueId: 'personal-cpf-relief-amount' }],
     requiredSubjectMarkers: [{ issueId: 'personal-cpf-relief-amount', all: ['tax', 'relief', 'cpf'] }],
     materialConcepts: [{ id: 'cpf_relief', issueId: 'personal-cpf-relief-amount', topicIds: ['iras-individual-cpf-relief'], allTerms: ['cpf', 'relief'], requireExtractedConcept: true }],
@@ -82,7 +85,8 @@ const POLICY = Object.freeze({
     topicOwners: [
       { topicId: 'iras-individual-cpf-relief', issueId: 'individual-cpf-tax-relief', role: 'GOVERNING' },
       { topicId: 'cpf_contribution_rates', issueId: 'employer-cpf-contribution', role: 'GOVERNING' }
-    ], contextualTopicOwners: [],
+    ], routingTopicOwners: [{ topicId: 'iras-individual-reliefs', issueId: 'individual-cpf-tax-relief', childTopicIds: ['iras-individual-cpf-relief'] }],
+    contextualTopicOwners: [],
     requiredSubjectMarkers: [
       { issueId: 'individual-cpf-tax-relief', all: ['tax', 'relief', 'cpf'] },
       { issueId: 'employer-cpf-contribution', all: ['employer', 'cpf', 'contribution'] }
@@ -229,6 +233,7 @@ export async function buildV4Contract() {
           independentTopicAccounting: {
             requiredTopicOwners: policy.topicOwners,
             contextualTopicOwners: policy.contextualTopicOwners,
+            routingTopicOwners: policy.routingTopicOwners || [],
             noUnrepresentedMaterialResidual: testCase.id !== 'unsupported-sfrsi-6-exploration-evaluation'
           },
           materialRequestedConcepts: policy.materialConcepts,
@@ -268,8 +273,7 @@ const hasAllTerms = (text, terms = []) => terms.every(term => containsTerm(text,
 
 function hasNonresidentCompany(text) {
   const normalized = normalize(text).replace(/\bnonresident\b/g, 'non resident');
-  const corporate = /\b(company|corporation|business entity|legal entity)\b/.test(normalized);
-  return corporate && /\bnon resident\b/.test(normalized);
+  return /\bnon resident (?:company|corporation|business entity|legal entity|corporate entity|corporate company)\b/.test(normalized);
 }
 
 function semanticSubjectGuard(actual, expected, caseContract) {
@@ -285,7 +289,7 @@ function semanticSubjectGuard(actual, expected, caseContract) {
   const explicitContradiction = !passed && (
     caseContract.caseId === 'wht-royalty-general-rule' && (
       /\bresident company\b/.test(n) && !hasNonresidentCompany(n) ||
-      /\bnon resident (employee|individual|person)\b/.test(n)
+      /\bnon ?resident (employee|individual|person)\b/.test(n)
     )
   );
   return { passed, explicitContradiction };
@@ -295,8 +299,9 @@ function relevantInventory(question) {
   const decomposition = defaultQueryTopicResolver.decomposeQuery(question);
   const classification = classifyQuestion(question);
   const ids = [...new Set([...decomposition.topics.map(topic => topic.id), ...classification.topicIds])];
-  const topics = defaultQueryTopicResolver.resolveTopicIds(ids).filter(topic =>
-    /^(?:ACCOUNTING|IRAS|CPF|MOM|ACRA|MAS)_/.test(topic.domainId));
+  const topics = defaultQueryTopicResolver.resolveTopicIds(ids).map(topic => ({
+    ...topic, routingOnly: getCoverageTopicById(topic.id)?.routingOnly === true
+  })).filter(topic => /^(?:ACCOUNTING|IRAS|CPF|MOM|ACRA|MAS)_/.test(topic.domainId));
   return { topicIds: topics.map(topic => topic.id).sort(),
     materialTopicIds: topics.filter(topic => topic.routingOnly !== true).map(topic => topic.id).sort(),
     routingOnlyTopicIds: topics.filter(topic => topic.routingOnly === true).map(topic => topic.id).sort(),
@@ -335,7 +340,38 @@ export function scoreSemanticV4(caseContract, interpretation, issuePlan) {
     return { topicId, issueId, contextual, owned };
   });
   const inventory = relevantInventory(caseContract.question);
-  const represented = new Set(actualIssues.flatMap(issue => [...(issue.mappedTopicIds || []), ...(issue.contextualTopicIds || [])]));
+  let independentlyReconciledPlan;
+  try {
+    independentlyReconciledPlan = reconcileQuestionUnderstanding(caseContract.question, classifyQuestion(caseContract.question), {
+      mode: 'SEMANTIC_INTERPRETATION', interpretation
+    }).issuePlan;
+  } catch {
+    independentlyReconciledPlan = undefined;
+  }
+  const routingTopicOwnership = (caseContract.semantic.independentTopicAccounting.routingTopicOwners || []).map(row => {
+    const pair = pairs.find(item => item.expectedIssueId === row.issueId);
+    const subject = pair ? actual[pair.actualIndex]?.subject : undefined;
+    const issue = subject ? actualIssues.find(item => item.subject === subject) : undefined;
+    const independentlyMatched = independentlyReconciledPlan
+      ? matchIssuesV2(expected, independentlyReconciledPlan.issues).expectedByActual : new Map();
+    const trustedPair = [...independentlyMatched.entries()].find(([, expectedIndex]) => expected[expectedIndex]?.id === row.issueId);
+    const trustedIssue = trustedPair ? independentlyReconciledPlan.issues[trustedPair[0]] : undefined;
+    const trustedRoute = trustedIssue?.routingTopicIds?.includes(row.topicId) === true;
+    const suppliedRoute = issue?.routingTopicIds?.includes(row.topicId) === true;
+    const scopeKeys = ['subject', 'population', 'domain', 'operation'];
+    const scopeAgrees = Boolean(issue && trustedIssue && scopeKeys.every(key => issue[key] === trustedIssue[key]) &&
+      JSON.stringify(issue.governingAuthorities || []) === JSON.stringify(trustedIssue.governingAuthorities || []));
+    const childrenOwned = row.childTopicIds.every(topicId => inventory.materialTopicIds.includes(topicId) &&
+      issue?.mappedTopicIds?.includes(topicId) === true && trustedIssue?.mappedTopicIds?.includes(topicId) === true);
+    const routingOnly = inventory.routingOnlyTopicIds.includes(row.topicId);
+    const routeSeparated = !issue?.mappedTopicIds?.includes(row.topicId) && !issue?.contextualTopicIds?.includes(row.topicId);
+    const owned = trustedRoute && suppliedRoute && scopeAgrees && childrenOwned && routingOnly && routeSeparated &&
+      independentlyReconciledPlan?.coverageEstablished === true && independentlyReconciledPlan?.hasUnmappedResidual === false;
+    return { ...row, trustedRoute, suppliedRoute, scopeAgrees, childrenOwned, routingOnly, routeSeparated, owned };
+  });
+  const validatedRoutingTopicIds = routingTopicOwnership.filter(row => row.owned).map(row => row.topicId);
+  const represented = new Set([...actualIssues.flatMap(issue => [...(issue.mappedTopicIds || []), ...(issue.contextualTopicIds || [])]),
+    ...validatedRoutingTopicIds]);
   const unrepresentedInventory = inventory.topicIds.filter(topicId => !represented.has(topicId));
   const unsupported = caseContract.caseId === 'unsupported-sfrsi-6-exploration-evaluation';
   const residuals = actualIssues.filter(issue => issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC');
@@ -343,10 +379,11 @@ export function scoreSemanticV4(caseContract, interpretation, issuePlan) {
     (issue.mappedTopicIds || []).some(topicId => !inventory.routingOnlyTopicIds.includes(topicId)));
   const unsupportedIssuePass = unsupported && actualIssues.length === expected.length &&
     actualIssues.every(issue => issue.unresolvedReason === 'NO_COVERAGE_TOPIC' && issue.status === 'UNRESOLVED');
-  const independentTopicPass = topicOwnership.every(row => row.owned) && (unsupported
+  const independentTopicPass = topicOwnership.every(row => row.owned) && routingTopicOwnership.every(row => row.owned) && (unsupported
     ? unsupportedIssuePass
     : unrepresentedInventory.length === 0 && inventory.unresolvedTopicTextCount === 0 &&
-      issuePlan?.coverageEstablished === true && issuePlan?.hasUnmappedResidual === false && materialResiduals.length === 0);
+      issuePlan?.coverageEstablished === true && issuePlan?.hasUnmappedResidual === false && materialResiduals.length === 0 &&
+      independentlyReconciledPlan?.coverageEstablished === true && independentlyReconciledPlan?.hasUnmappedResidual === false);
   const requiredConcepts = caseContract.semantic.materialRequestedConcepts;
   const productionConcepts = getRequestedQuestionConcepts(caseContract.question, interpretation);
   const conceptOwnership = requiredConcepts.map(concept => {
@@ -379,7 +416,7 @@ export function scoreSemanticV4(caseContract, interpretation, issuePlan) {
   return {
     stages, validInterpretation: valid, identityPass, dimensionsPass, specificityPass,
     matchedIssueCount: pairs.length, expectedIssueCount: expected.length, actualIssueCount: actual.length,
-    pairs, topicOwnership, independentInventory: inventory, unrepresentedInventory,
+    pairs, topicOwnership, routingTopicOwnership, validatedRoutingTopicIds, independentInventory: inventory, unrepresentedInventory,
     unassignedResidualCount: residuals.length, conceptOwnership,
     subjectAttribution: failedPair || matching.ownerByExpected.size < expected.length ? {
       attribution: unmatchedSubjectContradiction || failedPair?.subjectGuard.explicitContradiction
@@ -422,8 +459,16 @@ export function scoreGovernedEvidenceV4(caseContract, observations = []) {
   const diagnostics = Object.entries(expectedByIssue).map(([issueId, expectedStatus]) => {
     const observation = observations.find(item => item.issueId === issueId);
     if (!observation) return { issueId, expectedStatus, ...classifyLifecycleFailure({ providerError: true }) };
+    const lifecycle = observation.lifecycle || {};
+    const evidenceQuality = observation.evidenceQuality || {};
+    const retrieved = observation.providerError !== true && lifecycle.retrievalAttempted === true &&
+      lifecycle.evidenceFound === true && observation.candidateCount > 0;
+    const admitted = retrieved && lifecycle.admitted === true && (evidenceQuality.eligibleRecords?.length || 0) > 0;
+    const verified = admitted && lifecycle.verified === true && observation.verifiedClaimCount > 0;
+    const covered = verified && lifecycle.covered === true && observation.requestedConceptCoverage === true &&
+      (evidenceQuality.uncoveredConcepts?.length || 0) === 0 && (evidenceQuality.uncoveredTopicIds?.length || 0) === 0;
     const diagnostic = classifyLifecycleFailure({
-      lifecycle: observation.lifecycle, candidateCount: observation.candidateCount,
+      lifecycle, candidateCount: observation.candidateCount,
       rejectedCount: observation.rejectedCount, evidenceQuality: observation.evidenceQuality,
       verifiedClaimCount: observation.verifiedClaimCount,
       requestedConceptCoverage: observation.requestedConceptCoverage,
@@ -431,21 +476,21 @@ export function scoreGovernedEvidenceV4(caseContract, observations = []) {
     });
     const statusPass = observation.ruleEvidenceStatus === expectedStatus;
     return { issueId, expectedStatus, actualStatus: observation.ruleEvidenceStatus, statusPass,
-      verifiedClaimCount: observation.verifiedClaimCount, ...diagnostic };
+      retrieved, admitted, verified, covered, verifiedClaimCount: observation.verifiedClaimCount, ...diagnostic };
   });
   const verifiedExpectedRows = diagnostics.filter(row => row.expectedStatus === 'VERIFIED');
   const insufficientExpectedRows = diagnostics.filter(row => row.expectedStatus === 'INSUFFICIENT');
   return {
     lifecycleDiagnostics: diagnostics,
     stages: {
-      GOVERNED_RETRIEVAL: verifiedExpectedRows.every(row => row.state !== 'pipeline_failure' && row.state !== 'candidate_missing') &&
-        verifiedExpectedRows.length > 0,
-      EVIDENCE_ADMISSION: verifiedExpectedRows.every(row => row.state !== 'candidate_rejected' && row.state !== 'candidate_not_admitted') &&
-        verifiedExpectedRows.length > 0,
-      CLAIM_VERIFICATION: insufficientExpectedRows.every(row => row.statusPass) &&
-        verifiedExpectedRows.every(row => row.verifiedClaimCount > 0 && row.state !== 'claim_verification_failed'),
-      REQUESTED_CONCEPT_COVERAGE: verifiedExpectedRows.every(row => row.statusPass && row.state === 'complete') &&
-        (!policy.requestedConceptCoverageRequired || verifiedExpectedRows.every(row => row.state === 'complete'))
+      GOVERNED_RETRIEVAL: verifiedExpectedRows.length > 0 &&
+        diagnostics.length === Object.keys(expectedByIssue).length && diagnostics.every(row => row.retrieved),
+      EVIDENCE_ADMISSION: verifiedExpectedRows.length > 0 &&
+        verifiedExpectedRows.every(row => row.admitted),
+      CLAIM_VERIFICATION: diagnostics.length > 0 && insufficientExpectedRows.every(row => row.statusPass) &&
+        verifiedExpectedRows.every(row => row.verified),
+      REQUESTED_CONCEPT_COVERAGE: verifiedExpectedRows.length > 0 && verifiedExpectedRows.every(row => row.statusPass && row.covered) &&
+        (!policy.requestedConceptCoverageRequired || verifiedExpectedRows.every(row => row.covered))
     }
   };
 }
@@ -568,35 +613,42 @@ export function createRequestBudgetGuard({ caseIds = CASE_IDS, minimumStartGapMs
   clock = () => performance.now(), sleep = ms => new Promise(resolve => setTimeout(resolve, ms)) } = {}) {
   let nextIndex = 0;
   let previousStart;
+  let inFlight = false;
   const counts = new Map();
   return {
     counts,
     async invoke(caseId, send) {
-      if (caseId !== caseIds[nextIndex] || counts.has(caseId)) throw new Error('V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED');
+      if (inFlight || caseId !== caseIds[nextIndex] || counts.has(caseId)) throw new Error('V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED');
       if (nextIndex >= RESOURCE_POLICY.expectedCalls) throw new Error('V4_CALL_BUDGET_EXCEEDED');
-      if (previousStart !== undefined) {
-        const remaining = minimumStartGapMs - (clock() - previousStart);
-        if (remaining > 0) await sleep(remaining);
-      }
-      const startedAt = clock();
-      if (previousStart !== undefined && startedAt - previousStart < minimumStartGapMs) throw new Error('V4_PACING_GAP_NOT_MET');
-      previousStart = startedAt;
+      inFlight = true;
       counts.set(caseId, 1);
       nextIndex += 1;
-      return send();
+      try {
+        if (previousStart !== undefined) {
+          const remaining = minimumStartGapMs - (clock() - previousStart);
+          if (remaining > 0) await sleep(remaining);
+        }
+        const startedAt = clock();
+        if (previousStart !== undefined && startedAt - previousStart < minimumStartGapMs) throw new Error('V4_PACING_GAP_NOT_MET');
+        previousStart = startedAt;
+        return await send();
+      } finally {
+        inFlight = false;
+      }
     }
   };
 }
 
 const REQUIRED_CONSUMPTION_BINDINGS = Object.freeze([
   'preregistrationSha256', 'contractSha256', 'evidenceLockSha256', 'productionFingerprintSha256',
-  'sourceFingerprintSha256', 'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'sharedAllowanceObservation'
+  'sourceFingerprintSha256', 'schemaPromptFingerprintSha256', 'protectedHistorySha256',
+  'evaluationFingerprintSha256', 'sharedAllowanceObservation'
 ]);
 
 const SHA256_RE = /^[a-f0-9]{64}$/i;
 const REQUIRED_EVIDENCE_BINDINGS = Object.freeze([
   'preregistrationSha256', 'contractSha256', 'productionFingerprintSha256', 'sourceFingerprintSha256',
-  'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'capturePayloadSha256'
+  'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'evaluationFingerprintSha256', 'capturePayloadSha256'
 ]);
 
 async function pathExists(filePath) {
@@ -611,7 +663,8 @@ export async function validateV4LivePreflight({ preregistration, evidenceLock, s
   const failures = [];
   if (!preregistration || preregistration.profile !== PROFILE || preregistration.frozen !== true) failures.push('PREREGISTRATION_NOT_FROZEN');
   if (!SHA256_RE.test(String(preregistrationSha256 || ''))) failures.push('PREREGISTRATION_FINGERPRINT_INVALID');
-  for (const key of ['contractSha256', 'productionFingerprintSha256', 'sourceFingerprintSha256', 'schemaPromptFingerprintSha256', 'protectedHistorySha256']) {
+  for (const key of ['contractSha256', 'productionFingerprintSha256', 'sourceFingerprintSha256', 'schemaPromptFingerprintSha256',
+    'protectedHistorySha256', 'evaluationFingerprintSha256']) {
     if (!SHA256_RE.test(String(preregistration?.[key] || ''))) failures.push(`PREREGISTRATION_BINDING_INVALID:${key}`);
   }
   if (!evidenceLock || evidenceLock.mode !== FUTURE_EVIDENCE_POLICY.transportMode || evidenceLock.synthetic === true || evidenceLock.frozen !== true) failures.push('EVIDENCE_LOCK_MISSING_OR_INVALID');
@@ -658,7 +711,7 @@ export async function writeFrozenV4Preregistration(filePath, preregistration) {
   assert.equal(preregistration?.profile, PROFILE, 'V4_PREREG_PROFILE_MISMATCH');
   assert.equal(preregistration?.frozen, true, 'V4_PREREG_MUST_BE_FROZEN');
   for (const key of ['contractSha256', 'productionFingerprintSha256', 'sourceFingerprintSha256',
-    'schemaPromptFingerprintSha256', 'protectedHistorySha256']) {
+    'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'evaluationFingerprintSha256']) {
     assert.match(String(preregistration[key] || ''), SHA256_RE, `V4_PREREG_BINDING_INVALID:${key}`);
   }
   const document = { ...preregistration, profile: PROFILE, status: 'FROZEN_PREREGISTRATION', targetedAcceptanceExecuted: false };
@@ -671,6 +724,9 @@ export async function writeFrozenV4Preregistration(filePath, preregistration) {
 /** Parse only the response envelope and return a redacted diagnostic on malformed output. */
 export function parseSemanticResponseSafelyV4(raw, question) {
   try {
+    if (Buffer.byteLength(String(raw), 'utf8') > RESOURCE_POLICY.maximumSemanticResponseBytes) {
+      return { parsed: false, valid: false, responseSha256: sha256(String(raw)), error: 'SEMANTIC_RESPONSE_TOO_LARGE' };
+    }
     const value = JSON.parse(raw);
     const valid = Boolean(validateSemanticQuestionInterpretation(value, question));
     return { parsed: true, valid, responseSha256: sha256(raw), ...(valid ? { interpretation: value } : {}) };
@@ -765,7 +821,7 @@ export async function reserveConsumption(namespaceDirectory, binding, preflight)
   const markerPath = path.join(namespaceDirectory, 'consumed-v4.json');
   assert.ok(binding && REQUIRED_CONSUMPTION_BINDINGS.every(key => binding[key]), 'V4_CONSUMPTION_BINDING_INCOMPLETE');
   for (const key of ['preregistrationSha256', 'contractSha256', 'evidenceLockSha256', 'productionFingerprintSha256',
-    'sourceFingerprintSha256', 'schemaPromptFingerprintSha256', 'protectedHistorySha256']) {
+    'sourceFingerprintSha256', 'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'evaluationFingerprintSha256']) {
     assert.match(String(binding[key] || ''), SHA256_RE, `V4_CONSUMPTION_BINDING_INVALID:${key}`);
   }
   assert.deepEqual(binding.sharedAllowanceObservation?.authorizedGeminiCalls, RESOURCE_POLICY.expectedCalls,
