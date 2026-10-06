@@ -1,0 +1,76 @@
+{
+  "date": "06/10/2026",
+  "resumeCheckpoint": "c5ae411",
+  "baselineCommit": "42637dfb552dae45ed3cb72f4f495d6528a14272",
+  "reviewedFixCommit": "5db0905b49826ef9c834f917c93261c733e82d1c",
+  "runtime": "Node.js 22.23.2",
+  "focusedRegression": {
+    "result": "PASS",
+    "exitCode": 0,
+    "network": "external-network blocking preload",
+    "logPath": ".tmp/v4-runner-windows-pathspec-fix.log",
+    "logSha256": "769bcb00c2554bd52c4a3696410187ae5bea465d8ab40d064fbbd9606b6e7713",
+    "newControls": ["original command exceeds 32767 UTF-16 units", "dirty bound file after 2200 monitored directories", "rogue .cts in last monitored directory", "individually oversized pathspec rejection"]
+  },
+  "syntax": { "files": 2, "result": "PASS" },
+  "targetedLint": { "files": 2, "result": "PASS", "warnings": 0 },
+  "preflight": { "result": "PASS", "node": "22.23.2" },
+  "smoke": {
+    "result": "PASS",
+    "exitCode": 0,
+    "suites": 89,
+    "seconds": 108.19,
+    "logPath": ".tmp/v4-runner-windows-smoke.log",
+    "logSha256": "f62fb729b39099d2f9d3ad65e68e24f7452092926dd0d8b70a5fb7558ca81b00"
+  },
+  "independentReview": { "reviewer": "/root/runner_windows_review", "materialFindings": 0, "signoff": "Windows batching correction and offline controls" },
+  "fileHashes": {
+    "scripts/iras_v4_capture_replay_runner.mjs": "cf5860f75277a5ef040631afb599c2d2e9cf22e1b83d5e81f41f173cb06eff95",
+    "tests/regression/test_iras_v4_capture_replay_runner.mjs": "fc727f7d9d26bb87d5bc5f2d1d14416e0c26d8d969d337949d7b76c2502541ce"
+  },
+  "actualFullInventoryFreeze": {
+    "result": "PASS",
+    "exitCode": 0,
+    "exclusiveCreation": true,
+    "boundFiles": 589,
+    "configurationPath": "artifacts/iras-v4-runner-integrity-2026-10-06/runner-configuration.json",
+    "configurationSha256": "0d23efe222c4153030e2e91e445911e0d439fd399125144d294ae5c169183008",
+    "integrityBindingSha256": "ec8abd02d2a89faee208b081020a828900b0dd2286b4644c5c07cdd0b018c358",
+    "offlineReverification": "PASS",
+    "logPath": ".tmp/v4-runner-windows-freeze.log",
+    "logSha256": "0ed0b25dde6e68e3001a37b2cd1166058329ed8ee652b03c0148fb8d1935f222"
+  },
+  "validFrozenConfigurationLiveHoldProbe": {
+    "result": "PASS",
+    "error": "V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED",
+    "fileAndCommitValidationPassedBeforeRejection": true,
+    "acquisitionPermitGranted": false,
+    "reservationOrOutputCreated": false,
+    "nullFieldsConfirmed": ["captureInventory", "productionEvidenceAdapterSha256", "preregistrationSha256"]
+  },
+  "scope": {
+    "productionChanged": false,
+    "existingEvaluatorChanged": false,
+    "contractChanged": false,
+    "consumedHistoryChanged": false,
+    "testRegistrationChanged": false,
+    "officialCalls": 0,
+    "providerCalls": 0,
+    "liveAcceptanceReservations": 0,
+    "runnerConfiguration": "FROZEN_RUNNER_CONFIGURATION",
+    "acceptanceConfiguration": "NOT_FROZEN",
+    "fullPreregistration": "NOT_FROZEN",
+    "officialEvidence": "NOT_CAPTURED",
+    "liveAcceptance": "HOLD",
+    "pushMergeDeploy": false
+  },
+  "broaderValidation": "Build/full/live integration not run: isolated runner/test correction with no production or TypeScript edits. Smoke, focused controls and actual checkout verification passed.",
+  "checkpointUsage": {
+    "startFiveHourRemainingPercent": 100,
+    "interimSaveFiveHourRemainingPercent": 90,
+    "closureFiveHourRemainingPercent": 89,
+    "closureWeeklyRemainingPercent": 89,
+    "minimumFiveHourRemainingPercent": 5,
+    "resetCreditsUsed": 0
+  }
+}
