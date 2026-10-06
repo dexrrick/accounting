@@ -1,0 +1,78 @@
+{
+  "profile": "iras-v4-semantic-authorized-hold-checkpoint",
+  "recordedAt": "2026-10-06T09:32:58Z",
+  "reviewedPreparationCommit": "19b80bdd3d482a6afaf2546bb27bd6bd44aa6e08",
+  "status": "CONDITIONALLY_AUTHORIZED_HOLD_ALLOWANCE",
+  "authorizationPath": "semantic-authorization.json",
+  "usageObservation": {
+    "sourceTool": "mcp__codex_app__get_usage_limits",
+    "observedAt": "2026-10-06T09:32:58Z",
+    "ordinaryUsageAllowed": true,
+    "rateLimitsByLimitId": {
+      "codex": {
+        "limitId": "codex",
+        "limitName": null,
+        "normalModelSlug": null,
+        "primary": {
+          "usedPercent": 41,
+          "windowDurationMins": 300,
+          "resetsAt": 1791293169
+        },
+        "secondary": {
+          "usedPercent": 63,
+          "windowDurationMins": 10080,
+          "resetsAt": 1791681217
+        },
+        "credits": {
+          "hasCredits": false,
+          "unlimited": false,
+          "balance": null
+        },
+        "individualLimit": null,
+        "spendControlReached": false,
+        "planType": "team",
+        "rateLimitReachedType": null
+      }
+    }
+  },
+  "remainingFiveHourPercent": 59,
+  "remainingWeeklyPercent": 37,
+  "requiredFiveHourRemainingPercent": 88,
+  "requiredWeeklyRemainingPercent": 19,
+  "reviewedProjection": {
+    "fiveHourCostPercentagePoints": 80,
+    "weeklyCostPercentagePoints": 15,
+    "meaning": "Conservative bound based on the earlier complete development-and-capture cycle; not measured consumption for nine Gemini calls."
+  },
+  "nextFiveHourResetUtc": "2026-10-06T13:26:09Z",
+  "evidenceExpiresAt": "2026-10-07T06:26:38.150Z",
+  "providerCalls": 0,
+  "officialRequests": 0,
+  "credentialsRead": false,
+  "providerQuotaHeadroomVerified": false,
+  "launcherInvoked": false,
+  "semanticNamespaceAbsent": true,
+  "checks": {
+    "headMatchesReviewedCommit": true,
+    "initialWorkingTreeClean": true,
+    "reviewedLauncherControlsReviewProjectionHashesMatch": true,
+    "eightFrozenLauncherInputHashesMatch": true,
+    "authorizationPureSchemaValidation": "PASS_WITH_BUNDLED_NODE_24_NO_LAUNCHER_MAIN_OR_RUNNER_IMPORT",
+    "retainedOfflineValidation": "Prior Node 22 frozen --check PASS retained; not rerun."
+  },
+  "runtimeNote": "Attempting C:/nvm4w/nodejs/node.exe for pure authorization schema validation returned local access denied before process start. Bundled Node 24 validated the record only. Live launcher still requires unchanged Node 22; runtime access must be resolved under authorized execution permissions if needed after gates pass.",
+  "stopPolicy": {
+    "beginCheckpointPreparationAtFiveHourRemainingPercent": 10,
+    "finishAboveFiveHourRemainingPercent": 5,
+    "doNotSpendAllowanceTowardDepletion": true,
+    "noAutomaticResetCreditConsumption": true
+  },
+  "resumeSteps": [
+    "Do not request conditional authorization again; it has been explicitly given and recorded.",
+    "Obtain an actual fresh independent allowance reading. Keep HOLD below 88% five-hour / 19% weekly; an expected reset is not evidence.",
+    "After the allowance gate passes, load GEMINI_API_KEY from .env.local process-locally without printing secrets; obtain configured credential/project/model quota evidence for the nine frozen requests, without an extra provider probe.",
+    "Recheck evidence freshness, frozen bindings and unused namespace. Invoke the unchanged Node 22 launcher once only. Supply actual post-request usage observation and fresh quota evidence within its rendezvous deadlines.",
+    "Retain the actual outcome, independently review and commit it even on failure. Never retry a consumed or uncertain namespace."
+  ],
+  "scope": "Authorization and checkpoint artifacts only. No recapture, production changes, launcher changes, push, merge or deployment."
+}
