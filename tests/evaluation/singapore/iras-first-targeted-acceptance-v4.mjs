@@ -456,6 +456,21 @@ export function scoreGovernedEvidenceV4(caseContract, observations = []) {
     }, expectedNoCoverageTopic: noCoverage, expectedNoClaims: noEvidence };
   }
   const expectedByIssue = policy.expectedRuleEvidenceByIssue || {};
+  const partialPolicy = policy.acceptablePartialNonIrasBehaviour;
+  const rejectionExpectation = caseContract.reviewedLocalCapability?.rejectionExpectation;
+  const partialIssue = partialPolicy?.permitted && rejectionExpectation
+    ? caseContract.semantic.expectedIssues.find(issue => issue.governingAuthorities.includes(rejectionExpectation.authority) &&
+      issue.operation.includes(partialPolicy.cpfOperation))
+    : undefined;
+  const requiredRejectedRecordIds = partialIssue
+    ? caseContract.semantic.independentTopicAccounting.requiredTopicOwners
+      .filter(owner => owner.issueId === partialIssue.id &&
+        getCoverageTopicById(owner.topicId)?.authorities.includes(rejectionExpectation.authority))
+      .flatMap(owner => getCoverageTopicById(owner.topicId)?.sourceRecordIds || [])
+    : [];
+  const separateVerifiedIrasIssueExpected = Boolean(partialIssue &&
+    caseContract.semantic.expectedIssues.some(issue => issue.id !== partialIssue.id &&
+      issue.governingAuthorities.includes('IRAS') && expectedByIssue[issue.id] === 'VERIFIED'));
   const diagnostics = Object.entries(expectedByIssue).map(([issueId, expectedStatus]) => {
     const observation = observations.find(item => item.issueId === issueId);
     if (!observation) return { issueId, expectedStatus, ...classifyLifecycleFailure({ providerError: true }) };
@@ -475,8 +490,25 @@ export function scoreGovernedEvidenceV4(caseContract, observations = []) {
       providerError: observation.providerError
     });
     const statusPass = observation.ruleEvidenceStatus === expectedStatus;
+    const partialRejectionPass = issueId === partialIssue?.id && partialPolicy?.permitted === true &&
+      separateVerifiedIrasIssueExpected && observation.authority === rejectionExpectation.authority &&
+      observation.operation === partialPolicy.cpfOperation &&
+      observation.ruleEvidenceStatus === partialPolicy.cpfEvidenceStatus &&
+      observation.providerError !== true && lifecycle.retrievalAttempted === true &&
+      lifecycle.evidenceFound === true && lifecycle.admitted === false && lifecycle.verified === false &&
+      lifecycle.covered === false && observation.gaps?.includes('CANDIDATE_REJECTED') === true && observation.candidateCount > 0 &&
+      observation.gaps?.includes('NO_ADMITTED_EVIDENCE') === true && observation.actualReturnedSourceCount === 0 &&
+      observation.verifiedClaimCount === 0 &&
+      (observation.rejectedCandidates || []).length > 0 &&
+      observation.rejectedCandidates.every(candidate => typeof candidate.eligibilityRejectionCode === 'string' &&
+        candidate.eligibilityRejectionCode.length > 0 &&
+        candidate.eligibilityRejectionCode === candidate.eligibilityGateResult) &&
+      observation.rejectedCandidates.some(candidate => candidate.sourceStatus === rejectionExpectation.requiredRejectedStatus &&
+        candidate.eligibilityRejectionCode === 'LOCAL_SOURCE_NOT_VERIFIED' &&
+        requiredRejectedRecordIds.includes(candidate.recordId));
     return { issueId, expectedStatus, actualStatus: observation.ruleEvidenceStatus, statusPass,
-      retrieved, admitted, verified, covered, verifiedClaimCount: observation.verifiedClaimCount, ...diagnostic };
+      retrieved, admitted, verified, covered, verifiedClaimCount: observation.verifiedClaimCount,
+      ...(issueId === partialIssue?.id ? { partialRejectionPass } : {}), ...diagnostic };
   });
   const verifiedExpectedRows = diagnostics.filter(row => row.expectedStatus === 'VERIFIED');
   const insufficientExpectedRows = diagnostics.filter(row => row.expectedStatus === 'INSUFFICIENT');
@@ -488,7 +520,8 @@ export function scoreGovernedEvidenceV4(caseContract, observations = []) {
       EVIDENCE_ADMISSION: verifiedExpectedRows.length > 0 &&
         verifiedExpectedRows.every(row => row.admitted),
       CLAIM_VERIFICATION: diagnostics.length > 0 && insufficientExpectedRows.every(row => row.statusPass) &&
-        verifiedExpectedRows.every(row => row.verified),
+        verifiedExpectedRows.every(row => row.verified) &&
+        (!partialPolicy?.permitted || diagnostics.some(row => row.issueId === partialIssue?.id && row.partialRejectionPass === true)),
       REQUESTED_CONCEPT_COVERAGE: verifiedExpectedRows.length > 0 && verifiedExpectedRows.every(row => row.statusPass && row.covered) &&
         (!policy.requestedConceptCoverageRequired || verifiedExpectedRows.every(row => row.covered))
     }

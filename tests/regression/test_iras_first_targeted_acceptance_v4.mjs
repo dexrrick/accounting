@@ -1,5 +1,5 @@
 // Passing API-free development checks, deliberately unregistered; live acceptance remains on HOLD.
-// Nine-case local runtime and explicit synthetic discovery outcomes are checked; the full negative-control matrix remains unfinished.
+// Nine-case local runtime plus controlled synthetic IRAS outcomes are checked; live capture and the full negative-control matrix remain unfinished.
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
@@ -112,7 +112,7 @@ for (const item of contract.cases) {
   const plannedPairs = new Set();
   for (const issue of issuePlan.issues) for (const authority of issue.governingAuthorities) {
     const domain = authority === 'IRAS'
-      ? issue.domain === 'IRAS_GST' ? 'IRAS_GST' : issue.domain === 'IRAS_INCOME_TAX' ? 'IRAS_CORPORATE_TAX' : 'IRAS_INDIVIDUAL_TAX'
+      ? issue.domain === 'IRAS_GST' ? 'IRAS_GST' : issue.population === 'INDIVIDUAL' ? 'IRAS_INDIVIDUAL_TAX' : 'IRAS_CORPORATE_TAX'
       : authority === 'CPF' ? 'CPF_PAYROLL' : 'ACCOUNTING';
     plannedPairs.add(`${authority}/${domain}`);
   }
@@ -127,6 +127,7 @@ for (const item of contract.cases) {
     assert.equal(semantic.stages.TOPIC_OWNERSHIP, true, `topic inventory: ${item.caseId}`);
     assert.equal(semantic.stages.REQUESTED_CONCEPT_OWNERSHIP, true, `requested concepts: ${item.caseId}`);
     assert.equal(routing.hasIssueOwner, true, `workstream retains every V2-matched issue: ${item.caseId}`);
+    assert.equal(routing.passed, true, `canonical workstream routing: ${item.caseId}`);
   }
 }
 
@@ -521,9 +522,16 @@ assert.equal(invalidCpf.passed, false, 'The required CPF NEEDS_REVIEW rejection 
 function governedObservations(item) {
   return Object.entries(item.governedProductionEvidence.expectedRuleEvidenceByIssue || {}).map(([issueId, status]) => {
     const complete = status === 'VERIFIED';
-    return { issueId, ruleEvidenceStatus: status, candidateCount: 1, rejectedCount: 0,
+    const partialCpf = status === 'INSUFFICIENT' && item.governedProductionEvidence.acceptablePartialNonIrasBehaviour?.permitted === true;
+    return { issueId, ruleEvidenceStatus: status, candidateCount: 1, rejectedCount: partialCpf ? 1 : 0,
+      ...(partialCpf ? { authority: item.reviewedLocalCapability.rejectionExpectation.authority,
+        operation: item.governedProductionEvidence.acceptablePartialNonIrasBehaviour.cpfOperation,
+        actualReturnedSourceCount: 0, gaps: ['CANDIDATE_REJECTED', 'NO_ADMITTED_EVIDENCE'], rejectedCandidates: [{
+          recordId: 'CPF_RATES_BY_AGE_2026', sourceStatus: 'NEEDS_REVIEW',
+          eligibilityRejectionCode: 'LOCAL_SOURCE_NOT_VERIFIED', eligibilityGateResult: 'LOCAL_SOURCE_NOT_VERIFIED' }] } : {}),
       lifecycle: { retrievalAttempted: true, evidenceFound: true, admitted: complete, verified: complete, covered: complete },
-      evidenceQuality: { eligibleRecords: complete ? [{}] : [], rejectedRecords: complete ? [] : [{}], uncoveredConcepts: [], uncoveredTopicIds: [] },
+      ...(!partialCpf ? { evidenceQuality: { eligibleRecords: complete ? [{}] : [], rejectedRecords: complete ? [] : [{}],
+        uncoveredConcepts: [], uncoveredTopicIds: [] } } : {}),
       verifiedClaimCount: complete ? 1 : 0, requestedConceptCoverage: complete };
   });
 }
@@ -737,27 +745,49 @@ function assertClaimsBoundToSyntheticResponses(issue, responses, family) {
 async function runControlledIras(query, issuePlan, questionUnderstanding, responseByUrl) {
   const requests = [];
   const transportObservations = [];
+  const fetchValidationObservations = [];
+  const candidateRecordGroups = [];
+  const sourceRetriever = {
+    async retrieveSources(request) {
+      const records = await defaultAdvancedSourceRetriever.retrieveSources(request);
+      candidateRecordGroups.push({ topicIds: [...(request.topicIds || [])], records });
+      return records;
+    },
+    getSourceById(id) { return defaultAdvancedSourceRetriever.getSourceById(id); },
+    findSourcesByStandardOrAct(code, section) { return defaultAdvancedSourceRetriever.findSourcesByStandardOrAct(code, section); }
+  };
   const customFetch = async url => {
     const key = String(url);
     requests.push(key);
     if (!Object.hasOwn(responseByUrl, key)) throw new Error(`API_FREE_FIXTURE_MISSING:${key}`);
     const response = responseByUrl[key];
-    transportObservations.push({ url: key, status: response.status, bodyBytes: Buffer.byteLength(response.body), synthetic: true });
+    transportObservations.push({ url: key, status: response.status, bodyBytes: Buffer.byteLength(response.body),
+      synthetic: true, sha256: createHash('sha256').update(response.body).digest('hex') });
     return new Response(response.body, { status: response.status, headers: { 'content-type': response.type || 'text/html' } });
   };
-  const retriever = new ControlledWebRetriever(undefined, new SourceCache());
-  const discoveryAdapter = new OfficialSitemapDiscoveryAdapter(retriever, { customFetch });
+  const webRetriever = new ControlledWebRetriever(undefined, new SourceCache());
+  const originalFetchOfficialSource = webRetriever.fetchOfficialSource.bind(webRetriever);
+  webRetriever.fetchOfficialSource = async (url, options = {}) => {
+    const result = await originalFetchOfficialSource(url, options);
+    fetchValidationObservations.push({ url, topicId: options.topicValidation?.topicId,
+      topicValidationPresent: Boolean(options.topicValidation),
+      status: result.status, sourceUrl: result.sourceUrl, finalUrl: result.finalUrl, pageTitle: result.pageTitle,
+      topicMatched: result.topicMatched, titleMatched: result.titleMatched, contentMatched: result.contentMatched });
+    return result;
+  };
+  const discoveryAdapter = new OfficialSitemapDiscoveryAdapter(webRetriever, { customFetch });
   const priorFetch = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error('AMBIENT_NETWORK_DISABLED_IN_V4_FIXTURE'); };
   try {
     const result = await buildAuthorityWorkstreams(query, issuePlan, {
+      retriever: sourceRetriever,
       referenceDate,
       questionUnderstanding,
-      groundingOptions: { localOnly: false, referenceDate, webRetriever: retriever,
+      groundingOptions: { localOnly: false, referenceDate, webRetriever,
         discoveryAdapter, officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; }, getLastSearchTrace() { return []; } },
         fetchOptions: { customFetch, useCache: false, timeoutMs: 50 } }
     });
-    return { result, requests, transportObservations, discoveryAdapter };
+    return { result, requests, transportObservations, fetchValidationObservations, candidateRecordGroups, discoveryAdapter };
   } finally { globalThis.fetch = priorFetch; }
 }
 
@@ -772,6 +802,149 @@ function evaluateIrasQuality(query, understanding, subject, population, topicIds
     authorities: ['IRAS'], requestedConcepts, ...(domains.length === 1 ? { domain: domains[0] } : {}),
     scopedSubject: subject, scopedPopulation: population });
 }
+function replayProductionIrasQuality(query, interpretation, subject, population, topicIds, records, sourceMapFallbackTrace) {
+  const understanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation };
+  const requestedConcepts = getRequestedQuestionConcepts(query, understanding)
+    .filter(concept => concept.topicIds.some(topicId => topicIds.includes(topicId)));
+  return evaluateEvidenceQuality({ query, topicIds, records, missingFacts: [], referenceDate,
+    authorities: ['IRAS'], requestedConcepts, scopedSubject: subject, scopedPopulation: population,
+    ...(sourceMapFallbackTrace ? { sourceMapFallbackTrace } : {}) });
+}
+
+function actualIssueForExpected(row, runtime, expectedIssueId) {
+  const expected = row.item.semantic.expectedIssues.find(issue => issue.id === expectedIssueId);
+  const pair = row.semantic.pairs.find(item => item.expectedIssueId === expectedIssueId);
+  assert.ok(expected && pair, `Expected semantic pair exists for ${row.item.caseId}/${expectedIssueId}`);
+  const semanticIssue = row.interpretation.issues[pair.actualIndex];
+  const authorities = expected.governingAuthorities;
+  const planned = row.issuePlan.issues.filter(issue => issue.subject === semanticIssue.subject &&
+    issue.domain === semanticIssue.domain && issue.population === semanticIssue.population &&
+    issue.operation === expected.operation[0] && authorities.some(authority => issue.governingAuthorities.includes(authority)));
+  assert.equal(planned.length, 1, `Expected issue maps uniquely to production issue plan: ${row.item.caseId}/${expectedIssueId}`);
+  const matches = runtime.workstreams.filter(stream => authorities.includes(stream.authority))
+    .flatMap(stream => stream.issues.map(issue => ({ issue, authority: stream.authority })))
+    .filter(({ issue, authority }) => issue.subject === planned[0].subject && issue.domain === planned[0].domain &&
+      issue.population === planned[0].population && issue.operation === planned[0].operation &&
+      authorities.includes(authority));
+  assert.equal(matches.length, 1, `Expected issue maps to exactly one actual runtime issue: ${row.item.caseId}/${expectedIssueId}`);
+  return { expected, planned: planned[0], ...matches[0] };
+}
+
+function transportUrlIdentity(url) {
+  if (typeof url !== 'string' || !url) return undefined;
+  try {
+    const parsed = new URL(url);
+    parsed.hash = '';
+    return parsed.toString().replace(/\/$/, '').toLowerCase();
+  } catch { return undefined; }
+}
+
+function observedSourceSubsetTrace(records, topicIds, retrievalAttempts, fetchObservations) {
+  const scopedSuccessAttempts = retrievalAttempts.filter(attempt => topicIds.includes(attempt.topicId) && attempt.fetchStatus === 'SUCCESS');
+  if (topicIds.length !== 1 || scopedSuccessAttempts.length !== 1 || !scopedSuccessAttempts[0].pageTitle) {
+    return { complete: false, reason: `MISSING_OR_AMBIGUOUS_SCOPED_SUCCESS_ATTEMPT topics=${topicIds.join(',')} attempts=${JSON.stringify(retrievalAttempts)}`,
+      trace: { selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] }, selectedRecordIds: [] };
+  }
+  const retrievalAttempt = scopedSuccessAttempts[0];
+  const matchingFetches = fetchObservations.filter(observation => observation.topicValidationPresent === true &&
+    observation.status === 'SUCCESS' && observation.pageTitle === retrievalAttempt.pageTitle);
+  if (matchingFetches.length !== 1) {
+    return { complete: false, reason: 'MISSING_OR_AMBIGUOUS_OBSERVED_VALIDATED_FETCH', trace: { selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] }, selectedRecordIds: [] };
+  }
+  const observedFetch = matchingFetches[0];
+  if (observedFetch.topicMatched !== true || observedFetch.titleMatched !== true || observedFetch.contentMatched !== true ||
+      !observedFetch.url || !observedFetch.finalUrl || !observedFetch.pageTitle) {
+    return { complete: false, reason: 'OBSERVED_FETCH_VALIDATION_FIELDS_INCOMPLETE', trace: { selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] }, selectedRecordIds: [] };
+  }
+  const selectedRecordIds = [];
+  const attempts = [];
+  for (const record of records) {
+    const officialIdentity = transportUrlIdentity(record.officialSourceUrl);
+    const canonicalIdentity = transportUrlIdentity(record.canonicalSourceUrl);
+    const finalIdentity = transportUrlIdentity(observedFetch.finalUrl);
+    if (!officialIdentity || officialIdentity !== canonicalIdentity || canonicalIdentity !== finalIdentity) continue;
+    selectedRecordIds.push(record.id);
+    attempts.push({ topicId: retrievalAttempt.topicId, fetchStatus: retrievalAttempt.fetchStatus,
+      finalUrl: observedFetch.finalUrl, pageTitle: observedFetch.pageTitle,
+      titleMatched: observedFetch.titleMatched, contentMatched: observedFetch.contentMatched });
+  }
+  const trace = { path: 'test_local_unique_observed_transport_attempt_subset',
+    selectedRecordIds: [...new Set(selectedRecordIds)],
+    finalVerifiedUrls: [...new Set(attempts.map(attempt => attempt.finalUrl))], attempts };
+  return { complete: records.length > 0 && trace.selectedRecordIds.length === records.length && attempts.length === records.length,
+    reason: records.length > 0 && trace.selectedRecordIds.length === records.length && attempts.length === records.length
+      ? undefined : 'RETURNED_SOURCE_NOT_BOUND_TO_OBSERVED_FETCH', trace, selectedRecordIds: trace.selectedRecordIds };
+}
+
+function actualGovernedObservations(row, controlledRun) {
+  const expectedByIssue = row.item.governedProductionEvidence.expectedRuleEvidenceByIssue || {};
+  return Object.keys(expectedByIssue).map(issueId => {
+    const { planned, issue, authority } = actualIssueForExpected(row, controlledRun.result, issueId);
+    const isIras = authority === 'IRAS';
+    let records;
+    let evidenceQuality;
+    if (isIras) {
+      // AuthorityIssueEvidence.sources is the actual verified/admitted subset, not the full initial candidate inventory.
+      records = issue.sources || [];
+      const observedTrace = records.length > 0
+        ? observedSourceSubsetTrace(records, planned.mappedTopicIds, issue.retrievalTrace?.attempts || [],
+          controlledRun.fetchValidationObservations)
+        : { complete: false, reason: 'NO_RETURNED_VERIFIED_SOURCE_SUBSET', selectedRecordIds: [],
+          trace: { path: 'test_local_unique_observed_transport_attempt_subset', selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] } };
+      if (records.length > 0) assert.equal(observedTrace.complete, true,
+        `Every returned IRAS source must bind through one unique sanitized scoped attempt to actual successful transport: ${row.item.caseId}/${issueId} ${observedTrace.reason}`);
+      evidenceQuality = replayProductionIrasQuality(row.item.question, row.interpretation, issue.subject,
+        issue.population, planned.mappedTopicIds, records, observedTrace.trace);
+    } else {
+      const topicIds = new Set(planned.mappedTopicIds);
+      const byId = new Map();
+      for (const group of controlledRun.candidateRecordGroups) {
+        if (group.topicIds.some(topicId => topicIds.has(topicId))) {
+          for (const record of group.records) byId.set(record.id, record);
+        }
+      }
+      records = [...byId.values()];
+    }
+    const candidateDiagnostics = records.map(record => {
+      const eligibilityGateResult = findRecordEligibilityRejection(record, undefined, referenceDate);
+      return { recordId: record.id, sourceStatus: record.sourceStatus,
+        eligibilityGateResult, baseEligible: eligibilityGateResult === undefined };
+    });
+    const rejectedCandidates = candidateDiagnostics.filter(candidate => candidate.eligibilityGateResult !== undefined)
+      .map(candidate => ({ ...candidate, eligibilityRejectionCode: candidate.eligibilityGateResult }));
+    const requestedConceptCoverage = isIras
+      ? issue.lifecycle.covered === true && planned.mappedTopicIds.length > 0 &&
+        planned.mappedTopicIds.every(topicId => evidenceQuality.coveredTopicIds?.includes(topicId)) &&
+        (evidenceQuality.uncoveredConcepts?.length || 0) === 0 && (evidenceQuality.uncoveredTopicIds?.length || 0) === 0
+      : issue.lifecycle.covered === true;
+    return { issueId, authority, operation: issue.operation, ruleEvidenceStatus: issue.evidenceStatus,
+      providerError: issue.gaps.some(gap => /^(?:RETRIEVAL|PROVIDER|TRANSPORT)_.*(?:FAILED|ERROR)$/.test(gap.code)),
+      lifecycle: { ...issue.lifecycle }, gaps: issue.gaps.map(gap => gap.code), candidateCount: records.length,
+      candidateInventoryKind: isIras ? 'actual_returned_verified_source_subset_lower_bound' : 'actual_through_call_retriever_records',
+      actualReturnedSourceCount: (issue.sources || []).length,
+      ...(isIras ? {} : { baseEligibleCandidateCount: candidateDiagnostics.filter(candidate => candidate.baseEligible).length,
+        candidateDiagnostics, candidateRecords: records }),
+      rejectedCount: isIras ? evidenceQuality.rejectedRecords?.length || 0 : rejectedCandidates.length,
+      rejectedCandidates, ...(isIras ? { evidenceQuality } : {}),
+      verifiedClaimCount: issue.verifiedClaims.length, requestedConceptCoverage };
+  });
+}
+
+function scoreControlledRuntime(row, controlledRun) {
+  const actualIssues = Object.keys(row.item.application.expectedByIssue || {}).map(issueId => {
+    const { issue } = actualIssueForExpected(row, controlledRun.result, issueId);
+    return [issueId, issue.applicationStatus];
+  });
+  const application = scoreApplicationStatusV4(row.item, { byIssue: Object.fromEntries(actualIssues),
+    overallStatus: controlledRun.result.status });
+  const governed = scoreGovernedEvidenceV4(row.item, actualGovernedObservations(row, controlledRun));
+  const routing = scoreWorkstreamRoutingV4(row.item, row.issuePlan, controlledRun.result);
+  const local = localCapabilityRows.find(item => item.caseId === row.item.caseId)?.result;
+  assert.ok(local, `Actual local-only capability observation exists: ${row.item.caseId}`);
+  const stages = evaluateV4Stages({ semantic: row.semantic, routing, local, governed, application });
+  return { routing, local, governed, application, stages };
+}
+
 const mappedRun = await runControlledIras(privateQuery, privateResolved.issuePlan, privateResolved.understanding, {
   [fixturePageUrl]: { body: mappedHtml, status: 200 }
 });
@@ -943,6 +1116,189 @@ assert.equal(reliefEvidence.sources[0].sourceStatus, 'NEEDS_REVIEW',
 console.log(`V4_DISCOVERY_RUNTIME ${JSON.stringify({ route: discoveredRun.requests, fetchStages: discoveryAttempts.map(attempt => attempt.fetchStatus),
   issueStatus: reliefEvidence.evidenceStatus, applicationStatus: reliefEvidence.applicationStatus,
   overallStatus: discoveredRun.result.status, sourceStatus: reliefEvidence.sources[0].sourceStatus })}`);
+
+const amountRow = semanticRows.find(row => row.item.caseId === 'target-relief-amount');
+const amountResponses = { [mappedReliefUrl]: { body: reliefHtml, status: 200 } };
+const amountRun = await runControlledIras(amountRow.item.question, amountRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: amountRow.interpretation }, amountResponses);
+const amountIssue = actualIssueForExpected(amountRow, amountRun.result, 'personal-cpf-relief-amount').issue;
+assert.ok(amountRun.requests.includes(mappedReliefUrl));
+assert.equal(amountIssue.operation, 'CALCULATE');
+assert.deepEqual(amountIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: true, admitted: true, verified: true, covered: true });
+assert.equal(amountIssue.evidenceStatus, 'VERIFIED');
+assert.equal(amountIssue.applicationStatus, 'UNRESOLVED');
+assert.equal(amountRun.result.status, 'CONDITIONAL');
+assert.equal(amountRun.result.applicationStatus, 'UNRESOLVED');
+assertClaimsBoundToSyntheticResponses(amountIssue, amountResponses, 'target-relief-amount');
+const amountPlannedIssue = actualIssueForExpected(amountRow, amountRun.result, 'personal-cpf-relief-amount').planned;
+const amountObservedTrace = observedSourceSubsetTrace(amountIssue.sources, amountPlannedIssue.mappedTopicIds,
+  amountIssue.retrievalTrace.attempts, amountRun.fetchValidationObservations);
+assert.equal(amountObservedTrace.complete, true, 'The amount source binds to its unique observed production fetch and scoped success attempt.');
+const ambiguousAmountTrace = observedSourceSubsetTrace(amountIssue.sources, amountPlannedIssue.mappedTopicIds,
+  amountIssue.retrievalTrace.attempts, [...amountRun.fetchValidationObservations, amountRun.fetchValidationObservations[0]]);
+assert.equal(ambiguousAmountTrace.complete, false, 'A duplicate matching transport observation cannot rescue an ambiguous trace join.');
+const amountGovernedObservations = actualGovernedObservations(amountRow, amountRun);
+const amountStages = scoreControlledRuntime(amountRow, amountRun);
+assert.equal(amountStages.routing.passed, true);
+const amountObservationSummary = { stages: amountStages.stages.stages,
+  observations: amountGovernedObservations.map(item => ({ issueId: item.issueId,
+    candidateCount: item.candidateCount, lifecycle: item.lifecycle, quality: {
+      eligible: item.evidenceQuality.eligibleRecords.map(record => record.id),
+      rejected: item.evidenceQuality.rejectedRecords.map(record => ({ id: record.recordId, code: record.code })),
+      covered: item.evidenceQuality.coveredTopicIds, uncoveredTopics: item.evidenceQuality.uncoveredTopicIds,
+      uncoveredConcepts: item.evidenceQuality.uncoveredConcepts } })) };
+assert.deepEqual(Object.values(amountStages.stages.stages), Array(Object.keys(amountStages.stages.stages).length).fill(true),
+  `The controlled amount run passes all observed V4 stages while leaving its application unresolved: ${JSON.stringify(amountObservationSummary)}`);
+
+const mixedRow = semanticRows.find(row => row.item.caseId === 'A-paraphrase-2');
+const mixedResponses = { [mappedReliefUrl]: { body: reliefHtml, status: 200 } };
+const mixedRun = await runControlledIras(mixedRow.item.question, mixedRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: mixedRow.interpretation }, mixedResponses);
+const mixedIrasIssue = actualIssueForExpected(mixedRow, mixedRun.result, 'individual-cpf-tax-relief').issue;
+const mixedCpfIssue = actualIssueForExpected(mixedRow, mixedRun.result, 'employer-cpf-contribution').issue;
+assert.equal(mixedIrasIssue.operation, 'CHECK_ELIGIBILITY');
+assert.equal(mixedIrasIssue.evidenceStatus, 'VERIFIED');
+assert.equal(mixedIrasIssue.applicationStatus, 'UNRESOLVED');
+assertClaimsBoundToSyntheticResponses(mixedIrasIssue, mixedResponses, 'A-paraphrase-2 IRAS relief');
+assert.equal(mixedCpfIssue.operation, 'CALCULATE');
+assert.equal(mixedCpfIssue.evidenceStatus, 'INSUFFICIENT');
+assert.equal(mixedCpfIssue.applicationStatus, 'UNRESOLVED');
+assert.equal(mixedCpfIssue.lifecycle.admitted, false);
+assert.equal(mixedCpfIssue.lifecycle.verified, false);
+assert.equal(mixedCpfIssue.lifecycle.covered, false);
+assert.equal(mixedCpfIssue.verifiedClaims.length, 0);
+assert.ok(mixedCpfIssue.gaps.some(gap => gap.code === 'CANDIDATE_REJECTED'));
+const mixedCpfCandidates = [...new Map(mixedRun.candidateRecordGroups
+  .filter(group => group.topicIds.includes('cpf_contribution_rates'))
+  .flatMap(group => group.records).map(record => [record.id, record])).values()];
+assert.ok(mixedCpfCandidates.length > 0, 'The CPF rejection observation comes from captured through-call candidate records.');
+assert.ok(mixedCpfCandidates.some(record => record.sourceStatus === 'NEEDS_REVIEW' &&
+  findRecordEligibilityRejection(record, undefined, referenceDate) === 'LOCAL_SOURCE_NOT_VERIFIED'));
+assert.equal(mixedRun.result.status, 'INSUFFICIENT');
+assert.equal(mixedRun.result.applicationStatus, 'UNRESOLVED');
+const actualMixedObservations = actualGovernedObservations(mixedRow, mixedRun);
+const mixedStages = scoreControlledRuntime(mixedRow, mixedRun);
+assert.equal(mixedStages.routing.passed, true);
+assert.equal(mixedStages.governed.stages.GOVERNED_RETRIEVAL, true);
+assert.equal(mixedStages.governed.stages.EVIDENCE_ADMISSION, true);
+assert.equal(mixedStages.governed.stages.CLAIM_VERIFICATION, true,
+  `The expected partial CPF result passes only with an observed NEEDS_REVIEW rejection and independently verified IRAS rule: ${JSON.stringify({
+    diagnostics: mixedStages.governed.lifecycleDiagnostics.map(item => ({ issueId: item.issueId,
+      expectedStatus: item.expectedStatus, actualStatus: item.actualStatus, statusPass: item.statusPass,
+      retrieved: item.retrieved, admitted: item.admitted, verified: item.verified, covered: item.covered,
+      partialRejectionPass: item.partialRejectionPass })),
+    observations: actualMixedObservations.map(item => ({ issueId: item.issueId, authority: item.authority,
+      operation: item.operation, status: item.ruleEvidenceStatus, lifecycle: item.lifecycle, candidateCount: item.candidateCount,
+      eligibleCandidateCount: item.eligibleCandidateCount, rejectedCandidates: item.rejectedCandidates, gaps: item.gaps }))
+  })}`);
+assert.equal(mixedStages.governed.stages.REQUESTED_CONCEPT_COVERAGE, true);
+assert.equal(mixedStages.application.passed, true);
+assert.equal(mixedStages.stages.earliestFailure, undefined);
+const partialCpfObservation = actualMixedObservations.find(item => item.issueId === 'employer-cpf-contribution');
+assert.equal(partialCpfObservation.actualReturnedSourceCount, 0,
+  'The actual CPF workstream exposes no issue-scoped admitted source records.');
+assert.equal(partialCpfObservation.baseEligibleCandidateCount, 3,
+  'Three raw CPF candidates pass the base record verifier but are not admitted to this issue scope.');
+assert.deepEqual(partialCpfObservation.candidateDiagnostics.map(item => [item.recordId, item.sourceStatus, item.eligibilityGateResult]), [
+  ['CPFA_SEC7_FIRST_SCHEDULE', 'VERIFIED', undefined],
+  ['CPF_RATES_BY_AGE_2026', 'NEEDS_REVIEW', 'LOCAL_SOURCE_NOT_VERIFIED'],
+  ['CPF_WAGE_CEILINGS_2026', 'VERIFIED', undefined],
+  ['CPF_ACCOUNT_ALLOCATION_RATES', 'VERIFIED', undefined],
+  ['CPF_SDL_SKILLS_DEVELOPMENT_LEVY', 'NEEDS_REVIEW', 'LOCAL_SOURCE_NOT_VERIFIED']
+], 'All five actual CPF candidates and their base-verifier outcomes remain visible as diagnostics.');
+const scoreMixedMutation = observations => scoreGovernedEvidenceV4(mixedRow.item, observations);
+const forgedAdmission = structuredClone(actualMixedObservations);
+const forgedAdmissionCpf = forgedAdmission.find(item => item.issueId === 'employer-cpf-contribution');
+forgedAdmissionCpf.lifecycle.admitted = true;
+forgedAdmissionCpf.actualReturnedSourceCount = 1;
+assert.equal(scoreMixedMutation(forgedAdmission).stages.CLAIM_VERIFICATION, false,
+  'Forged CPF admission cannot pass the partial-result claim gate.');
+const forgedCpfVerification = structuredClone(actualMixedObservations);
+const forgedCpfVerifiedRow = forgedCpfVerification.find(item => item.issueId === 'employer-cpf-contribution');
+assert.equal(forgedCpfVerifiedRow.ruleEvidenceStatus, 'INSUFFICIENT',
+  'The forged verification mutation keeps the actual insufficient status label.');
+forgedCpfVerifiedRow.lifecycle.admitted = true;
+forgedCpfVerifiedRow.lifecycle.verified = true;
+forgedCpfVerifiedRow.lifecycle.covered = true;
+forgedCpfVerifiedRow.verifiedClaimCount = 1;
+forgedCpfVerifiedRow.actualReturnedSourceCount = 1;
+assert.equal(scoreMixedMutation(forgedCpfVerification).stages.CLAIM_VERIFICATION, false,
+  'Forged CPF verification cannot turn unsupported contribution calculation into a pass.');
+const wrongCpfRejectionStatus = structuredClone(actualMixedObservations);
+wrongCpfRejectionStatus.find(item => item.issueId === 'employer-cpf-contribution').rejectedCandidates
+  .find(candidate => candidate.recordId === 'CPF_RATES_BY_AGE_2026').sourceStatus = 'VERIFIED';
+assert.equal(scoreMixedMutation(wrongCpfRejectionStatus).stages.CLAIM_VERIFICATION, false,
+  'A rejected CPF candidate with the wrong status cannot satisfy the reviewed rejection expectation.');
+const wrongCpfRejectionCode = structuredClone(actualMixedObservations);
+wrongCpfRejectionCode.find(item => item.issueId === 'employer-cpf-contribution').rejectedCandidates
+  .find(candidate => candidate.recordId === 'CPF_RATES_BY_AGE_2026').eligibilityRejectionCode = 'UNRELATED_REJECTION';
+assert.equal(scoreMixedMutation(wrongCpfRejectionCode).stages.CLAIM_VERIFICATION, false,
+  'A rejection code that differs from the existing verifier result cannot satisfy the partial-result gate.');
+const unrelatedRejectionOnly = structuredClone(actualMixedObservations);
+unrelatedRejectionOnly.find(item => item.issueId === 'employer-cpf-contribution').rejectedCandidates =
+  unrelatedRejectionOnly.find(item => item.issueId === 'employer-cpf-contribution').rejectedCandidates
+    .filter(candidate => candidate.recordId !== 'CPF_RATES_BY_AGE_2026');
+assert.equal(scoreMixedMutation(unrelatedRejectionOnly).stages.CLAIM_VERIFICATION, false,
+  'The employer contribution-topic record must be the rejected candidate; the unrelated SDL rejection cannot substitute.');
+const forgedCpfSource = structuredClone(actualMixedObservations);
+forgedCpfSource.find(item => item.issueId === 'employer-cpf-contribution').actualReturnedSourceCount = 1;
+assert.equal(scoreMixedMutation(forgedCpfSource).stages.CLAIM_VERIFICATION, false,
+  'Any returned CPF source record invalidates the expected rejected-only partial result.');
+const missingCpfAdmissionGap = structuredClone(actualMixedObservations);
+missingCpfAdmissionGap.find(item => item.issueId === 'employer-cpf-contribution').gaps = ['CANDIDATE_REJECTED'];
+assert.equal(scoreMixedMutation(missingCpfAdmissionGap).stages.CLAIM_VERIFICATION, false,
+  'The partial result requires actual no-admitted-evidence diagnostics.');
+const missingCpfLifecycleFlag = structuredClone(actualMixedObservations);
+delete missingCpfLifecycleFlag.find(item => item.issueId === 'employer-cpf-contribution').lifecycle.admitted;
+assert.equal(scoreMixedMutation(missingCpfLifecycleFlag).stages.CLAIM_VERIFICATION, false,
+  'Missing CPF lifecycle admission state fails closed.');
+
+const emptySitemapHtml = '<?xml version="1.0"?><urlset></urlset>';
+const mixedFailureResponses = {
+  [mappedReliefUrl]: { body: '<html><body>synthetic unavailable mapped response</body></html>', status: 404 },
+  'https://www.iras.gov.sg/sitemap': { body: emptySitemapHtml, status: 200, type: 'application/xml' },
+  'https://www.iras.gov.sg/robots.txt': { body: 'User-agent: *\nDisallow:', status: 200, type: 'text/plain' }
+};
+const mixedFailureRun = await runControlledIras(mixedRow.item.question, mixedRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: mixedRow.interpretation }, mixedFailureResponses);
+const failedMixedIrasIssue = actualIssueForExpected(mixedRow, mixedFailureRun.result, 'individual-cpf-tax-relief').issue;
+const failedMixedCpfIssue = actualIssueForExpected(mixedRow, mixedFailureRun.result, 'employer-cpf-contribution').issue;
+assert.deepEqual(mixedFailureRun.requests, [mappedReliefUrl, 'https://www.iras.gov.sg/sitemap', 'https://www.iras.gov.sg/robots.txt'],
+  'The negative mixed transport follows the mapped 404, supplied empty sitemap, and supplied robots response without ambient network access.');
+assert.equal(mixedFailureRun.requests.every(url => Object.hasOwn(mixedFailureResponses, url)), true,
+  'Every actual requested URL has an explicit controlled response; a missing-fixture exception is not the tested failure.');
+assert.deepEqual(mixedFailureRun.transportObservations.map(({ url, status }) => ({ url, status })), [
+  { url: mappedReliefUrl, status: 404 }, { url: 'https://www.iras.gov.sg/sitemap', status: 200 },
+  { url: 'https://www.iras.gov.sg/robots.txt', status: 200 }
+]);
+assert.equal(mixedFailureRun.transportObservations.every(observation => {
+  const response = mixedFailureResponses[observation.url];
+  return observation.synthetic === true && observation.bodyBytes === Buffer.byteLength(response.body) &&
+    observation.sha256 === createHash('sha256').update(response.body).digest('hex');
+}), true, 'The mixed transport diagnostic binds each URL/status/body length to the exact supplied synthetic response bytes.');
+assert.equal(failedMixedIrasIssue.evidenceStatus, 'INSUFFICIENT');
+assert.equal(failedMixedIrasIssue.applicationStatus, 'UNRESOLVED');
+assert.equal(failedMixedIrasIssue.verifiedClaims.length, 0);
+assert.equal(failedMixedCpfIssue.evidenceStatus, 'INSUFFICIENT');
+assert.ok(failedMixedCpfIssue.gaps.some(gap => gap.code === 'CANDIDATE_REJECTED'));
+assert.equal(mixedFailureRun.result.status, 'INSUFFICIENT');
+assert.equal(mixedFailureRun.result.applicationStatus, 'UNRESOLVED');
+const failedMixedStages = scoreControlledRuntime(mixedRow, mixedFailureRun);
+assert.equal(failedMixedStages.governed.stages.GOVERNED_RETRIEVAL, false,
+  'The independent IRAS transport failure fails governed retrieval despite the expected CPF partial result.');
+assert.equal(failedMixedStages.stages.earliestFailure, 'GOVERNED_RETRIEVAL');
+assert.equal(partialCpfObservation.ruleEvidenceStatus, 'INSUFFICIENT');
+console.log(`V4_CONTROLLED_CPF_RELIEF_AMOUNT ${JSON.stringify({ lifecycle: amountIssue.lifecycle,
+  evidenceStatus: amountIssue.evidenceStatus, applicationStatus: amountIssue.applicationStatus,
+  overall: amountRun.result.status, sourceInventory: actualGovernedObservations(amountRow, amountRun)[0].candidateInventoryKind,
+  stages: amountStages.stages.stages })}`);
+console.log(`V4_CONTROLLED_MIXED_CPF_RELIEF ${JSON.stringify({ positive: { iras: mixedIrasIssue.lifecycle,
+  cpf: mixedCpfIssue.lifecycle, cpfCandidateCount: mixedCpfCandidates.length, cpfRejectedStatus: partialCpfObservation.rejectedCandidates.map(item => item.sourceStatus),
+  overall: mixedRun.result.status, stages: mixedStages.stages.stages }, negative: { requests: mixedFailureRun.requests,
+  transport: mixedFailureRun.transportObservations,
+  iras: failedMixedIrasIssue.lifecycle, cpf: failedMixedCpfIssue.lifecycle, overall: mixedFailureRun.result.status,
+  earliestFailure: failedMixedStages.stages.earliestFailure } })}`);
 
 const foreignIncomeUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income';
 const foreignRow = semanticRows.find(row => row.item.caseId === 'foreign-dividend-receipt-treatment');

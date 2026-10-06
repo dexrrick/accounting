@@ -1,0 +1,132 @@
+{
+  "provenance": "Synthetic API-free production runtime controls; not live acceptance",
+  "baseCommit": "3431a22",
+  "date": "2026-10-06",
+  "observations": {
+    "V4_CONTROLLED_CPF_RELIEF_AMOUNT": {
+      "lifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true
+      },
+      "evidenceStatus": "VERIFIED",
+      "applicationStatus": "UNRESOLVED",
+      "overall": "CONDITIONAL",
+      "sourceInventory": "actual_returned_verified_source_subset_lower_bound",
+      "stages": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      }
+    },
+    "V4_CONTROLLED_MIXED_CPF_RELIEF": {
+      "positive": {
+        "iras": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": true,
+          "verified": true,
+          "covered": true
+        },
+        "cpf": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": false,
+          "verified": false,
+          "covered": false
+        },
+        "cpfCandidateCount": 5,
+        "cpfRejectedStatus": [
+          "NEEDS_REVIEW",
+          "NEEDS_REVIEW"
+        ],
+        "overall": "INSUFFICIENT",
+        "stages": {
+          "SEMANTIC_VALIDATION": true,
+          "SEMANTIC_ISSUE_IDENTITY": true,
+          "SEMANTIC_DIMENSIONS": true,
+          "TOPIC_OWNERSHIP": true,
+          "REQUESTED_CONCEPT_OWNERSHIP": true,
+          "WORKSTREAM_ROUTING": true,
+          "LOCAL_CAPABILITY": true,
+          "GOVERNED_RETRIEVAL": true,
+          "EVIDENCE_ADMISSION": true,
+          "CLAIM_VERIFICATION": true,
+          "REQUESTED_CONCEPT_COVERAGE": true,
+          "APPLICATION_STATUS": true,
+          "OVERALL_STATUS": true,
+          "INTEGRITY": true
+        }
+      },
+      "negative": {
+        "requests": [
+          "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+          "https://www.iras.gov.sg/sitemap",
+          "https://www.iras.gov.sg/robots.txt"
+        ],
+        "transport": [
+          {
+            "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+            "status": 404,
+            "bodyBytes": 63,
+            "synthetic": true,
+            "sha256": "94e5e840707fc2fca8c3622edda169f456a4373b4742d6eeaeb28771bfb6cb1b"
+          },
+          {
+            "url": "https://www.iras.gov.sg/sitemap",
+            "status": 200,
+            "bodyBytes": 38,
+            "synthetic": true,
+            "sha256": "57faf6089261a40c0c53c416656ea121b300149430893db845e3e7632fe5e724"
+          },
+          {
+            "url": "https://www.iras.gov.sg/robots.txt",
+            "status": 200,
+            "bodyBytes": 23,
+            "synthetic": true,
+            "sha256": "3a125e84a637dc3f5442bb6949fa200056f37db4627b4c2a3addc55bbb89b703"
+          }
+        ],
+        "iras": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": false,
+          "admitted": false,
+          "verified": false,
+          "covered": false
+        },
+        "cpf": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": false,
+          "verified": false,
+          "covered": false
+        },
+        "overall": "INSUFFICIENT",
+        "earliestFailure": "GOVERNED_RETRIEVAL"
+      }
+    }
+  }
+}
