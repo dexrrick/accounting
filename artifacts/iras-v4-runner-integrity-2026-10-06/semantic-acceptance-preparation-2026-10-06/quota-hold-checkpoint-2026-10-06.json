@@ -1,0 +1,64 @@
+{
+  "profile": "iras-v4-semantic-quota-hold-checkpoint",
+  "recordedAt": "2026-10-06T09:50:58Z",
+  "status": "CONDITIONALLY_AUTHORIZED_HOLD_PROVIDER_QUOTA_UNCONFIRMED",
+  "authorizationPreserved": true,
+  "authorizationCommit": "518f54c",
+  "reviewedPreparationCommit": "19b80bdd3d482a6afaf2546bb27bd6bd44aa6e08",
+  "usageObservation": {
+    "sourceTool": "mcp__codex_app__get_usage_limits",
+    "observedAt": "2026-10-06T09:48:45Z",
+    "fiveHourWindowMinutes": 300,
+    "weeklyWindowMinutes": 10080,
+    "fiveHourUsedPercent": 2,
+    "weeklyUsedPercent": 25,
+    "fiveHourRemainingPercent": 98,
+    "weeklyRemainingPercent": 75,
+    "ordinaryUsageAllowed": true
+  },
+  "reviewedLaunchRequirement": {
+    "fiveHourRemainingPercent": 88,
+    "weeklyRemainingPercent": 19,
+    "unchanged": true,
+    "rendezvousObservationStillRequired": true
+  },
+  "runtime": {
+    "path": "C:/nvm4w/nodejs/node.exe",
+    "observedVersion": "v22.23.2",
+    "versionCheckSucceededWithExecutionPermissions": true
+  },
+  "credentialCheckPath": "credential-check-2026-10-06.json",
+  "checks": {
+    "authorizationPureSchema": "PASS",
+    "reviewHash": "MATCH",
+    "eightImmutableInputHashes": "MATCH",
+    "evidenceFresh": true,
+    "semanticNamespaceAbsent": true
+  },
+  "providerQuota": {
+    "configuredProjectIdentityVerified": false,
+    "currentHeadroomVerified": false,
+    "reportedTierLimitsRemainHistorical": true,
+    "blockingEvidence": "AI Studio API-key/project access opened a Google sign-in page. No authenticated quota evidence was available.",
+    "userActionRequested": "Sign in to AI Studio in the opened tab and report readiness, or provide a fresh quota/headroom observation for the project linked to the .env.local key and frozen model. Do not send the API key."
+  },
+  "providerCalls": 0,
+  "providerProbes": 0,
+  "officialRequests": 0,
+  "launcherInvoked": false,
+  "semanticReservationCreated": false,
+  "evidenceExpiresAt": "2026-10-07T06:26:38.150Z",
+  "stopPolicy": {
+    "checkpointPreparationAtFiveHourRemainingPercent": 10,
+    "finishAboveFiveHourRemainingPercent": 5,
+    "noAutomaticResetCreditConsumption": true
+  },
+  "resumeSteps": [
+    "Authorization is already recorded; do not ask for it again.",
+    "Obtain credential-bound configured-project/model quota evidence: at least nine requests available, at least four starts/minute supported, and frozen request token limits supported. Do not use an extra provider probe.",
+    "Recheck allowance and freshness before launch; require unchanged 88%/19% at the launcher's post-validation rendezvous.",
+    "Load GEMINI_API_KEY from .env.local into the Node 22 execution process without exposing it, then invoke the reviewed launcher exactly once with zero retries after all gates pass.",
+    "Review and commit the actual execution outcome, including failure. Never retry a consumed or uncertain namespace."
+  ],
+  "scope": "Current pre-execution HOLD; no semantic acceptance outcome exists. No recapture, launcher change or frozen-input change."
+}
