@@ -30,6 +30,7 @@ import {
   runOfflineSyntheticV4CaseLoop,
   sha256,
   matchCaptureInventoryRequest,
+  matchPreparedRedirectEdge,
   unionProtectedHistoryPaths,
   validateActivationInventory,
   validateCapturePayload
@@ -425,6 +426,15 @@ async function testActivationControls() {
   const target = 'https://www.iras.gov.sg/explicit-redirect-target';
   const redirect = { ...source, url: target, purpose: 'REDIRECT', redirectFrom: source.url };
   const redirectRequest = { ...exactRequest, url: target };
+  const alreadyApprovedSource = { ...source, url: target, purpose: 'SOURCE' };
+  const observedRedirect = new Map([[target, new Set([source.url])]]);
+  assert.equal(matchPreparedRedirectEdge(exactRequest, redirectRequest, [source, alreadyApprovedSource], observedRedirect), undefined,
+    'an already approved SOURCE target does not authorize redirect re-entry');
+  assert.equal(matchPreparedRedirectEdge(exactRequest, redirectRequest, [source, redirect], observedRedirect), redirect,
+    'redirect re-entry requires its exact redirect row and observed parent Location');
+  assert.equal(matchPreparedRedirectEdge({ ...exactRequest, url: 'https://www.iras.gov.sg/other-parent' },
+    redirectRequest, [source, redirect], observedRedirect), undefined,
+  'the redirect edge is bound to the dispatched parent URL');
   assert.equal(matchCaptureInventoryRequest(redirectRequest, [redirect]), undefined,
     'redirect target requires an observed approved edge');
   assert.equal(matchCaptureInventoryRequest(redirectRequest, [redirect], new Map([[target, new Set([source.url])]])), redirect,
@@ -1088,6 +1098,102 @@ async function testCaptureDeadlineAndBodyLimit() {
   }
 }
 
+async function testPreparedRetrieverPreflightAndIdentityGate() {
+  const root = await temporaryDirectory('iras-v4-prepared-retriever-');
+  try {
+    const paths = await artifactPaths(root, 'preflight-before-retriever-timeout');
+    let preflightCount = 0;
+    let physicalFetchCount = 0;
+    const transport = captureTransport(root, paths, async (_url, init) => {
+      physicalFetchCount += 1;
+      assert.equal(init.signal.aborted, false, 'preparation delay must finish before the production timeout starts');
+      return new Response('<html><body>bounded source</body></html>', {
+        status: 200, headers: { 'content-type': 'text/html' }
+      });
+    }, {
+      syntheticTestControls: {
+        timeoutMs: 500,
+        preDispatchPreflight: async () => {
+          preflightCount += 1;
+          await new Promise(resolve => setTimeout(resolve, 80));
+        }
+      }
+    });
+    const webRetriever = bindProductionControlledRetriever({ transport, cache: new SourceCache() });
+    let fetchResult;
+    await runBoundedCapture({
+      transport,
+      syntheticMode: true,
+      execute: async ({ withEvidenceFamily }) => await withEvidenceFamily('gst', async () => {
+        fetchResult = await webRetriever.fetchOfficialSource('https://iras.gov.sg/prepared-fast', {
+          timeoutMs: 20, useCache: false
+        });
+      })
+    });
+    assert.equal(fetchResult.status, 'SUCCESS');
+    assert.equal(preflightCount, 1, 'the preparation control runs once before the production timeout');
+    assert.equal(physicalFetchCount, 1);
+    assert.equal(transport.requestCount, 1);
+
+    const slowPaths = await artifactPaths(root, 'physical-timeout-still-enforced');
+    let slowPhysicalFetchCount = 0;
+    const slowTransport = captureTransport(root, slowPaths, async (_url, init) => {
+      slowPhysicalFetchCount += 1;
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(resolve, 150);
+        init.signal.addEventListener('abort', () => {
+          clearTimeout(timeout);
+          const error = new Error('physical request aborted at the retriever deadline');
+          error.name = 'AbortError';
+          reject(error);
+        }, { once: true });
+      });
+      return new Response('too late');
+    }, { syntheticTestControls: { timeoutMs: 500 } });
+    const slowRetriever = bindProductionControlledRetriever({ transport: slowTransport, cache: new SourceCache() });
+    await assert.rejects(runBoundedCapture({
+      transport: slowTransport,
+      syntheticMode: true,
+      execute: async ({ withEvidenceFamily }) => await withEvidenceFamily('gst', () =>
+        slowRetriever.fetchOfficialSource('https://iras.gov.sg/prepared-slow', {
+          timeoutMs: 20, useCache: false
+        }))
+    }), /V4_CAPTURE_ACQUISITION_TIMEOUT/);
+    assert.equal(slowPhysicalFetchCount, 1);
+    const slowPayload = JSON.parse(await readFile(slowPaths.payloadPath, 'utf8'));
+    assert.equal(slowPayload.entries[0].failure, 'TIMEOUT');
+
+    const identityPaths = await artifactPaths(root, 'prepared-request-identity');
+    let identityFetchCount = 0;
+    const staleUrl = 'https://iras.gov.sg/prepared-identity';
+    const staleCache = new SourceCache(0);
+    staleCache.set({
+      canonicalUrl: staleUrl,
+      retrievedAt: new Date(0).toISOString(),
+      contentHash: sha256('stale content'),
+      rawContent: 'stale content',
+      httpStatus: 200,
+      etag: '"stale"',
+      expiresAt: 0
+    }, 0, 0);
+    const identityTransport = captureTransport(root, identityPaths, async () => {
+      identityFetchCount += 1;
+      return new Response('unexpected identity dispatch');
+    });
+    const identityRetriever = bindProductionControlledRetriever({ transport: identityTransport, cache: staleCache });
+    await assert.rejects(runBoundedCapture({
+      transport: identityTransport,
+      syntheticMode: true,
+      execute: async ({ withEvidenceFamily }) => await withEvidenceFamily('gst', () =>
+        identityRetriever.fetchOfficialSource(staleUrl, { useCache: true }))
+    }), /V4_CAPTURE_PREPARED_REQUEST_IDENTITY_CHANGED/);
+    assert.equal(identityFetchCount, 0, 'a post-preparation conditional-header change cannot dispatch');
+    assert.equal(identityTransport.requestCount, 0);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
 async function testCaseLoopAndOneUseReservation() {
   let clockValue = 0;
   const startTimes = [];
@@ -1341,6 +1447,7 @@ async function main() {
   await testLiveHoldBeforeOutput();
   await testCaptureBudgetsAndFailures();
   await testCaptureDeadlineAndBodyLimit();
+  await testPreparedRetrieverPreflightAndIdentityGate();
   await testCaseLoopAndOneUseReservation();
   process.stdout.write('V4 capture/replay runner regression passed\n');
 }

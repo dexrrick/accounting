@@ -75,6 +75,7 @@ const reviewedAcquisitionPermits = new WeakSet();
 const reviewedExecutionCapabilities = new WeakSet();
 const reviewedLiveCaptureTransports = new WeakSet();
 const reviewedReplayTransports = new WeakSet();
+const captureTransportPreparationApis = new WeakMap();
 const APPROVED_EXECUTION_MODULES = Object.freeze([
   Object.freeze({ path: 'scripts/iras_v4_production_acceptance_adapter.mjs', exportName: 'runV4AcceptanceCase' }),
   Object.freeze({ path: 'scripts/iras_v4_capture_transports.mjs', exportName: 'runV4CapturePlan' }),
@@ -918,7 +919,7 @@ export async function verifyFrozenActivationConfiguration({ activationConfigurat
   };
   assertActivationConfigurationBodyMatches(document, canonicalBody);
   return { passed: true, sha256: activation.sha256, document, runnerConfiguration: runner.snapshot,
-    preregistration: prereg.value };
+    runnerConfigurationFileSha256: runnerRead.sha256, preregistration: prereg.value };
 }
 
 /** Load only the named reviewed exports into a branded execution capability. */
@@ -944,6 +945,7 @@ export async function loadReviewedV4ExecutionCapability(options = {}) {
     root: path.resolve(options.root || ROOT),
     runnerIntegrityBindingSha256: verified.document.runnerIntegrityBindingSha256,
     captureInventorySha256: verified.document.captureInventorySha256,
+    reviewedModules: frozenJsonCopy(verified.document.reviewedModules),
     runV4AcceptanceCase: exports.runV4AcceptanceCase,
     runV4CapturePlan: exports.runV4CapturePlan,
     sendV4SemanticRequest: exports.sendV4SemanticRequest,
@@ -976,6 +978,8 @@ export async function validateReviewedAcquisitionPermit({
       integrityBindingSha256: verified.document.runnerIntegrityBindingSha256,
       captureInventorySha256: verified.document.captureInventorySha256,
       captureInventory: frozenJsonCopy(verified.document.captureInventory),
+      runnerConfigurationFileSha256: verified.runnerConfigurationFileSha256,
+      reviewedModules: frozenJsonCopy(verified.document.reviewedModules),
       productionEvidenceAdapterSha256: adapterRow.sha256,
       activationConfigurationSha256: verified.document.activationConfigurationSha256,
       activationConfigurationFileSha256: verified.sha256,
@@ -1071,6 +1075,14 @@ export function matchCaptureInventoryRequest(request, inventory, observedRedirec
     if (row.purpose !== 'REDIRECT') return true;
     return observedRedirects.get(row.url)?.has(row.redirectFrom) === true;
   });
+}
+
+export function matchPreparedRedirectEdge(parentRequest, request, inventory, observedRedirects = new Map()) {
+  if (!parentRequest || !request || !Array.isArray(inventory) ||
+      parentRequest.family !== request.family || !observedRedirects.get(request.url)?.has(parentRequest.url)) return undefined;
+  return inventory.find(row => row.purpose === 'REDIRECT' && row.redirectFrom === parentRequest.url &&
+    row.family === request.family && row.url === request.url && row.method === request.method &&
+    stableJson(row.headers) === stableJson(request.headers));
 }
 
 function requestIdentity(request) {
@@ -1312,7 +1324,10 @@ export function createCaptureTransport({
     maximumRequests,
     maximumRequestsPerFamily
   };
+  const transportBrand = Object.freeze({});
   const familyContext = new AsyncLocalStorage();
+  const preparedDispatchContext = new AsyncLocalStorage();
+  const preparedDispatchGrants = new WeakSet();
   const entries = [];
   const cacheReuses = [];
   const inFlightIdentities = new Set();
@@ -1415,7 +1430,10 @@ export function createCaptureTransport({
         permit.productionEvidenceAdapterSha256 !== acquisitionPermit.productionEvidenceAdapterSha256 ||
         permit.activationConfigurationSha256 !== acquisitionPermit.activationConfigurationSha256 ||
         permit.activationConfigurationFileSha256 !== acquisitionPermit.activationConfigurationFileSha256 ||
-        permit.preregistrationSha256 !== preregistrationSha256) {
+        permit.preregistrationSha256 !== preregistrationSha256 ||
+        permit.runnerConfigurationFileSha256 !== acquisitionPermit.runnerConfigurationFileSha256 ||
+        stableJson(permit.reviewedModules) !== stableJson(acquisitionPermit.reviewedModules) ||
+        stableJson(permit.reviewedModules) !== stableJson(executionCapability.reviewedModules)) {
       throw new Error('V4_CAPTURE_ACTIVATION_PERMIT_CHANGED');
     }
     assert.equal(captureInventoryDigest(acquisitionPermit.captureInventory), acquisitionPermit.captureInventorySha256,
@@ -1431,8 +1449,140 @@ export function createCaptureTransport({
     return permit;
   }
 
+  function preparedBindingRows(permit) {
+    assert.match(String(permit.runnerConfigurationFileSha256 || ''), SHA256_RE,
+      'V4_CAPTURE_PREPARED_RUNNER_FILE_BINDING_MISSING');
+    assert.match(String(permit.preregistrationSha256 || ''), SHA256_RE,
+      'V4_CAPTURE_PREPARED_PREREGISTRATION_BINDING_MISSING');
+    assert.match(String(permit.activationConfigurationFileSha256 || ''), SHA256_RE,
+      'V4_CAPTURE_PREPARED_ACTIVATION_FILE_BINDING_MISSING');
+    assert.ok(Array.isArray(permit.reviewedModules) && permit.reviewedModules.length > 0,
+      'V4_CAPTURE_PREPARED_EXECUTION_MODULE_BINDINGS_MISSING');
+    return frozenJsonCopy([
+      { label: 'runner-configuration', absolutePath: path.resolve(runnerConfigurationPath), sha256: permit.runnerConfigurationFileSha256 },
+      { label: 'preregistration', absolutePath: path.resolve(preregistrationPath), sha256: permit.preregistrationSha256 },
+      { label: 'activation-configuration', absolutePath: path.resolve(activationConfigurationPath), sha256: permit.activationConfigurationFileSha256 },
+      ...permit.reviewedModules.map(row => ({
+        label: 'reviewed-module:' + row.exportName,
+        absolutePath: path.resolve(root, row.path),
+        sha256: row.sha256
+      }))
+    ]);
+  }
+
+  async function assertPreparedBindingsUnchanged(prepared) {
+    assert.ok(prepared && prepared.brand === transportBrand && preparedDispatchGrants.has(prepared),
+      'V4_CAPTURE_PREPARED_DISPATCH_GRANT_REQUIRED');
+    assertReviewedV4ExecutionCapability(executionCapability);
+    assert.ok(reviewedAcquisitionPermits.has(acquisitionPermit), 'V4_LIVE_CAPTURE_REQUIRES_RECOMPUTED_REVIEWED_PERMIT');
+    assert.equal(prepared.capability, executionCapability, 'V4_CAPTURE_PREPARED_CAPABILITY_CHANGED');
+    assert.equal(prepared.integrityBindingSha256, integrityBindingSha256, 'V4_CAPTURE_PREPARED_RUNNER_BINDING_CHANGED');
+    assert.equal(prepared.activationConfigurationSha256, acquisitionPermit.activationConfigurationSha256,
+      'V4_CAPTURE_PREPARED_ACTIVATION_CHANGED');
+    assert.equal(prepared.activationConfigurationFileSha256, acquisitionPermit.activationConfigurationFileSha256,
+      'V4_CAPTURE_PREPARED_ACTIVATION_FILE_CHANGED');
+    assert.equal(prepared.captureInventorySha256, acquisitionPermit.captureInventorySha256,
+      'V4_CAPTURE_PREPARED_INVENTORY_CHANGED');
+    assert.equal(captureInventoryDigest(acquisitionPermit.captureInventory), acquisitionPermit.captureInventorySha256,
+      'V4_CAPTURE_PERMIT_INVENTORY_MUTATED');
+    assert.equal(stableJson(prepared.permit.reviewedModules), stableJson(executionCapability.reviewedModules),
+      'V4_CAPTURE_PREPARED_EXECUTION_MODULE_SET_CHANGED');
+    assert.equal(stableJson(acquisitionPermit.reviewedModules), stableJson(executionCapability.reviewedModules),
+      'V4_CAPTURE_EXECUTION_MODULE_BINDING_CHANGED');
+    for (const row of prepared.bindingRows) {
+      const relative = path.relative(root, row.absolutePath);
+      const safePath = await assertNoSymlinkPath(root, relative);
+      assert.equal(sha256(await readFile(safePath)), row.sha256, 'V4_CAPTURE_PREPARED_BINDING_CHANGED:' + row.label);
+    }
+    return true;
+  }
+
+  async function prepareRetrieverRequest(url, init, callback) {
+    assert.equal(typeof callback, 'function', 'V4_CAPTURE_PREPARED_CALLBACK_REQUIRED');
+    const family = familyContext.getStore();
+    let request;
+    try { request = normalizeRequest(url, init, family); }
+    catch (error) { throw latchIntegrity(error.message || 'V4_CAPTURE_REQUEST_REJECTED'); }
+    if (latch) throw latch;
+    const identity = requestIdentity(request);
+    const identityKey = request.family + ':' + identity;
+    const parent = preparedDispatchContext.getStore();
+    let permit;
+    let bindingRows = [];
+    if (!synthetic) {
+      try {
+        if (parent) {
+          await assertPreparedBindingsUnchanged(parent);
+          assert.equal(parent.consumed, true, 'V4_CAPTURE_REDIRECT_PARENT_NOT_DISPATCHED');
+          assert.equal(request.family, parent.request.family, 'V4_CAPTURE_REDIRECT_FAMILY_CHANGED');
+          permit = parent.permit;
+          const redirectRow = matchPreparedRedirectEdge(parent.request, request, permit.captureInventory, observedRedirects);
+          assert.ok(redirectRow,
+          'V4_CAPTURE_REDIRECT_EDGE_NOT_APPROVED_OR_OBSERVED');
+        } else {
+          permit = await revalidateActivatedDispatch(request);
+        }
+      } catch (error) {
+        throw latchIntegrity(error.message || 'V4_CAPTURE_PREFLIGHT_FAILED');
+      }
+    } else if (typeof syntheticTestControls.preDispatchPreflight === 'function') {
+      try { await syntheticTestControls.preDispatchPreflight(frozenJsonCopy(request)); }
+      catch (error) { throw latchIntegrity(error.message || 'V4_SYNTHETIC_PREFLIGHT_FAILED'); }
+    }
+    await reserveRequestSlot(identityKey, request);
+    const prepared = {
+      brand: transportBrand,
+      capability: executionCapability,
+      request: frozenJsonCopy(request),
+      identity,
+      identityKey,
+      permit: permit || null,
+      bindingRows,
+      integrityBindingSha256,
+      activationConfigurationSha256: acquisitionPermit?.activationConfigurationSha256 || null,
+      activationConfigurationFileSha256: acquisitionPermit?.activationConfigurationFileSha256 || null,
+      captureInventorySha256: acquisitionPermit?.captureInventorySha256 || null,
+      consumed: false
+    };
+    preparedDispatchGrants.add(prepared);
+    try {
+      if (!synthetic && !parent) {
+        await ensureReserved();
+        if (latch) throw latch;
+        permit = await revalidateActivatedDispatch(request);
+        prepared.permit = permit;
+        bindingRows = preparedBindingRows(permit);
+        prepared.bindingRows = bindingRows;
+        await assertPreparedBindingsUnchanged(prepared);
+      } else if (!synthetic) {
+        prepared.permit = permit;
+        prepared.bindingRows = parent.bindingRows;
+        await assertPreparedBindingsUnchanged(prepared);
+      }
+      return await preparedDispatchContext.run(prepared, callback);
+    } catch (error) {
+      throw latchIntegrity(error?.message || 'V4_CAPTURE_PREPARED_REQUEST_FAILED');
+    } finally {
+      if (!prepared.consumed) {
+        const previous = requestSlotChain;
+        let release;
+        requestSlotChain = new Promise(resolve => { release = resolve; });
+        await previous;
+        try {
+          if (inFlightIdentities.delete(identityKey)) {
+            reservedRequestCount = Math.max(0, reservedRequestCount - 1);
+            const count = Math.max(0, (reservedFamilyCounts.get(request.family) || 0) - 1);
+            if (count) reservedFamilyCounts.set(request.family, count);
+            else reservedFamilyCounts.delete(request.family);
+          }
+        } finally { release(); }
+      }
+    }
+  }
+
   async function captureFetch(url, init = {}) {
     const family = familyContext.getStore();
+    const prepared = preparedDispatchContext.getStore();
     let request;
     try {
       request = normalizeRequest(url, init, family);
@@ -1442,27 +1592,44 @@ export function createCaptureTransport({
     if (latch) throw latch;
     const identity = requestIdentity(request);
     const identityKey = request.family + ':' + identity;
-    if (!synthetic) {
-      try {
-        await revalidateActivatedDispatch(request);
-      } catch (error) {
-        throw latchIntegrity(error.message || 'V4_CAPTURE_PREFLIGHT_FAILED');
-      }
-    } else if (typeof syntheticTestControls.preDispatchPreflight === 'function') {
-      try { await syntheticTestControls.preDispatchPreflight(request); }
-      catch (error) { throw latchIntegrity(error.message || 'V4_SYNTHETIC_PREFLIGHT_FAILED'); }
+    if (!synthetic && !prepared) {
+      throw latchIntegrity('V4_CAPTURE_UNPREPARED_LIVE_DISPATCH_BLOCKED');
     }
-    await reserveRequestSlot(identityKey, request);
+    if (prepared) {
+      try {
+        assert.ok(preparedDispatchGrants.has(prepared) && prepared.brand === transportBrand,
+          'V4_CAPTURE_PREPARED_DISPATCH_GRANT_REQUIRED');
+        assert.equal(prepared.consumed, false, 'V4_CAPTURE_PREPARED_DISPATCH_GRANT_REUSED');
+        assert.equal(prepared.identity, identity, 'V4_CAPTURE_PREPARED_REQUEST_IDENTITY_CHANGED');
+        assert.equal(stableJson(prepared.request), stableJson(request), 'V4_CAPTURE_PREPARED_REQUEST_CHANGED');
+        if (!synthetic) {
+          await assertPreparedBindingsUnchanged(prepared);
+          assert.ok(matchCaptureInventoryRequest(request, prepared.permit.captureInventory, observedRedirects),
+            'V4_CAPTURE_REQUEST_NOT_IN_APPROVED_INVENTORY');
+        }
+        prepared.consumed = true;
+      } catch (error) {
+        throw latchIntegrity(error.message || 'V4_CAPTURE_PREPARED_DISPATCH_REJECTED');
+      }
+    } else {
+      if (typeof syntheticTestControls.preDispatchPreflight === 'function') {
+        try { await syntheticTestControls.preDispatchPreflight(frozenJsonCopy(request)); }
+        catch (error) { throw latchIntegrity(error.message || 'V4_SYNTHETIC_PREFLIGHT_FAILED'); }
+      }
+      await reserveRequestSlot(identityKey, request);
+    }
     try {
       await ensureReserved();
       if (latch) throw latch;
       if (!synthetic) {
-        try { await revalidateActivatedDispatch(request); }
-        catch (error) { throw latchIntegrity(error.message || 'V4_CAPTURE_POST_RESERVATION_PREFLIGHT_FAILED'); }
+        await assertPreparedBindingsUnchanged(prepared);
+        assert.ok(matchCaptureInventoryRequest(request, prepared.permit.captureInventory, observedRedirects),
+          'V4_CAPTURE_REQUEST_NOT_IN_APPROVED_INVENTORY');
       }
     } catch (error) {
       inFlightIdentities.delete(identityKey);
-      throw error;
+      if (error === latch) throw error;
+      throw latchIntegrity(error.message || 'V4_CAPTURE_POST_PREPARATION_CHECK_FAILED');
     }
     dispatchCount += 1;
     familyCounts.set(request.family, (familyCounts.get(request.family) || 0) + 1);
@@ -1715,6 +1882,7 @@ export function createCaptureTransport({
     },
     finalizeCapture
   };
+  captureTransportPreparationApis.set(transport, prepareRetrieverRequest);
   if (!synthetic) {
     transport.executionCapability = executionCapability;
     reviewedLiveCaptureTransports.add(transport);
@@ -2061,13 +2229,20 @@ export function bindProductionControlledRetriever({ transport, cache = new Sourc
   const webRetriever = new ControlledWebRetriever(validator, cache);
   const original = webRetriever.fetchOfficialSource.bind(webRetriever);
   webRetriever.fetchOfficialSource = async (url, options = {}) => {
-    try { validateOfficialUrl(url); }
+    let normalizedUrl;
+    try { normalizedUrl = validateOfficialUrl(url); }
     catch (error) {
       transport.assertHealthy?.();
       transport.trip?.('V4_PRODUCTION_REQUEST_URL_BLOCKED');
       throw error;
     }
-    const result = await original(url, { ...options, customFetch: transport.fetch });
+    const invokeOriginal = () => original(normalizedUrl, { ...options, customFetch: transport.fetch });
+    const prepare = captureTransportPreparationApis.get(transport);
+    const result = prepare
+      ? await prepare(normalizedUrl, {
+        method: 'GET', redirect: 'manual', headers: { Accept: ACCEPT_HEADER }
+      }, invokeOriginal)
+      : await invokeOriginal();
     if (result.cached) transport.recordCacheReuse?.(url, result);
     if (result.status === 'REDIRECT_REJECTED') transport.trip?.('V4_PRODUCTION_REDIRECT_REJECTED');
     transport.assertHealthy?.();

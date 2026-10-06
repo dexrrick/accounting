@@ -1,0 +1,32 @@
+{
+  "status": "OFFLINE_CONTROLS_AND_REVIEW_PASS",
+  "node": "22.23.2",
+  "externalNetworkBlocked": true,
+  "focusedRunner": "PASS",
+  "syntax": "PASS",
+  "targetedLint": "PASS_ZERO_WARNINGS",
+  "diffCheck": "PASS",
+  "independentReview": "NO_UNRESOLVED_MATERIAL_FINDINGS",
+  "priorFreezePreserved": true,
+  "officialRequests": 0,
+  "providerRequests": 0,
+  "liveCaptureReservations": 0,
+  "rows": [
+    {
+      "path": "scripts/iras_v4_capture_replay_runner.mjs",
+      "sha256": "deb6e7de2e1c53d054660bdef8a05d8dc74feed42dfb3023d482db409ed19571"
+    },
+    {
+      "path": "tests/regression/test_iras_v4_capture_replay_runner.mjs",
+      "sha256": "76f714fcb3bb9906efece2dbebb0e71972d65befb0879b89b8f18a2abede4c4f"
+    },
+    {
+      "path": ".tmp/v4-capture-timeout-fix-regression.log",
+      "sha256": "769bcb00c2554bd52c4a3696410187ae5bea465d8ab40d064fbbd9606b6e7713"
+    },
+    {
+      "path": ".tmp/v4-capture-timeout-fix-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
