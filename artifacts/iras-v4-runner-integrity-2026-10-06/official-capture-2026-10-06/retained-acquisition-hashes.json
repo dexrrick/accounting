@@ -1,0 +1,22 @@
+[
+  {
+    "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-reserved.json",
+    "sha256": "8508ccdaac24bfcec6bbc8369e4d7179ec0b7586bb0614bd41a39283e7aa58bf",
+    "bytes": 648
+  },
+  {
+    "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-partial.jsonl",
+    "sha256": "3efaea58fbfd55fe57075930c4a6d33ebe5ed5bcdbecd86b7bda6acda898daa9",
+    "bytes": 6780156
+  },
+  {
+    "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-payload.json",
+    "sha256": "7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9",
+    "bytes": 6786345
+  },
+  {
+    "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-result.json",
+    "sha256": "15bb1aa377dba8e3b12a7c001bd4089dcbba735ce940fec5705dace5885fc8a9",
+    "bytes": 3051
+  }
+]
