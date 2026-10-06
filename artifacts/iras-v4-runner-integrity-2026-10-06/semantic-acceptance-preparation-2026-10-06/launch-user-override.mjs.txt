@@ -1,0 +1,681 @@
+// Reviewed artifact-only launcher for the frozen nine-call semantic acceptance with an explicit user resource-threshold override.
+// From D:\Accounting, feed this text to Node 22 with the existing tsx loader:
+//   Get-Content -Raw 'artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06/launch-user-override.mjs.txt' | & 'C:\nvm4w\nodejs\node.exe' --import tsx --input-type=module - --check
+// `--check` is the default and never reads credentials or writes files. `--execute`
+// requires the supervisor's later human authorization; it does not authorize by itself.
+//
+// After expensive runner validation, sharedAllowanceReader exclusively writes a
+// gate-request-<id>.json in this preparation directory and prints AWAITING_FRESH_GATES.
+// Only after that log line, the supervisor calls get_usage_limits and writes the
+// matching gate-response-<id>.json exclusively. The response binds requestId and
+// launcherSha256 and retains the raw tool result plus its observedAt; it supplies no
+// remaining percentages. It also carries the reviewed reserve-document hash and fresh
+// provider quota/headroom confirmation for the fixed model and configured key hash.
+// No provider probe is made to fill missing or unknown quota evidence.
+
+import { execFileSync } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
+import { access, lstat, open, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+export const ROOT = 'D:/Accounting';
+export const GIT = 'C:/Users/Admin/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/git/cmd/git.exe';
+export const BASELINE_COMMIT = '80e64ad07011c586705c53be59d5372e81b5ee2d';
+export const PREP_DIR = 'artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06';
+export const ACTIVATION_DIR = 'artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix';
+export const CAPTURE_DIR = 'artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06';
+export const SEMANTIC_NAMESPACE = 'artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4';
+export const MODEL = 'gemini-3.5-flash-lite';
+export const LAUNCHER_PATH = `${PREP_DIR}/launch-user-override.mjs.txt`;
+export const AUTHORIZATION_PATH = `${PREP_DIR}/semantic-authorization-user-override.json`;
+export const REVIEW_PATH = `${PREP_DIR}/independent-review-user-override.json`;
+export const PROJECTION_PATH = `${PREP_DIR}/resource-projection-user-override.json`;
+export const RUNNER_PATH = `${ACTIVATION_DIR}/runner-configuration-current.json`;
+export const PREREGISTRATION_PATH = `${ACTIVATION_DIR}/preregistration.json`;
+export const ACTIVATION_PATH = `${ACTIVATION_DIR}/activation-configuration.json`;
+export const PAYLOAD_PATH = `${CAPTURE_DIR}/capture-payload.json`;
+export const EVIDENCE_LOCK_PATH = `${CAPTURE_DIR}/evidence-lock.json`;
+
+export const FROZEN_INPUT_HASHES = Object.freeze({
+  [RUNNER_PATH]: '15fbd23e629c5a13538ea380dccfcf260523670a71da026d8357fe6fba8b8806',
+  [PREREGISTRATION_PATH]: '483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3',
+  [ACTIVATION_PATH]: '5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30',
+  [PAYLOAD_PATH]: '7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9',
+  [`${CAPTURE_DIR}/capture-partial.jsonl`]: '3efaea58fbfd55fe57075930c4a6d33ebe5ed5bcdbecd86b7bda6acda898daa9',
+  [`${CAPTURE_DIR}/capture-result.json`]: '15bb1aa377dba8e3b12a7c001bd4089dcbba735ce940fec5705dace5885fc8a9',
+  [EVIDENCE_LOCK_PATH]: '36f1ac828e25ab0cc4f9879954efa1479ab3e68122043d2ccff255f8dd57dac1',
+  [`${CAPTURE_DIR}/completion-result.json`]: '22ca1252c3ae2fd99326fa2835ebd2c0e70cffdcdfd511ef6135aa51f6b5e524'
+});
+
+const HASH_RE = /^[a-f0-9]{64}$/;
+const COMMIT_RE = /^[a-f0-9]{40}$/;
+const EXPECTED_TOOL = 'mcp__codex_app__get_usage_limits';
+const PROVIDER_QUOTA_MAX_AGE_MS = 30 * 60_000;
+const OUTPUT_NAMES = Object.freeze([
+  'consumed-v4.json', 'acceptance-v4.json', 'acceptance-v4.json.tmp', 'runner-v4.partial.jsonl'
+]);
+const PROJECTION = Object.freeze({ fiveHourCostPercentagePoints: 50, weeklyCostPercentagePoints: 15 });
+const REQUIRED_RESERVES = Object.freeze({ fiveHour: 8, weekly: 4 });
+const CHECKPOINT_FIVE_HOUR_PERCENT = 10;
+const FINISH_ABOVE_FIVE_HOUR_PERCENT = 5;
+export const RESOURCE_OVERRIDE_USER_INSTRUCTION = 'please continue\nignore the 88% threshold';
+const activeExecution = { mode: null, runId: null, context: null, authorization: null,
+  phase: 'CLI', runnerInvoked: false, runnerReturned: false };
+
+const abs = relative => path.resolve(ROOT, relative);
+const sha256 = value => createHash('sha256').update(value).digest('hex');
+const codedError = code => Object.assign(new Error(code), { code });
+const isoNow = () => new Date().toISOString();
+
+export function parseCliArguments(args = []) {
+  if (!Array.isArray(args) || args.length > 1) throw codedError('INVALID_CLI_ARGUMENTS');
+  if (args.length === 0 || args[0] === '--check') return Object.freeze({ mode: 'check' });
+  if (args[0] === '--execute') return Object.freeze({ mode: 'execute' });
+  throw codedError('INVALID_CLI_ARGUMENTS');
+}
+
+export function requireFreshTimestamp(value, now = Date.now(), maximumAgeMs = 5 * 60_000, code = 'OBSERVATION_STALE') {
+  const observed = Date.parse(value || '');
+  if (!Number.isFinite(observed) || observed > now || now - observed > maximumAgeMs) throw codedError(code);
+  return observed;
+}
+
+export function validateProjectionEvidence(documentText) {
+  let document;
+  try { document = JSON.parse(String(documentText || '')); } catch { throw codedError('RESERVE_PROJECTION_EVIDENCE_INVALID'); }
+  if (!document || document.profile !== 'resource-projection-user-override' ||
+      document.fiveHourCostPercentagePoints !== PROJECTION.fiveHourCostPercentagePoints ||
+      document.weeklyCostPercentagePoints !== PROJECTION.weeklyCostPercentagePoints ||
+      document.humanOverride !== true || document.userInstruction !== RESOURCE_OVERRIDE_USER_INSTRUCTION ||
+      document.requiredFiveHourReservePercentagePoints !== REQUIRED_RESERVES.fiveHour ||
+      document.requiredWeeklyReservePercentagePoints !== REQUIRED_RESERVES.weekly ||
+      document.checkpointAtRemainingFiveHourPercent !== CHECKPOINT_FIVE_HOUR_PERCENT ||
+      document.finishAboveFiveHourPercent !== FINISH_ABOVE_FIVE_HOUR_PERCENT ||
+      document.resultingMinimumRemainingAtReservation?.fiveHourPercent !==
+        PROJECTION.fiveHourCostPercentagePoints + REQUIRED_RESERVES.fiveHour ||
+      document.resultingMinimumRemainingAtReservation?.weeklyPercent !==
+        PROJECTION.weeklyCostPercentagePoints + REQUIRED_RESERVES.weekly) {
+    throw codedError('RESERVE_PROJECTION_EVIDENCE_INVALID');
+  }
+  return PROJECTION;
+}
+
+function decodeUsageDocument(rawPayload) {
+  if (!rawPayload || typeof rawPayload !== 'object' || rawPayload.isError === true) {
+    throw codedError('USAGE_LIMITS_UNREADABLE');
+  }
+  const content = Array.isArray(rawPayload.content) ? rawPayload.content.filter(row => row?.type === 'text') : [];
+  if (content.length === 1 && typeof content[0].text === 'string') {
+    try { return JSON.parse(content[0].text); } catch { throw codedError('USAGE_LIMITS_UNREADABLE'); }
+  }
+  if (rawPayload.structuredContent && typeof rawPayload.structuredContent === 'object') return rawPayload.structuredContent;
+  throw codedError('USAGE_LIMITS_UNREADABLE');
+}
+
+export function deriveCodexAllowance(observation, projection, now = Date.now()) {
+  if (observation?.sourceTool !== EXPECTED_TOOL) throw codedError('USAGE_LIMITS_SOURCE_INVALID');
+  requireFreshTimestamp(observation.observedAt, now, 5 * 60_000, 'USAGE_LIMITS_STALE');
+  const usage = decodeUsageDocument(observation.rawPayload);
+  if (usage.ordinaryUsageAllowed !== true) throw codedError('USAGE_LIMITS_UNREADABLE');
+  const codexLimits = usage.rateLimitsByLimitId?.codex;
+  const fiveHour = codexLimits?.primary;
+  const weekly = codexLimits?.secondary;
+  if (fiveHour?.windowDurationMins !== 300 || weekly?.windowDurationMins !== 10_080) {
+    throw codedError('USAGE_LIMITS_WINDOW_INVALID');
+  }
+  const used = [fiveHour.usedPercent, weekly.usedPercent];
+  if (!used.every(value => Number.isFinite(value) && value >= 0 && value <= 100)) {
+    throw codedError('USAGE_LIMITS_UNREADABLE');
+  }
+  if (projection?.fiveHourCostPercentagePoints !== PROJECTION.fiveHourCostPercentagePoints ||
+      projection?.weeklyCostPercentagePoints !== PROJECTION.weeklyCostPercentagePoints) {
+    throw codedError('RESERVE_PROJECTION_INVALID');
+  }
+  return Object.freeze({
+    source: 'codex',
+    readable: true,
+    observedAt: observation.observedAt,
+    fiveHourRemainingPercent: 100 - fiveHour.usedPercent,
+    weeklyRemainingPercent: 100 - weekly.usedPercent,
+    projectedFiveHourCostPercentagePoints: PROJECTION.fiveHourCostPercentagePoints,
+    projectedWeeklyCostPercentagePoints: PROJECTION.weeklyCostPercentagePoints
+  });
+}
+
+export function validateReserve(allowance) {
+  const numbers = [allowance?.fiveHourRemainingPercent, allowance?.weeklyRemainingPercent,
+    allowance?.projectedFiveHourCostPercentagePoints, allowance?.projectedWeeklyCostPercentagePoints];
+  if (!numbers.every(value => Number.isFinite(value) && value >= 0 && value <= 100)) {
+    throw codedError('RESERVE_PROJECTION_INVALID');
+  }
+  const fiveHourAfter = allowance.fiveHourRemainingPercent - allowance.projectedFiveHourCostPercentagePoints;
+  const weeklyAfter = allowance.weeklyRemainingPercent - allowance.projectedWeeklyCostPercentagePoints;
+  if (fiveHourAfter < 8 || weeklyAfter < 4) throw codedError('PROJECTED_RESERVE_NOT_MET');
+  return Object.freeze({ fiveHourAfter, weeklyAfter });
+}
+
+export function validateProviderQuotaEvidence(evidence, {
+  now = Date.now(), credentialSha256, preregistrationSha256
+} = {}) {
+  // User-confirmed provider headroom has a separate 30-minute TTL; Codex allowance
+  // remains limited to five minutes and is sampled only at this runner rendezvous.
+  requireFreshTimestamp(evidence?.observedAt, now, PROVIDER_QUOTA_MAX_AGE_MS, 'PROVIDER_QUOTA_STALE');
+  if (evidence?.provider !== 'gemini' || evidence?.model !== MODEL ||
+      typeof evidence?.source !== 'string' || !evidence.source.trim() || evidence?.synthetic === true) {
+    throw codedError('PROVIDER_QUOTA_UNKNOWN');
+  }
+  if (!HASH_RE.test(String(evidence.credentialSha256 || '')) || evidence.credentialSha256 !== credentialSha256) {
+    throw codedError('PROVIDER_QUOTA_CREDENTIAL_MISMATCH');
+  }
+  const limits = evidence.reportedLimits;
+  const headroom = evidence.currentHeadroom;
+  if (!limits || !headroom || !Number.isFinite(limits.requestsPerMinute) || limits.requestsPerMinute < 4 ||
+      !Number.isFinite(limits.tokensPerMinute) || limits.tokensPerMinute <= 0 ||
+      !Number.isFinite(limits.requestsPerDay) || limits.requestsPerDay < 9 ||
+      !Number.isSafeInteger(headroom.confirmedRequestCapacity) || headroom.confirmedRequestCapacity < 9 ||
+      headroom.confirmedForNineFrozenRequests !== true || headroom.frozenRequestTokenLimitsSupported !== true ||
+      headroom.preregistrationSha256 !== preregistrationSha256) {
+    throw codedError('PROVIDER_QUOTA_HEADROOM_UNCONFIRMED');
+  }
+  return Object.freeze({ source: evidence.source, observedAt: evidence.observedAt,
+    model: evidence.model, credentialSha256: evidence.credentialSha256 });
+}
+
+export function validateAuthorizationDocument(authorization, expected) {
+  if (!authorization || authorization.profile !== 'iras-v4-semantic-execution-authorization' ||
+      authorization.status !== 'AUTHORIZED' || authorization.humanAuthorized !== true ||
+      authorization.authorizedBy !== 'user' || authorization.authorizedGeminiCalls !== 9 ||
+      authorization.model !== MODEL || authorization.retries !== 0 ||
+      authorization.humanResourceThresholdOverride !== true ||
+      authorization.resourceOverrideUserInstruction !== RESOURCE_OVERRIDE_USER_INSTRUCTION) {
+    throw codedError('AUTHORIZATION_INVALID');
+  }
+  if (!COMMIT_RE.test(String(authorization.reviewedPreparationCommit || ''))) {
+    throw codedError('REVIEWED_PREPARATION_COMMIT_INVALID');
+  }
+  if (authorization.launcherSha256 !== expected.launcherSha256 ||
+      authorization.baselineCommit !== BASELINE_COMMIT ||
+      authorization.reserveProjectionSha256 !== expected.reserveProjectionSha256 ||
+      (expected.reviewedPreparationCommit && authorization.reviewedPreparationCommit !== expected.reviewedPreparationCommit) ||
+      !HASH_RE.test(String(authorization.independentReviewSha256 || ''))) {
+    throw codedError('AUTHORIZATION_BINDING_MISMATCH');
+  }
+  const actual = authorization.immutableInputHashes;
+  const expectedRows = Object.entries(FROZEN_INPUT_HASHES).sort(([a], [b]) => a.localeCompare(b));
+  const actualRows = actual && typeof actual === 'object' && !Array.isArray(actual)
+    ? Object.entries(actual).sort(([a], [b]) => a.localeCompare(b)) : [];
+  if (JSON.stringify(actualRows) !== JSON.stringify(expectedRows)) throw codedError('AUTHORIZATION_INPUT_HASHES_MISMATCH');
+  requireFreshTimestamp(authorization.authorizedAt, expected.now ?? Date.now(), 365 * 24 * 60 * 60_000,
+    'AUTHORIZATION_TIMESTAMP_INVALID');
+  return true;
+}
+
+export function assertOutputNamesUnused(existingNames) {
+  const present = new Set(existingNames || []);
+  const reused = OUTPUT_NAMES.find(name => present.has(name));
+  if (reused) throw codedError('SEMANTIC_NAMESPACE_ALREADY_USED');
+  return true;
+}
+
+export function classifyCanonicalObservations(observations = []) {
+  const rows = new Map((Array.isArray(observations) ? observations : [])
+    .filter(row => row && OUTPUT_NAMES.includes(row.name)).map(row => [row.name, row]));
+  const observedAllAbsent = OUTPUT_NAMES.every(name => rows.get(name)?.state === 'ABSENT');
+  const anyPresent = OUTPUT_NAMES.some(name => rows.get(name)?.state === 'PRESENT');
+  const hashes = Object.fromEntries(OUTPUT_NAMES.map(name => {
+    const value = rows.get(name)?.sha256;
+    return [name, HASH_RE.test(String(value || '')) ? value : null];
+  }));
+  const states = Object.fromEntries(OUTPUT_NAMES.map(name => [name, rows.get(name)?.state || 'UNCERTAIN']));
+  return Object.freeze({
+    reservationState: observedAllAbsent ? 'OBSERVED_ABSENT' : anyPresent ? 'OUTPUT_PRESENT' : 'STATE_UNCERTAIN',
+    observedAllAbsent,
+    anyPresent,
+    retryPermitted: observedAllAbsent,
+    hashes: Object.freeze(hashes),
+    states: Object.freeze(states)
+  });
+}
+
+export function attributeCanonicalState(canonicalState, runnerReturned = false) {
+  const consumed = canonicalState?.states?.['consumed-v4.json'] === 'PRESENT';
+  const retryPermitted = canonicalState?.observedAllAbsent === true && runnerReturned !== true;
+  const status = consumed ? 'CONSUMED_NO_RETRY' : canonicalState?.anyPresent ? 'OUTPUT_PRESENT_NO_RETRY' :
+    canonicalState?.observedAllAbsent ? runnerReturned ? 'RUNNER_RETURNED_NO_RETRY' : 'OBSERVED_UNCONSUMED' :
+      'STATE_UNCERTAIN_NO_RETRY';
+  return Object.freeze({ status, consumed, retryPermitted,
+    reservationState: canonicalState?.reservationState || 'STATE_UNCERTAIN',
+    hashes: canonicalState?.hashes || Object.fromEntries(OUTPUT_NAMES.map(name => [name, null])),
+    states: canonicalState?.states || Object.fromEntries(OUTPUT_NAMES.map(name => [name, 'UNCERTAIN'])) });
+}
+
+export function safeFailureCode(error) {
+  const messageCode = String(error?.message || '').match(/^([A-Z][A-Z0-9_]{2,79})(?=[:\s]|$)/)?.[1];
+  if (messageCode && !['ERR_ASSERTION', 'ASSERTIONERROR'].includes(messageCode)) return messageCode;
+  const errorCode = String(error?.code || '').match(/^([A-Z][A-Z0-9_]{2,79})$/)?.[1];
+  if (errorCode && !['ERR_ASSERTION', 'ASSERTIONERROR'].includes(errorCode)) return errorCode;
+  return errorCode === 'ERR_ASSERTION' ? 'ASSERTION_FAILURE' : 'UNCLASSIFIED_FAILURE';
+}
+
+export function buildLaunchAudit({ status, phase, runnerInvoked, consumed, firstFailure,
+  context, authorization, gates, attribution,
+  finishedAt = new Date().toISOString() }) {
+  const safeFirstFailure = typeof firstFailure === 'string' && /^[A-Z][A-Z0-9_]{2,79}$/.test(firstFailure)
+    ? firstFailure : null;
+  return {
+    profile: 'iras-v4-semantic-launch-audit', status, phase, runnerInvoked,
+    consumed: attribution?.consumed ?? consumed,
+    reservationState: attribution?.reservationState || 'STATE_UNCERTAIN',
+    canonicalOutputStates: attribution?.states || Object.fromEntries(OUTPUT_NAMES.map(name => [name, 'UNCERTAIN'])),
+    firstFailure: safeFirstFailure,
+    launcherSha256: context.launcherSha256,
+    baselineCommit: BASELINE_COMMIT, launchHead: context.git.head, launchBranch: context.git.branch,
+    immutableInputHashes: FROZEN_INPUT_HASHES,
+    independentReviewSha256: authorization?.independentReviewSha256 || null,
+    reserveProjectionSha256: context.projectionSha256,
+    captureExpiresAt: context.captureExpiresAt,
+    gateResponseSha256: gates?.gateResponseSha256 || null,
+    providerQuotaEvidenceSummary: gates ? {
+      source: gates.quotaSummary.source, observedAt: gates.quotaSummary.observedAt, model: gates.quotaSummary.model
+    } : null,
+    runnerOutputSha256: attribution?.hashes || Object.fromEntries(OUTPUT_NAMES.map(name => [name, null])),
+    retryPermitted: attribution?.retryPermitted ?? false,
+    finishedAt
+  };
+}
+
+async function fileExists(filePath) {
+  try { await access(filePath); return true; }
+  catch (error) { if (error?.code === 'ENOENT') return false; throw error; }
+}
+
+async function observeCanonicalState(namespaceDirectory = abs(SEMANTIC_NAMESPACE)) {
+  const observations = [];
+  for (const name of OUTPUT_NAMES) {
+    const target = path.join(namespaceDirectory, name);
+    try {
+      const metadata = await lstat(target);
+      if (!metadata.isFile()) {
+        observations.push({ name, state: 'PRESENT', sha256: null });
+        continue;
+      }
+      try {
+        observations.push({ name, state: 'PRESENT', sha256: sha256(await readFile(target)) });
+      } catch {
+        observations.push({ name, state: 'UNCERTAIN', sha256: null });
+      }
+    } catch (error) {
+      observations.push({ name, state: error?.code === 'ENOENT' ? 'ABSENT' : 'UNCERTAIN', sha256: null });
+    }
+  }
+  return classifyCanonicalObservations(observations);
+}
+
+async function readRegularFile(relative) {
+  const filePath = abs(relative);
+  const metadata = await lstat(filePath);
+  if (!metadata.isFile()) throw codedError('FROZEN_INPUT_NOT_REGULAR_FILE');
+  return readFile(filePath);
+}
+
+async function readJson(relative, expectedHash) {
+  const bytes = await readRegularFile(relative);
+  if (expectedHash && sha256(bytes) !== expectedHash) throw codedError('FROZEN_INPUT_HASH_MISMATCH');
+  try { return { bytes, sha256: sha256(bytes), value: JSON.parse(bytes.toString('utf8')) }; }
+  catch { throw codedError('FROZEN_INPUT_JSON_INVALID'); }
+}
+
+async function writeExclusive(filePath, document) {
+  const bytes = Buffer.from(`${JSON.stringify(document, null, 2)}\n`, 'utf8');
+  const handle = await open(filePath, 'wx');
+  try { await handle.writeFile(bytes); await handle.sync(); }
+  finally { await handle.close(); }
+  return sha256(bytes);
+}
+
+async function assertRawFrozenHashes() {
+  for (const [relative, expectedHash] of Object.entries(FROZEN_INPUT_HASHES)) {
+    const bytes = await readRegularFile(relative);
+    if (sha256(bytes) !== expectedHash) throw codedError('FROZEN_INPUT_HASH_MISMATCH');
+  }
+}
+
+function verifyBaselineAncestry() {
+  execFileSync(GIT, ['-C', ROOT, 'merge-base', '--is-ancestor', BASELINE_COMMIT, 'HEAD'], { stdio: 'ignore' });
+  const head = execFileSync(GIT, ['-C', ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const branch = execFileSync(GIT, ['-C', ROOT, 'rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim();
+  if (!COMMIT_RE.test(head) || !branch || branch === 'HEAD') throw codedError('BASELINE_BRANCH_INVALID');
+  return { head, branch };
+}
+
+async function assertNamespaceUnused(namespaceDirectory) {
+  const existing = [];
+  for (const name of OUTPUT_NAMES) if (await fileExists(path.join(namespaceDirectory, name))) existing.push(name);
+  return assertOutputNamesUnused(existing);
+}
+
+function assertEvidenceLockLinks(lock, { activation, preregistrationSha256, payloadSha256, payloadValidation,
+  runnerConfiguration }) {
+  if (!lock || lock.profile !== 'iras-v4-runner-integrity' || lock.mode !== 'frozenContemporaneousCapture' ||
+      lock.frozen !== true || lock.synthetic !== false) throw codedError('EVIDENCE_LOCK_INVALID');
+  const pairs = [
+    [lock.preregistrationSha256, preregistrationSha256],
+    [lock.capturePayloadSha256, payloadSha256],
+    [lock.runnerIntegrityBindingSha256, activation.runnerConfiguration.integrityBindingSha256],
+    [lock.activationConfigurationSha256, activation.document.activationConfigurationSha256],
+    [lock.activationConfigurationFileSha256, activation.sha256],
+    [lock.captureInventorySha256, activation.document.captureInventorySha256],
+    [lock.captureFileInventorySha256, runnerConfiguration.fileInventorySha256],
+    [lock.capturedAt, payloadValidation.earliestAcquisitionAt],
+    [lock.sourceReferenceDate, payloadValidation.earliestAcquisitionAt.slice(0, 10)]
+  ];
+  if (pairs.some(([actual, expected]) => actual !== expected)) throw codedError('EVIDENCE_LOCK_BINDING_MISMATCH');
+  for (const key of ['contractSha256', 'productionFingerprintSha256', 'sourceFingerprintSha256',
+    'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'evaluationFingerprintSha256']) {
+    if (lock[key] !== activation.preregistration[key]) throw codedError('EVIDENCE_LOCK_PREREGISTRATION_LINK_MISMATCH');
+  }
+  if (!Array.isArray(lock.captureRows) && !Number.isSafeInteger(lock.requestCount)) {
+    throw codedError('EVIDENCE_LOCK_CAPTURE_METADATA_INVALID');
+  }
+}
+
+async function getPreparationContext(runner, { now = new Date() } = {}) {
+  if (path.resolve(process.cwd()).replaceAll('\\', '/') !== ROOT) throw codedError('LAUNCH_WRONG_ROOT');
+  if (Number(process.versions.node.split('.')[0]) !== 22) throw codedError('LAUNCH_REQUIRES_NODE_22');
+  const git = verifyBaselineAncestry();
+  const launcherBytes = await readRegularFile(LAUNCHER_PATH);
+  const launcherSha256 = sha256(launcherBytes);
+  const projectionBytes = await readRegularFile(PROJECTION_PATH);
+  const projectionSha256 = sha256(projectionBytes);
+  validateProjectionEvidence(projectionBytes.toString('utf8'));
+  await assertRawFrozenHashes();
+  const activation = await runner.verifyFrozenActivationConfiguration({
+    activationConfigurationPath: abs(ACTIVATION_PATH), root: ROOT, gitExecutable: GIT
+  });
+  if (activation.sha256 !== FROZEN_INPUT_HASHES[ACTIVATION_PATH] ||
+      activation.runnerConfiguration.semanticNamespace !== SEMANTIC_NAMESPACE) {
+    throw codedError('FROZEN_ACTIVATION_BINDING_MISMATCH');
+  }
+  const preregistrationRead = await readJson(PREREGISTRATION_PATH, FROZEN_INPUT_HASHES[PREREGISTRATION_PATH]);
+  const payloadRead = await readJson(PAYLOAD_PATH, FROZEN_INPUT_HASHES[PAYLOAD_PATH]);
+  const lockRead = await readJson(EVIDENCE_LOCK_PATH, FROZEN_INPUT_HASHES[EVIDENCE_LOCK_PATH]);
+  const payloadValidation = runner.validateCapturePayload(payloadRead.value, {
+    now,
+    expectedIntegrityBindingSha256: activation.runnerConfiguration.integrityBindingSha256,
+    expectedPreregistrationSha256: preregistrationRead.sha256,
+    expectedActivationConfigurationSha256: activation.document.activationConfigurationSha256,
+    expectedActivationConfigurationFileSha256: activation.sha256,
+    expectedCaptureInventory: activation.document.captureInventory,
+    syntheticMode: false,
+    requireComplete: true
+  });
+  const oldestCapture = Date.parse(payloadValidation.earliestAcquisitionAt);
+  if (!Number.isFinite(oldestCapture) || oldestCapture > now.getTime() || now.getTime() - oldestCapture > 24 * 60 * 60_000) {
+    throw codedError('CAPTURE_EVIDENCE_EXPIRED');
+  }
+  assertEvidenceLockLinks(lockRead.value, {
+    activation, preregistrationSha256: preregistrationRead.sha256, payloadSha256: payloadRead.sha256,
+    payloadValidation, runnerConfiguration: activation.runnerConfiguration
+  });
+  const namespaceDirectory = abs(SEMANTIC_NAMESPACE);
+  await assertNamespaceUnused(namespaceDirectory);
+  return {
+    git,
+    launcherSha256,
+    projectionSha256,
+    activation,
+    preregistration: preregistrationRead.value,
+    preregistrationSha256: preregistrationRead.sha256,
+    payloadSha256: payloadRead.sha256,
+    evidenceLockSha256: lockRead.sha256,
+    captureExpiresAt: new Date(oldestCapture + 24 * 60 * 60_000).toISOString(),
+    namespaceDirectory
+  };
+}
+
+async function assertAuthorization(context, now = new Date()) {
+  const authorizationRead = await readJson(AUTHORIZATION_PATH);
+  const reviewBytes = await readRegularFile(REVIEW_PATH);
+  const reviewHash = sha256(reviewBytes);
+  const authorization = authorizationRead.value;
+  validateAuthorizationDocument(authorization, {
+    launcherSha256: context.launcherSha256,
+    reserveProjectionSha256: context.projectionSha256,
+    now: now.getTime()
+  });
+  if (authorization.independentReviewPath !== REVIEW_PATH || authorization.independentReviewSha256 !== reviewHash) {
+    throw codedError('INDEPENDENT_REVIEW_BINDING_MISMATCH');
+  }
+  if (!COMMIT_RE.test(authorization.reviewedPreparationCommit)) throw codedError('REVIEWED_PREPARATION_COMMIT_INVALID');
+  execFileSync(GIT, ['-C', ROOT, 'merge-base', '--is-ancestor', authorization.reviewedPreparationCommit, 'HEAD'], { stdio: 'ignore' });
+  const committedPaths = [
+    [LAUNCHER_PATH, context.launcherSha256],
+    [PROJECTION_PATH, context.projectionSha256],
+    [REVIEW_PATH, reviewHash]
+  ];
+  for (const [relative, expectedHash] of committedPaths) {
+    if (sha256(await readRegularFile(relative)) !== expectedHash) {
+      throw codedError('REVIEWED_PREPARATION_WORKTREE_CONTENT_MISMATCH');
+    }
+    const committedBytes = execFileSync(GIT, ['-C', ROOT, 'show', `${authorization.reviewedPreparationCommit}:${relative}`]);
+    if (sha256(committedBytes) !== expectedHash) throw codedError('REVIEWED_PREPARATION_COMMIT_CONTENT_MISMATCH');
+  }
+  return authorization;
+}
+
+async function waitForGateResponse({ requestId, launcherSha256, projectionSha256, preregistrationSha256,
+  credentialSha256, requestTimestamp }) {
+  const responsePath = abs(`${PREP_DIR}/gate-response-${requestId}.json`);
+  const requestPath = abs(`${PREP_DIR}/gate-request-${requestId}.json`);
+  if (await fileExists(responsePath)) throw codedError('GATE_RESPONSE_REUSE');
+  const request = {
+    profile: 'iras-v4-semantic-gate-request', requestId, launcherSha256, requestedAt: requestTimestamp,
+    responsePath: `${PREP_DIR}/gate-response-${requestId}.json`,
+    requiredUsageTool: EXPECTED_TOOL, usageWindowsMinutes: [300, 10_080], maximumObservationAgeMs: 300_000,
+    projectionSha256, preregistrationSha256, model: MODEL, quotaMustBindCredentialSha256: credentialSha256,
+    confirmedCapacityRequired: 9, providerRequestsPerMinuteRequired: 4
+  };
+  await writeExclusive(requestPath, request);
+  console.log(JSON.stringify({ phase: 'AWAITING_FRESH_GATES', requestId, requestPath: request.responsePath,
+    deadlineSeconds: 120 }));
+  const deadline = Date.now() + 120_000;
+  let responseBytes;
+  while (Date.now() < deadline) {
+    try {
+      const metadata = await lstat(responsePath);
+      if (!metadata.isFile()) throw codedError('GATE_RESPONSE_UNREADABLE');
+      responseBytes = await readFile(responsePath);
+      break;
+    }
+    catch (error) { if (error?.code !== 'ENOENT') throw codedError('GATE_RESPONSE_UNREADABLE'); }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  if (!responseBytes) throw codedError('GATE_RESPONSE_TIMEOUT');
+  let response;
+  try { response = JSON.parse(responseBytes.toString('utf8')); }
+  catch { throw codedError('GATE_RESPONSE_INVALID'); }
+  if (response.profile !== 'iras-v4-semantic-gate-response' || response.requestId !== requestId ||
+      response.launcherSha256 !== launcherSha256 || response.projectionSha256 !== projectionSha256) {
+    throw codedError('GATE_RESPONSE_BINDING_MISMATCH');
+  }
+  const now = Date.now();
+  const requestedAt = Date.parse(requestTimestamp);
+  const suppliedAt = Date.parse(response.suppliedAt || '');
+  const usageObservedAt = Date.parse(response.usageObservation?.observedAt || '');
+  if (!Number.isFinite(requestedAt) || !Number.isFinite(suppliedAt) || suppliedAt < requestedAt || suppliedAt > now ||
+      !Number.isFinite(usageObservedAt) || usageObservedAt < requestedAt) {
+    throw codedError('GATE_RESPONSE_NOT_POST_REQUEST');
+  }
+  const projection = validateProjectionEvidence((await readFile(abs(PROJECTION_PATH))).toString('utf8'));
+  const allowance = deriveCodexAllowance(response.usageObservation, projection, now);
+  const reserveAfterProjection = validateReserve(allowance);
+  const quotaSummary = validateProviderQuotaEvidence(response.providerQuotaEvidence, {
+    now, credentialSha256, preregistrationSha256
+  });
+  return { allowance, reserveAfterProjection, quotaSummary, gateResponseSha256: sha256(responseBytes) };
+}
+
+async function sharedAllowanceReader(context) {
+  // This is the first credential read in the launcher, after human authorization.
+  const credential = process.env.GEMINI_API_KEY;
+  if (typeof credential !== 'string' || credential.trim().length <= 10) throw codedError('GEMINI_CREDENTIAL_UNAVAILABLE');
+  const credentialSha256 = sha256(Buffer.from(credential, 'utf8'));
+  const requestId = randomUUID();
+  const requestTimestamp = isoNow();
+  const gates = await waitForGateResponse({ requestId, launcherSha256: context.launcherSha256,
+    projectionSha256: context.projectionSha256, preregistrationSha256: context.preregistrationSha256,
+    credentialSha256, requestTimestamp });
+  return gates;
+}
+
+async function writeLaunchAudit(runId, document) {
+  const destination = abs(`${PREP_DIR}/semantic-launch-audit-${runId}.json`);
+  try {
+    const digest = await writeExclusive(destination, document);
+    return { saved: true, sha256: digest };
+  } catch (error) {
+    return { saved: false, code: safeFailureCode(error) };
+  }
+}
+
+async function executeOnce(runner, context, authorization, runId) {
+  let result = null;
+  let failure = null;
+  let gates = null;
+  activeExecution.phase = 'CAPABILITY_LOAD';
+  activeExecution.context = context;
+  activeExecution.authorization = authorization;
+  try {
+    const executionCapability = await runner.loadReviewedV4ExecutionCapability({
+      activationConfigurationPath: abs(ACTIVATION_PATH), root: ROOT, gitExecutable: GIT
+    });
+    activeExecution.phase = 'SEMANTIC_RUNNER';
+    activeExecution.runnerInvoked = true;
+    result = await runner.runBoundedV4SemanticPhase({
+      root: ROOT,
+      gitExecutable: GIT,
+      runnerConfigurationPath: abs(RUNNER_PATH),
+      activationConfigurationPath: abs(ACTIVATION_PATH),
+      executionCapability,
+      preregistrationPath: abs(PREREGISTRATION_PATH),
+      evidenceLockPath: abs(EVIDENCE_LOCK_PATH),
+      capturePayloadPath: abs(PAYLOAD_PATH),
+      namespaceDirectory: context.namespaceDirectory,
+      authorizedGeminiCalls: 9,
+      sharedAllowanceReader: async () => {
+        activeExecution.phase = 'FRESH_GATES';
+        const observation = await sharedAllowanceReader(context);
+        gates = { gateResponseSha256: observation.gateResponseSha256, quotaSummary: observation.quotaSummary };
+        activeExecution.phase = 'SEMANTIC_ACCEPTANCE';
+        return observation.allowance;
+      }
+    });
+    activeExecution.runnerReturned = true;
+  } catch (error) {
+    failure = safeFailureCode(error);
+  }
+  const resultFailure = result?.firstFailure ? safeFailureCode({ message: String(result.firstFailure) }) : null;
+  await reportExecutionOutcome({ result, firstFailure: failure || resultFailure, gates, runId });
+}
+
+function executionStatus(result, attribution) {
+  if (result?.acceptanceStatus === 'PASSED') return 'ACCEPTANCE_PASSED';
+  if (result) return attribution.consumed ? 'ACCEPTANCE_FAILED_CONSUMED_NO_RETRY' :
+    attribution.retryPermitted ? 'ACCEPTANCE_FAILED_UNCONSUMED' :
+      attribution.status === 'OUTPUT_PRESENT_NO_RETRY' ? 'ACCEPTANCE_FAILED_OUTPUT_PRESENT_NO_RETRY' :
+        attribution.status === 'RUNNER_RETURNED_NO_RETRY' ? 'ACCEPTANCE_FAILED_RUNNER_RETURNED_NO_RETRY' :
+          'ACCEPTANCE_FAILED_NO_RETRY_STATE_UNCERTAIN';
+  return attribution.retryPermitted ? 'HOLD_UNCONSUMED' : attribution.consumed ?
+    'FAILED_CONSUMED_NO_RETRY' : attribution.status === 'OUTPUT_PRESENT_NO_RETRY' ?
+      'FAILED_OUTPUT_PRESENT_NO_RETRY' : attribution.status === 'RUNNER_RETURNED_NO_RETRY' ?
+        'RUNNER_RETURNED_NO_RETRY' : 'NO_RETRY_STATE_UNCERTAIN';
+}
+
+async function reportExecutionOutcome({ result = null, firstFailure = null, gates = null, runId = null }) {
+  // Every execute outcome is attributed from a fresh read. Unreadable, partial,
+  // or otherwise uncertain namespace state is never described as retryable.
+  let canonicalState = await observeCanonicalState(activeExecution.context?.namespaceDirectory || abs(SEMANTIC_NAMESPACE));
+  let attribution = attributeCanonicalState(canonicalState, activeExecution.runnerReturned);
+  const status = executionStatus(result, attribution);
+  const outcomePhase = activeExecution.phase;
+  const context = activeExecution.context || {
+    launcherSha256: null, git: { head: null, branch: null }, projectionSha256: null, captureExpiresAt: null
+  };
+  let auditSave = { saved: false, code: 'AUDIT_ASSEMBLY_FAILED' };
+  if (runId) {
+    try {
+      const document = buildLaunchAudit({
+        status, phase: outcomePhase, runnerInvoked: activeExecution.runnerInvoked,
+        consumed: attribution.consumed,
+        firstFailure, context, authorization: activeExecution.authorization, gates, attribution, finishedAt: isoNow()
+      });
+      auditSave = await writeLaunchAudit(runId, document);
+    } catch { auditSave = { saved: false, code: 'AUDIT_ASSEMBLY_FAILED' }; }
+  }
+  if (!auditSave.saved) {
+    canonicalState = await observeCanonicalState(activeExecution.context?.namespaceDirectory || abs(SEMANTIC_NAMESPACE));
+    attribution = attributeCanonicalState(canonicalState, activeExecution.runnerReturned);
+  }
+  const finalStatus = executionStatus(result, attribution);
+  console.log(JSON.stringify({ phase: outcomePhase, status: finalStatus,
+    consumed: attribution.consumed, retryPermitted: attribution.retryPermitted,
+    reservationState: attribution.reservationState, firstFailure: firstFailure || null,
+    auditSaved: auditSave.saved, auditFailure: auditSave.code || null,
+    runnerOutputSha256: attribution.hashes, canonicalOutputStates: attribution.states }));
+  process.exitCode = 1;
+  if (result?.acceptanceStatus === 'PASSED') process.exitCode = 0;
+}
+
+async function reportExecuteFailure(error) {
+  await reportExecutionOutcome({ firstFailure: safeFailureCode(error), runId: activeExecution.runId });
+}
+
+async function main() {
+  const { mode } = parseCliArguments(process.argv.slice(2));
+  activeExecution.mode = mode;
+  activeExecution.phase = 'RUNTIME_PRECHECK';
+  if (path.resolve(process.cwd()).replaceAll('\\', '/') !== ROOT) throw codedError('LAUNCH_WRONG_ROOT');
+  if (Number(process.versions.node.split('.')[0]) !== 22) throw codedError('LAUNCH_REQUIRES_NODE_22');
+  if (mode === 'execute' && !(await fileExists(abs(AUTHORIZATION_PATH)))) {
+    activeExecution.phase = 'AUTHORIZATION';
+    const canonicalState = await observeCanonicalState(abs(SEMANTIC_NAMESPACE));
+    const attribution = attributeCanonicalState(canonicalState);
+    console.log(JSON.stringify({ phase: activeExecution.phase,
+      status: attribution.retryPermitted ? 'HOLD_UNCONSUMED' : attribution.consumed ?
+        'NO_RETRY_CONSUMED' : attribution.status === 'OUTPUT_PRESENT_NO_RETRY' ?
+          'NO_RETRY_CANONICAL_OUTPUT_PRESENT' : 'NO_RETRY_CANONICAL_STATE_UNCERTAIN',
+      firstFailure: 'AUTHORIZATION_MISSING', consumed: attribution.consumed,
+      retryPermitted: attribution.retryPermitted, reservationState: attribution.reservationState,
+      runnerOutputSha256: attribution.hashes, canonicalOutputStates: attribution.states }));
+    process.exitCode = 1;
+    return;
+  }
+  activeExecution.runId = mode === 'execute' ? randomUUID() : null;
+  activeExecution.phase = 'RUNNER_IMPORT';
+  const runner = await import(pathToFileURL(abs('scripts/iras_v4_capture_replay_runner.mjs')).href);
+  activeExecution.phase = 'FROZEN_PREFLIGHT';
+  const context = await getPreparationContext(runner);
+  activeExecution.context = context;
+  if (mode === 'check') {
+    console.log(JSON.stringify({ phase: 'CHECK', status: 'FROZEN_EVIDENCE_AND_OFFLINE_GATES_VALID',
+      baselineCommit: BASELINE_COMMIT, launchHead: context.git.head, launchBranch: context.git.branch,
+      launcherSha256: context.launcherSha256, projectionSha256: context.projectionSha256,
+      immutableInputHashes: FROZEN_INPUT_HASHES, captureExpiresAt: context.captureExpiresAt,
+      semanticNamespaceUnused: true, authorizationRequiredSeparately: true,
+      providerQuotaAndFreshAllowanceRequiredAtRunnerRendezvous: true }));
+    return;
+  }
+  activeExecution.phase = 'AUTHORIZATION';
+  const authorization = await assertAuthorization(context);
+  activeExecution.authorization = authorization;
+  await executeOnce(runner, context, authorization, activeExecution.runId);
+}
+
+// Imported pure-helper tests use a data URL. Only Node's stdin CLI entry point runs main.
+if (import.meta.url.startsWith('file:') && process.argv[1] === '-') {
+  main().catch(error => activeExecution.mode === 'execute' ? reportExecuteFailure(error) : (() => {
+    console.log(JSON.stringify({ phase: 'LAUNCH', status: 'FAILED_CLOSED', firstFailure: safeFailureCode(error) }));
+    process.exitCode = 1;
+  })());
+}
