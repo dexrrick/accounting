@@ -1,0 +1,22 @@
+{
+  "manifestSha256": {
+    "activation": "b61044862f157a93c4529a054309ade4da03666f96bf6d77111a3e46a53b2c3b",
+    "preregistration": "0f6e0e99f7751fb230c39d4172adda9ceb777d97303ba38e5e42c4cf3382a265",
+    "runner": "c28d78859dce8ab2907ee50baddf5f4b424ed2328ccf6cbee4115a9bd9eaf078"
+  },
+  "currentAndHistoricalInventoryEqual": true,
+  "boundFilesRawHashesVerified": 593,
+  "reviewWasReadOnly": true,
+  "digestsAndRawLinksVerified": true,
+  "reviewedAtUtc": "2026-10-06T14:20:40.2360717Z",
+  "promptRowsVerified": 9,
+  "reservationsAbsent": true,
+  "finalFreezeReportReview": "COMPLETE_NO_MATERIAL_FINDINGS: three raw binding hashes, six protected hashes, namespace/prompt/inventory links and no execution checked",
+  "protectedHistoricalInputsUnchanged": true,
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "profile": "iras-v4-frozen-bindings-independent-review",
+  "reviewedCommit": "a9924a8931209fa6df723e8faaefc21914368d82",
+  "captureInventoryRowsVerified": 15,
+  "reviewer": "/root/offline_repair_review",
+  "freezeValidationSha256": "c381c4728cdd1ae0788576e938114109c6c1314b4738c4c3e16e16dbc7d99ec1"
+}

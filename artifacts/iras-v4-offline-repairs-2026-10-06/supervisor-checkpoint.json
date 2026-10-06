@@ -28,8 +28,8 @@
   "usagePolicy": {
     "checkpointAtRemainingPercent": 10,
     "finishAboveRemainingPercent": 5,
-    "lastObservedFiveHourRemainingPercent": 5,
-    "lastObservedWeeklyRemainingPercent": 61
+    "lastObservedFiveHourRemainingPercent": 60,
+    "lastObservedWeeklyRemainingPercent": 66
   },
   "checkpointNotes": [
     "Focused repairs independently reviewed with no remaining material findings.",
@@ -54,5 +54,15 @@
     "initialWeeklyRemainingPercent": 72,
     "initialFiveHourRemainingPercent": 100
   },
-  "repairCommit": "df288e0d490387cc33ddfff9d15782e70e728c50"
+  "repairCommit": "df288e0d490387cc33ddfff9d15782e70e728c50",
+  "freshAcceptancePreparation": {
+    "reviewedCommit": "a9924a8931209fa6df723e8faaefc21914368d82",
+    "observedAtUtc": "2026-10-06T14:28:24.3544577Z",
+    "liveCallsMade": 0,
+    "capturesMade": 0,
+    "status": "OFFLINE_COMPLETE_LIVE_HELD",
+    "plan": "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/supervisor-plan.json",
+    "namespaceReserved": false,
+    "authorizationRequest": "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/authorization-request.json"
+  }
 }

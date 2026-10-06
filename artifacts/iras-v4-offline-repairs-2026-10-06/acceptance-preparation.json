@@ -1,6 +1,6 @@
 {
   "profile": "iras-v4-repaired-acceptance-preparation",
-  "status": "OFFLINE_VALIDATED_CANDIDATE_PENDING_FRESH_BINDINGS_CAPTURE_AND_AUTHORIZATION",
+  "status": "FRESH_BINDINGS_FROZEN_REVIEWED_CAPTURE_AND_AUTHORIZATION_PENDING",
   "freshNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
   "namespaceMustBeAbsentBeforeReservation": true,
   "consumptionMarkerCreated": false,
@@ -49,5 +49,7 @@
   "resourcePolicy": {
     "checkpointAtRemainingPercent": 10,
     "finishAboveRemainingPercent": 5
-  }
+  },
+  "freshPreparation": "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/supervisor-plan.json",
+  "authorizationRequest": "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/authorization-request.json"
 }

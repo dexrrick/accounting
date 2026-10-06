@@ -1,6 +1,6 @@
 {
   "profile": "iras-v4-fresh-acceptance-preparation",
-  "status": "REVIEW_AND_VALIDATION_COMPLETE_READY_FOR_OFFLINE_FREEZE_AFTER_COMMIT",
+  "status": "OFFLINE_PREPARATION_COMPLETE_CAPTURE_AND_GEMINI_HELD",
   "repairCommit": "df288e0d490387cc33ddfff9d15782e70e728c50",
   "baselineFailureCommit": "45d2626",
   "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
@@ -47,5 +47,12 @@
   "resourcePolicy": {
     "checkpointAtRemainingPercent": 10,
     "finishAboveRemainingPercent": 5
-  }
+  },
+  "namespaceSupportCommit": "a9924a8931209fa6df723e8faaefc21914368d82",
+  "frozenBindings": {
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/runner-configuration.json": "c28d78859dce8ab2907ee50baddf5f4b424ed2328ccf6cbee4115a9bd9eaf078",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/preregistration.json": "0f6e0e99f7751fb230c39d4172adda9ceb777d97303ba38e5e42c4cf3382a265",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/activation-configuration.json": "b61044862f157a93c4529a054309ade4da03666f96bf6d77111a3e46a53b2c3b"
+  },
+  "finalIndependentReview": "COMPLETE_NO_MATERIAL_FINDINGS"
 }
