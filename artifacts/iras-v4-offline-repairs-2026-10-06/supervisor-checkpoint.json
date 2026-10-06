@@ -1,0 +1,57 @@
+{
+  "profile": "iras-v4-offline-repair-supervisor-checkpoint",
+  "status": "OFFLINE_REPAIRS_REVIEWED_AND_VALIDATED",
+  "baselineCommit": "45d26268618c5e3505566fcfe1619ab5188c1603",
+  "authorization": {
+    "offlineRepairsAndRegressionTests": true,
+    "liveGeminiRun": false,
+    "officialSourceRecapture": false,
+    "consumedRunModification": false
+  },
+  "historicalRun": "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4",
+  "historicalResult": "FAILED_CONSUMED_SIX_RESPONSES_THREE_CASES_UNEXECUTED",
+  "acceptanceProven": false,
+  "repairSequence": [
+    "Hash-check and reproduce all six retained responses offline through production paths",
+    "Supervisor resolves ownership, evidence coverage and interpretation design",
+    "Builder implements focused repairs and meaningful negative regressions",
+    "Independent reviewer audits changes, evidence integrity and preparation",
+    "Supervisor runs targeted tests, lint, build, smoke and full suite",
+    "Prepare fresh unconsumed namespace and reviewed evidence inventory candidate"
+  ],
+  "evidenceFreshness": {
+    "expiresAtSgt": "07/10/2026 14:26:38.150 SGT",
+    "expiresAtUtc": "2026-10-07T06:26:38.15Z",
+    "repairsMustNotBeRushed": true,
+    "expiredEvidenceMayBeUsedForOfflineHistoricalDiagnosticsOnly": true
+  },
+  "usagePolicy": {
+    "checkpointAtRemainingPercent": 10,
+    "finishAboveRemainingPercent": 5,
+    "lastObservedFiveHourRemainingPercent": 5,
+    "lastObservedWeeklyRemainingPercent": 61
+  },
+  "checkpointNotes": [
+    "Focused repairs independently reviewed with no remaining material findings.",
+    "All six retained-response regressions, lint, build, smoke and full regression suite pass; lint/build warnings remain.",
+    "Original smoke fingerprint failure overlapped final source edits; subsequent full and settled-source smoke passed without weakening fingerprint gates.",
+    "Consumed historical artifacts and frozen nine-case contract unchanged; no Gemini or source recapture performed.",
+    "Changes are uncommitted. Next: preserve reviewed state in a commit, generate new reviewed bindings, then obtain appropriate capture and live-run authorization.",
+    "Fresh candidate namespace remains absent and unconsumed; full nine-case acceptance remains unproven."
+  ],
+  "validation": {
+    "full": "PASS: full.log, all suites passed, 166.66 seconds",
+    "build": "PASS with warnings",
+    "smoke": "PASS: smoke-final.log, all suites passed, 89.62 seconds; original failed smoke.log retained",
+    "lint": "PASS with warnings",
+    "targeted": "PASS: authority, semantic, replay runner, retained six-response replay, foreign-income rule"
+  },
+  "independentReview": "COMPLETE: no remaining material findings after exemption and residency boundary repairs; validation remains incomplete",
+  "reviewFollowUp": {
+    "sourceCodeChangedDuringReview": false,
+    "finalSmokeLog": "artifacts/iras-v4-offline-repairs-2026-10-06/smoke-final.log",
+    "reviewedAtUtc": "2026-10-06T13:56:15.3790973Z",
+    "initialWeeklyRemainingPercent": 72,
+    "initialFiveHourRemainingPercent": 100
+  }
+}

@@ -2717,24 +2717,29 @@ async function runFixedV4CaseLoop({
     const layerNames = scoreVerdicts && typeof scoreVerdicts === 'object' && !Array.isArray(scoreVerdicts)
       ? Object.keys(scoreVerdicts).sort() : [];
     const layerVerdictsValid = stableJson(layerNames) === stableJson(expectedLayerNames);
-    const canonicalStages = layerVerdictsValid ? evaluateV4Stages(scoreVerdicts) : undefined;
-    const stageVerdicts = caseResult?.stageVerdicts;
-    const stageNames = stageVerdicts && typeof stageVerdicts === 'object' && !Array.isArray(stageVerdicts)
-      ? Object.keys(stageVerdicts).sort() : [];
+    const adapterCanonicalStages = layerVerdictsValid ? evaluateV4Stages(scoreVerdicts) : undefined;
+    const adapterStageVerdicts = caseResult?.stageVerdicts;
+    const stageNames = adapterStageVerdicts && typeof adapterStageVerdicts === 'object' && !Array.isArray(adapterStageVerdicts)
+      ? Object.keys(adapterStageVerdicts).sort() : [];
     const expectedStageNames = [...FAILURE_STAGES].sort();
     const stageKeysValid = stableJson(stageNames) === stableJson(expectedStageNames);
-    const stageVerdictsMatch = Boolean(canonicalStages && stageKeysValid &&
-      stableJson(Object.fromEntries(FAILURE_STAGES.map(stage => [stage, stageVerdicts[stage]]))) ===
-      stableJson(canonicalStages.stages));
-    const canonicalFirstFailure = canonicalStages?.earliestFailure ?? null;
-    const firstFailureMatches = Boolean(canonicalStages && (caseResult?.firstFailure ?? null) === canonicalFirstFailure);
+    const stageVerdictsMatch = Boolean(adapterCanonicalStages && stageKeysValid &&
+      stableJson(Object.fromEntries(FAILURE_STAGES.map(stage => [stage, adapterStageVerdicts[stage]]))) ===
+      stableJson(adapterCanonicalStages.stages));
+    const adapterFirstFailure = adapterCanonicalStages?.earliestFailure ?? null;
+    const firstFailureMatches = Boolean(adapterCanonicalStages && (caseResult?.firstFailure ?? null) === adapterFirstFailure);
+    const operationalIntegrityPassed = semanticState.failureStage !== 'INTEGRITY';
+    const effectiveCanonicalStages = layerVerdictsValid
+      ? evaluateV4Stages({ ...scoreVerdicts, integrityPassed: operationalIntegrityPassed })
+      : undefined;
     const primaryOperationalFailure = ['INTEGRITY', 'SEMANTIC_TRANSPORT'].includes(semanticState.failureStage)
       ? semanticState.failureStage : undefined;
-    const firstFailure = primaryOperationalFailure || canonicalFirstFailure || semanticState.failureStage ||
+    const firstFailure = primaryOperationalFailure || effectiveCanonicalStages?.earliestFailure || semanticState.failureStage ||
       (caseResult && (!stageVerdictsMatch || !firstFailureMatches) ? 'ACCEPTANCE_SCORE' : undefined) ||
       (caseError ? 'CASE_EXECUTION' : undefined);
-    const scoredPass = Boolean(canonicalStages && stageVerdictsMatch && firstFailureMatches &&
-      canonicalFirstFailure == null && FAILURE_STAGES.every(stage => canonicalStages.stages[stage] === true));
+    const scoredPass = Boolean(effectiveCanonicalStages && operationalIntegrityPassed && stageVerdictsMatch && firstFailureMatches &&
+      effectiveCanonicalStages.earliestFailure == null &&
+      FAILURE_STAGES.every(stage => effectiveCanonicalStages.stages[stage] === true));
     const scoreFailureCode = !layerVerdictsValid ? 'V4_ACCEPTANCE_LAYER_VERDICTS_INVALID'
       : !stageKeysValid || !stageVerdictsMatch ? 'V4_ACCEPTANCE_STAGE_VERDICTS_MISMATCH'
         : !firstFailureMatches ? 'V4_ACCEPTANCE_FAILURE_ATTRIBUTION_MISMATCH'
@@ -2748,8 +2753,15 @@ async function runFixedV4CaseLoop({
       status: failure ? 'FAILED' : 'PASSED',
       completedAt: isoFrom(now()),
       ...(resultBytes ? { actualResult: caseResult, resultSha256: sha256(resultBytes) } : {}),
+      adapterStageVerdicts: adapterStageVerdicts || {},
       layerVerdicts: scoreVerdicts || {},
-      stageVerdicts: canonicalStages?.stages || stageVerdicts || {},
+      stageVerdicts: effectiveCanonicalStages?.stages || adapterStageVerdicts || {},
+      operationalIntegrity: {
+        passed: operationalIntegrityPassed,
+        ...(operationalIntegrityPassed ? {} : {
+          failureCode: semanticState.failureCode || String(caseError?.message || caseError || 'V4_OPERATIONAL_INTEGRITY_FAILED').slice(0, 160)
+        })
+      },
       firstFailure: failure?.stage || null,
       failure,
       semanticResponseSha256: semanticState.responseSha256,

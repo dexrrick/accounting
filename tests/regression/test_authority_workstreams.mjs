@@ -142,6 +142,76 @@ assert.equal(topiclessAreas.get('IRAS:UNKNOWN'), 'UNKNOWN',
   'Ambiguous reporting and a bare employee tax subject remain unresolved.');
 assert.equal(topiclessAreas.get('IRAS:IRAS_CORPORATE_TAX'), 'IRAS_CORPORATE_TAX',
   'Corporate deductibility remains corporate tax even when the expense concerns an employee benefit.');
+
+const genericIncomeTaxTreatmentQuery = 'Explain corporate income-tax treatment of the expense.';
+const genericIncomeTaxTreatmentUnderstanding = {
+  mode: 'SEMANTIC_INTERPRETATION',
+  interpretation: {
+    jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: [],
+    domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'corporate income-tax treatment',
+    concepts: [{ concept: 'corporate income-tax treatment', role: 'PRIMARY' }],
+    requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false, calculationRequested: false,
+    factsExplicitlyProvided: [], confidence: 0.95
+  }
+};
+const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-tax treatment') => {
+  const understanding = {
+    ...genericIncomeTaxTreatmentUnderstanding,
+    interpretation: {
+      ...genericIncomeTaxTreatmentUnderstanding.interpretation,
+      primarySubject: conceptLabel,
+      concepts: [{ concept: conceptLabel, role: 'PRIMARY' }]
+    }
+  };
+  const requestedByIssue = new Map();
+  const result = await buildAuthorityWorkstreams(genericIncomeTaxTreatmentQuery, issuePlan(issues), {
+    questionUnderstanding: understanding,
+    providers: { IRAS: provider('IRAS', async request => {
+      requestedByIssue.set(request.issue.id, request.retrievalIntent.requestedConcepts.map(concept => concept.id));
+      return { candidates: [], claims: [] };
+    }) },
+    referenceDate
+  });
+  return { result, requestedByIssue };
+};
+const genericTreatmentIssue = (id, subject) => issue(id, {
+  subject, population: 'COMPANY', domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'],
+  mappedTopicIds: ['iras-cit-deductibility']
+});
+const ownedGenericTaxTreatment = await runGenericTaxOwnership([
+  genericTreatmentIssue('generic-tax-treatment-owner', 'corporate income-tax treatment of a company expense')
+]);
+assert.equal(ownedGenericTaxTreatment.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'), false,
+  'The generic corporate tax label is owned by its sole matching company income-tax issue.');
+assert.equal(ownedGenericTaxTreatment.requestedByIssue.get('generic-tax-treatment-owner')
+  ?.includes('semantic_corporate_income_tax_treatment') || false, false,
+  'The generic tax label is assigned for aggregation, not promoted into a redundant retrieval requirement.');
+const ownedGenericCorporateTax = await runGenericTaxOwnership([
+  genericTreatmentIssue('generic-corporate-tax-owner', 'Singapore corporate income-tax treatment of a foreign dividend receipt')
+], 'corporate income tax');
+assert.equal(ownedGenericCorporateTax.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'), false,
+  'The observed shorter corporate income-tax label is owned by its sole matching issue.');
+assert.equal(ownedGenericCorporateTax.requestedByIssue.get('generic-corporate-tax-owner')
+  ?.includes('semantic_corporate_income_tax') || false, false,
+  'The shorter corporate tax label does not create a redundant retrieval requirement.');
+const unrelatedGenericTaxTreatment = await runGenericTaxOwnership([
+  genericTreatmentIssue('unrelated-generic-tax-issue', 'company tax treatment of foreign income')
+]);
+assert.ok(unrelatedGenericTaxTreatment.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+  'A generic company tax label is not attached to an issue whose subject lacks that label.');
+assert.equal(unrelatedGenericTaxTreatment.requestedByIssue.get('unrelated-generic-tax-issue')
+  ?.includes('semantic_corporate_income_tax_treatment') || false, false,
+  'An unrelated income-tax issue does not receive the generic concept.');
+const ambiguousGenericTaxTreatment = await runGenericTaxOwnership([
+  genericTreatmentIssue('ambiguous-generic-tax-a', 'corporate income-tax treatment of a company expense'),
+  genericTreatmentIssue('ambiguous-generic-tax-b', 'corporate income-tax treatment of a company receipt')
+]);
+assert.ok(ambiguousGenericTaxTreatment.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+  'Matching multiple company issues remains ambiguous and fail-closed.');
+assert.equal([...ambiguousGenericTaxTreatment.requestedByIssue.values()]
+  .some(ids => ids.includes('semantic_corporate_income_tax_treatment')), false,
+  'The generic concept is not assigned to either side of a multi-issue ambiguity.');
+
 const companyBenefitDeductionSubjects = [
   'company tax deductibility of accommodation benefit for the employee',
   'company income tax deduction of accommodation benefit for the employee'

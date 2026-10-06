@@ -146,6 +146,10 @@ assert.notEqual(ruleSupport(ruleParagraph, {
 assert.equal(ruleSupport(ruleParagraph, {
   concepts: [{ label: subject, terms: ['treaty exemption conditions'] }]
 }), undefined, 'A broader exemption request remains outside general foreign-income rule support.');
+assert.equal(ruleSupport(ruleParagraph, {
+  subject: 'Singapore corporate tax treatment of tax-free foreign dividend receipt',
+  concepts: [{ label: 'tax-free treatment of foreign dividend receipt', terms: ['tax-free'] }]
+}), undefined, 'The general receipt-tax paragraph cannot establish an explicit tax-free outcome.');
 
 const savedUnits = [savedExcerpt.text, otherSavedExcerpt.text, categoryListExcerpt.text];
 const sourceComposition = 'SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE';

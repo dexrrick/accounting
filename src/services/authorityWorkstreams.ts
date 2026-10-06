@@ -206,11 +206,38 @@ export function planAuthorityWorkstreams(issuePlan: SemanticIssueReconciliation)
   return toInternalPlan(issuePlan).map(({ issuePlans: _issuePlans, ...plan }) => plan);
 }
 
-function topiclessConceptBelongsToIssue(concept: RequestedQuestionConcept, issue: ReconciledSemanticQuestionIssue, authority: SemanticAuthority): boolean {
+function isCorporateIncomeTaxTreatmentConcept(concept: RequestedQuestionConcept): boolean {
+  return ['corporate income tax treatment', 'corporate income tax'].includes(normalizeEvidenceText(concept.label));
+}
+
+function corporateIncomeTaxConceptAnchor(concept: RequestedQuestionConcept): string | undefined {
+  const label = normalizeEvidenceText(concept.label);
+  return label === 'corporate income tax treatment' || label === 'corporate income tax' ? label : undefined;
+}
+
+function topiclessConceptBelongsToIssue(
+  concept: RequestedQuestionConcept,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  candidateIssues: ReconciledSemanticQuestionIssue[] = []
+): boolean {
   if (authority !== 'IRAS' || issue.domain !== 'IRAS_INCOME_TAX') return false;
   if (concept.id === 'relief_claim_prioritization') {
     return issue.population === 'INDIVIDUAL' || issue.population === 'EMPLOYEE' ||
       issue.mappedTopicIds.some(id => id.startsWith('iras-individual-'));
+  }
+  // This generic semantic label has no distinctive ownership terms after the
+  // tax vocabulary is removed. Assign it only to the sole mapped company
+  // income-tax issue whose subject explicitly contains the complete label.
+  // Ambiguous or unrelated issue sets therefore retain the top-level gap.
+  if (isCorporateIncomeTaxTreatmentConcept(concept)) {
+    const anchor = corporateIncomeTaxConceptAnchor(concept)!;
+    const matchingIssues = candidateIssues.filter(candidate => candidate.status === 'MAPPED' &&
+      candidate.population === 'COMPANY' && candidate.domain === 'IRAS_INCOME_TAX' &&
+      candidate.governingAuthorities.includes('IRAS') &&
+      normalizeEvidenceText(candidate.subject).includes(anchor));
+    return matchingIssues.length === 1 && matchingIssues[0].id === issue.id &&
+      issue.population === 'COMPANY' && issue.governingAuthorities.includes('IRAS');
   }
   const issueText = `${issue.subject} ${issue.mappedTopicIds.join(' ')}`;
   const uniqueTerms = [...new Set([...concept.terms, concept.label].flatMap(conceptOwnershipTerms))];
@@ -218,11 +245,19 @@ function topiclessConceptBelongsToIssue(concept: RequestedQuestionConcept, issue
   return uniqueTerms.length > 0 && uniqueTerms.filter(term => normalizedIssue.has(term)).length >= Math.min(2, uniqueTerms.length);
 }
 
-function requestedConceptsForIssue(query: string, issue: ReconciledSemanticQuestionIssue, authority: SemanticAuthority, topicIds: string[], understanding?: SemanticQuestionUnderstanding): RequestedQuestionConcept[] {
+function requestedConceptsForIssue(
+  query: string,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  topicIds: string[],
+  understanding: SemanticQuestionUnderstanding | undefined,
+  candidateIssues: ReconciledSemanticQuestionIssue[]
+): RequestedQuestionConcept[] {
   const topicSet = new Set(topicIds);
   return getRequestedQuestionConcepts(query, understanding).filter(concept =>
     concept.topicIds.some(topicId => topicSet.has(topicId)) ||
-    concept.topicIds.length === 0 && topiclessConceptBelongsToIssue(concept, issue, authority)
+    concept.topicIds.length === 0 && !isCorporateIncomeTaxTreatmentConcept(concept) &&
+      topiclessConceptBelongsToIssue(concept, issue, authority, candidateIssues)
   );
 }
 
@@ -430,7 +465,7 @@ function hasCompanyTaxResidencyAnchors(text: string): boolean {
 }
 
 const GENERAL_COMPANY_TAX_RESIDENCY_CONCEPT_WORDS = new Set([
-  'a', 'and', 'assessment', 'business', 'company', 'companies', 'control', 'corporate', 'corporation', 'criteria', 'general',
+  'a', 'and', 'assessment', 'business', 'company', 'companies', 'control', 'corporate', 'corporation', 'criteria', 'determination', 'general',
   'criterion', 'determine', 'determined', 'determines', 'does', 'exercise', 'exercised', 'for', 'here', 'how', 'in',
   'is', 'management', 'of', 'place', 'residence', 'residency', 'resident', 'rule', 'rules', 'singapore', 'tax',
   'test', 'the', 'whether', 'where', 'year'
@@ -706,14 +741,15 @@ async function evaluateIssue(
   options: AuthorityWorkstreamOptions,
   retriever: ISourceRetriever,
   understanding: SemanticQuestionUnderstanding,
-  referenceDate: string
+  referenceDate: string,
+  candidateIssues: ReconciledSemanticQuestionIssue[]
 ): Promise<AuthorityIssueEvidence> {
   const issue = plannedIssue.issue;
   const topicIds = plannedIssue.topicIds;
   const topics = getCoverageTopicsByIds(topicIds);
   const evidenceTopics = plan.authority === 'IRAS' ? topics.filter(topic => !topic.routingOnly) : topics;
   const evidenceTopicIds = evidenceTopics.map(topic => topic.id);
-  const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding);
+  const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding, candidateIssues);
   const mapped = topicIds.length > 0 && plan.domain !== 'UNKNOWN';
   const lifecycle = initialLifecycle(issue, mapped);
   const application = applicationForIssue(issue);
@@ -893,6 +929,9 @@ export async function buildAuthorityWorkstreams(
   const understanding = options.questionUnderstanding || { mode: 'DETERMINISTIC_FALLBACK' as const };
   const retriever = options.retriever || defaultAdvancedSourceRetriever;
   const internalPlans = toInternalPlan(issuePlan);
+  const candidateIssues = [...new Map(issuePlan.issues
+    .filter(issue => issue.governingAuthorities.includes('IRAS'))
+    .map(issue => [issue.id, issue])).values()];
   const plannedIssueIds = new Set(internalPlans.flatMap(plan => plan.issueIds));
   const plannedIssueCount = internalPlans.reduce((count, plan) => count + plan.issuePlans.length, 0);
   const workstreams: AuthorityWorkstreamResult[] = [];
@@ -910,7 +949,7 @@ export async function buildAuthorityWorkstreams(
 
   for (const plan of internalPlans) {
     const results = await Promise.all(plan.issuePlans.map(issuePlanItem => evaluateIssue(
-      query, plan, issuePlanItem, options, retriever, understanding, referenceDate
+      query, plan, issuePlanItem, options, retriever, understanding, referenceDate, candidateIssues
     )));
     const verifiedClaims = [...new Map(results.flatMap(item => item.verifiedClaims).map(claim =>
       [`${claim.recordId}\n${claim.quote}`, claim]
@@ -943,7 +982,7 @@ export async function buildAuthorityWorkstreams(
   }
   for (const concept of getRequestedQuestionConcepts(query, understanding).filter(item => item.topicIds.length === 0)) {
     const assigned = internalPlans.some(plan => plan.authority === 'IRAS' && plan.issuePlans.some(item =>
-      topiclessConceptBelongsToIssue(concept, item.issue, plan.authority)));
+      topiclessConceptBelongsToIssue(concept, item.issue, plan.authority, candidateIssues)));
     if (!assigned) topLevelGaps.push({
       issueId: 'issue-plan', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: concept.label,
       operation: 'OTHER', stage: 'mapped', code: 'UNROUTED_MATERIAL_CONCEPT',

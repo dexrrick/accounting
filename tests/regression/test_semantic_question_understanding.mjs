@@ -391,6 +391,58 @@ assert.deepEqual(corporateRoute.classification.authorities, ['IRAS']);
 assert.ok(corporateRoute.classification.domains.includes('IRAS_CORPORATE_TAX'));
 assert.equal(corporateRoute.classification.domains.includes('IRAS_INDIVIDUAL_TAX'), false);
 
+const foreignDividendReceiptQuery = 'Our Singapore company received a dividend from its Thai subsidiary in the current year. Explain the company’s Singapore corporate income-tax treatment for this receipt.';
+const foreignDividendReceiptMeaning = interpretation({
+  population: 'COMPANY', primarySubject: 'Singapore corporate income-tax treatment of foreign dividend receipt',
+  concepts: [
+    { concept: 'foreign dividend', role: 'PRIMARY' },
+    { concept: 'corporate income tax', role: 'PRIMARY' },
+    { concept: 'tax exemption for foreign-sourced income', role: 'RELATED' }
+  ],
+  requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true,
+  issues: [{ subject: 'Singapore corporate income-tax treatment of foreign dividend receipt', population: 'COMPANY',
+    domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], contextualAuthorities: [],
+    operation: 'DETERMINE_TREATMENT', mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const foreignDividendReceiptConcepts = getRequestedQuestionConcepts(foreignDividendReceiptQuery, foreignDividendReceiptMeaning);
+assert.deepEqual(foreignDividendReceiptConcepts.map(concept => concept.id), [
+  'foreign_dividend_receipt_tax_treatment', 'semantic_corporate_income_tax'
+],
+  'A bounded general foreign-dividend receipt question asks for receipt tax treatment, not a separate exemption determination.');
+assert.deepEqual(foreignDividendReceiptConcepts[0].topicIds, ['iras-foreign-sourced-income']);
+const explicitForeignDividendExemptionQuery = 'What conditions must our Singapore company satisfy to claim the foreign dividend tax exemption?';
+const explicitForeignDividendExemptionMeaning = interpretation({
+  population: 'COMPANY', primarySubject: 'foreign dividend exemption eligibility',
+  concepts: [{ concept: 'foreign dividend tax exemption', role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true
+});
+assert.equal(getRequestedQuestionConcepts(explicitForeignDividendExemptionQuery, explicitForeignDividendExemptionMeaning)
+  .some(concept => concept.id === 'foreign_dividend_receipt_tax_treatment'), false,
+  'A direct exemption-eligibility question keeps the exemption concept instead of collapsing into receipt treatment.');
+const pluralForeignDividendExemptionQuery = 'Explain tax exemptions for a foreign dividend received by a Singapore company.';
+const pluralForeignDividendExemptionMeaning = interpretation({
+  population: 'COMPANY', primarySubject: 'foreign dividend tax exemption',
+  concepts: [{ concept: 'foreign dividend tax exemption', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false
+});
+assert.equal(getRequestedQuestionConcepts(pluralForeignDividendExemptionQuery, pluralForeignDividendExemptionMeaning)
+  .some(concept => concept.id === 'foreign_dividend_receipt_tax_treatment'), false,
+  'A plural exemption request does not receive a general dividend receipt rule as substitute coverage.');
+const taxFreeForeignDividendQuery = 'Our Singapore company received a foreign dividend. Is this receipt tax-free?';
+const taxFreeForeignDividendMeaning = interpretation({
+  population: 'COMPANY', primarySubject: 'tax-free treatment for foreign dividend receipt',
+  concepts: [{ concept: 'tax exemption for foreign-sourced income', role: 'PRIMARY' }],
+  requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true,
+  issues: [{ subject: 'tax-free treatment for foreign dividend receipt', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'DETERMINE_TREATMENT', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const taxFreeForeignDividendConcepts = getRequestedQuestionConcepts(taxFreeForeignDividendQuery, taxFreeForeignDividendMeaning);
+assert.equal(taxFreeForeignDividendConcepts.some(concept => concept.id === 'foreign_dividend_receipt_tax_treatment'), false,
+  'A tax-free outcome request cannot use the general receipt-tax rule as a substitute concept.');
+assert.ok(taxFreeForeignDividendConcepts.some(concept => /exemption/i.test(concept.label)),
+  'The provider exemption concept remains a separate requested coverage requirement.');
+
 const gstQuery = 'Can my GST-registered company claim input tax on a customer dinner?';
 const gstRoute = reconcile(gstQuery, {
   domain: 'IRAS_GST', primarySubject: 'input tax on business entertainment', population: 'COMPANY',
@@ -519,6 +571,67 @@ assert.equal(promptCalls.length, 1);
 assert.ok(promptCalls[0].options.timeoutMs >= 8_000);
 assert.match(promptCalls[0].system, /do not answer/i);
 assert.doesNotMatch(promptCalls[0].prompt, /retrieved evidence|conversation history/i);
+const generalCompanyResidencyQuery = 'How do Singapore tax rules determine whether a company is tax resident here?';
+const generalCompanyResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY',
+  primarySubject: 'corporate tax residence determination',
+  concepts: [
+    { concept: 'tax residence', role: 'PRIMARY' },
+    { concept: 'control and management', role: 'RELATED' }
+  ],
+  requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true,
+  issues: [{ subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'DETERMINE_TREATMENT', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const normalizedCompanyResidency = await interpretSemanticQuestion(generalCompanyResidencyQuery, provider,
+  async () => JSON.stringify(generalCompanyResidencyMeaning));
+assert.equal(normalizedCompanyResidency.interpretation.requestedOperation, 'EXPLAIN_RULE');
+assert.equal(normalizedCompanyResidency.interpretation.requiresUserSpecificFacts, false);
+assert.equal(normalizedCompanyResidency.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedCompanyResidency.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE');
+const normalizedResidencyConcepts = getRequestedQuestionConcepts(generalCompanyResidencyQuery, normalizedCompanyResidency);
+assert.deepEqual(normalizedResidencyConcepts.map(concept => concept.id), ['company_tax_residency_rule']);
+assert.deepEqual(normalizedResidencyConcepts[0].topicIds, ['iras-corporate-tax-residency']);
+const conditionalCompanyResidencyQuery = 'How do Singapore tax rules determine whether a company is tax resident here if its board meetings are held in Thailand?';
+const conditionalCompanyResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'corporate tax residence determination',
+  concepts: [{ concept: 'tax residence', role: 'PRIMARY' }, { concept: 'control and management', role: 'RELATED' }],
+  requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true, factsExplicitlyProvided: [],
+  issues: [{ subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'DETERMINE_TREATMENT', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const conditionalCompanyResidency = await interpretSemanticQuestion(conditionalCompanyResidencyQuery, provider,
+  async () => JSON.stringify(conditionalCompanyResidencyMeaning));
+assert.equal(conditionalCompanyResidency.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'A factual conditional suffix prevents standalone general-rule normalization even when no facts are reported.');
+assert.equal(conditionalCompanyResidency.interpretation.requiresUserSpecificFacts, true);
+assert.equal(conditionalCompanyResidency.interpretation.issues[0].operation, 'DETERMINE_TREATMENT');
+assert.equal(conditionalCompanyResidency.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS');
+assert.equal(getRequestedQuestionConcepts(conditionalCompanyResidencyQuery, conditionalCompanyResidency)
+  .some(concept => concept.id === 'company_tax_residency_rule'), false,
+  'A fact-dependent residency question does not inherit general-rule concept coverage.');
+const factualCompanyResidencyQuery = 'Under Singapore’s general rule, when is a company whose board meetings are held in Thailand tax resident here?';
+const factualCompanyResidency = await interpretSemanticQuestion(factualCompanyResidencyQuery, provider,
+  async () => JSON.stringify(conditionalCompanyResidencyMeaning));
+assert.equal(factualCompanyResidency.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'Factual circumstances inserted into the general-rule prefix remain case-dependent.');
+assert.equal(factualCompanyResidency.interpretation.requiresUserSpecificFacts, true);
+assert.equal(factualCompanyResidency.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS');
+assert.equal(getRequestedQuestionConcepts(factualCompanyResidencyQuery, factualCompanyResidency)
+  .some(concept => concept.id === 'company_tax_residency_rule'), false,
+  'A factual company-residency question cannot claim standalone general-rule coverage.');
+const ownedCompanyResidencyQuery = 'How do Singapore tax rules determine whether our company is tax resident here?';
+const ownedCompanyResidency = await interpretSemanticQuestion(ownedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(generalCompanyResidencyMeaning));
+assert.equal(ownedCompanyResidency.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'An owned-company question remains case-dependent even with general-rule wording.');
+const namedCompanyResidencyQuery = 'How do Singapore tax rules determine whether Acme Pte Ltd is tax resident here?';
+const namedCompanyResidency = await interpretSemanticQuestion(namedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(generalCompanyResidencyMeaning));
+assert.equal(namedCompanyResidency.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'A named-company question remains case-dependent even with general-rule wording.');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => '{bad json')).failure, 'INVALID_RESPONSE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => JSON.stringify(interpretation({ confidence: 0.2 })))).failure, 'LOW_CONFIDENCE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => { throw new Error('request timed out'); })).failure, 'TIMEOUT');

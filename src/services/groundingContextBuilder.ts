@@ -31,6 +31,7 @@ import {
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
+import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import type { AuthorityEvidenceScope } from '../types/authorityEvidence';
@@ -808,9 +809,36 @@ function candidateTitlePhrases(title: string | undefined): string[] {
   return [...phrases].slice(-12);
 }
 
-export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = ''): string {
+function completeScopedRulePassage(
+  pageText: string,
+  topic: MappedCoverageTopic,
+  subject: string | undefined,
+  population: string | undefined,
+  concepts: RequestedQuestionConcept[],
+  maxChars: number
+): string | undefined {
+  if (!subject || population !== 'COMPANY' || topic.id !== 'iras-foreign-sourced-income' ||
+      !concepts.some(concept => concept.id === 'foreign_dividend_receipt_tax_treatment')) return undefined;
+  const conceptScope = concepts.filter(concept => concept.topicIds.includes(topic.id));
+  const paragraphs = pageText.split(/\r?\n[\t ]*\r?\n+/).map(value => value.trim()).filter(Boolean);
+  return paragraphs.find(paragraph => paragraph.length <= maxChars &&
+    supportGeneralIrasRuleConcept({
+      sourceText: paragraph,
+      domainId: topic.domainId,
+      topicIds: [topic.id],
+      subject,
+      population,
+      concepts: conceptScope
+    }) === true);
+}
+
+export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = '', preferredPassages: string[] = []): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
+  const completePageBlocks = new Set(text.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()));
+  const preferred = preferredPassages.find(passage => passage.trim().length > 0 && passage.trim().length <= maxChars &&
+    completePageBlocks.has(passage.trim()))?.trim() || '';
+  const prefixLength = preferred ? preferred.length + 2 : 0;
   const sentences: Array<{ text: string; paragraphIndex: number }> = [];
   let paragraphIndex = 0;
   for (const part of text.split(/((?<=[.!?])\s+|\n+)/)) {
@@ -834,7 +862,7 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
     // Keep at least one exact topic phrase in the excerpt even when generic
     // query terms occur more often elsewhere on a long page.
     .sort((a, b) => b.topicMatches - a.topicMatches || b.queryMatches - a.queryMatches || a.index - b.index);
-  if (matches.length === 0) return '';
+  if (matches.length === 0) return preferred;
 
   const chosen = new Map<number, { text: string; paragraphIndex: number }>();
   const renderChosen = (segments: Map<number, { text: string; paragraphIndex: number }>): string => {
@@ -861,10 +889,11 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
       if (!sentence || chosen.has(index)) continue;
       const proposed = new Map(chosen);
       proposed.set(index, sentence);
-      if (renderChosen(proposed).length <= maxChars) chosen.set(index, sentence);
+      if (prefixLength + renderChosen(proposed).length <= maxChars) chosen.set(index, sentence);
     }
   }
-  return renderChosen(chosen);
+  const relevant = renderChosen(chosen);
+  return preferred ? `${preferred}${relevant ? `\n\n${relevant}` : ''}` : relevant;
 }
 
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
@@ -1191,7 +1220,14 @@ export async function resolveMappedOfficialSourceFallback(
     }
 
     const requiredContentTerms = topic.requiredContentTerms || [];
-    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '', [...expectation.topicTerms, ...requiredContentTerms], 5_000, query);
+    const scopedSubject = options.evidenceScope?.context.primarySubject || semanticIrasContext?.primarySubject;
+    const scopedPopulation = options.evidenceScope?.context.population || semanticIrasContext?.population;
+    const preferredRulePassage = completeScopedRulePassage(
+      contentValidation.substantiveText || '', topic, scopedSubject, scopedPopulation, requestedConcepts, 5_000
+    );
+    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '',
+      [...expectation.topicTerms, ...requiredContentTerms], 5_000, query,
+      preferredRulePassage ? [preferredRulePassage] : []);
     const requiredContentPresent = containsRequiredContentTermsInOneBlock(contentValidation.substantiveText || '', requiredContentTerms) &&
       containsRequiredContentTermsInOneBlock(excerpt, requiredContentTerms);
     const excerptTopicMatches = expectation.topicTerms.filter(term => matchesTopicContentTerm(

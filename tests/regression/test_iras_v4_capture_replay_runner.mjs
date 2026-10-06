@@ -1315,6 +1315,17 @@ async function testCaseLoopAndOneUseReservation() {
   assert.equal(latchedResult.rows[0].failure.stage, 'INTEGRITY');
   assert.equal(latchedResult.rows[0].actualResult.observedSemanticResponse, `offline-${CASE_IDS[0]}`,
     'A post-case integrity latch preserves the completed bounded production-shaped result.');
+  assert.equal(latchedResult.rows[0].status, 'FAILED');
+  assert.equal(latchedResult.rows[0].firstFailure, 'INTEGRITY');
+  assert.equal(latchedResult.rows[0].stageVerdicts.INTEGRITY, false,
+    'The effective persisted verdict reflects a latched replay integrity failure.');
+  assert.equal(latchedResult.rows[0].adapterStageVerdicts.INTEGRITY, true,
+    'The adapter projection remains available as a separate diagnostic.');
+  assert.equal(latchedResult.rows[0].operationalIntegrity.passed, false);
+  assert.equal(latchedResult.rows[0].operationalIntegrity.failureCode, 'V4_REPLAY_MISS');
+  assert.equal(latchedResult.rows[0].failure.stage, 'INTEGRITY');
+  assert.equal(latchedResult.rows[0].actualResult.stageVerdicts.INTEGRITY, true,
+    'The raw adapter result is retained while the authoritative operational verdict fails.');
   assert.equal(latchedResult.rows[1].status, 'NOT_RUN_AFTER_PRIOR_FAILURE');
   assert.equal(latchedSemanticCalls, 1, 'A latched evidence replay stops remaining semantic sends immediately.');
 

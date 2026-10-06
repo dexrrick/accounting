@@ -98,6 +98,7 @@ const testSuites = [
   { name: 'IRAS Claim-to-Evidence Verification', file: 'test_iras_claim_evidence_verifier.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS HTML Evidence Boundaries', file: 'test_iras_html_evidence_boundaries.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Evidence Policy Pipeline', file: 'test_iras_evidence_pipeline.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS V4 Retained-response Offline Regression', file: 'test_iras_v4_retained_response_replay.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'IRAS Deterministic Applications', file: 'test_iras_application_evaluator.mjs', layer: 'corporate-tax', tier: 'smoke' },
   { name: 'Verified Source-Driven GST Calculation', file: 'test_verified_gst_calculation.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'IRAS Provisional Answer Pipeline', file: 'test_iras_end_to_end_provisional.mjs', layer: 'retrieval-evidence', tier: 'full' },

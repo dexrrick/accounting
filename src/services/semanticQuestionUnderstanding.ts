@@ -610,7 +610,7 @@ export async function interpretSemanticQuestion(
       failureReason: hasSemanticContractContradiction(raw) ? 'CONTRADICTORY_FIELDS' : 'SCHEMA_MISMATCH'
     };
     if (interpretation.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'LOW_CONFIDENCE' };
-    return { mode: 'SEMANTIC_INTERPRETATION', interpretation };
+    return { mode: 'SEMANTIC_INTERPRETATION', interpretation: normalizeGeneralCompanyTaxResidencyRuleInterpretation(query, interpretation) };
   } catch (error) {
     // aiTransport deliberately withholds provider bodies and includes only the HTTP status.
     // Preserve 429 as a transport outcome so callers can retry without scoring it as model quality.
@@ -678,6 +678,42 @@ function isClearlyGeneralRuleQuestion(query: string): boolean {
   const capInteraction = /\b(?:cap|limit|threshold)\b/i.test(query) &&
     /\b(?:interact\w*|overlap\w*|prioriti[sz]\w*|relationship)\b/i.test(query);
   return explicitGeneral || genericHypotheticalRule || capInteraction;
+}
+
+function isGeneralCompanyTaxResidencyRuleQuestion(query: string): boolean {
+  const ending = String.raw`(?:\s+(?:here|in\s+singapore))?\s*[?.!]*\s*$`;
+  const generalRuleQuestion = new RegExp(
+    String.raw`^\s*(?:under|as|in)\s+singapore['’]s?\s+general\s+rule\s*,?\s+when\s+(?:is|does)\s+(?:a|any)\s+company\s+(?:tax\s+resident|tax\s+residen(?:ce|cy))\b${ending}`,
+    'i'
+  ).test(query);
+  const rulesDetermineQuestion = /^\s*how\s+do\s+singapore\s+tax\s+rules\s+determine\s+whether\s+a\s+company\s+is\s+tax\s+resident\s+(?:here|in\s+singapore)\s*[?.!]*\s*$/i.test(query);
+  return (generalRuleQuestion || rulesDetermineQuestion) &&
+    !hasExplicitCaseReference(query) && !hasCaseLinkedCircumstances(query) && !hasFirstPersonOutcomeApplication(query);
+}
+
+function hasSemanticCompanyTaxResidencyAnchors(value: string): boolean {
+  const normalized = value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return /\b(?:company|companies|corporate|corporation)\b/.test(normalized) &&
+    /\btax\b/.test(normalized) && /\b(?:residence|residency|resident)\b/.test(normalized);
+}
+
+function normalizeGeneralCompanyTaxResidencyRuleInterpretation(
+  query: string,
+  interpretation: SemanticQuestionInterpretation
+): SemanticQuestionInterpretation {
+  const issue = interpretation.issues?.length === 1 ? interpretation.issues[0] : undefined;
+  if (!isGeneralCompanyTaxResidencyRuleQuestion(query) || interpretation.domain !== 'IRAS_INCOME_TAX' ||
+      interpretation.population !== 'COMPANY' || !interpretation.authorityCandidates.includes('IRAS') ||
+      !issue || issue.domain !== 'IRAS_INCOME_TAX' || issue.population !== 'COMPANY' ||
+      !issue.governingAuthorities.includes('IRAS') || !hasSemanticCompanyTaxResidencyAnchors(issue.subject) ||
+      issue.operation !== 'DETERMINE_TREATMENT' || interpretation.factsExplicitlyProvided.length > 0) return interpretation;
+
+  return validateSemanticQuestionInterpretation({
+    ...interpretation,
+    requestedOperation: 'EXPLAIN_RULE',
+    requiresUserSpecificFacts: false,
+    issues: [{ ...issue, operation: 'EXPLAIN_RULE' }]
+  }, query) || interpretation;
 }
 
 function asksForCaseOutcome(query: string): boolean {
@@ -931,6 +967,29 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
         ['personal insurance', 'insurance premium', 'insurance premiums', 'personal insurance policy where employee is policyholder', 'employer-paid insurance premium'], ['iras-employment-benefits']);
     }
   }
+  const hasSingleCompanyIncomeTaxIssue = semantic?.domain === 'IRAS_INCOME_TAX' && semantic.population === 'COMPANY' &&
+    (!semantic.issues || semantic.issues.length === 1 && semantic.issues[0].domain === 'IRAS_INCOME_TAX' &&
+      semantic.issues[0].population === 'COMPANY' && semantic.issues[0].governingAuthorities.includes('IRAS'));
+  const asksGeneralForeignDividendReceiptTreatment = hasSingleCompanyIncomeTaxIssue &&
+    /\bdividends?\b/i.test(query) && /\b(?:received|receipt|receiving)\b/i.test(query) &&
+    /\b(?:treatment|taxable|tax|income tax)\b/i.test(query) &&
+    /\bforeign\s+dividend\b/i.test(text) &&
+    !/\b(?:exempt(?:ions?|ed|ing)?|tax[\s-]free|underlying tax|qualif\w+)\b/i.test(query);
+  if (asksGeneralForeignDividendReceiptTreatment) {
+    add('foreign_dividend_receipt_tax_treatment', 'Tax treatment of foreign dividend receipt',
+      ['foreign dividend receipt', 'foreign-sourced income', 'dividend received in Singapore'], ['iras-foreign-sourced-income']);
+  }
+  const residencyIssues = semantic?.issues;
+  const generalCompanyTaxResidencyRequest = semantic?.domain === 'IRAS_INCOME_TAX' && semantic.population === 'COMPANY' &&
+    semantic.authorityCandidates.includes('IRAS') && isGeneralCompanyTaxResidencyRuleQuestion(query) &&
+    (residencyIssues ? residencyIssues.length === 1 && residencyIssues[0].domain === 'IRAS_INCOME_TAX' &&
+      residencyIssues[0].population === 'COMPANY' && residencyIssues[0].governingAuthorities.includes('IRAS') &&
+      hasSemanticCompanyTaxResidencyAnchors(residencyIssues[0].subject)
+      : hasSemanticCompanyTaxResidencyAnchors(semantic.primarySubject));
+  if (generalCompanyTaxResidencyRequest) {
+    add('company_tax_residency_rule', 'Company tax residency rule',
+      ['tax resident in Singapore', 'control and management'], ['iras-corporate-tax-residency']);
+  }
   const requestedDomain = concepts.some(concept => concept.id === 'employee_benefit_tax_treatment')
     ? 'IRAS_EMPLOYER_TAX'
     : semantic ? toRegistryDomain(semantic.domain, semantic.population) : undefined;
@@ -953,6 +1012,10 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
         hasCanonical('employee_housing_benefit_tax_treatment') && /\b(?:housing|accommodation|rent)\b/.test(normalized) ||
         hasCanonical('employee_personal_insurance_tax_treatment') && /\b(?:personal insurance|insurance premiums?)\b/.test(normalized) ||
         /\b(?:benefits? in kind|perquisites?|employment benefits?)\b/.test(normalized)
+      ) ||
+      hasCanonical('company_tax_residency_rule') && (
+        /^(?:(?:company|corporate)\s+)?(?:tax\s+)?residen(?:ce|cy|t)(?:\s+determination)?$/.test(normalized) ||
+        normalized === 'control and management'
       );
     if (isAlreadyCoveredCanonicalConcept) continue;
     const mappedTopics = defaultQueryTopicResolver.decomposeQuery(label).topics
