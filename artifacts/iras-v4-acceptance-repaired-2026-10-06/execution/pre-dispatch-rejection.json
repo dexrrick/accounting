@@ -1,0 +1,12 @@
+{
+  "profile": "iras-v4-pre-dispatch-rejection",
+  "resolved": "Git-normalizedblob ownership plus unchanged rawmanifest/context hashes",
+  "geminiRequestsMade": 0,
+  "stage": "COMMITTED_INPUT_CHECK",
+  "transportRetriesConsumed": 0,
+  "cause": "Git text=auto normalizes CRLF metadata toLF; rawgitshow comparison incorrect",
+  "originalLog": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/capture-launch.log",
+  "sourceRequestsMade": 0,
+  "captureNamespaceAbsent": true,
+  "semanticNamespaceAbsent": true
+}

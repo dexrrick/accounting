@@ -69,7 +69,8 @@ function parseMode(args) {
 }
 
 function safeFailureCode(error, fallback = 'EXECUTION_FAILED') {
-  const candidate = String(error?.code === 'ERR_ASSERTION' ? error?.message : error?.code || error?.message || '');
+  const candidate = String(error?.code === 'ERR_ASSERTION' ? error?.message : error?.code || error?.message || '')
+    .split(/[\r\n]/, 1)[0].trim();
   return CAPTURE_FAILURE_CODE_RE.test(candidate) ? candidate : fallback;
 }
 
@@ -288,8 +289,9 @@ async function assertExecutionCheckout(context) {
     { stdio: 'ignore', windowsHide: true });
   const head = git(['rev-parse', 'HEAD']);
   for (const relative of EXECUTION_INPUTS) {
-    const committedBytes = execFileSync(GIT, ['-C', ROOT, 'show', `HEAD:${relative}`], { windowsHide: true });
-    assert.equal(sha256(committedBytes), context.hashes[relative], 'LAUNCH_INPUT_NOT_COMMITTED_AS_REVIEWED');
+    const workingBlob = git(['hash-object', `--path=${relative}`, '--stdin'], { input: await readRaw(relative) });
+    const committedBlob = git(['rev-parse', `HEAD:${relative}`]);
+    assert.equal(workingBlob, committedBlob, 'LAUNCH_INPUT_NOT_COMMITTED_AS_REVIEWED');
   }
   return Object.freeze({ head, branch });
 }
@@ -308,11 +310,13 @@ async function writeExclusiveJson(relative, document) {
 async function checkMode() {
   logPhase('OFFLINE_CHECK', 'STARTED');
   const context = await loadPreparedContext();
+  const checkout = await assertExecutionCheckout(context);
   await assertCaptureOutputsAbsent();
   await assertSemanticNamespaceAbsent();
   await assertContextStable(context);
   logPhase('OFFLINE_CHECK', 'PASSED', {
     reviewedCommit: REVIEWED_COMMIT,
+    head: checkout.head,
     captureInventoryRows: context.captureInventory.length,
     authorizedGeminiCalls: context.authorization.authorizedGeminiCalls,
     authorizationGranted: context.authorization.authorizationGranted,

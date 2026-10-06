@@ -2,7 +2,7 @@
   "syntaxCheck": "PASS: Node22",
   "disposition": "NO_REMAINING_MATERIAL_FINDINGS",
   "reviewer": "/root/offline_repair_review",
-  "launcherSha256": "416d834c9bfb4c165cf05ec1344085d6ed45b98c63008fabc830a1402c44518f",
+  "launcherSha256": "4a24b6f9d62063b655c97bd085bd5a336433d9859b3ca7b230108fdfce976e84",
   "reviewedAtUtc": "2026-10-06T14:51:34.0527385Z",
   "offlineCheck": "PASS: exact15inventory, authorization, no network/credential reads/files written",
   "liveRequestsDuringReview": 0,
@@ -10,7 +10,11 @@
     "Correct readJson value access",
     "Exclusive write validates parents and permits absent destination",
     "Actual three raw frozen-manifest hashes checked against authorized pins",
-    "Projected reserves8/4 and actualfivehourcheckpoint10/floor5 preserved"
+    "Projected reserves8/4 and actualfivehourcheckpoint10/floor5 preserved",
+    "Git-normalized blob equality validates committed inputs independently of raw pinned hashes",
+    "Offline check now includes committed-input integrity",
+    "Only bounded uppercase first-line failure codes logged"
   ],
-  "profile": "iras-v4-fresh-launcher-independent-review"
+  "profile": "iras-v4-fresh-launcher-independent-review",
+  "normalizationCorrectionReview": "NO_MATERIAL_FINDINGS: independent reviewer, syntax Node22 passed; runtime offline check after commit"
 }
