@@ -15,6 +15,9 @@ import {
   CASE_EVIDENCE_FAMILY,
   EVIDENCE_FAMILIES,
   RUNNER_PROFILE,
+  assertCanonicalNamespace,
+  assertInArtifactNamespace,
+  assertReviewedSemanticNamespace,
   assertActivationConfigurationBodyMatches,
   assertRunnerConfigurationBodyMatches,
   assertFrozenSemanticRequest,
@@ -28,6 +31,7 @@ import {
   runBoundedCapture,
   runBoundedV4SemanticPhase,
   runOfflineSyntheticV4CaseLoop,
+  verifyFrozenRunnerConfiguration,
   sha256,
   matchCaptureInventoryRequest,
   matchPreparedRedirectEdge,
@@ -49,6 +53,7 @@ const TEST_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const GIT = process.env.CODEX_GIT_EXECUTABLE ||
   'C:/Users/Admin/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/git/cmd/git.exe';
 const ARTIFACT_ROOT = 'artifacts/iras-v4-runner-integrity-2026-10-06';
+const FRESH_ACCEPTANCE_ROOT = 'artifacts/iras-v4-acceptance-repaired-2026-10-06';
 
 function passingSyntheticCaseResult(caseId) {
   const layerVerdicts = {
@@ -564,6 +569,146 @@ function testFrozenConfigurationGuards() {
   assert.ok(protectedUnion.includes('src/frozen-historical-file.ts'));
   assert.ok(protectedUnion.includes(subsequentImmutableFile),
     'current immutable artifact rows join the 389 historical paths in the bound input set');
+}
+
+async function testReviewedSemanticNamespaces() {
+  const legacyNamespace = ARTIFACT_ROOT + '/semantic-run-v4';
+  const freshNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4';
+  const root = await temporaryDirectory('iras-v4-semantic-namespace-');
+  try {
+    assert.equal(assertReviewedSemanticNamespace(legacyNamespace), legacyNamespace,
+      'the historical semantic namespace remains accepted');
+    assert.equal(assertReviewedSemanticNamespace(freshNamespace), freshNamespace,
+      'the explicitly reviewed fresh namespace is accepted');
+    assert.throws(() => assertReviewedSemanticNamespace(undefined),
+      /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/, 'a malformed binding cannot inherit the legacy default');
+    for (const unauthorized of [
+      'artifacts/unreviewed/semantic-run-v4',
+      FRESH_ACCEPTANCE_ROOT + '/../' + ARTIFACT_ROOT + '/semantic-run-v4',
+      freshNamespace.toUpperCase()
+    ]) {
+      assert.throws(() => assertReviewedSemanticNamespace(unauthorized),
+        /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/);
+    }
+
+    const makeBinding = semanticNamespace => {
+      const body = {
+        profile: RUNNER_PROFILE,
+        status: 'FROZEN_RUNNER_CONFIGURATION',
+        executionNodeMajor: 22,
+        semanticNamespace
+      };
+      return { ...body, integrityBindingSha256: digest(JSON.stringify(body)) };
+    };
+    const legacyBinding = makeBinding(legacyNamespace);
+    const freshBinding = makeBinding(freshNamespace);
+    const legacyPath = path.join(root, ...legacyNamespace.split('/'));
+    const freshPath = path.join(root, ...freshNamespace.split('/'));
+    assert.notEqual(path.resolve(root), path.resolve('.'), 'fixture root must differ from the process working directory');
+    assert.equal(assertRunnerConfigurationBodyMatches(legacyBinding, legacyBinding), true,
+      'the consumed legacy binding remains valid');
+    assert.equal(assertRunnerConfigurationBodyMatches(freshBinding, freshBinding), true,
+      'the fresh synthetic binding includes its namespace in the integrity hash');
+    assert.equal(assertCanonicalNamespace(legacyPath, legacyBinding, root), legacyPath);
+    assert.equal(assertCanonicalNamespace(freshPath, freshBinding, root), freshPath,
+      'the frozen fresh binding selects its exact acceptance slot');
+    assert.throws(() => assertCanonicalNamespace(freshNamespace, freshBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'a root-relative namespace string resolves against cwd, matching downstream filesystem operations');
+    assert.throws(() => assertCanonicalNamespace(legacyPath, freshBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
+    assert.throws(() => assertRunnerConfigurationBodyMatches(freshBinding, legacyBinding),
+      /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
+    assert.throws(() => assertCanonicalNamespace(
+      root + '/' + FRESH_ACCEPTANCE_ROOT + '/../' + ARTIFACT_ROOT + '/semantic-run-v4', freshBinding, root),
+    /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
+
+    assert.equal(assertInArtifactNamespace(path.join(root, legacyNamespace, 'runner-config.json'), root),
+      path.join(root, legacyNamespace, 'runner-config.json'));
+    assert.equal(assertInArtifactNamespace(path.join(root, freshNamespace, 'runner-config.json'), root),
+      path.join(root, freshNamespace, 'runner-config.json'));
+    assert.throws(() => assertInArtifactNamespace(path.join(root, 'artifacts/unreviewed/output.json'), root),
+      /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/);
+    assert.throws(() => assertInArtifactNamespace(
+      root + '/' + FRESH_ACCEPTANCE_ROOT + '/../' + ARTIFACT_ROOT + '/output.json', root),
+    /V4_ARTIFACT_PATH_TRAVERSAL_REJECTED/);
+
+    await assert.rejects(verifyFrozenRunnerConfiguration({
+      binding: {
+        profile: RUNNER_PROFILE,
+        status: 'FROZEN_RUNNER_CONFIGURATION',
+        executionNodeMajor: 22,
+        semanticNamespace: 'artifacts/unreviewed/semantic-run-v4'
+      },
+      root,
+      gitExecutable: GIT,
+      syntheticFixture: true
+    }), /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/,
+    'the verifier rejects an unreviewed namespace before recomputing repository inputs');
+    await assert.rejects(verifyFrozenRunnerConfiguration({
+      binding: {
+        profile: RUNNER_PROFILE,
+        status: 'FROZEN_RUNNER_CONFIGURATION',
+        executionNodeMajor: 22
+      },
+      root,
+      gitExecutable: GIT,
+      syntheticFixture: true
+    }), /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/,
+    'the verifier fails closed when a frozen document omits its bound namespace');
+
+    const artifactDirectory = path.join(root, ARTIFACT_ROOT);
+    await mkdir(artifactDirectory, { recursive: true });
+    const runnerConfigurationPath = path.join(artifactDirectory, 'runner-configuration.json');
+    const preregistrationPath = path.join(artifactDirectory, 'preregistration.json');
+    const evidenceLockPath = path.join(artifactDirectory, 'evidence-lock.json');
+    const capturePayloadPath = path.join(artifactDirectory, 'capture-payload.json');
+    await writeFile(runnerConfigurationPath, JSON.stringify({ semanticNamespace: legacyNamespace }));
+    await writeFile(preregistrationPath, '{}');
+    await writeFile(evidenceLockPath, '{}');
+    await writeFile(capturePayloadPath, '{}');
+    let allowanceReads = 0;
+    await assert.rejects(runBoundedV4SemanticPhase({
+      root,
+      runnerConfigurationPath,
+      preregistrationPath,
+      evidenceLockPath,
+      capturePayloadPath,
+      namespaceDirectory: freshPath,
+      authorizedGeminiCalls: 9,
+      sharedAllowanceReader: async () => { allowanceReads += 1; return {}; }
+    }), /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+    'a supplied fresh slot must match the frozen binding before verification or reservation');
+    assert.equal(allowanceReads, 0, 'namespace mismatch precedes external allowance lookup');
+    await assert.rejects(stat(freshPath), { code: 'ENOENT' },
+      'namespace mismatch does not create the supplied directory');
+    await assert.rejects(stat(path.join(freshPath, 'consumed-v4.json')), { code: 'ENOENT' },
+      'namespace mismatch does not create a consumption reservation');
+
+    const cwdRelativeFreshPath = path.resolve(freshNamespace);
+    assert.notEqual(cwdRelativeFreshPath, freshPath);
+    await assert.rejects(stat(cwdRelativeFreshPath), { code: 'ENOENT' },
+      'relative-path fixture starts without a working-directory namespace');
+    await writeFile(runnerConfigurationPath, JSON.stringify({ semanticNamespace: freshNamespace }));
+    await assert.rejects(runBoundedV4SemanticPhase({
+      root,
+      runnerConfigurationPath,
+      preregistrationPath,
+      evidenceLockPath,
+      capturePayloadPath,
+      namespaceDirectory: freshNamespace,
+      authorizedGeminiCalls: 9,
+      sharedAllowanceReader: async () => { allowanceReads += 1; return {}; }
+    }), /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/,
+    'a root-relative namespace that resolves outside the explicit root fails before directory creation');
+    assert.equal(allowanceReads, 0, 'root/cwd mismatch precedes external allowance lookup');
+    await assert.rejects(stat(cwdRelativeFreshPath), { code: 'ENOENT' },
+      'root/cwd mismatch does not create a working-directory namespace');
+    await assert.rejects(stat(path.join(cwdRelativeFreshPath, 'consumed-v4.json')), { code: 'ENOENT' },
+      'root/cwd mismatch does not create a consumption reservation');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 }
 
 async function testControlledCaptureAndReplay() {
@@ -1452,6 +1597,7 @@ async function main() {
   await testProviderEnvelopeFailureRetention();
   await testActualAdapterInFixedCaseLoop();
   testFrozenConfigurationGuards();
+  await testReviewedSemanticNamespaces();
   await testCheckoutBindings();
   await testCheckoutStatusWindowsScale();
   await testControlledCaptureAndReplay();

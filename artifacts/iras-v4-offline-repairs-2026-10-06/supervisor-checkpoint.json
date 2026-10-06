@@ -36,7 +36,7 @@
     "All six retained-response regressions, lint, build, smoke and full regression suite pass; lint/build warnings remain.",
     "Original smoke fingerprint failure overlapped final source edits; subsequent full and settled-source smoke passed without weakening fingerprint gates.",
     "Consumed historical artifacts and frozen nine-case contract unchanged; no Gemini or source recapture performed.",
-    "Changes are uncommitted. Next: preserve reviewed state in a commit, generate new reviewed bindings, then obtain appropriate capture and live-run authorization.",
+    "Reviewed repair state committed; fresh namespace preparation is in artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/supervisor-plan.json.",
     "Fresh candidate namespace remains absent and unconsumed; full nine-case acceptance remains unproven."
   ],
   "validation": {
@@ -53,5 +53,6 @@
     "reviewedAtUtc": "2026-10-06T13:56:15.3790973Z",
     "initialWeeklyRemainingPercent": 72,
     "initialFiveHourRemainingPercent": 100
-  }
+  },
+  "repairCommit": "df288e0d490387cc33ddfff9d15782e70e728c50"
 }

@@ -1,0 +1,40 @@
+{
+  "profile": "iras-v4-new-run-authorization-request",
+  "status": "NOT_AUTHORIZED_PENDING_VERIFIED_BINDINGS",
+  "authorizationGranted": false,
+  "priorAuthorizationReusable": false,
+  "freshNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
+  "requestedActions": [
+    "Fresh bounded IRAS capture using the reviewed 15-request inventory and new code bindings",
+    "One new nine-case Gemini acceptance run after capture, evidence, quota and resource preflight pass"
+  ],
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "captureLimits": {
+    "allowedHosts": ["iras.gov.sg", "www.iras.gov.sg"],
+    "approvedRequestIdentities": 15,
+    "maximumRequests": 60,
+    "maximumRequestsPerFamily": 10,
+    "retries": 0,
+    "maximumCaptureAgeHours": 24,
+    "unknownRequestsFailClosed": true
+  },
+  "semanticLimits": {
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "authorizedCallsRequested": 9,
+    "callsPerCase": 1,
+    "retries": 0,
+    "minimumStartGapMs": 15250,
+    "maximumResponseBytes": 65536,
+    "liveSourceRetrieval": false
+  },
+  "requiredBeforeExecution": [
+    "New explicit human authorization for these actions and this namespace",
+    "Independently verified new frozen bindings for committed reviewed code",
+    "New code-bound official capture and evidence lock before semantic execution",
+    "Fresh independently readable shared allowance and cost projection",
+    "Fresh provider quota evidence; do not assume the earlier confirmation applies"
+  ],
+  "acceptanceProven": false,
+  "noReservationsMadeDuringPreparation": true
+}

@@ -1,0 +1,51 @@
+{
+  "profile": "iras-v4-fresh-acceptance-preparation",
+  "status": "REVIEW_AND_VALIDATION_COMPLETE_READY_FOR_OFFLINE_FREEZE_AFTER_COMMIT",
+  "repairCommit": "df288e0d490387cc33ddfff9d15782e70e728c50",
+  "baselineFailureCommit": "45d2626",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
+  "namespaceMustRemainAbsentUntilAuthorizedRun": true,
+  "acceptanceProven": false,
+  "authorization": {
+    "commitReviewedRepairs": true,
+    "prepareOfflineBindings": true,
+    "officialSourceCapture": false,
+    "geminiAcceptance": false
+  },
+  "inventory": {
+    "requestRows": 15,
+    "discoveryRows": 6,
+    "sourceRows": 9,
+    "sha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+    "mustMatchCurrentApprovedInventory": true,
+    "uncapturedCertificateApplicationPageAdded": false,
+    "redirectEdges": 0,
+    "unknownRequestsFailClosed": true
+  },
+  "sequence": [
+    "Commit validated accounting and semantic repairs",
+    "Builder adds explicit fresh namespace support with legacy compatibility and negative controls",
+    "Independent reviewer reviews namespace controls and offline freeze harness",
+    "Run focused runner regressions and repository smoke validation",
+    "Commit namespace support and reviewed harness",
+    "Exclusively freeze new code-bound runner, preregistration and activation files offline",
+    "Independently verify frozen bindings and absence of reservations",
+    "Request new source-capture and nine-call Gemini authorization; refresh allowance, cost projection and provider quota before execution"
+  ],
+  "futureExecutionLimits": {
+    "geminiCalls": 9,
+    "geminiRetries": 0,
+    "model": "gemini-3.5-flash-lite",
+    "minimumGeminiStartGapMs": 15250,
+    "maximumSemanticResponseBytes": 65536,
+    "captureMaximumRequests": 60,
+    "captureMaximumRequestsPerFamily": 10,
+    "captureRetries": 0,
+    "captureMaximumAgeHours": 24,
+    "liveSourceNetworkDuringSemanticRun": false
+  },
+  "resourcePolicy": {
+    "checkpointAtRemainingPercent": 10,
+    "finishAboveRemainingPercent": 5
+  }
+}

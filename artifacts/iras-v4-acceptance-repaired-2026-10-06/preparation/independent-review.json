@@ -1,0 +1,25 @@
+{
+  "profile": "iras-v4-fresh-namespace-independent-review",
+  "reviewWasReadOnly": true,
+  "files": {
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/freeze-bindings.mjs": "6dc5611f6bf7e7a29bba2eed751919f23d794794e0cf9de9d5d759cf73cb2af7",
+    "tests/regression/test_iras_v4_capture_replay_runner.mjs": "7658815590a7a8f3f2a84f85fe8d6326373074e1fda34798258777740b98c0ea",
+    "scripts/iras_v4_capture_replay_runner.mjs": "6ed979a4ff4193ce78144a3c8c3c0f66238b901d83da4cc43fa605a397ee42c3",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/authorization-request.json": "fbe0abcdc5556909000d535b66b3a0402d3ff874a451360a38f7e11163b6ac81"
+  },
+  "focusedRunnerRegression": "PASS per builder, Node22, exit0",
+  "liveCallsMade": 0,
+  "reviewer": "/root/offline_repair_review",
+  "reviewedAtUtc": "2026-10-06T14:10:06.5994690Z",
+  "disposition": "NO_REMAINING_MATERIAL_FINDINGS",
+  "resolvedFinding": "Namespace guard now resolves supplied paths with the same cwd semantics as all downstream filesystem operations; root/cwd mismatch rejects before side effects.",
+  "verifiedControls": [
+    "Exact legacy/fresh namespace allowlist",
+    "Namespace selected inside hash-bound runner configuration",
+    "Missing/unknown/traversal namespace rejection",
+    "Legacy compatibility and consumption protections preserved",
+    "Frozen harness uses new exclusive paths and blocks ambient external network",
+    "Same current approved 15-request inventory and nine prompt rows",
+    "Capture and Gemini execution held pending new authorization"
+  ]
+}

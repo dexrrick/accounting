@@ -104,6 +104,15 @@ const EXTRA_BINDINGS = Object.freeze([
 const MAX_RETAINED_CASE_RESULT_BYTES = 256_000;
 const TRACKED_DIRS = Object.freeze(['src', 'tests/evaluation/singapore', 'tests/regression', 'scripts']);
 const ARTIFACT_NAMESPACE = 'artifacts/iras-v4-runner-integrity-2026-10-06/';
+const FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/iras-v4-acceptance-repaired-2026-10-06/';
+const APPROVED_ARTIFACT_NAMESPACES = Object.freeze([
+  ARTIFACT_NAMESPACE,
+  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE
+]);
+const APPROVED_SEMANTIC_NAMESPACES = Object.freeze([
+  ARTIFACT_NAMESPACE + 'semantic-run-v4',
+  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4'
+]);
 let ambientNetworkBlockInProgress = false;
 const explicitTransportNetworkContext = new AsyncLocalStorage();
 const EXPLICIT_TRANSPORT_NETWORK_CAPABILITY = Symbol('reviewed-transport-call');
@@ -240,11 +249,20 @@ async function assertNoSymlinkPath(root, target, { mustExist = true } = {}) {
   return absolute;
 }
 
-function assertInArtifactNamespace(target, root) {
+export function assertInArtifactNamespace(target, root) {
+  assert.equal(typeof target, 'string', 'V4_ARTIFACT_PATH_REQUIRED');
+  assert.ok(!target.split(/[\\/]+/).includes('..'), 'V4_ARTIFACT_PATH_TRAVERSAL_REJECTED');
   const absolute = path.resolve(target);
   const relative = path.relative(path.resolve(root), absolute).split(path.sep).join('/');
-  assert.ok(relative.startsWith(ARTIFACT_NAMESPACE), 'V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE');
+  assert.ok(APPROVED_ARTIFACT_NAMESPACES.some(namespace => relative.startsWith(namespace)),
+    'V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE');
   return absolute;
+}
+
+export function assertReviewedSemanticNamespace(semanticNamespace) {
+  assert.ok(APPROVED_SEMANTIC_NAMESPACES.includes(semanticNamespace),
+    'V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID');
+  return semanticNamespace;
 }
 
 function assertNode22() {
@@ -499,7 +517,7 @@ function designProjection(design) {
   };
 }
 
-function runnerConfigurationBody(snapshot, designProjectionValue, node) {
+function runnerConfigurationBody(snapshot, designProjectionValue, node, semanticNamespace) {
   return {
     profile: RUNNER_PROFILE,
     status: RUNNER_CONFIGURATION_STATUS,
@@ -515,7 +533,7 @@ function runnerConfigurationBody(snapshot, designProjectionValue, node) {
     captureInventory: null,
     productionEvidenceAdapterSha256: null,
     preregistrationSha256: null,
-    semanticNamespace: ARTIFACT_NAMESPACE + 'semantic-run-v4',
+    semanticNamespace,
     designFingerprints: designProjectionValue,
     fileRows: snapshot.fileRows,
     fileInventorySha256: snapshot.fileInventorySha256
@@ -527,8 +545,10 @@ export async function collectReviewedRunnerBinding({
   gitExecutable,
   baselineCommit = BASELINE_COMMIT,
   reviewedCommit,
-  syntheticFixture = false
+  syntheticFixture = false,
+  semanticNamespace = APPROVED_SEMANTIC_NAMESPACES[0]
 } = {}) {
+  const frozenSemanticNamespace = assertReviewedSemanticNamespace(semanticNamespace);
   const node = syntheticFixture ? { nodeVersion: process.versions.node, execPath: process.execPath } : assertNode22();
   assertExplicitGit(gitExecutable);
   const design = await buildDesignFingerprints();
@@ -555,7 +575,7 @@ export async function collectReviewedRunnerBinding({
     directories: TRACKED_DIRS,
     expectedBranch: syntheticFixture ? undefined : EXPECTED_BRANCH
   });
-  const body = runnerConfigurationBody(snapshot, designProjection(design), node);
+  const body = runnerConfigurationBody(snapshot, designProjection(design), node, frozenSemanticNamespace);
   return {
     ...body,
     integrityBindingSha256: sha256(stableJson(body))
@@ -575,12 +595,15 @@ export async function writeFrozenRunnerConfiguration({
   root = ROOT,
   gitExecutable,
   baselineCommit = BASELINE_COMMIT,
-  reviewedCommit
+  reviewedCommit,
+  semanticNamespace = APPROVED_SEMANTIC_NAMESPACES[0]
 } = {}) {
   assert.ok(outputPath, 'V4_RUNNER_CONFIGURATION_PATH_REQUIRED');
   assertNode22();
   const destination = assertInArtifactNamespace(assertOutsideProtectedHistory(outputPath, root), root);
-  const binding = await collectReviewedRunnerBinding({ root, gitExecutable, baselineCommit, reviewedCommit });
+  const binding = await collectReviewedRunnerBinding({
+    root, gitExecutable, baselineCommit, reviewedCommit, semanticNamespace
+  });
   await mkdir(path.dirname(destination), { recursive: true });
   await assertNoSymlinkPath(root, path.relative(root, destination), { mustExist: false });
   const bytes = Buffer.from(JSON.stringify(binding, null, 2) + '\n', 'utf8');
@@ -616,13 +639,15 @@ export async function verifyFrozenRunnerConfiguration({
   assert.equal(document.profile, RUNNER_PROFILE, 'V4_RUNNER_CONFIGURATION_PROFILE_INVALID');
   assert.equal(document.status, RUNNER_CONFIGURATION_STATUS, 'V4_RUNNER_CONFIGURATION_NOT_FROZEN');
   assert.equal(document.executionNodeMajor, EXECUTION_NODE_MAJOR, 'V4_EXECUTION_NODE_BINDING_INVALID');
+  const semanticNamespace = assertReviewedSemanticNamespace(document.semanticNamespace);
   if (!syntheticFixture) assertNode22();
   const recomputed = await collectReviewedRunnerBinding({
     root,
     gitExecutable,
     baselineCommit: document.baselineCommit,
     reviewedCommit: document.reviewedCommit,
-    syntheticFixture
+    syntheticFixture,
+    semanticNamespace
   });
   assertRunnerConfigurationBodyMatches(document, recomputed);
   return { passed: true, integrityBindingSha256: recomputed.integrityBindingSha256, snapshot: recomputed };
@@ -2785,10 +2810,11 @@ async function runFixedV4CaseLoop({
       rows.find(row => row.status !== 'PASSED')?.firstFailure || null };
 }
 
-function assertCanonicalNamespace(namespaceDirectory, runnerConfiguration, root) {
-  assert.equal(runnerConfiguration.semanticNamespace, ARTIFACT_NAMESPACE + 'semantic-run-v4',
-    'V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID');
-  const expected = path.resolve(root, runnerConfiguration.semanticNamespace);
+export function assertCanonicalNamespace(namespaceDirectory, runnerConfiguration, root) {
+  const semanticNamespace = assertReviewedSemanticNamespace(runnerConfiguration?.semanticNamespace);
+  assert.equal(typeof namespaceDirectory, 'string', 'V4_SEMANTIC_NAMESPACE_REQUIRED');
+  assert.ok(!namespaceDirectory.split(/[\\/]+/).includes('..'), 'V4_SEMANTIC_NAMESPACE_NOT_FROZEN');
+  const expected = path.resolve(root, semanticNamespace);
   const supplied = path.resolve(namespaceDirectory);
   assert.equal(supplied, expected, 'V4_SEMANTIC_NAMESPACE_NOT_FROZEN');
   assertInArtifactNamespace(supplied, root);
