@@ -39,3 +39,7 @@ Final regression SHA-256: `f7ce5a7d1fea2488a0d24e7f5c64d9fbfd7795ac491bf35f249bc
 The saved regression-log digest remains `769bcb00c2554bd52c4a3696410187ae5bea465d8ab40d064fbbd9606b6e7713`.
 
 The reviewer verified these hashes and reports **no remaining material findings**. All seven findings are closed. This approves only the bounded runner safeguards for supervisor commit/final binding verification/configuration freeze. Full preregistration, official capture and live acceptance remain HOLD. The valid-frozen-configuration HOLD probe remains a supervisor final-verification item; earlier invalid-profile tests do not prove that case.
+
+## Supervisor final-verification blocker
+
+After committing reviewed inputs at `187cdcda556a69703245197446376c8a7c9d2f2c`, the actual full-inventory freeze failed with Windows `spawn ENAMETOOLONG` in the single Git-status pathspec argument vector. No configuration file was created. This newly observed issue is outside the earlier signoff and keeps freeze HOLD until bounded status arguments are implemented, validated and independently checked. Closure began at 8% five-hour remaining; do not spend the user's stopping buffer on another implementation cycle.

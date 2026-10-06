@@ -23,3 +23,9 @@ Reproduce the focused offline run from `D:\Accounting`:
 ```
 
 Node 22 requires the approved escalated execution path in this sandbox. Use the bundled explicit Git executable `C:\Users\Admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe`; the PATH shim is broken. Prepare closure at 10% five-hour remaining, finish above 5%, and do not use reset credits. This checkpoint is written before that floor, in response to the user's reminder.
+
+## Latest verified state
+
+All seven review findings are now closed after the final history-inventory union fix. Final source hash: `87cddbb06816bd22078b657c8460d8402d82bd4245fa347800711dd844217778`; regression hash: `f7ce5a7d1fea2488a0d24e7f5c64d9fbfd7795ac491bf35f249bcc0927fe0a68`. Focused blocked regression, syntax and targeted lint pass. Reviewed source/test/design and review/checkpoint records are committed at `187cdcda556a69703245197446376c8a7c9d2f2c`.
+
+The supervisor's actual freeze attempt exposed a Windows `spawn ENAMETOOLONG` at `collectCheckoutIntegritySnapshot`: the complete inventory is passed as one Git-status argument vector. Freeze failed before configuration creation; no `runner-configuration.json` exists. This is a newly observed final-verification blocker. Batch status pathspecs (or use supported bounded input) without omitting bound paths, add a targeted control, independently check the fix, commit it, and retry exclusive freeze. Do not claim the earlier signoff covers this new issue. Live HOLD coverage for a valid frozen config remains unverified until freeze succeeds.
