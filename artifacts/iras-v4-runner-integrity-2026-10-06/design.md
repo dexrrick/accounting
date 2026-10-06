@@ -1,0 +1,29 @@
+# Bounded V4 runner-integrity phase — 06/10/2026
+
+The reviewed API-free checkpoint is committed as `42637dfb552dae45ed3cb72f4f495d6528a14272` on `codex/multi-authority-workstreams`. All five saved checkpoint hashes match, including the retained execution log; all 389 historical rows across 221 paths remain intact. This phase implements and independently reviews executable integrity safeguards before official evidence acquisition. Synthetic runtime success is not current official evidence or live acceptance.
+
+## Ownership and scope
+
+The supervisor owns design, baseline commit, ambiguous integrity decisions, review disposition, final verification and freezing. The builder owns `scripts/iras_v4_capture_replay_runner.mjs` and its new isolated regression. The independent reviewer inspects the final implementation and controls without editing them. Production, the existing evaluator, contract JSON, test registration and historical artifacts remain unchanged.
+
+The deliverable is a reusable capture/replay integrity boundary with an offline-check entry point and guarded execution orchestration. It must not silently expose the development-only synthetic observation adapter as a live scorer. A freeze of runner safeguards does not establish completeness of a future acquisition inventory, production observation adapter, official corpus or semantic acceptance. Each missing prerequisite keeps the corresponding later phase on HOLD.
+
+## Required executable safeguards
+
+1. Bind actual working-file bytes, tracked Git blobs, reviewed commit and baseline ancestry. Recompute the complete production/evaluation/source/prompt/schema/history inventories using existing helpers, separately bind the runner, and reject dirty or newly introduced executable inputs. Check before transport or reservation and after execution. Git commands use argument arrays and an explicit executable.
+2. Freeze with exclusive creation. Store new reports, configuration, corpus and execution artifacts outside the existing protected-history traversal, under this artifact namespace; avoid circular hashes or updates to consumed historical artifacts.
+3. Count each real HTTP dispatch, including failures and redirects, against 60 total and ten per evidence family, with zero deliberate retries. Transport accepts bounded HTTPS GET requests to the existing approved IRAS hosts. It enforces manual redirects, a 3,000 ms whole-response deadline and response-size bounds. The production retriever remains responsible for admission, topic validation, redirect policy and its five-redirect ceiling.
+4. Reserve acquisition once before dispatch and preserve partial outcomes. Capture raw response bytes and SHA-256, HTTP metadata, requested/actual URL, family, acquisition times and policy provenance. Bind a separately frozen evidence lock to the unchanged configuration digest, payload digest and reviewed file/commit bindings.
+5. Reject unbound, synthetic, tampered, missing, future-dated, wrong-date or older-than-24-hour evidence. Age derives from the earliest actual acquisition, not a caller's convenient summary timestamp. Validate every entry and cumulative budgets.
+6. Replay exact request identities only. Unknown/mismatched requests fail closed and latch integrity failure even if the production pipeline catches the thrown transport error. Replay supplies HTTP bytes through the production retriever; it cannot set verification or coverage flags. Ambient networking throws.
+7. Reserve execution durably before the first semantic dispatch. Enforce the existing frozen nine-case order, one call per case, no retries, 8,000 ms timeout and 15,250 ms starts. Failed or interrupted execution remains consumed. Fresh independently readable allowance, projected reserve and explicit nine-call provider authorization remain prerequisites; they are not inferred from a metadata-shaped object or Codex usage alone.
+
+Offline tests must exercise actual transport and orchestration, including the production controlled retriever, mutation failures, budget/deadline failures, strict lookup, swallowed transport errors and concurrent one-use reservation. Fixtures must be explicitly synthetic and temporary; no official/provider requests are part of offline validation.
+
+Supervisor implementation decisions: replay is an exact response map that allows identical successful response reuse across cases and retains lookup/reuse diagnostics; unused approved fallback responses are diagnostics, not an automatic failure. One-use execution applies to a frozen canonical output namespace. Capture counts repeated successful HTTP fetches, rejects conflicting response identities and does not deliberately retry failed requests. Family identifiers are a fixed six-family inventory, not arbitrary labels. Exact configuration validation rejects appended activation fields. Capturing non-synthetic evidence remains blocked before reservation/dispatch until a separately reviewed acquisition inventory and adapter exist. Global ambient-network blocking must reject overlapping operations so an early restore cannot reopen another operation's network access. Semantic response hashes must describe actual bounded response bytes, including partial/failure journaling, and live test-control overrides are prohibited.
+
+## Release and resource boundary
+
+Only freeze controls after implementation, independent review, supervisor disposition and targeted offline validation pass. Do not capture pages while building the runner: their 24-hour window must begin after their own reviewed acquisition prerequisites are ready. Do not activate a provider call from synthetic passes or a runner-only freeze. Final profile, push, merge and deployment remain excluded.
+
+At phase start, five-hour remaining was 47% and weekly remaining was 49%. Begin checkpoint preparation at 10% five-hour or 5% weekly remaining; finish above 5% five-hour and 2% weekly. Do not use reset credits.
