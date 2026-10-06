@@ -1,0 +1,17 @@
+{
+  "profile": "iras-v4-fresh-resource-authorization-review",
+  "reviewer": "/root/offline_repair_review",
+  "projectionSha256": "0bba5ea1d86c492c5ceae26e809914a0d8e531953112f7bbc847c4a6aca4228f",
+  "projectionBasis": "Observed26/4 scoped preparation consumption rounded to40/15 for bounded capture/acceptance/outcome preservation",
+  "authorizationSha256": "521e4922f01d13b4811bb858aafe6ddedfd56b401389e7e840370f9cd3892ad9",
+  "quotaSource": "Current explicit human confirmation; no provider probe or new numerical capacity inferred",
+  "reviewedAtUtc": "2026-10-06T14:34:58.9769400Z",
+  "limitations": [
+    "Planning estimate, not a guaranteed upper bound",
+    "Fresh independent allowance observation after expensive verification",
+    "Continue monitoring and stop if bound unsupported",
+    "No remedial coding, retries or additional capture in this execution scope",
+    "Preserve frozen8/4 reserve and usercheckpoint10/floorabove5"
+  ],
+  "disposition": "ACCEPTABLE_NO_MATERIAL_FINDINGS"
+}
