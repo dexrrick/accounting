@@ -1,0 +1,53 @@
+{
+  "profile": "iras-v4-semantic-acceptance-preparation",
+  "status": "REVIEWED_PREPARATION_COMPLETE_LIVE_ACCEPTANCE_HELD",
+  "recordedAt": "2026-10-06T09:21:41Z",
+  "baselineHead": "80e64ad07011c586705c53be59d5372e81b5ee2d",
+  "branch": "codex/multi-authority-workstreams",
+  "boundFileCount": 592,
+  "initialBoundRawByteMismatches": 0,
+  "checks": {
+    "builderNode22SyntaxBothFiles": "PASS",
+    "builderFocusedOfflineControls": "PASS",
+    "builderTargetedOxlint": "PASS_NO_WARNINGS",
+    "independentReview": "BOTH_P2_FINDINGS_CLOSED_NO_REMAINING_MATERIAL_FINDINGS",
+    "supervisorActualFrozenCheckoutCheck": "FROZEN_EVIDENCE_AND_OFFLINE_GATES_VALID",
+    "supervisorActualCheckExternalNetworkBlocked": true,
+    "supervisorActualCheckExitCode": 0
+  },
+  "observedCliCounters": {
+    "invalidArguments": {"runnerImports": 0, "capabilityLoads": 0, "credentialReads": 0, "launcherWrites": 0, "requests": 0},
+    "missingAuthorization": {"runnerImports": 0, "capabilityLoads": 0, "credentialReads": 0, "launcherWrites": 0, "requests": 0}
+  },
+  "testOwnedDirectoriesCreated": 1,
+  "testOwnedFilesCreated": 0,
+  "testDirectoryRemoved": true,
+  "officialRequests": 0,
+  "providerCalls": 0,
+  "semanticNamespaceAbsentAfterCheck": true,
+  "authorizationFileAbsentAfterCheck": true,
+  "credentialFileLoaded": false,
+  "credentialSourceReportedByUser": ".env.local",
+  "credentialAvailabilityVerified": false,
+  "providerQuotaHeadroomVerified": false,
+  "remainingFiveHourPercentAtCheckpoint": 71,
+  "remainingWeeklyPercentAtCheckpoint": 38,
+  "allowanceObservationAt": "2026-10-06T09:19:10Z",
+  "projectedFiveHourCostPercentagePoints": 80,
+  "projectedWeeklyCostPercentagePoints": 15,
+  "requiredFiveHourRemainingForLaunch": 88,
+  "requiredWeeklyRemainingForLaunch": 19,
+  "liveReserveGatePassed": false,
+  "fiveHourStopFloorPercent": 5,
+  "checkpointPreparationThresholdPercent": 10,
+  "nextFiveHourResetUtc": "2026-10-06T13:26:09Z",
+  "evidenceExpiresAt": "2026-10-07T06:26:38.150Z",
+  "artifactSha256": {
+    "launch.mjs.txt": "3c4ae3ce2e8fc995cc88272015d9af6224f0cac2a5967f29ecc52e8aa44411ad",
+    "offline-controls.mjs.txt": "2def37d0741331e4507276f5093a231422e572b1abd563b92f273a020eb8b26c",
+    "independent-review.md": "fb2f050efb034814c27477bd9a1d1f398425974d2fd4231407ad7d5d7b858c40",
+    "resource-projection.md": "daa332cb1e7bf11d017611ff8849423a13e871bdf9f89d5dd43e0c2e2b8b3578",
+    "supervisor-offline-check.txt": "de9743fa000dd391e6b78feb50264a5583533ec59ddc92e48acb91a4c35a5e58"
+  },
+  "accountingValidation": "Existing smoke/build and frozen source validation retained; no production or fingerprinted input was changed, so no accounting suite was repeated."
+}
