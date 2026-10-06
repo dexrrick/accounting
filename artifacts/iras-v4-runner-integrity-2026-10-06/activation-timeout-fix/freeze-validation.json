@@ -1,0 +1,29 @@
+{
+  "status": "FROZEN_API_FREE_HOLD",
+  "reviewedCommit": "a30dd0a5d8a5b405dcab5dad460bf86c8bcf1b96",
+  "boundFileCount": 592,
+  "boundFileMismatches": 0,
+  "archivedCheckpointHashesUnchanged": true,
+  "immutableFingerprintsUnchanged": true,
+  "priorActivationManifestsUnchanged": true,
+  "holdProbeNamespaceAbsent": true,
+  "unpreparedLiveDispatchRejectedWithoutRequest": true,
+  "officialRequests": 0,
+  "providerRequests": 0,
+  "liveReservations": 0,
+  "freezeLogSha256": "d5ffc198e952ea7f616fe2c0e832d6fe98f9fbcfd7e749a17062ce68bf9cbd87",
+  "manifests": [
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix/runner-configuration-current.json",
+      "sha256": "15fbd23e629c5a13538ea380dccfcf260523670a71da026d8357fe6fba8b8806"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix/preregistration.json",
+      "sha256": "483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix/activation-configuration.json",
+      "sha256": "5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30"
+    }
+  ]
+}
