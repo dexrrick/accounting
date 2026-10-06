@@ -67,6 +67,10 @@ const SHA256_RE = /^[a-f0-9]{64}$/i;
 const ACCEPT_HEADER = 'text/plain, application/json, text/html, */*';
 const NETWORK_DISABLED_MESSAGE = 'V4_AMBIENT_NETWORK_DISABLED';
 const MAX_GIT_OUTPUT_BYTES = 8 * 1024 * 1024;
+// Leave substantial headroom below CreateProcess' 32,767 UTF-16-unit limit.
+// The estimate doubles every argument code unit to cover Windows quoting and
+// escaping, then includes Git's executable path, -C root, and fixed options.
+const WINDOWS_GIT_STATUS_COMMAND_BUDGET = 24_000;
 const EXTRA_BINDINGS = Object.freeze([
   'AGENTS.md',
   'package.json',
@@ -199,6 +203,41 @@ function parsePorcelainZ(raw) {
   return entries;
 }
 
+function conservativeWindowsArgumentLength(value) {
+  return 2 + (String(value).length * 2);
+}
+
+function conservativeWindowsCommandLength(gitExecutable, root, args) {
+  const argv = [gitExecutable, '-C', root, ...args];
+  return argv.reduce((total, value) => total + conservativeWindowsArgumentLength(value) + 1, 0);
+}
+
+function chunkStatusPathspecs(gitExecutable, root, pathspecs) {
+  const fixedArgs = ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--'];
+  const fixedLength = conservativeWindowsCommandLength(gitExecutable, root, fixedArgs);
+  assert.ok(fixedLength < WINDOWS_GIT_STATUS_COMMAND_BUDGET, 'V4_GIT_STATUS_FIXED_COMMAND_TOO_LARGE');
+  const chunks = [];
+  let current = [];
+  let currentLength = fixedLength;
+  for (const pathspec of pathspecs) {
+    // Prefixing Git's literal pathspec magic makes filenames containing '*',
+    // '?', '[' or ':' stay exact paths while directories remain recursive.
+    const literalPathspec = ':(literal)' + pathspec;
+    const argumentLength = conservativeWindowsArgumentLength(literalPathspec) + 1;
+    assert.ok(fixedLength + argumentLength <= WINDOWS_GIT_STATUS_COMMAND_BUDGET,
+      'V4_GIT_STATUS_PATHSPEC_TOO_LARGE:' + pathspec);
+    if (current.length > 0 && currentLength + argumentLength > WINDOWS_GIT_STATUS_COMMAND_BUDGET) {
+      chunks.push(current);
+      current = [];
+      currentLength = fixedLength;
+    }
+    current.push(literalPathspec);
+    currentLength += argumentLength;
+  }
+  if (current.length > 0) chunks.push(current);
+  return { fixedArgs, chunks };
+}
+
 function isExecutableInput(relative) {
   return /\.(?:mjs|cjs|js|jsx|ts|tsx|mts|cts|sh|ps1|bat|cmd|json)$/i.test(relative);
 }
@@ -252,14 +291,25 @@ export async function collectCheckoutIntegritySnapshot({
   if (expectedBranch) assert.equal(branch, expectedBranch, 'V4_BRANCH_MISMATCH');
 
   const canonicalPaths = [...new Set(paths.map(value => normalizedRelative(absoluteRoot, value)))].sort();
-  for (const directory of directories) await assertNoSymlinkPath(absoluteRoot, directory);
-  const statusPathspecs = [...new Set([...directories, ...canonicalPaths])];
-  const status = parsePorcelainZ((await runGit(gitExecutable, absoluteRoot,
-    ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--', ...statusPathspecs])).stdout);
+  const normalizedDirectories = [...new Set(directories.map(value => normalizedRelative(absoluteRoot, value)))];
+  for (const directory of normalizedDirectories) await assertNoSymlinkPath(absoluteRoot, directory);
+  const statusPathspecs = [...new Set([...normalizedDirectories, ...canonicalPaths])];
+  const { fixedArgs, chunks } = chunkStatusPathspecs(gitExecutable, absoluteRoot, statusPathspecs);
+  const entriesByPath = new Map();
+  for (const chunk of chunks) {
+    const output = await runGit(gitExecutable, absoluteRoot, [...fixedArgs, ...chunk]);
+    for (const entry of parsePorcelainZ(output.stdout)) {
+      const previous = entriesByPath.get(entry.path);
+      assert.ok(!previous || previous.status === entry.status,
+        'V4_GIT_STATUS_CHANGED_DURING_INVENTORY:' + entry.path);
+      entriesByPath.set(entry.path, entry);
+    }
+  }
+  const status = [...entriesByPath.values()];
   const dirty = status.filter(entry => entry.status !== '??');
   assert.deepEqual(dirty, [], 'V4_RELEVANT_TRACKED_FILES_DIRTY');
   const untrackedExecutableInputs = status.filter(entry => entry.status === '??' &&
-    directories.some(directory => pathIsWithin(entry.path.replaceAll('\\', '/'), directory.replaceAll('\\', '/'))) &&
+    normalizedDirectories.some(directory => pathIsWithin(entry.path.replaceAll('\\', '/'), directory.replaceAll('\\', '/'))) &&
     isExecutableInput(entry.path));
   assert.deepEqual(untrackedExecutableInputs, [], 'V4_UNTRACKED_EXECUTABLE_INPUT');
 

@@ -115,6 +115,12 @@ async function testCheckoutBindings() {
     assert.equal(initial.fileRows.length, 3);
     assert.ok(initial.fileRows.every(row => row.gitBlob === row.reviewedBlob));
 
+    await assert.rejects(
+      collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline,
+        reviewedCommit: baseline, paths: ['src/' + 'x'.repeat(20_000) + '.ts'], directories: [] }),
+      /V4_GIT_STATUS_PATHSPEC_TOO_LARGE/
+    );
+
     await writeFile(path.join(root, 'src', 'sample.ts'), 'export const value = 2;\n');
     await assert.rejects(
       collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline, paths, directories }),
@@ -159,6 +165,46 @@ async function testCheckoutBindings() {
     await assert.rejects(
       collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: reviewed, paths, directories }),
       /V4_REVIEWED_COMMIT_NOT_ANCESTOR_OF_HEAD/
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function testCheckoutStatusWindowsScale() {
+  const root = await temporaryDirectory('iras-v4-status-scale-');
+  try {
+    const baseline = await initGitFixture(root);
+    const monitoredRoot = path.join(root, 'monitored');
+    await mkdir(monitoredRoot, { recursive: true });
+    const directories = Array.from({ length: 2_200 }, (_, index) =>
+      'monitored/d' + String(index).padStart(4, '0'));
+    for (let offset = 0; offset < directories.length; offset += 128) {
+      await Promise.all(directories.slice(offset, offset + 128).map(directory =>
+        mkdir(path.join(root, directory))));
+    }
+    const paths = ['src/sample.ts'];
+    const originalCommandArguments = [GIT, '-C', root, 'status', '--porcelain=v1', '-z',
+      '--untracked-files=all', '--', ...directories, ...paths];
+    const originalCommandCodeUnits = originalCommandArguments.reduce(
+      (total, argument) => total + argument.length + 1, 0);
+    assert.ok(originalCommandCodeUnits > 32_767,
+      'scale fixture must cross the Windows CreateProcess command-line limit');
+
+    await writeFile(path.join(root, 'src', 'sample.ts'), 'export const value = 2;\n');
+    await assert.rejects(
+      collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline,
+        reviewedCommit: baseline, paths, directories }),
+      /V4_RELEVANT_TRACKED_FILES_DIRTY/
+    );
+    git(root, ['checkout', '--', 'src/sample.ts']);
+
+    const roguePath = path.join(root, directories[directories.length - 1], 'rogue.cts');
+    await writeFile(roguePath, 'export const rogue = true;\n');
+    await assert.rejects(
+      collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline,
+        reviewedCommit: baseline, paths, directories }),
+      /V4_UNTRACKED_EXECUTABLE_INPUT/
     );
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -881,6 +927,7 @@ async function main() {
   assert.equal(path.resolve(TEST_ROOT), TEST_ROOT);
   testFrozenConfigurationGuards();
   await testCheckoutBindings();
+  await testCheckoutStatusWindowsScale();
   await testControlledCaptureAndReplay();
   await testLiveHoldBeforeOutput();
   await testCaptureBudgetsAndFailures();
