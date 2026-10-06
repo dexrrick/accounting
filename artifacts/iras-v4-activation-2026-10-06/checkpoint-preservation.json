@@ -1,0 +1,39 @@
+{
+  "date": "06/10/2026",
+  "initialHead": "a1be3af",
+  "checkpointRowsVerified": 589,
+  "checkpointRowsMismatched": 0,
+  "officialCapture": "HOLD",
+  "officialRequests": 0,
+  "providerRequests": 0,
+  "rows": [
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/runner-configuration.json",
+      "sha256": "0d23efe222c4153030e2e91e445911e0d439fd399125144d294ae5c169183008"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/windows-pathspec-fix/validation.json",
+      "sha256": "3b7bc97a58ec12cd12f372b9df2899b0052fb0defe058ed455814bed034efa51"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/windows-pathspec-fix/independent-review.md",
+      "sha256": "4698b81dc408eb20eabd0026818c09585af211b7015f894bde39633bfb8efbff"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/windows-pathspec-fix/supervisor-final-report.md",
+      "sha256": "d14c9a87f9fd5061e01443310193bff99bfdb6a8729675905a94afd3c875bdaa"
+    },
+    {
+      "path": ".tmp/v4-runner-windows-pathspec-fix.log",
+      "sha256": "769bcb00c2554bd52c4a3696410187ae5bea465d8ab40d064fbbd9606b6e7713"
+    },
+    {
+      "path": ".tmp/v4-runner-windows-smoke.log",
+      "sha256": "f62fb729b39099d2f9d3ad65e68e24f7452092926dd0d8b70a5fb7558ca81b00"
+    },
+    {
+      "path": ".tmp/v4-runner-windows-freeze.log",
+      "sha256": "0ed0b25dde6e68e3001a37b2cd1166058329ed8ee652b03c0148fb8d1935f222"
+    }
+  ]
+}

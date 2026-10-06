@@ -11,13 +11,17 @@ import { fileURLToPath } from 'node:url';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import {
   BASELINE_COMMIT,
+  ACTIVATION_PROFILE,
   CASE_EVIDENCE_FAMILY,
   EVIDENCE_FAMILIES,
   RUNNER_PROFILE,
+  assertActivationConfigurationBodyMatches,
   assertRunnerConfigurationBodyMatches,
+  assertFrozenSemanticRequest,
+  bindProductionControlledRetriever,
+  buildApprovedCaptureInventory,
   captureInventoryDigest,
   collectTrackedExecutablePaths,
-  bindProductionControlledRetriever,
   collectCheckoutIntegritySnapshot,
   createCaptureTransport,
   createReplayTransport,
@@ -25,21 +29,248 @@ import {
   runBoundedV4SemanticPhase,
   runOfflineSyntheticV4CaseLoop,
   sha256,
+  matchCaptureInventoryRequest,
   unionProtectedHistoryPaths,
+  validateActivationInventory,
   validateCapturePayload
 } from '../../scripts/iras_v4_capture_replay_runner.mjs';
 import {
   CASE_IDS,
+  FAILURE_STAGES,
+  readV4Contract,
   reserveConsumption
 } from '../evaluation/singapore/iras-first-targeted-acceptance-v4.mjs';
+import { runV4AcceptanceCase } from '../../scripts/iras_v4_production_acceptance_adapter.mjs';
+import { sendV4SemanticRequest } from '../../scripts/iras_v4_capture_transports.mjs';
+import { SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA } from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const TEST_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const GIT = process.env.CODEX_GIT_EXECUTABLE ||
   'C:/Users/Admin/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/git/cmd/git.exe';
 const ARTIFACT_ROOT = 'artifacts/iras-v4-runner-integrity-2026-10-06';
 
+function passingSyntheticCaseResult(caseId) {
+  const layerVerdicts = {
+    semantic: { stages: {
+      SEMANTIC_VALIDATION: true,
+      SEMANTIC_ISSUE_IDENTITY: true,
+      SEMANTIC_DIMENSIONS: true,
+      TOPIC_OWNERSHIP: true,
+      REQUESTED_CONCEPT_OWNERSHIP: true
+    } },
+    routing: { passed: true },
+    local: { passed: true },
+    governed: { stages: {
+      GOVERNED_RETRIEVAL: true,
+      EVIDENCE_ADMISSION: true,
+      CLAIM_VERIFICATION: true,
+      REQUESTED_CONCEPT_COVERAGE: true
+    } },
+    application: {
+      applicationStatusesPassed: true,
+      ruleVerifiedUnresolvedApplicationPreserved: true,
+      overallAllowed: true
+    }
+  };
+  return {
+    caseId,
+    layerVerdicts,
+    stageVerdicts: Object.fromEntries(FAILURE_STAGES.map(stage => [stage, true])),
+    firstFailure: null
+  };
+}
+
 function digest(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+async function testProviderEnvelopeFailureRetention() {
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.GEMINI_API_KEY;
+  const body = Buffer.from('{"error":{"message":"synthetic quota response"}}', 'utf8');
+  let calls = 0;
+  process.env.GEMINI_API_KEY = 'offline-fixture-key-only';
+  globalThis.fetch = async (url, init) => {
+    calls += 1;
+    assert.equal(String(url), 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent');
+    assert.equal(init.redirect, 'error');
+    assert.equal(new Headers(init.headers).get('x-goog-api-key'), 'offline-fixture-key-only');
+    return new Response(body, { status: 429, headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    await assert.rejects(sendV4SemanticRequest({
+      prompt: 'offline request fixture',
+      system: 'offline system fixture',
+      provider: { activeProvider: 'gemini', gemini: { model: 'gemini-3.5-flash-lite' } },
+      options: { jsonMode: true, responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+        timeoutMs: 8_000, temperature: 0 },
+      caseId: 'unsupported-sfrsi-6-exploration-evaluation'
+    }), error => {
+      assert.equal(error.message, 'V4_PROVIDER_HTTP_429');
+      assert.deepEqual(error.partialProviderResponse, {
+        kind: 'GEMINI_HTTP_ENVELOPE',
+        status: 429,
+        failureCode: 'V4_PROVIDER_HTTP_429',
+        truncated: false,
+        bodyBase64: body.toString('base64'),
+        bodySha256: sha256(body),
+        bodyBytes: body.length
+      });
+      return true;
+    });
+    assert.equal(calls, 1, 'The synthetic provider error makes exactly one physical fetch and is never retried.');
+
+    const abortController = new AbortController();
+    const abortPrefix = Buffer.from('{"error":', 'utf8');
+    let stalledFetchCalls = 0;
+    let stalledCancelCalls = 0;
+    globalThis.fetch = async () => {
+      stalledFetchCalls += 1;
+      abortController.abort();
+      return new Response(new ReadableStream({
+        start(controller) { controller.enqueue(abortPrefix); },
+        cancel() { stalledCancelCalls += 1; return new Promise(() => {}); }
+      }), { status: 500 });
+    };
+    const freshTransport = await import(new URL(
+      '../../scripts/iras_v4_capture_transports.mjs?stalled-cancel-control=1', import.meta.url).href);
+    await assert.rejects(freshTransport.sendV4SemanticRequest({
+      prompt: 'offline stalled response fixture',
+      system: 'offline system fixture',
+      provider: { activeProvider: 'gemini', gemini: { model: 'gemini-3.5-flash-lite' } },
+      options: { jsonMode: true, responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+        timeoutMs: 8_000, temperature: 0 },
+      caseId: 'gst-input-tax-general-rule',
+      signal: abortController.signal
+    }), error => {
+      assert.equal(error.message, 'V4_PROVIDER_TIMEOUT');
+      assert.equal(error.partialProviderResponse.kind, 'GEMINI_HTTP_ENVELOPE');
+      assert.equal(error.partialProviderResponse.status, 500);
+      assert.equal(error.partialProviderResponse.bodyBase64, '');
+      assert.equal(error.partialProviderResponse.bodySha256, sha256(Buffer.alloc(0)));
+      return true;
+    });
+    assert.equal(stalledFetchCalls, 1);
+    assert.equal(stalledCancelCalls, 1, 'Already-aborted provider reads cancel without awaiting a stalled body cancel.');
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = originalApiKey;
+  }
+}
+
+async function testActualAdapterInFixedCaseLoop() {
+  const contract = await readV4Contract();
+  const caseId = 'private-expense-treatment';
+  const caseContract = contract.cases.find(row => row.caseId === caseId);
+  assert.ok(caseContract, 'Private-expense case is present in the fixed V4 contract.');
+  const subject = 'company private holiday travel expense corporate income tax treatment';
+  const semanticWire = {
+    schemaVersion: 2,
+    jurisdiction: ['Singapore'],
+    authorityCandidates: ['IRAS'],
+    contextualAuthorities: [],
+    domain: 'IRAS_INCOME_TAX',
+    population: 'COMPANY',
+    primarySubject: subject,
+    concepts: [
+      { concept: 'company expense tax deductibility', role: 'PRIMARY' },
+      { concept: 'private and domestic expenses', role: 'RELATED' }
+    ],
+    requestedOperation: 'DETERMINE_TREATMENT',
+    factsExplicitlyProvided: ['SGD 900', 'director private holiday', 'travel expense'],
+    confidence: 0.96,
+    issues: [{
+      subject,
+      population: 'COMPANY',
+      domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'],
+      contextualAuthorities: [],
+      operation: 'DETERMINE_TREATMENT',
+      mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+      confidence: 0.96
+    }]
+  };
+  const privateUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses';
+  const fixtureResponses = new Map([
+    [privateUrl, ['<html><head><title>Business Expenses | IRAS</title></head><body>' +
+      '<main><h1>Business Expenses</h1><p>For income tax, companies may deduct expenses wholly and exclusively incurred in producing income under the general deduction rule in section 14. This explains whether a company expense is tax deductible and whether it is deductible for tax purposes. Private and domestic expenses are not deductible under section 15, subject to the statutory exceptions and qualifications. This guidance explains the treatment of business expenses for corporate income tax.</p></main></body></html>', 'text/html']],
+    ['https://www.iras.gov.sg/sitemap', ['<?xml version="1.0"?><urlset><url><loc>' +
+      'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/cpf-relief-employees' +
+      '</loc><lastmod>2026-10-04</lastmod></url></urlset>', 'application/xml']],
+    ['https://www.iras.gov.sg/robots.txt', ['User-agent: *\nDisallow:', 'text/plain']]
+  ]);
+  const fetchedUrls = [];
+  const fixtureFetch = async url => {
+    const normalized = String(url);
+    fetchedUrls.push(normalized);
+    const fixture = fixtureResponses.get(normalized);
+    return new Response(fixture?.[0] || 'SYNTHETIC_FIXTURE_NOT_MAPPED', {
+      status: fixture ? 200 : 404,
+      headers: { 'content-type': fixture?.[1] || 'text/plain' }
+    });
+  };
+  const webRetriever = bindProductionControlledRetriever({
+    transport: { fetch: fixtureFetch },
+    cache: new SourceCache()
+  });
+  assert.equal(Object.isFrozen(webRetriever), true, 'The production retriever passed to the adapter is frozen.');
+  const callbackRequests = [];
+  const semanticCalls = [];
+  const result = await runOfflineSyntheticV4CaseLoop({
+    synthetic: true,
+    referenceDate: '2026-10-04',
+    semanticTransport: async ({ caseId: currentCaseId }) => {
+      semanticCalls.push(currentCaseId);
+      return currentCaseId === caseId ? JSON.stringify(semanticWire) : `synthetic-${currentCaseId}`;
+    },
+    evidenceTransport: fixtureFetch,
+    withEvidenceFamily: async (_family, callback) => callback(),
+    webRetriever,
+    executeCase: async ({ caseId: currentCaseId, sendSemantic, referenceDate, evidenceTransport, withEvidenceFamily, webRetriever: controlled }) => {
+      if (currentCaseId !== caseId) {
+        await sendSemantic({ caseId: currentCaseId });
+        return passingSyntheticCaseResult(currentCaseId);
+      }
+      return await runV4AcceptanceCase({
+        caseId: currentCaseId,
+        referenceDate,
+        evidenceTransport,
+        withEvidenceFamily,
+        webRetriever: controlled,
+        sendSemantic: async request => {
+          callbackRequests.push(request);
+          return await sendSemantic(request);
+        }
+      });
+    }
+  });
+  assert.equal(result.status, 'PASSED', `Fixed-loop production scorer row: ${JSON.stringify({
+    loopRows: result.rows.map(row => ({ caseId: row.caseId, status: row.status, failure: row.failure })),
+    callCounts: result.callCounts,
+    status: result.rows[3]?.status,
+    failure: result.rows[3]?.failure,
+    firstFailure: result.rows[3]?.firstFailure,
+    stageVerdicts: result.rows[3]?.stageVerdicts,
+    resultRetained: Boolean(result.rows[3]?.actualResult)
+  })}`);
+  assert.deepEqual(semanticCalls, CASE_IDS);
+  assert.equal(callbackRequests.length, 1);
+  assert.equal(callbackRequests[0].options.timeoutMs, 8_000);
+  assert.equal(callbackRequests[0].timeoutMs, undefined,
+    'Actual production adapter callback supplies the frozen timeout in options only.');
+  const row = result.rows.find(item => item.caseId === caseId);
+  assert.ok(row);
+  assert.equal(row.status, 'PASSED');
+  assert.equal(Object.keys(row.stageVerdicts).length, FAILURE_STAGES.length,
+    'The fixed loop retains the complete fourteen-stage recomputation.');
+  assert.equal(FAILURE_STAGES.every(stage => row.stageVerdicts[stage] === true), true);
+  assert.equal(Object.hasOwn(row.actualResult.layerVerdicts.semantic, 'passed'), false);
+  assert.equal(Object.hasOwn(row.actualResult.layerVerdicts.governed, 'passed'), false);
+  assert.equal(row.actualResult.productionDiagnostics.governed.available, true);
+  assert.ok(fetchedUrls.includes(privateUrl), 'Production evidence traverses the frozen controlled retriever.');
+  assert.equal(JSON.stringify(row.actualResult).includes('synthetic fixture not mapped'), false);
 }
 
 function git(root, args) {
@@ -169,6 +400,92 @@ async function testCheckoutBindings() {
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+}
+
+async function testActivationControls() {
+  const candidate = await buildApprovedCaptureInventory();
+  assert.equal(validateActivationInventory(candidate), true);
+  assert.ok(candidate.length <= 60);
+  for (const family of EVIDENCE_FAMILIES) {
+    const rows = candidate.filter(row => row.family === family);
+    assert.ok(rows.length > 0 && rows.length <= 10, `bounded approved inventory for ${family}`);
+    assert.ok(rows.some(row => row.purpose === 'SOURCE'), `mapped source request for ${family}`);
+    assert.ok(rows.some(row => row.purpose === 'DISCOVERY'), `explicit discovery request for ${family}`);
+  }
+  const source = candidate.find(row => row.purpose === 'SOURCE');
+  const exactRequest = { family: source.family, url: source.url, method: source.method, headers: source.headers };
+  assert.equal(matchCaptureInventoryRequest(exactRequest, candidate), source);
+  assert.equal(matchCaptureInventoryRequest({ ...exactRequest, url: source.url + '?unreviewed=1' }, candidate), undefined,
+    'inventory does not grant same-host path/query wildcards');
+  assert.equal(matchCaptureInventoryRequest({ ...exactRequest, family: 'gst' }, candidate), undefined,
+    'inventory is exact by family');
+  assert.equal(matchCaptureInventoryRequest({ ...exactRequest, headers: { accept: 'text/html' } }, candidate), undefined,
+    'inventory is exact by normalized headers');
+
+  const target = 'https://www.iras.gov.sg/explicit-redirect-target';
+  const redirect = { ...source, url: target, purpose: 'REDIRECT', redirectFrom: source.url };
+  const redirectRequest = { ...exactRequest, url: target };
+  assert.equal(matchCaptureInventoryRequest(redirectRequest, [redirect]), undefined,
+    'redirect target requires an observed approved edge');
+  assert.equal(matchCaptureInventoryRequest(redirectRequest, [redirect], new Map([[target, new Set([source.url])]])), redirect,
+    'redirect target is allowed only after the exact source Location was observed');
+
+  const redirectTargetRow = candidate.find(row => row.purpose === 'SOURCE' && row.family !== source.family);
+  assert.ok(redirectTargetRow, 'The bounded inventory contains a second mapped official URL for redirect validation.');
+  const explicitRedirect = {
+    ...structuredClone(source),
+    url: redirectTargetRow.url,
+    purpose: 'REDIRECT',
+    redirectFrom: source.url,
+    provenance: structuredClone(source.provenance)
+  };
+  assert.equal(validateActivationInventory([...candidate, explicitRedirect]), true,
+    'An explicit official target is valid when redirect provenance inherits from a same-family source parent.');
+  assert.throws(() => validateActivationInventory([...candidate, {
+    ...explicitRedirect,
+    provenance: { ...explicitRedirect.provenance, topicIds: ['invented-topic'] }
+  }]), /TOPIC_UNMAPPED|REDIRECT_PROVENANCE_NOT_INHERITED/);
+
+  const body = { profile: ACTIVATION_PROFILE, frozen: true, capturePolicy: { maximumRequests: 60 } };
+  const document = { ...body, activationConfigurationSha256: sha256(JSON.stringify(body)) };
+  assert.equal(assertActivationConfigurationBodyMatches(document, body), true);
+  const appended = { ...document, unbound: true };
+  const appendedBody = { ...appended };
+  delete appendedBody.activationConfigurationSha256;
+  appended.activationConfigurationSha256 = sha256(JSON.stringify(appendedBody));
+  assert.throws(() => assertActivationConfigurationBodyMatches(appended, body), /HAS_UNBOUND_FIELDS/);
+  const changedPolicy = { ...document, capturePolicy: { maximumRequests: 61 } };
+  const changedPolicyBody = { ...changedPolicy };
+  delete changedPolicyBody.activationConfigurationSha256;
+  changedPolicy.activationConfigurationSha256 = sha256(JSON.stringify(changedPolicyBody));
+  assert.throws(() => assertActivationConfigurationBodyMatches(changedPolicy, body), /HAS_UNBOUND_FIELDS/);
+
+  const prompt = 'frozen prompt';
+  const system = 'frozen system';
+  const caseId = CASE_IDS[0];
+  const options = { jsonMode: true, responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+    timeoutMs: 8_000, temperature: 0 };
+  const request = { caseId, prompt, system, provider: { activeProvider: 'gemini', gemini: { model: 'gemini-3.5-flash-lite' } },
+    options, timeoutMs: 8_000 };
+  const promptFingerprints = [{ caseId, promptSha256: sha256(prompt), systemSha256: sha256(system),
+    schemaSha256: sha256(JSON.stringify(SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA)) }];
+  assert.equal(assertFrozenSemanticRequest(request, { caseId, promptFingerprints }), true);
+  const requestWithOptionsTimeoutOnly = { ...request };
+  delete requestWithOptionsTimeoutOnly.timeoutMs;
+  assert.equal(assertFrozenSemanticRequest(requestWithOptionsTimeoutOnly, { caseId, promptFingerprints }), true,
+    'The adapter carries the frozen timeout inside options before the runner binds its transport timeout.');
+  assert.throws(() => assertFrozenSemanticRequest({ ...request, timeoutMs: 7_999 },
+    { caseId, promptFingerprints }), /TIMEOUT_OPTION_MISMATCH/);
+  assert.throws(() => assertFrozenSemanticRequest({ ...request, provider: { ...request.provider,
+    gemini: { model: 'different-model' } } }, { caseId, promptFingerprints }), /MODEL_MISMATCH/);
+  assert.throws(() => assertFrozenSemanticRequest({ ...request, prompt: prompt + ' altered' },
+    { caseId, promptFingerprints }), /PROMPT_FINGERPRINT_MISMATCH/);
+
+  const archivalPath = path.join(TEST_ROOT, ARTIFACT_ROOT, 'runner-configuration.json');
+  const archival = JSON.parse(await readFile(archivalPath, 'utf8'));
+  assert.equal(archival.captureInventory, null, 'historical frozen runner remains activation-null');
+  assert.equal(archival.productionEvidenceAdapterSha256, null, 'historical frozen runner remains adapter-null');
+  assert.equal(archival.preregistrationSha256, null, 'historical frozen runner remains preregistration-null');
 }
 
 async function testCheckoutStatusWindowsScale() {
@@ -374,7 +691,7 @@ async function testLiveHoldBeforeOutput() {
       syntheticMode: false,
       runnerConfigurationPath: path.join(paths.directory, 'missing-runner-config.json'),
       execute: async () => { executeCalls += 1; }
-    }), /V4_LIVE_CAPTURE_REQUIRES_RECOMPUTED_REVIEWED_PERMIT/);
+    }), /V4_REVIEWED_EXECUTION_CAPABILITY_REQUIRED/);
     assert.equal(fetchCalls, 0);
     assert.equal(executeCalls, 0);
     await assert.rejects(stat(paths.markerPath), { code: 'ENOENT' });
@@ -619,12 +936,9 @@ async function testCaptureBudgetsAndFailures() {
     await assert.rejects(runBoundedCapture({
       transport: failedTransport,
       syntheticMode: true,
-      execute: async ({ webRetriever, withEvidenceFamily }) => await withEvidenceFamily('gst', async () => {
-        const first = await webRetriever.fetchOfficialSource('https://iras.gov.sg/fails', { useCache: false });
-        assert.equal(first.status, 'NETWORK_ERROR');
-        return await webRetriever.fetchOfficialSource('https://iras.gov.sg/fails', { useCache: false });
-      })
-    }), /V4_CAPTURE_RETRY_AFTER_FAILED_REQUEST_BLOCKED/);
+      execute: async ({ webRetriever, withEvidenceFamily }) => await withEvidenceFamily('gst', () =>
+        webRetriever.fetchOfficialSource('https://iras.gov.sg/fails', { useCache: false }))
+    }), /V4_CAPTURE_ACQUISITION_NETWORK_ERROR/);
     assert.equal(failedCalls, 1);
     const failedPayload = JSON.parse(await readFile(retryPaths.payloadPath, 'utf8'));
     assert.equal(failedPayload.captureStatus, 'FAILED');
@@ -795,26 +1109,111 @@ async function testCaseLoopAndOneUseReservation() {
         startTimes.push({ caseId, at: clockValue });
         return await globalThis.fetch('https://example.invalid');
       },
-      executeCase: async ({ caseId, sendSemantic }) => {
+      referenceDate: '2026-10-01',
+      executeCase: async ({ caseId, sendSemantic, referenceDate }) => {
+        assert.equal(referenceDate, '2026-10-01', 'fixed loop forwards bound evidence reference date');
         await assert.rejects(globalThis.fetch('https://example.invalid'), /V4_AMBIENT_NETWORK_DISABLED/);
         assert.equal(typeof await sendSemantic({ caseId, prompt: 'synthetic only' }), 'string');
-        return { caseId };
+        return passingSyntheticCaseResult(caseId);
       }
     });
   } finally {
     globalThis.fetch = previousFetch;
   }
   assert.deepEqual(loop.rows.map(row => row.caseId), CASE_IDS);
+  assert.equal(loop.status, 'PASSED');
   assert.deepEqual(loop.callCounts, Object.fromEntries(CASE_IDS.map(id => [id, 1])));
   assert.equal(authorizedFetchCalls, CASE_IDS.length);
   assert.equal(loop.rows[0].semanticResponseSha256, sha256(rawSemanticBytes), 'response identity uses original response bytes');
   assert.equal(loop.rows[0].semanticResponseBytes, rawSemanticBytes.length);
+  assert.equal(loop.rows[0].semanticResponseBase64, rawSemanticBytes.toString('base64'),
+    'partial journal result retains exact successful semantic bytes');
+  assert.equal(loop.rows[0].actualResult.caseId, CASE_IDS[0], 'actual bounded case result is retained');
   for (let i = 1; i < startTimes.length; i += 1) {
     assert.ok(startTimes[i].at - startTimes[i - 1].at >= 15_250);
   }
 
+  const scoredFailureProgress = [];
+  let scoredFailureSends = 0;
+  const scoredFailure = await runOfflineSyntheticV4CaseLoop({
+    synthetic: true,
+    referenceDate: '2026-10-01',
+    semanticTransport: async ({ caseId }) => { scoredFailureSends += 1; return `actual-${caseId}`; },
+    executeCase: async ({ caseId, sendSemantic }) => {
+      const raw = await sendSemantic({ caseId });
+      const result = passingSyntheticCaseResult(caseId);
+      result.observedSemanticResponse = raw;
+      if (caseId === CASE_IDS[0]) {
+        result.layerVerdicts.semantic.stages.SEMANTIC_VALIDATION = false;
+        result.firstFailure = null;
+      }
+      return result;
+    },
+    writeProgress: async row => scoredFailureProgress.push(row)
+  });
+  assert.equal(scoredFailure.status, 'FAILED');
+  assert.equal(scoredFailureSends, CASE_IDS.length, 'scored semantic failures are retained while bounded cases continue');
+  assert.equal(scoredFailure.rows[0].failure.stage, 'SEMANTIC_VALIDATION');
+  assert.equal(scoredFailure.rows[0].actualResult.layerVerdicts.semantic.stages.SEMANTIC_VALIDATION, false);
+  assert.equal(scoredFailure.rows[0].stageVerdicts.SEMANTIC_VALIDATION, false,
+    'Canonical stage verdicts are recomputed from the five production layer outputs.');
+  assert.equal(scoredFailure.rows[0].failure.code, 'V4_ACCEPTANCE_STAGE_VERDICTS_MISMATCH',
+    'Contradictory adapter stage claims are attributed as an acceptance scoring error.');
+  assert.equal(Object.keys(scoredFailure.rows[0].stageVerdicts).length, FAILURE_STAGES.length);
+  assert.equal(scoredFailure.rows[0].semanticResponseBase64, Buffer.from(`actual-${CASE_IDS[0]}`).toString('base64'));
+  assert.equal(scoredFailureProgress.find(row => row.event === 'CASE_FAILED').actualResult.caseId, CASE_IDS[0]);
+
+  const providerFailureProgress = [];
+  const providerFailureBytes = Buffer.from('{"error":"synthetic"}', 'utf8');
+  const providerFailure = await runOfflineSyntheticV4CaseLoop({
+    synthetic: true,
+    semanticTransport: async () => {
+      const error = new Error('V4_PROVIDER_HTTP_429');
+      error.partialProviderResponse = {
+        kind: 'GEMINI_HTTP_ENVELOPE', status: 429, failureCode: error.message, truncated: false,
+        bodyBase64: providerFailureBytes.toString('base64'), bodySha256: sha256(providerFailureBytes),
+        bodyBytes: providerFailureBytes.length
+      };
+      throw error;
+    },
+    executeCase: async ({ caseId, sendSemantic }) => {
+      await sendSemantic({ caseId }).catch(() => {});
+      return passingSyntheticCaseResult(caseId);
+    },
+    writeProgress: async row => providerFailureProgress.push(row)
+  });
+  assert.equal(providerFailure.rows[0].failure.stage, 'SEMANTIC_TRANSPORT',
+    'A swallowed provider failure remains the primary cause over the adapter semantic fallback.');
+  assert.equal(providerFailure.rows[0].providerResponsePartial.bodyBase64, providerFailureBytes.toString('base64'));
+  assert.equal(providerFailure.rows[0].semanticResponseBase64, undefined,
+    'Provider HTTP bytes are never mislabeled as successful semantic response bytes.');
+  const providerFailureEvent = providerFailureProgress.find(row => row.event === 'SEMANTIC_RESPONSE_FAILED');
+  assert.equal(providerFailureEvent.partialProviderResponse.kind, 'GEMINI_HTTP_ENVELOPE');
+  assert.equal(providerFailureEvent.partialSemanticResponseBase64, undefined);
+  assert.equal(providerFailure.rows[1].status, 'NOT_RUN_AFTER_PRIOR_FAILURE');
+
+  let replayLatched = false;
+  let latchedSemanticCalls = 0;
+  const latchedResult = await runOfflineSyntheticV4CaseLoop({
+    synthetic: true,
+    semanticTransport: async ({ caseId }) => { latchedSemanticCalls += 1; return `offline-${caseId}`; },
+    assertCaseHealth: () => { if (replayLatched) throw new Error('V4_REPLAY_MISS'); },
+    executeCase: async ({ caseId, sendSemantic }) => {
+      const observed = await sendSemantic({ caseId });
+      const result = passingSyntheticCaseResult(caseId);
+      result.observedSemanticResponse = observed;
+      replayLatched = true;
+      return result;
+    }
+  });
+  assert.equal(latchedResult.rows[0].failure.stage, 'INTEGRITY');
+  assert.equal(latchedResult.rows[0].actualResult.observedSemanticResponse, `offline-${CASE_IDS[0]}`,
+    'A post-case integrity latch preserves the completed bounded production-shaped result.');
+  assert.equal(latchedResult.rows[1].status, 'NOT_RUN_AFTER_PRIOR_FAILURE');
+  assert.equal(latchedSemanticCalls, 1, 'A latched evidence replay stops remaining semantic sends immediately.');
+
   let semanticDispatches = 0;
-  await assert.rejects(runOfflineSyntheticV4CaseLoop({
+  const duplicateOutcome = await runOfflineSyntheticV4CaseLoop({
     synthetic: true,
     semanticTransport: async () => {
       semanticDispatches += 1;
@@ -829,11 +1228,13 @@ async function testCaseLoopAndOneUseReservation() {
       }
       return await sendSemantic({ prompt: 'single call' });
     }
-  }), /V4_EXTRA_OR_RETRY_SEMANTIC_CALL_BLOCKED/);
+  });
   assert.equal(semanticDispatches, 1);
+  assert.equal(duplicateOutcome.status, 'FAILED');
+  assert.equal(duplicateOutcome.rows[0].failure.stage, 'CASE_EXECUTION');
 
   let timeoutCalls = 0;
-  await assert.rejects(runOfflineSyntheticV4CaseLoop({
+  const timeoutOutcome = await runOfflineSyntheticV4CaseLoop({
     synthetic: true,
     timeoutMs: 15,
     semanticTransport: async () => {
@@ -841,20 +1242,23 @@ async function testCaseLoopAndOneUseReservation() {
       return await new Promise(resolve => setTimeout(() => resolve('late'), 100));
     },
     executeCase: async ({ caseId, sendSemantic }) => await sendSemantic({ caseId })
-  }), /V4_SEMANTIC_DEADLINE_EXCEEDED/);
+  });
   assert.equal(timeoutCalls, 1);
+  assert.equal(timeoutOutcome.rows[0].failure.stage, 'SEMANTIC_TRANSPORT');
+  assert.equal(timeoutOutcome.rows[0].failure.code, 'V4_SEMANTIC_DEADLINE_EXCEEDED');
 
-  await assert.rejects(runOfflineSyntheticV4CaseLoop({
+  const oversizedOutcome = await runOfflineSyntheticV4CaseLoop({
     synthetic: true,
     maximumResponseBytes: 8,
     semanticTransport: async () => 'response-too-large',
     executeCase: async ({ caseId, sendSemantic }) => await sendSemantic({ caseId })
-  }), /V4_SEMANTIC_RESPONSE_TOO_LARGE/);
+  });
+  assert.equal(oversizedOutcome.rows[0].failure.code, 'V4_SEMANTIC_RESPONSE_TOO_LARGE');
 
   const semanticTimeoutPrefix = Buffer.from('semantic-prefix');
   const semanticTimeoutProgress = [];
   const semanticTimeoutStarted = Date.now();
-  await assert.rejects(Promise.race([
+  const stalledStreamOutcome = await Promise.race([
     runOfflineSyntheticV4CaseLoop({
       synthetic: true,
       timeoutMs: 20,
@@ -866,15 +1270,16 @@ async function testCaseLoopAndOneUseReservation() {
       writeProgress: async row => semanticTimeoutProgress.push(row)
     }),
     new Promise((_, reject) => setTimeout(() => reject(new Error('V4_SEMANTIC_CANCEL_CLEANUP_HUNG')), 250))
-  ]), /V4_SEMANTIC_DEADLINE_EXCEEDED/);
+  ]);
+  assert.equal(stalledStreamOutcome.rows[0].failure.code, 'V4_SEMANTIC_DEADLINE_EXCEEDED');
   assert.ok(Date.now() - semanticTimeoutStarted < 250, 'semantic deadline does not await a stalled stream cancel');
   const semanticTimeoutFailure = semanticTimeoutProgress.find(row => row.event === 'SEMANTIC_RESPONSE_FAILED');
-  assert.equal(semanticTimeoutFailure.partialResponseBase64, semanticTimeoutPrefix.toString('base64'));
-  assert.equal(semanticTimeoutFailure.partialResponseSha256, sha256(semanticTimeoutPrefix));
-  assert.equal(semanticTimeoutFailure.partialResponseBytes, semanticTimeoutPrefix.length);
+  assert.equal(semanticTimeoutFailure.partialSemanticResponseBase64, semanticTimeoutPrefix.toString('base64'));
+  assert.equal(semanticTimeoutFailure.partialSemanticResponseSha256, sha256(semanticTimeoutPrefix));
+  assert.equal(semanticTimeoutFailure.partialSemanticResponseBytes, semanticTimeoutPrefix.length);
 
   const semanticOverflowProgress = [];
-  await assert.rejects(runOfflineSyntheticV4CaseLoop({
+  const semanticOverflowOutcome = await runOfflineSyntheticV4CaseLoop({
     synthetic: true,
     maximumResponseBytes: 4,
     semanticTransport: async () => new Response(new ReadableStream({
@@ -883,11 +1288,12 @@ async function testCaseLoopAndOneUseReservation() {
     }), { status: 200 }),
     executeCase: async ({ caseId, sendSemantic }) => await sendSemantic({ caseId }),
     writeProgress: async row => semanticOverflowProgress.push(row)
-  }), /V4_SEMANTIC_RESPONSE_TOO_LARGE/);
+  });
+  assert.equal(semanticOverflowOutcome.rows[0].failure.code, 'V4_SEMANTIC_RESPONSE_TOO_LARGE');
   const semanticOverflowFailure = semanticOverflowProgress.find(row => row.event === 'SEMANTIC_RESPONSE_FAILED');
-  assert.equal(semanticOverflowFailure.partialResponseBase64, Buffer.from('1234').toString('base64'));
-  assert.equal(semanticOverflowFailure.partialResponseSha256, sha256(Buffer.from('1234')));
-  assert.equal(semanticOverflowFailure.partialResponseBytes, 4);
+  assert.equal(semanticOverflowFailure.partialSemanticResponseBase64, Buffer.from('1234').toString('base64'));
+  assert.equal(semanticOverflowFailure.partialSemanticResponseSha256, sha256(Buffer.from('1234')));
+  assert.equal(semanticOverflowFailure.partialSemanticResponseBytes, 4);
 
   const root = await temporaryDirectory('iras-v4-reserve-');
   try {
@@ -925,6 +1331,9 @@ async function main() {
   assert.equal(CASE_EVIDENCE_FAMILY['wht-royalty-general-rule'], 'withholding-tax');
   assert.equal(BASELINE_COMMIT, '42637dfb552dae45ed3cb72f4f495d6528a14272');
   assert.equal(path.resolve(TEST_ROOT), TEST_ROOT);
+  await testActivationControls();
+  await testProviderEnvelopeFailureRetention();
+  await testActualAdapterInFixedCaseLoop();
   testFrozenConfigurationGuards();
   await testCheckoutBindings();
   await testCheckoutStatusWindowsScale();

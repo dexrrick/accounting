@@ -1,0 +1,67 @@
+{
+  "node": "22.23.2",
+  "externalNetworkBlocked": true,
+  "officialCapture": "HOLD",
+  "officialRequests": 0,
+  "providerRequests": 0,
+  "liveReservations": 0,
+  "focusedRunner": "PASS",
+  "focusedAdapter": "PASS",
+  "syntax": "PASS",
+  "targetedLint": "PASS_ZERO_WARNINGS",
+  "repositoryPreflight": "PASS",
+  "smokeSuites": 89,
+  "build": "PASS",
+  "repositoryLint": "PASS_WITH_UNRELATED_GENERATED_FILE_WARNINGS",
+  "independentReview": "NO_UNRESOLVED_MATERIAL_FINDINGS",
+  "rows": [
+    {
+      "path": "scripts/iras_v4_capture_replay_runner.mjs",
+      "sha256": "f50aef065e1262b4473c7d2d9b04d82104f0535fda05093529ccb61ff8451ca3"
+    },
+    {
+      "path": "scripts/iras_v4_capture_transports.mjs",
+      "sha256": "9377511f6ff2301496ea123f07eb73226cf687c5a171291703aa5b9f043e2efa"
+    },
+    {
+      "path": "scripts/iras_v4_production_acceptance_adapter.mjs",
+      "sha256": "ade1bdce0739dd9ca77eaa2572480bdb0c9e0fd5ed794a138a1dca39dc42a1dd"
+    },
+    {
+      "path": "tests/regression/test_iras_v4_capture_replay_runner.mjs",
+      "sha256": "df94426666f141b88216740a7ed2fe36748ccaa55f358d38d18d1298bf68e702"
+    },
+    {
+      "path": "tests/regression/test_iras_v4_production_acceptance_adapter.mjs",
+      "sha256": "14b8d465dbc9f3ebd19c9a5e1bd55fc3cbb97734aaebf0fe5dae03c428fd0a37"
+    },
+    {
+      "path": ".tmp/iras-v4-activation-runner-final.log",
+      "sha256": "769bcb00c2554bd52c4a3696410187ae5bea465d8ab40d064fbbd9606b6e7713"
+    },
+    {
+      "path": ".tmp/v4-activation-production-adapter.log",
+      "sha256": "5edcc680f1cba8f6b1bfa50108a4b9d18f4a95bdab2d2dbe00d48abadae1583c"
+    },
+    {
+      "path": ".tmp/v4-activation-final-targeted-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/v4-activation-final-transport-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/v4-activation-supervisor-smoke.log",
+      "sha256": "febdd9e54a7b929cb22b2528e93c87552c75ab13702373d1f8b4c560262e20e6"
+    },
+    {
+      "path": ".tmp/v4-activation-supervisor-build.log",
+      "sha256": "2344db0b28d5721ce434c37806291fb79f31486dac5dc8f435c3625a10a3ffd3"
+    },
+    {
+      "path": ".tmp/v4-activation-supervisor-lint.log",
+      "sha256": "57044d71b5a4eb57acf6af10f5db793692c089fe505927f6970608795be0c506"
+    }
+  ]
+}

@@ -19,16 +19,26 @@ import {
   PROFILE as V4_PROFILE,
   RESOURCE_POLICY,
   createRequestBudgetGuard,
+  evaluateV4Stages,
+  FAILURE_STAGES,
   protectedHistorySnapshot,
+  readV4Contract,
   reserveConsumption,
   validateV4LivePreflight
 } from '../tests/evaluation/singapore/iras-first-targeted-acceptance-v4.mjs';
 import { ControlledWebRetriever } from '../src/retrieval/controlledWebRetriever.ts';
 import { SourceCache } from '../src/retrieval/sourceCache.ts';
+import { getCoverageTopicById } from '../src/standards/coverageRegistry.ts';
+import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../src/standards/approvedSourceRegistry.ts';
+import { UNIFIED_SOURCE_REGISTRY } from '../src/standards/unifiedSourceModel.ts';
+import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../src/retrieval/officialSitemapDiscovery.ts';
+import { SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA } from '../src/services/semanticQuestionUnderstanding.ts';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const RUNNER_PROFILE = 'iras-v4-runner-integrity';
 export const RUNNER_CONFIGURATION_STATUS = 'FROZEN_RUNNER_CONFIGURATION';
+export const ACTIVATION_PROFILE = 'iras-v4-capture-activation';
+export const ACTIVATION_CONFIGURATION_STATUS = 'FROZEN_ACTIVATION_CONFIGURATION';
 export const BASELINE_COMMIT = '42637dfb552dae45ed3cb72f4f495d6528a14272';
 export const EXPECTED_BRANCH = 'codex/multi-authority-workstreams';
 export const EXECUTION_NODE_MAJOR = 22;
@@ -62,6 +72,15 @@ export const CASE_EVIDENCE_FAMILY = Object.freeze({
   'gst-input-tax-general-rule': 'gst'
 });
 const reviewedAcquisitionPermits = new WeakSet();
+const reviewedExecutionCapabilities = new WeakSet();
+const reviewedLiveCaptureTransports = new WeakSet();
+const reviewedReplayTransports = new WeakSet();
+const APPROVED_EXECUTION_MODULES = Object.freeze([
+  Object.freeze({ path: 'scripts/iras_v4_production_acceptance_adapter.mjs', exportName: 'runV4AcceptanceCase' }),
+  Object.freeze({ path: 'scripts/iras_v4_capture_transports.mjs', exportName: 'runV4CapturePlan' }),
+  Object.freeze({ path: 'scripts/iras_v4_capture_transports.mjs', exportName: 'sendV4SemanticRequest' }),
+  Object.freeze({ path: 'scripts/iras_v4_capture_transports.mjs', exportName: 'fetchV4OfficialSource' })
+]);
 
 const SHA256_RE = /^[a-f0-9]{64}$/i;
 const ACCEPT_HEADER = 'text/plain, application/json, text/html, */*';
@@ -81,6 +100,7 @@ const EXTRA_BINDINGS = Object.freeze([
   'docs/evaluation/multi-authority-workstreams/iras-first-targeted-acceptance-2026-10-04-v4/acceptance-design.md',
   'artifacts/iras-v4-runner-integrity-2026-10-06/design.md'
 ]);
+const MAX_RETAINED_CASE_RESULT_BYTES = 256_000;
 const TRACKED_DIRS = Object.freeze(['src', 'tests/evaluation/singapore', 'tests/regression', 'scripts']);
 const ARTIFACT_NAMESPACE = 'artifacts/iras-v4-runner-integrity-2026-10-06/';
 let ambientNetworkBlockInProgress = false;
@@ -103,9 +123,89 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
+function deepFreezeJson(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreezeJson(child);
+  return Object.freeze(value);
+}
+
+function frozenJsonCopy(value) {
+  return deepFreezeJson(JSON.parse(JSON.stringify(value)));
+}
+
 export function captureInventoryDigest(captureInventory) {
   assert.ok(Array.isArray(captureInventory), 'V4_CAPTURE_INVENTORY_REQUIRED');
   return sha256(stableJson(captureInventory));
+}
+
+/** Build only exact IRAS source-map requests named by the frozen V4 case topics. */
+export async function buildApprovedCaptureInventory() {
+  const contract = await readV4Contract();
+  const byRequest = new Map();
+  const familySources = new Map(EVIDENCE_FAMILIES.map(family => [family, { topicIds: new Set(), sourceRecordIds: new Set(), caseIds: new Set() }]));
+  for (const testCase of contract.cases || []) {
+    const family = CASE_EVIDENCE_FAMILY[testCase.caseId];
+    if (!family) continue;
+    const owners = [
+      ...(testCase.semantic?.independentTopicAccounting?.requiredTopicOwners || []),
+      ...(testCase.semantic?.independentTopicAccounting?.contextualTopicOwners || []),
+      ...(testCase.semantic?.independentTopicAccounting?.routingTopicOwners || []),
+      ...(testCase.semantic?.materialRequestedConcepts || []).flatMap(item => (item.topicIds || []).map(topicId => ({ topicId })))
+    ];
+    const topicIds = [...new Set(owners.map(item => item.topicId).filter(Boolean))];
+    for (const topicId of topicIds) {
+      const topic = getCoverageTopicById(topicId);
+      if (!topic) continue;
+      const approvedSourceIds = [];
+      for (const sourceRecordId of topic.sourceRecordIds) {
+        const source = UNIFIED_SOURCE_REGISTRY[sourceRecordId];
+        if (!source || !(source.authority === 'IRAS' || source.authorities?.includes('IRAS')) ||
+            !hasVerifiedSourceUrlProvenance(source)) continue;
+        const url = source.canonicalSourceUrl;
+        try { validateOfficialUrl(url); } catch { continue; }
+        if (source.officialSourceUrl !== url || !isApprovedSingaporeSourceUrl(url)) continue;
+        approvedSourceIds.push(sourceRecordId);
+        const identity = stableJson({ family, url, method: 'GET', headers: { accept: ACCEPT_HEADER } });
+        const current = byRequest.get(identity) || {
+          family, url, method: 'GET', headers: { accept: ACCEPT_HEADER }, purpose: 'SOURCE',
+          provenance: { topicIds: new Set(), sourceRecordIds: new Set(), caseIds: new Set() }
+        };
+        current.provenance.topicIds.add(topicId);
+        current.provenance.sourceRecordIds.add(sourceRecordId);
+        current.provenance.caseIds.add(testCase.caseId);
+        byRequest.set(identity, current);
+      }
+      if (approvedSourceIds.length) {
+        const familyRow = familySources.get(family);
+        familyRow.topicIds.add(topicId);
+        familyRow.caseIds.add(testCase.caseId);
+        for (const sourceRecordId of approvedSourceIds) familyRow.sourceRecordIds.add(sourceRecordId);
+      }
+    }
+  }
+  for (const family of EVIDENCE_FAMILIES) {
+    const row = familySources.get(family);
+    assert.ok(row.topicIds.size > 0 && row.sourceRecordIds.size > 0 && row.caseIds.size > 0,
+      'V4_CAPTURE_FAMILY_SOURCE_MAP_MISSING:' + family);
+    const sitemapUrl = OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.IRAS?.sitemapUrls?.[0];
+    if (sitemapUrl) {
+      const identity = stableJson({ family, url: sitemapUrl, method: 'GET', headers: { accept: ACCEPT_HEADER } });
+      byRequest.set(identity, {
+        family, url: sitemapUrl, method: 'GET', headers: { accept: ACCEPT_HEADER }, purpose: 'DISCOVERY',
+        provenance: { topicIds: row.topicIds, sourceRecordIds: row.sourceRecordIds, caseIds: row.caseIds }
+      });
+    }
+  }
+  const inventory = [...byRequest.values()].map(row => ({
+    ...row,
+    provenance: {
+      topicIds: [...row.provenance.topicIds].sort(),
+      sourceRecordIds: [...row.provenance.sourceRecordIds].sort(),
+      caseIds: [...row.provenance.caseIds].sort()
+    }
+  })).sort((a, b) => a.family.localeCompare(b.family) || a.url.localeCompare(b.url) || a.purpose.localeCompare(b.purpose));
+  validateActivationInventory(inventory);
+  return inventory;
 }
 
 function normalizedRelative(root, target) {
@@ -527,29 +627,382 @@ export async function verifyFrozenRunnerConfiguration({
   return { passed: true, integrityBindingSha256: recomputed.integrityBindingSha256, snapshot: recomputed };
 }
 
+function activationInputsProjection({ archivalRunnerConfiguration, runnerConfiguration, captureInventory, reviewedModules }) {
+  return {
+    profile: ACTIVATION_PROFILE,
+    archivalRunnerConfiguration,
+    runnerIntegrityBindingSha256: runnerConfiguration.integrityBindingSha256,
+    designFingerprints: runnerConfiguration.designFingerprints,
+    captureInventory,
+    captureInventorySha256: captureInventoryDigest(captureInventory),
+    reviewedModules: [...reviewedModules].sort((a, b) => a.path.localeCompare(b.path)),
+    capturePolicy: CAPTURE_POLICY,
+    evidenceFamilies: EVIDENCE_FAMILIES,
+    caseEvidenceFamily: CASE_EVIDENCE_FAMILY
+  };
+}
+
+function assertPromptFingerprintRows(rows, schemaPromptFingerprintSha256) {
+  assert.ok(Array.isArray(rows) && rows.length === CASE_IDS.length, 'V4_PROMPT_FINGERPRINT_ROWS_REQUIRED');
+  assert.deepEqual(rows.map(row => row?.caseId), CASE_IDS, 'V4_PROMPT_FINGERPRINT_CASE_SET_INVALID');
+  for (const row of rows) {
+    assert.match(String(row?.promptSha256 || ''), SHA256_RE, 'V4_PROMPT_FINGERPRINT_PROMPT_HASH_INVALID');
+    assert.match(String(row?.systemSha256 || ''), SHA256_RE, 'V4_PROMPT_FINGERPRINT_SYSTEM_HASH_INVALID');
+    assert.equal(row.schemaSha256, sha256(stableJson(SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA)),
+      'V4_PROMPT_FINGERPRINT_SCHEMA_HASH_INVALID');
+    assert.ok(Number.isSafeInteger(row.promptChars) && row.promptChars > 0, 'V4_PROMPT_FINGERPRINT_PROMPT_LENGTH_INVALID');
+    assert.ok(Number.isSafeInteger(row.systemChars) && row.systemChars > 0, 'V4_PROMPT_FINGERPRINT_SYSTEM_LENGTH_INVALID');
+  }
+  assert.equal(sha256(stableJson(rows)), schemaPromptFingerprintSha256, 'V4_PROMPT_FINGERPRINT_BINDING_MISMATCH');
+  return true;
+}
+
+export function validateActivationInventory(inventory) {
+  assert.ok(Array.isArray(inventory) && inventory.length > 0, 'V4_CAPTURE_INVENTORY_REQUIRED');
+  assert.ok(inventory.length <= CAPTURE_POLICY.maximumRequests, 'V4_CAPTURE_INVENTORY_BOUNDS_EXCEEDED');
+  const seen = new Set();
+  const familyCounts = new Map();
+  const inventoryByUrl = new Map();
+  const discoveryUrls = new Set(Object.values(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS)
+    .flatMap(provider => provider.sitemapUrls || []));
+  for (const row of inventory) {
+    assert.ok(row && EVIDENCE_FAMILIES.includes(row.family), 'V4_CAPTURE_INVENTORY_FAMILY_INVALID');
+    assert.equal(row.method, 'GET', 'V4_CAPTURE_INVENTORY_METHOD_INVALID');
+    assert.equal(validateOfficialUrl(row.url), row.url, 'V4_CAPTURE_INVENTORY_URL_NOT_NORMALIZED');
+    assert.ok(row.headers && typeof row.headers === 'object' && !Array.isArray(row.headers), 'V4_CAPTURE_INVENTORY_HEADERS_INVALID');
+    const normalized = normalizeRequest(row.url, { method: row.method, redirect: 'manual', headers: row.headers }, row.family);
+    assert.deepEqual(normalized, { family: row.family, url: row.url, method: row.method, headers: row.headers },
+      'V4_CAPTURE_INVENTORY_REQUEST_NOT_NORMALIZED');
+    assert.ok(['SOURCE', 'DISCOVERY', 'REDIRECT'].includes(row.purpose), 'V4_CAPTURE_INVENTORY_PURPOSE_INVALID');
+    assert.ok(row.provenance && Array.isArray(row.provenance.topicIds) && row.provenance.topicIds.length > 0 &&
+      Array.isArray(row.provenance.sourceRecordIds) && row.provenance.sourceRecordIds.length > 0 &&
+      Array.isArray(row.provenance.caseIds) && row.provenance.caseIds.length > 0,
+    'V4_CAPTURE_INVENTORY_PROVENANCE_REQUIRED');
+    for (const caseId of row.provenance.caseIds) {
+      assert.equal(CASE_EVIDENCE_FAMILY[caseId], row.family, 'V4_CAPTURE_INVENTORY_CASE_FAMILY_MISMATCH');
+    }
+    for (const topicId of row.provenance.topicIds) {
+      const topic = getCoverageTopicById(topicId);
+      assert.ok(topic, 'V4_CAPTURE_INVENTORY_TOPIC_UNMAPPED:' + topicId);
+      assert.ok(row.provenance.sourceRecordIds.some(recordId => topic.sourceRecordIds.includes(recordId)),
+        'V4_CAPTURE_INVENTORY_TOPIC_SOURCE_MISMATCH:' + topicId);
+    }
+    for (const sourceRecordId of row.provenance.sourceRecordIds) {
+      const source = UNIFIED_SOURCE_REGISTRY[sourceRecordId];
+      assert.ok(source, 'V4_CAPTURE_INVENTORY_SOURCE_UNMAPPED:' + sourceRecordId);
+      assert.ok(source.authority === 'IRAS' || source.authorities?.includes('IRAS'),
+        'V4_CAPTURE_INVENTORY_SOURCE_AUTHORITY_INVALID:' + sourceRecordId);
+      assert.ok(hasVerifiedSourceUrlProvenance(source), 'V4_CAPTURE_INVENTORY_SOURCE_PROVENANCE_INVALID:' + sourceRecordId);
+      assert.ok(isApprovedSingaporeSourceUrl(row.url), 'V4_CAPTURE_INVENTORY_URL_NOT_APPROVED');
+      if (row.purpose === 'SOURCE') {
+        assert.equal(source.canonicalSourceUrl, row.url, 'V4_CAPTURE_INVENTORY_URL_SOURCE_MISMATCH:' + sourceRecordId);
+        assert.equal(source.officialSourceUrl, row.url, 'V4_CAPTURE_INVENTORY_OFFICIAL_URL_SOURCE_MISMATCH:' + sourceRecordId);
+      }
+      assert.ok(row.provenance.topicIds.some(topicId => getCoverageTopicById(topicId)?.sourceRecordIds?.includes(sourceRecordId)),
+        'V4_CAPTURE_INVENTORY_SOURCE_TOPIC_ASSOCIATION_MISSING:' + sourceRecordId);
+    }
+    if (row.purpose === 'DISCOVERY') assert.ok(discoveryUrls.has(row.url), 'V4_CAPTURE_INVENTORY_DISCOVERY_URL_UNAPPROVED');
+    if (row.purpose === 'REDIRECT') {
+      assert.equal(validateOfficialUrl(row.redirectFrom), row.redirectFrom, 'V4_CAPTURE_REDIRECT_SOURCE_INVALID');
+      assert.notEqual(row.redirectFrom, row.url, 'V4_CAPTURE_REDIRECT_EDGE_INVALID');
+      assert.ok(Object.values(UNIFIED_SOURCE_REGISTRY).some(source =>
+        (source.authority === 'IRAS' || source.authorities?.includes('IRAS')) &&
+        hasVerifiedSourceUrlProvenance(source) && source.canonicalSourceUrl === row.url && source.officialSourceUrl === row.url),
+      'V4_CAPTURE_REDIRECT_TARGET_NOT_APPROVED_OFFICIAL_SOURCE');
+    } else assert.equal(row.redirectFrom, undefined, 'V4_CAPTURE_REDIRECT_EDGE_UNEXPECTED');
+    const identity = stableJson({ family: row.family, url: row.url, method: row.method, headers: row.headers });
+    assert.ok(!seen.has(identity), 'V4_CAPTURE_INVENTORY_DUPLICATE_REQUEST');
+    seen.add(identity);
+    familyCounts.set(row.family, (familyCounts.get(row.family) || 0) + 1);
+    const sameUrl = inventoryByUrl.get(row.url) || [];
+    sameUrl.push(row);
+    inventoryByUrl.set(row.url, sameUrl);
+  }
+  assert.deepEqual([...familyCounts.keys()].sort(), [...EVIDENCE_FAMILIES].sort(), 'V4_CAPTURE_INVENTORY_FAMILY_COVERAGE_INCOMPLETE');
+  assert.ok([...familyCounts.values()].every(count => count <= CAPTURE_POLICY.maximumRequestsPerFamily),
+    'V4_CAPTURE_INVENTORY_FAMILY_BOUNDS_EXCEEDED');
+  for (const row of inventory.filter(item => item.purpose === 'REDIRECT')) {
+    const parents = inventoryByUrl.get(row.redirectFrom)?.filter(candidate => candidate.family === row.family);
+    assert.ok(parents?.length === 1, 'V4_CAPTURE_REDIRECT_PARENT_NOT_IN_INVENTORY');
+    const parent = parents[0];
+    assert.ok(['SOURCE', 'DISCOVERY', 'REDIRECT'].includes(parent.purpose), 'V4_CAPTURE_REDIRECT_PARENT_PURPOSE_INVALID');
+    for (const key of ['topicIds', 'sourceRecordIds', 'caseIds']) {
+      assert.deepEqual(row.provenance[key], parent.provenance[key], 'V4_CAPTURE_REDIRECT_PROVENANCE_NOT_INHERITED:' + key);
+    }
+    const visited = new Set([row.url]);
+    let ancestorUrl = row.redirectFrom;
+    while (true) {
+      assert.ok(!visited.has(ancestorUrl), 'V4_CAPTURE_REDIRECT_CYCLE');
+      visited.add(ancestorUrl);
+      const ancestor = inventoryByUrl.get(ancestorUrl)?.find(candidate =>
+        candidate.family === row.family && candidate.purpose === 'REDIRECT');
+      if (!ancestor) break;
+      ancestorUrl = ancestor.redirectFrom;
+    }
+  }
+  return true;
+}
+
+export function assertActivationConfigurationBodyMatches(document, canonicalBody) {
+  assert.deepEqual(document, {
+    ...canonicalBody,
+    activationConfigurationSha256: sha256(stableJson(canonicalBody))
+  }, 'V4_ACTIVATION_CONFIGURATION_HAS_UNBOUND_FIELDS');
+  return true;
+}
+
+/** Build non-circular inputs to add to the V4 preregistration before it is frozen. */
+export async function buildActivationPreregistrationInputs({
+  archivalRunnerConfigurationPath,
+  runnerConfigurationPath,
+  captureInventory,
+  reviewedModules = APPROVED_EXECUTION_MODULES,
+  root = ROOT,
+  gitExecutable
+} = {}) {
+  const archival = await readObjectAndHash(archivalRunnerConfigurationPath, root);
+  const current = await readObjectAndHash(runnerConfigurationPath, root);
+  await verifyFrozenRunnerConfiguration({ binding: current.value, root, gitExecutable });
+  assert.equal(archival.value.profile, RUNNER_PROFILE, 'V4_ARCHIVAL_RUNNER_CONFIGURATION_INVALID');
+  assert.equal(archival.value.captureInventory, null, 'V4_ARCHIVAL_RUNNER_CONFIGURATION_NOT_NULL_ACTIVATION');
+  assert.equal(archival.value.productionEvidenceAdapterSha256, null, 'V4_ARCHIVAL_RUNNER_CONFIGURATION_NOT_NULL_ADAPTER');
+  assert.equal(archival.value.preregistrationSha256, null, 'V4_ARCHIVAL_RUNNER_CONFIGURATION_NOT_NULL_PREREGISTRATION');
+  assert.equal(current.value.captureInventory, null, 'V4_CURRENT_RUNNER_CONFIGURATION_NOT_NULL_ACTIVATION');
+  assert.equal(current.value.productionEvidenceAdapterSha256, null, 'V4_CURRENT_RUNNER_CONFIGURATION_NOT_NULL_ADAPTER');
+  assert.equal(current.value.preregistrationSha256, null, 'V4_CURRENT_RUNNER_CONFIGURATION_NOT_NULL_PREREGISTRATION');
+  validateActivationInventory(captureInventory);
+  assert.ok(Array.isArray(reviewedModules) && reviewedModules.length >= 2, 'V4_REVIEWED_EXECUTION_MODULES_REQUIRED');
+  const expectedDescriptors = APPROVED_EXECUTION_MODULES.map(row => stableJson(row)).sort();
+  assert.deepEqual(reviewedModules.map(({ path, exportName }) => stableJson({ path, exportName })).sort(),
+    expectedDescriptors, 'V4_REVIEWED_EXECUTION_MODULE_SET_INVALID');
+  const normalizedModules = [];
+  for (const row of reviewedModules) {
+    assert.ok(row && typeof row.path === 'string' && typeof row.exportName === 'string', 'V4_REVIEWED_MODULE_ROW_INVALID');
+    const relative = normalizedRelative(root, row.path);
+    assert.ok(relative.startsWith('scripts/iras_v4_'), 'V4_REVIEWED_MODULE_PATH_REJECTED');
+    const absolute = await assertNoSymlinkPath(root, relative);
+    const moduleHash = sha256(await readFile(absolute));
+    const boundRow = current.value.fileRows.find(fileRow => fileRow.path === relative);
+    assert.ok(boundRow && boundRow.sha256 === moduleHash, 'V4_REVIEWED_MODULE_NOT_BOUND_BY_CURRENT_RUNNER:' + relative);
+    normalizedModules.push({ path: relative, sha256: moduleHash, exportName: row.exportName });
+  }
+  const body = activationInputsProjection({
+    archivalRunnerConfiguration: { path: normalizedRelative(root, archivalRunnerConfigurationPath), sha256: archival.sha256 },
+    runnerConfiguration: current.value,
+    captureInventory,
+    reviewedModules: normalizedModules
+  });
+  const promptFingerprints = current.value.designFingerprints?.promptFingerprints;
+  assertPromptFingerprintRows(promptFingerprints, current.value.designFingerprints?.schemaPromptFingerprintSha256);
+  return {
+    activationInputsSha256: sha256(stableJson(body)),
+    activationInputs: body,
+    preregistrationBindings: {
+      profile: V4_PROFILE,
+      contractSha256: current.value.designFingerprints.contractSha256,
+      productionFingerprintSha256: current.value.designFingerprints.productionFingerprintSha256,
+      sourceFingerprintSha256: current.value.designFingerprints.sourceFingerprintSha256,
+      schemaPromptFingerprintSha256: current.value.designFingerprints.schemaPromptFingerprintSha256,
+      protectedHistorySha256: current.value.designFingerprints.protectedHistorySha256,
+      evaluationFingerprintSha256: current.value.designFingerprints.evaluationFingerprintSha256,
+      promptFingerprints,
+      activationInputsSha256: sha256(stableJson(body))
+    }
+  };
+}
+
+/** Freeze the activation overlay after the reviewed preregistration exists. */
+export async function writeFrozenActivationConfiguration({
+  outputPath,
+  archivalRunnerConfigurationPath,
+  runnerConfigurationPath,
+  preregistrationPath,
+  captureInventory,
+  reviewedModules,
+  root = ROOT,
+  gitExecutable
+} = {}) {
+  assert.ok(outputPath, 'V4_ACTIVATION_OUTPUT_PATH_REQUIRED');
+  const destination = assertInArtifactNamespace(outputPath, root);
+  const inputs = await buildActivationPreregistrationInputs({ archivalRunnerConfigurationPath, runnerConfigurationPath,
+    captureInventory, reviewedModules, root, gitExecutable });
+  const prereg = await readObjectAndHash(preregistrationPath, root);
+  assert.equal(prereg.value.profile, V4_PROFILE, 'V4_ACTIVATION_PREREGISTRATION_PROFILE_INVALID');
+  assert.equal(prereg.value.frozen, true, 'V4_ACTIVATION_PREREGISTRATION_NOT_FROZEN');
+  assert.equal(prereg.value.activationInputsSha256, inputs.activationInputsSha256,
+    'V4_ACTIVATION_PREREGISTRATION_INPUT_BINDING_MISMATCH');
+  for (const [key, value] of Object.entries(inputs.preregistrationBindings)) {
+    if (key === 'profile' || key === 'activationInputsSha256') continue;
+    assert.deepEqual(prereg.value[key], value, 'V4_ACTIVATION_PREREGISTRATION_BINDING_MISMATCH:' + key);
+  }
+  const documentBody = {
+    profile: ACTIVATION_PROFILE,
+    status: ACTIVATION_CONFIGURATION_STATUS,
+    frozen: true,
+    archivalRunnerConfiguration: inputs.activationInputs.archivalRunnerConfiguration,
+    runnerConfigurationPath: normalizedRelative(root, runnerConfigurationPath),
+    runnerIntegrityBindingSha256: inputs.activationInputs.runnerIntegrityBindingSha256,
+    activationInputsSha256: inputs.activationInputsSha256,
+    preregistrationPath: normalizedRelative(root, preregistrationPath),
+    preregistrationSha256: prereg.sha256,
+    captureInventory: inputs.activationInputs.captureInventory,
+    captureInventorySha256: inputs.activationInputs.captureInventorySha256,
+    reviewedModules: inputs.activationInputs.reviewedModules,
+    capturePolicy: CAPTURE_POLICY,
+    evidenceFamilies: EVIDENCE_FAMILIES,
+    caseEvidenceFamily: CASE_EVIDENCE_FAMILY,
+    officialCaptureExecutionStatus: 'NOT_EXECUTED_BY_ACTIVATION_FREEZE'
+  };
+  const document = { ...documentBody, activationConfigurationSha256: sha256(stableJson(documentBody)) };
+  const bytes = Buffer.from(JSON.stringify(document, null, 2) + '\n', 'utf8');
+  await mkdir(path.dirname(destination), { recursive: true });
+  await assertNoSymlinkPath(root, path.relative(root, destination), { mustExist: false });
+  const handle = await open(destination, 'wx');
+  try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
+  return { path: destination, sha256: sha256(bytes), activationConfigurationSha256: document.activationConfigurationSha256 };
+}
+
+export async function verifyFrozenActivationConfiguration({ activationConfigurationPath, root = ROOT, gitExecutable } = {}) {
+  const activation = await readObjectAndHash(activationConfigurationPath, root);
+  const document = activation.value;
+  assert.equal(document.profile, ACTIVATION_PROFILE, 'V4_ACTIVATION_CONFIGURATION_PROFILE_INVALID');
+  assert.equal(document.status, ACTIVATION_CONFIGURATION_STATUS, 'V4_ACTIVATION_CONFIGURATION_NOT_FROZEN');
+  assert.equal(document.frozen, true, 'V4_ACTIVATION_CONFIGURATION_NOT_FROZEN');
+  const body = { ...document };
+  delete body.activationConfigurationSha256;
+  assert.equal(document.activationConfigurationSha256, sha256(stableJson(body)), 'V4_ACTIVATION_CONFIGURATION_BODY_TAMPERED');
+  const runnerRead = await readObjectAndHash(path.resolve(root, document.runnerConfigurationPath), root);
+  const runner = await verifyFrozenRunnerConfiguration({ binding: runnerRead.value, root, gitExecutable });
+  assert.equal(runner.integrityBindingSha256, document.runnerIntegrityBindingSha256, 'V4_ACTIVATION_RUNNER_BINDING_MISMATCH');
+  assert.equal(runner.snapshot.captureInventory, null, 'V4_ACTIVATION_RUNNER_MUST_REMAIN_SEPARATE');
+  assert.equal(runner.snapshot.productionEvidenceAdapterSha256, null, 'V4_ACTIVATION_RUNNER_MUST_REMAIN_SEPARATE');
+  const archival = await readObjectAndHash(path.resolve(root, document.archivalRunnerConfiguration.path), root);
+  assert.equal(archival.sha256, document.archivalRunnerConfiguration.sha256, 'V4_ARCHIVAL_RUNNER_CONFIGURATION_HASH_MISMATCH');
+  const prereg = await readObjectAndHash(path.resolve(root, document.preregistrationPath), root);
+  assert.equal(prereg.sha256, document.preregistrationSha256, 'V4_ACTIVATION_PREREGISTRATION_HASH_MISMATCH');
+  assert.equal(prereg.value.activationInputsSha256, document.activationInputsSha256, 'V4_ACTIVATION_PREREGISTRATION_INPUT_BINDING_MISMATCH');
+  await verifyFrozenPreregistration(path.resolve(root, document.preregistrationPath), prereg.sha256, runner.snapshot, root,
+    document.activationInputsSha256);
+  validateActivationInventory(document.captureInventory);
+  assert.equal(captureInventoryDigest(document.captureInventory), document.captureInventorySha256, 'V4_ACTIVATION_INVENTORY_HASH_MISMATCH');
+  for (const row of document.reviewedModules) {
+    const absolute = await assertNoSymlinkPath(root, row.path);
+    assert.equal(sha256(await readFile(absolute)), row.sha256, 'V4_REVIEWED_EXECUTION_MODULE_HASH_MISMATCH:' + row.path);
+  }
+  const inputs = await buildActivationPreregistrationInputs({
+    archivalRunnerConfigurationPath: path.resolve(root, document.archivalRunnerConfiguration.path),
+    runnerConfigurationPath: path.resolve(root, document.runnerConfigurationPath),
+    captureInventory: document.captureInventory,
+    reviewedModules: document.reviewedModules,
+    root,
+    gitExecutable
+  });
+  assert.equal(inputs.activationInputsSha256, document.activationInputsSha256, 'V4_ACTIVATION_INPUTS_CHANGED');
+  const canonicalBody = {
+    profile: ACTIVATION_PROFILE,
+    status: ACTIVATION_CONFIGURATION_STATUS,
+    frozen: true,
+    archivalRunnerConfiguration: inputs.activationInputs.archivalRunnerConfiguration,
+    runnerConfigurationPath: normalizedRelative(root, path.resolve(root, document.runnerConfigurationPath)),
+    runnerIntegrityBindingSha256: inputs.activationInputs.runnerIntegrityBindingSha256,
+    activationInputsSha256: inputs.activationInputsSha256,
+    preregistrationPath: normalizedRelative(root, path.resolve(root, document.preregistrationPath)),
+    preregistrationSha256: prereg.sha256,
+    captureInventory: inputs.activationInputs.captureInventory,
+    captureInventorySha256: inputs.activationInputs.captureInventorySha256,
+    reviewedModules: inputs.activationInputs.reviewedModules,
+    capturePolicy: CAPTURE_POLICY,
+    evidenceFamilies: EVIDENCE_FAMILIES,
+    caseEvidenceFamily: CASE_EVIDENCE_FAMILY,
+    officialCaptureExecutionStatus: 'NOT_EXECUTED_BY_ACTIVATION_FREEZE'
+  };
+  assertActivationConfigurationBodyMatches(document, canonicalBody);
+  return { passed: true, sha256: activation.sha256, document, runnerConfiguration: runner.snapshot,
+    preregistration: prereg.value };
+}
+
+/** Load only the named reviewed exports into a branded execution capability. */
+export async function loadReviewedV4ExecutionCapability(options = {}) {
+  const verified = await verifyFrozenActivationConfiguration(options);
+  const exportRows = new Map(verified.document.reviewedModules.map(row => [row.exportName, row]));
+  const expectedNames = ['runV4AcceptanceCase', 'runV4CapturePlan', 'sendV4SemanticRequest', 'fetchV4OfficialSource'];
+  assert.deepEqual([...exportRows.keys()].sort(), [...expectedNames].sort(), 'V4_REVIEWED_EXECUTION_EXPORT_SET_INVALID');
+  const exports = {};
+  for (const name of expectedNames) {
+    const row = exportRows.get(name);
+    const absolute = await assertNoSymlinkPath(options.root || ROOT, row.path);
+    const module = await import(pathToFileURL(absolute).href + '?v4=' + row.sha256);
+    assert.equal(sha256(await readFile(absolute)), row.sha256, 'V4_REVIEWED_EXECUTION_MODULE_CHANGED_DURING_LOAD:' + row.path);
+    assert.equal(typeof module[name], 'function', 'V4_REVIEWED_EXECUTION_EXPORT_MISSING:' + name);
+    exports[name] = module[name];
+  }
+  const capability = Object.freeze({
+    activationConfigurationPath: path.resolve(options.activationConfigurationPath),
+    activationConfigurationSha256: verified.document.activationConfigurationSha256,
+    activationConfigurationFileSha256: verified.sha256,
+    gitExecutable: options.gitExecutable,
+    root: path.resolve(options.root || ROOT),
+    runnerIntegrityBindingSha256: verified.document.runnerIntegrityBindingSha256,
+    captureInventorySha256: verified.document.captureInventorySha256,
+    runV4AcceptanceCase: exports.runV4AcceptanceCase,
+    runV4CapturePlan: exports.runV4CapturePlan,
+    sendV4SemanticRequest: exports.sendV4SemanticRequest,
+    fetchV4OfficialSource: exports.fetchV4OfficialSource
+  });
+  reviewedExecutionCapabilities.add(capability);
+  return capability;
+}
+
+export function assertReviewedV4ExecutionCapability(capability) {
+  assert.ok(capability && reviewedExecutionCapabilities.has(capability), 'V4_REVIEWED_EXECUTION_CAPABILITY_REQUIRED');
+  return true;
+}
+
 export async function validateReviewedAcquisitionPermit({
   runnerConfigurationPath,
+  activationConfigurationPath,
   root = ROOT,
   gitExecutable
 } = {}) {
   assertNode22();
-  const { value: config } = await readObjectAndHash(runnerConfigurationPath);
-  const verified = await verifyFrozenRunnerConfiguration({ binding: config, root, gitExecutable });
-  assert.ok(Array.isArray(config.captureInventory) && config.captureInventory.length > 0,
-    'V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED');
-  assert.match(String(config.productionEvidenceAdapterSha256 || ''), SHA256_RE,
-    'V4_PRODUCTION_OBSERVATION_ADAPTER_NOT_REVIEWED');
-  assert.match(String(config.preregistrationSha256 || ''), SHA256_RE, 'V4_FROZEN_PREREGISTRATION_NOT_BOUND');
-  const permit = Object.freeze({
-    integrityBindingSha256: verified.integrityBindingSha256,
-    captureInventorySha256: sha256(stableJson(config.captureInventory)),
-    productionEvidenceAdapterSha256: config.productionEvidenceAdapterSha256
-  });
+  let permit;
+  if (activationConfigurationPath) {
+    const verified = await verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
+    assert.equal(path.resolve(runnerConfigurationPath || ''),
+      path.resolve(root, verified.document.runnerConfigurationPath), 'V4_ACTIVATION_RUNNER_CONFIGURATION_PATH_MISMATCH');
+    const adapterRow = verified.document.reviewedModules.find(row => row.exportName === 'runV4AcceptanceCase');
+    assert.ok(adapterRow, 'V4_PRODUCTION_OBSERVATION_ADAPTER_NOT_REVIEWED');
+    permit = Object.freeze({
+      integrityBindingSha256: verified.document.runnerIntegrityBindingSha256,
+      captureInventorySha256: verified.document.captureInventorySha256,
+      captureInventory: frozenJsonCopy(verified.document.captureInventory),
+      productionEvidenceAdapterSha256: adapterRow.sha256,
+      activationConfigurationSha256: verified.document.activationConfigurationSha256,
+      activationConfigurationFileSha256: verified.sha256,
+      activationConfigurationPath: path.resolve(activationConfigurationPath),
+      preregistrationSha256: verified.document.preregistrationSha256
+    });
+  } else {
+    const { value: config } = await readObjectAndHash(runnerConfigurationPath, root);
+    const verified = await verifyFrozenRunnerConfiguration({ binding: config, root, gitExecutable });
+    assert.ok(Array.isArray(config.captureInventory) && config.captureInventory.length > 0,
+      'V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED');
+    assert.match(String(config.productionEvidenceAdapterSha256 || ''), SHA256_RE,
+      'V4_PRODUCTION_OBSERVATION_ADAPTER_NOT_REVIEWED');
+    assert.match(String(config.preregistrationSha256 || ''), SHA256_RE, 'V4_FROZEN_PREREGISTRATION_NOT_BOUND');
+    permit = Object.freeze({
+      integrityBindingSha256: verified.integrityBindingSha256,
+      captureInventorySha256: sha256(stableJson(config.captureInventory)),
+      captureInventory: frozenJsonCopy(config.captureInventory),
+      productionEvidenceAdapterSha256: config.productionEvidenceAdapterSha256
+    });
+  }
   reviewedAcquisitionPermits.add(permit);
   return permit;
 }
 
-async function verifyFrozenPreregistration(preregistrationPath, preregistrationSha256, runnerConfiguration, root) {
+async function verifyFrozenPreregistration(preregistrationPath, preregistrationSha256, runnerConfiguration, root,
+  expectedActivationInputsSha256) {
   const prereg = await readObjectAndHash(preregistrationPath, root);
   assert.equal(prereg.sha256, preregistrationSha256, 'V4_CAPTURE_PREREGISTRATION_HASH_MISMATCH');
   assert.equal(prereg.value.profile, V4_PROFILE, 'V4_CAPTURE_PREREGISTRATION_PROFILE_INVALID');
@@ -558,6 +1011,16 @@ async function verifyFrozenPreregistration(preregistrationPath, preregistrationS
     'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'evaluationFingerprintSha256']) {
     assert.equal(prereg.value[key], runnerConfiguration.designFingerprints[key], 'V4_CAPTURE_PREREGISTRATION_BINDING_MISMATCH:' + key);
   }
+  if (expectedActivationInputsSha256) {
+    const promptFingerprints = runnerConfiguration.designFingerprints?.promptFingerprints;
+    assertPromptFingerprintRows(promptFingerprints, runnerConfiguration.designFingerprints?.schemaPromptFingerprintSha256);
+    assert.deepEqual(prereg.value.promptFingerprints, promptFingerprints,
+      'V4_PREREGISTRATION_PROMPT_FINGERPRINT_ROWS_MISMATCH');
+    assert.equal(sha256(stableJson(prereg.value.promptFingerprints)), prereg.value.schemaPromptFingerprintSha256,
+      'V4_PREREGISTRATION_PROMPT_FINGERPRINT_HASH_MISMATCH');
+  }
+  if (expectedActivationInputsSha256) assert.equal(prereg.value.activationInputsSha256, expectedActivationInputsSha256,
+    'V4_CAPTURE_PREREGISTRATION_ACTIVATION_INPUT_MISMATCH');
   return prereg.value;
 }
 
@@ -597,6 +1060,17 @@ function normalizeRequest(url, init = {}, family) {
     method: 'GET',
     headers: Object.fromEntries(Object.entries(normalizedHeaders).sort(([a], [b]) => a.localeCompare(b)))
   };
+}
+
+/** Exact request authorization. Redirect edges require a previously observed matching Location. */
+export function matchCaptureInventoryRequest(request, inventory, observedRedirects = new Map()) {
+  if (!request || !Array.isArray(inventory)) return undefined;
+  return inventory.find(row => {
+    if (row.family !== request.family || row.url !== request.url || row.method !== request.method ||
+        stableJson(row.headers) !== stableJson(request.headers)) return false;
+    if (row.purpose !== 'REDIRECT') return true;
+    return observedRedirects.get(row.url)?.has(row.redirectFrom) === true;
+  });
 }
 
 function requestIdentity(request) {
@@ -767,29 +1241,48 @@ function ambientNetworkDisabled(fn) {
 }
 
 export function createCaptureTransport({
-  liveFetch,
+  liveFetch: suppliedLiveFetch,
   markerPath,
   journalPath,
   payloadPath,
   integrityBindingSha256,
   preregistrationSha256,
   runnerConfigurationPath,
+  activationConfigurationPath,
   preregistrationPath,
   gitExecutable,
   provenance = {},
   synthetic = false,
   acquisitionPermit,
+  executionCapability,
   root = ROOT,
   now = () => new Date(),
   syntheticTestControls = {}
 } = {}) {
+  let liveFetch = suppliedLiveFetch;
+  if (!synthetic) {
+    assertReviewedV4ExecutionCapability(executionCapability);
+    assert.equal(liveFetch, undefined, 'V4_LIVE_CAPTURE_CALLBACK_SUBSTITUTION_BLOCKED');
+    liveFetch = executionCapability.fetchV4OfficialSource;
+    assert.equal(executionCapability.activationConfigurationSha256, acquisitionPermit?.activationConfigurationSha256,
+      'V4_CAPTURE_EXECUTION_CAPABILITY_ACTIVATION_MISMATCH');
+    assert.equal(path.resolve(activationConfigurationPath || ''), path.resolve(executionCapability.activationConfigurationPath),
+      'V4_CAPTURE_EXECUTION_CAPABILITY_PATH_MISMATCH');
+  }
   assert.equal(typeof liveFetch, 'function', 'V4_EXPLICIT_CAPTURE_TRANSPORT_REQUIRED');
   assert.match(String(integrityBindingSha256 || ''), SHA256_RE, 'V4_CAPTURE_INTEGRITY_BINDING_REQUIRED');
   if (!synthetic) {
     assert.ok(acquisitionPermit && reviewedAcquisitionPermits.has(acquisitionPermit),
       'V4_LIVE_CAPTURE_REQUIRES_RECOMPUTED_REVIEWED_PERMIT');
+    assert.equal(captureInventoryDigest(acquisitionPermit.captureInventory), acquisitionPermit.captureInventorySha256,
+      'V4_CAPTURE_PERMIT_INVENTORY_MUTATED');
+    assert.equal(acquisitionPermit.activationConfigurationSha256, executionCapability.activationConfigurationSha256,
+      'V4_CAPTURE_EXECUTION_CAPABILITY_ACTIVATION_MISMATCH');
+    assert.equal(acquisitionPermit.activationConfigurationFileSha256, executionCapability.activationConfigurationFileSha256,
+      'V4_CAPTURE_EXECUTION_CAPABILITY_FILE_MISMATCH');
     assert.ok(runnerConfigurationPath && path.isAbsolute(gitExecutable),
       'V4_LIVE_CAPTURE_CHECKOUT_VALIDATION_REQUIRED');
+    assert.ok(activationConfigurationPath, 'V4_FROZEN_ACTIVATION_CONFIGURATION_REQUIRED');
     assert.ok(preregistrationPath, 'V4_FROZEN_PREREGISTRATION_PATH_REQUIRED');
     assert.match(String(preregistrationSha256 || ''), SHA256_RE, 'V4_CAPTURE_PREREGISTRATION_BINDING_REQUIRED');
     assert.equal(syntheticTestControls.timeoutMs, undefined, 'V4_LIVE_CAPTURE_POLICY_CANNOT_BE_OVERRIDDEN');
@@ -801,6 +1294,7 @@ export function createCaptureTransport({
     assert.equal(syntheticTestControls.synthetic, true, 'V4_SYNTHETIC_MODE_MUST_BE_EXPLICIT');
   }
   assert.ok(markerPath && journalPath && payloadPath, 'V4_CAPTURE_OUTPUT_PATHS_REQUIRED');
+  const boundProvenance = frozenJsonCopy(provenance);
   const marker = outsideProtectedTree(markerPath, root);
   const journal = outsideProtectedTree(journalPath, root);
   const payload = outsideProtectedTree(payloadPath, root);
@@ -824,6 +1318,7 @@ export function createCaptureTransport({
   const inFlightIdentities = new Set();
   const failedIdentities = new Set();
   const successfulResponses = new Map();
+  const observedRedirects = new Map();
   const familyCounts = new Map();
   const reservedFamilyCounts = new Map();
   let latch;
@@ -850,6 +1345,11 @@ export function createCaptureTransport({
       synthetic,
       integrityBindingSha256,
       preregistrationSha256: preregistrationSha256 || null,
+      ...(synthetic ? {} : {
+        activationConfigurationSha256: acquisitionPermit.activationConfigurationSha256,
+        activationConfigurationFileSha256: acquisitionPermit.activationConfigurationFileSha256,
+        captureInventorySha256: acquisitionPermit.captureInventorySha256
+      }),
       reservedAt: isoFrom(now())
     }, null, 2) + '\n';
     reservationPromise = (async () => {
@@ -906,6 +1406,31 @@ export function createCaptureTransport({
     }
   }
 
+  async function revalidateActivatedDispatch(request) {
+    const permit = await validateReviewedAcquisitionPermit({
+      runnerConfigurationPath, activationConfigurationPath, root, gitExecutable
+    });
+    if (permit.integrityBindingSha256 !== integrityBindingSha256 ||
+        permit.captureInventorySha256 !== acquisitionPermit.captureInventorySha256 ||
+        permit.productionEvidenceAdapterSha256 !== acquisitionPermit.productionEvidenceAdapterSha256 ||
+        permit.activationConfigurationSha256 !== acquisitionPermit.activationConfigurationSha256 ||
+        permit.activationConfigurationFileSha256 !== acquisitionPermit.activationConfigurationFileSha256 ||
+        permit.preregistrationSha256 !== preregistrationSha256) {
+      throw new Error('V4_CAPTURE_ACTIVATION_PERMIT_CHANGED');
+    }
+    assert.equal(captureInventoryDigest(acquisitionPermit.captureInventory), acquisitionPermit.captureInventorySha256,
+      'V4_CAPTURE_PERMIT_INVENTORY_MUTATED');
+    assert.equal(captureInventoryDigest(permit.captureInventory), permit.captureInventorySha256,
+      'V4_CAPTURE_VERIFIED_INVENTORY_MUTATED');
+    if (!matchCaptureInventoryRequest(request, permit.captureInventory, observedRedirects)) {
+      throw new Error('V4_CAPTURE_REQUEST_NOT_IN_APPROVED_INVENTORY');
+    }
+    assertReviewedV4ExecutionCapability(executionCapability);
+    assert.equal(executionCapability.activationConfigurationSha256, permit.activationConfigurationSha256,
+      'V4_CAPTURE_EXECUTION_CAPABILITY_ACTIVATION_MISMATCH');
+    return permit;
+  }
+
   async function captureFetch(url, init = {}) {
     const family = familyContext.getStore();
     let request;
@@ -917,17 +1442,9 @@ export function createCaptureTransport({
     if (latch) throw latch;
     const identity = requestIdentity(request);
     const identityKey = request.family + ':' + identity;
-    if (!synthetic && !reserved) {
+    if (!synthetic) {
       try {
-        const permit = await validateReviewedAcquisitionPermit({ runnerConfigurationPath, root, gitExecutable });
-        const { value: currentConfiguration } = await readObjectAndHash(runnerConfigurationPath, root);
-        if (permit.integrityBindingSha256 !== integrityBindingSha256 ||
-            permit.captureInventorySha256 !== acquisitionPermit.captureInventorySha256 ||
-            permit.productionEvidenceAdapterSha256 !== acquisitionPermit.productionEvidenceAdapterSha256 ||
-            currentConfiguration.preregistrationSha256 !== preregistrationSha256) {
-          throw new Error('V4_CAPTURE_PERMIT_CHANGED');
-        }
-        await verifyFrozenPreregistration(preregistrationPath, preregistrationSha256, currentConfiguration, root);
+        await revalidateActivatedDispatch(request);
       } catch (error) {
         throw latchIntegrity(error.message || 'V4_CAPTURE_PREFLIGHT_FAILED');
       }
@@ -939,6 +1456,10 @@ export function createCaptureTransport({
     try {
       await ensureReserved();
       if (latch) throw latch;
+      if (!synthetic) {
+        try { await revalidateActivatedDispatch(request); }
+        catch (error) { throw latchIntegrity(error.message || 'V4_CAPTURE_POST_RESERVATION_PREFLIGHT_FAILED'); }
+      }
     } catch (error) {
       inFlightIdentities.delete(identityKey);
       throw error;
@@ -963,6 +1484,7 @@ export function createCaptureTransport({
     const entryBase = {
       ordinal: dispatchCount,
       request,
+      ...(synthetic ? {} : { inventoryPurpose: matchCaptureInventoryRequest(request, acquisitionPermit.captureInventory, observedRedirects)?.purpose }),
       requestIdentitySha256: identity,
       startedAt
     };
@@ -991,6 +1513,19 @@ export function createCaptureTransport({
         };
         await appendEntry(entry);
         throw latchIntegrity('V4_CAPTURE_UNEXPECTED_AUTO_FOLLOW');
+      }
+      const location = responseData.headers.location;
+      if ([301, 302, 303, 307, 308].includes(responseData.status) && location) {
+        try {
+          const target = validateOfficialUrl(new URL(location, request.url).toString());
+          const hasReviewedEdge = !synthetic && acquisitionPermit.captureInventory.some(row =>
+            row.family === request.family && row.purpose === 'REDIRECT' && row.redirectFrom === request.url && row.url === target);
+          if (hasReviewedEdge) {
+            const sources = observedRedirects.get(target) || new Set();
+            sources.add(request.url);
+            observedRedirects.set(target, sources);
+          }
+        } catch { /* An unapproved or malformed redirect never grants a follow-up request. */ }
       }
       const entry = {
         ...entryBase,
@@ -1064,7 +1599,7 @@ export function createCaptureTransport({
         failure: kind,
         error: String(error?.message || error).slice(0, 240)
       });
-      return makeMarkedFailure(request.url, kind);
+      throw latchIntegrity('V4_CAPTURE_ACQUISITION_' + kind);
     } finally {
       inFlightIdentities.delete(identityKey);
       clearTimeout(timeoutId);
@@ -1118,6 +1653,11 @@ export function createCaptureTransport({
       synthetic,
       integrityBindingSha256,
       preregistrationSha256: preregistrationSha256 || null,
+      ...(synthetic ? {} : {
+        activationConfigurationSha256: acquisitionPermit.activationConfigurationSha256,
+        activationConfigurationFileSha256: acquisitionPermit.activationConfigurationFileSha256,
+        captureInventorySha256: acquisitionPermit.captureInventorySha256
+      }),
       captureStartedAt: entries[0]?.startedAt || null,
       captureCompletedAt: isoFrom(now()),
       earliestAcquisitionAt: earliestAcquisitionAt === undefined ? null : new Date(earliestAcquisitionAt).toISOString(),
@@ -1125,12 +1665,17 @@ export function createCaptureTransport({
       provenance: {
         runnerIntegrityBindingSha256: integrityBindingSha256,
         preregistrationSha256: preregistrationSha256 || null,
+        ...(synthetic ? {} : {
+          activationConfigurationSha256: acquisitionPermit.activationConfigurationSha256,
+          activationConfigurationFileSha256: acquisitionPermit.activationConfigurationFileSha256,
+          captureInventorySha256: acquisitionPermit.captureInventorySha256
+        }),
         nodeVersion: process.versions.node,
         execPath: process.execPath,
-        sourcePolicySha256: provenance.sourcePolicySha256 || null,
-        sourceRegistrySha256: provenance.sourceRegistrySha256 || null,
-        sourceMapSha256: provenance.sourceMapSha256 || null,
-        discoveryPolicySha256: provenance.discoveryPolicySha256 || null,
+        sourcePolicySha256: boundProvenance.sourcePolicySha256 || null,
+        sourceRegistrySha256: boundProvenance.sourceRegistrySha256 || null,
+        sourceMapSha256: boundProvenance.sourceMapSha256 || null,
+        discoveryPolicySha256: boundProvenance.discoveryPolicySha256 || null,
         productionRetriever: CAPTURE_POLICY.productionRetriever
       },
       requestCount: entries.length,
@@ -1144,19 +1689,20 @@ export function createCaptureTransport({
     return { path: payload, sha256: sha256(bytes), document };
   }
 
-  return {
+  const transport = {
     fetch: captureFetch,
     withEvidenceFamily,
     withCaseFamily,
     recordCacheReuse,
-    get entries() { return entries; },
+    get entries() { return frozenJsonCopy(entries); },
     get requestCount() { return dispatchCount; },
     get reservedRequestCount() { return reservedRequestCount; },
-    get cacheReuses() { return cacheReuses; },
+    get cacheReuses() { return frozenJsonCopy(cacheReuses); },
     get terminalIntegrityFailure() { return latch?.message || null; },
     integrityBindingSha256,
     synthetic,
     acquisitionPermit,
+    activationConfigurationPath,
     runnerConfigurationPath,
     preregistrationPath,
     preregistrationSha256,
@@ -1164,10 +1710,17 @@ export function createCaptureTransport({
     trip(code) { throw latchIntegrity(code); },
     assertHealthy() { if (latch) throw latch; },
     assertCaptureComplete() {
+      if (entries.some(entry => entry.failure !== null)) throw latchIntegrity('V4_CAPTURE_ACQUISITION_FAILED');
       if (unsuccessfulHttpStatus) throw latchIntegrity('V4_CAPTURE_HTTP_STATUS_UNSUCCESSFUL');
     },
     finalizeCapture
   };
+  if (!synthetic) {
+    transport.executionCapability = executionCapability;
+    reviewedLiveCaptureTransports.add(transport);
+    Object.freeze(transport);
+  }
+  return transport;
 }
 
 function compareCaptureResponse(left, right) {
@@ -1200,6 +1753,9 @@ export function validateCapturePayload(payload, {
   now = new Date(),
   expectedIntegrityBindingSha256,
   expectedPreregistrationSha256,
+  expectedActivationConfigurationSha256,
+  expectedActivationConfigurationFileSha256,
+  expectedCaptureInventory,
   syntheticMode = false,
   requireComplete = true
 } = {}) {
@@ -1231,14 +1787,34 @@ export function validateCapturePayload(payload, {
       'V4_CAPTURE_PROVENANCE_BINDING_MISMATCH');
     assert.equal(payload.provenance.preregistrationSha256, payload.preregistrationSha256,
       'V4_CAPTURE_PROVENANCE_PREREGISTRATION_MISMATCH');
+    assert.match(String(payload.activationConfigurationSha256 || ''), SHA256_RE,
+      'V4_CAPTURE_ACTIVATION_BINDING_MISSING');
+    assert.match(String(payload.activationConfigurationFileSha256 || ''), SHA256_RE,
+      'V4_CAPTURE_ACTIVATION_FILE_BINDING_MISSING');
+    assert.match(String(payload.captureInventorySha256 || ''), SHA256_RE, 'V4_CAPTURE_INVENTORY_BINDING_MISSING');
+    assert.equal(payload.provenance.activationConfigurationSha256, payload.activationConfigurationSha256,
+      'V4_CAPTURE_PROVENANCE_ACTIVATION_MISMATCH');
+    assert.equal(payload.provenance.activationConfigurationFileSha256, payload.activationConfigurationFileSha256,
+      'V4_CAPTURE_PROVENANCE_ACTIVATION_FILE_MISMATCH');
+    assert.equal(payload.provenance.captureInventorySha256, payload.captureInventorySha256,
+      'V4_CAPTURE_PROVENANCE_INVENTORY_MISMATCH');
   }
   assert.match(String(payload.integrityBindingSha256 || ''), SHA256_RE, 'V4_CAPTURE_BINDING_INVALID');
   if (expectedIntegrityBindingSha256) assert.equal(payload.integrityBindingSha256, expectedIntegrityBindingSha256, 'V4_CAPTURE_BINDING_MISMATCH');
   if (expectedPreregistrationSha256) assert.equal(payload.preregistrationSha256, expectedPreregistrationSha256, 'V4_CAPTURE_PREREGISTRATION_MISMATCH');
+  if (expectedActivationConfigurationSha256) assert.equal(payload.activationConfigurationSha256,
+    expectedActivationConfigurationSha256, 'V4_CAPTURE_ACTIVATION_MISMATCH');
+  if (expectedActivationConfigurationFileSha256) assert.equal(payload.activationConfigurationFileSha256,
+    expectedActivationConfigurationFileSha256, 'V4_CAPTURE_ACTIVATION_FILE_MISMATCH');
+  if (expectedCaptureInventory) {
+    validateActivationInventory(expectedCaptureInventory);
+    assert.equal(payload.captureInventorySha256, captureInventoryDigest(expectedCaptureInventory), 'V4_CAPTURE_INVENTORY_MISMATCH');
+  }
   assert.ok(Array.isArray(payload.entries), 'V4_CAPTURE_ENTRIES_MISSING');
   assert.ok(payload.entries.length <= payload.policy.maximumRequests, 'V4_CAPTURE_REQUEST_BUDGET_EXCEEDED');
   const counts = new Map();
   const identities = new Map();
+  const observedRedirects = new Map();
   const starts = [];
   const currentTime = now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (!Number.isFinite(currentTime)) throw new Error('V4_CAPTURE_VALIDATION_TIME_INVALID');
@@ -1251,6 +1827,11 @@ export function validateCapturePayload(payload, {
     }, entry.request.family);
     const identity = requestIdentity(normalized);
     assert.equal(entry.requestIdentitySha256, identity, 'V4_CAPTURE_REQUEST_IDENTITY_MISMATCH');
+    if (!syntheticMode && expectedCaptureInventory) {
+      const inventoryRow = matchCaptureInventoryRequest(normalized, expectedCaptureInventory, observedRedirects);
+      assert.ok(inventoryRow, 'V4_CAPTURE_PAYLOAD_REQUEST_OUTSIDE_INVENTORY');
+      assert.equal(entry.inventoryPurpose, inventoryRow.purpose, 'V4_CAPTURE_PAYLOAD_INVENTORY_PURPOSE_MISMATCH');
+    }
     const familyCount = (counts.get(normalized.family) || 0) + 1;
     counts.set(normalized.family, familyCount);
     assert.ok(familyCount <= payload.policy.maximumRequestsPerFamily, 'V4_CAPTURE_FAMILY_BUDGET_EXCEEDED');
@@ -1304,6 +1885,12 @@ export function validateCapturePayload(payload, {
     if (location && entry.status >= 300 && entry.status < 400) {
       const target = new URL(location, normalized.url).toString();
       validateOfficialUrl(target);
+      if (expectedCaptureInventory?.some(row => row.family === normalized.family && row.purpose === 'REDIRECT' &&
+          row.redirectFrom === normalized.url && row.url === target)) {
+        const sources = observedRedirects.get(target) || new Set();
+        sources.add(normalized.url);
+        observedRedirects.set(target, sources);
+      }
     }
     const familyIdentity = normalized.family + ':' + identity;
     if (identities.has(familyIdentity)) {
@@ -1345,13 +1932,26 @@ export function createReplayTransport({
   syntheticMode = false,
   now = new Date(),
   expectedIntegrityBindingSha256,
-  expectedPreregistrationSha256
+  expectedPreregistrationSha256,
+  executionCapability,
+  activationConfigurationSha256,
+  expectedCaptureInventory
 } = {}) {
+  const approvedInventory = syntheticMode ? expectedCaptureInventory : frozenJsonCopy(expectedCaptureInventory);
+  if (!syntheticMode) {
+    assertReviewedV4ExecutionCapability(executionCapability);
+    assert.equal(activationConfigurationSha256, executionCapability.activationConfigurationSha256,
+      'V4_REPLAY_ACTIVATION_BINDING_MISMATCH');
+    assert.equal(captureInventoryDigest(approvedInventory), executionCapability.captureInventorySha256,
+      'V4_REPLAY_INVENTORY_BINDING_MISMATCH');
+  }
   validateCapturePayload(payload, {
     now,
     syntheticMode,
     expectedIntegrityBindingSha256,
     expectedPreregistrationSha256,
+    expectedActivationConfigurationSha256: activationConfigurationSha256,
+    expectedCaptureInventory: approvedInventory,
     requireComplete: !syntheticMode
   });
   const responseByIdentity = new Map();
@@ -1363,6 +1963,7 @@ export function createReplayTransport({
   }
   const lookupCounts = new Map();
   const familyContext = new AsyncLocalStorage();
+  const observedRedirects = new Map();
   let latched;
   let replayLookupCount = 0;
   const cacheReuses = [];
@@ -1381,6 +1982,9 @@ export function createReplayTransport({
     try { request = normalizeRequest(url, init, familyContext.getStore()); }
     catch (error) { throw trip(error.message || 'V4_REPLAY_REQUEST_POLICY_REJECTED'); }
     const identity = requestIdentity(request);
+    if (!syntheticMode && !matchCaptureInventoryRequest(request, approvedInventory, observedRedirects)) {
+      throw trip('V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY');
+    }
     const key = request.family + ':' + identity;
     const entry = responseByIdentity.get(key);
     if (!entry) throw trip('V4_REPLAY_MISS');
@@ -1400,6 +2004,19 @@ export function createReplayTransport({
       headers: entry.headers
     });
     Object.defineProperty(response, 'url', { value: entry.actualUrl });
+    const location = entry.headers?.location;
+    if ([301, 302, 303, 307, 308].includes(entry.status) && location && !syntheticMode) {
+      try {
+        const target = validateOfficialUrl(new URL(location, request.url).toString());
+        const hasReviewedEdge = approvedInventory.some(row => row.family === request.family &&
+          row.purpose === 'REDIRECT' && row.redirectFrom === request.url && row.url === target);
+        if (hasReviewedEdge) {
+          const sources = observedRedirects.get(target) || new Set();
+          sources.add(request.url);
+          observedRedirects.set(target, sources);
+        }
+      } catch { /* an unreviewed Location never authorizes a replay lookup */ }
+    }
     return response;
   }
 
@@ -1419,7 +2036,7 @@ export function createReplayTransport({
     cacheReuses.push({ family, url: validateOfficialUrl(url), recordedAt: isoFrom(now), contentHash: result?.contentHash || null });
   }
   function assertHealthy() { if (latched) throw latched; }
-  return {
+  const replay = {
     fetch: replayFetch,
     withEvidenceFamily,
     withCaseFamily,
@@ -1432,6 +2049,11 @@ export function createReplayTransport({
     get terminalIntegrityFailure() { return latched?.message || null; },
     trip
   };
+  if (!syntheticMode) {
+    reviewedReplayTransports.add(replay);
+    Object.freeze(replay);
+  }
+  return replay;
 }
 
 export function bindProductionControlledRetriever({ transport, cache = new SourceCache(), validator } = {}) {
@@ -1451,7 +2073,7 @@ export function bindProductionControlledRetriever({ transport, cache = new Sourc
     transport.assertHealthy?.();
     return result;
   };
-  return webRetriever;
+  return Object.freeze(webRetriever);
 }
 
 export async function runBoundedCapture({
@@ -1459,17 +2081,23 @@ export async function runBoundedCapture({
   execute,
   syntheticMode = false,
   runnerConfigurationPath,
+  activationConfigurationPath,
+  executionCapability,
   preregistrationPath,
   root = ROOT,
   gitExecutable
 } = {}) {
   assert.ok(transport && typeof transport.fetch === 'function', 'V4_CAPTURE_TRANSPORT_REQUIRED');
-  assert.equal(typeof execute, 'function', 'V4_CAPTURE_EXECUTOR_REQUIRED');
   if (syntheticMode) {
     assert.equal(transport.synthetic, true, 'V4_SYNTHETIC_CAPTURE_MODE_MISMATCH');
+    assert.equal(typeof execute, 'function', 'V4_CAPTURE_EXECUTOR_REQUIRED');
   } else {
     assertNode22();
     assert.equal(transport.synthetic, false, 'V4_LIVE_CAPTURE_MODE_MISMATCH');
+    assertReviewedV4ExecutionCapability(executionCapability);
+    assert.ok(reviewedLiveCaptureTransports.has(transport), 'V4_REVIEWED_LIVE_CAPTURE_TRANSPORT_REQUIRED');
+    assert.equal(transport.executionCapability, executionCapability, 'V4_CAPTURE_TRANSPORT_CAPABILITY_MISMATCH');
+    assert.equal(execute, undefined, 'V4_LIVE_CAPTURE_EXECUTOR_CALLBACK_SUBSTITUTION_BLOCKED');
     assert.ok(transport.acquisitionPermit && reviewedAcquisitionPermits.has(transport.acquisitionPermit),
       'V4_LIVE_CAPTURE_REQUIRES_RECOMPUTED_REVIEWED_PERMIT');
     assert.equal(path.resolve(transport.runnerConfigurationPath || ''), path.resolve(runnerConfigurationPath || ''),
@@ -1478,28 +2106,41 @@ export async function runBoundedCapture({
     const verified = await verifyFrozenRunnerConfiguration({ binding: configRead.value, root, gitExecutable });
     assert.equal(configRead.value.integrityBindingSha256, transport.integrityBindingSha256,
       'V4_CAPTURE_TRANSPORT_RUNNER_BINDING_MISMATCH');
-    assert.ok(Array.isArray(verified.snapshot.captureInventory) && verified.snapshot.captureInventory.length > 0,
-      'V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED');
-    assert.match(String(verified.snapshot.productionEvidenceAdapterSha256 || ''), SHA256_RE,
-      'V4_PRODUCTION_OBSERVATION_ADAPTER_NOT_REVIEWED');
+    const activation = await verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
+    assert.equal(activation.document.runnerIntegrityBindingSha256, verified.integrityBindingSha256,
+      'V4_CAPTURE_ACTIVATION_RUNNER_BINDING_MISMATCH');
+    assert.equal(executionCapability.activationConfigurationSha256, activation.document.activationConfigurationSha256,
+      'V4_CAPTURE_EXECUTION_CAPABILITY_ACTIVATION_MISMATCH');
+    assert.equal(executionCapability.activationConfigurationFileSha256, activation.sha256,
+      'V4_CAPTURE_EXECUTION_CAPABILITY_FILE_MISMATCH');
+    assert.equal(path.resolve(transport.activationConfigurationPath || ''), path.resolve(activationConfigurationPath || ''),
+      'V4_CAPTURE_TRANSPORT_ACTIVATION_PATH_MISMATCH');
     assert.equal(path.resolve(transport.preregistrationPath || ''), path.resolve(preregistrationPath || ''),
       'V4_CAPTURE_PREREGISTRATION_PATH_MISMATCH');
-    assert.equal(transport.preregistrationSha256, verified.snapshot.preregistrationSha256,
+    assert.equal(transport.preregistrationSha256, activation.document.preregistrationSha256,
       'V4_CAPTURE_PREREGISTRATION_BINDING_MISMATCH');
-    await verifyFrozenPreregistration(preregistrationPath, transport.preregistrationSha256, verified.snapshot, root);
+    await verifyFrozenPreregistration(preregistrationPath, transport.preregistrationSha256, verified.snapshot, root,
+      activation.document.activationInputsSha256);
   }
   let result;
   try {
-    result = await ambientNetworkDisabled(() => execute({
+    const parameters = {
       webRetriever: bindProductionControlledRetriever({ transport }),
       withEvidenceFamily: transport.withEvidenceFamily,
       withCaseFamily: transport.withCaseFamily
-    }));
+    };
+    result = syntheticMode
+      ? await ambientNetworkDisabled(() => execute(parameters))
+      : await ambientNetworkDisabled(() => executionCapability.runV4CapturePlan({
+        ...parameters,
+        captureInventory: transport.acquisitionPermit.captureInventory
+      }));
     transport.assertHealthy();
     transport.assertCaptureComplete?.();
     if (!syntheticMode) {
       const configRead = await readObjectAndHash(runnerConfigurationPath);
       await verifyFrozenRunnerConfiguration({ binding: configRead.value, root, gitExecutable });
+      await verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
     }
     return { result, capture: await transport.finalizeCapture('COMPLETE'), synthetic: syntheticMode };
   } catch (error) {
@@ -1516,20 +2157,26 @@ export async function loadCapturePayload(payloadPath, root = ROOT) {
   return { payload, bytes, sha256: sha256(bytes) };
 }
 
-function validateEvidenceLock(lock, { config, preregistrationSha256, payloadSha256, payload, now }) {
+function validateEvidenceLock(lock, { config, activationDocument, activationConfigurationSha256,
+  activationConfigurationFileSha256, preregistrationSha256, payloadSha256, payload, now }) {
   assert.ok(lock && lock.mode === FUTURE_EVIDENCE_POLICY.transportMode && lock.frozen === true, 'V4_EVIDENCE_LOCK_INVALID');
   assert.equal(lock.synthetic, false, 'V4_EVIDENCE_LOCK_SYNTHETIC');
   assert.equal(lock.runnerIntegrityBindingSha256, config.integrityBindingSha256, 'V4_EVIDENCE_LOCK_RUNNER_BINDING_MISMATCH');
   assert.equal(lock.preregistrationSha256, preregistrationSha256, 'V4_EVIDENCE_LOCK_PREREGISTRATION_MISMATCH');
   assert.equal(lock.capturePayloadSha256, payloadSha256, 'V4_EVIDENCE_LOCK_PAYLOAD_HASH_MISMATCH');
   assert.equal(lock.captureFileInventorySha256, config.fileInventorySha256, 'V4_EVIDENCE_LOCK_FILE_INVENTORY_MISMATCH');
-  assert.ok(Array.isArray(config.captureInventory) && config.captureInventory.length > 0,
+  assert.equal(lock.activationConfigurationSha256, activationConfigurationSha256,
+    'V4_EVIDENCE_LOCK_ACTIVATION_MISMATCH');
+  assert.equal(lock.activationConfigurationFileSha256, activationConfigurationFileSha256,
+    'V4_EVIDENCE_LOCK_ACTIVATION_FILE_MISMATCH');
+  assert.ok(Array.isArray(activationDocument.captureInventory) && activationDocument.captureInventory.length > 0,
     'V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED');
-  assert.equal(lock.captureInventorySha256, captureInventoryDigest(config.captureInventory),
+  assert.equal(lock.captureInventorySha256, captureInventoryDigest(activationDocument.captureInventory),
     'V4_EVIDENCE_LOCK_CAPTURE_INVENTORY_MISMATCH');
-  assert.match(String(config.productionEvidenceAdapterSha256 || ''), SHA256_RE,
+  const adapterRow = activationDocument.reviewedModules.find(row => row.exportName === 'runV4AcceptanceCase');
+  assert.match(String(adapterRow?.sha256 || ''), SHA256_RE,
     'V4_PRODUCTION_OBSERVATION_ADAPTER_NOT_REVIEWED');
-  assert.equal(lock.captureAdapterSha256, config.productionEvidenceAdapterSha256,
+  assert.equal(lock.captureAdapterSha256, adapterRow.sha256,
     'V4_EVIDENCE_LOCK_ADAPTER_MISMATCH');
   for (const key of ['contractSha256', 'productionFingerprintSha256', 'sourceFingerprintSha256',
     'schemaPromptFingerprintSha256', 'protectedHistorySha256', 'evaluationFingerprintSha256']) {
@@ -1539,6 +2186,9 @@ function validateEvidenceLock(lock, { config, preregistrationSha256, payloadSha2
     now,
     expectedIntegrityBindingSha256: config.integrityBindingSha256,
     expectedPreregistrationSha256: preregistrationSha256,
+    expectedActivationConfigurationSha256: activationConfigurationSha256,
+    expectedActivationConfigurationFileSha256: activationConfigurationFileSha256,
+    expectedCaptureInventory: activationDocument.captureInventory,
     syntheticMode: false,
     requireComplete: true
   });
@@ -1552,24 +2202,32 @@ export async function writeFrozenEvidenceLock({
   outputPath,
   payloadPath,
   runnerConfigurationPath,
+  activationConfigurationPath,
   gitExecutable,
   preregistrationPath,
   now = new Date(),
   root = ROOT
 } = {}) {
   const destination = outsideProtectedTree(outputPath, root);
-  const { value: runnerConfiguration } = await readObjectAndHash(runnerConfigurationPath, root);
-  await verifyFrozenRunnerConfiguration({ binding: runnerConfiguration, root, gitExecutable });
+  const activation = await verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
+  const runnerConfiguration = activation.runnerConfiguration;
+  assert.equal(path.resolve(root, activation.document.runnerConfigurationPath), path.resolve(runnerConfigurationPath),
+    'V4_EVIDENCE_LOCK_RUNNER_CONFIGURATION_PATH_MISMATCH');
   const { payload, sha256: payloadSha256 } = await loadCapturePayload(payloadPath, root);
   const preregRead = await readObjectAndHash(preregistrationPath, root);
   const preregistrationSha256 = preregRead.sha256;
   const preregistration = preregRead.value;
-  assert.equal(preregistrationSha256, runnerConfiguration.preregistrationSha256,
-    'V4_LOCK_PREREGISTRATION_NOT_BOUND_BY_RUNNER_CONFIGURATION');
+  assert.equal(preregistrationSha256, activation.document.preregistrationSha256,
+    'V4_LOCK_PREREGISTRATION_NOT_BOUND_BY_ACTIVATION');
+  assert.equal(preregistration.activationInputsSha256, activation.document.activationInputsSha256,
+    'V4_LOCK_PREREGISTRATION_ACTIVATION_INPUT_MISMATCH');
   validateCapturePayload(payload, {
     now,
     expectedIntegrityBindingSha256: runnerConfiguration.integrityBindingSha256,
     expectedPreregistrationSha256: preregistrationSha256,
+    expectedActivationConfigurationSha256: activation.document.activationConfigurationSha256,
+    expectedActivationConfigurationFileSha256: activation.sha256,
+    expectedCaptureInventory: activation.document.captureInventory,
     syntheticMode: false,
     requireComplete: true
   });
@@ -1587,12 +2245,12 @@ export async function writeFrozenEvidenceLock({
     protectedHistorySha256: preregistration.protectedHistorySha256,
     evaluationFingerprintSha256: preregistration.evaluationFingerprintSha256,
     runnerIntegrityBindingSha256: runnerConfiguration.integrityBindingSha256,
+    activationConfigurationSha256: activation.document.activationConfigurationSha256,
+    activationConfigurationFileSha256: activation.sha256,
     capturePayloadSha256: payloadSha256,
     captureFileInventorySha256: runnerConfiguration.fileInventorySha256,
-    captureInventorySha256: Array.isArray(runnerConfiguration.captureInventory)
-      ? captureInventoryDigest(runnerConfiguration.captureInventory)
-      : null,
-    captureAdapterSha256: runnerConfiguration.productionEvidenceAdapterSha256 || null,
+    captureInventorySha256: activation.document.captureInventorySha256,
+    captureAdapterSha256: activation.document.reviewedModules.find(row => row.exportName === 'runV4AcceptanceCase')?.sha256 || null,
     capturedAt: earliest,
     sourceReferenceDate: earliest.slice(0, 10),
     lockedAt: isoFrom(now),
@@ -1602,12 +2260,6 @@ export async function writeFrozenEvidenceLock({
     nodeVersion: payload.provenance?.nodeVersion || null,
     execPath: payload.provenance?.execPath || null
   };
-  // The current V4 runner freeze intentionally lacks a reviewed live request
-  // inventory and production observation adapter. Keep live lock creation held.
-  assert.ok(Array.isArray(runnerConfiguration.captureInventory) && runnerConfiguration.captureInventory.length > 0,
-    'V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED');
-  assert.match(String(runnerConfiguration.productionEvidenceAdapterSha256 || ''), SHA256_RE,
-    'V4_PRODUCTION_OBSERVATION_ADAPTER_NOT_REVIEWED');
   await mkdir(path.dirname(destination), { recursive: true });
   const bytes = Buffer.from(JSON.stringify(lock, null, 2) + '\n', 'utf8');
   await writeExclusiveDurable(destination, bytes, root);
@@ -1622,6 +2274,7 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
   let timeoutId;
   const chunks = [];
   let retainedBytes = 0;
+  let semanticResponseObserved = false;
   let reader;
   const timeout = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
@@ -1634,6 +2287,7 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
       Promise.resolve().then(() => explicitTransportCall(() => sendSemantic({ ...args, signal: controller.signal, timeoutMs }))),
       timeout
     ]);
+    semanticResponseObserved = true;
     if (value instanceof Response) {
       reader = value.body?.getReader();
       if (!reader) return { text: '', bytes: Buffer.alloc(0) };
@@ -1670,12 +2324,15 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
     return { text: value, bytes };
   } catch (error) {
     void reader?.cancel(error).catch(() => {});
-    const partial = Buffer.concat(chunks);
-    error.partialResponse = {
-      bodyBase64: partial.toString('base64'),
-      bodySha256: sha256(partial),
-      bodyBytes: partial.length
-    };
+    if (semanticResponseObserved) {
+      const partial = Buffer.concat(chunks);
+      error.partialResponse = {
+        kind: 'SEMANTIC_RESPONSE_BYTES',
+        bodyBase64: partial.toString('base64'),
+        bodySha256: sha256(partial),
+        bodyBytes: partial.length
+      };
+    }
     throw error;
   } finally {
     clearTimeout(timeoutId);
@@ -1704,6 +2361,34 @@ async function assertNamespaceUnused(namespaceDirectory) {
   }
 }
 
+export function assertFrozenSemanticRequest(args, { caseId, promptFingerprints } = {}) {
+  assert.ok(args && typeof args === 'object' && !Array.isArray(args), 'V4_SEMANTIC_REQUEST_SHAPE_INVALID');
+  assert.equal(args.caseId, caseId, 'V4_SEMANTIC_CASE_ID_MISMATCH');
+  const expected = promptFingerprints?.find(row => row.caseId === caseId);
+  assert.ok(expected, 'V4_SEMANTIC_CASE_PROMPT_NOT_PREREGISTERED');
+  assert.equal(typeof args.prompt, 'string', 'V4_SEMANTIC_PROMPT_MISSING');
+  assert.equal(typeof args.system, 'string', 'V4_SEMANTIC_SYSTEM_MISSING');
+  assert.equal(sha256(args.prompt), expected.promptSha256, 'V4_SEMANTIC_PROMPT_FINGERPRINT_MISMATCH');
+  assert.equal(sha256(args.system), expected.systemSha256, 'V4_SEMANTIC_SYSTEM_FINGERPRINT_MISMATCH');
+  assert.equal(args.provider?.activeProvider, 'gemini', 'V4_SEMANTIC_PROVIDER_MISMATCH');
+  assert.deepEqual(Object.keys(args.provider || {}).sort(), ['activeProvider', 'gemini'], 'V4_SEMANTIC_PROVIDER_OPTIONS_MISMATCH');
+  assert.deepEqual(Object.keys(args.provider?.gemini || {}).sort(), ['model'], 'V4_SEMANTIC_PROVIDER_OPTIONS_MISMATCH');
+  assert.equal(args.provider.gemini.model, 'gemini-3.5-flash-lite', 'V4_SEMANTIC_MODEL_MISMATCH');
+  const expectedOptions = {
+    jsonMode: true,
+    responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+    timeoutMs: RESOURCE_POLICY.timeoutMs,
+    temperature: 0
+  };
+  assert.deepEqual(args.options, expectedOptions, 'V4_SEMANTIC_LOGICAL_OPTIONS_MISMATCH');
+  assert.equal(sha256(JSON.stringify(args.options.responseJsonSchema)), expected.schemaSha256,
+    'V4_SEMANTIC_SCHEMA_FINGERPRINT_MISMATCH');
+  if (args.timeoutMs !== undefined) {
+    assert.equal(args.timeoutMs, RESOURCE_POLICY.timeoutMs, 'V4_SEMANTIC_TIMEOUT_OPTION_MISMATCH');
+  }
+  return true;
+}
+
 async function runFixedV4CaseLoop({
   semanticTransport,
   executeCase,
@@ -1711,6 +2396,10 @@ async function runFixedV4CaseLoop({
   withEvidenceFamily,
   webRetriever,
   requestGuard,
+  semanticRequestVerifier,
+  semanticDispatchValidator,
+  assertCaseHealth = () => {},
+  referenceDate,
   semanticLimits = {
     timeoutMs: RESOURCE_POLICY.timeoutMs,
     maximumBytes: RESOURCE_POLICY.maximumSemanticResponseBytes
@@ -1719,29 +2408,64 @@ async function runFixedV4CaseLoop({
   now = () => new Date()
 }) {
   const rows = [];
+  let priorFailure;
   for (const caseId of CASE_IDS) {
-    const semanticState = { sends: 0, pending: [], journalPromises: [], responseSha256: null, responseBytes: null };
-    const sendSemantic = args => {
+    const semanticState = { sends: 0, pending: [], journalPromises: [], responseSha256: null,
+      responseBytes: null, responseBase64: null, providerResponsePartial: null, failureStage: null, failureCode: null };
+    const sendSemantic = async args => {
       if (!args || typeof args !== 'object' || Array.isArray(args)) throw new Error('V4_SEMANTIC_REQUEST_SHAPE_INVALID');
       if (args.caseId !== undefined && args.caseId !== caseId) throw new Error('V4_SEMANTIC_CASE_ID_OVERRIDE_BLOCKED');
       semanticState.sends += 1;
       if (semanticState.sends !== 1) throw new Error('V4_EXTRA_OR_RETRY_SEMANTIC_CALL_BLOCKED');
-      const operation = requestGuard.invoke(caseId, async () => {
-        const response = await boundedSemanticSend(semanticTransport, { ...args, caseId }, {
-          timeoutMs: semanticLimits.timeoutMs,
-          maximumBytes: semanticLimits.maximumBytes
+      let boundArgs;
+      try {
+        boundArgs = deepFreezeJson(JSON.parse(stableJson({ ...args, caseId })));
+        await semanticRequestVerifier?.(boundArgs, caseId);
+        semanticDispatchValidator?.(boundArgs, caseId);
+      } catch (error) {
+        semanticState.failureStage = 'INTEGRITY';
+        semanticState.failureCode = String(error?.message || error).slice(0, 160);
+        throw error;
+      }
+      let operation;
+      try {
+        operation = requestGuard.invoke(caseId, async () => {
+          try {
+            semanticDispatchValidator?.(boundArgs, caseId);
+          } catch (error) {
+            semanticState.failureStage = 'INTEGRITY';
+            semanticState.failureCode = String(error?.message || error).slice(0, 160);
+            throw error;
+          }
+          try {
+          const response = await boundedSemanticSend(semanticTransport, boundArgs, {
+            timeoutMs: semanticLimits.timeoutMs,
+            maximumBytes: semanticLimits.maximumBytes
+          });
+          semanticState.responseSha256 = sha256(response.bytes);
+          semanticState.responseBytes = response.bytes.length;
+          semanticState.responseBase64 = response.bytes.toString('base64');
+          await writeProgress({
+            event: 'SEMANTIC_RESPONSE_RECEIVED',
+            caseId,
+            receivedAt: isoFrom(now()),
+            responseSha256: semanticState.responseSha256,
+            responseBytes: semanticState.responseBytes,
+            responseBase64: semanticState.responseBase64
+          });
+          return response.text;
+          } catch (error) {
+            semanticState.failureStage = 'SEMANTIC_TRANSPORT';
+            semanticState.failureCode = String(error?.message || error).slice(0, 160);
+            semanticState.providerResponsePartial = error?.partialProviderResponse || null;
+            throw error;
+          }
         });
-        semanticState.responseSha256 = sha256(response.bytes);
-        semanticState.responseBytes = response.bytes.length;
-        await writeProgress({
-          event: 'SEMANTIC_RESPONSE_RECEIVED',
-          caseId,
-          receivedAt: isoFrom(now()),
-          responseSha256: semanticState.responseSha256,
-          responseBytes: semanticState.responseBytes
-        });
-        return response.text;
-      });
+      } catch (error) {
+        semanticState.failureStage ||= 'INTEGRITY';
+        semanticState.failureCode ||= String(error?.message || error).slice(0, 160);
+        throw error;
+      }
       semanticState.pending.push(operation);
       const journalPromise = operation.catch(async error => {
         await writeProgress({
@@ -1749,9 +2473,10 @@ async function runFixedV4CaseLoop({
           caseId,
           failedAt: isoFrom(now()),
           error: String(error?.message || error).slice(0, 240),
-          partialResponseBase64: error?.partialResponse?.bodyBase64,
-          partialResponseSha256: error?.partialResponse?.bodySha256,
-          partialResponseBytes: error?.partialResponse?.bodyBytes
+          partialSemanticResponseBase64: error?.partialResponse?.bodyBase64,
+          partialSemanticResponseSha256: error?.partialResponse?.bodySha256,
+          partialSemanticResponseBytes: error?.partialResponse?.bodyBytes,
+          partialProviderResponse: error?.partialProviderResponse
         });
       }).catch(() => {});
       semanticState.journalPromises.push(journalPromise);
@@ -1760,42 +2485,117 @@ async function runFixedV4CaseLoop({
     const execute = () => executeCase({
       caseId,
       sendSemantic,
+      referenceDate,
       evidenceTransport,
       withEvidenceFamily,
       webRetriever
     });
     const family = CASE_EVIDENCE_FAMILY[caseId];
     let caseResult;
+    let caseError;
+    if (priorFailure) {
+      rows.push({ caseId, status: 'NOT_RUN_AFTER_PRIOR_FAILURE', failure: priorFailure,
+        completedAt: isoFrom(now()), stageVerdicts: {}, firstFailure: priorFailure.stage });
+      await writeProgress({ event: 'CASE_NOT_RUN', caseId, failure: priorFailure });
+      continue;
+    }
     try {
+      assertCaseHealth();
       caseResult = family && withEvidenceFamily
         ? await withEvidenceFamily(family, execute)
         : await execute();
       if (semanticState.pending.length) await Promise.all(semanticState.pending);
       if (semanticState.journalPromises.length) await Promise.all(semanticState.journalPromises);
     } catch (error) {
+      caseError = error;
       if (semanticState.pending.length) {
         try { await Promise.all(semanticState.pending); } catch {}
       }
       if (semanticState.journalPromises.length) await Promise.all(semanticState.journalPromises);
-      throw error;
     }
-    assert.equal(semanticState.sends, 1, 'V4_CASE_MUST_SEND_EXACTLY_ONCE:' + caseId);
-    assert.ok(semanticState.responseSha256, 'V4_CASE_SEMANTIC_RESPONSE_MISSING:' + caseId);
+    try {
+      assertCaseHealth();
+    } catch (error) {
+      caseError ||= error;
+      semanticState.failureStage = 'INTEGRITY';
+      semanticState.failureCode = String(error?.message || error).slice(0, 160);
+    }
+    if (!caseError && semanticState.sends !== 1) {
+      caseError = new Error('V4_CASE_MUST_SEND_EXACTLY_ONCE:' + caseId);
+      semanticState.failureStage = 'INTEGRITY';
+    }
+    if (!caseError && !semanticState.responseSha256) {
+      caseError = new Error('V4_CASE_SEMANTIC_RESPONSE_MISSING:' + caseId);
+      semanticState.failureStage ||= 'SEMANTIC_RESPONSE';
+    }
+    let resultBytes;
+    if (caseResult !== undefined) {
+      try { resultBytes = Buffer.from(stableJson(caseResult), 'utf8'); }
+      catch { caseError ||= new Error('V4_CASE_RESULT_NOT_JSON_SERIALIZABLE'); }
+      if (resultBytes && resultBytes.length > MAX_RETAINED_CASE_RESULT_BYTES) {
+        resultBytes = undefined;
+        caseError ||= new Error('V4_CASE_RESULT_TOO_LARGE');
+      }
+    }
+    const scoreVerdicts = caseResult?.layerVerdicts;
+    const expectedLayerNames = ['application', 'governed', 'local', 'routing', 'semantic'];
+    const layerNames = scoreVerdicts && typeof scoreVerdicts === 'object' && !Array.isArray(scoreVerdicts)
+      ? Object.keys(scoreVerdicts).sort() : [];
+    const layerVerdictsValid = stableJson(layerNames) === stableJson(expectedLayerNames);
+    const canonicalStages = layerVerdictsValid ? evaluateV4Stages(scoreVerdicts) : undefined;
+    const stageVerdicts = caseResult?.stageVerdicts;
+    const stageNames = stageVerdicts && typeof stageVerdicts === 'object' && !Array.isArray(stageVerdicts)
+      ? Object.keys(stageVerdicts).sort() : [];
+    const expectedStageNames = [...FAILURE_STAGES].sort();
+    const stageKeysValid = stableJson(stageNames) === stableJson(expectedStageNames);
+    const stageVerdictsMatch = Boolean(canonicalStages && stageKeysValid &&
+      stableJson(Object.fromEntries(FAILURE_STAGES.map(stage => [stage, stageVerdicts[stage]]))) ===
+      stableJson(canonicalStages.stages));
+    const canonicalFirstFailure = canonicalStages?.earliestFailure ?? null;
+    const firstFailureMatches = Boolean(canonicalStages && (caseResult?.firstFailure ?? null) === canonicalFirstFailure);
+    const primaryOperationalFailure = ['INTEGRITY', 'SEMANTIC_TRANSPORT'].includes(semanticState.failureStage)
+      ? semanticState.failureStage : undefined;
+    const firstFailure = primaryOperationalFailure || canonicalFirstFailure || semanticState.failureStage ||
+      (caseResult && (!stageVerdictsMatch || !firstFailureMatches) ? 'ACCEPTANCE_SCORE' : undefined) ||
+      (caseError ? 'CASE_EXECUTION' : undefined);
+    const scoredPass = Boolean(canonicalStages && stageVerdictsMatch && firstFailureMatches &&
+      canonicalFirstFailure == null && FAILURE_STAGES.every(stage => canonicalStages.stages[stage] === true));
+    const scoreFailureCode = !layerVerdictsValid ? 'V4_ACCEPTANCE_LAYER_VERDICTS_INVALID'
+      : !stageKeysValid || !stageVerdictsMatch ? 'V4_ACCEPTANCE_STAGE_VERDICTS_MISMATCH'
+        : !firstFailureMatches ? 'V4_ACCEPTANCE_FAILURE_ATTRIBUTION_MISMATCH'
+          : 'V4_ACCEPTANCE_SCORE_FAILED';
+    const failure = caseError || !scoredPass
+      ? { stage: firstFailure || 'ACCEPTANCE_SCORE', code: semanticState.failureCode ||
+        (caseError ? String(caseError?.message || caseError).slice(0, 160) : scoreFailureCode) }
+      : null;
     const row = {
       caseId,
+      status: failure ? 'FAILED' : 'PASSED',
       completedAt: isoFrom(now()),
-      resultSha256: sha256(stableJson(caseResult)),
+      ...(resultBytes ? { actualResult: caseResult, resultSha256: sha256(resultBytes) } : {}),
+      layerVerdicts: scoreVerdicts || {},
+      stageVerdicts: canonicalStages?.stages || stageVerdicts || {},
+      firstFailure: failure?.stage || null,
+      failure,
       semanticResponseSha256: semanticState.responseSha256,
-      semanticResponseBytes: semanticState.responseBytes
+      semanticResponseBytes: semanticState.responseBytes,
+      ...(semanticState.responseBase64 ? { semanticResponseBase64: semanticState.responseBase64 } : {}),
+      ...(semanticState.providerResponsePartial ? { providerResponsePartial: semanticState.providerResponsePartial } : {})
     };
     rows.push(row);
-    await writeProgress({ event: 'CASE_COMPLETED', ...row });
+    if (failure && (caseError || !requestGuard.counts.has(caseId) ||
+        ['INTEGRITY', 'SEMANTIC_TRANSPORT'].includes(semanticState.failureStage))) {
+      priorFailure = failure;
+    }
+    await writeProgress({ event: failure ? 'CASE_FAILED' : 'CASE_COMPLETED', ...row });
   }
-  assert.equal(rows.length, CASE_IDS.length, 'V4_CASE_COUNT_MISMATCH');
-  assert.deepEqual(rows.map(row => row.caseId), CASE_IDS, 'V4_CASE_ORDER_MISMATCH');
-  assert.deepEqual(Object.fromEntries(requestGuard.counts), Object.fromEntries(CASE_IDS.map(id => [id, 1])),
-    'V4_NINE_CALL_BUDGET_NOT_EXHAUSTED');
-  return { rows, callCounts: Object.fromEntries(requestGuard.counts) };
+  const callCounts = Object.fromEntries(requestGuard.counts);
+  const passed = rows.length === CASE_IDS.length && rows.every(row => row.status === 'PASSED') &&
+    stableJson(rows.map(row => row.caseId)) === stableJson(CASE_IDS) &&
+    stableJson(callCounts) === stableJson(Object.fromEntries(CASE_IDS.map(id => [id, 1])));
+  return { rows, callCounts, status: passed ? 'PASSED' : 'FAILED', passed,
+    firstFailure: rows.find(row => row.failure || row.status !== 'PASSED')?.failure?.stage ||
+      rows.find(row => row.status !== 'PASSED')?.firstFailure || null };
 }
 
 function assertCanonicalNamespace(namespaceDirectory, runnerConfiguration, root) {
@@ -1820,12 +2620,14 @@ export async function runOfflineSyntheticV4CaseLoop({
   evidenceTransport,
   withEvidenceFamily,
   webRetriever,
+  referenceDate,
   minimumStartGapMs = 0,
   clock = () => performance.now(),
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   timeoutMs = RESOURCE_POLICY.timeoutMs,
   maximumResponseBytes = RESOURCE_POLICY.maximumSemanticResponseBytes,
   writeProgress = async () => {},
+  assertCaseHealth = () => {},
   now = () => new Date()
 } = {}) {
   assert.equal(synthetic, true, 'V4_OFFLINE_CASE_LOOP_REQUIRES_SYNTHETIC_FIXTURE');
@@ -1842,7 +2644,9 @@ export async function runOfflineSyntheticV4CaseLoop({
     evidenceTransport,
     withEvidenceFamily,
     webRetriever,
+    referenceDate,
     requestGuard: guard,
+    assertCaseHealth,
     semanticLimits: { timeoutMs, maximumBytes: maximumResponseBytes },
     writeProgress,
     now
@@ -1858,6 +2662,8 @@ export async function runBoundedV4SemanticPhase({
   root = ROOT,
   gitExecutable,
   runnerConfigurationPath,
+  activationConfigurationPath,
+  executionCapability,
   preregistrationPath,
   evidenceLockPath,
   capturePayloadPath,
@@ -1870,8 +2676,6 @@ export async function runBoundedV4SemanticPhase({
 } = {}) {
   assertNode22();
   assert.equal(typeof sharedAllowanceReader, 'function', 'V4_SHARED_ALLOWANCE_READER_REQUIRED');
-  assert.equal(typeof semanticTransport, 'function', 'V4_EXPLICIT_SEMANTIC_TRANSPORT_REQUIRED');
-  assert.equal(typeof executeCase, 'function', 'V4_CASE_EXECUTOR_REQUIRED');
   const outputPath = path.resolve(namespaceDirectory, 'acceptance-v4.json');
   outsideProtectedTree(outputPath, root);
   const [bindingRead, preregRead, lockRead, payloadRead] = await Promise.all([
@@ -1881,18 +2685,38 @@ export async function runBoundedV4SemanticPhase({
     loadCapturePayload(capturePayloadPath, root)
   ]);
   assertCanonicalNamespace(namespaceDirectory, bindingRead.value, root);
-  assert.equal(preregRead.sha256, bindingRead.value.preregistrationSha256,
-    'V4_RUNNER_CONFIGURATION_PREREGISTRATION_MISMATCH');
-  await mkdir(namespaceDirectory, { recursive: true });
-  await assertNoSymlinkPath(root, path.relative(root, namespaceDirectory), { mustExist: true });
-  await assertNamespaceUnused(namespaceDirectory);
   const verified = await verifyFrozenRunnerConfiguration({
     binding: bindingRead.value,
     root,
     gitExecutable
   });
+  assert.equal(semanticTransport, undefined, 'V4_LIVE_SEMANTIC_CALLBACK_SUBSTITUTION_BLOCKED');
+  assert.equal(executeCase, undefined, 'V4_LIVE_ACCEPTANCE_ADAPTER_CALLBACK_SUBSTITUTION_BLOCKED');
+  assertReviewedV4ExecutionCapability(executionCapability);
+  assert.ok(activationConfigurationPath, 'V4_FROZEN_ACTIVATION_CONFIGURATION_REQUIRED');
+  const activation = await verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
+  assert.equal(path.resolve(runnerConfigurationPath), path.resolve(root, activation.document.runnerConfigurationPath),
+    'V4_ACTIVATION_RUNNER_CONFIGURATION_PATH_MISMATCH');
+  assert.equal(activation.document.runnerIntegrityBindingSha256, verified.integrityBindingSha256,
+    'V4_ACTIVATION_RUNNER_BINDING_MISMATCH');
+  assert.equal(preregRead.sha256, activation.document.preregistrationSha256,
+    'V4_ACTIVATION_PREREGISTRATION_HASH_MISMATCH');
+  assert.equal(path.resolve(preregistrationPath), path.resolve(root, activation.document.preregistrationPath),
+    'V4_ACTIVATION_PREREGISTRATION_PATH_MISMATCH');
+  assert.equal(executionCapability.activationConfigurationSha256, activation.document.activationConfigurationSha256,
+    'V4_EXECUTION_CAPABILITY_ACTIVATION_MISMATCH');
+  assert.equal(executionCapability.activationConfigurationFileSha256, activation.sha256,
+    'V4_EXECUTION_CAPABILITY_ACTIVATION_FILE_MISMATCH');
+  assert.equal(path.resolve(executionCapability.activationConfigurationPath), path.resolve(activationConfigurationPath),
+    'V4_EXECUTION_CAPABILITY_ACTIVATION_PATH_MISMATCH');
+  await mkdir(namespaceDirectory, { recursive: true });
+  await assertNoSymlinkPath(root, path.relative(root, namespaceDirectory), { mustExist: true });
+  await assertNamespaceUnused(namespaceDirectory);
   const evidenceValidation = validateEvidenceLock(lockRead.value, {
     config: verified.snapshot,
+    activationDocument: activation.document,
+    activationConfigurationSha256: activation.document.activationConfigurationSha256,
+    activationConfigurationFileSha256: activation.sha256,
     preregistrationSha256: preregRead.sha256,
     payloadSha256: payloadRead.sha256,
     payload: payloadRead.payload,
@@ -1910,6 +2734,9 @@ export async function runBoundedV4SemanticPhase({
     now: now()
   });
   assert.equal(preflight.passed, true, 'V4_LIVE_PREFLIGHT_NOT_PASSED:' + preflight.failures.join(','));
+  const configuredGeminiKey = process.env.GEMINI_API_KEY;
+  assert.ok(typeof configuredGeminiKey === 'string' && configuredGeminiKey.trim().length > 10,
+    'V4_GEMINI_CREDENTIAL_UNAVAILABLE');
   const binding = {
     preregistrationSha256: preregRead.sha256,
     contractSha256: preregRead.value.contractSha256,
@@ -1919,6 +2746,9 @@ export async function runBoundedV4SemanticPhase({
     schemaPromptFingerprintSha256: preregRead.value.schemaPromptFingerprintSha256,
     protectedHistorySha256: preregRead.value.protectedHistorySha256,
     evaluationFingerprintSha256: preregRead.value.evaluationFingerprintSha256,
+    activationConfigurationSha256: activation.document.activationConfigurationSha256,
+    activationConfigurationFileSha256: activation.sha256,
+    captureInventorySha256: activation.document.captureInventorySha256,
     sharedAllowanceObservation: { authorizedGeminiCalls }
   };
   const replay = createReplayTransport({
@@ -1926,8 +2756,12 @@ export async function runBoundedV4SemanticPhase({
     integrityLatch: () => {},
     now: now(),
     expectedIntegrityBindingSha256: bindingRead.value.integrityBindingSha256,
-    expectedPreregistrationSha256: preregRead.sha256
+    expectedPreregistrationSha256: preregRead.sha256,
+    executionCapability,
+    activationConfigurationSha256: activation.document.activationConfigurationSha256,
+    expectedCaptureInventory: activation.document.captureInventory
   });
+  assert.ok(reviewedReplayTransports.has(replay), 'V4_REVIEWED_EVIDENCE_REPLAY_REQUIRED');
   await reserveConsumption(namespaceDirectory, binding, preflight);
   const partialPath = path.join(namespaceDirectory, 'runner-v4.partial.jsonl');
   const partialHandle = await open(partialPath, 'wx');
@@ -1939,11 +2773,27 @@ export async function runBoundedV4SemanticPhase({
       await partialHandle.sync();
     };
     const outcome = await ambientNetworkDisabled(() => runFixedV4CaseLoop({
-      semanticTransport,
-      executeCase,
+      semanticTransport: executionCapability.sendV4SemanticRequest,
+      executeCase: executionCapability.runV4AcceptanceCase,
       evidenceTransport: replay.fetch,
       withEvidenceFamily: replay.withEvidenceFamily,
       webRetriever,
+      referenceDate: lockRead.value.sourceReferenceDate,
+      semanticRequestVerifier: async (args, caseId) => {
+        assertFrozenSemanticRequest(args, {
+          caseId,
+          promptFingerprints: preregRead.value.promptFingerprints
+        });
+        const currentActivation = await verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
+        assert.equal(currentActivation.sha256, activation.sha256, 'V4_SEMANTIC_ACTIVATION_FILE_CHANGED');
+        assert.equal(currentActivation.document.activationConfigurationSha256,
+          activation.document.activationConfigurationSha256, 'V4_SEMANTIC_ACTIVATION_CHANGED');
+      },
+      semanticDispatchValidator: (args, caseId) => assertFrozenSemanticRequest(args, {
+        caseId,
+        promptFingerprints: preregRead.value.promptFingerprints
+      }),
+      assertCaseHealth: () => replay.assertHealthy(),
       requestGuard: createRequestBudgetGuard({ caseIds: CASE_IDS, minimumStartGapMs: RESOURCE_POLICY.minimumStartGapMs }),
       writeProgress,
       now
@@ -1955,20 +2805,29 @@ export async function runBoundedV4SemanticPhase({
       gitExecutable
     });
     assert.equal(finalSnapshot.passed, true, 'V4_POST_RUN_INTEGRITY_FAILED');
+    const finalActivation = await verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
+    assert.equal(finalActivation.sha256, activation.sha256, 'V4_POST_RUN_ACTIVATION_FILE_CHANGED');
     const finalDocument = {
       profile: V4_PROFILE,
-      status: 'BOUNDED_SEMANTIC_PHASE_COMPLETE',
+      status: outcome.passed ? 'BOUNDED_SEMANTIC_PHASE_COMPLETE' : 'BOUNDED_SEMANTIC_PHASE_FAILED',
+      acceptanceStatus: outcome.passed ? 'PASSED' : 'FAILED',
       synthetic: false,
       runnerIntegrityBindingSha256: bindingRead.value.integrityBindingSha256,
+      activationConfigurationSha256: activation.document.activationConfigurationSha256,
+      activationConfigurationFileSha256: activation.sha256,
+      captureInventorySha256: activation.document.captureInventorySha256,
       preregistrationSha256: preregRead.sha256,
       evidenceLockSha256: lockRead.sha256,
       capturePayloadSha256: payloadRead.sha256,
       rows: outcome.rows,
       callCounts: outcome.callCounts,
+      firstFailure: outcome.firstFailure,
       replayCacheReuses: replay.cacheReuses,
       unusedReplayResponseCount: replay.unusedResponseCount
     };
-    await partialHandle.writeFile(JSON.stringify({ terminal: finalDocument.status, completedAt: isoFrom(now()) }) + '\n');
+    await partialHandle.writeFile(JSON.stringify({ terminal: finalDocument.status,
+      acceptanceStatus: finalDocument.acceptanceStatus, firstFailure: finalDocument.firstFailure,
+      completedAt: isoFrom(now()) }) + '\n');
     await partialHandle.sync();
     await partialHandle.close();
     await writeExclusiveDurable(outputPath, Buffer.from(JSON.stringify(finalDocument, null, 2) + '\n'));

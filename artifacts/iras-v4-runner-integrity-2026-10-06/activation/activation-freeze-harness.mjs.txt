@@ -1,0 +1,109 @@
+API-free activation freeze harness (run only after independent review and commit)
+
+Preconditions:
+- The adapter, runner, transports, and focused offline controls have passed independent review and are committed.
+- Run from D:\Accounting with Node 22, the explicit Git executable below, and the repository network blocker in NODE_OPTIONS.
+- Confirm each destination below is absent. The freeze writers use exclusive creation and are write-once.
+- Do not call runBoundedCapture or runBoundedV4SemanticPhase here. This harness stops after positive capability, permit, and capture-transport construction.
+
+PowerShell:
+
+$env:CODEX_GIT_EXECUTABLE = 'C:\Users\Admin\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe'
+$env:NODE_OPTIONS = '--import=file:///D:/Accounting/docs/evaluation/multi-authority-workstreams/iras-v4-negative-controls-2026-10-06/block-external-network.mjs'
+@'
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
+import * as runner from './scripts/iras_v4_capture_replay_runner.mjs';
+import { writeFrozenV4Preregistration } from './tests/evaluation/singapore/iras-first-targeted-acceptance-v4.mjs';
+
+const root = process.cwd();
+const gitExecutable = process.env.CODEX_GIT_EXECUTABLE;
+assert.ok(path.isAbsolute(gitExecutable));
+const directory = path.join(root, 'artifacts/iras-v4-runner-integrity-2026-10-06/activation');
+const archivalRunnerConfigurationPath = path.join(root, 'artifacts/iras-v4-runner-integrity-2026-10-06/runner-configuration.json');
+const runnerConfigurationPath = path.join(directory, 'runner-configuration-current.json');
+const preregistrationPath = path.join(directory, 'preregistration.json');
+const activationConfigurationPath = path.join(directory, 'activation-configuration.json');
+const candidate = JSON.parse(await readFile(path.join(directory, 'capture-inventory-candidate.json'), 'utf8'));
+assert.equal(candidate.status, 'API_FREE_CANDIDATE_NOT_FROZEN');
+assert.equal(runner.captureInventoryDigest(candidate.inventory), candidate.inventorySha256);
+assert.equal(runner.validateActivationInventory(candidate.inventory), true);
+const reviewedCommit = execFileSync(gitExecutable, ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+
+// First bind committed code with null activation fields; this is a new current snapshot.
+await runner.writeFrozenRunnerConfiguration({ outputPath: runnerConfigurationPath, root, gitExecutable, reviewedCommit });
+const preregInputs = await runner.buildActivationPreregistrationInputs({
+  archivalRunnerConfigurationPath,
+  runnerConfigurationPath,
+  captureInventory: candidate.inventory,
+  root,
+  gitExecutable
+});
+const preregistrationWrite = await writeFrozenV4Preregistration(preregistrationPath, {
+  frozen: true,
+  ...preregInputs.preregistrationBindings
+});
+await runner.writeFrozenActivationConfiguration({
+  outputPath: activationConfigurationPath,
+  archivalRunnerConfigurationPath,
+  runnerConfigurationPath,
+  preregistrationPath,
+  captureInventory: candidate.inventory,
+  root,
+  gitExecutable
+});
+
+// Positive offline construction proves selected module hashes, path bindings, and branded exports.
+const executionCapability = await runner.loadReviewedV4ExecutionCapability({ activationConfigurationPath, root, gitExecutable });
+const acquisitionPermit = await runner.validateReviewedAcquisitionPermit({
+  runnerConfigurationPath,
+  activationConfigurationPath,
+  root,
+  gitExecutable
+});
+const runnerConfiguration = JSON.parse(await readFile(runnerConfigurationPath, 'utf8'));
+const paths = path.join(directory, 'hold-probe');
+const transport = runner.createCaptureTransport({
+  markerPath: path.join(paths, 'capture-reserved.json'),
+  journalPath: path.join(paths, 'capture-partial.jsonl'),
+  payloadPath: path.join(paths, 'capture-payload.json'),
+  integrityBindingSha256: runnerConfiguration.integrityBindingSha256,
+  preregistrationSha256: preregistrationWrite.sha256,
+  runnerConfigurationPath,
+  activationConfigurationPath,
+  preregistrationPath,
+  gitExecutable,
+  acquisitionPermit,
+  executionCapability,
+  root
+});
+assert.equal(transport.synthetic, false);
+assert.equal(transport.executionCapability, executionCapability);
+await runner.verifyFrozenActivationConfiguration({ activationConfigurationPath, root, gitExecutable });
+const preregistration = JSON.parse(await readFile(preregistrationPath, 'utf8'));
+assert.ok(runnerConfiguration.designFingerprints.promptFingerprints.length > 0);
+assert.deepEqual(preregistration.promptFingerprints, runnerConfiguration.designFingerprints.promptFingerprints);
+assert.equal(runnerConfiguration.captureInventory, null);
+assert.equal(runnerConfiguration.productionEvidenceAdapterSha256, null);
+assert.equal(runnerConfiguration.preregistrationSha256, null);
+await assert.rejects(runner.validateReviewedAcquisitionPermit({ runnerConfigurationPath, root, gitExecutable }),
+  /V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED/);
+await assert.rejects(stat(paths), error => error.code === 'ENOENT');
+console.log(JSON.stringify({
+  status: 'API_FREE_ACTIVATION_CONSTRUCTED_OFFICIAL_CAPTURE_STILL_HELD',
+  reviewedCommit,
+  inventorySha256: candidate.inventorySha256,
+  activationConfigurationSha256: executionCapability.activationConfigurationSha256,
+  activationConfigurationFileSha256: executionCapability.activationConfigurationFileSha256,
+  boundFileCount: runnerConfiguration.fileRows.length,
+  promptRowsVerified: preregistration.promptFingerprints.length,
+  legacyNullActivationRejected: true,
+  holdProbeNamespaceAbsent: true,
+  selectedExports: ['runV4AcceptanceCase', 'runV4CapturePlan', 'sendV4SemanticRequest', 'fetchV4OfficialSource'],
+  reservationOrDispatchOccurred: false
+}, null, 2));
+'@ | & 'C:\nvm4w\nodejs\node.exe' --import tsx -
+
+The resulting current runner configuration, preregistration, and activation configuration are new write-once files under this directory. Review their hashes and the positive construction report. The candidate inventory contains six exact IRAS sitemap discovery rows and zero redirect edges because no explicit source-map redirect edge is currently registered. A later observed Location target that lacks an exact same-family REDIRECT row remains denied; sitemap-discovered URLs likewise require a reviewed regenerated inventory.
