@@ -1,0 +1,100 @@
+{
+  "profile": "iras-v4-user-override-execution-independent-review",
+  "reviewer": "Independent reviewer subagent authorization_review",
+  "disposition": "ACTUAL_FAILED_CONSUMED_RUN_CONFIRMED_NO_RETRY",
+  "providerCalls": 6,
+  "providerRetries": 0,
+  "providerCallAttribution": "Six retained Gemini responses; source ordering and guarded one-send-per-executed-case path support exactly six calls.",
+  "passedCases": 3,
+  "failedCases": 3,
+  "unexecutedCases": [
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "firstChronologicalScoredFailure": {
+    "caseId": "private-expense-treatment",
+    "stage": "OVERALL_STATUS"
+  },
+  "fatalExecutionFailure": {
+    "caseId": "corporate-residency-general-rule",
+    "code": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+  },
+  "failures": [
+    {
+      "caseId": "private-expense-treatment",
+      "stage": "OVERALL_STATUS",
+      "expected": "Verified rule evidence, unresolved application, CONDITIONAL overall.",
+      "actual": "Rule evidence and requested coverage passed; application remained unresolved, but production overall was INSUFFICIENT due UNROUTED_MATERIAL_CONCEPT.",
+      "attribution": "Production concept routing/aggregation. The generic corporate income-tax treatment label loses distinguishing ownership terms and fails topicless assignment.",
+      "relatedSource": {
+        "path": "src/services/authorityWorkstreams.ts",
+        "line": 209,
+        "functions": [
+          "conceptOwnershipTerms",
+          "topiclessConceptBelongsToIssue"
+        ]
+      },
+      "fixDirection": "Handle generic labels within established issue ownership without weakening material-concept ownership."
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "stage": "REQUESTED_CONCEPT_COVERAGE",
+      "expected": "Requested receipt treatment covered; unresolved application with CONDITIONAL overall.",
+      "actual": "Semantic interpretation, routing, retrieval, admission and three quotations passed, but receipt-treatment coverage remained false. Quotations concern underlying-tax documentation. Overall INSUFFICIENT; separate generic corporate-tax label also produced UNROUTED_MATERIAL_CONCEPT.",
+      "attribution": "Scoped claim selection/coverage and production concept routing; admission sufficiency does not establish requested verified scope coverage.",
+      "relatedSource": {
+        "path": "src/services/authorityWorkstreams.ts",
+        "line": 560,
+        "function": "issueClaimCoverage"
+      },
+      "fixDirection": "Inspect scoped claim selection and coverage requirements; preserve distinction between admission sufficiency and verified coverage."
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "stage": "INTEGRITY",
+      "fatalCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "retainedRejectedUrlSuffix": "companies-receiving-foreign-income/applying-for-a-certificate-of-residence-tax-reclaim-form",
+      "approvedCorporateResidencyInventory": "IRAS sitemap and company tax-residency source page.",
+      "attribution": "Replay correctly rejected an extra evidence request before network dispatch. Separately Gemini selected DETERMINE_TREATMENT requiring facts for a general-rule question whose contract expects EXPLAIN_RULE, no facts, and NOT_REQUIRED application. Governed PROVIDER_ERROR reflects the blocked evidence path, not a failed Gemini response.",
+      "relatedSource": {
+        "path": "scripts/iras_v4_capture_replay_runner.mjs",
+        "line": 2152,
+        "function": "createReplayTransport"
+      }
+    }
+  ],
+  "checks": {
+    "gateBindingsMatch": true,
+    "responseDelaySeconds": 34.054,
+    "actualAllowanceRemaining": {
+      "fiveHourPercent": 71,
+      "weeklyPercent": 71
+    },
+    "projectedReserveRemaining": {
+      "fiveHourPercent": 21,
+      "weeklyPercent": 56
+    },
+    "quotaConfirmationCredentialBoundAndWithin30Minutes": true,
+    "sixRawResponseHashesAndByteCountsMatch": true,
+    "eightFrozenInputHashesMatch": true,
+    "officialSourceNetworkRequests": 0
+  },
+  "verifiedHashes": {
+    "consumptionMarker": "e880df98cb6ea73860446de7023b1ff3dc80cd727746d593d199dd574e83a819",
+    "partialJournal": "bbaed3f8caaa2a20fc46307bacf6bff94107b2fc04b3fd8e111e34e5b8a74da2",
+    "gateResponse": "fdf4f51e2b4a39ab2f6af7fa440e412b92a7f944c4653e15fd358a674f1393cb"
+  },
+  "limitations": [
+    "No final acceptance artifact or completed post-run full frozen verification exists because replay health failed first.",
+    "Case6 scored INTEGRITY:true is an evaluator default and does not override its operational integrity failure.",
+    "Rejected URL is retained, but its complete normalized request identity is not."
+  ],
+  "reviewActions": {
+    "readOnly": true,
+    "credentialsRead": false,
+    "networkRequests": 0,
+    "runnerInvoked": false,
+    "testsRun": false
+  }
+}

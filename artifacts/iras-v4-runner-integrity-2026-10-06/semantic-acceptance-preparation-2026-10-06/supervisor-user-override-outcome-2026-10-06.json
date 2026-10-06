@@ -1,0 +1,333 @@
+{
+  "profile": "iras-v4-supervisor-user-override-execution-outcome",
+  "recordedAt": "2026-10-06T12:41:42.881Z",
+  "status": "FAILED_CONSUMED_NO_RETRY",
+  "launcherExitCode": 1,
+  "launchHead": "823ee27349265e3d79d7b6d82c526d36d974495b",
+  "reviewedPreparationCommit": "432a66c62b86ba420957e96f34f3b3c3bdee0193",
+  "userResourceOverrideApplied": true,
+  "providerResponseCount": 6,
+  "evaluatedCaseCount": 6,
+  "passedCaseCount": 3,
+  "failedCaseCount": 3,
+  "unexecutedCaseIds": [
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "providerRetries": 0,
+  "officialNetworkRequests": 0,
+  "runFatalFailure": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+  "firstEvaluatedCaseFailure": {
+    "caseId": "private-expense-treatment",
+    "stage": "OVERALL_STATUS"
+  },
+  "consumed": true,
+  "retryPermitted": false,
+  "semanticNamespace": "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4/",
+  "canonicalOutputStates": {
+    "consumed-v4.json": "PRESENT",
+    "acceptance-v4.json": "ABSENT",
+    "acceptance-v4.json.tmp": "ABSENT",
+    "runner-v4.partial.jsonl": "PRESENT"
+  },
+  "formalAcceptanceArtifactProduced": false,
+  "formalAggregateVerdictsAvailable": false,
+  "retainedCaseVerdictsAndProductionDiagnosticsAvailable": true,
+  "cases": [
+    {
+      "caseId": "target-relief-entitlement",
+      "status": "PASSED",
+      "firstFailure": null,
+      "failure": null,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "failedStages": [],
+      "resultSha256": "b52aa12ef08cf5797c6a077d94a01db49db8bac952d73364a5624ee05b820679",
+      "semanticResponseSha256": "a04467c8fe75fe4e6dd002e0df300e5806e4743063bf1000a8b4d719c49df60e",
+      "semanticResponseBytes": 1014
+    },
+    {
+      "caseId": "target-relief-amount",
+      "status": "PASSED",
+      "firstFailure": null,
+      "failure": null,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "failedStages": [],
+      "resultSha256": "3b2216f11a3efa0cd4bbc1dbf5152bfdc596cd319a486d7f7b29accdc182be8a",
+      "semanticResponseSha256": "1251d62037d80a7844f000090cf83a6d974306fb003b5a0b77641bba3643f83f",
+      "semanticResponseBytes": 1005
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "status": "PASSED",
+      "firstFailure": null,
+      "failure": null,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "failedStages": [],
+      "resultSha256": "0372cd99d23b85dfd87a6fd7ef73db04993ebd4915b01f042b8af42f7857f6a7",
+      "semanticResponseSha256": "69c7db4c3fef4c4c829aec22a662fd085f5702e971420bf3bfcaed7758a41c0d",
+      "semanticResponseBytes": 1461
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "status": "FAILED",
+      "firstFailure": "OVERALL_STATUS",
+      "failure": {
+        "stage": "OVERALL_STATUS",
+        "code": "V4_ACCEPTANCE_SCORE_FAILED"
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "failedStages": [
+        "OVERALL_STATUS"
+      ],
+      "resultSha256": "646021ae118b0ad796bdc1da8ce9b2f818c0eac58538654aafcb5e2fcfcb2fe0",
+      "semanticResponseSha256": "94e78f62f06fa0fcdc1a6dc13de32ebd519dfd3123a6a5ad6922370e095ff461",
+      "semanticResponseBytes": 1275
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "status": "FAILED",
+      "firstFailure": "REQUESTED_CONCEPT_COVERAGE",
+      "failure": {
+        "stage": "REQUESTED_CONCEPT_COVERAGE",
+        "code": "V4_ACCEPTANCE_SCORE_FAILED"
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "failedStages": [
+        "REQUESTED_CONCEPT_COVERAGE",
+        "OVERALL_STATUS"
+      ],
+      "resultSha256": "d637f50dd236309ec6def47f02876a65840faaffa218ae3e27da71b9de871360",
+      "semanticResponseSha256": "3caf4682120ff273012b48492b5baacf83a72bfbf62c49c37548db9393008010",
+      "semanticResponseBytes": 1230
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "status": "FAILED",
+      "firstFailure": "INTEGRITY",
+      "failure": {
+        "stage": "INTEGRITY",
+        "code": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "failedStages": [
+        "SEMANTIC_DIMENSIONS",
+        "GOVERNED_RETRIEVAL",
+        "EVIDENCE_ADMISSION",
+        "CLAIM_VERIFICATION",
+        "REQUESTED_CONCEPT_COVERAGE",
+        "APPLICATION_STATUS",
+        "OVERALL_STATUS"
+      ],
+      "resultSha256": "665a99865d129461774c747d99d6b6f237712eaff3f6f813dcc787311f1087ed",
+      "semanticResponseSha256": "4d3a3ec9f2779a36915f93b9919f51d7dfdf7c720536646310d4e0145d4434d3",
+      "semanticResponseBytes": 923
+    }
+  ],
+  "initialSharedAllowance": {
+    "fiveHourRemainingPercent": 74,
+    "weeklyRemainingPercent": 72
+  },
+  "postValidationAllowance": {
+    "source": "codex",
+    "readable": true,
+    "observedAt": "2026-10-06T12:23:10Z",
+    "fiveHourRemainingPercent": 71,
+    "weeklyRemainingPercent": 71,
+    "projectedFiveHourCostPercentagePoints": 50,
+    "projectedWeeklyCostPercentagePoints": 15
+  },
+  "projectedReserveAfterUserOverride": {
+    "fiveHourAfter": 21,
+    "weeklyAfter": 56
+  },
+  "quotaEvidenceSource": "Direct user instruction to proceed and approval in this chat following the explicit request for fresh confirmation that previously stated allowance remains available for this nine-call run; user-reported headroom, no provider-dashboard observation",
+  "quotaObservedAt": "2026-10-06T12:12:20Z",
+  "rendezvous": {
+    "requestedAt": "2026-10-06T12:22:37.810Z",
+    "usageObservedAt": "2026-10-06T12:23:10Z",
+    "suppliedAt": "2026-10-06T12:23:11.864Z",
+    "responseWithin120Seconds": true
+  },
+  "remainingAllowanceAfterExecution": {
+    "fiveHourPercent": 61,
+    "weeklyPercent": 70,
+    "observedAt": "2026-10-06T12:40:20Z"
+  },
+  "artifactSha256": {
+    "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06/semantic-launch-audit-92dc74f1-cc45-4a66-b72f-fb39dada84a5.json": "b759d5c502635bc6708d1758cf00d836fd6994c9c3c4873cde93bd812fe48d7d",
+    "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06/gate-response-5fde697a-6418-4313-b1fd-c867850af845.json": "fdf4f51e2b4a39ab2f6af7fa440e412b92a7f944c4653e15fd358a674f1393cb",
+    "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06/gate-request-5fde697a-6418-4313-b1fd-c867850af845.json": "da4fc97b3d191860fed40eda37dc13941087c8b73f5dd37d8e8ce9ff68535edb",
+    "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06/provider-quota-confirmation-user-override-2026-10-06.json": "42b5e0f4928646976d91a1c4d5661d20dcb9faa108c52842cd5a432766906193",
+    "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06/supervisor-user-override-launch-output-2026-10-06.txt": "91a80967c3f4ccd4200167ffd5802ae4176d83a5a10fc292a47b4c4ce3fee9b5",
+    "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4/consumed-v4.json": "e880df98cb6ea73860446de7023b1ff3dc80cd727746d593d199dd574e83a819",
+    "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4/runner-v4.partial.jsonl": "bbaed3f8caaa2a20fc46307bacf6bff94107b2fc04b3fd8e111e34e5b8a74da2"
+  },
+  "checks": {
+    "sixRetainedRawResponsesRehashed": true,
+    "gateMarkerAndPartialHashesMatchActualAudit": true,
+    "eightImmutableLauncherInputHashesRemainUnchanged": true,
+    "preservedGateEvidenceRevalidatesAtOriginalSuppliedTime": true,
+    "partialJSONRowsAllReadable": true,
+    "priorAccountingSmokeBuildRetained": true,
+    "noProductionChanges": true
+  },
+  "limitations": [
+    "Runner aborted on integrity failure before final acceptance aggregate could be produced. Do not synthesize acceptance-v4.json or claim full nine-case acceptance.",
+    "50/15 was an uncertain execution-only resource estimate approved under the human threshold override; it was not measured provider-call consumption.",
+    "Six calls and detailed failure layers are independently confirmed. Complete normalized rejected-request identity is not retained."
+  ],
+  "stopPolicy": {
+    "checkpointPreparationAtRemainingFiveHourPercent": 10,
+    "finishAboveRemainingFiveHourPercent": 5,
+    "noAutomaticResetCreditConsumption": true
+  },
+  "scope": "Actual consumed failed run preserved without retry, remedial implementation, recapture, push, merge or deployment.",
+  "providerCalls": 6,
+  "providerCallAttribution": "Six retained Gemini responses; source ordering and guarded one-send-per-executed-case path support exactly six calls.",
+  "independentReview": {
+    "path": "independent-user-override-outcome-review-2026-10-06.json",
+    "sha256": "72a9fc56bf23869a455f92cd870f1302eae8136b86a67a4437d91900abeb664e",
+    "disposition": "ACTUAL_FAILED_CONSUMED_RUN_CONFIRMED_NO_RETRY"
+  },
+  "failureAttribution": [
+    {
+      "caseId": "private-expense-treatment",
+      "stage": "OVERALL_STATUS",
+      "expected": "Verified rule evidence, unresolved application, CONDITIONAL overall.",
+      "actual": "Rule evidence and requested coverage passed; application remained unresolved, but production overall was INSUFFICIENT due UNROUTED_MATERIAL_CONCEPT.",
+      "attribution": "Production concept routing/aggregation. The generic corporate income-tax treatment label loses distinguishing ownership terms and fails topicless assignment.",
+      "relatedSource": {
+        "path": "src/services/authorityWorkstreams.ts",
+        "line": 209,
+        "functions": [
+          "conceptOwnershipTerms",
+          "topiclessConceptBelongsToIssue"
+        ]
+      },
+      "fixDirection": "Handle generic labels within established issue ownership without weakening material-concept ownership."
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "stage": "REQUESTED_CONCEPT_COVERAGE",
+      "expected": "Requested receipt treatment covered; unresolved application with CONDITIONAL overall.",
+      "actual": "Semantic interpretation, routing, retrieval, admission and three quotations passed, but receipt-treatment coverage remained false. Quotations concern underlying-tax documentation. Overall INSUFFICIENT; separate generic corporate-tax label also produced UNROUTED_MATERIAL_CONCEPT.",
+      "attribution": "Scoped claim selection/coverage and production concept routing; admission sufficiency does not establish requested verified scope coverage.",
+      "relatedSource": {
+        "path": "src/services/authorityWorkstreams.ts",
+        "line": 560,
+        "function": "issueClaimCoverage"
+      },
+      "fixDirection": "Inspect scoped claim selection and coverage requirements; preserve distinction between admission sufficiency and verified coverage."
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "stage": "INTEGRITY",
+      "fatalCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "retainedRejectedUrlSuffix": "companies-receiving-foreign-income/applying-for-a-certificate-of-residence-tax-reclaim-form",
+      "approvedCorporateResidencyInventory": "IRAS sitemap and company tax-residency source page.",
+      "attribution": "Replay correctly rejected an extra evidence request before network dispatch. Separately Gemini selected DETERMINE_TREATMENT requiring facts for a general-rule question whose contract expects EXPLAIN_RULE, no facts, and NOT_REQUIRED application. Governed PROVIDER_ERROR reflects the blocked evidence path, not a failed Gemini response.",
+      "relatedSource": {
+        "path": "scripts/iras_v4_capture_replay_runner.mjs",
+        "line": 2152,
+        "function": "createReplayTransport"
+      }
+    }
+  ],
+  "independentReviewLimitations": [
+    "No final acceptance artifact or completed post-run full frozen verification exists because replay health failed first.",
+    "Case6 scored INTEGRITY:true is an evaluator default and does not override its operational integrity failure.",
+    "Rejected URL is retained, but its complete normalized request identity is not."
+  ],
+  "secretPreservationCheck": "supervisor-user-override-secret-check-2026-10-06.json"
+}

@@ -1,0 +1,18 @@
+{
+  "preregistrationSha256": "483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3",
+  "contractSha256": "5fc338c51794522307e79c10e8e51958700553e0709090d6b9343146b709a26d",
+  "evidenceLockSha256": "36f1ac828e25ab0cc4f9879954efa1479ab3e68122043d2ccff255f8dd57dac1",
+  "productionFingerprintSha256": "20a0d4a278a474b6f90121cb6025af00384549f235fbbfc738b23563aabdc7f8",
+  "sourceFingerprintSha256": "20a0d4a278a474b6f90121cb6025af00384549f235fbbfc738b23563aabdc7f8",
+  "schemaPromptFingerprintSha256": "da33413ca7dd1145f6f004e56c3c035568d09ec2014618caafc18c7738b26067",
+  "protectedHistorySha256": "aeef14d202f870a42d0db81f61d841faa461981c32f800903cab0929c405ffdb",
+  "evaluationFingerprintSha256": "d21b3e95f3f3046ad6600df5f7391639732e72074bffa03826d02f107dde8c2f",
+  "activationConfigurationSha256": "e7edc14987859e0d1f51c07450b46f8f1fed46502ae08eebaa19921a1b9026ac",
+  "activationConfigurationFileSha256": "5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30",
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "sharedAllowanceObservation": {
+    "authorizedGeminiCalls": 9
+  },
+  "profile": "iras-first-targeted-acceptance-v4",
+  "status": "CONSUMED_NO_RETRY"
+}
