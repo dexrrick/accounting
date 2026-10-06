@@ -709,22 +709,37 @@ const sitemapHtml = `<?xml version="1.0"?><urlset><url><loc>${discoveredUrl}</lo
 const fixtureManifest = [mappedHtml, reliefHtml, sitemapHtml].map(text => ({ synthetic: true, sha256: createHash('sha256').update(text).digest('hex') }));
 assert.equal(fixtureManifest.every(item => item.synthetic && /^[a-f0-9]{64}$/.test(item.sha256)), true);
 const controlledRuleFixtureBodies = [];
+function syntheticIrasResponse(family, polarity, urls, body, type = 'text/html') {
+  controlledRuleFixtureBodies.push({ family, polarity, urls, body, type });
+  return { body, status: 200, type };
+}
 function syntheticIrasPage(family, polarity, urls, title, ruleText) {
   const body = `<html><head><title>${title}</title></head><body><!-- SYNTHETIC API-FREE FIXTURE --><main><h1>${title}</h1><p>${ruleText}</p></main></body></html>`;
-  controlledRuleFixtureBodies.push({ family, polarity, urls, body });
-  return { body, status: 200 };
+  return syntheticIrasResponse(family, polarity, urls, body);
 }
 function syntheticIrasResponses(family, polarity, pages, ruleText) {
   return Object.fromEntries(pages.map(([url, title]) => [url,
     syntheticIrasPage(family, polarity, [url], title, ruleText)]));
 }
+const controlledSitemapUrl = 'https://www.iras.gov.sg/sitemap';
+const controlledRobotsUrl = 'https://www.iras.gov.sg/robots.txt';
+const controlledDiscoveryResponses = {
+  [controlledSitemapUrl]: syntheticIrasResponse('shared-controlled-discovery', 'sitemap',
+    [controlledSitemapUrl], sitemapHtml, 'application/xml'),
+  [controlledRobotsUrl]: syntheticIrasResponse('shared-controlled-discovery', 'robots',
+    [controlledRobotsUrl], 'User-agent: *\nDisallow:', 'text/plain')
+};
+function withControlledDiscoveryFixtures(responses) {
+  return { ...responses, ...controlledDiscoveryResponses };
+}
 function normalizeFixtureEvidence(value) {
   return String(value).normalize('NFC').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 }
-function assertClaimsBoundToSyntheticResponses(issue, responses, family) {
-  assert.ok(issue.verifiedClaims.length > 0, `${family} positive must expose actual verified claims.`);
+function assertClaimsBoundToSyntheticResponses(issue, responses, family, claimFilter = () => true) {
+  const claims = issue.verifiedClaims.filter(claimFilter);
+  assert.ok(claims.length > 0, `${family} positive must expose actual verified claims within the requested source scope.`);
   const sourcesById = new Map(issue.sources.map(source => [source.id, source]));
-  for (const claim of issue.verifiedClaims) {
+  for (const claim of claims) {
     const source = sourcesById.get(claim.recordId);
     assert.ok(source, `${family} verified claim ${claim.recordId} must link to a returned source record.`);
     const response = responses[source.officialSourceUrl];
@@ -744,6 +759,7 @@ function assertClaimsBoundToSyntheticResponses(issue, responses, family) {
 
 async function runControlledIras(query, issuePlan, questionUnderstanding, responseByUrl) {
   const requests = [];
+  const missingFixtureRequests = [];
   const transportObservations = [];
   const fetchValidationObservations = [];
   const candidateRecordGroups = [];
@@ -759,7 +775,10 @@ async function runControlledIras(query, issuePlan, questionUnderstanding, respon
   const customFetch = async url => {
     const key = String(url);
     requests.push(key);
-    if (!Object.hasOwn(responseByUrl, key)) throw new Error(`API_FREE_FIXTURE_MISSING:${key}`);
+    if (!Object.hasOwn(responseByUrl, key)) {
+      missingFixtureRequests.push(key);
+      throw new Error(`API_FREE_FIXTURE_MISSING:${key}`);
+    }
     const response = responseByUrl[key];
     transportObservations.push({ url: key, status: response.status, bodyBytes: Buffer.byteLength(response.body),
       synthetic: true, sha256: createHash('sha256').update(response.body).digest('hex') });
@@ -769,10 +788,10 @@ async function runControlledIras(query, issuePlan, questionUnderstanding, respon
   const originalFetchOfficialSource = webRetriever.fetchOfficialSource.bind(webRetriever);
   webRetriever.fetchOfficialSource = async (url, options = {}) => {
     const result = await originalFetchOfficialSource(url, options);
-    fetchValidationObservations.push({ url, topicId: options.topicValidation?.topicId,
-      topicValidationPresent: Boolean(options.topicValidation),
+    fetchValidationObservations.push({ url, topicValidationPresent: Boolean(options.topicValidation),
       status: result.status, sourceUrl: result.sourceUrl, finalUrl: result.finalUrl, pageTitle: result.pageTitle,
-      topicMatched: result.topicMatched, titleMatched: result.titleMatched, contentMatched: result.contentMatched });
+      contentHash: result.contentHash, topicMatched: result.topicMatched,
+      titleMatched: result.titleMatched, contentMatched: result.contentMatched });
     return result;
   };
   const discoveryAdapter = new OfficialSitemapDiscoveryAdapter(webRetriever, { customFetch });
@@ -787,8 +806,28 @@ async function runControlledIras(query, issuePlan, questionUnderstanding, respon
         discoveryAdapter, officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; }, getLastSearchTrace() { return []; } },
         fetchOptions: { customFetch, useCache: false, timeoutMs: 50 } }
     });
-    return { result, requests, transportObservations, fetchValidationObservations, candidateRecordGroups, discoveryAdapter };
+    return { result, requests, missingFixtureRequests, transportObservations, fetchValidationObservations,
+      candidateRecordGroups, discoveryAdapter, suppliedResponses: responseByUrl };
   } finally { globalThis.fetch = priorFetch; }
+}
+
+function observeControlledIrasRun(run) {
+  const issue = run.result.workstreams.flatMap(workstream => workstream.issues)[0];
+  return { requests: run.transportObservations, attempts: issue.retrievalTrace?.attempts?.map(attempt => ({
+    fetchStatus: attempt.fetchStatus, topicId: attempt.topicId, pageTitle: attempt.pageTitle
+  })), lifecycle: issue.lifecycle, evidenceStatus: issue.evidenceStatus,
+  verifiedClaims: issue.verifiedClaims?.map(claim => ({ recordId: claim.recordId, quote: claim.quote })),
+  gaps: issue.gaps?.map(gap => gap.code), sources: issue.sources?.map(source => ({ id: source.id, sourceStatus: source.sourceStatus })),
+  applicationStatus: issue.applicationStatus, overallStatus: run.result.status };
+}
+function assertNoControlledFixtureMisses(run, label) {
+  assert.deepEqual(run.missingFixtureRequests, [], `${label} supplies every requested synthetic response URL.`);
+  assert.equal(run.transportObservations.every(observation => {
+    const response = run.suppliedResponses[observation.url];
+    return response && observation.synthetic === true && observation.status === response.status &&
+      observation.bodyBytes === Buffer.byteLength(response.body) &&
+      observation.sha256 === createHash('sha256').update(response.body).digest('hex');
+  }), true, `${label} binds each requested response hash to the explicitly supplied fixture bytes.`);
 }
 
 const privateResolved = semanticResolution(privateQuery, 'DETERMINE_TREATMENT',
@@ -834,46 +873,138 @@ function transportUrlIdentity(url) {
   if (typeof url !== 'string' || !url) return undefined;
   try {
     const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) return undefined;
     parsed.hash = '';
-    return parsed.toString().replace(/\/$/, '').toLowerCase();
+    if (parsed.pathname.length > 1 && parsed.pathname.endsWith('/')) {
+      parsed.pathname = parsed.pathname.slice(0, -1);
+    }
+    return parsed.toString();
   } catch { return undefined; }
 }
 
 function observedSourceSubsetTrace(records, topicIds, retrievalAttempts, fetchObservations) {
-  const scopedSuccessAttempts = retrievalAttempts.filter(attempt => topicIds.includes(attempt.topicId) && attempt.fetchStatus === 'SUCCESS');
-  if (topicIds.length !== 1 || scopedSuccessAttempts.length !== 1 || !scopedSuccessAttempts[0].pageTitle) {
-    return { complete: false, reason: `MISSING_OR_AMBIGUOUS_SCOPED_SUCCESS_ATTEMPT topics=${topicIds.join(',')} attempts=${JSON.stringify(retrievalAttempts)}`,
-      trace: { selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] }, selectedRecordIds: [] };
-  }
-  const retrievalAttempt = scopedSuccessAttempts[0];
-  const matchingFetches = fetchObservations.filter(observation => observation.topicValidationPresent === true &&
-    observation.status === 'SUCCESS' && observation.pageTitle === retrievalAttempt.pageTitle);
-  if (matchingFetches.length !== 1) {
-    return { complete: false, reason: 'MISSING_OR_AMBIGUOUS_OBSERVED_VALIDATED_FETCH', trace: { selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] }, selectedRecordIds: [] };
-  }
-  const observedFetch = matchingFetches[0];
-  if (observedFetch.topicMatched !== true || observedFetch.titleMatched !== true || observedFetch.contentMatched !== true ||
-      !observedFetch.url || !observedFetch.finalUrl || !observedFetch.pageTitle) {
-    return { complete: false, reason: 'OBSERVED_FETCH_VALIDATION_FIELDS_INCOMPLETE', trace: { selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] }, selectedRecordIds: [] };
-  }
+  const liveRecords = records.filter(record => record.provenance === 'LIVE_EXTERNAL');
   const selectedRecordIds = [];
   const attempts = [];
-  for (const record of records) {
+  const reasons = [];
+  const observedTopicIds = new Set(retrievalAttempts.filter(attempt => attempt.fetchStatus === 'SUCCESS')
+    .map(attempt => attempt.topicId).filter(Boolean));
+  const scopedRegisteredTopics = new Set([...topicIds, ...observedTopicIds]
+    .filter(topicId => getCoverageTopicById(topicId)));
+
+  for (const record of liveRecords) {
+    const recordTags = [...new Set((record.tags || []).filter(tag => scopedRegisteredTopics.has(tag)))];
+    if (!recordTags.length) {
+      reasons.push(`${record.id}:MISSING_REGISTERED_TOPIC_TAG`);
+      continue;
+    }
     const officialIdentity = transportUrlIdentity(record.officialSourceUrl);
     const canonicalIdentity = transportUrlIdentity(record.canonicalSourceUrl);
+    if (!officialIdentity || officialIdentity !== canonicalIdentity || !record.contentHash ||
+        !/^[a-f\d]{64}$/i.test(record.contentHash) || !record.documentTitle) {
+      reasons.push(`${record.id}:SOURCE_METADATA_INCOMPLETE_OR_CONFLICTING`);
+      continue;
+    }
+
+    const relevantFetches = fetchObservations.filter(observation => observation.status === 'SUCCESS' &&
+      (observation.pageTitle === record.documentTitle ||
+        (transportUrlIdentity(observation.finalUrl) === officialIdentity && observation.contentHash === record.contentHash)));
+    if (!relevantFetches.length) {
+      reasons.push(`${record.id}:MISSING_VALIDATED_TITLE_FETCH`);
+      continue;
+    }
+    const fetchIdentity = observation => JSON.stringify([
+      transportUrlIdentity(observation.url), transportUrlIdentity(observation.sourceUrl),
+      transportUrlIdentity(observation.finalUrl), observation.pageTitle, observation.contentHash
+    ]);
+    const invalidRelevantFetch = relevantFetches.find(observation => {
+      const requestIdentity = transportUrlIdentity(observation.url);
+      const sourceIdentity = transportUrlIdentity(observation.sourceUrl);
+      const finalIdentity = transportUrlIdentity(observation.finalUrl);
+      return observation.topicValidationPresent !== true || observation.topicMatched !== true ||
+        observation.titleMatched !== true || observation.contentMatched !== true ||
+        !observation.url || !observation.sourceUrl || !observation.finalUrl || !observation.pageTitle ||
+        !observation.contentHash || !/^[a-f\d]{64}$/i.test(observation.contentHash) ||
+        !requestIdentity || !sourceIdentity || !finalIdentity ||
+        observation.pageTitle !== record.documentTitle || observation.contentHash !== record.contentHash ||
+        finalIdentity !== officialIdentity || finalIdentity !== canonicalIdentity;
+    });
+    if (invalidRelevantFetch) {
+      reasons.push(`${record.id}:AMBIGUOUS_OR_INCOMPLETE_VALIDATED_TITLE_FETCH`);
+      continue;
+    }
+    const uniqueRelevantFetches = [...new Map(relevantFetches.map(observation =>
+      [fetchIdentity(observation), observation])).values()];
+    const sameTitleFinalUrls = new Set(relevantFetches.map(observation =>
+      transportUrlIdentity(observation.finalUrl)));
+    if (uniqueRelevantFetches.length !== 1 || sameTitleFinalUrls.size !== 1) {
+      reasons.push(`${record.id}:AMBIGUOUS_OR_INCOMPLETE_VALIDATED_TITLE_FETCH`);
+      continue;
+    }
+    const observedFetch = uniqueRelevantFetches[0];
     const finalIdentity = transportUrlIdentity(observedFetch.finalUrl);
-    if (!officialIdentity || officialIdentity !== canonicalIdentity || canonicalIdentity !== finalIdentity) continue;
+    if (observedFetch.pageTitle !== record.documentTitle || observedFetch.contentHash !== record.contentHash ||
+        finalIdentity !== officialIdentity || finalIdentity !== canonicalIdentity) {
+      reasons.push(`${record.id}:SOURCE_CONTENT_OR_URL_FETCH_MISMATCH`);
+      continue;
+    }
+
+    const matchingAssociations = [];
+    for (const topicId of recordTags) {
+      const topicAttempts = retrievalAttempts.filter(attempt => attempt.topicId === topicId &&
+        attempt.fetchStatus === 'SUCCESS' && attempt.pageTitle === record.documentTitle);
+      if (topicAttempts.length !== 1) continue;
+      const retrievalAttempt = topicAttempts[0];
+      matchingAssociations.push({ topicId, retrievalAttempt, observedFetch });
+    }
+    if (matchingAssociations.length === 0) {
+      reasons.push(`${record.id}:NO_UNIQUE_VALIDATED_TOPIC_FETCH`);
+      continue;
+    }
     selectedRecordIds.push(record.id);
-    attempts.push({ topicId: retrievalAttempt.topicId, fetchStatus: retrievalAttempt.fetchStatus,
-      finalUrl: observedFetch.finalUrl, pageTitle: observedFetch.pageTitle,
-      titleMatched: observedFetch.titleMatched, contentMatched: observedFetch.contentMatched });
+    for (const { topicId, retrievalAttempt, observedFetch } of matchingAssociations) {
+      attempts.push({ topicId, fetchStatus: retrievalAttempt.fetchStatus,
+        finalUrl: observedFetch.finalUrl, pageTitle: observedFetch.pageTitle,
+        titleMatched: observedFetch.titleMatched, contentMatched: observedFetch.contentMatched });
+    }
   }
-  const trace = { path: 'test_local_unique_observed_transport_attempt_subset',
+  const trace = { path: 'test_local_observed_source_tag_attempt_fetch_subset',
     selectedRecordIds: [...new Set(selectedRecordIds)],
     finalVerifiedUrls: [...new Set(attempts.map(attempt => attempt.finalUrl))], attempts };
-  return { complete: records.length > 0 && trace.selectedRecordIds.length === records.length && attempts.length === records.length,
-    reason: records.length > 0 && trace.selectedRecordIds.length === records.length && attempts.length === records.length
-      ? undefined : 'RETURNED_SOURCE_NOT_BOUND_TO_OBSERVED_FETCH', trace, selectedRecordIds: trace.selectedRecordIds };
+  const complete = reasons.length === 0 && trace.selectedRecordIds.length === liveRecords.length;
+  return { complete, reason: complete ? undefined : reasons.join(';') || 'LIVE_SOURCE_NOT_BOUND_TO_OBSERVED_FETCH',
+    trace, selectedRecordIds: trace.selectedRecordIds };
+}
+
+function observedCandidateSubset(row, planned, issue, controlledRun) {
+  const topicIds = new Set(planned.mappedTopicIds);
+  const byId = new Map();
+  const conflicts = [];
+  const evidenceIdentity = record => JSON.stringify([
+    record.sourceText, record.contentHash, record.officialSourceUrl, record.canonicalSourceUrl,
+    record.documentTitle, record.provenance, record.authority, record.domain,
+    record.sourceStatus, [...(record.tags || [])].sort()
+  ]);
+  const addRecord = (record, source) => {
+    const existing = byId.get(record.id);
+    if (!existing) {
+      byId.set(record.id, { record, source });
+      return;
+    }
+    if (evidenceIdentity(existing.record) !== evidenceIdentity(record)) {
+      conflicts.push({ recordId: record.id, sources: [existing.source, source] });
+      return;
+    }
+    if (source === 'actual_returned_source') byId.set(record.id, { record, source });
+  };
+  for (const group of controlledRun.candidateRecordGroups) {
+    if (group.topicIds.some(topicId => topicIds.has(topicId))) {
+      for (const record of group.records) addRecord(record, 'actual_through_call_candidate_group');
+    }
+  }
+  for (const record of issue.sources || []) addRecord(record, 'actual_returned_source');
+  assert.deepEqual(conflicts, [], `Duplicate source IDs must not hide conflicting observed evidence: ${row.item.caseId}/${issue.issueId}`);
+  return [...byId.values()].map(item => item.record);
 }
 
 function actualGovernedObservations(row, controlledRun) {
@@ -883,16 +1014,14 @@ function actualGovernedObservations(row, controlledRun) {
     const isIras = authority === 'IRAS';
     let records;
     let evidenceQuality;
+    let observedTrace;
     if (isIras) {
-      // AuthorityIssueEvidence.sources is the actual verified/admitted subset, not the full initial candidate inventory.
-      records = issue.sources || [];
-      const observedTrace = records.length > 0
-        ? observedSourceSubsetTrace(records, planned.mappedTopicIds, issue.retrievalTrace?.attempts || [],
-          controlledRun.fetchValidationObservations)
-        : { complete: false, reason: 'NO_RETURNED_VERIFIED_SOURCE_SUBSET', selectedRecordIds: [],
-          trace: { path: 'test_local_unique_observed_transport_attempt_subset', selectedRecordIds: [], finalVerifiedUrls: [], attempts: [] } };
-      if (records.length > 0) assert.equal(observedTrace.complete, true,
-        `Every returned IRAS source must bind through one unique sanitized scoped attempt to actual successful transport: ${row.item.caseId}/${issueId} ${observedTrace.reason}`);
+      // The through-call raw local records and returned sources are separate observed subsets, not the initial inventory.
+      records = observedCandidateSubset(row, planned, issue, controlledRun);
+      observedTrace = observedSourceSubsetTrace(records, planned.mappedTopicIds,
+        issue.retrievalTrace?.attempts || [], controlledRun.fetchValidationObservations);
+      if (records.some(record => record.provenance === 'LIVE_EXTERNAL')) assert.equal(observedTrace.complete, true,
+        `Every observed live IRAS source must bind through an actual registered tag, sanitized success attempt, and validated fetch: ${row.item.caseId}/${issueId} ${observedTrace.reason}`);
       evidenceQuality = replayProductionIrasQuality(row.item.question, row.interpretation, issue.subject,
         issue.population, planned.mappedTopicIds, records, observedTrace.trace);
     } else {
@@ -920,7 +1049,20 @@ function actualGovernedObservations(row, controlledRun) {
     return { issueId, authority, operation: issue.operation, ruleEvidenceStatus: issue.evidenceStatus,
       providerError: issue.gaps.some(gap => /^(?:RETRIEVAL|PROVIDER|TRANSPORT)_.*(?:FAILED|ERROR)$/.test(gap.code)),
       lifecycle: { ...issue.lifecycle }, gaps: issue.gaps.map(gap => gap.code), candidateCount: records.length,
-      candidateInventoryKind: isIras ? 'actual_returned_verified_source_subset_lower_bound' : 'actual_through_call_retriever_records',
+      candidateInventoryKind: isIras
+        ? 'observed_through_call_local_retriever_records_plus_verified_returned_sources_not_full_provider_inventory'
+        : 'actual_through_call_retriever_records',
+      candidateCountBasis: isIras
+        ? 'distinct observed record IDs across planned-topic through-call retriever groups and actual returned sources; not an initial candidate/admission inventory'
+        : 'distinct observed record IDs across through-call retriever groups scoped to the planned issue topics',
+      observedRecordIds: records.map(record => record.id),
+      eligibleRecordIds: evidenceQuality?.eligibleRecords?.map(record => record.id) || [],
+      candidateRecordProvenanceCounts: Object.fromEntries([...new Set(records.map(record => record.provenance))]
+        .map(provenance => [provenance, records.filter(record => record.provenance === provenance).length])),
+      ...(isIras ? { transportBinding: { path: observedTrace.trace.path,
+        liveSourceIds: records.filter(record => record.provenance === 'LIVE_EXTERNAL').map(record => record.id),
+        boundSourceIds: observedTrace.selectedRecordIds,
+        observedAttempts: observedTrace.trace.attempts } } : {}),
       actualReturnedSourceCount: (issue.sources || []).length,
       ...(isIras ? {} : { baseEligibleCandidateCount: candidateDiagnostics.filter(candidate => candidate.baseEligible).length,
         candidateDiagnostics, candidateRecords: records }),
@@ -937,17 +1079,39 @@ function scoreControlledRuntime(row, controlledRun) {
   });
   const application = scoreApplicationStatusV4(row.item, { byIssue: Object.fromEntries(actualIssues),
     overallStatus: controlledRun.result.status });
-  const governed = scoreGovernedEvidenceV4(row.item, actualGovernedObservations(row, controlledRun));
+  const expectedGovernedIssueIds = Object.keys(row.item.governedProductionEvidence.expectedRuleEvidenceByIssue || {});
+  const governedObservations = expectedGovernedIssueIds.length > 0
+    ? actualGovernedObservations(row, controlledRun)
+    : actualNoRouteGovernedObservation(row, controlledRun.result);
+  const governed = scoreGovernedEvidenceV4(row.item, governedObservations);
   const routing = scoreWorkstreamRoutingV4(row.item, row.issuePlan, controlledRun.result);
   const local = localCapabilityRows.find(item => item.caseId === row.item.caseId)?.result;
   assert.ok(local, `Actual local-only capability observation exists: ${row.item.caseId}`);
   const stages = evaluateV4Stages({ semantic: row.semantic, routing, local, governed, application });
-  return { routing, local, governed, application, stages };
+  return { routing, local, governed, application, stages, governedObservations };
+}
+
+function actualNoRouteGovernedObservation(row, runtime) {
+  const plannedIrasIssues = row.issuePlan.issues.filter(issue => issue.governingAuthorities.includes('IRAS'));
+  const plannedIrasTopics = [...new Set(plannedIrasIssues.flatMap(issue => issue.mappedTopicIds))];
+  const irasWorkstreams = runtime.workstreams.filter(workstream => workstream.authority === 'IRAS');
+  const irasIssues = irasWorkstreams.flatMap(workstream => workstream.issues);
+  const candidateCount = irasIssues.reduce((sum, issue) => sum + (issue.sources?.length || 0), 0);
+  const claimCount = irasIssues.reduce((sum, issue) => sum + (issue.verifiedClaims?.length || 0), 0);
+  assert.equal(plannedIrasIssues.length, 0, `${row.item.caseId} issue plan has no IRAS route.`);
+  assert.equal(plannedIrasTopics.length, 0, `${row.item.caseId} issue plan has no IRAS mapped topic.`);
+  assert.equal(irasWorkstreams.length, 0, `${row.item.caseId} actual runtime has no IRAS workstream.`);
+  assert.equal(candidateCount, 0, `${row.item.caseId} actual IRAS workstreams have no returned candidates.`);
+  assert.equal(claimCount, 0, `${row.item.caseId} actual IRAS workstreams have no verified claims.`);
+  return [{ source: 'actual_issue_plan_and_local_only_runtime', coverageStatus: 'NO_COVERAGE_TOPIC',
+    irAsWorkstreamCount: irasWorkstreams.length, plannedIrasIssueCount: plannedIrasIssues.length,
+    plannedIrasTopicIds: plannedIrasTopics, candidateCount, claimCount }];
 }
 
 const mappedRun = await runControlledIras(privateQuery, privateResolved.issuePlan, privateResolved.understanding, {
-  [fixturePageUrl]: { body: mappedHtml, status: 200 }
+  ...withControlledDiscoveryFixtures({ [fixturePageUrl]: { body: mappedHtml, status: 200 } })
 });
+assertNoControlledFixtureMisses(mappedRun, 'Private-expense qualification positive');
 const privateEvidence = mappedRun.result.workstreams.flatMap(workstream => workstream.issues)[0];
 assert.ok(mappedRun.requests.includes(fixturePageUrl), 'The real default advanced retriever follows the reviewed mapped IRAS pointer.');
 assert.equal(mappedRun.result.workstreams.length, 1);
@@ -967,6 +1131,39 @@ assert.ok(privateEvidence.sources.some(source => source.id === 'ITA_SEC15_PROHIB
 assert.equal(privateEvidence.verifiedClaims.some(claim => claim.recordId === 'ITA_SEC15_PROHIBITED_DEDUCTIONS' &&
   claim.quote === UNIFIED_SOURCE_REGISTRY.ITA_SEC15_PROHIBITED_DEDUCTIONS.sourceText && /statutory exceptions/i.test(claim.quote)), true,
   'The actual local evidence verifier retains the literal caveated reviewed quotation.');
+
+const privateMissingQualificationText = 'For income tax, companies may deduct expenses wholly and exclusively incurred in producing income under the general deduction rule in section 14. This explains whether a company expense is tax deductible and whether it is deductible for tax purposes. Private and domestic expenses are not deductible under section 15. This guidance explains the treatment of business expenses for corporate income tax.';
+const privateMissingQualificationFixture = syntheticIrasPage('private-expense-treatment', 'negative-missing-qualification',
+  [fixturePageUrl], 'Business Expenses | IRAS', privateMissingQualificationText);
+const privateMissingQualificationResponses = { [fixturePageUrl]: privateMissingQualificationFixture };
+const privateMissingQualificationRun = await runControlledIras(privateQuery, privateResolved.issuePlan,
+  privateResolved.understanding, withControlledDiscoveryFixtures(privateMissingQualificationResponses));
+const privateMissingQualificationIssue = privateMissingQualificationRun.result.workstreams.flatMap(workstream => workstream.issues)[0];
+assertNoControlledFixtureMisses(privateMissingQualificationRun, 'Private-expense missing-qualification negative control');
+assert.deepEqual(privateMissingQualificationRun.requests, [fixturePageUrl, controlledSitemapUrl]);
+assert.deepEqual(privateMissingQualificationRun.transportObservations.map(item => item.status), [200, 200]);
+assert.equal(privateMissingQualificationRun.transportObservations[0].sha256,
+  createHash('sha256').update(privateMissingQualificationFixture.body).digest('hex'));
+assert.equal(/statutory exceptions|qualifications/i.test(privateMissingQualificationText), false,
+  'The fetched private-expense page omits qualification language.');
+assert.deepEqual(privateMissingQualificationIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus), ['SUCCESS']);
+assert.deepEqual(privateMissingQualificationIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+  evidenceFound: true, admitted: true, verified: true, covered: true });
+assert.equal(privateMissingQualificationIssue.evidenceStatus, 'VERIFIED');
+assert.equal(privateMissingQualificationIssue.applicationStatus, 'UNRESOLVED');
+assert.equal(privateMissingQualificationRun.result.status, 'CONDITIONAL');
+const privateMissingPageClaim = privateMissingQualificationIssue.verifiedClaims.find(claim => claim.recordId.startsWith('LIVE_TOPIC_'));
+const privateMissingPageSource = privateMissingQualificationIssue.sources.find(source => source.id === privateMissingPageClaim?.recordId);
+assert.equal(privateMissingPageClaim?.quote, privateMissingQualificationText,
+  'The fetched unqualified page remains traceable as its own literal claim.');
+assert.equal(privateMissingPageSource?.officialSourceUrl, fixturePageUrl);
+assert.equal(privateMissingPageSource?.sourceStatus, 'NEEDS_REVIEW');
+const privateRetainedSection15Claim = privateMissingQualificationIssue.verifiedClaims.find(claim =>
+  claim.recordId === 'ITA_SEC15_PROHIBITED_DEDUCTIONS');
+assert.equal(privateRetainedSection15Claim?.quote, UNIFIED_SOURCE_REGISTRY.ITA_SEC15_PROHIBITED_DEDUCTIONS.sourceText,
+  'The local reviewed Section 15 claim retains its statutory qualification despite the fetched page omission.');
+assert.match(privateRetainedSection15Claim.quote, /subject to statutory exceptions/i);
+console.log(`V4_CONTROLLED_PRIVATE_MISSING_QUALIFICATION ${JSON.stringify(observeControlledIrasRun(privateMissingQualificationRun))}`);
 
 const privateIssue = privateResolved.issuePlan.issues[0];
 const privateTopics = privateIssue.mappedTopicIds;
@@ -1084,6 +1281,80 @@ console.log(`V4_INCOMPLETE_SCOPE_RUNTIME ${JSON.stringify(['wht-royalty-general-
     gaps: issue.gaps.map(gap => gap.code) };
 }))}`);
 
+const privateLocalSemanticRow = semanticRows.find(row => row.item.caseId === 'private-expense-treatment');
+const privateLocalRuntime = localRuntimeResults.get('private-expense-treatment');
+const privateLocalIssue = onlyRuntimeIssue('private-expense-treatment');
+const privateLocalRecordsById = new Map(localCandidateRecordGroups.get('private-expense-treatment')
+  .flatMap(group => group.records).map(record => [record.id, record]));
+const privateLocalRecords = [...privateLocalRecordsById.values()];
+const privateLocalPlannedIssue = privateLocalSemanticRow.issuePlan.issues.find(issue => issue.subject === privateLocalIssue.subject);
+const privateLocalQuality = replayProductionIrasQuality(privateLocalSemanticRow.item.question,
+  privateLocalSemanticRow.interpretation, privateLocalIssue.subject, privateLocalIssue.population,
+  privateLocalPlannedIssue.mappedTopicIds, privateLocalRecords);
+const privateLocalRequestedConceptCoverage = privateLocalIssue.lifecycle.covered === true &&
+  privateLocalPlannedIssue.mappedTopicIds.every(topicId => privateLocalQuality.coveredTopicIds.includes(topicId)) &&
+  privateLocalQuality.uncoveredConcepts.length === 0 && privateLocalQuality.uncoveredTopicIds.length === 0;
+const privateLocalLifecycleFailure = classifyLifecycleFailure({ lifecycle: privateLocalIssue.lifecycle,
+  candidateCount: privateLocalRecords.length, evidenceQuality: privateLocalQuality,
+  verifiedClaimCount: privateLocalIssue.verifiedClaims.length, requestedConceptCoverage: privateLocalRequestedConceptCoverage });
+const privateLocalExpectedIssueId = Object.keys(privateLocalSemanticRow.item.governedProductionEvidence.expectedRuleEvidenceByIssue)[0];
+const privateLocalGovernedObservation = { issueId: privateLocalExpectedIssueId, authority: 'IRAS',
+  operation: privateLocalIssue.operation, ruleEvidenceStatus: privateLocalIssue.evidenceStatus,
+  providerError: privateLocalIssue.gaps.some(gap => /^(?:RETRIEVAL|PROVIDER|TRANSPORT)_.*(?:FAILED|ERROR)$/.test(gap.code)),
+  lifecycle: { ...privateLocalIssue.lifecycle }, candidateCount: privateLocalRecords.length,
+  candidateInventoryKind: 'actual_local_only_runtime_candidates',
+  actualReturnedSourceCount: privateLocalIssue.sources.length, rejectedCount: privateLocalQuality.rejectedRecords.length,
+  rejectedCandidates: [], evidenceQuality: privateLocalQuality,
+  verifiedClaimCount: privateLocalIssue.verifiedClaims.length, requestedConceptCoverage: privateLocalRequestedConceptCoverage,
+  gaps: privateLocalIssue.gaps.map(gap => gap.code) };
+const privateLocalGovernedScore = scoreGovernedEvidenceV4(privateLocalSemanticRow.item, [privateLocalGovernedObservation]);
+const privateLocalApplicationScore = scoreApplicationStatusV4(privateLocalSemanticRow.item, {
+  byIssue: { [privateLocalExpectedIssueId]: privateLocalIssue.applicationStatus },
+  overallStatus: privateLocalRuntime.status
+});
+const privateLocalRoutingScore = scoreWorkstreamRoutingV4(privateLocalSemanticRow.item,
+  privateLocalSemanticRow.issuePlan, privateLocalRuntime);
+const privateLocalStages = evaluateV4Stages({ semantic: privateLocalSemanticRow.semantic,
+  routing: privateLocalRoutingScore,
+  local: localCapabilityRows.find(row => row.caseId === 'private-expense-treatment')?.result,
+  governed: privateLocalGovernedScore, application: privateLocalApplicationScore });
+assert.deepEqual([...privateLocalRecordsById.keys()].sort(), [
+  'ITA_SEC14_GENERAL_DEDUCTION', 'ITA_SEC15_1_K_MOTOR_CAR', 'ITA_SEC15_PROHIBITED_DEDUCTIONS'
+]);
+assert.equal(privateLocalExpectedIssueId, 'company-private-expense-tax-treatment');
+assert.equal(privateLocalIssue.lifecycle.admitted, true);
+assert.equal(privateLocalIssue.lifecycle.verified, true);
+assert.equal(privateLocalIssue.lifecycle.covered, false);
+assert.equal(privateLocalIssue.evidenceStatus, 'INSUFFICIENT');
+assert.ok(privateLocalIssue.verifiedClaims.some(claim => claim.recordId === 'ITA_SEC15_PROHIBITED_DEDUCTIONS' &&
+  claim.quote === UNIFIED_SOURCE_REGISTRY.ITA_SEC15_PROHIBITED_DEDUCTIONS.sourceText));
+assert.ok(privateLocalQuality.coveredTopicIds.includes('iras-cit-disallowed-expenses'));
+assert.ok(privateLocalQuality.uncoveredTopicIds.includes('iras-cit-deductibility'));
+assert.equal(privateLocalRequestedConceptCoverage, false);
+assert.deepEqual(privateLocalLifecycleFailure, { stage: 'REQUESTED_CONCEPT_COVERAGE', state: 'verified_claims_scope_uncovered' });
+assert.equal(privateLocalGovernedScore.stages.GOVERNED_RETRIEVAL, true);
+assert.equal(privateLocalGovernedScore.stages.EVIDENCE_ADMISSION, true);
+assert.equal(privateLocalGovernedScore.stages.CLAIM_VERIFICATION, true);
+assert.equal(privateLocalGovernedScore.stages.REQUESTED_CONCEPT_COVERAGE, false);
+assert.equal(privateLocalApplicationScore.overallStatus, 'INSUFFICIENT');
+assert.equal(privateLocalApplicationScore.applicationStatusesPassed, true);
+assert.equal(privateLocalApplicationScore.overallAllowed, false);
+assert.equal(privateLocalStages.earliestFailure, 'REQUESTED_CONCEPT_COVERAGE');
+console.log(`V4_PRIVATE_LOCAL_RUNTIME_QUALIFICATION_TRACE ${JSON.stringify({
+  provenance: 'actual local-only production runtime; prospective governed stage counterpart without transport proof',
+  status: privateLocalRuntime.status, evidenceStatus: privateLocalIssue.evidenceStatus,
+  lifecycle: privateLocalIssue.lifecycle, gaps: privateLocalIssue.gaps.map(gap => gap.code),
+  candidateIds: privateLocalRecords.map(record => record.id),
+  returnedSources: privateLocalIssue.sources.map(source => ({ id: source.id, sourceStatus: source.sourceStatus })),
+  verifiedClaims: privateLocalIssue.verifiedClaims.map(claim => ({ recordId: claim.recordId, quote: claim.quote })),
+  requestedConceptCoverage: privateLocalRequestedConceptCoverage, lifecycleFailure: privateLocalLifecycleFailure,
+  governedStages: privateLocalGovernedScore.stages, earliestFailure: privateLocalStages.earliestFailure,
+  quality: { eligibleIds: privateLocalQuality.eligibleRecords.map(record => record.id),
+    coveredTopicIds: privateLocalQuality.coveredTopicIds, uncoveredTopicIds: privateLocalQuality.uncoveredTopicIds,
+    uncoveredConcepts: privateLocalQuality.uncoveredConcepts,
+    rejectedRecords: privateLocalQuality.rejectedRecords.map(record => ({ recordId: record.recordId, code: record.code })) }
+})}`);
+
 const reliefResolved = semanticResolution(reliefQuery, 'CHECK_ELIGIBILITY', 'individual personal tax relief on compulsory CPF contributions',
   'IRAS_INCOME_TAX', 'INDIVIDUAL');
 const discoveredRun = await runControlledIras(reliefQuery, reliefResolved.issuePlan, reliefResolved.understanding, {
@@ -1134,10 +1405,22 @@ assertClaimsBoundToSyntheticResponses(amountIssue, amountResponses, 'target-reli
 const amountPlannedIssue = actualIssueForExpected(amountRow, amountRun.result, 'personal-cpf-relief-amount').planned;
 const amountObservedTrace = observedSourceSubsetTrace(amountIssue.sources, amountPlannedIssue.mappedTopicIds,
   amountIssue.retrievalTrace.attempts, amountRun.fetchValidationObservations);
-assert.equal(amountObservedTrace.complete, true, 'The amount source binds to its unique observed production fetch and scoped success attempt.');
+assert.equal(amountObservedTrace.complete, true,
+  `The amount source binds to its actual tagged topic, observed content hash, unique fetch, and success attempt: ${JSON.stringify({
+    reason: amountObservedTrace.reason,
+    sources: amountIssue.sources.map(({ id, tags, relatedTopicIds, sourceMapTopicIds, documentTitle, officialSourceUrl,
+      canonicalSourceUrl, contentHash, contentHashAlgorithm }) => ({ id, tags, relatedTopicIds, sourceMapTopicIds,
+      documentTitle, officialSourceUrl, canonicalSourceUrl, contentHash, contentHashAlgorithm })),
+    attempts: amountIssue.retrievalTrace.attempts.map(({ topicId, fetchStatus, pageTitle }) => ({ topicId, fetchStatus, pageTitle })),
+    fetches: amountRun.fetchValidationObservations.map(({ topicId, topicValidationPresent, contentHash, sourceUrl,
+      finalUrl, pageTitle, topicMatched, titleMatched, contentMatched }) => ({ topicId, topicValidationPresent,
+      contentHash, sourceUrl, finalUrl, pageTitle, topicMatched, titleMatched, contentMatched }))
+  })}`);
 const ambiguousAmountTrace = observedSourceSubsetTrace(amountIssue.sources, amountPlannedIssue.mappedTopicIds,
-  amountIssue.retrievalTrace.attempts, [...amountRun.fetchValidationObservations, amountRun.fetchValidationObservations[0]]);
-assert.equal(ambiguousAmountTrace.complete, false, 'A duplicate matching transport observation cannot rescue an ambiguous trace join.');
+  amountIssue.retrievalTrace.attempts, [...amountRun.fetchValidationObservations,
+    { ...amountRun.fetchValidationObservations[0], finalUrl: 'https://www.iras.gov.sg/taxes/iras-conflicting-final-url' }]);
+assert.equal(ambiguousAmountTrace.complete, false,
+  'A conflicting final URL for the same observed page title cannot rescue an ambiguous trace join.');
 const amountGovernedObservations = actualGovernedObservations(amountRow, amountRun);
 const amountStages = scoreControlledRuntime(amountRow, amountRun);
 assert.equal(amountStages.routing.passed, true);
@@ -1308,9 +1591,45 @@ const foreignNegativeFixture = syntheticIrasPage('foreign-dividend-receipt-treat
   'Foreign-sourced income is considered under corporate income tax. Dividends received by a Singapore company from a domestic source are recorded as dividend income. This page describes dividends paid by a company to shareholders, not foreign-sourced dividends received by a company.');
 const foreignPositiveResponses = { [foreignIncomeUrl]: foreignPositiveFixture };
 const foreignPositiveRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
-  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation }, foreignPositiveResponses);
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation },
+  withControlledDiscoveryFixtures(foreignPositiveResponses));
 const foreignNegativeRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
-  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation }, { [foreignIncomeUrl]: foreignNegativeFixture });
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation },
+  withControlledDiscoveryFixtures({ [foreignIncomeUrl]: foreignNegativeFixture }));
+const foreignPayerOnlyText = 'For corporate income tax, foreign-sourced income includes dividends distributed by a company. The company paying an overseas dividend distributes that income to its shareholders.';
+const foreignOtherIncomeOnlyText = 'Foreign-sourced income received by a Singapore company includes service income from services performed overseas and interest earned on foreign deposits. Foreign-sourced service and interest income is considered under company income tax.';
+const foreignPayerOnlyResponses = { [foreignIncomeUrl]: syntheticIrasPage('foreign-dividend-receipt-treatment',
+  'negative-payer-only', [foreignIncomeUrl], 'Companies Receiving Foreign Income | IRAS', foreignPayerOnlyText) };
+const foreignOtherIncomeOnlyResponses = { [foreignIncomeUrl]: syntheticIrasPage('foreign-dividend-receipt-treatment',
+  'negative-other-income-only', [foreignIncomeUrl], 'Companies Receiving Foreign Income | IRAS', foreignOtherIncomeOnlyText) };
+const foreignPayerOnlyRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation },
+  withControlledDiscoveryFixtures(foreignPayerOnlyResponses));
+const foreignOtherIncomeOnlyRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation },
+  withControlledDiscoveryFixtures(foreignOtherIncomeOnlyResponses));
+for (const [label, run] of [
+  ['foreign payer-only', foreignPayerOnlyRun], ['foreign other-income-only', foreignOtherIncomeOnlyRun]
+]) {
+  assertNoControlledFixtureMisses(run, label);
+  assert.equal(run.transportObservations[0]?.url, foreignIncomeUrl);
+  assert.equal(run.transportObservations[0]?.status, 200);
+  const issue = run.result.workstreams.flatMap(workstream => workstream.issues)[0];
+  assert.ok(issue.retrievalTrace?.attempts?.some(attempt => attempt.fetchStatus === 'SUCCESS'),
+    `${label} passes the actual IRAS page-topic transport check.`);
+  assert.deepEqual(issue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+    evidenceFound: true, admitted: false, verified: false, covered: false });
+  assert.equal(issue.evidenceStatus, 'INSUFFICIENT');
+  assert.equal(issue.verifiedClaims.length, 0);
+  assert.ok(issue.gaps.some(gap => gap.code === 'NO_ADMITTED_EVIDENCE'));
+  assert.equal(issue.applicationStatus, 'UNRESOLVED');
+  assert.equal(run.result.status, 'INSUFFICIENT');
+  assert.equal(run.result.applicationStatus, 'UNRESOLVED');
+}
+assert.equal(/\breceived\b/i.test(foreignPayerOnlyText), false,
+  'Payer-only evidence does not state that a Singapore company received the dividend.');
+assert.equal(/\bdividend/i.test(foreignOtherIncomeOnlyText), false,
+  'Other-income evidence is limited to foreign service income and interest.');
 const foreignPositiveIssue = foreignPositiveRun.result.workstreams.flatMap(stream => stream.issues)[0];
 const foreignNegativeIssue = foreignNegativeRun.result.workstreams.flatMap(stream => stream.issues)[0];
 const foreignPositiveDiagnostic = { requests: foreignPositiveRun.transportObservations, retrievalTrace: foreignPositiveIssue.retrievalTrace,
@@ -1337,12 +1656,14 @@ assert.ok(foreignNegativeIssue.gaps.some(gap => gap.code === 'NO_ADMITTED_EVIDEN
 assert.equal(foreignNegativeIssue.applicationStatus, 'UNRESOLVED');
 assert.equal(foreignNegativeRun.result.status, 'INSUFFICIENT');
 assert.equal(foreignNegativeRun.result.applicationStatus, 'UNRESOLVED');
+for (const run of [foreignPositiveRun, foreignNegativeRun]) assertNoControlledFixtureMisses(run, 'Foreign-dividend control');
 console.log(`V4_CONTROLLED_FOREIGN_DIVIDEND ${JSON.stringify({ positive: { lifecycle: foreignPositiveIssue.lifecycle,
   evidenceStatus: foreignPositiveIssue.evidenceStatus, applicationStatus: foreignPositiveIssue.applicationStatus,
   overall: foreignPositiveRun.result.status }, negative: { lifecycle: foreignNegativeIssue.lifecycle,
   evidenceStatus: foreignNegativeIssue.evidenceStatus, claims: foreignNegativeIssue.verifiedClaims.length,
   stages: foreignNegativeIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus), gaps: foreignNegativeIssue.gaps.map(gap => gap.code),
-  applicationStatus: foreignNegativeIssue.applicationStatus, overall: foreignNegativeRun.result.status } })}`);
+  applicationStatus: foreignNegativeIssue.applicationStatus, overall: foreignNegativeRun.result.status },
+  payerOnly: observeControlledIrasRun(foreignPayerOnlyRun), otherIncomeOnly: observeControlledIrasRun(foreignOtherIncomeOnlyRun) })}`);
 
 const residencyUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence';
 const residencyRow = semanticRows.find(row => row.item.caseId === 'corporate-residency-general-rule');
@@ -1448,10 +1769,28 @@ const gstPositiveText = 'A GST-registered business may claim input tax on busine
 const gstBlockedOnlyText = 'Input tax on the purchase and running expenses of a motor car is generally blocked from claim, subject to the vehicle definition and exceptions. Business purpose alone does not make a blocked motor-car claim recoverable. This page describes blocked input tax and does not establish the general recovery conditions for a GST-registered company’s business purchases.';
 const gstPositiveResponses = syntheticIrasResponses('gst-input-tax-general-rule', 'positive', gstUrlsAndTitles, gstPositiveText);
 const gstPositiveRun = await runControlledIras(gstRow.item.question, gstRow.issuePlan,
-  { mode: 'SEMANTIC_INTERPRETATION', interpretation: gstRow.interpretation }, gstPositiveResponses);
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: gstRow.interpretation },
+  withControlledDiscoveryFixtures(gstPositiveResponses));
 const gstNegativeRun = await runControlledIras(gstRow.item.question, gstRow.issuePlan,
   { mode: 'SEMANTIC_INTERPRETATION', interpretation: gstRow.interpretation },
-  syntheticIrasResponses('gst-input-tax-general-rule', 'negative-blocked-only', gstUrlsAndTitles, gstBlockedOnlyText));
+  withControlledDiscoveryFixtures(syntheticIrasResponses('gst-input-tax-general-rule', 'negative-blocked-only', gstUrlsAndTitles, gstBlockedOnlyText)));
+const gstUnregisteredOnlyText = 'A business that is not registered for GST cannot claim input tax on its expenses. GST registration is required before a business may charge GST on its taxable supplies.';
+const gstPrivateOnlyText = 'Input tax on private or domestic purchases cannot be claimed, even when the purchaser is GST-registered. Input tax attributable to private use is disallowed.';
+const gstOutputTaxOnlyText = 'GST-registered businesses must account for output tax on their taxable supplies. Output tax is charged to customers and reported in the company’s GST return.';
+const gstNegativeScenarios = [
+  ['negative-unregistered-only', gstUnregisteredOnlyText],
+  ['negative-private-only', gstPrivateOnlyText],
+  ['negative-output-tax-only', gstOutputTaxOnlyText]
+].map(([polarity, text]) => {
+  const responses = syntheticIrasResponses('gst-input-tax-general-rule', polarity, gstUrlsAndTitles, text);
+  return { polarity, responses };
+});
+const gstNegativeRuns = [];
+for (const { responses } of gstNegativeScenarios) {
+  gstNegativeRuns.push(await runControlledIras(gstRow.item.question, gstRow.issuePlan,
+    { mode: 'SEMANTIC_INTERPRETATION', interpretation: gstRow.interpretation },
+    withControlledDiscoveryFixtures(responses)));
+}
 const gstPositiveIssue = gstPositiveRun.result.workstreams.flatMap(stream => stream.issues)[0];
 const gstNegativeIssue = gstNegativeRun.result.workstreams.flatMap(stream => stream.issues)[0];
 assert.deepEqual(gstPositiveIssue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
@@ -1473,20 +1812,251 @@ assert.ok(gstNegativeIssue.gaps.some(gap => gap.code === 'ISSUE_CONCEPT_UNCOVERE
 assert.equal(gstNegativeIssue.applicationStatus, 'NOT_REQUIRED');
 assert.equal(gstNegativeRun.result.status, 'INSUFFICIENT');
 assert.equal(gstNegativeRun.result.applicationStatus, 'NOT_REQUIRED');
+assertNoControlledFixtureMisses(gstPositiveRun, 'GST positive');
+assertNoControlledFixtureMisses(gstNegativeRun, 'GST blocked-input-tax control');
+assert.deepEqual(gstNegativeScenarios.map(scenario => scenario.polarity), [
+  'negative-unregistered-only', 'negative-private-only', 'negative-output-tax-only'
+]);
+assert.equal(/\bdividend/i.test(gstUnregisteredOnlyText), false);
+assert.equal(/\boutput tax\b/i.test(gstPrivateOnlyText), false);
+assert.equal(/\binput tax\b/i.test(gstOutputTaxOnlyText), false);
+for (const [{ polarity }, run] of gstNegativeScenarios.map((scenario, index) => [scenario, gstNegativeRuns[index]])) {
+  assertNoControlledFixtureMisses(run, `GST ${polarity}`);
+  assert.ok(run.requests.some(url => gstUrlsAndTitles.some(([pageUrl]) => pageUrl === url)),
+    `GST ${polarity} requested a mapped synthetic IRAS page.`);
+  const issue = run.result.workstreams.flatMap(workstream => workstream.issues)[0];
+  assert.ok(issue.retrievalTrace?.attempts?.some(attempt => attempt.fetchStatus === 'SUCCESS'),
+    `GST ${polarity} passes actual page-topic transport validation.`);
+  assert.deepEqual(issue.lifecycle, { requested: true, mapped: true, retrievalAttempted: true,
+    evidenceFound: true, admitted: true, verified: false, covered: false });
+  assert.equal(issue.evidenceStatus, 'INSUFFICIENT');
+  assert.equal(issue.verifiedClaims.length, 0);
+  assert.ok(issue.gaps.some(gap => gap.code === 'IRAS_SCOPE_NOT_COVERED'));
+  assert.ok(issue.gaps.some(gap => gap.code === 'NO_VERIFIED_CLAIM'));
+  assert.equal(issue.applicationStatus, 'NOT_REQUIRED');
+  assert.equal(run.result.status, 'INSUFFICIENT');
+  assert.equal(run.result.applicationStatus, 'NOT_REQUIRED');
+}
 console.log(`V4_CONTROLLED_GST ${JSON.stringify({ positive: { lifecycle: gstPositiveIssue.lifecycle,
   evidenceStatus: gstPositiveIssue.evidenceStatus, applicationStatus: gstPositiveIssue.applicationStatus,
   overall: gstPositiveRun.result.status, attempts: gstPositiveIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus) },
   negative: { lifecycle: gstNegativeIssue.lifecycle, evidenceStatus: gstNegativeIssue.evidenceStatus,
     claims: gstNegativeIssue.verifiedClaims.length, stages: gstNegativeIssue.retrievalTrace?.attempts?.map(attempt => attempt.fetchStatus),
     gaps: gstNegativeIssue.gaps.map(gap => gap.code), applicationStatus: gstNegativeIssue.applicationStatus,
-    overall: gstNegativeRun.result.status } })}`);
+    overall: gstNegativeRun.result.status },
+  scopedNegatives: gstNegativeScenarios.map(({ polarity }, index) => ({ polarity, ...observeControlledIrasRun(gstNegativeRuns[index]) })) })}`);
 
-const allFixtureHashes = [...fixtureManifest, ...controlledRuleFixtureBodies.map(({ family, polarity, urls, body }) => ({
-  family, polarity, urls, bodyBytes: Buffer.byteLength(body), synthetic: true,
+function tracedSourcesForMutation(row, run, label) {
+  const expectedIssueId = Object.keys(row.item.governedProductionEvidence.expectedRuleEvidenceByIssue)[0];
+  const { planned, issue } = actualIssueForExpected(row, run.result, expectedIssueId);
+  const records = observedCandidateSubset(row, planned, issue, run);
+  const attempts = issue.retrievalTrace?.attempts || [];
+  const trace = observedSourceSubsetTrace(records, planned.mappedTopicIds, attempts, run.fetchValidationObservations);
+  assert.equal(trace.complete, true, `${label} actual sources bind before mutation: ${trace.reason || 'complete'}`);
+  assert.ok(records.some(record => record.provenance === 'LIVE_EXTERNAL'), `${label} has an actual returned live source.`);
+  return { planned, issue, records, attempts, fetches: run.fetchValidationObservations };
+}
+function assertSourceTraceMutationFails({ planned, issue, records, attempts, fetches }, label, mutation) {
+  const altered = mutation({ planned, issue, records: structuredClone(records),
+    attempts: structuredClone(attempts), fetches: structuredClone(fetches) });
+  const result = observedSourceSubsetTrace(altered.records, planned.mappedTopicIds, altered.attempts, altered.fetches);
+  assert.equal(result.complete, false, `${label} fails closed: ${result.reason || 'incomplete observed binding'}`);
+  return { mutation: label, reason: result.reason };
+}
+const gstTraceInputs = tracedSourcesForMutation(gstRow, gstPositiveRun, 'GST positive source binding');
+const gstLiveRecord = gstTraceInputs.records.find(record => record.provenance === 'LIVE_EXTERNAL');
+const gstLiveTag = gstLiveRecord.tags.find(tag => gstTraceInputs.attempts.some(attempt =>
+  attempt.topicId === tag && attempt.fetchStatus === 'SUCCESS' && attempt.pageTitle === gstLiveRecord.documentTitle));
+assert.ok(gstLiveTag, 'An actual registered live source tag joins to an actual successful sanitized topic/title attempt.');
+const gstMutationResults = [];
+const gstBoundFetch = gstTraceInputs.fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle);
+const identicalDuplicateTrace = observedSourceSubsetTrace(gstTraceInputs.records, gstTraceInputs.planned.mappedTopicIds,
+  gstTraceInputs.attempts, [...gstTraceInputs.fetches, structuredClone(gstBoundFetch)]);
+assert.equal(identicalDuplicateTrace.complete, true,
+  'An identical duplicate of an actual validated fetch remains one unambiguous observed fetch.');
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Duplicate success lacks topic-validation presence', ({ fetches }) => {
+  fetches.push({ ...gstBoundFetch, topicValidationPresent: undefined });
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Duplicate success has false topic-validation presence and content flag', ({ fetches }) => {
+  fetches.push({ ...gstBoundFetch, topicValidationPresent: false, contentMatched: false });
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Duplicate success lacks actual content-validation flag', ({ fetches }) => {
+  const fetch = fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle);
+  fetch.contentMatched = undefined;
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Conflicting final URL for an actual validated title', ({ fetches }) => {
+  const fetch = fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle);
+  fetches.push({ ...fetch, finalUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/conflicting-final-url' });
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Malformed observed request URL', ({ fetches }) => {
+  fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle).url = 'https://[broken.invalid';
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Malformed observed source URL', ({ fetches }) => {
+  fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle).sourceUrl = 'https://%zz.invalid/';
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Missing requested, source, or final URL metadata', ({ fetches }) => {
+  const fetch = fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle);
+  fetch.url = undefined;
+  fetch.sourceUrl = undefined;
+  fetch.finalUrl = undefined;
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Missing page title with matching observed final URL and hash', ({ fetches }) => {
+  const fetch = fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle);
+  fetch.pageTitle = undefined;
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Conflicting page title with matching observed final URL and hash', ({ fetches }) => {
+  const fetch = fetches.find(item => item.pageTitle === gstLiveRecord.documentTitle);
+  fetch.pageTitle = 'Conflicting title | IRAS';
+  return { records: gstTraceInputs.records, attempts: gstTraceInputs.attempts, fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Wrong topic binding in actual success attempt', ({ attempts }) => {
+  const attempt = attempts.find(item => item.topicId === gstLiveTag && item.fetchStatus === 'SUCCESS' &&
+    item.pageTitle === gstLiveRecord.documentTitle);
+  attempt.topicId = 'iras-corporate-tax-residency';
+  return { records: gstTraceInputs.records, attempts, fetches: gstTraceInputs.fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Missing actual source topic tag', ({ records }) => {
+  const record = records.find(item => item.id === gstLiveRecord.id);
+  record.tags = [];
+  return { records, attempts: gstTraceInputs.attempts, fetches: gstTraceInputs.fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Missing matching sanitized success attempt', ({ attempts }) => {
+  return { records: gstTraceInputs.records,
+    attempts: attempts.filter(item => !(item.topicId === gstLiveTag && item.fetchStatus === 'SUCCESS' &&
+      item.pageTitle === gstLiveRecord.documentTitle)), fetches: gstTraceInputs.fetches };
+}));
+gstMutationResults.push(assertSourceTraceMutationFails(gstTraceInputs, 'Returned content hash does not match observed fetch bytes', ({ records }) => {
+  records.find(item => item.id === gstLiveRecord.id).contentHash = '0'.repeat(64);
+  return { records, attempts: gstTraceInputs.attempts, fetches: gstTraceInputs.fetches };
+}));
+const whtTraceInputs = tracedSourcesForMutation(whtRow, whtPositiveRun, 'Withholding-tax positive source binding');
+const whtUpperPath = whtUrlsAndTitles[2][0];
+assert.notEqual(transportUrlIdentity(whtUpperPath), transportUrlIdentity(whtUpperPath.replace('(WHT)', '(wht)')),
+  'Path case stays significant when URL identity normalizes the host.');
+console.log(`V4_OBSERVED_SOURCE_BINDING_MUTATIONS ${JSON.stringify({
+  gst: { sourceIds: gstTraceInputs.records.filter(record => record.provenance === 'LIVE_EXTERNAL').map(record => record.id),
+    attemptCount: gstTraceInputs.attempts.length, fetchCount: gstTraceInputs.fetches.length,
+    identicalDuplicateAccepted: identicalDuplicateTrace.complete, mutations: gstMutationResults },
+  wht: { sourceIds: whtTraceInputs.records.filter(record => record.provenance === 'LIVE_EXTERNAL').map(record => record.id),
+    attemptCount: whtTraceInputs.attempts.length, fetchCount: whtTraceInputs.fetches.length,
+    pathCaseSensitive: true }
+})}`);
+
+const reliefStageRow = semanticRows.find(row => row.item.caseId === 'target-relief-entitlement');
+const reliefMappedMissFixture = syntheticIrasResponse('target-relief-entitlement', 'stage-mapped-url-miss',
+  [mappedReliefUrl], '<html><body>Synthetic mapped URL miss.</body></html>');
+reliefMappedMissFixture.status = 404;
+const reliefStageFixture = syntheticIrasResponse('target-relief-entitlement', 'stage-positive-discovered-page',
+  [discoveredUrl], reliefHtml);
+const reliefStageResponses = withControlledDiscoveryFixtures({
+  [mappedReliefUrl]: reliefMappedMissFixture, [discoveredUrl]: reliefStageFixture
+});
+const reliefStageRun = await runControlledIras(reliefStageRow.item.question, reliefStageRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: reliefStageRow.interpretation }, reliefStageResponses);
+const privateStageRow = semanticRows.find(row => row.item.caseId === 'private-expense-treatment');
+const privateStageFixture = syntheticIrasResponse('private-expense-treatment', 'stage-positive-mapped-page',
+  [fixturePageUrl], mappedHtml);
+const privateStageResponses = withControlledDiscoveryFixtures({ [fixturePageUrl]: privateStageFixture });
+const privateStageRun = await runControlledIras(privateStageRow.item.question, privateStageRow.issuePlan,
+  { mode: 'SEMANTIC_INTERPRETATION', interpretation: privateStageRow.interpretation }, privateStageResponses);
+const reliefStageIssue = actualIssueForExpected(reliefStageRow, reliefStageRun.result, 'personal-cpf-relief').issue;
+assertClaimsBoundToSyntheticResponses(reliefStageIssue, reliefStageResponses, 'CPF relief entitlement stage');
+const privateStageIssue = actualIssueForExpected(privateStageRow, privateStageRun.result,
+  'company-private-expense-tax-treatment').issue;
+const privateStageLiveSourceIds = new Set(privateStageIssue.sources.filter(source => source.provenance === 'LIVE_EXTERNAL')
+  .map(source => source.id));
+assertClaimsBoundToSyntheticResponses(privateStageIssue, privateStageResponses, 'Private-expense stage',
+  claim => privateStageLiveSourceIds.has(claim.recordId));
+const privateStageLocalSection15Claim = privateStageIssue.verifiedClaims.find(claim =>
+  claim.recordId === 'ITA_SEC15_PROHIBITED_DEDUCTIONS');
+assert.equal(privateStageLocalSection15Claim?.quote,
+  UNIFIED_SOURCE_REGISTRY.ITA_SEC15_PROHIBITED_DEDUCTIONS.sourceText);
+assert.match(privateStageLocalSection15Claim.quote, /subject to statutory exceptions/i);
+for (const [label, run] of [
+  ['relief entitlement stage runtime', reliefStageRun], ['private-expense stage runtime', privateStageRun],
+  ['foreign-dividend stage runtime', foreignPositiveRun], ['company-residency stage runtime', residencyPositiveRun],
+  ['withholding-tax stage runtime', whtPositiveRun], ['GST stage runtime', gstPositiveRun],
+  ['CPF relief amount stage runtime', amountRun], ['mixed CPF relief stage runtime', mixedRun]
+]) assertNoControlledFixtureMisses(run, label);
+
+const fullStageRuns = [
+  [reliefStageRow, reliefStageRun], [privateStageRow, privateStageRun], [foreignRow, foreignPositiveRun],
+  [residencyRow, residencyPositiveRun], [whtRow, whtPositiveRun], [gstRow, gstPositiveRun],
+  [amountRow, amountRun], [mixedRow, mixedRun]
+];
+const fullStageObservations = [];
+for (const [row, run] of fullStageRuns) {
+  const score = scoreControlledRuntime(row, run);
+  const stages = score.stages.stages;
+  assert.equal(Object.values(stages).every(value => value === true), true,
+    `Actual API-free runtime passes its intended V4 development stages: ${row.item.caseId} ${JSON.stringify({
+      stages, diagnostics: score.governed.lifecycleDiagnostics, overall: run.result.status
+    })}`);
+  assert.equal(score.application.overallStatus, run.result.status,
+    `${row.item.caseId} application score uses actual runtime overall status.`);
+  fullStageObservations.push({ caseId: row.item.caseId, status: run.result.status,
+    evidenceStatus: run.result.evidenceStatus,
+    applicationStatus: run.result.applicationStatus,
+    lifecycle: score.governedObservations.map(observation => observation.lifecycle),
+    gaps: score.governedObservations.map(observation => observation.gaps || []),
+    inventory: score.governedObservations.map(observation => ({ kind: observation.candidateInventoryKind,
+      countBasis: observation.candidateCountBasis,
+      candidateCount: observation.candidateCount, actualReturnedSourceCount: observation.actualReturnedSourceCount,
+      provenanceCounts: observation.candidateRecordProvenanceCounts,
+      recordIds: observation.observedRecordIds || [],
+      eligibleRecordIds: observation.eligibleRecordIds || [],
+      transportBinding: observation.transportBinding })),
+    stages });
+}
+const unsupportedRow = semanticRows.find(row => row.item.caseId === 'unsupported-sfrsi-6-exploration-evaluation');
+const unsupportedStageRun = { result: unsupportedRuntime,
+  candidateRecordGroups: localCandidateRecordGroups.get(unsupportedRow.item.caseId), fetchValidationObservations: [] };
+const unsupportedStages = scoreControlledRuntime(unsupportedRow, unsupportedStageRun);
+assert.equal(unsupportedStages.governed.expectedNoCoverageTopic, true,
+  'The expected no-coverage observation comes from the actual unsupported issue plan and local-only runtime.');
+assert.equal(Object.values(unsupportedStages.stages.stages).every(value => value === true), true,
+  `Actual unsupported no-route runtime passes its intended V4 stages: ${JSON.stringify({
+    stages: unsupportedStages.stages.stages, governed: unsupportedStages.governed,
+    actualWorkstreams: unsupportedRuntime.workstreams.map(workstream => workstream.authority)
+  })}`);
+fullStageObservations.push({ caseId: unsupportedRow.item.caseId, status: unsupportedRuntime.status,
+  evidenceStatus: unsupportedRuntime.evidenceStatus, applicationStatus: unsupportedRuntime.applicationStatus,
+  noRouteObservation: unsupportedStages.governedObservations,
+  inventory: [{ kind: 'actual_local_only_issue_plan_and_runtime_no_route', candidateCount: 0, recordIds: [] }],
+  stages: unsupportedStages.stages.stages,
+  provenance: 'actual local-only production runtime; no IRAS issue-plan route, mapped topic, candidate, or claim' });
+assert.equal(fullStageObservations.length, 9);
+assert.deepEqual(fullStageObservations.map(item => item.caseId).sort(), [...CASE_IDS].sort(),
+  'The observed full-stage rows cover every frozen case exactly once.');
+assert.equal(fullStageObservations.every(item => Object.values(item.stages).every(value => value === true)), true);
+console.log(`V4_FULL_RUNTIME_STAGES ${JSON.stringify({ integrityScope:
+  'API-free development stage exercise; no live corpus, committed ancestry, or transport-integrity proof',
+  traceScope: 'test-local subset proof derived only from observed through-call records, returned sources, sanitized attempts, and validated fetch observations',
+  cases: fullStageObservations })}`);
+
+const allFixtureHashes = [...fixtureManifest, ...controlledRuleFixtureBodies.map(({ family, polarity, urls, body, type }) => ({
+  family, polarity, urls, contentType: type, bodyBytes: Buffer.byteLength(body), synthetic: true,
   provenance: 'synthetic API-free test body; not live or authoritative IRAS content',
   sha256: createHash('sha256').update(body).digest('hex')
 }))];
 assert.equal(allFixtureHashes.every(item => item.synthetic && /^[a-f0-9]{64}$/.test(item.sha256)), true);
-assert.equal(allFixtureHashes.slice(3).every(item => item.family && item.polarity && item.urls.length && item.provenance), true);
+assert.equal(allFixtureHashes.slice(3).every(item => item.family && item.polarity && item.urls.length && item.contentType && item.bodyBytes > 0 && item.provenance), true);
+for (const [family, polarity] of [
+  ['private-expense-treatment', 'negative-missing-qualification'],
+  ['foreign-dividend-receipt-treatment', 'negative-payer-only'],
+  ['foreign-dividend-receipt-treatment', 'negative-other-income-only'],
+  ['gst-input-tax-general-rule', 'negative-unregistered-only'],
+  ['gst-input-tax-general-rule', 'negative-private-only'],
+  ['gst-input-tax-general-rule', 'negative-output-tax-only']
+]) assert.ok(allFixtureHashes.some(item => item.family === family && item.polarity === polarity),
+  `Fixture manifest contains exact provenance for ${family}/${polarity}.`);
 console.log(`V4_SYNTHETIC_FIXTURE_MANIFEST ${JSON.stringify(allFixtureHashes.slice(3))}`);
 console.log(`V4 API-free contract, local-only runtime, one-use guards, controlled discovery and evidence-gate checks passed (${allFixtureHashes.length} explicitly synthetic fixture hashes).`);

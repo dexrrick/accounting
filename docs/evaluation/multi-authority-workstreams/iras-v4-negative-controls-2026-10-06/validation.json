@@ -1,0 +1,85 @@
+{
+  "date": "06/10/2026",
+  "baselineHead": "25861811d1d4292642e48db05fa45f0eaad023c9",
+  "runtime": "Node.js 22.23.2",
+  "focusedRegression": {
+    "result": "PASS",
+    "exitCode": 0,
+    "sourceLog": ".tmp/v4-negative-review-fixes-final.log",
+    "network": "blocked by preserved preload",
+    "caseCount": 9,
+    "stagesPerCase": 14,
+    "syntheticFixtureCount": 34,
+    "detailedManifestEntries": 31
+  },
+  "lint": {
+    "result": "PASS",
+    "exitCode": 0,
+    "files": [
+      "tests/regression/test_iras_first_targeted_acceptance_v4.mjs",
+      "docs/evaluation/multi-authority-workstreams/iras-v4-negative-controls-2026-10-06/block-external-network.mjs"
+    ],
+    "inheritedWarnings": [
+      "unused sha256 import",
+      "unused ROOT declaration"
+    ]
+  },
+  "protectedHistory": {
+    "result": "PASS",
+    "frozenFingerprintRows": 389,
+    "paths": 221,
+    "checker": "docs/evaluation/multi-authority-workstreams/iras-first-contract-resolution-2026-10-04/check-history.mjs",
+    "scope": "baseline and final supervisor check before subsequent test-only adapter corrections; protected files unchanged afterward"
+  },
+  "diffCheck": "PASS",
+  "independentReview": {
+    "agent": "/root/v4_negative_review",
+    "result": "NO_REMAINING_MATERIAL_FINDINGS",
+    "fixes": [
+      "validate all relevant successful observations before deduplication",
+      "require parsed request/source/final URLs and complete matching attribution"
+    ]
+  },
+  "scope": {
+    "productionChanged": false,
+    "evaluatorChanged": false,
+    "contractJsonChanged": false,
+    "testRegistrationChanged": false,
+    "officialCalls": 0,
+    "liveAcceptance": "HOLD",
+    "freeze": "NOT_PERFORMED",
+    "commit": "NOT_PERFORMED"
+  },
+  "broaderValidation": "Not run: isolated unregistered regression and checkpoint artifacts; no production or TypeScript changes",
+  "usage": {
+    "fiveHourRemainingPercent": 54,
+    "weeklyRemainingPercent": 50,
+    "prepareStopFiveHourPercent": 10,
+    "minimumFiveHourRemainingPercent": 5,
+    "prepareStopWeeklyPercent": 5,
+    "minimumWeeklyRemainingPercent": 2,
+    "resetCreditsUsed": 0
+  },
+  "fileHashes": [
+    {
+      "path": "tests/regression/test_iras_first_targeted_acceptance_v4.mjs",
+      "sha256": "5996f40e050ef9db450d2e7399c010e7e8d148fe09ea706786b71a812c346339"
+    },
+    {
+      "path": "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.mjs",
+      "sha256": "5e681a27380ccda79049b41523800104d7a10d84ed5ccb2b038bdd56a65ecd5b"
+    },
+    {
+      "path": "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.json",
+      "sha256": "f0721dfee27482035c2dfe97891fdd4bf59cee3afc3ecc22acfb89f2694c3063"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-v4-negative-controls-2026-10-06/block-external-network.mjs",
+      "sha256": "60ae7e52510a6e3cbd726fc835c52a490a94967341056c35fa752c99b243d673"
+    },
+    {
+      "path": ".tmp/v4-negative-review-fixes-final.log",
+      "sha256": "f19522fbcbb098b49d92b163145e36b602173fae730c73ea4ab7b8ae550e13cb"
+    }
+  ]
+}
