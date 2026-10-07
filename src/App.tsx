@@ -14,6 +14,7 @@ import { calculateDoubleEntries } from './engine/accountingEngine';
 import { processAccountingQuery, type OutputPreference } from './services/geminiService';
 import { loadProviderSettings, saveProviderSettings, type ProviderSettings } from './types/provider';
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
+import { WorkspaceEmptyState } from './components/WorkspaceEmptyState';
 import { getSingaporeTimestamp } from './utils/dateUtils';
 import { createChatPreview, extractOfficialAnswerLinks } from './utils/chatPresentation';
 import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresentation';
@@ -44,9 +45,9 @@ export const App: React.FC = () => {
     return () => window.clearInterval(timer);
   }, []);
 
-  // Theme Management (Light mode default with YNAB styling, seamless Dark mode toggle)
+  // Theme Management (Dark mode default with light mode toggle)
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('app_theme') as 'light' | 'dark') || 'light';
+    return (localStorage.getItem('app_theme') as 'light' | 'dark') || 'dark';
   });
 
   useEffect(() => {
@@ -181,7 +182,7 @@ export const App: React.FC = () => {
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
 
   return (
-    <div className="min-h-screen bg-[#F4F7FA] dark:bg-[#131A29] text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-workspace-canvas text-workspace-text flex flex-col font-sans transition-colors duration-200">
       {/* App Header */}
       <Header
         theme={theme}
@@ -193,11 +194,14 @@ export const App: React.FC = () => {
       />
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 pb-12 sm:pb-8">
-        {/* Top Grid: Chat on Left, Input Handlers + Journal on Right */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
-          {/* Left Column: Conversational AI Panel (5 cols) */}
-          <div className="lg:col-span-5 h-[580px] sm:h-[680px] lg:h-[750px]">
+      <main className="flex-1 max-w-[1504px] w-full mx-auto px-3 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-10 sm:pb-8 space-y-4 sm:space-y-5">
+        <section className="space-y-1">
+          <h2 className="text-2xl sm:text-[1.65rem] font-semibold tracking-tight text-workspace-text">Accounting workspace</h2>
+          <p className="text-sm sm:text-base text-workspace-muted">Work through transactions, journals, and statutory guidance in one place.</p>
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 items-stretch">
+          <div className="h-[580px] sm:h-[680px] lg:h-[750px]">
             <ChatPanel
               messages={messages}
               onSendMessage={handleSendMessage}
@@ -211,114 +215,116 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* Right Column: Parameters + Journal (7 cols) */}
-          <div className="lg:col-span-7 space-y-5 sm:space-y-6">
-            {/* Structured Parameters Panel */}
-            <InputHandlerPanel
-              scenario={scenario}
-              onScenarioChange={handleScenarioChange}
-              onResetToDefaults={handleResetToDefaults}
-            />
-            {scenario?.imageEvidence && scenario.imageEvidence.length > 0 && <ImageEvidencePanel evidence={scenario.imageEvidence} />}
+          <div className="min-w-0">
+            {scenario ? (
+              <div className="space-y-5 sm:space-y-6">
+                {/* Structured Parameters Panel */}
+                <InputHandlerPanel
+                  scenario={scenario}
+                  onScenarioChange={handleScenarioChange}
+                  onResetToDefaults={handleResetToDefaults}
+                />
+                {scenario?.imageEvidence && scenario.imageEvidence.length > 0 && <ImageEvidencePanel evidence={scenario.imageEvidence} />}
 
-            {/* View Switcher Tabs */}
-            {scenario && (
-              showJournal ||
-              (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
-              hasCurrentIrasEvidencePresentation(scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) ||
-              Boolean(scenario.accountingTreatmentSummary) ||
-              Boolean(scenario.singaporeTaxTreatmentSummary) ||
-              Boolean(scenario.regulatoryMandatesSummary)
-            ) && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-1 sm:gap-2 border-b border-slate-200 dark:border-[#2B374E] bg-white dark:bg-[#1C2538] px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
-                  {showJournal && (
-                    <button
-                      onClick={() => setActiveTab('entries')}
-                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
-                        activeTab === 'entries'
-                          ? 'border-ynab-blue text-ynab-blue dark:border-blue-400 dark:text-blue-400'
-                          : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                      }`}
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      Double Entry Journal
-                    </button>
-                  )}
+                {/* View Switcher Tabs */}
+                {scenario && (
+                  showJournal ||
+                  (scenario.statutoryAdvisory && scenario.statutoryAdvisory.length > 0) ||
+                  hasCurrentIrasEvidencePresentation(scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) ||
+                  Boolean(scenario.accountingTreatmentSummary) ||
+                  Boolean(scenario.singaporeTaxTreatmentSummary) ||
+                  Boolean(scenario.regulatoryMandatesSummary)
+                ) && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-1 sm:gap-2 border-b border-workspace-border dark:border-workspace-border bg-workspace-panel px-2 sm:px-3 pt-2 rounded-t-xl overflow-x-auto no-scrollbar shadow-xs">
+                      {showJournal && (
+                        <button
+                          onClick={() => setActiveTab('entries')}
+                          className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
+                            activeTab === 'entries'
+                              ? 'border-workspace-accent text-workspace-accent-text dark:border-workspace-accent dark:text-workspace-accent-text'
+                              : 'border-transparent text-workspace-muted dark:text-workspace-muted hover:text-slate-800 dark:hover:text-slate-200'
+                          }`}
+                        >
+                          <FileSpreadsheet className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          Double Entry Journal
+                        </button>
+                      )}
 
-                  {showStatutory && <button
-                    onClick={() => setActiveTab('compliance')}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
-                      activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
-                        ? 'border-ynab-blue text-ynab-blue dark:border-blue-400 dark:text-blue-400'
-                        : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                    }`}
-                  >
-                    <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    Statutory Citations & Directives
-                  </button>}
-                </div>
+                      {showStatutory && <button
+                        onClick={() => setActiveTab('compliance')}
+                        className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
+                          activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
+                            ? 'border-workspace-accent text-workspace-accent-text dark:border-workspace-accent dark:text-workspace-accent-text'
+                            : 'border-transparent text-workspace-muted dark:text-workspace-muted hover:text-slate-800 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        <BookCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        Statutory Citations & Directives
+                      </button>}
+                    </div>
 
-                {/* Tab Content */}
-                {activeTab === 'entries' && showJournal && (
-                  <JournalTable
-                    groups={computed.groups}
-                    standard={standard}
-                    functionalCurrency={scenario.functionalCurrency}
-                    assumptions={scenario.assumptions}
-                  />
-                )}
+                    {/* Tab Content */}
+                    {activeTab === 'entries' && showJournal && (
+                      <JournalTable
+                        groups={computed.groups}
+                        standard={standard}
+                        functionalCurrency={scenario.functionalCurrency}
+                        assumptions={scenario.assumptions}
+                      />
+                    )}
 
-                {showStatutory && (activeTab === 'compliance' || !showJournal) && (
-                  <ComplianceRationale
-                    citations={(() => {
-                      const all = [
-                        ...computed.groups.flatMap((g) => g.citations),
-                        ...(scenario.directGroups?.[0]?.citations || [])
-                      ];
-                      const seen = new Set<string>();
-                      return all.filter((c) => {
-                        const k = `${(c.standard || '').toLowerCase()}-${(c.paragraph || '').toLowerCase()}-${(c.officialSourceUrl || '').toLowerCase()}`;
-                        if (seen.has(k)) return false;
-                        seen.add(k);
-                        return true;
-                      });
-                    })()}
-                    advisories={scenario.statutoryAdvisory}
-                    officialAnswerLinks={scenario.officialAnswerLinks}
-                    standard={standard}
-                    classification={scenario.classification}
-                    primaryDomain={scenario.primaryDomain}
-                    assumptions={scenario.assumptions}
-                    accountingTreatmentSummary={scenario.accountingTreatmentSummary}
-                    singaporeTaxTreatmentSummary={scenario.singaporeTaxTreatmentSummary}
-                    regulatoryMandatesSummary={scenario.regulatoryMandatesSummary}
-                    effectiveDateOrTiming={scenario.effectiveDateOrTiming}
-                    uncertaintyDisclaimer={scenario.uncertaintyDisclaimer}
-                    irasEvidencePresentation={scenario.irasEvidencePresentation}
-                    rawQuery={scenario.rawQuery}
-                    queryIntent={scenario.queryIntent}
-                  />
+                    {showStatutory && (activeTab === 'compliance' || !showJournal) && (
+                      <ComplianceRationale
+                        citations={(() => {
+                          const all = [
+                            ...computed.groups.flatMap((g) => g.citations),
+                            ...(scenario.directGroups?.[0]?.citations || [])
+                          ];
+                          const seen = new Set<string>();
+                          return all.filter((c) => {
+                            const k = `${(c.standard || '').toLowerCase()}-${(c.paragraph || '').toLowerCase()}-${(c.officialSourceUrl || '').toLowerCase()}`;
+                            if (seen.has(k)) return false;
+                            seen.add(k);
+                            return true;
+                          });
+                        })()}
+                        advisories={scenario.statutoryAdvisory}
+                        officialAnswerLinks={scenario.officialAnswerLinks}
+                        standard={standard}
+                        classification={scenario.classification}
+                        primaryDomain={scenario.primaryDomain}
+                        assumptions={scenario.assumptions}
+                        accountingTreatmentSummary={scenario.accountingTreatmentSummary}
+                        singaporeTaxTreatmentSummary={scenario.singaporeTaxTreatmentSummary}
+                        regulatoryMandatesSummary={scenario.regulatoryMandatesSummary}
+                        effectiveDateOrTiming={scenario.effectiveDateOrTiming}
+                        uncertaintyDisclaimer={scenario.uncertaintyDisclaimer}
+                        irasEvidencePresentation={scenario.irasEvidencePresentation}
+                        rawQuery={scenario.rawQuery}
+                        queryIntent={scenario.queryIntent}
+                      />
+                    )}
+                  </div>
                 )}
               </div>
+            ) : (
+              <WorkspaceEmptyState />
             )}
           </div>
         </div>
       </main>
       {outputPreference.shareStructure && (
-        <div className="max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pb-12"><ShareTransferCalculator scenario={scenario} /></div>
+        <div className="max-w-[1504px] w-full mx-auto px-3 sm:px-6 lg:px-8 pb-12"><ShareTransferCalculator scenario={scenario} /></div>
       )}
 
-      <div className="fixed right-4 bottom-4 sm:right-6 sm:bottom-6 z-30">
-        <FeedbackDialog messages={messages} scenario={scenario} providerSettings={providerSettings} theme={theme} fontSize={fontSize} outputPreference={outputPreference} />
-      </div>
-
-      {/* Footer */}
-      <footer className="bg-white/80 dark:bg-[#151D2C] border-t border-slate-200 dark:border-[#2B374E] py-4 text-center text-xs text-slate-500 dark:text-slate-400">
-        <div className="max-w-7xl mx-auto px-4">
-        <p>
+            {/* Footer */}
+      <footer className="bg-white/80 dark:bg-workspace-panel border-t border-workspace-border dark:border-workspace-border py-4 text-center text-xs text-workspace-muted dark:text-workspace-muted">
+        <div className="max-w-[1504px] mx-auto flex flex-col items-center justify-between gap-3 px-4 sm:flex-row">
+        <p className="text-center sm:text-left">
           Universal Accounting & Singapore Statutory Engine • Grounded in IRAS, ACRA, CPF Board, MOM, MAS & Singapore Statutes • ECB Spot rates via Frankfurter API
         </p>
+        <FeedbackDialog messages={messages} scenario={scenario} providerSettings={providerSettings} theme={theme} fontSize={fontSize} outputPreference={outputPreference} />
         </div>
       </footer>
     </div>
