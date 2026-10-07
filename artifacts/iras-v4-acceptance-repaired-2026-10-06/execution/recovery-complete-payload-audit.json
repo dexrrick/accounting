@@ -1,0 +1,28 @@
+{
+  "responseCount": 15,
+  "geminiResourceHold": true,
+  "exactFrozenInventoryAndOrderedTimestampsVerified": true,
+  "canonicalBase64AndBodySha256Verified": true,
+  "preserveFailedLauncherResult": true,
+  "frozenAndProtectedHistoricalHashesUnchanged": true,
+  "allFailuresNull": true,
+  "semanticNamespaceAbsent": true,
+  "previous11CaptureUnchanged": true,
+  "profile": "iras-v4-recovery-complete-payload-audit",
+  "disposition": "VALID_ACTUAL_COMPLETE_PAYLOAD_OFFLINE_FINALIZATION_REQUIRED",
+  "familyCounts": {
+    "private-expense": 2,
+    "relief": 2,
+    "withholding-tax": 4,
+    "corporate-residency": 2,
+    "gst": 3,
+    "foreign-income": 2
+  },
+  "journalEqualsPayloadEntries": true,
+  "payloadSha256": "17028b5c5357357c7a0e5d5597f00d6ca545c556b89a73ffe5727b6765d940fc",
+  "sourceFailure": "OPTIONAL_UNDEFINED_PROVENANCE_PROPERTY_OMITTED_BY_JSON_SERIALIZATION",
+  "recoveryCapturedDataMustNotBeReacquired": true,
+  "allHttp200": true,
+  "observedAtUtc": "2026-10-07T15:31:10.7900329Z",
+  "reviewer": "/root/offline_repair_review"
+}

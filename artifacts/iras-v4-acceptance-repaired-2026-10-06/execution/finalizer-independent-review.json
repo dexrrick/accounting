@@ -1,0 +1,18 @@
+{
+  "controls": [
+    "Network blocked before repository imports",
+    "Immutableactualcapture/frozeninputs validated",
+    "All15replayed throughbrandedproductionpath",
+    "Exclusiveexistingevidencelockwriter",
+    "Failedcaptureresultpreserved andcompletionseparatelyrecorded",
+    "Beforeafterhashesbothcapturefolders",
+    "No source requests, Gemini or credential access"
+  ],
+  "semanticLauncherCompletionSupport": "PENDING_LATER_SCOPED_REPAIR",
+  "finalizerSha256": "766fcc4eb49c82e9e04ade312a42ea833709639c39c76c584a5b7b5de6b862ed",
+  "profile": "iras-v4-offline-finalizer-independent-review",
+  "observedAtUtc": "2026-10-07T15:35:06.0022191Z",
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "reviewer": "/root/offline_repair_review",
+  "syntax": "PASS: Node22"
+}
