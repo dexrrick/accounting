@@ -1,0 +1,12 @@
+{
+  "stderr": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/recovery-capture.stderr.log",
+  "profile": "iras-v4-recovery-capture-process",
+  "launchedAtUtc": "2026-10-07T13:35:34.4858461Z",
+  "originalCapturePreserved": true,
+  "purpose": "Authorized reviewed fifteen-request recovery only; no Gemini mode or credential loading",
+  "launcherSha256": "eb54f4a0e148a17babc83a47f445d14f65fa2fd031c09513ee55ef3993af784a",
+  "stdout": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/recovery-capture.stdout.log",
+  "transportRetries": 0,
+  "processId": 35156,
+  "captureDirectory": "artifacts/iras-v4-acceptance-repaired-2026-10-06/official-capture-recovery-2026-10-07"
+}

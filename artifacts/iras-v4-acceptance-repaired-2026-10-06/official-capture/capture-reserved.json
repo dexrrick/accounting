@@ -1,0 +1,11 @@
+{
+  "profile": "iras-v4-runner-integrity",
+  "status": "CAPTURE_RESERVED_NO_RETRY",
+  "synthetic": false,
+  "integrityBindingSha256": "105d00ccce8bc4242c98ccf5480f694ffe966ed3863ba8465c6e755b7085ea50",
+  "preregistrationSha256": "0f6e0e99f7751fb230c39d4172adda9ceb777d97303ba38e5e42c4cf3382a265",
+  "activationConfigurationSha256": "82bbeb0d0922153daab91d2774ca1cc088ddb12d59d21479bd9343b7352f8c7e",
+  "activationConfigurationFileSha256": "b61044862f157a93c4529a054309ade4da03666f96bf6d77111a3e46a53b2c3b",
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "reservedAt": "2026-10-06T15:10:48.184Z"
+}
