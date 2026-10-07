@@ -1,0 +1,16 @@
+{
+  "sourceRequests": 0,
+  "profile": "iras-v4-superseded-offline-freeze",
+  "status": "STOPPED_FOR_REVIEWED_TEST_FIXTURE_REPAIR_NO_DISPATCH",
+  "geminiCalls": 0,
+  "reason": "P2 regression fixture assumes real retry namespace absent; isolate cwd in second temporary directory before freezing",
+  "observedAtUtc": "2026-10-07T16:37:14.4435602Z",
+  "stoppedProcessIds": [
+    15368
+  ],
+  "preservedOutputs": {
+    "runner-configuration.json": "d177d4fff6ad72971047b2dcf13e5bb2c6c144dee5e88f8c65dd34a9fed6e722",
+    "activation-configuration.json": "7addae58277a3376c5af62aa6aa67fbafd42f2672631ff6248d1f454650ae9db",
+    "preregistration.json": "f03225bc51b9c55f427f4f1d7ba1462e8639f8acd95b2f88d3b4e25fb2b84e90"
+  }
+}

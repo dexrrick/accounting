@@ -706,27 +706,35 @@ async function testReviewedSemanticNamespaces() {
     await assert.rejects(stat(path.join(freshPath, 'consumed-v4.json')), { code: 'ENOENT' },
       'namespace mismatch does not create a consumption reservation');
 
-    const cwdRelativeRetryPath = path.resolve(retryNamespace);
-    assert.notEqual(cwdRelativeRetryPath, retryPath);
-    await assert.rejects(stat(cwdRelativeRetryPath), { code: 'ENOENT' },
-      'relative-path fixture starts without a working-directory namespace');
-    await writeFile(runnerConfigurationPath, JSON.stringify({ semanticNamespace: retryNamespace }));
-    await assert.rejects(runBoundedV4SemanticPhase({
-      root,
-      runnerConfigurationPath,
-      preregistrationPath,
-      evidenceLockPath,
-      capturePayloadPath,
-      namespaceDirectory: retryNamespace,
-      authorizedGeminiCalls: 9,
-      sharedAllowanceReader: async () => { allowanceReads += 1; return {}; }
-    }), /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/,
-    'a root-relative namespace that resolves outside the explicit root fails before directory creation');
-    assert.equal(allowanceReads, 0, 'root/cwd mismatch precedes external allowance lookup');
-    await assert.rejects(stat(cwdRelativeRetryPath), { code: 'ENOENT' },
-      'root/cwd mismatch does not create a working-directory namespace');
-    await assert.rejects(stat(path.join(cwdRelativeRetryPath, 'consumed-v4.json')), { code: 'ENOENT' },
-      'root/cwd mismatch does not create a consumption reservation');
+    const originalCwd = process.cwd();
+    const mismatchCwd = await temporaryDirectory('iras-v4-semantic-namespace-cwd-');
+    try {
+      process.chdir(mismatchCwd);
+      const cwdRelativeRetryPath = path.resolve(retryNamespace);
+      assert.notEqual(cwdRelativeRetryPath, retryPath);
+      await assert.rejects(stat(cwdRelativeRetryPath), { code: 'ENOENT' },
+        'isolated relative-path fixture starts without a working-directory namespace');
+      await writeFile(runnerConfigurationPath, JSON.stringify({ semanticNamespace: retryNamespace }));
+      await assert.rejects(runBoundedV4SemanticPhase({
+        root,
+        runnerConfigurationPath,
+        preregistrationPath,
+        evidenceLockPath,
+        capturePayloadPath,
+        namespaceDirectory: retryNamespace,
+        authorizedGeminiCalls: 9,
+        sharedAllowanceReader: async () => { allowanceReads += 1; return {}; }
+      }), /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/,
+      'a root-relative namespace that resolves outside the explicit root fails before directory creation');
+      assert.equal(allowanceReads, 0, 'root/cwd mismatch precedes external allowance lookup');
+      await assert.rejects(stat(cwdRelativeRetryPath), { code: 'ENOENT' },
+        'root/cwd mismatch does not create a working-directory namespace');
+      await assert.rejects(stat(path.join(cwdRelativeRetryPath, 'consumed-v4.json')), { code: 'ENOENT' },
+        'root/cwd mismatch does not create a consumption reservation');
+    } finally {
+      process.chdir(originalCwd);
+      await rm(mismatchCwd, { recursive: true, force: true });
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }
