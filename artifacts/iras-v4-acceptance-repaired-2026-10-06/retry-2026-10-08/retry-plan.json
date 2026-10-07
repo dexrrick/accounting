@@ -1,0 +1,32 @@
+{
+  "profile": "iras-v4-user-authorized-retry-plan",
+  "status": "AUTHORIZED_PREPARATION_EXECUTION_HELD_FOR_REVIEWED_BINDINGS",
+  "userInstruction": "please retry",
+  "authorizationObservedAtUtc": "2026-10-07T16:20:00Z",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-retry-2026-10-08",
+  "artifactRoot": "artifacts/iras-v4-acceptance-repaired-2026-10-06/retry-2026-10-08",
+  "previousConsumedRun": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
+  "previousRunCommit": "f95fae6",
+  "authorizedGeminiCalls": 9,
+  "model": "gemini-3.5-flash-lite",
+  "transportTimeoutMs": 8000,
+  "retries": 0,
+  "providerProbesAuthorized": 0,
+  "approvedSourceRequests": 15,
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "conservativePriorMaximumSourceRequests": 27,
+  "maximumSourceRequestsIncludingRetry": 42,
+  "maximumSourceRequestsPerFamilyIncludingRetry": 10,
+  "originalAuthorizedSourceMaximum": 60,
+  "originalAuthorizedSourceFamilyMaximum": 10,
+  "recaptureReason": "New exact reviewed namespace changes executable fingerprint; immutable prior capture is bound to previous fingerprints and cannot be relabelled.",
+  "requiredBeforeDispatch": [
+    "Scoped namespace addition and serialized-document check reviewed and regression tested",
+    "New frozen committed bindings and reviewed authorization manifest",
+    "Fresh governed source capture and evidence lock",
+    "Fresh allowance observation meeting reviewed projection/reserve",
+    "Independent result review and durable checkpoint"
+  ],
+  "previousRunsMustRemainImmutable": true,
+  "acceptanceProven": false
+}

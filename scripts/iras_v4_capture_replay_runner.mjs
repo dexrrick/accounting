@@ -105,13 +105,16 @@ const MAX_RETAINED_CASE_RESULT_BYTES = 256_000;
 const TRACKED_DIRS = Object.freeze(['src', 'tests/evaluation/singapore', 'tests/regression', 'scripts']);
 const ARTIFACT_NAMESPACE = 'artifacts/iras-v4-runner-integrity-2026-10-06/';
 const FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/iras-v4-acceptance-repaired-2026-10-06/';
+const RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE =
+  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4-retry-2026-10-08';
 const APPROVED_ARTIFACT_NAMESPACES = Object.freeze([
   ARTIFACT_NAMESPACE,
   FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE
 ]);
 const APPROVED_SEMANTIC_NAMESPACES = Object.freeze([
   ARTIFACT_NAMESPACE + 'semantic-run-v4',
-  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4'
+  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4',
+  RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE
 ]);
 let ambientNetworkBlockInProgress = false;
 const explicitTransportNetworkContext = new AsyncLocalStorage();
