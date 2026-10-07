@@ -1,0 +1,13 @@
+{
+  "observedAtUtc": "2026-10-07T15:57:30.5773364Z",
+  "responseCount": 15,
+  "negativeCompletionBindingChecks": true,
+  "initialAttempt": "REJECTED_MISSING_REQUIRED_EXPLICIT_GIT_ENVIRONMENT_NO_DISPATCH",
+  "credentialsRead": false,
+  "status": "PASS",
+  "providerCalls": 0,
+  "profile": "iras-v4-supervisor-recovery-launcher-validation",
+  "mode": "NETWORK_BLOCKED_READ_ONLY_VALIDATE_CAPTURE",
+  "finalValidationExitCode": 0,
+  "launcherSha256": "c3a17c5e444a69cbff2450d74efdbaee1748d755b2705819f04bd4b35585d31e"
+}

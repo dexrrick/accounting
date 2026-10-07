@@ -1,0 +1,725 @@
+{
+  "profile": "iras-first-targeted-acceptance-v4",
+  "status": "BOUNDED_SEMANTIC_PHASE_FAILED",
+  "acceptanceStatus": "FAILED",
+  "synthetic": false,
+  "runnerIntegrityBindingSha256": "105d00ccce8bc4242c98ccf5480f694ffe966ed3863ba8465c6e755b7085ea50",
+  "activationConfigurationSha256": "82bbeb0d0922153daab91d2774ca1cc088ddb12d59d21479bd9343b7352f8c7e",
+  "activationConfigurationFileSha256": "b61044862f157a93c4529a054309ade4da03666f96bf6d77111a3e46a53b2c3b",
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "preregistrationSha256": "0f6e0e99f7751fb230c39d4172adda9ceb777d97303ba38e5e42c4cf3382a265",
+  "evidenceLockSha256": "90cc1009abde67d7c89671c3f2d2306b01862519653bfa3b555ff8dc0896289f",
+  "capturePayloadSha256": "17028b5c5357357c7a0e5d5597f00d6ca545c556b89a73ffe5727b6765d940fc",
+  "rows": [
+    {
+      "caseId": "target-relief-entitlement",
+      "status": "FAILED",
+      "completedAt": "2026-10-07T16:10:03.627Z",
+      "actualResult": {
+        "caseId": "target-relief-entitlement",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true,
+          "issues": [
+            {
+              "id": "issue_1cd7f6be",
+              "subject": "CPF Tiered Contribution Rates by Age",
+              "population": "UNKNOWN",
+              "domain": "CPF_PAYROLL",
+              "governingAuthorities": [
+                "CPF"
+              ],
+              "contextualAuthorities": [],
+              "operation": "OTHER",
+              "mappedTopicIds": [
+                "cpf_contribution_rates"
+              ],
+              "status": "MAPPED"
+            },
+            {
+              "id": "issue_dd7484fc",
+              "subject": "Individual Tax Relief Eligibility; CPF Relief for Employees",
+              "population": "INDIVIDUAL",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "OTHER",
+              "mappedTopicIds": [
+                "iras-individual-reliefs",
+                "iras-individual-cpf-relief"
+              ],
+              "status": "MAPPED"
+            }
+          ]
+        },
+        "semanticUnderstanding": {
+          "mode": "DETERMINISTIC_FALLBACK",
+          "failure": "PROVIDER_ERROR",
+          "sendCount": 1,
+          "transportError": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+        },
+        "layerVerdicts": {
+          "semantic": {
+            "stages": {
+              "SEMANTIC_VALIDATION": false,
+              "SEMANTIC_ISSUE_IDENTITY": false,
+              "SEMANTIC_DIMENSIONS": false,
+              "TOPIC_OWNERSHIP": false,
+              "REQUESTED_CONCEPT_OWNERSHIP": false
+            },
+            "validInterpretation": false,
+            "identityPass": false,
+            "dimensionsPass": false,
+            "specificityPass": false,
+            "matchedIssueCount": 0,
+            "expectedIssueCount": 1,
+            "actualIssueCount": 0,
+            "pairs": [],
+            "topicOwnership": [
+              {
+                "topicId": "iras-individual-cpf-relief",
+                "issueId": "personal-cpf-relief",
+                "contextual": false,
+                "owned": false
+              },
+              {
+                "topicId": "cpf_contribution_rates",
+                "issueId": "personal-cpf-relief",
+                "contextual": true,
+                "owned": false
+              }
+            ],
+            "routingTopicOwnership": [
+              {
+                "topicId": "iras-individual-reliefs",
+                "issueId": "personal-cpf-relief",
+                "childTopicIds": [
+                  "iras-individual-cpf-relief"
+                ],
+                "trustedRoute": false,
+                "suppliedRoute": false,
+                "scopeAgrees": false,
+                "childrenOwned": false,
+                "routingOnly": true,
+                "routeSeparated": true,
+                "owned": false
+              }
+            ],
+            "validatedRoutingTopicIds": [],
+            "independentInventory": {
+              "topicIds": [
+                "cpf_contribution_rates",
+                "iras-individual-cpf-relief",
+                "iras-individual-reliefs"
+              ],
+              "materialTopicIds": [
+                "cpf_contribution_rates",
+                "iras-individual-cpf-relief"
+              ],
+              "routingOnlyTopicIds": [
+                "iras-individual-reliefs"
+              ],
+              "unresolvedTopicTextCount": 0
+            },
+            "unrepresentedInventory": [],
+            "unassignedResidualCount": 0,
+            "conceptOwnership": [
+              {
+                "conceptId": "cpf_relief",
+                "issueId": "personal-cpf-relief",
+                "markerPass": false,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              }
+            ],
+            "subjectAttribution": {
+              "attribution": "SCORING_UNRESOLVED",
+              "modelError": false
+            }
+          },
+          "routing": {
+            "actualPairs": [
+              "CPF/CPF_PAYROLL",
+              "IRAS/IRAS_INDIVIDUAL_TAX"
+            ],
+            "expectedPass": false,
+            "hasIssueOwner": true,
+            "contextualWasRouted": true,
+            "noIrasForUnsupported": true,
+            "passed": false
+          },
+          "local": {
+            "topicStates": {
+              "iras-individual-cpf-relief": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "issueStates": {
+              "personal-cpf-relief": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "authorityStates": {
+              "IRAS": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "passed": true
+          },
+          "governed": {
+            "lifecycleDiagnostics": [
+              {
+                "issueId": "personal-cpf-relief",
+                "expectedStatus": "VERIFIED",
+                "stage": "GOVERNED_RETRIEVAL",
+                "state": "pipeline_failure"
+              }
+            ],
+            "stages": {
+              "GOVERNED_RETRIEVAL": false,
+              "EVIDENCE_ADMISSION": false,
+              "CLAIM_VERIFICATION": false,
+              "REQUESTED_CONCEPT_COVERAGE": false
+            }
+          },
+          "application": {
+            "issueStatuses": {
+              "personal-cpf-relief": {
+                "expected": "UNRESOLVED",
+                "passed": false
+              }
+            },
+            "overallStatus": "INSUFFICIENT",
+            "applicationStatusesPassed": false,
+            "overallAllowed": false,
+            "ruleVerifiedUnresolvedApplicationPreserved": false,
+            "passed": false
+          }
+        },
+        "stageVerdicts": {
+          "SEMANTIC_VALIDATION": false,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false,
+          "WORKSTREAM_ROUTING": false,
+          "LOCAL_CAPABILITY": true,
+          "GOVERNED_RETRIEVAL": false,
+          "EVIDENCE_ADMISSION": false,
+          "CLAIM_VERIFICATION": false,
+          "REQUESTED_CONCEPT_COVERAGE": false,
+          "APPLICATION_STATUS": false,
+          "OVERALL_STATUS": false,
+          "INTEGRITY": true
+        },
+        "firstFailure": "SEMANTIC_VALIDATION",
+        "productionDiagnostics": {
+          "local": {
+            "available": true,
+            "runtimeStatus": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "referenceDate": "2026-10-07",
+            "candidateGroupCount": 2,
+            "candidateGroupRecordCount": 5,
+            "topicObservations": [
+              {
+                "topicId": "iras-individual-cpf-relief",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": true,
+                "substantiveScopeIncomplete": false,
+                "admitted": false,
+                "literalVerified": false,
+                "topicCovered": false,
+                "needsReviewCandidate": false,
+                "candidateCount": 0,
+                "state": "EXPECTED_LOCAL_GAP",
+                "expected": "EXPECTED_LOCAL_GAP"
+              }
+            ],
+            "issues": [
+              {
+                "issueId": "issue_1cd7f6be",
+                "subject": "CPF Tiered Contribution Rates by Age",
+                "authority": "CPF",
+                "domain": "CPF_PAYROLL",
+                "population": "UNKNOWN",
+                "operation": "OTHER",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": true,
+                  "admitted": false,
+                  "verified": false,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "CANDIDATE_REJECTED",
+                  "NO_ADMITTED_EVIDENCE",
+                  "NO_VERIFIED_CLAIM",
+                  "ISSUE_CONCEPT_UNCOVERED"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [],
+                "sources": []
+              },
+              {
+                "issueId": "issue_dd7484fc",
+                "subject": "Individual Tax Relief Eligibility; CPF Relief for Employees",
+                "authority": "IRAS",
+                "domain": "IRAS_INCOME_TAX",
+                "population": "INDIVIDUAL",
+                "operation": "OTHER",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": false,
+                  "admitted": false,
+                  "verified": false,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "NO_CANDIDATE_EVIDENCE",
+                  "IRAS_SCOPE_NOT_COVERED",
+                  "NO_VERIFIED_CLAIM",
+                  "ISSUE_CONCEPT_UNCOVERED",
+                  "ISSUE_CONCEPT_UNCOVERED"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [],
+                "sources": []
+              }
+            ]
+          },
+          "governed": {
+            "available": true,
+            "status": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "workstreams": [
+              {
+                "authority": "CPF",
+                "domain": "CPF_PAYROLL",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_1cd7f6be",
+                    "subject": "CPF Tiered Contribution Rates by Age",
+                    "authority": "CPF",
+                    "domain": "CPF_PAYROLL",
+                    "population": "UNKNOWN",
+                    "operation": "OTHER",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": true,
+                      "retrievalAttempted": true,
+                      "evidenceFound": true,
+                      "admitted": false,
+                      "verified": false,
+                      "covered": false
+                    },
+                    "evidenceStatus": "INSUFFICIENT",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [
+                      "CANDIDATE_REJECTED",
+                      "NO_ADMITTED_EVIDENCE",
+                      "NO_VERIFIED_CLAIM",
+                      "ISSUE_CONCEPT_UNCOVERED"
+                    ],
+                    "retrievalAttempts": [],
+                    "verifiedClaims": [],
+                    "sources": []
+                  }
+                ]
+              },
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_INDIVIDUAL_TAX",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_dd7484fc",
+                    "subject": "Individual Tax Relief Eligibility; CPF Relief for Employees",
+                    "authority": "IRAS",
+                    "domain": "IRAS_INCOME_TAX",
+                    "population": "INDIVIDUAL",
+                    "operation": "OTHER",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": true,
+                      "retrievalAttempted": true,
+                      "evidenceFound": true,
+                      "admitted": true,
+                      "verified": true,
+                      "covered": false
+                    },
+                    "evidenceStatus": "INSUFFICIENT",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [
+                      "ISSUE_CONCEPT_UNCOVERED"
+                    ],
+                    "retrievalAttempts": [
+                      {
+                        "topicId": "iras-individual-cpf-relief",
+                        "fetchStatus": "SUCCESS",
+                        "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees"
+                      }
+                    ],
+                    "verifiedClaims": [
+                      {
+                        "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                        "quote": "Please note that a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including relief on compulsory/voluntary CPF contributions) for each Year of Assessment (YA)."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                        "quote": "CPF Relief is capped by the amount of compulsory employee CPF contributions made on Ordinary Wages and Additional Wages under the CPF Act."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                        "quote": "You may claim CPF Relief for making employee CPF contributions on wages that have not exceeded the Ordinary Wage ceiling and Additional Wage ceiling."
+                      }
+                    ],
+                    "sources": [
+                      {
+                        "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                        "sourceStatus": "NEEDS_REVIEW",
+                        "provenance": "LIVE_EXTERNAL",
+                        "documentTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                        "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                        "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                        "documentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "topLevelGaps": [
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL"
+            ],
+            "candidateGroupCount": 2,
+            "candidateGroupRecordCount": 5,
+            "fetchValidationObservations": [
+              {
+                "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                "sourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                "status": "SUCCESS",
+                "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                "rawContentSha256": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                "rawContentBytes": 290951,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": true,
+                "topicMatched": true,
+                "titleMatched": true,
+                "contentMatched": true
+              }
+            ],
+            "governedIssueObservations": []
+          }
+        }
+      },
+      "resultSha256": "1cd274d64fcb640d35a2dd52cf2942cf427b4119bb297ce03ca33b15e7ded043",
+      "adapterStageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "layerVerdicts": {
+        "semantic": {
+          "stages": {
+            "SEMANTIC_VALIDATION": false,
+            "SEMANTIC_ISSUE_IDENTITY": false,
+            "SEMANTIC_DIMENSIONS": false,
+            "TOPIC_OWNERSHIP": false,
+            "REQUESTED_CONCEPT_OWNERSHIP": false
+          },
+          "validInterpretation": false,
+          "identityPass": false,
+          "dimensionsPass": false,
+          "specificityPass": false,
+          "matchedIssueCount": 0,
+          "expectedIssueCount": 1,
+          "actualIssueCount": 0,
+          "pairs": [],
+          "topicOwnership": [
+            {
+              "topicId": "iras-individual-cpf-relief",
+              "issueId": "personal-cpf-relief",
+              "contextual": false,
+              "owned": false
+            },
+            {
+              "topicId": "cpf_contribution_rates",
+              "issueId": "personal-cpf-relief",
+              "contextual": true,
+              "owned": false
+            }
+          ],
+          "routingTopicOwnership": [
+            {
+              "topicId": "iras-individual-reliefs",
+              "issueId": "personal-cpf-relief",
+              "childTopicIds": [
+                "iras-individual-cpf-relief"
+              ],
+              "trustedRoute": false,
+              "suppliedRoute": false,
+              "scopeAgrees": false,
+              "childrenOwned": false,
+              "routingOnly": true,
+              "routeSeparated": true,
+              "owned": false
+            }
+          ],
+          "validatedRoutingTopicIds": [],
+          "independentInventory": {
+            "topicIds": [
+              "cpf_contribution_rates",
+              "iras-individual-cpf-relief",
+              "iras-individual-reliefs"
+            ],
+            "materialTopicIds": [
+              "cpf_contribution_rates",
+              "iras-individual-cpf-relief"
+            ],
+            "routingOnlyTopicIds": [
+              "iras-individual-reliefs"
+            ],
+            "unresolvedTopicTextCount": 0
+          },
+          "unrepresentedInventory": [],
+          "unassignedResidualCount": 0,
+          "conceptOwnership": [
+            {
+              "conceptId": "cpf_relief",
+              "issueId": "personal-cpf-relief",
+              "markerPass": false,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            }
+          ],
+          "subjectAttribution": {
+            "attribution": "SCORING_UNRESOLVED",
+            "modelError": false
+          }
+        },
+        "routing": {
+          "actualPairs": [
+            "CPF/CPF_PAYROLL",
+            "IRAS/IRAS_INDIVIDUAL_TAX"
+          ],
+          "expectedPass": false,
+          "hasIssueOwner": true,
+          "contextualWasRouted": true,
+          "noIrasForUnsupported": true,
+          "passed": false
+        },
+        "local": {
+          "topicStates": {
+            "iras-individual-cpf-relief": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "issueStates": {
+            "personal-cpf-relief": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "authorityStates": {
+            "IRAS": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "governed": {
+          "lifecycleDiagnostics": [
+            {
+              "issueId": "personal-cpf-relief",
+              "expectedStatus": "VERIFIED",
+              "stage": "GOVERNED_RETRIEVAL",
+              "state": "pipeline_failure"
+            }
+          ],
+          "stages": {
+            "GOVERNED_RETRIEVAL": false,
+            "EVIDENCE_ADMISSION": false,
+            "CLAIM_VERIFICATION": false,
+            "REQUESTED_CONCEPT_COVERAGE": false
+          }
+        },
+        "application": {
+          "issueStatuses": {
+            "personal-cpf-relief": {
+              "expected": "UNRESOLVED",
+              "passed": false
+            }
+          },
+          "overallStatus": "INSUFFICIENT",
+          "applicationStatusesPassed": false,
+          "overallAllowed": false,
+          "ruleVerifiedUnresolvedApplicationPreserved": false,
+          "passed": false
+        }
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "operationalIntegrity": {
+        "passed": true
+      },
+      "firstFailure": "SEMANTIC_TRANSPORT",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "semanticResponseSha256": null,
+      "semanticResponseBytes": null
+    },
+    {
+      "caseId": "target-relief-amount",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.628Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.628Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.629Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.630Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.630Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.631Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.632Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "status": "NOT_RUN_AFTER_PRIOR_FAILURE",
+      "failure": {
+        "stage": "SEMANTIC_TRANSPORT",
+        "code": "V4_SEMANTIC_DEADLINE_EXCEEDED"
+      },
+      "completedAt": "2026-10-07T16:10:03.632Z",
+      "stageVerdicts": {},
+      "firstFailure": "SEMANTIC_TRANSPORT"
+    }
+  ],
+  "callCounts": {
+    "target-relief-entitlement": 1
+  },
+  "firstFailure": "SEMANTIC_TRANSPORT",
+  "replayCacheReuses": [],
+  "unusedReplayResponseCount": 14
+}
