@@ -1,0 +1,19 @@
+{
+  "profile": "iras-v4-recovery-capture-finalization",
+  "status": "CAPTURE_EVIDENCE_LOCKED_SEMANTIC_HELD",
+  "recoveryPlanSha256": "4f6f1012093c4346af6f6fbe285a791bb8142aa1f54a09b64c7c32dc4d7a7e75",
+  "capturePayloadSha256": "17028b5c5357357c7a0e5d5597f00d6ca545c556b89a73ffe5727b6765d940fc",
+  "captureJournalSha256": "4194e5bdcc2e409dbae9f8743e0b6bd2d28c31296b1defb67bd1446ebf3979ca",
+  "captureMarkerSha256": "35d479345d260f3900c4007638f25ad63fd1e544beb15f9c9ed214c94f330aef",
+  "failedCaptureResultSha256": "969581c3d3bb98b4299fbcee0271cc1e61a6c747b35eb465615abfaaf9d021f7",
+  "evidenceLockSha256": "90cc1009abde67d7c89671c3f2d2306b01862519653bfa3b555ff8dc0896289f",
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "captureRequestCount": 15,
+  "successfulReplayLookupCount": 15,
+  "sourceEvidenceExpiresAtUtc": "2026-10-08T13:52:10.340Z",
+  "semanticStatus": "HELD_RESOURCE",
+  "semanticCalls": 0,
+  "providerApiCalls": 0,
+  "networkBlocked": true,
+  "finalizedAtUtc": "2026-10-07T15:42:40.901Z"
+}

@@ -1,0 +1,10 @@
+{
+  "profile": "iras-v4-supervisor-evidence-seal-verification",
+  "observedAtUtc": "2026-10-07T15:48:08.3303980Z",
+  "completionSha256": "c600656f163d60729bd7605874322d74cc0e87d2fa612ea36c8c496ec5c5dd7a",
+  "replayLookups": 15,
+  "geminiCalls": 0,
+  "status": "PASS",
+  "rawHashBindingsVerified": 6,
+  "evidenceExpiresAtUtc": "2026-10-08T13:52:10.34Z"
+}
