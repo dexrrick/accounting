@@ -1,0 +1,9 @@
+{
+  "runtimeValidation": "PENDING_SUPERVISOR_AFTER_COMMIT",
+  "profile": "iras-v4-recovery-launcher-independent-review",
+  "scope": "Exact serialization-failure recovery, pinned completion/inputs, unchanged authorization/resource/freshness gates, offline validation mode",
+  "reviewer": "/root/offline_repair_review",
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "observedAtUtc": "2026-10-07T15:56:52.3182921Z",
+  "launcherSha256": "c3a17c5e444a69cbff2450d74efdbaee1748d755b2705819f04bd4b35585d31e"
+}

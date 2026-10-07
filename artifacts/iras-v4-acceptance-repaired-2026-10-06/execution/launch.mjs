@@ -1,6 +1,6 @@
 // One-shot launcher for the reviewed fresh IRAS capture and nine-case semantic run.
-// --check is offline, read-only, and never inspects credentials. Capture and semantic
-// modes require the reviewed checkout, exact authorization, and the frozen inputs.
+// --check and --validate-capture are offline/read-only and never inspect credentials.
+// Capture and semantic modes require the reviewed checkout, exact authorization, and frozen inputs.
 
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
@@ -29,6 +29,10 @@ const AUTHORIZATION_PATH = `${EXECUTION}/authorization.json`;
 const RESOURCE_PROJECTION_PATH = `${EXECUTION}/resource-projection.json`;
 const RESOURCE_REVIEW_PATH = `${EXECUTION}/resource-authorization-review.json`;
 const RECOVERY_PLAN_PATH = `${EXECUTION}/capture-recovery-plan.json`;
+const RECOVERY_FINALIZER_PATH = `${EXECUTION}/finalize-recovery.mjs`;
+const RECOVERY_COMPLETION_PATH = `${EXECUTION}/capture-recovery-completion.json`;
+const RECOVERY_PAYLOAD_AUDIT_PATH = `${EXECUTION}/recovery-complete-payload-audit.json`;
+const RECOVERY_SEAL_PATH = `${EXECUTION}/supervisor-evidence-seal-verification.json`;
 const CAPTURE_OUTPUTS = Object.freeze({
   marker: `${CAPTURE}/capture-reserved.json`,
   journal: `${CAPTURE}/capture-partial.jsonl`,
@@ -39,6 +43,12 @@ const CAPTURE_OUTPUTS = Object.freeze({
 const MODEL = 'gemini-3.5-flash-lite';
 const EXPECTED_FREEZE_VALIDATION_SHA256 = 'c381c4728cdd1ae0788576e938114109c6c1314b4738c4c3e16e16dbc7d99ec1';
 const EXPECTED_AUTHORIZATION_REQUEST_SHA256 = 'aab2a82dc05d53d2a2e5b07c4ecec092085fbbc47ba526b1c8a7166e9be6e0b0';
+const EXPECTED_RECOVERY_COMPLETION_SHA256 = 'c600656f163d60729bd7605874322d74cc0e87d2fa612ea36c8c496ec5c5dd7a';
+const EXPECTED_RECOVERY_FINALIZER_SHA256 = '766fcc4eb49c82e9e04ade312a42ea833709639c39c76c584a5b7b5de6b862ed';
+const EXPECTED_INTERRUPTED_CAPTURE_LAUNCHER_SHA256 = 'eb54f4a0e148a17babc83a47f445d14f65fa2fd031c09513ee55ef3993af784a';
+const EXPECTED_RECOVERY_PAYLOAD_AUDIT_SHA256 = '422cdfa6862fa955b0fb0aee4936bebc3387ad058a3b2eee22022dcb45fa7c00';
+const EXPECTED_RECOVERY_SEAL_SHA256 = '8c30fa2d4c27a5f48f279ce266c98dbe295d955e7085ad4ea388afa85f2532e7';
+const NETWORK_BLOCKER_PATH = 'docs/evaluation/multi-authority-workstreams/iras-v4-negative-controls-2026-10-06/block-external-network.mjs';
 const FROZEN_BINDINGS = Object.freeze({
   [RUNNER_PATH]: 'c28d78859dce8ab2907ee50baddf5f4b424ed2328ccf6cbee4115a9bd9eaf078',
   [PREREGISTRATION_PATH]: '0f6e0e99f7751fb230c39d4172adda9ceb777d97303ba38e5e42c4cf3382a265',
@@ -56,7 +66,10 @@ const EXECUTION_INPUTS = Object.freeze([
   AUTHORIZATION_PATH,
   RESOURCE_PROJECTION_PATH,
   RESOURCE_REVIEW_PATH,
-  RECOVERY_PLAN_PATH
+  RECOVERY_PLAN_PATH,
+  RECOVERY_FINALIZER_PATH,
+  RECOVERY_PAYLOAD_AUDIT_PATH,
+  RECOVERY_SEAL_PATH
 ]);
 const CAPTURE_FAILURE_CODE_RE = /^[A-Z][A-Z0-9_:-]{0,119}$/;
 const sha256 = value => createHash('sha256').update(value).digest('hex');
@@ -67,7 +80,7 @@ const codedError = code => Object.assign(new Error(code), { code });
 function parseMode(args) {
   assert.ok(Array.isArray(args) && args.length <= 1, 'INVALID_LAUNCH_ARGUMENTS');
   const argument = args[0] || '--check';
-  assert.ok(['--check', '--capture', '--semantic'].includes(argument), 'INVALID_LAUNCH_ARGUMENTS');
+  assert.ok(['--check', '--capture', '--semantic', '--validate-capture'].includes(argument), 'INVALID_LAUNCH_ARGUMENTS');
   return argument.slice(2);
 }
 
@@ -137,11 +150,15 @@ async function assertPresentFile(relative) {
 
 async function loadPreparedContext() {
   const launcherBytes = await readRaw(LAUNCHER_PATH);
+  const recoveryFinalizerBytes = await readRaw(RECOVERY_FINALIZER_PATH);
+  assert.equal(sha256(recoveryFinalizerBytes), EXPECTED_RECOVERY_FINALIZER_SHA256,
+    'RECOVERY_FINALIZER_HASH_MISMATCH');
   const [runner, preregistration, activation, freezeValidation, authorizationRequest, authorization,
-    resourceProjection, resourceReview, recoveryPlan] = await Promise.all([
+    resourceProjection, resourceReview, recoveryPlan, recoveryPayloadAudit, recoverySeal] = await Promise.all([
     readJson(RUNNER_PATH), readJson(PREREGISTRATION_PATH), readJson(ACTIVATION_PATH),
     readJson(FREEZE_VALIDATION_PATH), readJson(AUTHORIZATION_REQUEST_PATH), readJson(AUTHORIZATION_PATH),
-    readJson(RESOURCE_PROJECTION_PATH), readJson(RESOURCE_REVIEW_PATH), readJson(RECOVERY_PLAN_PATH)
+    readJson(RESOURCE_PROJECTION_PATH), readJson(RESOURCE_REVIEW_PATH), readJson(RECOVERY_PLAN_PATH),
+    readJson(RECOVERY_PAYLOAD_AUDIT_PATH), readJson(RECOVERY_SEAL_PATH)
   ]);
   assert.equal(runner.sha256, FROZEN_BINDINGS[RUNNER_PATH], 'FROZEN_RUNNER_RAW_HASH_MISMATCH');
   assert.equal(preregistration.sha256, FROZEN_BINDINGS[PREREGISTRATION_PATH], 'FROZEN_PREREGISTRATION_RAW_HASH_MISMATCH');
@@ -268,6 +285,19 @@ async function loadPreparedContext() {
     recovery.previousReservedMarkerSha256, 'RECOVERY_PREVIOUS_MARKER_HASH_MISMATCH');
   assert.equal(sha256(await readRaw(`${PREVIOUS_CAPTURE}/capture-partial.jsonl`)),
     recovery.previousJournalSha256, 'RECOVERY_PREVIOUS_JOURNAL_HASH_MISMATCH');
+  assert.equal(recoveryPayloadAudit.sha256, EXPECTED_RECOVERY_PAYLOAD_AUDIT_SHA256);
+  assert.equal(recoveryPayloadAudit.value.payloadSha256, '17028b5c5357357c7a0e5d5597f00d6ca545c556b89a73ffe5727b6765d940fc');
+  assert.equal(recoveryPayloadAudit.value.responseCount, 15);
+  assert.equal(recoveryPayloadAudit.value.allFailuresNull, true);
+  assert.equal(recoveryPayloadAudit.value.journalEqualsPayloadEntries, true);
+  assert.equal(recoveryPayloadAudit.value.previous11CaptureUnchanged, true);
+  assert.equal(recoverySeal.sha256, EXPECTED_RECOVERY_SEAL_SHA256);
+  assert.equal(recoverySeal.value.profile, 'iras-v4-supervisor-evidence-seal-verification');
+  assert.equal(recoverySeal.value.status, 'PASS');
+  assert.equal(recoverySeal.value.completionSha256, EXPECTED_RECOVERY_COMPLETION_SHA256);
+  assert.equal(recoverySeal.value.rawHashBindingsVerified, 6);
+  assert.equal(recoverySeal.value.replayLookups, 15);
+  assert.equal(recoverySeal.value.geminiCalls, 0);
 
   const hashes = Object.freeze({
     [LAUNCHER_PATH]: sha256(launcherBytes),
@@ -279,7 +309,10 @@ async function loadPreparedContext() {
     [AUTHORIZATION_PATH]: authorization.sha256,
     [RESOURCE_PROJECTION_PATH]: resourceProjection.sha256,
     [RESOURCE_REVIEW_PATH]: resourceReview.sha256,
-    [RECOVERY_PLAN_PATH]: recoveryPlan.sha256
+    [RECOVERY_PLAN_PATH]: recoveryPlan.sha256,
+    [RECOVERY_FINALIZER_PATH]: sha256(recoveryFinalizerBytes),
+    [RECOVERY_PAYLOAD_AUDIT_PATH]: recoveryPayloadAudit.sha256,
+    [RECOVERY_SEAL_PATH]: recoverySeal.sha256
   });
   return Object.freeze({
     launcherSha256: hashes[LAUNCHER_PATH],
@@ -295,7 +328,11 @@ async function loadPreparedContext() {
     resourceProjectionSha256: resourceProjection.sha256,
     resourceReviewSha256: resourceReview.sha256,
     freezeValidationSha256: freezeValidation.sha256,
-    captureInventory: activation.value.captureInventory
+    captureInventory: activation.value.captureInventory,
+    recoveryPlan: recovery,
+    recoveryPlanSha256: recoveryPlan.sha256,
+    recoveryPayloadAudit: recoveryPayloadAudit.value,
+    recoverySeal: recoverySeal.value
   });
 }
 
@@ -683,6 +720,34 @@ async function sharedAllowanceReader(context) {
   return gates.allowance;
 }
 
+function assertRecoveryCompletionBindings(completion, expected) {
+  assert.equal(completion.profile, 'iras-v4-recovery-capture-finalization');
+  assert.equal(completion.status, 'CAPTURE_EVIDENCE_LOCKED_SEMANTIC_HELD');
+  for (const field of ['recoveryPlanSha256', 'capturePayloadSha256', 'captureJournalSha256', 'captureMarkerSha256',
+    'failedCaptureResultSha256', 'evidenceLockSha256', 'captureInventorySha256']) {
+    assert.equal(completion[field], expected[field], `RECOVERY_COMPLETION_BINDING_MISMATCH:${field}`);
+  }
+  assert.equal(completion.captureRequestCount, 15);
+  assert.equal(completion.successfulReplayLookupCount, 15);
+  assert.equal(completion.semanticStatus, 'HELD_RESOURCE');
+  assert.equal(completion.semanticCalls, 0);
+  assert.equal(completion.providerApiCalls, 0);
+  assert.equal(completion.networkBlocked, true);
+  assert.equal(completion.sourceEvidenceExpiresAtUtc,
+    new Date(Date.parse(expected.earliestAcquisitionAt) + 24 * 60 * 60_000).toISOString());
+  assert.ok(Number.isFinite(Date.parse(completion.finalizedAtUtc)), 'RECOVERY_COMPLETION_TIMESTAMP_INVALID');
+}
+
+function assertRecoveryCompletionRejectsTampering(completion, expected) {
+  for (const mutation of [
+    { capturePayloadSha256: '0'.repeat(64) },
+    { failedCaptureResultSha256: 'f'.repeat(64) },
+    { captureInventorySha256: '0'.repeat(64) },
+    { successfulReplayLookupCount: 14 },
+    { networkBlocked: false }
+  ]) assert.throws(() => assertRecoveryCompletionBindings({ ...completion, ...mutation }, expected));
+}
+
 async function validateCapturedEvidence(runner, context) {
   for (const relative of [CAPTURE_OUTPUTS.marker, CAPTURE_OUTPUTS.journal, CAPTURE_OUTPUTS.payload,
     CAPTURE_OUTPUTS.evidenceLock, CAPTURE_OUTPUTS.result]) await assertPresentFile(relative);
@@ -693,22 +758,34 @@ async function validateCapturedEvidence(runner, context) {
   ]);
   const report = captureResult.value;
   assert.equal(report.profile, 'iras-v4-fresh-capture-launch-result');
-  assert.equal(report.status, 'CAPTURED_AND_LOCKED', 'FRESH_CAPTURE_NOT_SUCCESSFULLY_LOCKED');
   assert.equal(report.executionMode, 'BOUNDED_OFFICIAL_IRAS_CAPTURE_ONLY');
-  assert.equal(report.launcherSha256, context.launcherSha256, 'CAPTURE_LAUNCHER_BINDING_MISMATCH');
   assert.equal(report.authorizationSha256, context.authorizationSha256, 'CAPTURE_AUTHORIZATION_BINDING_MISMATCH');
   assert.equal(report.resourceProjectionSha256, context.resourceProjectionSha256, 'CAPTURE_PROJECTION_BINDING_MISMATCH');
   assert.equal(report.resourceReviewSha256, context.resourceReviewSha256, 'CAPTURE_REVIEW_BINDING_MISMATCH');
   assert.equal(report.freezeValidationSha256, context.freezeValidationSha256, 'CAPTURE_FREEZE_BINDING_MISMATCH');
-  assert.equal(report.captureInventorySha256, context.authorization.captureInventorySha256);
+  assert.equal(report.reviewedCommit, REVIEWED_COMMIT);
   assert.equal(report.semanticNamespace, SEMANTIC_NAMESPACE);
-  assert.equal(report.semanticCalls, 0);
   assert.equal(report.providerCredentialRead, false);
-  assert.equal(report.requestCount, 15);
-  assert.equal(report.planRows?.length, 15);
-  assert.ok(report.planRows.every(row => row.status === 'SUCCESS'), 'FRESH_CAPTURE_PLAN_NOT_COMPLETE');
-  assert.equal(report.capturePayloadSha256, payloadRead.sha256, 'CAPTURE_RESULT_PAYLOAD_HASH_MISMATCH');
-  assert.equal(report.evidenceLockSha256, lockRead.sha256, 'CAPTURE_RESULT_LOCK_HASH_MISMATCH');
+  let recoveryCompletion = null;
+  if (report.status === 'CAPTURED_AND_LOCKED') {
+    assert.equal(report.launcherSha256, context.launcherSha256, 'CAPTURE_LAUNCHER_BINDING_MISMATCH');
+    assert.equal(report.captureInventorySha256, context.authorization.captureInventorySha256);
+    assert.equal(report.semanticCalls, 0);
+    assert.equal(report.requestCount, 15);
+    assert.equal(report.planRows?.length, 15);
+    assert.ok(report.planRows.every(row => row.status === 'SUCCESS'), 'FRESH_CAPTURE_PLAN_NOT_COMPLETE');
+    assert.equal(report.capturePayloadSha256, payloadRead.sha256, 'CAPTURE_RESULT_PAYLOAD_HASH_MISMATCH');
+    assert.equal(report.evidenceLockSha256, lockRead.sha256, 'CAPTURE_RESULT_LOCK_HASH_MISMATCH');
+  } else {
+    assert.equal(report.status, 'FAILED_NO_AUTOMATIC_RETRY', 'FRESH_CAPTURE_NOT_SUCCESSFULLY_LOCKED');
+    assert.equal(report.phase, 'CAPTURE_PAYLOAD_VALIDATION', 'RECOVERY_CAPTURE_FAILURE_PHASE_MISMATCH');
+    assert.equal(report.failureCode, 'CAPTURE_PAYLOAD_DOCUMENT_MISMATCH', 'RECOVERY_CAPTURE_FAILURE_NOT_APPROVED');
+    assert.equal(report.launcherSha256, EXPECTED_INTERRUPTED_CAPTURE_LAUNCHER_SHA256,
+      'RECOVERY_ORIGINAL_CAPTURE_LAUNCHER_MISMATCH');
+    recoveryCompletion = await readJson(RECOVERY_COMPLETION_PATH);
+    assert.equal(recoveryCompletion.sha256, EXPECTED_RECOVERY_COMPLETION_SHA256,
+      'RECOVERY_COMPLETION_RAW_HASH_MISMATCH');
+  }
   const payloadValidation = runner.validateCapturePayload(payloadRead.value, {
     now: new Date(),
     expectedIntegrityBindingSha256: context.runnerConfiguration.integrityBindingSha256,
@@ -726,11 +803,55 @@ async function validateCapturedEvidence(runner, context) {
     'EVIDENCE_LOCK_PREREGISTRATION_MISMATCH');
   assert.equal(lockRead.value.runnerIntegrityBindingSha256, context.runnerConfiguration.integrityBindingSha256,
     'EVIDENCE_LOCK_RUNNER_BINDING_MISMATCH');
+  assert.equal(lockRead.value.capturePayloadSha256, payloadRead.sha256, 'EVIDENCE_LOCK_PAYLOAD_HASH_MISMATCH');
+  assert.equal(lockRead.value.captureInventorySha256, context.authorization.captureInventorySha256,
+    'EVIDENCE_LOCK_INVENTORY_MISMATCH');
   const captureTime = Date.parse(payloadValidation.earliestAcquisitionAt);
   assert.ok(Number.isFinite(captureTime) && captureTime <= Date.now() && Date.now() - captureTime < 24 * 60 * 60_000,
     'FRESH_CAPTURE_EXPIRED');
+  let recoveryCompletionSha256 = null;
+  if (recoveryCompletion) {
+    const plan = context.recoveryPlan;
+    const journalBytes = await readRaw(CAPTURE_OUTPUTS.journal);
+    const markerSha256 = sha256(await readRaw(CAPTURE_OUTPUTS.marker));
+    const journalSha256 = sha256(journalBytes);
+    const journalEntries = journalBytes.toString('utf8').trim().split(/\r?\n/).map(line => JSON.parse(line));
+    assert.deepEqual(journalEntries, payloadRead.value.entries, 'RECOVERY_CAPTURE_JOURNAL_MISMATCH');
+    assert.equal(payloadRead.value.captureStatus, 'COMPLETE');
+    assert.equal(payloadRead.value.synthetic, false);
+    assert.equal(payloadRead.value.entries.length, 15);
+    const inventory = context.captureInventory.filter(row => row.purpose !== 'REDIRECT');
+    assert.equal(inventory.length, 15);
+    for (let index = 0; index < inventory.length; index += 1) {
+      const wanted = inventory[index], entry = payloadRead.value.entries[index];
+      assert.deepEqual(entry.request, { family: wanted.family, url: wanted.url, method: wanted.method, headers: wanted.headers });
+      assert.equal(entry.inventoryPurpose, wanted.purpose);
+      assert.equal(entry.actualUrl, wanted.url);
+      assert.equal(entry.status, 200);
+      assert.equal(entry.failure, null);
+    }
+    const previousMarkerSha256 = sha256(await readRaw(`${PREVIOUS_CAPTURE}/capture-reserved.json`));
+    const previousJournalBytes = await readRaw(`${PREVIOUS_CAPTURE}/capture-partial.jsonl`);
+    assert.equal(previousMarkerSha256, plan.previousReservedMarkerSha256, 'RECOVERY_PREVIOUS_MARKER_CHANGED');
+    assert.equal(sha256(previousJournalBytes), plan.previousJournalSha256, 'RECOVERY_PREVIOUS_JOURNAL_CHANGED');
+    assert.equal(previousJournalBytes.toString('utf8').trim().split(/\r?\n/).length, plan.retainedResponseCount);
+    const completion = recoveryCompletion.value;
+    const expected = {
+      recoveryPlanSha256: context.recoveryPlanSha256,
+      capturePayloadSha256: payloadRead.sha256,
+      captureJournalSha256: journalSha256,
+      captureMarkerSha256: markerSha256,
+      failedCaptureResultSha256: captureResult.sha256,
+      evidenceLockSha256: lockRead.sha256,
+      captureInventorySha256: context.authorization.captureInventorySha256,
+      earliestAcquisitionAt: payloadValidation.earliestAcquisitionAt
+    };
+    assertRecoveryCompletionBindings(completion, expected);
+    assertRecoveryCompletionRejectsTampering(completion, expected);
+    recoveryCompletionSha256 = recoveryCompletion.sha256;
+  }
   return Object.freeze({ report, captureResultSha256: captureResult.sha256, payloadSha256: payloadRead.sha256,
-    evidenceLockSha256: lockRead.sha256 });
+    evidenceLockSha256: lockRead.sha256, recoveryCompletionSha256 });
 }
 
 async function runSemantic(context) {
@@ -746,6 +867,10 @@ async function runSemantic(context) {
     activationConfigurationPath: abs(ACTIVATION_PATH), root: ROOT, gitExecutable: GIT
   });
   await assertContextStable(context);
+  if (capture.recoveryCompletionSha256) {
+    assert.equal(sha256(await readRaw(RECOVERY_COMPLETION_PATH)), capture.recoveryCompletionSha256,
+      'RECOVERY_COMPLETION_CHANGED_DURING_PREFLIGHT');
+  }
   logPhase('FROZEN_EXECUTION_CAPABILITY_VALIDATION', 'PASSED');
 
   logPhase('SEMANTIC_ACCEPTANCE', 'STARTED', { authorizedCalls: 9, retries: 0, model: MODEL });
@@ -777,12 +902,37 @@ async function runSemantic(context) {
   });
 }
 
+async function validateCaptureMode(context) {
+  const checkout = await assertExecutionCheckout(context);
+  await assertSemanticNamespaceAbsent();
+  await assertContextStable(context);
+  logPhase('OFFLINE_RECOVERY_CAPTURE_VALIDATION', 'STARTED', { head: checkout.head });
+  await import(pathToFileURL(abs(NETWORK_BLOCKER_PATH)).href);
+  const runner = await import(pathToFileURL(abs('scripts/iras_v4_capture_replay_runner.mjs')).href);
+  const capture = await validateCapturedEvidence(runner, context);
+  assert.ok(capture.recoveryCompletionSha256, 'RECOVERY_COMPLETION_REQUIRED');
+  await assertContextStable(context);
+  assert.equal(sha256(await readRaw(RECOVERY_COMPLETION_PATH)), capture.recoveryCompletionSha256,
+    'RECOVERY_COMPLETION_CHANGED_DURING_VALIDATION');
+  logPhase('OFFLINE_RECOVERY_CAPTURE_VALIDATION', 'PASSED', {
+    completionSha256: capture.recoveryCompletionSha256,
+    capturePayloadSha256: capture.payloadSha256,
+    evidenceLockSha256: capture.evidenceLockSha256,
+    requestCount: 15,
+    replayLookups: context.recoverySeal.replayLookups,
+    providerApiCalls: 0,
+    networkBlocked: true,
+    negativeCompletionBindingChecks: true
+  });
+}
+
 async function main() {
   const mode = parseMode(process.argv.slice(2));
   if (mode === 'check') return await checkMode();
   logPhase('PRELAUNCH_BINDING_CHECK', 'STARTED', { mode });
   const context = await loadPreparedContext();
   await assertContextStable(context);
+  if (mode === 'validate-capture') return await validateCaptureMode(context);
   if (mode === 'capture') await runCapture(context);
   else await runSemantic(context);
 }
