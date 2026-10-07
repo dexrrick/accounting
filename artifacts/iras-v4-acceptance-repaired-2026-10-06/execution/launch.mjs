@@ -16,7 +16,8 @@ const BRANCH = 'codex/multi-authority-workstreams';
 const ARTIFACT_ROOT = 'artifacts/iras-v4-acceptance-repaired-2026-10-06';
 const PREPARATION = `${ARTIFACT_ROOT}/preparation`;
 const EXECUTION = `${ARTIFACT_ROOT}/execution`;
-const CAPTURE = `${ARTIFACT_ROOT}/official-capture`;
+const PREVIOUS_CAPTURE = `${ARTIFACT_ROOT}/official-capture`;
+const CAPTURE = `${ARTIFACT_ROOT}/official-capture-recovery-2026-10-07`;
 const SEMANTIC_NAMESPACE = `${ARTIFACT_ROOT}/semantic-run-v4`;
 const LAUNCHER_PATH = `${EXECUTION}/launch.mjs`;
 const RUNNER_PATH = `${PREPARATION}/runner-configuration.json`;
@@ -27,6 +28,7 @@ const AUTHORIZATION_REQUEST_PATH = `${PREPARATION}/authorization-request.json`;
 const AUTHORIZATION_PATH = `${EXECUTION}/authorization.json`;
 const RESOURCE_PROJECTION_PATH = `${EXECUTION}/resource-projection.json`;
 const RESOURCE_REVIEW_PATH = `${EXECUTION}/resource-authorization-review.json`;
+const RECOVERY_PLAN_PATH = `${EXECUTION}/capture-recovery-plan.json`;
 const CAPTURE_OUTPUTS = Object.freeze({
   marker: `${CAPTURE}/capture-reserved.json`,
   journal: `${CAPTURE}/capture-partial.jsonl`,
@@ -53,7 +55,8 @@ const EXECUTION_INPUTS = Object.freeze([
   AUTHORIZATION_REQUEST_PATH,
   AUTHORIZATION_PATH,
   RESOURCE_PROJECTION_PATH,
-  RESOURCE_REVIEW_PATH
+  RESOURCE_REVIEW_PATH,
+  RECOVERY_PLAN_PATH
 ]);
 const CAPTURE_FAILURE_CODE_RE = /^[A-Z][A-Z0-9_:-]{0,119}$/;
 const sha256 = value => createHash('sha256').update(value).digest('hex');
@@ -135,10 +138,10 @@ async function assertPresentFile(relative) {
 async function loadPreparedContext() {
   const launcherBytes = await readRaw(LAUNCHER_PATH);
   const [runner, preregistration, activation, freezeValidation, authorizationRequest, authorization,
-    resourceProjection, resourceReview] = await Promise.all([
+    resourceProjection, resourceReview, recoveryPlan] = await Promise.all([
     readJson(RUNNER_PATH), readJson(PREREGISTRATION_PATH), readJson(ACTIVATION_PATH),
     readJson(FREEZE_VALIDATION_PATH), readJson(AUTHORIZATION_REQUEST_PATH), readJson(AUTHORIZATION_PATH),
-    readJson(RESOURCE_PROJECTION_PATH), readJson(RESOURCE_REVIEW_PATH)
+    readJson(RESOURCE_PROJECTION_PATH), readJson(RESOURCE_REVIEW_PATH), readJson(RECOVERY_PLAN_PATH)
   ]);
   assert.equal(runner.sha256, FROZEN_BINDINGS[RUNNER_PATH], 'FROZEN_RUNNER_RAW_HASH_MISMATCH');
   assert.equal(preregistration.sha256, FROZEN_BINDINGS[PREREGISTRATION_PATH], 'FROZEN_PREREGISTRATION_RAW_HASH_MISMATCH');
@@ -229,6 +232,43 @@ async function loadPreparedContext() {
   assert.equal(resourceReview.value.quotaSource,
     'Current explicit human confirmation; no provider probe or new numerical capacity inferred');
 
+  const recovery = recoveryPlan.value;
+  assert.equal(recovery.profile, 'iras-v4-interrupted-capture-recovery');
+  assert.equal(recovery.status, 'INDEPENDENTLY_REVIEWED_AUTHORIZED_RECOVERY');
+  assert.equal(recovery.semanticNamespace, SEMANTIC_NAMESPACE);
+  assert.equal(recovery.previousCaptureDirectory, PREVIOUS_CAPTURE);
+  assert.equal(recovery.recoveryCaptureDirectory, CAPTURE);
+  assert.equal(recovery.previousReservedNamespaceMustNotBeReused, true);
+  assert.equal(recovery.captureInventorySha256, activation.value.captureInventorySha256);
+  assert.equal(recovery.transportRetries, 0);
+  assert.equal(recovery.missingFamily, 'withholding-tax');
+  assert.equal(recovery.missingRequestCount, 4);
+  assert.equal(recovery.retainedResponsesAllHttp200, true);
+  assert.equal(recovery.previousCaptureProcessRunning, false);
+  assert.equal(recovery.terminationCause, 'UNDETERMINED_NO_COMPLETE_PAYLOAD_OR_EVIDENCE_LOCK');
+  assert.equal(recovery.originalMaximumRequests, 60);
+  assert.equal(recovery.originalMaximumRequestsPerFamily, 10);
+  assert.equal(recovery.retainedResponseCount, 11);
+  assert.equal(recovery.maximumUnresolvedPreviousRequests, 1);
+  assert.equal(recovery.freshApprovedRequestCount, activation.value.captureInventory.length);
+  assert.equal(recovery.aggregateMaximumRequests, 27);
+  assert.equal(recovery.retainedResponseCount + recovery.maximumUnresolvedPreviousRequests +
+    recovery.freshApprovedRequestCount, recovery.aggregateMaximumRequests);
+  assert.ok(recovery.aggregateMaximumRequests <= recovery.originalMaximumRequests,
+    'RECOVERY_AGGREGATE_REQUEST_CEILING_EXCEEDED');
+  assert.equal(recovery.aggregateMaximumRequestsPerFamily, 6);
+  assert.ok(recovery.aggregateMaximumRequestsPerFamily <= recovery.originalMaximumRequestsPerFamily,
+    'RECOVERY_FAMILY_REQUEST_CEILING_EXCEEDED');
+  assert.equal(recovery.paidCallsAuthorized, 9);
+  assert.equal(recovery.paidCallsAlreadyMade, 0);
+  assert.equal(recovery.existingGeminiAuthorizationUnspent, true);
+  assert.equal(Object.values(recovery.retainedFamilyCounts || {}).reduce((total, count) => total + count, 0),
+    recovery.retainedResponseCount, 'RECOVERY_RETAINED_FAMILY_COUNTS_MISMATCH');
+  assert.equal(sha256(await readRaw(`${PREVIOUS_CAPTURE}/capture-reserved.json`)),
+    recovery.previousReservedMarkerSha256, 'RECOVERY_PREVIOUS_MARKER_HASH_MISMATCH');
+  assert.equal(sha256(await readRaw(`${PREVIOUS_CAPTURE}/capture-partial.jsonl`)),
+    recovery.previousJournalSha256, 'RECOVERY_PREVIOUS_JOURNAL_HASH_MISMATCH');
+
   const hashes = Object.freeze({
     [LAUNCHER_PATH]: sha256(launcherBytes),
     [RUNNER_PATH]: runner.sha256,
@@ -238,7 +278,8 @@ async function loadPreparedContext() {
     [AUTHORIZATION_REQUEST_PATH]: authorizationRequest.sha256,
     [AUTHORIZATION_PATH]: authorization.sha256,
     [RESOURCE_PROJECTION_PATH]: resourceProjection.sha256,
-    [RESOURCE_REVIEW_PATH]: resourceReview.sha256
+    [RESOURCE_REVIEW_PATH]: resourceReview.sha256,
+    [RECOVERY_PLAN_PATH]: recoveryPlan.sha256
   });
   return Object.freeze({
     launcherSha256: hashes[LAUNCHER_PATH],

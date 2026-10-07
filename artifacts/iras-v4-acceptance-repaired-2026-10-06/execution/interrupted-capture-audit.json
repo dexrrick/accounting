@@ -1,0 +1,16 @@
+{
+  "recoveryInterpretation": "Existingexplicituserauthorizationandcurrentcontinuationsupportnecessaryrecoverywithsame15identitieswithin60/10ceilings; do not reuseoldreservedfolder",
+  "canonicalBase64AndBodyHashesVerified": true,
+  "responseBodiesVerified": 11,
+  "previousReservedMarkerSha256": "36245fe12f6aec90f0929ac4408b7726efcc6ab541a84206f768c40c010b8c65",
+  "materialFindings": 0,
+  "observedAtUtc": "2026-10-07T13:19:00.5035328Z",
+  "disposition": "VALID_RETAINED_PARTIAL_NOT_COMPLETE",
+  "frozenBindingsUnchanged": true,
+  "profile": "iras-v4-interrupted-capture-independent-audit",
+  "previousPartialJournalSha256": "077bc970ea87a2d12948deb993be54f771d33516a3c6f8fc07bab16406487047",
+  "semanticNamespaceAbsent": true,
+  "protectedHistoricalHashesUnchanged": true,
+  "reviewer": "/root/offline_repair_review",
+  "first11FrozenIdentitiesAndOrderedTimesVerified": true
+}
