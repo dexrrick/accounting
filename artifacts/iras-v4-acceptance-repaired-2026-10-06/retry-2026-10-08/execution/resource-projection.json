@@ -1,0 +1,28 @@
+{
+  "historical80ProjectionChanged": false,
+  "observationMaximumAgeMs": 300000,
+  "scope": "Fresh15-request capture, one nine-call acceptance, outcome review and checkpoint/commit; no remedial coding, retries or extra capture",
+  "checkpointAtRemainingPercent": 10,
+  "actualAllowanceMustBeMonitored": true,
+  "stopIfBoundNoLongerSupported": true,
+  "status": "INDEPENDENTLY_REVIEWED_PLANNING_ESTIMATE",
+  "observationRequiredAfterExpensiveValidation": true,
+  "reserveAfterProjectionMinimumWeeklyPercent": 4,
+  "fiveHourCostPercentagePoints": 40,
+  "evidence": {
+    "observedPreparationWeeklyDecrease": 4,
+    "preparationStartUsedWeeklyPercent": 30,
+    "preparationStartUsedFiveHourPercent": 14,
+    "observedPreparationFiveHourDecrease": 26,
+    "preparationEndUsedFiveHourPercent": 40,
+    "includedWork": "Scoped implementation, independent review, focused tests, two smoke cycles, commits and full nine-pass freeze validation",
+    "nextScopeHasNoImplementation": true,
+    "source": "Independent Codex usage tool observations in current account/window",
+    "preparationEndUsedWeeklyPercent": 34
+  },
+  "finishAboveRemainingPercent": 5,
+  "weeklyCostPercentagePoints": 15,
+  "reserveAfterProjectionMinimumFiveHourPercent": 8,
+  "profile": "iras-v4-fresh-execution-resource-projection",
+  "estimation": "Round the observed26/4 preparation-cycle consumption up to40/15 for bounded execution and review. Shared activity may be included; this is a conservative bound, not measured Gemini quota or isolated per-call cost."
+}

@@ -1,0 +1,16 @@
+{
+  "reviewedAtUtc": "2026-10-07T17:01:09.5320849Z",
+  "projectionSha256": "0bba5ea1d86c492c5ceae26e809914a0d8e531953112f7bbc847c4a6aca4228f",
+  "reviewer": "/root/offline_repair_review",
+  "profile": "iras-v4-fresh-resource-authorization-review",
+  "quotaSource": "Current explicit human confirmation; no provider probe or new numerical capacity inferred",
+  "disposition": "ACCEPTABLE_NO_MATERIAL_FINDINGS",
+  "authorizationSha256": "711b44ab06427680c5e485c5d259d182570f418aede46ab289430693e4bc56de",
+  "quotaContinuity": "Prior explicit enough confirmation and current retry instruction for same fixed model/configured credential scope",
+  "projectionBasis": "Unchanged independently reviewed 40/15 estimate and 8/4 reserve for bounded capture/acceptance/outcome preservation",
+  "limitations": [
+    "Fresh allowance observation after expensive verification",
+    "Stop if bound unsupported; checkpoint10/finishabove5",
+    "No automatic retries or extra source capture beyond reviewed15"
+  ]
+}

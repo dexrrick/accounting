@@ -1,0 +1,16 @@
+{
+  "retries": 0,
+  "authorizedCalls": 9,
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "launcherSha256": "d2d33e13f0dcf4dbc2498985851e1bf4a9441b5ee71be86326f54ef505025d2e",
+  "profile": "iras-v4-retry-final-launcher-independent-review",
+  "reviewedAtUtc": "2026-10-07T17:01:09.5657569Z",
+  "reviewer": "/root/offline_repair_review",
+  "protectedInputs": 21,
+  "finalPinsVerified": 6,
+  "failureDiagnostics": "Acceptance firstFailure reported before count assertion",
+  "pendingPins": 0,
+  "syntax": "PASS_NODE22",
+  "serializationCorrection": "Exact JSON writer equivalence plus negative body/provenance checks",
+  "fixedDeadlineMs": 8000
+}
