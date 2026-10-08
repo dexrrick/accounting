@@ -1,0 +1,17 @@
+{
+  "profile": "current-post-repair-human-approval",
+  "status": "EXPLICIT_HUMAN_APPROVAL_RECORDED",
+  "templateOnly": false,
+  "source": "current Codex chat user message",
+  "threadId": "01a11bd1-82cd-7d90-bc8f-2e7a6b764aa1",
+  "userInstruction": "go ahead all good",
+  "observedAtUtc": "2026-10-08T14:23:36Z",
+  "authorizedAtUtc": "2026-10-08T14:23:36Z",
+  "authorizationRequestSha256": "56ed641e0d787a74ee42326b477b5e19a889d82e3b08f093b7794a0771b9149c",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "officialSourceCaptureAuthorized": true,
+  "geminiAcceptanceAuthorized": true,
+  "quotaConfirmedByHuman": true,
+  "quotaConfirmationScope": "Current explicit human quota confirmation for gemini-3.5-flash-lite, exactly nine one-per-case calls, configured credential, 8000 ms timeout, zero retries or probes, 15250 ms minimum start gap, and no additional requests; fresh allowance gate required.",
+  "approvalQuestion": "Please authorize one fresh 15-request IRAS capture and one nine-case Gemini run (gemini-3.5-flash-lite, eight-second deadline, no retries), and confirm Gemini quota is sufficient."
+}
