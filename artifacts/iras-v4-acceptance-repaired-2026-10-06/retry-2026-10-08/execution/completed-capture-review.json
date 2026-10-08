@@ -1,0 +1,19 @@
+{
+  "journalEqualsPayloadEntries": true,
+  "reviewer": "/root/offline_repair_review",
+  "callsDuringReview": 0,
+  "boundFilesVerified": 593,
+  "canonicalBase64AndBodyHashesVerified": true,
+  "exactFrozenInventoryVerified": true,
+  "allHttp200": true,
+  "evidenceLockSha256": "74e04d16460a3d5fcc89ffca7a6dcee743ac58d5f5535ef242753f07a4621588",
+  "sourceEvidenceExpiresAtUtc": "2026-10-08T17:19:11.759Z",
+  "payloadSha256": "2c1c2cf17dbe956c88fef130043e6ec9fc8296ae7b2022e5f55fa58b30dbd0f6",
+  "protectedFilesVerified": 21,
+  "profile": "iras-v4-retry-completed-capture-independent-review",
+  "semanticNamespaceAbsent": true,
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "reviewedAtUtc": "2026-10-08T11:20:24.1735103Z",
+  "requestCount": 15,
+  "semanticCalls": 0
+}
