@@ -833,7 +833,10 @@ async function run() {
     ['iras-cit-tax-rate'], ratesQuery, directNoPointerRetriever,
     {
       webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
-      discoveryAdapter: { discoverOfficialSourceCandidates: async () => [genericPageUrl] },
+      discoveryAdapter: {
+        discoverOfficialSourceCandidates: async () => [genericPageUrl],
+        getCandidateTitle: () => 'Corporate Income Tax Rates'
+      },
       fetchOptions: {
         useCache: false,
         customFetch: async () => htmlResponse('<html><head><title>Corporate Income Tax</title></head><main><p>IRAS corporate income tax rate information.</p></main></html>')

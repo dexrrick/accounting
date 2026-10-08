@@ -154,12 +154,13 @@ const genericIncomeTaxTreatmentUnderstanding = {
     factsExplicitlyProvided: [], confidence: 0.95
   }
 };
-const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-tax treatment') => {
+const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-tax treatment', population = 'COMPANY') => {
   const understanding = {
     ...genericIncomeTaxTreatmentUnderstanding,
     interpretation: {
       ...genericIncomeTaxTreatmentUnderstanding.interpretation,
       primarySubject: conceptLabel,
+      population,
       concepts: [{ concept: conceptLabel, role: 'PRIMARY' }]
     }
   };
@@ -172,7 +173,9 @@ const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-t
     }) },
     referenceDate
   });
-  return { result, requestedByIssue };
+  const conceptId = getRequestedQuestionConcepts(genericIncomeTaxTreatmentQuery, understanding)
+    .find(concept => concept.label === conceptLabel)?.id;
+  return { result, requestedByIssue, conceptId };
 };
 const genericTreatmentIssue = (id, subject) => issue(id, {
   subject, population: 'COMPANY', domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'],
@@ -211,6 +214,78 @@ assert.ok(ambiguousGenericTaxTreatment.result.gaps.some(gap => gap.code === 'UNR
 assert.equal([...ambiguousGenericTaxTreatment.requestedByIssue.values()]
   .some(ids => ids.includes('semantic_corporate_income_tax_treatment')), false,
   'The generic concept is not assigned to either side of a multi-issue ambiguity.');
+
+for (const [population, topicId] of [
+  ['INDIVIDUAL', 'iras-individual-cpf-relief'],
+  ['EMPLOYEE', 'iras-individual-cpf-relief'],
+  ['COMPANY', 'iras-cit-deductibility'],
+  ['FUND', 'iras-cit-deductibility']
+]) {
+  const genericIncomeTax = await runGenericTaxOwnership([
+    issue(`generic-income-tax-${population.toLowerCase()}`, {
+      subject: `income tax for ${population.toLowerCase()}`, population,
+      domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: [topicId]
+    })
+  ], 'income tax', population);
+  assert.equal(genericIncomeTax.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'), false,
+    `The exact generic income-tax concept has a sole, mapped ${population} owner with a compatible topic.`);
+  assert.equal(genericIncomeTax.requestedByIssue.get(`generic-income-tax-${population.toLowerCase()}`)
+    ?.includes(genericIncomeTax.conceptId) || false, false,
+  'Exact generic income tax is assigned for aggregation without becoming a redundant retrieval requirement.');
+}
+
+const mixedGenericIncomeTaxOwners = await runGenericTaxOwnership([
+  issue('mixed-income-tax-company', {
+    subject: 'company corporate expense deduction', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], mappedTopicIds: ['iras-cit-deductibility']
+  }),
+  issue('mixed-income-tax-individual', {
+    subject: 'individual personal relief', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], mappedTopicIds: ['iras-individual-cpf-relief']
+  })
+], 'income tax');
+assert.ok(mixedGenericIncomeTaxOwners.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+  'Mixed corporate and individual income-tax issues keep generic ownership ambiguous.');
+
+const unresolvedGenericIncomeTaxOwner = await runGenericTaxOwnership([
+  issue('mapped-generic-income-tax-owner', {
+    subject: 'individual personal relief', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], mappedTopicIds: ['iras-individual-cpf-relief']
+  }),
+  issue('unmapped-plausible-income-tax-owner', {
+    subject: 'unresolved income-tax issue', population: 'UNKNOWN', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], mappedTopicIds: [], status: 'UNRESOLVED'
+  })
+], 'income tax');
+assert.ok(unresolvedGenericIncomeTaxOwner.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+  'An unmapped plausible IRAS income-tax issue still counts when determining singleton ownership.');
+
+const unrelatedGenericIncomeTaxOwner = await runGenericTaxOwnership([
+  issue('gst-is-not-income-tax', {
+    subject: 'GST registration', population: 'COMPANY', domain: 'IRAS_GST',
+    governingAuthorities: ['IRAS'], mappedTopicIds: ['iras-gst-registration']
+  }),
+  issue('contextual-only-iras', {
+    subject: 'accounting policy', population: 'COMPANY', domain: 'ACCOUNTING_STANDARDS',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: ['IRAS'], mappedTopicIds: []
+  })
+], 'income tax');
+assert.ok(unrelatedGenericIncomeTaxOwner.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+  'GST and contextual-only IRAS do not own an exact generic income-tax concept.');
+
+for (const [population, topicId] of [
+  ['UNKNOWN', 'iras-cit-deductibility'],
+  ['COMPANY', 'iras-individual-cpf-relief']
+]) {
+  const mismatchedGenericIncomeTaxOwner = await runGenericTaxOwnership([
+    issue(`mismatched-income-tax-${population.toLowerCase()}`, {
+      subject: `income tax for ${population.toLowerCase()}`, population,
+      domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], mappedTopicIds: [topicId]
+    })
+  ], 'income tax', population);
+  assert.ok(mismatchedGenericIncomeTaxOwner.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+    `Population ${population} cannot own a generic income-tax concept through topic ${topicId}.`);
+}
 
 const companyBenefitDeductionSubjects = [
   'company tax deductibility of accommodation benefit for the employee',

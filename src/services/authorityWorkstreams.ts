@@ -210,6 +210,10 @@ function isCorporateIncomeTaxTreatmentConcept(concept: RequestedQuestionConcept)
   return ['corporate income tax treatment', 'corporate income tax'].includes(normalizeEvidenceText(concept.label));
 }
 
+function isGenericIncomeTaxConcept(concept: RequestedQuestionConcept): boolean {
+  return normalizeEvidenceText(concept.label) === 'income tax';
+}
+
 function corporateIncomeTaxConceptAnchor(concept: RequestedQuestionConcept): string | undefined {
   const label = normalizeEvidenceText(concept.label);
   return label === 'corporate income tax treatment' || label === 'corporate income tax' ? label : undefined;
@@ -239,6 +243,24 @@ function topiclessConceptBelongsToIssue(
     return matchingIssues.length === 1 && matchingIssues[0].id === issue.id &&
       issue.population === 'COMPANY' && issue.governingAuthorities.includes('IRAS');
   }
+  if (isGenericIncomeTaxConcept(concept)) {
+    // The exact generic label has no distinctive ownership terms. Treat every
+    // governing income-tax issue as a possible owner for ambiguity purposes,
+    // including an unresolved or unmapped issue. Only a sole, mapped issue
+    // with population-consistent income-tax topics can own the concept.
+    const plausibleIssues = candidateIssues.filter(candidate =>
+      candidate.domain === 'IRAS_INCOME_TAX' && candidate.governingAuthorities.includes('IRAS'));
+    if (plausibleIssues.length !== 1 || plausibleIssues[0].id !== issue.id || issue.status !== 'MAPPED') return false;
+    const topics = getCoverageTopicsByIds(issue.mappedTopicIds).filter(topic => topic.domainId.startsWith('IRAS_'));
+    const expectedDomain = issue.population === 'INDIVIDUAL' || issue.population === 'EMPLOYEE'
+      ? 'IRAS_INDIVIDUAL_TAX'
+      : issue.population === 'COMPANY' || issue.population === 'FUND'
+        ? 'IRAS_CORPORATE_TAX'
+        : undefined;
+    return Boolean(expectedDomain && topics.length > 0 &&
+      topics.every(topic => topic.domainId === expectedDomain) &&
+      canonicalDomainForIssue(issue, 'IRAS', topics) === expectedDomain);
+  }
   const issueText = `${issue.subject} ${issue.mappedTopicIds.join(' ')}`;
   const uniqueTerms = [...new Set([...concept.terms, concept.label].flatMap(conceptOwnershipTerms))];
   const normalizedIssue = new Set(conceptOwnershipTerms(issueText));
@@ -256,7 +278,7 @@ function requestedConceptsForIssue(
   const topicSet = new Set(topicIds);
   return getRequestedQuestionConcepts(query, understanding).filter(concept =>
     concept.topicIds.some(topicId => topicSet.has(topicId)) ||
-    concept.topicIds.length === 0 && !isCorporateIncomeTaxTreatmentConcept(concept) &&
+    concept.topicIds.length === 0 && !isCorporateIncomeTaxTreatmentConcept(concept) && !isGenericIncomeTaxConcept(concept) &&
       topiclessConceptBelongsToIssue(concept, issue, authority, candidateIssues)
   );
 }

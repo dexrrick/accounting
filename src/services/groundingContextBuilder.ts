@@ -24,7 +24,10 @@ import { assembleDeterministicResponse, guardUnconditionalMealInputTaxClaim, has
 import { extractAccountingContext } from './conversationAccountingState';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import {
+  getIrasTaxRouteArea,
   getOfficialSourceDiscoveryProviderConfig,
+  isOfficialSourceCandidateMateriallyRelevant,
+  isIrasSourceUrlAreaCompatible,
   OfficialDomainSearchAdapter as DefaultOfficialDomainSearchAdapter,
   OfficialSitemapDiscoveryAdapter
 } from '../retrieval/officialSitemapDiscovery';
@@ -168,6 +171,8 @@ export interface OfficialSourceDiscoveryRequest {
   query: string;
   authority?: string;
   topicId: string;
+  topicDomainId?: string;
+  scopeQuery?: string;
   topicTitle: string;
   standardOrAct: string;
   approvedHosts: readonly string[];
@@ -175,6 +180,8 @@ export interface OfficialSourceDiscoveryRequest {
   topicHints?: readonly string[];
   /** Reviewed map titles help identify a moved page; they never establish evidence. */
   expectedTitles?: readonly string[];
+  /** Explicitly mapped URLs may retain a cross-area declaration from the registry. */
+  declaredSourceUrls?: readonly string[];
   /** Authority configuration for sitemap discovery; URLs remain metadata only. */
   sitemapUrls?: readonly string[];
   preferredHosts?: readonly string[];
@@ -572,20 +579,19 @@ function isSourceMapRelevantToQuery(pointer: SourceMapPointer, query: string): b
 }
 
 function irasCandidateDomainMismatch(query: string, topic: MappedCoverageTopic, candidateUrl: string): string | undefined {
-  let path = '';
+  let approvedIrasUrl = false;
   try {
     const candidate = new URL(candidateUrl);
-    if (candidate.protocol === 'https:' && isApprovedSingaporeSourceUrl(candidate.toString())) {
-      path = decodeURIComponent(candidate.pathname).toLowerCase();
-    }
+    approvedIrasUrl = candidate.protocol === 'https:' && isApprovedSingaporeSourceUrl(candidate.toString());
   } catch { /* an invalid URL is rejected by the surrounding URL/provenance gates */ }
-  if (!path) return undefined;
-  const pageIsIndividualIncomeTaxRoute = /^\/taxes\/individual-income-tax(?:\/|$)/.test(path);
-  const pageIsCorporateIncomeTaxRoute = /^\/taxes\/corporate-income-tax(?:\/|$)/.test(path);
-  const pageIsGstRoute = /^\/taxes\/(?:goods-services-tax(?:-\(gst\))?|gst)(?:\/|$)/.test(path);
-  const pageIsWithholdingTaxRoute = /^\/taxes\/withholding-tax(?:\/|$)/.test(path);
-  const pageIsPropertyTaxRoute = /^\/taxes\/property-tax(?:\/|$)/.test(path);
-  const pageIsStampDutyRoute = /^\/taxes\/stamp-duty(?:\/|$)/.test(path);
+  if (!approvedIrasUrl) return undefined;
+  const routeArea = getIrasTaxRouteArea(candidateUrl);
+  const pageIsIndividualIncomeTaxRoute = routeArea === 'INDIVIDUAL';
+  const pageIsCorporateIncomeTaxRoute = routeArea === 'CORPORATE';
+  const pageIsGstRoute = routeArea === 'GST';
+  const pageIsWithholdingTaxRoute = routeArea === 'WITHHOLDING';
+  const pageIsPropertyTaxRoute = routeArea === 'PROPERTY';
+  const pageIsStampDutyRoute = routeArea === 'STAMP_DUTY';
   const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding[-\s]+tax|wht|withhold(?:ing)? monies|payer)\b/i.test(query);
   if (isEmployeeBenefitTaxTopic(topic) && pageIsCorporateIncomeTaxRoute) {
     return 'The fetched IRAS page is in the corporate income-tax domain, which does not match employee benefit tax treatment.';
@@ -906,6 +912,27 @@ function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
   const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
   if (providerConfig) return [...providerConfig.approvedHosts];
   return approvedHostsForTopic(topic);
+}
+
+function isApprovedDiscoveryCandidateUrl(candidateUrl: string, approvedHosts: readonly string[]): boolean {
+  try {
+    const parsed = new URL(candidateUrl);
+    return parsed.protocol === 'https:' && !parsed.username && !parsed.password && approvedHosts.includes(parsed.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
+function cloneOfficialSourceDiscoveryRequest(request: OfficialSourceDiscoveryRequest): OfficialSourceDiscoveryRequest {
+  return {
+    ...request,
+    approvedHosts: [...request.approvedHosts],
+    topicHints: request.topicHints ? [...request.topicHints] : undefined,
+    expectedTitles: request.expectedTitles ? [...request.expectedTitles] : undefined,
+    declaredSourceUrls: request.declaredSourceUrls ? [...request.declaredSourceUrls] : undefined,
+    sitemapUrls: request.sitemapUrls ? [...request.sitemapUrls] : undefined,
+    preferredHosts: request.preferredHosts ? [...request.preferredHosts] : undefined
+  };
 }
 
 const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)[\s-]+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
@@ -1378,34 +1405,59 @@ export async function resolveMappedOfficialSourceFallback(
     const approvedHosts = discoveryHostsForTopic(topic);
     if (approvedHosts.length === 0) return;
     const expectedPointers = work?.pointers || [];
+    const declaredSourceUrls = expectedPointers.map(pointer => pointer.officialSourceUrl)
+      .filter((url): url is string => Boolean(url));
     const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+    const discoveryRequest: OfficialSourceDiscoveryRequest = {
+      query: options.semanticDiscoveryQuery || query,
+      scopeQuery: query,
+      authority: topic.authorities[0],
+      topicId: topic.id,
+      topicDomainId: topic.domainId,
+      topicTitle: topic.title,
+      standardOrAct: topic.actOrStandard || topic.title,
+      approvedHosts,
+      topicHints: [...(topic.aliases || []), ...topic.keywords],
+      expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
+      declaredSourceUrls,
+      sitemapUrls: providerConfig?.sitemapUrls,
+      preferredHosts: providerConfig?.preferredHosts,
+      searchSite: providerConfig?.searchSite,
+      searchEndpoint: providerConfig?.searchEndpoint,
+      searchRedirectHost: providerConfig?.searchRedirectHost,
+      searchRedirectParameter: providerConfig?.searchRedirectParameter,
+      lexicalDiscovery: providerConfig?.lexicalDiscovery,
+      authorityLevelFallback: isAuthorityQuery,
+      maxCandidates: 4
+    };
     let discoveredCandidates: string[] = [];
     try {
       sitemapStageAttempted = true;
-      discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates({
-        query: options.semanticDiscoveryQuery || query,
-        authority: topic.authorities[0],
-        topicId: topic.id,
-        topicTitle: topic.title,
-        standardOrAct: topic.actOrStandard || topic.title,
-        approvedHosts,
-        topicHints: [...(topic.aliases || []), ...topic.keywords],
-        expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
-        sitemapUrls: providerConfig?.sitemapUrls,
-        preferredHosts: providerConfig?.preferredHosts,
-        searchSite: providerConfig?.searchSite,
-        searchEndpoint: providerConfig?.searchEndpoint,
-        searchRedirectHost: providerConfig?.searchRedirectHost,
-        searchRedirectParameter: providerConfig?.searchRedirectParameter,
-        lexicalDiscovery: providerConfig?.lexicalDiscovery,
-        authorityLevelFallback: isAuthorityQuery,
-        maxCandidates: 4
-      });
+      discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates(
+        cloneOfficialSourceDiscoveryRequest(discoveryRequest)
+      );
     } catch {
       // First-party discovery is optional and fail-closed. Mapped retrieval
       // results already collected remain available if the sitemap is down.
       discoveredCandidates = [];
     }
+    for (const candidateUrl of discoveredCandidates) {
+      if (!isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts)) {
+        attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false,
+          discoveryStage: 'SITEMAP_DISCOVERY', error: 'Discovery candidate was not an HTTPS URL on an approved authority hostname.' });
+      } else if (!isIrasSourceUrlAreaCompatible(topic.domainId, candidateUrl, declaredSourceUrls, query)) {
+        attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'DOMAIN_MISMATCH', titleMatched: false, contentMatched: false,
+          discoveryStage: 'SITEMAP_DISCOVERY', error: 'Discovered IRAS URL tax area conflicts with the requested topic domain.' });
+      } else if (!isOfficialSourceCandidateMateriallyRelevant(candidateUrl, discoveryRequest, discoveryAdapter.getCandidateTitle?.(candidateUrl))) {
+        attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'METADATA_IRRELEVANT', titleMatched: false, contentMatched: false,
+          discoveryStage: 'SITEMAP_DISCOVERY', error: 'Candidate URL metadata does not materially match the requested topic.' });
+      }
+    }
+    discoveredCandidates = discoveredCandidates.filter(candidateUrl =>
+      isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts) &&
+      isIrasSourceUrlAreaCompatible(topic.domainId, candidateUrl, declaredSourceUrls, query) &&
+      isOfficialSourceCandidateMateriallyRelevant(candidateUrl, discoveryRequest, discoveryAdapter.getCandidateTitle?.(candidateUrl))
+    );
     for (const fetchAttempt of discoveryAdapter.getLastFetchTrace?.() || []) {
       discoveryFetchAttempts.push({
         topicId: fetchAttempt.topicId || topic.id,
@@ -1468,27 +1520,35 @@ export async function resolveMappedOfficialSourceFallback(
     const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
     if (!providerConfig?.searchSite || !approvedHosts.includes(providerConfig.searchSite)) return;
     const expectedPointers = work?.pointers || [];
+    const declaredSourceUrls = expectedPointers.map(pointer => pointer.officialSourceUrl)
+      .filter((url): url is string => Boolean(url));
     const officialDomainSearchAdapter = options.officialDomainSearchAdapter || getDefaultOfficialDomainSearchAdapter(webRetriever, options.fetchOptions);
+    const searchRequest: OfficialSourceDiscoveryRequest = {
+      query: options.semanticDiscoveryQuery || query,
+      scopeQuery: query,
+      authority: topic.authorities[0],
+      topicId: topic.id,
+      topicDomainId: topic.domainId,
+      topicTitle: topic.title,
+      standardOrAct: topic.actOrStandard || topic.title,
+      approvedHosts,
+      topicHints: [...(topic.aliases || []), ...topic.keywords],
+      expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
+      declaredSourceUrls,
+      searchSite: providerConfig.searchSite,
+      searchEndpoint: providerConfig.searchEndpoint,
+      searchRedirectHost: providerConfig.searchRedirectHost,
+      searchRedirectParameter: providerConfig.searchRedirectParameter,
+      lexicalDiscovery: providerConfig.lexicalDiscovery,
+      authorityLevelFallback: isAuthorityQuery,
+      maxCandidates: 4
+    };
     let searchCandidates: string[] = [];
     try {
       onlineSearchStageAttempted = true;
-      searchCandidates = await officialDomainSearchAdapter.searchOfficialDomainCandidates({
-        query: options.semanticDiscoveryQuery || query,
-        authority: topic.authorities[0],
-        topicId: topic.id,
-        topicTitle: topic.title,
-        standardOrAct: topic.actOrStandard || topic.title,
-        approvedHosts,
-        topicHints: [...(topic.aliases || []), ...topic.keywords],
-        expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
-        searchSite: providerConfig.searchSite,
-        searchEndpoint: providerConfig.searchEndpoint,
-        searchRedirectHost: providerConfig.searchRedirectHost,
-        searchRedirectParameter: providerConfig.searchRedirectParameter,
-        lexicalDiscovery: providerConfig.lexicalDiscovery,
-        authorityLevelFallback: isAuthorityQuery,
-        maxCandidates: 4
-      });
+      searchCandidates = await officialDomainSearchAdapter.searchOfficialDomainCandidates(
+        cloneOfficialSourceDiscoveryRequest(searchRequest)
+      );
     } catch {
       searchCandidates = [];
     }
@@ -1499,7 +1559,26 @@ export async function resolveMappedOfficialSourceFallback(
           error: searchTrace.reason || 'The restricted query variant produced no approved official URL candidates.' });
       }
     }
-    for (const candidateUrl of searchCandidates.slice(0, 4)) {
+    for (const candidateUrl of searchCandidates) {
+      if (!isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts)) {
+        attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false,
+          discoveryStage: 'OFFICIAL_DOMAIN_SEARCH', searchQueryVariant: officialDomainSearchAdapter.getCandidateQueryVariant?.(candidateUrl),
+          error: 'Online search candidate was not an HTTPS URL on an approved authority hostname.' });
+      } else if (!isIrasSourceUrlAreaCompatible(topic.domainId, candidateUrl, declaredSourceUrls, query)) {
+        attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'DOMAIN_MISMATCH', titleMatched: false, contentMatched: false,
+          discoveryStage: 'OFFICIAL_DOMAIN_SEARCH', searchQueryVariant: officialDomainSearchAdapter.getCandidateQueryVariant?.(candidateUrl),
+          error: 'Discovered IRAS URL tax area conflicts with the requested topic domain.' });
+      } else if (!isOfficialSourceCandidateMateriallyRelevant(candidateUrl, searchRequest, officialDomainSearchAdapter.getCandidateTitle?.(candidateUrl))) {
+        attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'METADATA_IRRELEVANT', titleMatched: false, contentMatched: false,
+          discoveryStage: 'OFFICIAL_DOMAIN_SEARCH', searchQueryVariant: officialDomainSearchAdapter.getCandidateQueryVariant?.(candidateUrl),
+          error: 'Candidate URL metadata does not materially match the requested topic.' });
+      }
+    }
+    for (const candidateUrl of searchCandidates.filter(candidateUrl =>
+      isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts) &&
+      isIrasSourceUrlAreaCompatible(topic.domainId, candidateUrl, declaredSourceUrls, query) &&
+      isOfficialSourceCandidateMateriallyRelevant(candidateUrl, searchRequest, officialDomainSearchAdapter.getCandidateTitle?.(candidateUrl))
+    ).slice(0, 4)) {
       let host = '';
       let protocol = '';
       try {
