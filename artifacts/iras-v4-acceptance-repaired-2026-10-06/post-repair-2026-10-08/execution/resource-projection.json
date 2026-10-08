@@ -1,0 +1,29 @@
+{
+  "profile": "iras-v4-fresh-execution-resource-projection",
+  "status": "INDEPENDENTLY_REVIEWED_PLANNING_ESTIMATE",
+  "scope": "One fresh 15-request official IRAS capture, one nine-call Gemini acceptance, outcome review and checkpoint; no extra capture, probes or retries",
+  "estimation": "Carry forward the independently reviewed planning estimate of 40/15 percentage points and 8/4 reserves for this bounded scope. This is a conservative planning estimate, not measured Gemini quota or isolated per-call cost.",
+  "fiveHourCostPercentagePoints": 40,
+  "weeklyCostPercentagePoints": 15,
+  "reserveAfterProjectionMinimumFiveHourPercent": 8,
+  "reserveAfterProjectionMinimumWeeklyPercent": 4,
+  "checkpointAtRemainingPercent": 10,
+  "finishAboveRemainingPercent": 5,
+  "observationMaximumAgeMs": 300000,
+  "actualAllowanceMustBeMonitored": true,
+  "observationRequiredAfterExpensiveValidation": true,
+  "stopIfBoundNoLongerSupported": true,
+  "historical80ProjectionChanged": false,
+  "currentAllowanceSource": "A fresh Codex usage-limit observation supplied through the execution gate after expensive validation; current allowance is not inferred from this estimate.",
+  "evidence": {
+    "observedPreparationFiveHourDecrease": 26,
+    "observedPreparationWeeklyDecrease": 4,
+    "preparationStartUsedFiveHourPercent": 14,
+    "preparationEndUsedFiveHourPercent": 40,
+    "preparationStartUsedWeeklyPercent": 30,
+    "preparationEndUsedWeeklyPercent": 34,
+    "includedWork": "Scoped implementation, independent review, focused tests, two smoke cycles, commits and full nine-pass freeze validation",
+    "nextScopeHasNoImplementation": true,
+    "source": "Prior account usage observations used only as the basis for this planning estimate"
+  }
+}
