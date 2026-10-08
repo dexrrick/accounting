@@ -1,0 +1,15 @@
+{
+  "helperSyntax": "PASS_NODE22",
+  "protectedInputCount": 36,
+  "approvedInventoryCount": 15,
+  "approvalPending": true,
+  "liveCalls": 0,
+  "capabilityAndAcquisitionPermitChecksDeferredToAuthorizedPreflight": true,
+  "disposition": "ACCEPTABLE_NO_MATERIAL_FINDINGS",
+  "exactNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "reviewedAtUtc": "2026-10-08T13:28:29.2143166Z",
+  "profile": "iras-v4-post-repair-namespace-independent-review",
+  "reviewer": "/root/offline_repair_review",
+  "runnerRegression": "PASS_NODE22_TEST_ONLY_FAKE_CREDENTIAL",
+  "priorThreeNamespacesPreserved": true
+}

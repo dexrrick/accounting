@@ -575,6 +575,7 @@ async function testReviewedSemanticNamespaces() {
   const legacyNamespace = ARTIFACT_ROOT + '/semantic-run-v4';
   const freshNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4';
   const retryNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-retry-2026-10-08';
+  const postRepairNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-post-repair-2026-10-08';
   const root = await temporaryDirectory('iras-v4-semantic-namespace-');
   try {
     assert.equal(assertReviewedSemanticNamespace(legacyNamespace), legacyNamespace,
@@ -583,6 +584,8 @@ async function testReviewedSemanticNamespaces() {
       'the explicitly reviewed fresh namespace is accepted');
     assert.equal(assertReviewedSemanticNamespace(retryNamespace), retryNamespace,
       'the exact retry namespace is accepted');
+    assert.equal(assertReviewedSemanticNamespace(postRepairNamespace), postRepairNamespace,
+      'the exact post-repair namespace is accepted');
     assert.throws(() => assertReviewedSemanticNamespace(undefined),
       /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/, 'a malformed binding cannot inherit the legacy default');
     for (const unauthorized of [
@@ -590,6 +593,9 @@ async function testReviewedSemanticNamespaces() {
       FRESH_ACCEPTANCE_ROOT + '/../' + ARTIFACT_ROOT + '/semantic-run-v4',
       retryNamespace + '/nested',
       retryNamespace + '-extra',
+      postRepairNamespace + '/nested',
+      postRepairNamespace + '-extra',
+      FRESH_ACCEPTANCE_ROOT + '/../' + postRepairNamespace.split('/').at(-1),
       freshNamespace.toUpperCase()
     ]) {
       assert.throws(() => assertReviewedSemanticNamespace(unauthorized),
@@ -608,9 +614,11 @@ async function testReviewedSemanticNamespaces() {
     const legacyBinding = makeBinding(legacyNamespace);
     const freshBinding = makeBinding(freshNamespace);
     const retryBinding = makeBinding(retryNamespace);
+    const postRepairBinding = makeBinding(postRepairNamespace);
     const legacyPath = path.join(root, ...legacyNamespace.split('/'));
     const freshPath = path.join(root, ...freshNamespace.split('/'));
     const retryPath = path.join(root, ...retryNamespace.split('/'));
+    const postRepairPath = path.join(root, ...postRepairNamespace.split('/'));
     assert.notEqual(path.resolve(root), path.resolve('.'), 'fixture root must differ from the process working directory');
     assert.equal(assertRunnerConfigurationBodyMatches(legacyBinding, legacyBinding), true,
       'the consumed legacy binding remains valid');
@@ -620,11 +628,15 @@ async function testReviewedSemanticNamespaces() {
     assert.equal(retryIntegrityHash, digest(JSON.stringify(retryBindingBody)),
       'the retry namespace is included in the recomputed integrity binding');
     assert.equal(assertRunnerConfigurationBodyMatches(retryBinding, retryBinding), true);
+    assert.equal(assertRunnerConfigurationBodyMatches(postRepairBinding, postRepairBinding), true,
+      'the exact post-repair namespace is included in the integrity binding');
     assert.equal(assertCanonicalNamespace(legacyPath, legacyBinding, root), legacyPath);
     assert.equal(assertCanonicalNamespace(freshPath, freshBinding, root), freshPath,
       'the frozen fresh binding selects its exact acceptance slot');
     assert.equal(assertCanonicalNamespace(retryPath, retryBinding, root), retryPath,
       'the retry binding selects only its exact new slot');
+    assert.equal(assertCanonicalNamespace(postRepairPath, postRepairBinding, root), postRepairPath,
+      'the post-repair binding selects only its exact new slot');
     assert.throws(() => assertCanonicalNamespace(freshPath, retryBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
     assert.throws(() => assertCanonicalNamespace(retryNamespace, retryBinding, root),
@@ -638,6 +650,8 @@ async function testReviewedSemanticNamespaces() {
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
     assert.throws(() => assertRunnerConfigurationBodyMatches(retryBinding, freshBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
+    assert.throws(() => assertRunnerConfigurationBodyMatches(postRepairBinding, retryBinding),
+      /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
     assert.throws(() => assertCanonicalNamespace(
       root + '/' + FRESH_ACCEPTANCE_ROOT + '/../' + ARTIFACT_ROOT + '/semantic-run-v4', freshBinding, root),
     /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
@@ -648,6 +662,8 @@ async function testReviewedSemanticNamespaces() {
       path.join(root, freshNamespace, 'runner-config.json'));
     assert.equal(assertInArtifactNamespace(path.join(root, retryNamespace, 'runner-config.json'), root),
       path.join(root, retryNamespace, 'runner-config.json'));
+    assert.equal(assertInArtifactNamespace(path.join(root, postRepairNamespace, 'runner-config.json'), root),
+      path.join(root, postRepairNamespace, 'runner-config.json'));
     assert.throws(() => assertInArtifactNamespace(path.join(root, 'artifacts/unreviewed/output.json'), root),
       /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/);
     assert.throws(() => assertInArtifactNamespace(
@@ -1589,7 +1605,9 @@ async function testCaseLoopAndOneUseReservation() {
   const root = await temporaryDirectory('iras-v4-reserve-');
   try {
     const namespace = path.join(root, FRESH_ACCEPTANCE_ROOT, 'semantic-run-v4-retry-2026-10-08');
+    const postRepairNamespace = path.join(root, FRESH_ACCEPTANCE_ROOT, 'semantic-run-v4-post-repair-2026-10-08');
     await mkdir(namespace, { recursive: true });
+    await mkdir(postRepairNamespace, { recursive: true });
     const hash = digest('binding');
     const binding = {
       preregistrationSha256: hash,
@@ -1612,6 +1630,11 @@ async function testCaseLoopAndOneUseReservation() {
     const consumed = path.join(namespace, 'consumed-v4.json');
     await stat(consumed);
     await assert.rejects(reserveConsumption(namespace, binding, preflight), /V4_NAMESPACE_ALREADY_USED/);
+
+    await reserveConsumption(postRepairNamespace, binding, preflight);
+    await stat(path.join(postRepairNamespace, 'consumed-v4.json'));
+    await assert.rejects(reserveConsumption(postRepairNamespace, binding, preflight), /V4_NAMESPACE_ALREADY_USED/,
+      'the exact post-repair namespace retains the one-use consumed-marker guard');
   } finally {
     await rm(root, { recursive: true, force: true });
   }
