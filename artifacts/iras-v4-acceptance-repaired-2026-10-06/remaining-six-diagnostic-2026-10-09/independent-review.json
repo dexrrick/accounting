@@ -1,0 +1,41 @@
+{
+  "profile": "iras-v4-remaining-six-diagnostic-independent-review",
+  "status": "APPROVED_FOR_REMAINING_SIX_DIAGNOSTIC_CONTINUATION",
+  "bindings": {
+    "launcherSha256": "cd624ebc36b2fcaec06d61058239031e937eea9bb18ce842065a21e88781672b",
+    "authorizationSha256": "83cc1ef8b39a80cbf29bf6642cd33d3fa71439d2767d084c4ffae5e9c964c821"
+  },
+  "semanticProfile": "DIAGNOSTIC_CONTINUATION",
+  "caseIds": [
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "model": "gemini-3.5-flash-lite",
+  "authorizedGeminiCalls": 6,
+  "retries": 0,
+  "providerProbesAuthorized": 0,
+  "liveSourceRetrieval": false,
+  "independentReviewer": true,
+  "reviewer": "/root/review_gemini_outcome",
+  "disposition": "NO_REMAINING_MATERIAL_FINDINGS",
+  "validated": [
+    "Actual semantic callback wiring",
+    "Private dispatch scope for Gemini native transport; source fetch blocked",
+    "Independent replay guard and cache per case",
+    "Continuation after case failures",
+    "Numeric call counts retained after later exceptions",
+    "Primary failure attribution and null failure codes on passed rows",
+    "Fresh allowance gate and consumed namespace protection",
+    "Diagnostic summary does not claim canonical nine-case acceptance"
+  ],
+  "checks": {
+    "targetedTests": "10_OF_10_PASS",
+    "syntax": "PASS_NODE22",
+    "scopedLint": "EXIT_ZERO_ONE_RESTORE_FINALLY_WARNING"
+  },
+  "reviewedAtUtc": "2026-10-08T23:50:21Z"
+}
