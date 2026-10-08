@@ -1,0 +1,35 @@
+{
+  "ruledOutHypothesis": "Possessive suffix s is already allowed; no tokenizer fix justified",
+  "status": "FAILED_CONSUMED",
+  "integrityFailureAuthoritativelyFalse": true,
+  "findings": [
+    "P2 exact generic income tax label loses sole individual-tax issue owner; verified rule plus unresolved application incorrectly becomes INSUFFICIENT instead of CONDITIONAL",
+    "P2 sitemap metadata treats generic corporate as distinctive and selects unrelated NCD page; mapped income-tax deductibility coverage needs offline investigation"
+  ],
+  "automaticRetries": 0,
+  "reviewer": "/root/offline_repair_review",
+  "boundFileHashesUnchanged": 593,
+  "passedCases": [
+    "target-relief-entitlement",
+    "A-paraphrase-2"
+  ],
+  "captureHashesUnchanged": true,
+  "protectedFileHashesUnchanged": 21,
+  "nextAction": "Offline focused builder -> reviewer -> supervisor repairs/regressions; no new source/provider calls under consumed authorization",
+  "finalAcceptanceFilePresent": false,
+  "notRunCases": 5,
+  "observedAtUtc": "2026-10-08T11:54:53.9966459Z",
+  "missingSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/specific-topics/tax-treatment-of-interest-gains-or-profits-derived-from-negotiable-certificates-of-deposit-by-non-financial-institutions",
+  "fullNineCaseAcceptanceProven": false,
+  "fourResponseAndResultHashesVerified": true,
+  "semanticResponseCount": 4,
+  "failedCases": {
+    "private-expense-treatment": "INTEGRITY/V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+    "target-relief-amount": "OVERALL_STATUS/V4_ACCEPTANCE_SCORE_FAILED"
+  },
+  "hashes": {
+    "runner-v4.partial.jsonl": "1dc55e0d0d73d60f77f89ac6d0bb03773a3c4bf8ecc013a7ea9590c1df6ed55f",
+    "consumed-v4.json": "952c50219cc8c29d0d3dea6798dd99b1ea4d7f88b3e046e280eb7217a0ab40ae"
+  },
+  "profile": "iras-v4-retry-consumed-outcome-independent-review"
+}
