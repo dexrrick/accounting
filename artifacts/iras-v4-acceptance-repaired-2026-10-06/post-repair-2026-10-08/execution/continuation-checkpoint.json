@@ -1,7 +1,7 @@
 {
   "profile": "iras-v4-post-repair-launcher-ready-checkpoint",
-  "status": "FRESH_CAPTURE_COMPLETE_GEMINI_UNSTARTED_SHARED_ALLOWANCE_BELOW_REVIEWED_GATE",
-  "observedAtUtc": "2026-10-08T16:17:47.4302620Z",
+  "status": "GEMINI_PREFLIGHT_RESERVE_REJECTED_ZERO_CALLS_AUTHORIZATION_UNSPENT",
+  "observedAtUtc": "2026-10-08T16:51:38.342Z",
   "launcherCommit": "ea761cd199979a8b2fb9cceb3f6f197dacc72984",
   "previousCheckpointCommit": "8ae8a3b",
   "priorConsumedRetryCommit": "b5b71b7",
@@ -31,30 +31,39 @@
     "independentReview": "NO_REMAINING_MATERIAL_FINDINGS",
     "supervisorPostCommitOfflineCheck": "PASS_594_BOUND_36_PROTECTED_9_PROMPTS_15_IDENTITIES",
     "productionCodeChanged": false,
-    "priorRepairLintBuildSmokeFull": "PASSED_PRIOR_SESSION_NOT_REPEATED"
+    "priorRepairLintBuildSmokeFull": "PASSED_PRIOR_SESSION_NOT_REPEATED",
+    "semanticContinuationSyntax": "PASS_NODE22",
+    "semanticContinuationOfflineCheck": "PASS_REVIEW_APPROVED_ZERO_NETWORK_ZERO_CREDENTIAL_ZERO_WRITES",
+    "semanticContinuationIndependentReview": "NO_REMAINING_MATERIAL_FINDINGS_FINAL_HASHES_CONFIRMED",
+    "coreLiveIntegrityCapabilityAndEvidenceChecks": "REACHED_POST_VALIDATION_FRESH_USAGE_GATE"
   },
   "resourcePolicy": {
-    "fiveHourProjection": 40,
-    "weeklyProjection": 15,
+    "fiveHourProjection": 20,
+    "weeklyProjection": 10,
     "fiveHourReserve": 8,
     "weeklyReserve": 4,
     "checkpointAtRemainingPercent": 10,
     "finishAboveRemainingPercent": 5,
     "currentAllowance": {
       "ordinaryUsageAllowed": true,
-      "fiveHourRemainingPercent": 47,
-      "weeklyRemainingPercent": 82,
+      "fiveHourRemainingPercent": 26,
+      "weeklyRemainingPercent": 79,
+      "observedAtUtc": "2026-10-08T16:49:11Z",
       "sourceTool": "mcp__codex_app__get_usage_limits"
     },
-    "freshObservationStillRequiredAfterLivePreflight": true
+    "freshObservationStillRequiredAfterLivePreflight": true,
+    "originalCombinedScopeProjection": {
+      "fiveHour": 40,
+      "weekly": 15,
+      "preserved": true
+    }
   },
   "nextRequired": [
-    "Read this checkpoint; verify saved capture hashes and frozen execution inputs without repeating passed tests. The consumed older attempts remain immutable.",
-    "After the shared window renews, obtain a fresh allowance observation; do not lower the reviewed40/15 estimates or8/4 reserves to force the gate.",
-    "Before source expiry09/10/2026 22:43:24.380 SGT, use the completed code-bound capture; do not recapture or spend new source requests under the already consumed15-request grant. If expired, new source-capture authorization is needed.",
-    "Start exactly the committed Node22 launch.mjs --semantic with --import tsx and local environment-file configuration; credentials stay process-local. This nine-call authorization remains unspent and needs no repeated approval.",
-    "When the actual runner requests its fresh gate after costly preflight, bind the new usage observation and current saved quota approval to its nonce, request hashes and configured credential digest.",
-    "Execute at most nine fixed Gemini calls,8000ms deadline,15250ms spacing,no retries/probes, source replay only. Independently review the outcome once, preserve any consumed attempt, and commit the result."
+    "Resume after shared allowance renewal at 09/10/2026 03:01:29 SGT; verify a fresh actual observation supports the reviewed20/10 projection and8/4 reserves.",
+    "Use the committed semantic-continuation.mjs --semantic on Node22 with CODEX_GIT_EXECUTABLE set to the fixed bundled Git path, --env-file=.env.local and --import tsx. Keep credentials private. Original launch.mjs is the capture lineage, not the continuation entry point.",
+    "Use the saved capture before expiry09/10/2026 22:43:24.380 SGT. No recapture, probes, provider retries or new human approval for this same unspent nine-call authorization.",
+    "Respond to the new gate nonce using an actual non-error get_usage_limits result observed after core validation, bound to current launcher/approval/projection/review/credential hashes.",
+    "Run at most9 fixed Gemini calls, then independently review the actual outcome and commit the result. Preserve any consumed attempt."
   ],
   "authorizationCommit": "506bd395d050f57c5e8c6202492fb8acd38ce8c5",
   "userInstruction": "go ahead all good",
@@ -69,7 +78,7 @@
     "evidenceLockSha256": "aa5c88eeb19c3ef891b09fa3c49f25e20620263f2121faf346403f6012fd445b",
     "earliestAcquisitionAt": "2026-10-08T14:43:24.38Z",
     "maximumAgeHours": 24,
-    "expiresAtUtc": "2026-08-11T14:43:24.0000000+08:00",
+    "expiresAtUtc": "2026-10-09T14:43:24.380Z",
     "expiresAtSgt": "09/10/2026 22:43:24.380 SGT",
     "completedAtUtc": "2026-10-08T16:13:02.881Z",
     "providerCredentialRead": false,
@@ -90,17 +99,19 @@
     "newHumanApprovalRequiredForSameUnspentAttempt": false
   },
   "allowanceGate": {
-    "status": "NOT_MET_NO_SEMANTIC_PROCESS_STARTED",
-    "lastObservedFiveHourRemainingPercent": 47,
-    "lastObservedWeeklyRemainingPercent": 82,
-    "projectionFiveHour": 40,
-    "projectionWeekly": 15,
-    "projectedFiveHourRemainingPercent": 7,
-    "projectedWeeklyRemainingPercent": 67,
+    "status": "NOT_MET_ZERO_PROVIDER_CALLS",
+    "observationPath": "execution/semantic-gate-response-ecf28137-21b5-46bd-a8c7-e0817d6e45ae.json",
+    "lastObservedFiveHourRemainingPercent": 26,
+    "lastObservedWeeklyRemainingPercent": 79,
+    "projectionFiveHour": 20,
+    "projectionWeekly": 10,
+    "projectedFiveHourRemainingPercent": 6,
+    "projectedWeeklyRemainingPercent": 69,
     "minimumFiveHourReserve": 8,
     "minimumWeeklyReserve": 4,
-    "minimumFiveHourStartPercent": 48,
-    "estimatesLowered": false,
+    "minimumFiveHourStartPercent": 28,
+    "projectionScope": "Gemini-only nine-case run, outcome review and checkpoint; completed capture excluded",
+    "furtherEstimateReductionToForceGate": false,
     "primaryResetsAtUtc": "2026-10-08T19:01:29Z",
     "primaryResetsAtSgt": "09/10/2026 03:01:29 SGT",
     "freshObservationRequiredAfterExpensiveSemanticPreflight": true
@@ -112,5 +123,11 @@
     "finishAboveRemainingPercent": 5,
     "floorPreserved": true,
     "unnecessaryTestsAndBroadReviewsSkippedPerUser": true
-  }
+  },
+  "semanticContinuationCommit": "05b617997fc968f00665eb5b606842112c37899e",
+  "userContinuationInstruction": "i think you can just go ahead with the gemini call",
+  "semanticPreflightProcessStarted": true,
+  "semanticPreflightProcessExited": true,
+  "semanticConsumptionMarkerCreated": false,
+  "emptyUnconsumedNamespaceCleanup": "Confirmed zero entries and no consumption marker; removed empty directory non-recursively so the same unspent namespace remains available."
 }
