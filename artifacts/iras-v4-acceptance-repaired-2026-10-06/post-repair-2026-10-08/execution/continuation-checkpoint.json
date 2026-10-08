@@ -1,0 +1,59 @@
+{
+  "profile": "iras-v4-post-repair-launcher-ready-checkpoint",
+  "status": "OFFLINE_LAUNCHER_REVIEWED_COMMITTED_NEW_EXPLICIT_APPROVAL_PENDING",
+  "observedAtUtc": "2026-10-08T14:21:15Z",
+  "launcherCommit": "ea761cd199979a8b2fb9cceb3f6f197dacc72984",
+  "previousCheckpointCommit": "8ae8a3b",
+  "priorConsumedRetryCommit": "b5b71b7",
+  "priorConsumedRetry": {
+    "passed": 2,
+    "failed": 2,
+    "notRun": 5,
+    "immutable": true
+  },
+  "repairsCommit": "3a7022e",
+  "reviewedCodeCommit": "66bdb77777f945f19d17cfe1559f4d6f9f9acfae",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "executionDirectory": "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/execution",
+  "preparationDirectory": "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/preparation",
+  "authorizationGranted": false,
+  "actualAuthorizationFileAbsent": true,
+  "actualApprovalEvidenceFileAbsent": true,
+  "actualResourceReviewFileAbsent": true,
+  "captureNamespaceAbsent": true,
+  "semanticNamespaceAbsent": true,
+  "newSourceRequestsMade": 0,
+  "newGeminiCallsMade": 0,
+  "fullNineCaseAcceptanceProven": false,
+  "validation": {
+    "syntax": "PASS_NODE22",
+    "targetedOfflineTests": "PASS_4_OF_4",
+    "independentReview": "NO_REMAINING_MATERIAL_FINDINGS",
+    "supervisorPostCommitOfflineCheck": "PASS_594_BOUND_36_PROTECTED_9_PROMPTS_15_IDENTITIES",
+    "productionCodeChanged": false,
+    "priorRepairLintBuildSmokeFull": "PASSED_PRIOR_SESSION_NOT_REPEATED"
+  },
+  "resourcePolicy": {
+    "fiveHourProjection": 40,
+    "weeklyProjection": 15,
+    "fiveHourReserve": 8,
+    "weeklyReserve": 4,
+    "checkpointAtRemainingPercent": 10,
+    "finishAboveRemainingPercent": 5,
+    "currentAllowance": {
+      "ordinaryUsageAllowed": true,
+      "fiveHourRemainingPercent": 84,
+      "weeklyRemainingPercent": 88,
+      "sourceTool": "mcp__codex_app__get_usage_limits"
+    },
+    "freshObservationStillRequiredAfterLivePreflight": true
+  },
+  "nextRequired": [
+    "Obtain explicit human approval for one new exact15-request IRAS capture and one fixed9-call Gemini attempt, plus current quota confirmation. Prior consumed authorization is not reusable.",
+    "Record the actual human reply in approval-evidence.json and authorization.json using reviewed templates; do not infer approval from elapsed time or an offline continuation.",
+    "Have an independent reviewer validate approval, quota and resource bindings; record resource-authorization-review.json and commit exact execution inputs.",
+    "Perform actual branded capability/acquisition permit checks and capture once under frozen scope; independently review completed fresh evidence.",
+    "Refresh actual allowance after costly preflight using new gate request; preserve40/15 projection and8/4 reserves. Run fixed model gemini-3.5-flash-lite, 8000ms deadline, nine calls max, no retries/probes, replay-only source retrieval.",
+    "Independently review outcome, preserve any consumed attempt, and checkpoint."
+  ]
+}
