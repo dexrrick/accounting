@@ -1,0 +1,22 @@
+{
+  "profile": "iras-v4-semantic-continuation-resource-projection",
+  "status": "INDEPENDENTLY_REVIEWED_PLANNING_ESTIMATE",
+  "scope": "One nine-call Gemini acceptance continuation using the already captured and locked 15-request evidence; no capture, source retrieval, probes, retries, or additional calls",
+  "estimation": "Conservative planning estimate for this bounded semantic-only continuation; not measured Gemini quota or isolated per-call cost, and not derived by subtracting prior usage from an earlier estimate.",
+  "fiveHourCostPercentagePoints": 20,
+  "weeklyCostPercentagePoints": 10,
+  "reserveAfterProjectionMinimumFiveHourPercent": 8,
+  "reserveAfterProjectionMinimumWeeklyPercent": 4,
+  "checkpointAtRemainingPercent": 10,
+  "finishAboveRemainingPercent": 5,
+  "observationMaximumAgeMs": 300000,
+  "actualAllowanceMustBeMonitored": true,
+  "observationRequiredAfterExpensiveValidation": true,
+  "stopIfBoundNoLongerSupported": true,
+  "captureAlreadyLocked": true,
+  "liveSourceRetrieval": false,
+  "providerProbesAuthorized": 0,
+  "retries": 0,
+  "authorizedGeminiCalls": 9,
+  "model": "gemini-3.5-flash-lite"
+}
