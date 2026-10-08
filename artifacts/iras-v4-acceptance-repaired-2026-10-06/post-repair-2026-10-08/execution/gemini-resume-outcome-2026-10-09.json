@@ -1,0 +1,111 @@
+{
+  "profile": "iras-v4-gemini-resume-outcome",
+  "status": "FAILED_CONSUMED_NO_RETRY",
+  "observedAtUtc": "2026-10-08T23:27:43.0165407Z",
+  "executionHead": "3c42d7c48fba4bed6637f4cd317f7e21e8dde395",
+  "continuationUserInstruction": "supervisor please continue where you left off with the gemini call\\",
+  "continuationThreadId": "01a11dc5-4e7c-72c0-834d-e46b4a3e7f57",
+  "priorAuthorizationReusedWithinSameUnspentAttempt": true,
+  "model": "gemini-3.5-flash-lite",
+  "runtime": "Node 22.23.2",
+  "authorizedMaximumCalls": 9,
+  "actualCalls": 3,
+  "responsesReceived": 3,
+  "passed": 2,
+  "failed": 1,
+  "notRun": 6,
+  "newOfficialSourceRequests": 0,
+  "providerRetries": 0,
+  "providerProbes": 0,
+  "transportTimeoutMs": 8000,
+  "minimumStartGapMs": 15250,
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "consumptionMarker": "CONSUMED_NO_RETRY",
+  "finalAcceptanceDocumentAbsent": true,
+  "fullNineCaseAcceptanceProven": false,
+  "firstFailure": "INTEGRITY",
+  "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+  "semanticChecksPassedForFailedCase": {
+    "SEMANTIC_VALIDATION": true,
+    "SEMANTIC_ISSUE_IDENTITY": true,
+    "SEMANTIC_DIMENSIONS": true,
+    "TOPIC_OWNERSHIP": true,
+    "REQUESTED_CONCEPT_OWNERSHIP": true
+  },
+  "outsideInventoryFetch": [
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+      "status": "THREW",
+      "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    }
+  ],
+  "cases": [
+    {
+      "caseId": "target-relief-entitlement",
+      "status": "PASSED",
+      "firstFailure": null,
+      "failureCode": null
+    },
+    {
+      "caseId": "target-relief-amount",
+      "status": "PASSED",
+      "firstFailure": null,
+      "failureCode": null
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "status": "FAILED",
+      "firstFailure": "INTEGRITY",
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "status": "NOT_RUN",
+      "firstFailure": null,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "status": "NOT_RUN",
+      "firstFailure": null,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "status": "NOT_RUN",
+      "firstFailure": null,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "status": "NOT_RUN",
+      "firstFailure": null,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "status": "NOT_RUN",
+      "firstFailure": null,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "status": "NOT_RUN",
+      "firstFailure": null,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+    }
+  ],
+  "artifacts": {
+    "partialJournalSha256": "0a93f3ae8ae1385a8c3c26f24fc1037fc868b08ecd957d536b442b399eca2bc7",
+    "consumptionMarkerSha256": "7dc26419455e23babe8f57b35ab33e9398514f0cea670b5cd27842d97bd88f0e",
+    "gateRequestPath": "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/execution/semantic-gate-request-0456920f-d87f-49c2-b1d8-aec359e577fb.json",
+    "gateResponsePath": "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/execution/semantic-gate-response-0456920f-d87f-49c2-b1d8-aec359e577fb.json"
+  },
+  "independentReview": "REVIEW_COMPLETE_FAILURE_CONFIRMED",
+  "precheck": {
+    "firstLaunch": "NODE24_PRECHECK_REJECTED_ZERO_PROVIDER_CALLS",
+    "correctedLaunch": "NODE22_FROZEN_CAPABILITY_AND_FRESH_ALLOWANCE_GATE_PASSED"
+  },
+  "nextStep": "Offline diagnosis of the out-of-inventory retrieval request using retained response; preserve consumed namespace. A new live attempt requires its own reviewed scope and authorization.",
+  "independentReviewPath": "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/execution/gemini-resume-outcome-review-2026-10-09.json"
+}
