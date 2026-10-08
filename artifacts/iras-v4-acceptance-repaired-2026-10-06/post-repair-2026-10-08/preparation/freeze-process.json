@@ -1,0 +1,10 @@
+{
+  "geminiCallsAllowed": 0,
+  "outputsWriteOnce": true,
+  "credentialsReadAllowed": false,
+  "sourceRequestsAllowed": 0,
+  "approvalPending": true,
+  "processId": 34208,
+  "profile": "iras-v4-post-repair-offline-freeze-process",
+  "launchedAtUtc": "2026-10-08T13:28:29.4713595Z"
+}
