@@ -228,7 +228,7 @@ async function assertHistoricalArtifactsUnchanged() {
   }
   const checks = await Promise.all(manifest.artifacts.map(async item => {
     if (typeof item?.path !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)) return false;
-    const filePath = path.resolve(PROJECT_ROOT, item.path);
+    const filePath = path.resolve(PROJECT_ROOT, item.path.replaceAll('\\', '/'));
     const relativePath = path.relative(PROJECT_ROOT, filePath);
     if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false;
     try {
@@ -250,7 +250,7 @@ async function assertV2HistoricalArtifactsUnchanged() {
   }
   const checks = await Promise.all(manifest.artifacts.map(async item => {
     if (typeof item?.path !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)) return false;
-    const filePath = path.resolve(PROJECT_ROOT, item.path);
+    const filePath = path.resolve(PROJECT_ROOT, item.path.replaceAll('\\', '/'));
     const relativePath = path.relative(PROJECT_ROOT, filePath);
     if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false;
     try {
@@ -2294,7 +2294,7 @@ async function requirePassingAuthorityReliefTarget(outputDirectory) {
   const protectedFilesPassed = Array.isArray(protectedHashes) && protectedHashes.length === 29 &&
     (await Promise.all(protectedHashes.map(async item => {
       if (typeof item?.path !== 'string' || typeof item.sha256 !== 'string') return false;
-      const filePath = path.resolve(PROJECT_ROOT, item.path);
+      const filePath = path.resolve(PROJECT_ROOT, item.path.replaceAll('\\', '/'));
       return await hashFile(filePath) === item.sha256;
     }))).every(Boolean);
   const rowAcceptancePassed = Array.isArray(targeted.cases) && targeted.cases.length === expectedCases.length &&
@@ -2340,7 +2340,7 @@ async function assertProtectedSemanticWireFormatArtifacts() {
       new Set(protectedHashes.map(item => item?.path)).size !== protectedHashes.length ||
       !(await Promise.all(protectedHashes.map(async item => {
         if (typeof item?.path !== 'string' || !/^[a-f0-9]{64}$/.test(item.sha256)) return false;
-        const filePath = path.resolve(PROJECT_ROOT, item.path);
+        const filePath = path.resolve(PROJECT_ROOT, item.path.replaceAll('\\', '/'));
         const relativePath = path.relative(PROJECT_ROOT, filePath);
         if (!relativePath || relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) return false;
         try {
