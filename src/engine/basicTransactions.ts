@@ -32,7 +32,7 @@ const need = (key: string, name: string, prompt: string): MissingFieldInfo => ({
 
 /** A single explicit SGD value only. Reject multiple, invalid and unsafe amounts. */
 function amountCents(query: string): bigint | undefined {
-  const amounts = [...query.matchAll(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d.,])/gi)];
+  const amounts = [...query.matchAll(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d,]|\.\d)/gi)];
   if (amounts.length !== 1) return undefined;
   const whole = amounts[0][1].replace(/,/g, '');
   const fraction = (amounts[0][2] || '').padEnd(2, '0');
