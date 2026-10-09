@@ -845,7 +845,7 @@ export async function processAccountingQuery(
             relevantChatHistory,
             groundedContext,
             deterministicScenario
-          ));
+          )));
         } catch (err: any) {
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'OpenAI API Error';
