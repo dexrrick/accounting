@@ -83,7 +83,7 @@ function expenseAccounts(query: string): Pair {
 const templates: Template[] = [
   {
     id: 'PETTY_CASH_WITHDRAWAL', title: 'Cash withdrawal to petty cash',
-    patterns: [/\b(?:withdraw|withdrew|withdrawal|take|took|transfer|transferred|move|moved)\b/i, /\b(?:petty cash|cash box|cash drawer)\b/i, /\bbank\b/i],
+    patterns: [/\b(?:withdraw|withdrew|withdrawal|take|took|transfer|transferred|move|moved)\b/i, /\b(?:petty cash|cash box|cash drawer)\b/i],
     accounts: () => ({ debit: asset('Petty Cash', '1005'), credit: bank() }),
     rationale: 'Internal transfer between two asset accounts; no revenue or expense and no GST arises merely from moving cash.'
   },
