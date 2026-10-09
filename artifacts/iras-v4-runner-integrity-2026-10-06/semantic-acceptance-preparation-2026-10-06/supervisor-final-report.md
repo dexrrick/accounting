@@ -1,0 +1,25 @@
+# Acceptance launcher prepared; Gemini remains on HOLD — 06/10/2026
+
+The artifact-only acceptance launcher is implemented, independently reviewed and validated against the actual frozen checkout. Both P2 findings are closed. The supervisor's Node 22 `--check`, under the preserved external-network blocker, returned `FROZEN_EVIDENCE_AND_OFFLINE_GATES_VALID` with exit code 0. Semantic acceptance remains untested: **zero provider calls, zero new official requests, no semantic reservation and no nine-call authorization record**.
+
+## Changes and validation
+
+`launch.mjs.txt` defaults to API-free checking. Live execution requires separately recorded human authorization tied to the actual reviewed launcher, review, projection, preparation commit and frozen inputs. It invokes the existing bounded runner once with the fixed namespace and reviewed capability. The post-validation rendezvous requests a fresh independent shared allowance reading and current credential-bound provider quota/headroom evidence. All execution failure paths inspect canonical output state; present, unreadable, partial or uncertain state prevents retry and preserves available hashes.
+
+`offline-controls.mjs.txt` covers allowance, authorization, reserve, quota and audit gates. Its instrumented stdin CLI cases for invalid arguments and missing authorization each observed zero runner imports, capability loads, credential reads, launcher writes and requests. The harness created and removed one empty temporary directory. Builder Node 22 syntax checks, focused controls and targeted oxlint passed with no warnings; independent re-review found no remaining material findings. Saved actual supervisor output is `supervisor-offline-check.txt`, raw SHA-256 `de9743fa000dd391e6b78feb50264a5583533ec59ddc92e48acb91a4c35a5e58`.
+
+Changed files are confined to this preparation directory: the launcher and controls, supervisor plan, raw baseline verification, reserve projection, user-reported quota/key context, independent review, actual check output, validation record and this report. The 592 frozen code/input bindings and the retained capture, original failure audit, completion audit, lock and manifests remain unchanged. Existing accounting smoke/build validation is retained; no production/input change justified repeating the accounting suite. Capture does not need to be repeated.
+
+Final reviewed raw hashes: launcher `3c4ae3ce2e8fc995cc88272015d9af6224f0cac2a5967f29ecc52e8aa44411ad`; controls `2def37d0741331e4507276f5093a231422e572b1abd563b92f273a020eb8b26c`; independent review `fb2f050efb034814c27477bd9a1d1f398425974d2fd4231407ad7d5d7b858c40`.
+
+## Resource checkpoint and remaining gates
+
+The user's reset was independently confirmed at continuation: 99% five-hour / 43% weekly remaining. The latest preparation reading at 17:19:10 SGT was **71% five-hour / 38% weekly remaining**, above the user's 5% five-hour stopping floor. Begin checkpoint preparation at 10% and finish above 5%; do not automatically spend reset credits.
+
+The independently reviewed conservative projection is 80 / 15 percentage points, based on the documented larger prior cycle's 78 / 12 decrease and including outcome review and commit. The frozen live gate therefore requires **at least 88% five-hour / 19% weekly remaining**. It does not currently pass. The usage tool reports the next five-hour reset at **21:26:09 SGT on 06/10/2026**. Refresh allowance at the launcher rendezvous; an expected reset is not a successful allowance reading.
+
+Evidence freshness still begins at `2026-10-06T06:26:38.150Z` and expires at **14:26:38.150 SGT on 07/10/2026**. Preparation did not reset that window. The canonical `semantic-run-v4` namespace and `semantic-authorization.json` remain absent after the actual check.
+
+The user confirmed the Gemini key is saved in `.env.local`; it was not read or loaded during preparation. Load it process-locally only after the separate nine-call authorization, and verify the expected `GEMINI_API_KEY` is available without printing it. The user reports AI Studio free limits of 15 RPM, 250,000 TPM and 500 RPD. Frozen pacing allows at most four starts per minute. Those reported limits do not establish current daily/token headroom or model/project quota. Obtain fresh headroom evidence for the configured credential and nine frozen requests; do not make an extra provider probe or manufacture quota evidence.
+
+Next: obtain the separately requested one-use nine-call authorization; record it against this committed preparation; confirm fresh reserves, credentials/quota, evidence and unused namespace; invoke once. The gate response must carry the actual usage-tool observation obtained after its request and provider quota/headroom confirmation. Codex observation must be within five minutes, quota confirmation within thirty minutes, and the response must arrive within the bounded 120-second rendezvous. Retain actual outputs, production diagnostics, independent layer verdicts and first-failure attribution; independently review and commit the actual outcome even if it fails. A consumed namespace cannot be retried. No push, merge or deployment is included.

@@ -1,0 +1,29 @@
+{
+  "verifiedAt": "2026-10-02T00:16:46.459Z",
+  "nodeVersion": "v22.23.1",
+  "currentFingerprintsMatch": true,
+  "preLiveFingerprintsMatch": true,
+  "protectedEntriesMatch": true,
+  "protectedEntryCount": 32,
+  "startedAt": "2026-10-02T00:13:35.234Z",
+  "completedAt": "2026-10-02T00:15:03.351Z",
+  "localStart": "02/10/2026, 08:13:35",
+  "localEnd": "02/10/2026, 08:15:03",
+  "requests": 6,
+  "responsesReceived": 0,
+  "validatorRejectedReceivedResponses": 0,
+  "providerStatuses": [
+    400,
+    400,
+    400,
+    400,
+    400,
+    400
+  ],
+  "minimumObservedStartGapMs": 16602,
+  "artifactInvalidResponses": 6,
+  "providerFailures": 6,
+  "timeouts": 0,
+  "strictAcceptance": false,
+  "finalTenRun": false
+}

@@ -1,0 +1,11 @@
+{
+  "namespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
+  "launcherSha256": "c3a17c5e444a69cbff2450d74efdbaee1748d755b2705819f04bd4b35585d31e",
+  "retries": 0,
+  "authorizedCalls": 9,
+  "profile": "iras-v4-authorized-semantic-process",
+  "launchedAtUtc": "2026-10-07T15:57:30.6611717Z",
+  "sourceRequestsAllowed": 0,
+  "model": "gemini-3.5-flash-lite",
+  "processId": 3992
+}

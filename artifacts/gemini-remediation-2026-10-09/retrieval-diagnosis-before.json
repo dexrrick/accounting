@@ -1,0 +1,123 @@
+{
+  "profile": "EXPLORATORY_OFFLINE_CPF_DIAGNOSIS_BEFORE_REPAIR",
+  "acceptanceProven": false,
+  "newSourceRequests": 0,
+  "requestedConcepts": [
+    {
+      "id": "cpf_relief",
+      "label": "CPF Relief / compulsory CPF contributions",
+      "terms": [
+        "cpf relief",
+        "central provident fund relief",
+        "compulsory cpf contributions"
+      ],
+      "topicIds": [
+        "iras-individual-cpf-relief"
+      ]
+    },
+    {
+      "id": "semantic_personal_income_tax_relief",
+      "label": "personal income tax relief",
+      "terms": [
+        "personal income tax relief"
+      ],
+      "topicIds": []
+    }
+  ],
+  "provisionalScopes": [
+    {
+      "id": "iras-authority-query-concept-cpf-relief",
+      "mappedTopicIds": [
+        "iras-individual-cpf-relief"
+      ]
+    },
+    {
+      "id": "iras-authority-query-concept-semantic-personal-income-tax-relief",
+      "mappedTopicIds": []
+    }
+  ],
+  "observedReplayRequests": [
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+      "captured": true
+    },
+    {
+      "url": "https://www.iras.gov.sg/sitemap",
+      "captured": true
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+      "captured": false
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+      "captured": false
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+      "captured": false
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-have-other-side-or-personal-income",
+      "captured": false
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+      "captured": true
+    },
+    {
+      "url": "https://www.iras.gov.sg/sitemap",
+      "captured": true
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+      "captured": false
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+      "captured": false
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/my-situation/i-have-other-side-or-personal-income",
+      "captured": false
+    },
+    {
+      "url": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+      "captured": false
+    }
+  ],
+  "registeredQuality": {
+    "status": "RETRIEVED_SUFFICIENT",
+    "rejectedRecords": [],
+    "uncoveredTopicIds": [],
+    "uncoveredConcepts": []
+  },
+  "fallbackStages": [
+    {
+      "stage": "LOCAL_VERIFIED",
+      "status": "EXHAUSTED",
+      "reason": "Local retrieval was insufficient for at least one routed topic."
+    },
+    {
+      "stage": "MAPPED_SOURCE",
+      "status": "SUFFICIENT",
+      "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+    },
+    {
+      "stage": "SITEMAP_DISCOVERY",
+      "status": "EXHAUSTED",
+      "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+    },
+    {
+      "stage": "OFFICIAL_DOMAIN_SEARCH",
+      "status": "EXHAUSTED",
+      "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+    },
+    {
+      "stage": "INSUFFICIENT",
+      "status": "EXHAUSTED",
+      "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+    }
+  ],
+  "finding": "A topicless personal-income-tax-relief scope excludes the registered CPF topic during standalone admission; full-scope quality accepts the captured CPF record."
+}

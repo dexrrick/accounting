@@ -1,0 +1,547 @@
+{
+  "summary": {
+    "suite": "Singapore multi-authority workstreams held-out oracle",
+    "mode": "ORACLE_ROUTING_WITH_LIVE_SOURCE_RETRIEVAL",
+    "oracleMode": true,
+    "modelUnderstandingMeasured": false,
+    "sourceAccessMode": "LIVE_SOURCE_DISCOVERY_REQUESTED",
+    "liveSourceRetrievalRequested": true,
+    "liveEvidenceMeasured": true,
+    "cases": 1,
+    "expectedScopeCasesPassed": 1,
+    "overallStatusCounts": {
+      "VERIFIED": 0,
+      "CONDITIONAL": 0,
+      "INSUFFICIENT": 1
+    },
+    "limitations": [
+      "Oracle issue plans measure deterministic reconciliation and retrieval, not live-model understanding.",
+      "Only IRAS live discovery is implemented; the other authority adapters use reviewed local evidence. No live model call was made.",
+      "A topic intentionally left unmapped by the independent taxonomy remains uncovered even when its oracle meaning is clear."
+    ]
+  },
+  "cases": [
+    {
+      "id": "A-cpf-and-personal-income-tax-relief",
+      "queryLabel": "An employee earns [amount] per month. What CPF contributions must the employer and employee make, and how do the employee's compulsory CPF contributions affect ",
+      "oracleMode": true,
+      "modelUnderstandingMeasured": false,
+      "oracleSemanticInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "issues": [
+          {
+            "subject": "employer CPF contribution obligations",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          },
+          {
+            "subject": "employee CPF contribution obligations",
+            "population": "EMPLOYEE",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          },
+          {
+            "subject": "employee personal income tax relief for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          }
+        ]
+      },
+      "rawQueryRetained": true,
+      "materialIssues": [
+        {
+          "id": "issue_80a46a4d",
+          "subject": "employer CPF contribution obligations",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "MAPPED"
+        },
+        {
+          "id": "issue_acad69df",
+          "subject": "employee CPF contribution obligations",
+          "population": "EMPLOYEE",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "MAPPED"
+        },
+        {
+          "id": "issue_7e4d5b0a",
+          "subject": "employee personal income tax relief for compulsory CPF contributions",
+          "population": "INDIVIDUAL",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "MAPPED"
+        }
+      ],
+      "mappedIds": [
+        {
+          "issueId": "issue_80a46a4d",
+          "topicIds": [
+            "cpf_contribution_rates"
+          ]
+        },
+        {
+          "issueId": "issue_acad69df",
+          "topicIds": [
+            "cpf_contribution_rates"
+          ]
+        },
+        {
+          "issueId": "issue_7e4d5b0a",
+          "topicIds": [
+            "iras-individual-cpf-relief"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "issueIds": [
+            "issue_80a46a4d",
+            "issue_acad69df"
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_INDIVIDUAL_TAX",
+          "issueIds": [
+            "issue_7e4d5b0a"
+          ]
+        }
+      ],
+      "retrievedWorkstreams": [
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "sourceSections": [
+            "CPF_CONTRIBUTIONS"
+          ],
+          "populations": [
+            "EMPLOYER",
+            "EMPLOYEE"
+          ],
+          "issueIds": [
+            "issue_80a46a4d",
+            "issue_acad69df"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_80a46a4d",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "retrievalTrace": {
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "ATTEMPTED",
+                    "reason": "The stage was attempted and requires evidence admission."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  }
+                ]
+              }
+            },
+            {
+              "issueId": "issue_acad69df",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "retrievalTrace": {
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "ATTEMPTED",
+                    "reason": "The stage was attempted and requires evidence admission."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  }
+                ]
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "employer CPF contribution obligations",
+            "employee CPF contribution obligations"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "CANDIDATE_REJECTED",
+              "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "NO_ADMITTED_EVIDENCE",
+              "reason": "No candidate passed the evidence admission checks for this issue.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "NO_VERIFIED_CLAIM",
+              "reason": "No complete source quotation passed claim verification for this issue.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "ISSUE_CONCEPT_UNCOVERED",
+              "reason": "Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "CANDIDATE_REJECTED",
+              "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "subject": "employee CPF contribution obligations"
+            },
+            {
+              "code": "NO_ADMITTED_EVIDENCE",
+              "reason": "No candidate passed the evidence admission checks for this issue.",
+              "subject": "employee CPF contribution obligations"
+            },
+            {
+              "code": "NO_VERIFIED_CLAIM",
+              "reason": "No complete source quotation passed claim verification for this issue.",
+              "subject": "employee CPF contribution obligations"
+            },
+            {
+              "code": "ISSUE_CONCEPT_UNCOVERED",
+              "reason": "Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "subject": "employee CPF contribution obligations"
+            }
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_INDIVIDUAL_TAX",
+          "sourceSections": [
+            "IRAS_INDIVIDUAL_TAX"
+          ],
+          "populations": [
+            "INDIVIDUAL"
+          ],
+          "issueIds": [
+            "issue_7e4d5b0a"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_7e4d5b0a",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": true
+              },
+              "retrievalTrace": {
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "EXHAUSTED",
+                    "reason": "The stage was exhausted without sufficient admitted evidence."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SUFFICIENT",
+                    "reason": "The stage supplied reviewed evidence candidates."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  }
+                ],
+                "attempts": [
+                  {
+                    "topicId": "iras-individual-cpf-relief",
+                    "fetchStatus": "SUCCESS",
+                    "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees"
+                  }
+                ]
+              }
+            }
+          ],
+          "acceptedOfficialSources": [
+            {
+              "id": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+              "authority": "IRAS",
+              "sourceAuthority": "IRAS",
+              "publisher": "Inland Revenue Authority of Singapore (IRAS)",
+              "title": "IRAS | Central Provident Fund (CPF) Relief for employees",
+              "instrument": "IRAS Administrative Guidance",
+              "domain": "IRAS_TAX",
+              "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "recordRole": "DISCOVERED_EVIDENCE",
+              "provenance": "LIVE_EXTERNAL"
+            }
+          ],
+          "coveredConcepts": [
+            "employee personal income tax relief for compulsory CPF contributions"
+          ],
+          "uncoveredConcepts": [],
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": []
+        }
+      ],
+      "workstreamEvidenceStatuses": [
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_INDIVIDUAL_TAX",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "UNRESOLVED"
+        }
+      ],
+      "overallEvidenceStatus": "INSUFFICIENT",
+      "overallApplicationStatus": "UNRESOLVED",
+      "overallStatus": "INSUFFICIENT",
+      "renderedSections": {
+        "queryMatchesRawQuestion": true,
+        "status": "INSUFFICIENT",
+        "sections": [
+          {
+            "authority": "CPF",
+            "authorityLabel": "CPF Board",
+            "domain": "CPF_PAYROLL",
+            "domainLabel": "CPF contributions",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_80a46a4d",
+                "subject": "employer CPF contribution obligations",
+                "population": "Employer",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+                  "No candidate passed the evidence admission checks for this issue.",
+                  "No complete source quotation passed claim verification for this issue.",
+                  "Verified quotations do not support the requested topic cpf_contribution_rates."
+                ]
+              },
+              {
+                "id": "issue_acad69df",
+                "subject": "employee CPF contribution obligations",
+                "population": "Employee",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+                  "No candidate passed the evidence admission checks for this issue.",
+                  "No complete source quotation passed claim verification for this issue.",
+                  "Verified quotations do not support the requested topic cpf_contribution_rates."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "employer CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "employer CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+              "employer CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+              "employer CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "employee CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "employee CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+              "employee CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+              "employee CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates."
+            ]
+          },
+          {
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_INDIVIDUAL_TAX",
+            "domainLabel": "Individual income tax",
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_7e4d5b0a",
+                "subject": "employee personal income tax relief for compulsory CPF contributions",
+                "population": "Individual",
+                "evidenceStatus": "VERIFIED",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": []
+              }
+            ],
+            "sources": [
+              {
+                "title": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                "publisher": "Inland Revenue Authority of Singapore (IRAS)",
+                "officialUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                "claimCount": 2
+              }
+            ],
+            "gaps": []
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "employer CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+          "employer CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+          "employer CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+          "employer CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates.",
+          "employee CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+          "employee CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+          "employee CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+          "employee CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates."
+        ]
+      },
+      "localNoProviderComparison": {
+        "interpretationMode": "DETERMINISTIC_FALLBACK",
+        "interpretationFailure": "NO_PROVIDER",
+        "modelUnderstandingMeasured": false,
+        "mappedIssueCount": 2,
+        "plannedWorkstreams": [
+          {
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL"
+          },
+          {
+            "authority": "IRAS",
+            "domain": "IRAS_INDIVIDUAL_TAX"
+          }
+        ],
+        "retrievedWorkstreams": [
+          {
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED"
+          },
+          {
+            "authority": "IRAS",
+            "domain": "IRAS_INDIVIDUAL_TAX",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED"
+          }
+        ],
+        "overallStatus": "INSUFFICIENT"
+      },
+      "sourceAccessMode": "LIVE_SOURCE_DISCOVERY_REQUESTED",
+      "liveSourceRetrievalRequested": true,
+      "liveEvidenceMeasured": true,
+      "liveAcceptedRecordCount": 1
+    }
+  ]
+}

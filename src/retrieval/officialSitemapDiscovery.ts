@@ -56,6 +56,73 @@ export interface OfficialSourceIndexEntry {
   discoveredAt: string;
 }
 
+function comparableUrl(raw: string): string | undefined {
+  try {
+    const url = new URL(raw);
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+export type IrasTaxRouteArea = 'INDIVIDUAL' | 'CORPORATE' | 'GST' | 'PROPERTY' | 'STAMP_DUTY' | 'WITHHOLDING';
+
+export function getIrasTaxRouteArea(candidateUrl: string): IrasTaxRouteArea | undefined {
+  try {
+    const url = new URL(candidateUrl);
+    if (!['iras.gov.sg', 'www.iras.gov.sg'].includes(url.hostname.toLowerCase())) return undefined;
+    const path = decodeURIComponent(url.pathname).toLowerCase();
+    return /^\/taxes\/individual-income-tax(?:\/|$)/.test(path) ? 'INDIVIDUAL'
+      : /^\/taxes\/corporate-income-tax(?:\/|$)/.test(path) ? 'CORPORATE'
+        : /^\/taxes\/(?:goods-services-tax(?:-\(gst\))?|gst)(?:\/|$)/.test(path) ? 'GST'
+          : /^\/taxes\/property-tax(?:\/|$)/.test(path) ? 'PROPERTY'
+            : /^\/taxes\/stamp-duty(?:\/|$)/.test(path) ? 'STAMP_DUTY'
+              : /^\/taxes\/withholding-tax(?:\/|$)/.test(path) ? 'WITHHOLDING'
+                : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Reject a discovered IRAS URL when its explicit tax-area route conflicts with
+ * the requested mapped topic. Unclassified routes still rely on lexical and
+ * fetched-body validation, while declared source URLs retain their explicit
+ * routing authority at the caller boundary.
+ */
+export function isIrasSourceUrlAreaCompatible(
+  topicDomainId: string | undefined,
+  candidateUrl: string,
+  declaredSourceUrls: readonly string[] = [],
+  scopeQuery = ''
+): boolean {
+  if (!topicDomainId) return true;
+  const routeArea = getIrasTaxRouteArea(candidateUrl);
+  if (!routeArea) return true;
+  const allowedAreas: Record<string, ReadonlySet<string>> = {
+    IRAS_CORPORATE_TAX: new Set(['CORPORATE']),
+    // Some individual DTA queries legitimately surface IRAS's withholding-tax
+    // route; body/topic validation still decides whether that page is useful.
+    IRAS_INDIVIDUAL_TAX: new Set(['INDIVIDUAL', 'WITHHOLDING']),
+    IRAS_EMPLOYER_TAX: new Set(['INDIVIDUAL']),
+    IRAS_EMPLOYER_REPORTING: new Set(['INDIVIDUAL']),
+    IRAS_EMPLOYMENT_BENEFITS: new Set(['INDIVIDUAL']),
+    IRAS_PROPERTY_TAX: new Set(['PROPERTY']),
+    IRAS_STAMP_DUTY: new Set(['STAMP_DUTY']),
+    IRAS_GST: new Set(['GST']),
+    // Broad income-tax scopes may cover either corporate or individual
+    // income-tax pages, but not GST, property tax, or stamp duty.
+    IRAS_INCOME_TAX: new Set(['CORPORATE', 'INDIVIDUAL', 'WITHHOLDING'])
+  };
+  const allowed = allowedAreas[topicDomainId];
+  const queryExplicitlyConcernsWithholdingTax = /\b(?:withholding[-\s]+tax|wht|withhold(?:ing)? monies|payer)\b/i.test(scopeQuery);
+  if ((!allowed || allowed.has(routeArea)) || routeArea === 'WITHHOLDING' &&
+      (topicDomainId === 'IRAS_INDIVIDUAL_TAX' || topicDomainId === 'IRAS_INCOME_TAX' || queryExplicitlyConcernsWithholdingTax)) return true;
+  const comparableCandidate = comparableUrl(candidateUrl);
+  return Boolean(comparableCandidate && declaredSourceUrls.some(url => comparableUrl(url) === comparableCandidate));
+}
+
 interface SitemapCacheEntry {
   expiresAt: number;
   entries: OfficialSourceIndexEntry[];
@@ -195,7 +262,7 @@ function normalizeWords(text: string): string[] {
   });
 }
 
-function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSourceDiscoveryRequest): number {
+function metadataRelevanceScore(entry: OfficialSourceIndexEntry, request: OfficialSourceDiscoveryRequest): number {
   const searchable = `${entry.pageTitle || ''} ${entry.hierarchy.join(' ')} ${entry.normalizedPath} ${entry.topicHints.join(' ')}`;
   const path = searchable.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
   const topicPhrases = [request.topicTitle, ...(request.topicHints || [])]
@@ -217,8 +284,10 @@ function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSource
   // lexical discovery. Sitemap membership remains ranking metadata only.
   const stopWords = new Set([
     'iras', 'singapore', 'tax', 'taxes', 'income', 'gst', 'goods', 'services',
-    'company', 'companies', 'business', 'businesses', 'the', 'and', 'for', 'from',
-    'with', 'under', 'into', 'what', 'when', 'where', 'does', 'should', 'can', 'are'
+    'company', 'companies', 'corporate', 'business', 'businesses', 'treatment',
+    'private', 'employee', 'employees', 'employer', 'employers',
+    'the', 'and', 'for', 'from', 'with', 'under', 'into', 'what', 'when', 'where',
+    'does', 'should', 'can', 'are'
   ]);
   const candidateWords = new Set(normalizeWords(searchable));
   const expectedTitleWords = normalizeWords((request.expectedTitles || []).join(' '))
@@ -230,7 +299,8 @@ function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSource
   const matchedExpectedTitleWords = new Set(expectedTitleWords.filter(word => candidateWords.has(word)));
   const matchedTitleWords = new Set(topicTitleWords.filter(word => candidateWords.has(word)));
   const matchedQueryWords = new Set(queryWords.filter(word => candidateWords.has(word)));
-  const expectedTitleMatch = matchedExpectedTitleWords.size >= 2 || [...matchedExpectedTitleWords].some(word => word.length >= 9);
+  const expectedTitleMatch = matchedExpectedTitleWords.size >= 2 || [...matchedExpectedTitleWords].some(word => word.length >= 9) ||
+    expectedTitleWords.length === 1 && matchedExpectedTitleWords.size === 1;
   const distinctiveTitleMatch = [...matchedTitleWords].some(word => word.length >= 9);
   const matchedSpecificHint = (request.topicHints || []).some(hint => {
     const hintWords = normalizeWords(hint).filter(word => word.length >= 5 && !stopWords.has(word));
@@ -239,14 +309,57 @@ function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSource
   });
   const matchedTopicPhrase = topicPhrases.some(phrase => {
     const phraseWords = normalizeWords(phrase).filter(word => word.length >= 4 && !stopWords.has(word));
-    return phraseWords.length >= 2 && phraseWords.every(word => candidateWords.has(word));
+    // A single non-generic topic term can be material when the mapped scope is
+    // itself that outcome (for example, "rate"). It must come from the
+    // caller's topic title/hints, not from an arbitrary shared query word.
+    return (phraseWords.length >= 2 && phraseWords.every(word => candidateWords.has(word))) ||
+      (phraseWords.length === 1 && candidateWords.has(phraseWords[0]));
   });
-  const authorityQueryMatch = request.authorityLevelFallback &&
+  const authorityQueryMatch = request.authorityLevelFallback && matchedQueryWords.size >= 2 &&
     [...matchedQueryWords].some(word => word.length >= 7);
+  const routeArea = getIrasTaxRouteArea(entry.canonicalUrl);
+  const scopedTopicWords = normalizeWords(`${request.topicTitle} ${(request.topicHints || []).join(' ')}`)
+    .filter(word => word.length >= 5 && !stopWords.has(word));
+  const candidatePathWords = new Set(normalizeWords(entry.normalizedPath));
+  const scopedRouteTopicMatch = Boolean(routeArea && request.topicDomainId?.startsWith('IRAS_') &&
+    scopedTopicWords.some(word => candidatePathWords.has(word)));
   if (!expectedTitleMatch && !distinctiveTitleMatch && matchedTitleWords.size < 2 && matchedQueryWords.size < 2 &&
-      !matchedSpecificHint && !matchedTopicPhrase && !authorityQueryMatch) return 0;
+      !matchedSpecificHint && !matchedTopicPhrase && !authorityQueryMatch && !scopedRouteTopicMatch) return 0;
   return 20 + matchedExpectedTitleWords.size * 6 + matchedTitleWords.size * 4 + matchedQueryWords.size +
     (matchedSpecificHint ? 8 : 0) + (matchedTopicPhrase ? 8 : 0);
+}
+
+function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSourceDiscoveryRequest): number {
+  if (!isIrasSourceUrlAreaCompatible(request.topicDomainId, entry.canonicalUrl, request.declaredSourceUrls, request.scopeQuery || request.query)) return 0;
+  return metadataRelevanceScore(entry, request);
+}
+
+/**
+ * Apply the same metadata-only material relevance rule at retrieval boundaries
+ * that use injected adapters. The adapter supplies only a candidate URL/title;
+ * current topic scope and routing hints come from the caller's request.
+ */
+export function isOfficialSourceCandidateMateriallyRelevant(
+  candidateUrl: string,
+  request: OfficialSourceDiscoveryRequest,
+  candidateTitle?: string
+): boolean {
+  try {
+    const url = new URL(candidateUrl);
+    const entry: OfficialSourceIndexEntry = {
+      authority: request.authority || url.hostname,
+      canonicalUrl: url.toString(),
+      pageTitle: candidateTitle,
+      hierarchy: [],
+      normalizedPath: decodeURIComponent(url.pathname).replace(/[^a-z0-9]+/gi, ' '),
+      topicHints: [],
+      discoverySourceUrl: '',
+      discoveredAt: ''
+    };
+    return candidateScore(entry, request) > 0;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -686,6 +799,7 @@ export class OfficialDomainSearchAdapter {
           if (resultUrl.protocol !== 'https:' || resultUrl.username || resultUrl.password || !approvedHosts.has(resultUrl.hostname.toLowerCase())) continue;
           resultUrl.hash = '';
           const canonicalUrl = resultUrl.toString();
+          if (!isIrasSourceUrlAreaCompatible(request.topicDomainId, canonicalUrl, request.declaredSourceUrls, request.scopeQuery || request.query)) continue;
           queryCandidateUrls.add(canonicalUrl);
           if (!variantCandidates.has(canonicalUrl) || candidate.title) variantCandidates.set(canonicalUrl, candidate.title);
         }

@@ -1,0 +1,15 @@
+{
+  "profile": "OWNERSHIP_LIVE_FAILURE_ANALYSIS",
+  "providerRequests": 9,
+  "passed": 6,
+  "failed": 3,
+  "newProviderCallsDuringAnalysis": 0,
+  "newSourceRequestsDuringAnalysis": 0,
+  "failures": [
+    { "caseId": "private-expense-treatment", "failedStages": ["OVERALL_STATUS"], "issueEvidence": "VERIFIED", "gap": "UNROUTED_MATERIAL_CONCEPT", "finding": "Related director benefits descriptor is rejected when director is explicit in question but omitted from issue subject." },
+    { "caseId": "foreign-dividend-receipt-treatment", "failedStages": ["GOVERNED_RETRIEVAL", "EVIDENCE_ADMISSION", "CLAIM_VERIFICATION", "REQUESTED_CONCEPT_COVERAGE", "OVERALL_STATUS"], "issueEvidence": "INSUFFICIENT", "finding": "Captured foreign-income source was fetched; foreign-sourced-dividend interpretation did not obtain verified rule evidence. Investigate canonical concept and scope handling." },
+    { "caseId": "gst-input-tax-general-rule", "failedStages": ["OVERALL_STATUS"], "issueEvidence": "VERIFIED", "gap": "UNROUTED_MATERIAL_CONCEPT", "finding": "Requested GST issue is covered but raw input tax/business purchases concepts leave a topicless residual." }
+  ],
+  "sourceReferenceDate": "2026-10-08",
+  "acceptanceProven": false
+}

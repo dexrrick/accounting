@@ -1,0 +1,37 @@
+{
+  "profile": "iras-v4-gemini-resume-independent-outcome-review",
+  "status": "REVIEW_COMPLETE_FAILURE_CONFIRMED",
+  "disposition": "NO_NEW_MATERIAL_DEFECTS_IN_OUTCOME_REPORT_OR_FAIL_CLOSED_CONTROLS",
+  "independentReviewer": true,
+  "reviewer": "/root/review_gemini_outcome",
+  "reviewedAtUtc": "2026-10-08T23:29:12Z",
+  "acceptanceStatus": "FAILED_CONSUMED",
+  "confirmed": {
+    "responses": 3,
+    "passed": 2,
+    "failed": 1,
+    "notRun": 6,
+    "failedCase": "A-paraphrase-2",
+    "allFiveSemanticChecksPassedForFailedCase": true,
+    "failureStage": "INTEGRITY",
+    "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+    "rejectedUrl": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+    "approvedReliefFamily": "sitemap plus CPF-relief-employees page only",
+    "journalAndConsumptionMarkerHashesMatch": true,
+    "finalAcceptanceDocumentAbsent": true,
+    "consumedNamespacePreserved": true,
+    "reuseBlocked": true
+  },
+  "controls": {
+    "providerRetries": 0,
+    "providerProbes": 0,
+    "newLiveSourceRequests": 0,
+    "evidenceBasis": "Reviewed single-dispatch transport, request guards, replay binding, ambient network guard and retained artifacts; not independent network telemetry."
+  },
+  "limits": [
+    "Retained diagnostics do not establish precisely why CPF issue coverage remained inadequate or which relevance rule admitted the SRS candidate.",
+    "The complete rejected request identity digest is not retained."
+  ],
+  "nextOfflineStep": "Use retained A-paraphrase-2 response and saved captured evidence in a separate diagnostic harness; record issue scope, mapped-evidence rejection reasons, discovery request and candidate scores. Preserve frozen inputs and consumed namespace; do not widen inventory merely to suppress the failure.",
+  "validation": "Read-only outcome review; no files changed by reviewer, no network calls or full suites rerun."
+}

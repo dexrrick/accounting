@@ -1,0 +1,2995 @@
+{
+  "profile": "iras-first-targeted-acceptance-v3",
+  "startingSha": "f919dc90d76b439f35765ad9555f9b4701037675",
+  "invocationCommit": "0fad212cb44cb86e1cc22bd09c26d7fd6ab32c5b",
+  "preregistrationSha256": "444e98ec44a553e76eae797dc58cfbd206bb8eaa983fda1d9405b6b97cb41d03",
+  "preregistrationFileSha256": "b6bc1065468f2e71e2be02be46166cdcc569fb58bc3f32bdff44adf4fc960906",
+  "reservedAt": "2026-10-03T14:41:25.232Z",
+  "evidenceMode": "localOnly",
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "minimumStartGapMs": 15250,
+  "sourceHashesConsistent": true,
+  "fixtureHashesConsistent": true,
+  "protectedHistoryVerified": true,
+  "requestCount": 9,
+  "extraCallAttempts": 0,
+  "minimumObservedStartGapMs": 17589,
+  "cases": [
+    {
+      "caseId": "target-relief-entitlement",
+      "expectedIssueIds": [
+        "personal-cpf-relief"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "c76005669e8c5ba0207631073595ffb7f4f4a13505bf1cb7ee1ddf8112b78eba",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8825,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": null,
+        "requestedAt": "2026-10-03T14:41:25.430Z",
+        "responseReceived": true,
+        "responseChars": 1001,
+        "latencyMs": 2572
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "personal-cpf-relief"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 1,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 1,
+          "routedRequiredIssues": 1
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "domain": "IRAS_INCOME_TAX",
+            "population": "INDIVIDUAL",
+            "operation": "CHECK_ELIGIBILITY",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 1,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 0,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 1,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 1,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 0,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 0,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 1,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 2,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_INDIVIDUAL_TAX"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 0,
+              "admitted": 0,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 0,
+              "UNRESOLVED": 1
+            },
+            "evidenceFoundCount": 0,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 1,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 1,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 1,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 0,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": false,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 2,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 1,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 1,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [
+          {
+            "issueId": "personal-cpf-relief",
+            "expectedTopicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "actualTopicIds": [
+              "iras-individual-cpf-relief",
+              "iras-individual-reliefs"
+            ],
+            "passed": true
+          }
+        ],
+        "independentInventory": {
+          "topicIds": [
+            "cpf_contribution_rates",
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": false,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": false,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": true,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": true,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": false,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 0,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 0,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 2,
+            "canonicalProviderPathReached": true,
+            "providerPathReached": true,
+            "retrievalAttemptedCount": 1,
+            "blockingGapCount": 5,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": true,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "TOPIC_MAPPING_COVERAGE"
+    },
+    {
+      "caseId": "target-relief-amount",
+      "expectedIssueIds": [
+        "personal-cpf-relief-amount"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "7b5e8f876c7a0d5245f51c9dc084b8f42f6e5b592ef44c6e2d4f8dab1e878562",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8832,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 18373,
+        "requestedAt": "2026-10-03T14:41:43.804Z",
+        "responseReceived": true,
+        "responseChars": 1005,
+        "latencyMs": 2281.16
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "personal-cpf-relief-amount"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 1,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 1,
+          "routedRequiredIssues": 1
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "domain": "IRAS_INCOME_TAX",
+            "population": "INDIVIDUAL",
+            "operation": "CALCULATE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 1,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 0,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 1,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 1,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 0,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 0,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 1,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 2,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_INDIVIDUAL_TAX"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 0,
+              "admitted": 0,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 0,
+              "UNRESOLVED": 1
+            },
+            "evidenceFoundCount": 0,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 1,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 1,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 1,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 0,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": false,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 2,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 1,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 1,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [
+          {
+            "issueId": "personal-cpf-relief-amount",
+            "expectedTopicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "actualTopicIds": [
+              "iras-individual-cpf-relief",
+              "iras-individual-reliefs"
+            ],
+            "passed": true
+          }
+        ],
+        "independentInventory": {
+          "topicIds": [
+            "cpf_contribution_rates",
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": false,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": false,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": true,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": true,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": false,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 0,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 0,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 2,
+            "canonicalProviderPathReached": true,
+            "providerPathReached": true,
+            "retrievalAttemptedCount": 1,
+            "blockingGapCount": 5,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": true,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "TOPIC_MAPPING_COVERAGE"
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "expectedIssueIds": [
+        "employer-cpf-contribution",
+        "individual-cpf-tax-relief"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "96163fb78f88c9138808f6aad207eccdc9313f4bde85e9adf6a5f258b6fe0062",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8908,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 18001,
+        "requestedAt": "2026-10-03T14:42:01.805Z",
+        "responseReceived": true,
+        "responseChars": 1471,
+        "latencyMs": 2472.02
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 2,
+        "predictedIssueCount": 2,
+        "matchedIssueCount": 2,
+        "matchedExpectedIssueIds": [
+          "individual-cpf-tax-relief",
+          "employer-cpf-contribution"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 2,
+        "operationMatched": 2,
+        "dimensionsCorrect": {
+          "governingAuthority": 2,
+          "contextualAuthority": 2,
+          "domain": 2,
+          "population": 2,
+          "operation": 2
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 2,
+        "finalWorkstreamCount": 2,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 2,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 2,
+          "routedRequiredIssues": 2
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "domain": "IRAS_INCOME_TAX",
+            "population": "INDIVIDUAL",
+            "operation": "CHECK_ELIGIBILITY",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 1,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 0,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 1,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 1,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 0,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 0,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 1,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 2,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_INDIVIDUAL_TAX"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 0,
+              "admitted": 0,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 0,
+              "UNRESOLVED": 1
+            },
+            "evidenceFoundCount": 0,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 1,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 1,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 0,
+              "OTHER_GAP": 0
+            }
+          },
+          {
+            "issueIndex": 1,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "domain": "CPF_PAYROLL",
+            "population": "EMPLOYER",
+            "operation": "CALCULATE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 0,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 1,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 0,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 1,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 0,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 1,
+                "COMPANY": 0,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 0,
+                "CPF": 1,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 0,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 1,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 1,
+            "canonicalWorkstreams": [
+              {
+                "authority": "CPF",
+                "domain": "CPF_PAYROLL"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 1,
+              "admitted": 0,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 0,
+              "UNRESOLVED": 1
+            },
+            "evidenceFoundCount": 1,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 0,
+              "CANDIDATE_REJECTED": 1,
+              "NO_ADMITTED_EVIDENCE": 1,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 0,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 0,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": true,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 2,
+          "plannedIssueCount": 2,
+          "runtimeIssueCount": 2,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 0,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 0,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [
+          {
+            "issueId": "individual-cpf-tax-relief",
+            "expectedTopicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "actualTopicIds": [
+              "iras-individual-cpf-relief",
+              "iras-individual-reliefs"
+            ],
+            "passed": true
+          },
+          {
+            "issueId": "employer-cpf-contribution",
+            "expectedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "actualTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "passed": true
+          }
+        ],
+        "independentInventory": {
+          "topicIds": [
+            "cpf_contribution_rates",
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": true,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": true,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": true,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": true,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": true,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 1,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 1,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "CPF",
+            "releaseRequired": false,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": true,
+            "mappedTopicCount": 1,
+            "canonicalProviderPathReached": false,
+            "providerPathReached": false,
+            "retrievalAttemptedCount": 1,
+            "blockingGapCount": 3,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": true,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": true
+          },
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 2,
+            "canonicalProviderPathReached": true,
+            "providerPathReached": true,
+            "retrievalAttemptedCount": 1,
+            "blockingGapCount": 4,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": true,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "EVIDENCE_ADMISSION"
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "expectedIssueIds": [
+        "company-private-expense-tax-treatment"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "3facae27a35cff5eaf4ec3b71677ba42ec0f4460c5e178e917cc56e827b74ed0",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8906,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 18175,
+        "requestedAt": "2026-10-03T14:42:19.979Z",
+        "responseReceived": true,
+        "responseChars": 1268,
+        "latencyMs": 2311.71
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "company-private-expense-tax-treatment"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 1,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 1,
+          "routedRequiredIssues": 1
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "domain": "IRAS_INCOME_TAX",
+            "population": "COMPANY",
+            "operation": "DETERMINE_TREATMENT",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 1,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 0,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 1,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 0,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 1,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 0,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 1,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 2,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 1,
+              "admitted": 1,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 0,
+              "UNRESOLVED": 1
+            },
+            "evidenceFoundCount": 1,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 0,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 1,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 1,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": true,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 1,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 0,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 0,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [
+          {
+            "issueId": "company-private-expense-tax-treatment",
+            "expectedTopicIds": [
+              "iras-cit-disallowed-expenses",
+              "iras-cit-deductibility"
+            ],
+            "actualTopicIds": [
+              "iras-cit-deductibility",
+              "iras-cit-disallowed-expenses"
+            ],
+            "passed": true
+          }
+        ],
+        "independentInventory": {
+          "topicIds": [
+            "iras-cit-deductibility",
+            "iras-cit-disallowed-expenses"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": true,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": false,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": true,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": true,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": true,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 0,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 0,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 2,
+            "canonicalProviderPathReached": true,
+            "providerPathReached": true,
+            "retrievalAttemptedCount": 1,
+            "blockingGapCount": 4,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": true,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "EVIDENCE_ADMISSION"
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "expectedIssueIds": [
+        "company-foreign-dividend-receipt-treatment"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "ab9c9e3f4564893a843ab316bfce103ca77b6734bd3ce338c047baed557777bc",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8926,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 18005,
+        "requestedAt": "2026-10-03T14:42:37.985Z",
+        "responseReceived": true,
+        "responseChars": 1164,
+        "latencyMs": 2169.66
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": 0,
+        "issuePrecision": 0,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 1,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 1,
+          "routedRequiredIssues": 1
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "IRAS_INCOME_TAX",
+            "population": "COMPANY",
+            "operation": "DETERMINE_TREATMENT",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 1,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 0,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 1,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 0,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 1,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 0,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 1,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 1,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 0,
+              "admitted": 0,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 0,
+              "UNRESOLVED": 1
+            },
+            "evidenceFoundCount": 0,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 1,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 1,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 1,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": true,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 1,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 0,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 0,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [],
+        "independentInventory": {
+          "topicIds": [
+            "iras-foreign-sourced-income"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": true,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": false,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": false,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": false,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": true,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 0,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 0,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": false,
+            "semanticDimensionsCorrect": {},
+            "authorityCorrect": false,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": false,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 0,
+            "canonicalProviderPathReached": false,
+            "providerPathReached": false,
+            "retrievalAttemptedCount": 0,
+            "blockingGapCount": 0,
+            "issueApplicationStatusCorrect": false,
+            "evidenceSafeguardsPassed": false,
+            "explicitUnsupportedState": false,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": false,
+            "canonicalWorkstreamCorrect": false,
+            "canonicalWorkstreamCount": 0,
+            "runtimeMetadataConsistent": false,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "SEMANTIC_ISSUE_RECALL_PRECISION"
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "expectedIssueIds": [
+        "general-company-tax-residency-rule"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "374f5c4258820ac75cddcf4c0742ff009efa29a794a462af2973560d748a641d",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8834,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17881,
+        "requestedAt": "2026-10-03T14:42:55.866Z",
+        "responseReceived": true,
+        "responseChars": 901,
+        "latencyMs": 1920.93
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "general-company-tax-residency-rule"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "IRAS_INCOME_TAX",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_RULE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 1,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 1,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 0,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 1,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 1,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 0,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 1,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 0,
+              "admitted": 0,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 1,
+              "UNRESOLVED": 0
+            },
+            "evidenceFoundCount": 0,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 1,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 1,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 1,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": true,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 1,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 0,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 0,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [
+          {
+            "issueId": "general-company-tax-residency-rule",
+            "expectedTopicIds": [
+              "iras-corporate-tax-residency"
+            ],
+            "actualTopicIds": [
+              "iras-corporate-tax-residency"
+            ],
+            "passed": true
+          }
+        ],
+        "independentInventory": {
+          "topicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": true,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": false,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": true,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": true,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": true,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 0,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 0,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 1,
+            "canonicalProviderPathReached": true,
+            "providerPathReached": true,
+            "retrievalAttemptedCount": 1,
+            "blockingGapCount": 5,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": true,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "EVIDENCE_ADMISSION"
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "expectedIssueIds": [
+        "general-wht-royalty-rules"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "7b22ee7f378108e08c65b24b45a179ff3526fe52abdd23f0ec30b71fab10dba5",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8867,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17589,
+        "requestedAt": "2026-10-03T14:43:13.455Z",
+        "responseReceived": true,
+        "responseChars": 1038,
+        "latencyMs": 2128.07
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "general-wht-royalty-rules"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "IRAS_INCOME_TAX",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_RULE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 1,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 1,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 0,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 1,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 1,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 0,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 2,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 1,
+              "admitted": 1,
+              "verified": 1,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 1,
+              "UNRESOLVED": 0
+            },
+            "evidenceFoundCount": 1,
+            "admittedRecordCount": 2,
+            "verifiedClaimCount": 2,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 0,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 0,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 0,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 1,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": true,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 1,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 0,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 0,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [
+          {
+            "issueId": "general-wht-royalty-rules",
+            "expectedTopicIds": [
+              "iras-withholding-tax-interest-royalties"
+            ],
+            "actualTopicIds": [
+              "iras-withholding-tax",
+              "iras-withholding-tax-interest-royalties"
+            ],
+            "passed": true
+          }
+        ],
+        "independentInventory": {
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": true,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": false,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": true,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": true,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": true,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 0,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 0,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 2,
+            "canonicalProviderPathReached": true,
+            "providerPathReached": true,
+            "retrievalAttemptedCount": 1,
+            "blockingGapCount": 2,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": false,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "RULE_EVIDENCE_LIFECYCLE"
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "expectedIssueIds": [
+        "general-gst-input-tax-recovery-rules"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "e99bbe4f7eb620a0f53ec7af562e861f2d7ed78504f545e3ad4e8982850444c7",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8872,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17803,
+        "requestedAt": "2026-10-03T14:43:31.258Z",
+        "responseReceived": true,
+        "responseChars": 975,
+        "latencyMs": 2053.67
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": 0,
+        "issuePrecision": 0,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "IRAS_GST",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_RULE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 0,
+                "IRAS_INCOME_TAX": 0,
+                "IRAS_GST": 1,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 1,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 0,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 1,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 1,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 0,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 1,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 0,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "MAPPED",
+            "unresolvedReason": "NONE",
+            "mappedTopicCount": 1,
+            "canonicalWorkstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_GST"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 1,
+              "retrievalAttempted": 1,
+              "evidenceFound": 1,
+              "admitted": 1,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 1,
+              "UNRESOLVED": 0
+            },
+            "evidenceFoundCount": 1,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 0,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 0,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 1,
+              "ISSUE_CONCEPT_UNCOVERED": 1,
+              "IRAS_SCOPE_NOT_COVERED": 0,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 0,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": true,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 1,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 0,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 0,
+          "unrepresentedResidualPlanIssueCount": 0,
+          "issuePlanResidualAccommodation": false
+        }
+      },
+      "additionalGates": {
+        "topicRows": [],
+        "independentInventory": {
+          "topicIds": [
+            "iras-gst-input-tax"
+          ],
+          "residualCount": 0
+        },
+        "independentCoveragePassed": true,
+        "fullIrasLifecycle": false,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": false,
+        "passed": false
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": false,
+        "semanticQualityPassed": false,
+        "releaseCoveragePassed": false,
+        "issueCountComplete": false,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": true,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 1,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 0,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 0,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "IRAS",
+            "releaseRequired": true,
+            "semanticIssueMatched": false,
+            "semanticDimensionsCorrect": {},
+            "authorityCorrect": false,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": false,
+            "irasEvidenceComplete": false,
+            "mappedTopicCount": 0,
+            "canonicalProviderPathReached": false,
+            "providerPathReached": false,
+            "retrievalAttemptedCount": 0,
+            "blockingGapCount": 0,
+            "issueApplicationStatusCorrect": false,
+            "evidenceSafeguardsPassed": false,
+            "explicitUnsupportedState": false,
+            "expectedUnsupportedState": false,
+            "canonicalRoute": false,
+            "canonicalWorkstreamCorrect": false,
+            "canonicalWorkstreamCount": 0,
+            "runtimeMetadataConsistent": false,
+            "nonIrasCoverageAcceptable": true,
+            "passed": false
+          }
+        ]
+      },
+      "passed": false,
+      "firstFailingStage": "SEMANTIC_ISSUE_RECALL_PRECISION"
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "expectedIssueIds": [
+        "sfrsi-6-mineral-exploration-evaluation"
+      ],
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "responseDiagnostic": {
+        "interpreted": true,
+        "validatorAccepted": true,
+        "rejectionCode": "NONE",
+        "rejectionFieldGroup": "SCHEMA_FIELD"
+      },
+      "capture": {
+        "promptSha256": "9bf9830b7b2d6cb06449a6c3c126d28c4c84f71a423d48c481dd2b4494c698ca",
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+        "promptChars": 8863,
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17734,
+        "requestedAt": "2026-10-03T14:43:48.992Z",
+        "responseReceived": true,
+        "responseChars": 1076,
+        "latencyMs": 2263.36
+      },
+      "extraCallAttempts": 0,
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "sfrsi-6-mineral-exploration-evaluation"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "runtimeTimedOut": false,
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "runtimeIssueScopeDiagnostics": [
+          {
+            "issueIndex": 0,
+            "presentInIssuePlan": true,
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "ACCOUNTING",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_RULE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "runtimeMetadataConsistent": true,
+            "runtimeMetadataMatchCount": 1,
+            "runtimeMetadataMismatchCount": 0,
+            "runtimeMetadataCounts": {
+              "domain": {
+                "ACCOUNTING": 1,
+                "IRAS_INCOME_TAX": 0,
+                "IRAS_GST": 0,
+                "IRAS_PROPERTY_TAX": 0,
+                "IRAS_STAMP_DUTY": 0,
+                "IRAS_OTHER": 0,
+                "CPF_PAYROLL": 0,
+                "MOM_EMPLOYMENT": 0,
+                "ACRA_CORPORATE": 0,
+                "MAS_FUNDS": 0,
+                "UNKNOWN": 0
+              },
+              "operation": {
+                "EXPLAIN_RULE": 1,
+                "EXPLAIN_INTERACTION": 0,
+                "DETERMINE_TREATMENT": 0,
+                "CHECK_ELIGIBILITY": 0,
+                "CALCULATE": 0,
+                "PREPARE_JOURNAL": 0,
+                "COMPARE": 0,
+                "FILING_REQUIREMENT": 0,
+                "OTHER": 0
+              },
+              "population": {
+                "INDIVIDUAL": 0,
+                "EMPLOYEE": 0,
+                "EMPLOYER": 0,
+                "COMPANY": 1,
+                "SHAREHOLDER": 0,
+                "FUND": 0,
+                "PROPERTY_OWNER": 0,
+                "UNKNOWN": 0
+              },
+              "governingAuthority": {
+                "IRAS": 0,
+                "CPF": 0,
+                "MOM": 0,
+                "ACRA": 0,
+                "MAS": 0,
+                "ACCOUNTING_STANDARDS": 1,
+                "IFRS_FOUNDATION": 0,
+                "SSO": 0,
+                "UNKNOWN": 0
+              },
+              "evidenceRequirement": {
+                "AUTHORITATIVE_SOURCE": 1,
+                "CASE_FACTS": 0,
+                "AUTHORITATIVE_SOURCE_AND_CASE_FACTS": 0,
+                "UNRESOLVED": 0
+              }
+            },
+            "planStatus": "UNRESOLVED",
+            "unresolvedReason": "NO_COVERAGE_TOPIC",
+            "mappedTopicCount": 0,
+            "canonicalWorkstreams": [
+              {
+                "authority": "ACCOUNTING_STANDARDS",
+                "domain": "ACCOUNTING"
+              }
+            ],
+            "runtimeIssueCount": 1,
+            "lifecycleCounts": {
+              "mapped": 0,
+              "retrievalAttempted": 0,
+              "evidenceFound": 0,
+              "admitted": 0,
+              "verified": 0,
+              "covered": 0
+            },
+            "evidenceStatusCounts": {
+              "VERIFIED": 0,
+              "INSUFFICIENT": 1
+            },
+            "applicationStatusCounts": {
+              "NOT_REQUIRED": 1,
+              "UNRESOLVED": 0
+            },
+            "evidenceFoundCount": 0,
+            "admittedRecordCount": 0,
+            "verifiedClaimCount": 0,
+            "gapCounts": {
+              "NO_COVERAGE_TOPIC": 1,
+              "UNKNOWN_DOMAIN": 0,
+              "UNASSIGNED_QUERY_TOPIC": 0,
+              "CANONICAL_AREA_UNRESOLVED": 0,
+              "ISSUE_UNMAPPED": 0,
+              "NO_GOVERNING_AUTHORITY": 0,
+              "PROVIDER_UNAVAILABLE": 0,
+              "PROVIDER_AUTHORITY_MISMATCH": 0,
+              "PROVIDER_ERROR": 0,
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 1,
+              "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+              "NO_CANDIDATE_EVIDENCE": 0,
+              "CANDIDATE_REJECTED": 0,
+              "NO_ADMITTED_EVIDENCE": 0,
+              "NO_VERIFIED_CLAIM": 0,
+              "ISSUE_CONCEPT_UNCOVERED": 0,
+              "IRAS_SCOPE_NOT_COVERED": 0,
+              "EMPTY_ISSUE_PLAN": 0,
+              "UNROUTED_MATERIAL_CONCEPT": 0,
+              "OTHER_GAP": 0
+            }
+          }
+        ],
+        "runtimeAssignmentIntegrity": true,
+        "runtimeAssignmentCounts": {
+          "semanticIssueCount": 1,
+          "plannedIssueCount": 1,
+          "runtimeIssueCount": 1,
+          "runtimeIssueIdMismatchCount": 0,
+          "duplicateRuntimeIssueIdCount": 0,
+          "unknownGapIssueIdCount": 0,
+          "emptyWorkstreamCount": 0,
+          "unresolvedPlanIssueCount": 1,
+          "unresolvedIrasPlanIssueCount": 0,
+          "knownUnsupportedNonIrasPlanIssueCount": 1,
+          "unrepresentedResidualPlanIssueCount": 0,
+          "issuePlanResidualAccommodation": true
+        }
+      },
+      "additionalGates": {
+        "topicRows": [
+          {
+            "issueId": "sfrsi-6-mineral-exploration-evaluation",
+            "expectedTopicIds": [],
+            "actualTopicIds": [],
+            "passed": true
+          }
+        ],
+        "independentInventory": {
+          "topicIds": [],
+          "residualCount": 2
+        },
+        "independentCoveragePassed": true,
+        "fullIrasLifecycle": true,
+        "requestedLifecyclePassed": true,
+        "applicationPassed": true,
+        "overallPassed": true,
+        "passed": true
+      },
+      "localFailure": false,
+      "irasFirstAcceptance": {
+        "passed": true,
+        "semanticQualityPassed": true,
+        "releaseCoveragePassed": true,
+        "issueCountComplete": true,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "runtimeIntegrity": true,
+        "sourceFingerprintsStable": true,
+        "fixtureFingerprintsStable": true,
+        "irasIssueCount": 0,
+        "scopeAwareWorkstreamSetAccuracy": true,
+        "irasIssuesPassed": 0,
+        "nonIrasIssueCount": 1,
+        "nonIrasIssuesSemanticallyRoutedOrExplicitlyUnsupported": 1,
+        "perIssueResults": [
+          {
+            "expectedAuthority": "ACCOUNTING_STANDARDS",
+            "releaseRequired": false,
+            "semanticIssueMatched": true,
+            "semanticDimensionsCorrect": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "authorityCorrect": true,
+            "authorityScopeKnown": true,
+            "noFalseIrasRoute": true,
+            "issuePlanPresent": true,
+            "irasEvidenceComplete": true,
+            "mappedTopicCount": 0,
+            "canonicalProviderPathReached": false,
+            "providerPathReached": false,
+            "retrievalAttemptedCount": 0,
+            "blockingGapCount": 2,
+            "issueApplicationStatusCorrect": true,
+            "evidenceSafeguardsPassed": true,
+            "explicitUnsupportedState": true,
+            "expectedUnsupportedState": true,
+            "canonicalRoute": true,
+            "canonicalWorkstreamCorrect": true,
+            "canonicalWorkstreamCount": 1,
+            "runtimeMetadataConsistent": true,
+            "nonIrasCoverageAcceptable": true,
+            "passed": true
+          }
+        ]
+      },
+      "passed": true
+    }
+  ],
+  "status": "FAIL/HOLD",
+  "irasFirstAcceptance": {
+    "passed": false,
+    "completedCases": 9,
+    "expectedCases": 9,
+    "semanticQuality": {
+      "validInterpretations": {
+        "count": 9,
+        "total": 9
+      },
+      "issueRecall": {
+        "matched": 8,
+        "expected": 10
+      },
+      "issuePrecision": {
+        "matched": 8,
+        "predicted": 10
+      },
+      "dimensions": {
+        "governingAuthority": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "population": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        }
+      },
+      "caseSpecificityCorrect": {
+        "correct": 9,
+        "total": 9
+      }
+    },
+    "releaseRequiredCoverage": {
+      "irasIssues": 8,
+      "topicMapped": 6,
+      "canonicalProviderPathReached": 6,
+      "providerPathReached": 6,
+      "retrievalAttempted": 6,
+      "evidenceSupported": 0,
+      "blockingCases": 8,
+      "blockingGapCount": 25,
+      "evidenceSafeguardsPassed": 7
+    },
+    "nonIrasSemantic": {
+      "issues": 2,
+      "recognizedAndRoutedOrExplicitlyUnsupported": 2,
+      "dimensions": {
+        "governingAuthority": {
+          "correct": 2,
+          "matched": 2,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 2,
+          "matched": 2,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 2,
+          "matched": 2,
+          "rate": 1
+        },
+        "population": {
+          "correct": 2,
+          "matched": 2,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 2,
+          "matched": 2,
+          "rate": 1
+        }
+      }
+    },
+    "nonIrasCoverageGaps": {
+      "CPF": {
+        "issueCount": 1,
+        "explicitUnsupportedCount": 1,
+        "gapCounts": {
+          "NO_COVERAGE_TOPIC": 0,
+          "UNKNOWN_DOMAIN": 0,
+          "UNASSIGNED_QUERY_TOPIC": 0,
+          "CANONICAL_AREA_UNRESOLVED": 0,
+          "ISSUE_UNMAPPED": 0,
+          "NO_GOVERNING_AUTHORITY": 0,
+          "PROVIDER_UNAVAILABLE": 0,
+          "PROVIDER_AUTHORITY_MISMATCH": 0,
+          "PROVIDER_ERROR": 0,
+          "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+          "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+          "NO_CANDIDATE_EVIDENCE": 0,
+          "CANDIDATE_REJECTED": 1,
+          "NO_ADMITTED_EVIDENCE": 1,
+          "NO_VERIFIED_CLAIM": 1,
+          "ISSUE_CONCEPT_UNCOVERED": 1,
+          "IRAS_SCOPE_NOT_COVERED": 0,
+          "EMPTY_ISSUE_PLAN": 0,
+          "UNROUTED_MATERIAL_CONCEPT": 0,
+          "OTHER_GAP": 0
+        }
+      },
+      "ACCOUNTING_STANDARDS": {
+        "issueCount": 1,
+        "explicitUnsupportedCount": 1,
+        "gapCounts": {
+          "NO_COVERAGE_TOPIC": 1,
+          "UNKNOWN_DOMAIN": 0,
+          "UNASSIGNED_QUERY_TOPIC": 0,
+          "CANONICAL_AREA_UNRESOLVED": 0,
+          "ISSUE_UNMAPPED": 0,
+          "NO_GOVERNING_AUTHORITY": 0,
+          "PROVIDER_UNAVAILABLE": 0,
+          "PROVIDER_AUTHORITY_MISMATCH": 0,
+          "PROVIDER_ERROR": 0,
+          "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 1,
+          "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+          "NO_CANDIDATE_EVIDENCE": 0,
+          "CANDIDATE_REJECTED": 0,
+          "NO_ADMITTED_EVIDENCE": 0,
+          "NO_VERIFIED_CLAIM": 0,
+          "ISSUE_CONCEPT_UNCOVERED": 0,
+          "IRAS_SCOPE_NOT_COVERED": 0,
+          "EMPTY_ISSUE_PLAN": 0,
+          "UNROUTED_MATERIAL_CONCEPT": 0,
+          "OTHER_GAP": 0
+        }
+      }
+    }
+  },
+  "pacingPassed": true,
+  "completedAt": "2026-10-03T14:43:51.464Z",
+  "timeoutCount": 0,
+  "providerErrorCount": 0,
+  "preTransportFailureCount": 0,
+  "invalidResponseCount": 0
+}

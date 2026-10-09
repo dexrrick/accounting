@@ -1,2 +1,13 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Preserve the exact bytes of historical evaluation artifacts and fixtures.
+docs/evaluation/** -text whitespace=cr-at-eol
+artifacts/** -text whitespace=cr-at-eol
+tests/evaluation/**/*.json -text whitespace=cr-at-eol
+tests/regression/test_iras_multi_authority_evidence_v4.mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_mapped_evidence_diagnostic_v5.mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_mapped_evidence_diagnostic_v8.mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_mapped_evidence_diagnostic_v9.mjs -text whitespace=cr-at-eol
+# Blank context lines in archived patches contain a meaningful leading space.
+docs/evaluation/**/*.patch whitespace=-blank-at-eol,cr-at-eol

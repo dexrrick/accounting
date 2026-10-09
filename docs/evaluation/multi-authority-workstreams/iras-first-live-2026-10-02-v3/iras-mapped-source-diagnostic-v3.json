@@ -1,0 +1,918 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-first-source-diagnostic-v3",
+  "mode": "live-source",
+  "purpose": "Fixed-case mapped IRAS source-path and admission diagnostics; questions, facts, fetched HTML, response text, and credentials are never persisted. Source-map URLs route retrieval only and never count as evidence.",
+  "syntheticContractSource": "irasResolverCases fixed nine-case v2 selection; issue inputs are synthetic representatives from frozen contracts, not historical raw model subject text.",
+  "liveSourceLimitations": [
+    "A page fetch, candidate, or admission does not establish a verified statutory rule or answer.",
+    "Case-specific application remains unresolved unless the existing runtime verifies the required facts.",
+    "This diagnostic makes no model request and makes no completeness assertion."
+  ],
+  "selectedCaseIds": [
+    "target-relief-entitlement",
+    "target-relief-amount",
+    "A-paraphrase-2",
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "selectedCaseCount": 9,
+  "selectedIrasIssueCount": 8,
+  "uniqueSourceMapCount": 9,
+  "uniqueSourceMapUrlCount": 9,
+  "maximumActualGetCount": 18,
+  "modelRequests": 0,
+  "preregisteredMapFetches": [
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-corporate-tax-residency"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-foreign-sourced-income"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-individual-cpf-relief"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    }
+  ],
+  "summary": {
+    "selectedCaseCount": 9,
+    "selectedIrasIssueCount": 8,
+    "mappedTopicCount": 8,
+    "uniqueSourceMapCount": 9,
+    "uniqueSourceMapUrlCount": 9,
+    "actualGetCount": 9,
+    "cacheReuseCount": 8,
+    "policyRejectionCount": 0,
+    "sitemapAdapterCalls": 5,
+    "searchAdapterCalls": 5,
+    "modelRequests": 0,
+    "networkMode": "LIVE_IRAS_MAPS_ONLY_NO_MODEL"
+  },
+  "pageFetches": [
+    {
+      "mapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:55.628Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:55.314Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-foreign-sourced-income"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:55.506Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "28b1dd80ca783b88da57d445543924b3c352f59f815400cfb737a886e5520a39"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:56.122Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:56.001Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-individual-cpf-relief"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:54.888Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "25c6de0c2fd4d1d02103484329e9d3af77ea55886d512a754d43890fae64dc83"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:55.901Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:55.707Z"
+      ],
+      "actualGetCount": 1
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "host": "www.iras.gov.sg",
+      "fetchStatus": "HTTP_200",
+      "contentHashes": [
+        "c68048a192053d1d7cee5bac956409f9e10c4a1e1cf4475353f1ea98489cf7bf"
+      ],
+      "fetchedAt": [
+        "2026-10-02T09:02:55.778Z"
+      ],
+      "actualGetCount": 1
+    }
+  ],
+  "issues": [
+    {
+      "caseId": "target-relief-entitlement",
+      "fixtureCaseId": "target-relief-entitlement",
+      "issueIndex": 0,
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "INDIVIDUAL",
+      "operation": "CHECK_ELIGIBILITY",
+      "topics": [
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "maps": [
+            {
+              "mapId": "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "SUCCESS",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true,
+        "verifiedRuleClaimCount": 3,
+        "verifiedSourceCount": 1,
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SUFFICIENT"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": []
+      }
+    },
+    {
+      "caseId": "target-relief-amount",
+      "fixtureCaseId": "target-relief-amount",
+      "issueIndex": 0,
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "INDIVIDUAL",
+      "operation": "CALCULATE",
+      "topics": [
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "maps": [
+            {
+              "mapId": "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "SUCCESS",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true,
+        "verifiedRuleClaimCount": 3,
+        "verifiedSourceCount": 1,
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SUFFICIENT"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": []
+      }
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "fixtureCaseId": "A-paraphrase-2",
+      "issueIndex": 1,
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "INDIVIDUAL",
+      "operation": "CHECK_ELIGIBILITY",
+      "topics": [
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "maps": [
+            {
+              "mapId": "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "SUCCESS",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true,
+        "verifiedRuleClaimCount": 3,
+        "verifiedSourceCount": 1,
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SUFFICIENT"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": []
+      }
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "fixtureCaseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "DETERMINE_TREATMENT",
+      "topics": [
+        {
+          "topicId": "iras-cit-deductibility",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "SUCCESS",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1
+            }
+          ]
+        },
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "TOPIC_MISMATCH",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": false,
+        "verifiedRuleClaimCount": 1,
+        "verifiedSourceCount": 1,
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ]
+      }
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "fixtureCaseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "DETERMINE_TREATMENT",
+      "topics": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "SUCCESS",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false,
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SUFFICIENT"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "fixtureCaseId": "company-residency-general",
+      "issueIndex": 0,
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "topics": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "TOPIC_MISMATCH",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": false,
+        "admitted": false,
+        "verified": false,
+        "covered": false,
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "EXHAUSTED"
+          },
+          {
+            "stage": "INSUFFICIENT",
+            "status": "EXHAUSTED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_CANDIDATE_EVIDENCE",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "fixtureCaseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "topics": [
+        {
+          "topicId": "iras-withholding-tax",
+          "maps": [
+            {
+              "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "DOMAIN_MISMATCH",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0
+            },
+            {
+              "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "DOMAIN_MISMATCH",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0
+            },
+            {
+              "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "DOMAIN_MISMATCH",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0
+            }
+          ]
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "maps": [
+            {
+              "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "TOPIC_MISMATCH",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0
+            },
+            {
+              "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "TOPIC_MISMATCH",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": false,
+        "verifiedRuleClaimCount": 1,
+        "verifiedSourceCount": 1,
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ]
+      }
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "fixtureCaseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "authority": "IRAS",
+      "domain": "IRAS_GST",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "topics": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "maps": [
+            {
+              "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "SUCCESS",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1
+            },
+            {
+              "mapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+              "fetchAttempts": [
+                {
+                  "status": "SUCCESS",
+                  "stage": "MAPPED_SOURCE"
+                }
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1
+            }
+          ]
+        }
+      ],
+      "provider": {
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false,
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    }
+  ],
+  "runtimeRows": [
+    {
+      "caseId": "target-relief-entitlement",
+      "fixtureCaseId": "target-relief-entitlement",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    },
+    {
+      "caseId": "target-relief-amount",
+      "fixtureCaseId": "target-relief-amount",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "fixtureCaseId": "A-paraphrase-2",
+      "status": "INSUFFICIENT",
+      "issueCount": 2
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "fixtureCaseId": "private-holiday-expense",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "fixtureCaseId": "foreign-dividend-treatment",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "fixtureCaseId": "company-residency-general",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "fixtureCaseId": "wht-royalty-general-rule",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "fixtureCaseId": "gst-input-tax-general-rule",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "fixtureCaseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "status": "INSUFFICIENT",
+      "issueCount": 1
+    }
+  ]
+}

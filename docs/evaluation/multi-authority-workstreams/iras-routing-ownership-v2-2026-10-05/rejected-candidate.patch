@@ -1,0 +1,131 @@
+diff --git a/scripts/run_all_tests.mjs b/scripts/run_all_tests.mjs
+index 5357fd2..b312e88 100644
+--- a/scripts/run_all_tests.mjs
++++ b/scripts/run_all_tests.mjs
+@@ -10,6 +10,7 @@ const testSuites = [
+   { name: 'AI Semantic Extraction & Schema Validation Gate', file: 'test_ai_semantic_extraction.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'Semantic Question Understanding & Guarded Routing', file: 'test_semantic_question_understanding.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'Per-Issue Semantic Operation Contracts', file: 'test_semantic_operations.mjs', layer: 'input-understanding', tier: 'smoke' },
++  { name: 'Bounded Routing Umbrella Ownership V2', file: 'test_routing_umbrella_ownership_v2.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'Semantic Operation Intent Boundaries', file: 'test_semantic_intent_boundaries.mjs', layer: 'input-understanding', tier: 'smoke' },
+   { name: 'Semantic Intent Follow-Up Runner', file: 'test_semantic_intent_followup_runner.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+   { name: 'Semantic Authority & Relief Evaluation Safety', file: 'test_semantic_authority_relief_evaluation.mjs', layer: 'evaluation-safety', tier: 'smoke' },
+diff --git a/src/services/semanticQuestionUnderstanding.ts b/src/services/semanticQuestionUnderstanding.ts
+index 96dc4ba..2415440 100644
+--- a/src/services/semanticQuestionUnderstanding.ts
++++ b/src/services/semanticQuestionUnderstanding.ts
+@@ -1,6 +1,10 @@
+ import { isExplicitForeignTaxOnlyQuestion, type QuestionClassificationResult } from '../classification/questionClassifier';
+ import type { SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
+ import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
++import {
++  getRoutingParentsForMappedChildren,
++  resolveOwnedRoutingParentTopicIds
++} from './requestedTopicOwnership';
+ import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
+ import type { ProviderSettings } from '../types/provider';
+ import { executeStructuredLlmCall } from './aiTransport';
+@@ -358,9 +362,11 @@ function resolveIssueTopicIds(
+ ): string[] {
+   const allowedDomains = topicDomainsForIssue(domain, population);
+   const subjectTopicIds = defaultQueryTopicResolver.decomposeQuery(subject).topics.map(topic => topic.id);
+-  return getCoverageTopicsByIds(subjectTopicIds).filter(topic =>
+-    independentlyRecognizedTopicIds.has(topic.id) && allowedDomains.includes(topic.domainId) &&
+-    semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain))
++  const subjectTopics = getCoverageTopicsByIds(subjectTopicIds).filter(topic =>
++    allowedDomains.includes(topic.domainId) &&
++    semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain));
++  const routingParents = getRoutingParentsForMappedChildren(subjectTopics.map(topic => topic.id));
++  return subjectTopics.filter(topic => independentlyRecognizedTopicIds.has(topic.id) && !routingParents.has(topic.id))
+     .map(topic => topic.id).sort();
+ }
+ 
+@@ -989,6 +995,8 @@ export interface ReconciledSemanticQuestionIssue extends SemanticQuestionIssue {
+   unresolvedReason?: 'NO_COVERAGE_TOPIC' | 'UNASSIGNED_QUERY_TOPIC' | 'UNKNOWN_DOMAIN';
+   /** Raw query topics recognized as context for this issue; never used as governing/source scope. */
+   contextualTopicIds?: string[];
++  /** Internally reconciled routing-only mentions; never part of substantive evidence scope. */
++  routingTopicIds?: string[];
+ }
+ 
+ export interface SemanticIssueReconciliation {
+@@ -1220,9 +1228,11 @@ function reconcileSemanticIssuePlan(
+           canonicalAccountingWorkstreamAuthority(issue.domain, authority))
+       };
+       const mappedTopicIds = resolveIssueTopicIds(routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.governingAuthorities, inventoryIds);
++      const routingTopicIds = resolveOwnedRoutingParentTopicIds(query, mappedTopicIds, inventoryIds);
+       const reconciledIssue = {
+         ...routedIssue,
+         mappedTopicIds,
++        ...(routingTopicIds.length ? { routingTopicIds } : {}),
+         evidenceRequirement: deriveEvidenceRequirement(
+           routedIssue.domain,
+           routedIssue.operation,
+@@ -1245,7 +1255,11 @@ function reconcileSemanticIssuePlan(
+         ...(contextualTopicIds.length ? { contextualTopicIds } : {})
+       };
+     });
+-    const mappedInventory = new Set(issues.flatMap(issue => [...issue.mappedTopicIds, ...(issue.contextualTopicIds || [])]));
++    const mappedInventory = new Set(issues.flatMap(issue => [
++      ...issue.mappedTopicIds,
++      ...(issue.contextualTopicIds || []),
++      ...(issue.routingTopicIds || [])
++    ]));
+     for (const topic of inventory.topics) {
+       if (mappedInventory.has(topic.id)) continue;
+       const residual = issueFromTaxonomyGroup([topic]);
+diff --git a/src/standards/coverageRegistry.ts b/src/standards/coverageRegistry.ts
+index 9ec248d..62fa930 100644
+--- a/src/standards/coverageRegistry.ts
++++ b/src/standards/coverageRegistry.ts
+@@ -76,6 +76,8 @@ export interface SingaporeCoverageTopic {
+   exclusionKeywords: string[];
+   /** Broad taxonomy entries can help route discovery without being required evidence coverage. */
+   routingOnly?: boolean;
++  /** Narrow raw-query associations let a mapped child account for a lexical routing-parent mention. */
++  routingOwnershipRules?: Array<{ childTopicId: string; queryPatterns: string[] }>;
+   /** Shared concept ID for legacy/new topic aliases that should count once in ranking. */
+   canonicalConceptId?: string;
+   actOrStandard?: string;
+@@ -131,6 +133,7 @@ interface TopicSpec {
+   requiredContentTerms?: string[];
+   exclusionKeywords?: string[];
+   routingOnly?: boolean;
++  routingOwnershipRules?: Array<{ childTopicId: string; queryPatterns: string[] }>;
+   canonicalConceptId?: string;
+   priority?: CoveragePriority;
+   status?: CoverageStatus;
+@@ -178,6 +181,12 @@ function topic(spec: TopicSpec): SingaporeCoverageTopic {
+     ...(spec.requiredContentTerms ? { requiredContentTerms: [...spec.requiredContentTerms] } : {}),
+     exclusionKeywords: spec.exclusionKeywords ?? [],
+     ...(spec.routingOnly ? { routingOnly: true } : {}),
++    ...(spec.routingOwnershipRules ? {
++      routingOwnershipRules: spec.routingOwnershipRules.map(rule => ({
++        childTopicId: rule.childTopicId,
++        queryPatterns: [...rule.queryPatterns]
++      }))
++    } : {}),
+     ...(spec.canonicalConceptId ? { canonicalConceptId: spec.canonicalConceptId } : {}),
+     ...(spec.actOrStandard ? { actOrStandard: spec.actOrStandard } : {}),
+     ...(spec.sectionMatch ? { sectionMatch: spec.sectionMatch } : {}),
+@@ -583,10 +592,18 @@ const topicSpecs: TopicSpec[] = [
+   { id: 'iras-individual-foreign-tax-credit', title: 'Individual Foreign Tax Credit and Double Tax Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual foreign tax credit', 'foreign tax credit individual', 'foreign tax credit', 'claim foreign tax credit individual', 'double taxation relief', 'double tax relief individual', 'taxed in the foreign country', 'taxed twice on the same income'], aliases: ['Claiming foreign tax credit'] },
+   { id: 'iras-individual-double-tax-agreements', title: 'Individual Double Tax Agreement Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P1', keywords: ['individual double tax agreement', 'individual dta relief', 'employment income dta exemption', 'dependent services treaty relief', 'double taxation relief individual', 'individual double taxation relief', 'double taxation agreements'], aliases: ['Claiming exemptions under Avoidance of Double Taxation Agreements', 'Double Taxation Agreements (DTA)'], queryPatterns: [String.raw`\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b[\s\S]{0,100}\b(?:relief|exemption|employment|income|foreign|overseas)\b`, String.raw`\b(?:relief|exemption|employment|income|foreign|overseas)\b[\s\S]{0,100}\b(?:double[ -]tax(?:ation)?|dta|tax treaty)\b`] },
+   { id: 'iras-individual-certificate-of-residence', title: 'Certificate of Residence for Individuals', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['individual certificate of residence', 'apply for certificate of residence', 'certificate of residence individual', 'cor for dta benefits'], aliases: ['Apply for COR'], queryPatterns: [String.raw`\b(?:certificate of residence|\bcor\b)[\s\S]{0,80}\b(?:dta|treaty|individual|tax resident)\b`] },
+-  { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'] },
++  { id: 'iras-individual-reliefs', title: 'Individual Tax Relief Eligibility', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', routingOnly: true, keywords: ['personal tax relief', 'individual tax relief', 'srs contribution relief', 'working mother child relief', 'qualifying child relief', 'cpf cash top-up relief'], routingOwnershipRules: [
++    { childTopicId: 'iras-individual-cpf-relief', queryPatterns: [String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:(?:on|for)|(?:(?:can|may)\s+(?:i|we|they)\s+claim\s+for))\s+(?:(?:my|their|employee)\s+)?(?:compulsory|mandatory)\s+cpf(?:\s+contributions?)?\b`] },
++    { childTopicId: 'iras-individual-srs-relief', queryPatterns: [String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+(?:(?:my|their)\s+)?(?:srs|supplementary retirement scheme)\s+contributions?\b`] },
++    { childTopicId: 'iras-individual-relief-cap', queryPatterns: [String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+cap\b`, String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+the\s+overall\s+cap\b`] },
++    { childTopicId: 'iras-individual-parent-relief', queryPatterns: [String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+(?:parent|parents|parental)\s+relief\b`] },
++    { childTopicId: 'iras-individual-grandparent-caregiver-relief', queryPatterns: [String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+(?:grandparent caregiver|caregiver)\s+relief\b`] },
++    { childTopicId: 'iras-individual-wmcr', queryPatterns: [String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+working mother(?:'s|’s)? child relief\b`] },
++    { childTopicId: 'iras-individual-qcr', queryPatterns: [String.raw`\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\s+(?:on|for)\s+qualifying child relief\b`] }
++  ] },
+   { id: 'iras-individual-relief-cap', title: 'Overall Personal Income Tax Relief Cap', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['personal relief cap', 'overall relief cap', 'aggregate tax relief cap', 'personal income tax relief cap'], queryPatterns: INDIVIDUAL_RELIEF_CAP_PATTERNS },
+   { id: 'iras-individual-cpf-relief', title: 'CPF Relief for Employees', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['cpf relief for employees', 'mandatory cpf contributions', 'compulsory cpf contributions'], queryPatterns: INDIVIDUAL_CPF_RELIEF_PATTERNS },
+-  { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['srs relief', 'supplementary retirement scheme relief'], queryPatterns: INDIVIDUAL_SRS_RELIEF_PATTERNS },
++  { id: 'iras-individual-srs-relief', title: 'Supplementary Retirement Scheme Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['srs relief', 'srs contribution relief', 'supplementary retirement scheme relief'], queryPatterns: INDIVIDUAL_SRS_RELIEF_PATTERNS },
+   { id: 'iras-individual-parent-relief', title: 'Parent Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['parent relief', 'parent relief disability', 'parent tax relief', 'tax relief for parents', 'parental tax relief'] },
+   { id: 'iras-individual-grandparent-caregiver-relief', title: 'Grandparent Caregiver Relief', domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['grandparent caregiver relief', 'caregiver relief'] },
+   { id: 'iras-individual-wmcr', title: "Working Mother's Child Relief", domainId: 'IRAS_INDIVIDUAL_TAX', priority: 'P2', keywords: ['working mother child relief', 'wmcr'] },

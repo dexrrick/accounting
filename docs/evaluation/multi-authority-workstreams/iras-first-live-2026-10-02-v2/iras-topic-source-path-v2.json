@@ -1,0 +1,750 @@
+{
+  "schemaVersion": 1,
+  "purpose": "No-API source-path diagnostic. Semantic subjects are synthetic representative inputs from frozen case contracts; historical live artifacts did not retain raw model issue subjects. Source-map pointers route retrieval and are never answer evidence.",
+  "summary": {
+    "selectedCaseCount": 9,
+    "selectedIrasIssueCount": 8,
+    "mappedIrasIssueCount": 8,
+    "sourceMappedTopicCount": 10,
+    "sourceMappedIrasIssueCount": 8,
+    "localProviderAttempts": 8,
+    "candidateFoundIssues": 3,
+    "issuesWithAnyAdmission": 3,
+    "issuesWithVerifiedRule": 2,
+    "unresolvedApplications": 5,
+    "networkAttempts": 0,
+    "modelRequests": 0,
+    "auditScope": "LOCAL_ONLY_NO_API_NO_OFFICIAL_PAGE_FETCH"
+  },
+  "cases": [
+    {
+      "caseId": "target-relief-entitlement",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "IRAS",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "operation": "CHECK_ELIGIBILITY",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "sourceMappedTopicCount": 1
+        }
+      ]
+    },
+    {
+      "caseId": "target-relief-amount",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "IRAS",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "operation": "CALCULATE",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "sourceMappedTopicCount": 1
+        }
+      ]
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "issueCount": 2,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "operation": "CALCULATE",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "sourceMappedTopicCount": 0
+        },
+        {
+          "issueIndex": 1,
+          "authority": "IRAS",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "operation": "CHECK_ELIGIBILITY",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ],
+          "sourceMappedTopicCount": 1
+        }
+      ]
+    },
+    {
+      "caseId": "private-holiday-expense",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "IRAS",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [
+            "iras-cit-deductibility",
+            "iras-cit-disallowed-expenses"
+          ],
+          "sourceMappedTopicCount": 2
+        }
+      ]
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "IRAS",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [
+            "iras-foreign-sourced-income"
+          ],
+          "sourceMappedTopicCount": 1
+        }
+      ]
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "IRAS",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [
+            "iras-corporate-tax-residency"
+          ],
+          "sourceMappedTopicCount": 1
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "IRAS",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ],
+          "sourceMappedTopicCount": 2
+        }
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "IRAS",
+          "domain": "IRAS_GST",
+          "population": "COMPANY",
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [
+            "iras-gst-input-tax"
+          ],
+          "sourceMappedTopicCount": 1
+        }
+      ]
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "issueCount": 1,
+      "issues": [
+        {
+          "issueIndex": 0,
+          "authority": "ACCOUNTING_STANDARDS",
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "sourceMappedTopicCount": 0
+        }
+      ]
+    }
+  ],
+  "irasIssues": [
+    {
+      "caseId": "target-relief-entitlement",
+      "issueIndex": 0,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "INDIVIDUAL",
+      "operation": "CHECK_ELIGIBILITY",
+      "queryCandidateTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "subjectCandidateTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "sourceMapIds": [
+            "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 1,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 0
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": false,
+        "admittedAny": false,
+        "verified": false,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_CANDIDATE_EVIDENCE",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    },
+    {
+      "caseId": "target-relief-amount",
+      "issueIndex": 0,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "INDIVIDUAL",
+      "operation": "CALCULATE",
+      "queryCandidateTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "subjectCandidateTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "sourceMapIds": [
+            "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 1,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 0
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": false,
+        "admittedAny": false,
+        "verified": false,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_CANDIDATE_EVIDENCE",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "issueIndex": 1,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "INDIVIDUAL",
+      "operation": "CHECK_ELIGIBILITY",
+      "queryCandidateTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "subjectCandidateTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-individual-cpf-relief",
+        "iras-individual-reliefs"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-individual-cpf-relief",
+          "sourceMapIds": [
+            "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 1,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 0
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": false,
+        "admittedAny": false,
+        "verified": false,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_CANDIDATE_EVIDENCE",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    },
+    {
+      "caseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "DETERMINE_TREATMENT",
+      "queryCandidateTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "subjectCandidateTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "sourceMapIds": [
+            "IRAS_CIT_EXPENSES_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 1,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 2
+        },
+        {
+          "topicId": "iras-cit-deductibility",
+          "sourceMapIds": [
+            "IRAS_CIT_EXPENSES_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 1,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 1
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admittedAny": true,
+        "verified": true,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 1,
+        "verifiedSourceCount": 1,
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ]
+      }
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "DETERMINE_TREATMENT",
+      "queryCandidateTopicIds": [
+        "iras-foreign-sourced-income"
+      ],
+      "subjectCandidateTopicIds": [
+        "iras-foreign-sourced-income"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-foreign-sourced-income"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "sourceMapIds": [
+            "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 1,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 0
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": false,
+        "admittedAny": false,
+        "verified": false,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "applicationStatus": "UNRESOLVED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_CANDIDATE_EVIDENCE",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueIndex": 0,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "queryCandidateTopicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "subjectCandidateTopicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "sourceMapIds": [
+            "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 1,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 0
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": false,
+        "admittedAny": false,
+        "verified": false,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "applicationStatus": "NOT_REQUIRED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_CANDIDATE_EVIDENCE",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_INCOME_TAX",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "queryCandidateTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "subjectCandidateTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapIds": [
+            "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+            "IRAS_WHT_RATES_SOURCE_MAP",
+            "IRAS_WHT_SCOPE_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 3,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 0
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapIds": [
+            "IRAS_WHT_RATES_SOURCE_MAP",
+            "IRAS_WHT_SCOPE_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 2,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 1
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admittedAny": true,
+        "verified": true,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 1,
+        "verifiedSourceCount": 1,
+        "applicationStatus": "NOT_REQUIRED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ]
+      }
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "semanticInput": "SYNTHETIC_REPRESENTATIVE_FROM_FROZEN_CASE_CONTRACT",
+      "domain": "IRAS_GST",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "queryCandidateTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "subjectCandidateTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "filteredIntersectionTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "mappedSourcePaths": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapIds": [
+            "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+            "IRAS_GST_INVOICING_SOURCE_MAP"
+          ],
+          "sourceMapPointerCount": 2,
+          "sourceMapPointersAreRoutingOnly": true,
+          "sourceMapPointersBindTopic": true,
+          "reviewedLocalEvidenceRecordCount": 0
+        }
+      ],
+      "providerPath": {
+        "routePresent": true,
+        "retrievalAttempted": true,
+        "candidateFound": true,
+        "admittedAny": true,
+        "verified": false,
+        "covered": false,
+        "evidenceStatus": "INSUFFICIENT",
+        "verifiedRuleClaimCount": 0,
+        "verifiedSourceCount": 0,
+        "applicationStatus": "NOT_REQUIRED",
+        "retrievalStages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SKIPPED"
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED"
+          }
+        ],
+        "gapCodes": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "NO_VERIFIED_CLAIM"
+        ]
+      }
+    }
+  ]
+}

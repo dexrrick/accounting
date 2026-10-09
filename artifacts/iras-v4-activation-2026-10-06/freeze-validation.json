@@ -1,0 +1,29 @@
+{
+  "status": "FROZEN_API_FREE_HOLD",
+  "reviewedCommit": "edc7feef81d60b380ea430ded59ebebb35c653a8",
+  "boundFileCount": 592,
+  "boundFileMismatches": 0,
+  "archivedCheckpointHashesUnchanged": true,
+  "immutableFingerprintsUnchanged": true,
+  "holdProbeNamespaceAbsent": true,
+  "officialRequests": 0,
+  "providerRequests": 0,
+  "liveReservations": 0,
+  "resourceRemainingPercentLastObserved": 4,
+  "requestedResourceBufferMet": false,
+  "freezeLogSha256": "10534e6cac72832ffe060478f9b4a468a34d840925215e795a5b1f3c315439ca",
+  "manifests": [
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/activation/runner-configuration-current.json",
+      "sha256": "c2735555d6503d63f335e632ae6c58d123a89f7c2abcb73e26ae52284922a3bb"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/activation/preregistration.json",
+      "sha256": "40183d06dd03c220c4866d3f50da7a9146110c818ef8cfbd82d7142592ee4aa8"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/activation/activation-configuration.json",
+      "sha256": "481cee36bf4b6dce8c2a6b3e7156a6683c642d6caebd3b39acdb506db5bde995"
+    }
+  ]
+}

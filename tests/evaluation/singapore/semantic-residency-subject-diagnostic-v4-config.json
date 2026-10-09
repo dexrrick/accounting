@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 4,
+  "profileVersion": "semantic-residency-subject-diagnostic-v4",
+  "outputPrefix": "semantic-residency-subject-diagnostic-v4",
+  "questionConfig": "tests/evaluation/singapore/semantic-residency-diagnostic-v3-config.json",
+  "pinnedQuestionConfigSha256": "304fa005a233a56161a8a964842d6582e9b21ad19224f2d7863aaafa66778408",
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "temperature": 0,
+  "jsonMode": true,
+  "retryCount": 0,
+  "minimumStartGapMs": 15250,
+  "observationsPerQuestion": 2,
+  "questionIds": [
+    "corporate-residency-original-general",
+    "corporate-residency-general-paraphrase",
+    "corporate-residency-case-applied-control"
+  ],
+  "jurisdictionFixedQuestionIds": [
+    "corporate-residency-original-general",
+    "corporate-residency-general-paraphrase",
+    "corporate-residency-case-applied-control"
+  ],
+  "schedule": [
+    { "questionId": "corporate-residency-original-general", "replicate": 1 },
+    { "questionId": "corporate-residency-general-paraphrase", "replicate": 1 },
+    { "questionId": "corporate-residency-case-applied-control", "replicate": 1 },
+    { "questionId": "corporate-residency-case-applied-control", "replicate": 2 },
+    { "questionId": "corporate-residency-general-paraphrase", "replicate": 2 },
+    { "questionId": "corporate-residency-original-general", "replicate": 2 }
+  ],
+  "subjectConceptIds": [
+    "COMPANY",
+    "TAX",
+    "RESIDENCE",
+    "NON_RESIDENT",
+    "SINGAPORE",
+    "CONTROL_MANAGEMENT",
+    "CERTIFICATE_RESIDENCE"
+  ],
+  "subjectReasonCodes": [
+    "EXACT_ANCHOR_HIT",
+    "NO_EXACT_ANCHOR",
+    "COMPANY_MISSING",
+    "TAX_MISSING",
+    "RESIDENCE_MISSING",
+    "JURISDICTION_MISSING",
+    "CONCEPT_EQUIVALENT_CANDIDATE",
+    "MATERIAL_CONCEPT_MISSING"
+  ]
+}

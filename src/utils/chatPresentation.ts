@@ -1,5 +1,6 @@
 import type { AccountingScenarioState, MissingFieldInfo } from '../types/accounting';
 import { hasCurrentIrasEvidencePresentation } from './irasEvidencePresentation';
+import { hasCurrentAuthorityEvidencePresentation } from './authorityEvidencePresentation';
 
 export interface OfficialAnswerLink {
   title: string;
@@ -104,6 +105,9 @@ export function createChatPreview(
   scenario: AccountingScenarioState,
   clarifications?: MissingFieldInfo[]
 ): string {
+  const currentAuthorityPresentation = hasCurrentAuthorityEvidencePresentation(
+    scenario.authorityEvidencePresentation, scenario.rawQuery
+  ) ? scenario.authorityEvidencePresentation : undefined;
   const currentIrasPresentation = hasCurrentIrasEvidencePresentation(
     scenario.irasEvidencePresentation, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent
   ) ? scenario.irasEvidencePresentation : undefined;
@@ -121,6 +125,23 @@ export function createChatPreview(
       : `I prepared the balanced ${group.title.toLowerCase()} journal (${amount} on each side).`;
     return `${prefix}${detail}${scenario.isHypothetical ? ' The original transaction remains unchanged.' : ''}`;
   };
+
+  if (currentAuthorityPresentation) {
+    if (scenario.queryIntent === 'HYBRID' && hasBalancedGroup) {
+      return `${journalPreview()} The whole-question evidence review and any open gaps are in Supporting Official Guidance.`;
+    }
+    const authorityClarification = clarifications?.[0] || scenario.missingFields?.[0];
+    if (authorityClarification && !scenario.isComplete) {
+      return `I need one detail to continue: ${authorityClarification.prompt} The whole-question evidence review is in Supporting Official Guidance.`;
+    }
+    if (currentAuthorityPresentation.status === 'INSUFFICIENT') {
+      return 'The whole-question evidence is incomplete for one or more material workstreams; see Supporting Official Guidance for issue-level sources and gaps.';
+    }
+    if (currentAuthorityPresentation.status === 'CONDITIONAL') {
+      return 'Verified source coverage is available, but application remains unresolved for one or more workstreams; see Supporting Official Guidance.';
+    }
+    return 'Verified evidence covers the resolved material workstreams; see Supporting Official Guidance for issue scopes and source excerpts.';
+  }
 
   if (currentIrasPresentation && !(scenario.queryIntent === 'HYBRID' && hasBalancedGroup)) {
     return conciseIrasPreview(currentIrasPresentation);

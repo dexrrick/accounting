@@ -1,0 +1,3130 @@
+{
+  "profile": "iras-v4-remaining-six-diagnostic-continuation",
+  "semanticProfile": "DIAGNOSTIC_CONTINUATION",
+  "status": "FAILED_CONTINUATION_RECORDED",
+  "diagnosticCaseIds": [
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "caseCount": 6,
+  "passed": 1,
+  "failed": 5,
+  "notRun": 0,
+  "rows": [
+    {
+      "caseId": "private-expense-treatment",
+      "status": "FAILED",
+      "passed": false,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "firstFailure": "INTEGRITY",
+      "adapterStageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "layerVerdicts": {
+        "semantic": {
+          "stages": {
+            "SEMANTIC_VALIDATION": false,
+            "SEMANTIC_ISSUE_IDENTITY": false,
+            "SEMANTIC_DIMENSIONS": false,
+            "TOPIC_OWNERSHIP": false,
+            "REQUESTED_CONCEPT_OWNERSHIP": false
+          },
+          "validInterpretation": false,
+          "identityPass": false,
+          "dimensionsPass": false,
+          "specificityPass": false,
+          "matchedIssueCount": 0,
+          "expectedIssueCount": 1,
+          "actualIssueCount": 0,
+          "pairs": [],
+          "topicOwnership": [
+            {
+              "topicId": "iras-cit-deductibility",
+              "issueId": "company-private-expense-tax-treatment",
+              "contextual": false,
+              "owned": false
+            },
+            {
+              "topicId": "iras-cit-disallowed-expenses",
+              "issueId": "company-private-expense-tax-treatment",
+              "contextual": false,
+              "owned": false
+            }
+          ],
+          "routingTopicOwnership": [],
+          "validatedRoutingTopicIds": [],
+          "independentInventory": {
+            "topicIds": [
+              "iras-cit-deductibility",
+              "iras-cit-disallowed-expenses"
+            ],
+            "materialTopicIds": [
+              "iras-cit-deductibility",
+              "iras-cit-disallowed-expenses"
+            ],
+            "routingOnlyTopicIds": [],
+            "unresolvedTopicTextCount": 0
+          },
+          "unrepresentedInventory": [],
+          "unassignedResidualCount": 0,
+          "conceptOwnership": [
+            {
+              "conceptId": "private-expense-deductibility",
+              "issueId": "company-private-expense-tax-treatment",
+              "markerPass": true,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            },
+            {
+              "conceptId": "private-expense-disallowance",
+              "issueId": "company-private-expense-tax-treatment",
+              "markerPass": true,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            }
+          ],
+          "subjectAttribution": {
+            "attribution": "SCORING_UNRESOLVED",
+            "modelError": false
+          }
+        },
+        "routing": {
+          "actualPairs": [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ],
+          "expectedPass": true,
+          "hasIssueOwner": false,
+          "contextualWasRouted": false,
+          "noIrasForUnsupported": true,
+          "passed": false
+        },
+        "local": {
+          "topicStates": {
+            "iras-cit-disallowed-expenses": {
+              "expected": "VERIFIED_LOCAL_RULE",
+              "actual": "VERIFIED_LOCAL_RULE",
+              "passed": true
+            },
+            "iras-cit-deductibility": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "issueStates": {
+            "company-private-expense-tax-treatment": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "authorityStates": {
+            "IRAS": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "governed": {
+          "lifecycleDiagnostics": [
+            {
+              "issueId": "company-private-expense-tax-treatment",
+              "expectedStatus": "VERIFIED",
+              "stage": "GOVERNED_RETRIEVAL",
+              "state": "pipeline_failure"
+            }
+          ],
+          "stages": {
+            "GOVERNED_RETRIEVAL": false,
+            "EVIDENCE_ADMISSION": false,
+            "CLAIM_VERIFICATION": false,
+            "REQUESTED_CONCEPT_COVERAGE": false
+          }
+        },
+        "application": {
+          "issueStatuses": {
+            "company-private-expense-tax-treatment": {
+              "expected": "UNRESOLVED",
+              "passed": false
+            }
+          },
+          "overallStatus": "INSUFFICIENT",
+          "applicationStatusesPassed": false,
+          "overallAllowed": false,
+          "ruleVerifiedUnresolvedApplicationPreserved": false,
+          "passed": false
+        }
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": false
+      },
+      "failureStage": "INTEGRITY",
+      "semanticSendInvocations": 1,
+      "approvedProviderFetchCount": 1,
+      "semanticResponseSha256": null,
+      "semanticResponseBytes": null,
+      "partialProviderResponse": {
+        "kind": "GEMINI_HTTP_ENVELOPE",
+        "status": null,
+        "failureCode": "V4_PROVIDER_TIMEOUT",
+        "truncated": false,
+        "bodyBase64": "",
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0
+      },
+      "adapterResult": {
+        "caseId": "private-expense-treatment",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true,
+          "issues": [
+            {
+              "id": "issue_232df2bc",
+              "subject": "Prohibited Deductions and Non-deductible Expenses; Corporate Tax Deductibility",
+              "population": "COMPANY",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "OTHER",
+              "mappedTopicIds": [
+                "iras-cit-disallowed-expenses",
+                "iras-cit-deductibility"
+              ],
+              "status": "MAPPED"
+            }
+          ]
+        },
+        "semanticUnderstanding": {
+          "mode": "DETERMINISTIC_FALLBACK",
+          "failure": "TIMEOUT",
+          "sendCount": 1,
+          "transportError": "V4_PROVIDER_TIMEOUT"
+        },
+        "layerVerdicts": {
+          "semantic": {
+            "stages": {
+              "SEMANTIC_VALIDATION": false,
+              "SEMANTIC_ISSUE_IDENTITY": false,
+              "SEMANTIC_DIMENSIONS": false,
+              "TOPIC_OWNERSHIP": false,
+              "REQUESTED_CONCEPT_OWNERSHIP": false
+            },
+            "validInterpretation": false,
+            "identityPass": false,
+            "dimensionsPass": false,
+            "specificityPass": false,
+            "matchedIssueCount": 0,
+            "expectedIssueCount": 1,
+            "actualIssueCount": 0,
+            "pairs": [],
+            "topicOwnership": [
+              {
+                "topicId": "iras-cit-deductibility",
+                "issueId": "company-private-expense-tax-treatment",
+                "contextual": false,
+                "owned": false
+              },
+              {
+                "topicId": "iras-cit-disallowed-expenses",
+                "issueId": "company-private-expense-tax-treatment",
+                "contextual": false,
+                "owned": false
+              }
+            ],
+            "routingTopicOwnership": [],
+            "validatedRoutingTopicIds": [],
+            "independentInventory": {
+              "topicIds": [
+                "iras-cit-deductibility",
+                "iras-cit-disallowed-expenses"
+              ],
+              "materialTopicIds": [
+                "iras-cit-deductibility",
+                "iras-cit-disallowed-expenses"
+              ],
+              "routingOnlyTopicIds": [],
+              "unresolvedTopicTextCount": 0
+            },
+            "unrepresentedInventory": [],
+            "unassignedResidualCount": 0,
+            "conceptOwnership": [
+              {
+                "conceptId": "private-expense-deductibility",
+                "issueId": "company-private-expense-tax-treatment",
+                "markerPass": true,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              },
+              {
+                "conceptId": "private-expense-disallowance",
+                "issueId": "company-private-expense-tax-treatment",
+                "markerPass": true,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              }
+            ],
+            "subjectAttribution": {
+              "attribution": "SCORING_UNRESOLVED",
+              "modelError": false
+            }
+          },
+          "routing": {
+            "actualPairs": [
+              "IRAS/IRAS_CORPORATE_TAX"
+            ],
+            "expectedPass": true,
+            "hasIssueOwner": false,
+            "contextualWasRouted": false,
+            "noIrasForUnsupported": true,
+            "passed": false
+          },
+          "local": {
+            "topicStates": {
+              "iras-cit-disallowed-expenses": {
+                "expected": "VERIFIED_LOCAL_RULE",
+                "actual": "VERIFIED_LOCAL_RULE",
+                "passed": true
+              },
+              "iras-cit-deductibility": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "issueStates": {
+              "company-private-expense-tax-treatment": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "authorityStates": {
+              "IRAS": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "passed": true
+          },
+          "governed": {
+            "lifecycleDiagnostics": [
+              {
+                "issueId": "company-private-expense-tax-treatment",
+                "expectedStatus": "VERIFIED",
+                "stage": "GOVERNED_RETRIEVAL",
+                "state": "pipeline_failure"
+              }
+            ],
+            "stages": {
+              "GOVERNED_RETRIEVAL": false,
+              "EVIDENCE_ADMISSION": false,
+              "CLAIM_VERIFICATION": false,
+              "REQUESTED_CONCEPT_COVERAGE": false
+            }
+          },
+          "application": {
+            "issueStatuses": {
+              "company-private-expense-tax-treatment": {
+                "expected": "UNRESOLVED",
+                "passed": false
+              }
+            },
+            "overallStatus": "INSUFFICIENT",
+            "applicationStatusesPassed": false,
+            "overallAllowed": false,
+            "ruleVerifiedUnresolvedApplicationPreserved": false,
+            "passed": false
+          }
+        },
+        "stageVerdicts": {
+          "SEMANTIC_VALIDATION": false,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false,
+          "WORKSTREAM_ROUTING": false,
+          "LOCAL_CAPABILITY": true,
+          "GOVERNED_RETRIEVAL": false,
+          "EVIDENCE_ADMISSION": false,
+          "CLAIM_VERIFICATION": false,
+          "REQUESTED_CONCEPT_COVERAGE": false,
+          "APPLICATION_STATUS": false,
+          "OVERALL_STATUS": false,
+          "INTEGRITY": true
+        },
+        "firstFailure": "SEMANTIC_VALIDATION",
+        "productionDiagnostics": {
+          "local": {
+            "available": true,
+            "runtimeStatus": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "referenceDate": "2026-10-08",
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 3,
+            "topicObservations": [
+              {
+                "topicId": "iras-cit-disallowed-expenses",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": false,
+                "substantiveScopeIncomplete": false,
+                "admitted": true,
+                "literalVerified": true,
+                "topicCovered": true,
+                "needsReviewCandidate": false,
+                "candidateCount": 3,
+                "state": "VERIFIED_LOCAL_RULE",
+                "expected": "VERIFIED_LOCAL_RULE"
+              },
+              {
+                "topicId": "iras-cit-deductibility",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": false,
+                "substantiveScopeIncomplete": true,
+                "admitted": true,
+                "literalVerified": false,
+                "topicCovered": true,
+                "needsReviewCandidate": false,
+                "candidateCount": 3,
+                "state": "EXPECTED_LOCAL_GAP",
+                "expected": "EXPECTED_LOCAL_GAP"
+              }
+            ],
+            "issues": [
+              {
+                "issueId": "issue_232df2bc",
+                "subject": "Prohibited Deductions and Non-deductible Expenses; Corporate Tax Deductibility",
+                "authority": "IRAS",
+                "domain": "IRAS_INCOME_TAX",
+                "population": "COMPANY",
+                "operation": "OTHER",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": true,
+                  "admitted": true,
+                  "verified": true,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "ISSUE_CONCEPT_UNCOVERED"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [
+                  {
+                    "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+                    "quote": "Section 15(1)(k) generally disallows outgoings and expenses (including employee reimbursements) in respect of qualifying passenger motor cars, subject to vehicle- and business-specific exceptions. Capital allowances on motor cars are governed separately by Sections 19 and 19A and are generally unavailable except under limited vehicle-specific rules. Vehicle category, registration date and use must be checked before deciding whether a deduction or allowance is available."
+                  },
+                  {
+                    "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                    "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+                  }
+                ],
+                "sources": [
+                  {
+                    "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+                    "sourceStatus": "VERIFIED",
+                    "provenance": "LOCAL_STATIC",
+                    "documentTitle": "Income Tax Act 1947",
+                    "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                    "contentHash": "5297592282d17f3983342a0fa4ca939a9276fad0ba36307f95f55dda66df04b3"
+                  },
+                  {
+                    "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                    "sourceStatus": "VERIFIED",
+                    "provenance": "LOCAL_STATIC",
+                    "documentTitle": "Income Tax Act 1947",
+                    "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                    "contentHash": "9c90e5dfcf808f1ef5a9e1f0e7df242df8def1537ac010f4d658042ad3db246e"
+                  }
+                ]
+              }
+            ]
+          },
+          "governed": {
+            "available": true,
+            "status": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "workstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_232df2bc",
+                    "subject": "Prohibited Deductions and Non-deductible Expenses; Corporate Tax Deductibility",
+                    "authority": "IRAS",
+                    "domain": "IRAS_INCOME_TAX",
+                    "population": "COMPANY",
+                    "operation": "OTHER",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": true,
+                      "retrievalAttempted": true,
+                      "evidenceFound": false,
+                      "admitted": false,
+                      "verified": false,
+                      "covered": false
+                    },
+                    "evidenceStatus": "INSUFFICIENT",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [
+                      "PROVIDER_ERROR"
+                    ],
+                    "retrievalAttempts": [],
+                    "verifiedClaims": [],
+                    "sources": []
+                  }
+                ]
+              }
+            ],
+            "topLevelGaps": [
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL"
+            ],
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 3,
+            "fetchValidationObservations": [
+              {
+                "url": "https://www.iras.gov.sg/sitemap",
+                "sourceUrl": "https://www.iras.gov.sg/sitemap",
+                "finalUrl": "https://www.iras.gov.sg/sitemap",
+                "status": "SUCCESS",
+                "contentHash": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentBytes": 412426,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": false,
+                "topicMatched": false,
+                "titleMatched": false,
+                "contentMatched": false
+              },
+              {
+                "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+                "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+                "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+                "status": "SUCCESS",
+                "pageTitle": "IRAS | Business Expenses",
+                "contentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+                "rawContentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+                "rawContentBytes": 280190,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": true,
+                "topicMatched": true,
+                "titleMatched": true,
+                "contentMatched": true
+              },
+              {
+                "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(s-z)",
+                "status": "THREW",
+                "topicValidationPresent": true,
+                "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+              }
+            ],
+            "governedIssueObservations": []
+          }
+        }
+      },
+      "adapterResultSha256": "5afd8443940235d336920a868c505047771b4bb8d64083f87b912b8021dcdaa7",
+      "replayHealthy": false,
+      "replayFailureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "blockedUrlObservations": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(s-z)",
+          "method": "GET",
+          "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+        }
+      ],
+      "blockedNetworkObservations": [],
+      "completedAtUtc": "2026-10-08T23:55:01.382Z"
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "status": "FAILED",
+      "passed": false,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "firstFailure": "INTEGRITY",
+      "adapterStageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "layerVerdicts": {
+        "semantic": {
+          "stages": {
+            "SEMANTIC_VALIDATION": false,
+            "SEMANTIC_ISSUE_IDENTITY": false,
+            "SEMANTIC_DIMENSIONS": false,
+            "TOPIC_OWNERSHIP": false,
+            "REQUESTED_CONCEPT_OWNERSHIP": false
+          },
+          "validInterpretation": false,
+          "identityPass": false,
+          "dimensionsPass": false,
+          "specificityPass": false,
+          "matchedIssueCount": 0,
+          "expectedIssueCount": 1,
+          "actualIssueCount": 0,
+          "pairs": [],
+          "topicOwnership": [
+            {
+              "topicId": "iras-foreign-sourced-income",
+              "issueId": "company-foreign-dividend-receipt-treatment",
+              "contextual": false,
+              "owned": false
+            }
+          ],
+          "routingTopicOwnership": [],
+          "validatedRoutingTopicIds": [],
+          "independentInventory": {
+            "topicIds": [
+              "iras-foreign-sourced-income"
+            ],
+            "materialTopicIds": [
+              "iras-foreign-sourced-income"
+            ],
+            "routingOnlyTopicIds": [],
+            "unresolvedTopicTextCount": 0
+          },
+          "unrepresentedInventory": [],
+          "unassignedResidualCount": 0,
+          "conceptOwnership": [
+            {
+              "conceptId": "foreign-dividend-receipt",
+              "issueId": "company-foreign-dividend-receipt-treatment",
+              "markerPass": true,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            }
+          ],
+          "subjectAttribution": {
+            "attribution": "SCORING_UNRESOLVED",
+            "modelError": false
+          }
+        },
+        "routing": {
+          "actualPairs": [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ],
+          "expectedPass": true,
+          "hasIssueOwner": false,
+          "contextualWasRouted": false,
+          "noIrasForUnsupported": true,
+          "passed": false
+        },
+        "local": {
+          "topicStates": {
+            "iras-foreign-sourced-income": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "issueStates": {
+            "company-foreign-dividend-receipt-treatment": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "authorityStates": {
+            "IRAS": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "governed": {
+          "lifecycleDiagnostics": [
+            {
+              "issueId": "company-foreign-dividend-receipt-treatment",
+              "expectedStatus": "VERIFIED",
+              "stage": "GOVERNED_RETRIEVAL",
+              "state": "pipeline_failure"
+            }
+          ],
+          "stages": {
+            "GOVERNED_RETRIEVAL": false,
+            "EVIDENCE_ADMISSION": false,
+            "CLAIM_VERIFICATION": false,
+            "REQUESTED_CONCEPT_COVERAGE": false
+          }
+        },
+        "application": {
+          "issueStatuses": {
+            "company-foreign-dividend-receipt-treatment": {
+              "expected": "UNRESOLVED",
+              "passed": false
+            }
+          },
+          "overallStatus": "INSUFFICIENT",
+          "applicationStatusesPassed": false,
+          "overallAllowed": false,
+          "ruleVerifiedUnresolvedApplicationPreserved": false,
+          "passed": false
+        }
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": false
+      },
+      "failureStage": "INTEGRITY",
+      "semanticSendInvocations": 1,
+      "approvedProviderFetchCount": 1,
+      "semanticResponseSha256": null,
+      "semanticResponseBytes": null,
+      "partialProviderResponse": {
+        "kind": "GEMINI_HTTP_ENVELOPE",
+        "status": null,
+        "failureCode": "V4_PROVIDER_TIMEOUT",
+        "truncated": false,
+        "bodyBase64": "",
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0
+      },
+      "adapterResult": {
+        "caseId": "foreign-dividend-receipt-treatment",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true,
+          "issues": [
+            {
+              "id": "issue_6c92782a",
+              "subject": "Foreign-sourced Income and Exemptions",
+              "population": "COMPANY",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "OTHER",
+              "mappedTopicIds": [
+                "iras-foreign-sourced-income"
+              ],
+              "status": "MAPPED"
+            }
+          ]
+        },
+        "semanticUnderstanding": {
+          "mode": "DETERMINISTIC_FALLBACK",
+          "failure": "TIMEOUT",
+          "sendCount": 1,
+          "transportError": "V4_PROVIDER_TIMEOUT"
+        },
+        "layerVerdicts": {
+          "semantic": {
+            "stages": {
+              "SEMANTIC_VALIDATION": false,
+              "SEMANTIC_ISSUE_IDENTITY": false,
+              "SEMANTIC_DIMENSIONS": false,
+              "TOPIC_OWNERSHIP": false,
+              "REQUESTED_CONCEPT_OWNERSHIP": false
+            },
+            "validInterpretation": false,
+            "identityPass": false,
+            "dimensionsPass": false,
+            "specificityPass": false,
+            "matchedIssueCount": 0,
+            "expectedIssueCount": 1,
+            "actualIssueCount": 0,
+            "pairs": [],
+            "topicOwnership": [
+              {
+                "topicId": "iras-foreign-sourced-income",
+                "issueId": "company-foreign-dividend-receipt-treatment",
+                "contextual": false,
+                "owned": false
+              }
+            ],
+            "routingTopicOwnership": [],
+            "validatedRoutingTopicIds": [],
+            "independentInventory": {
+              "topicIds": [
+                "iras-foreign-sourced-income"
+              ],
+              "materialTopicIds": [
+                "iras-foreign-sourced-income"
+              ],
+              "routingOnlyTopicIds": [],
+              "unresolvedTopicTextCount": 0
+            },
+            "unrepresentedInventory": [],
+            "unassignedResidualCount": 0,
+            "conceptOwnership": [
+              {
+                "conceptId": "foreign-dividend-receipt",
+                "issueId": "company-foreign-dividend-receipt-treatment",
+                "markerPass": true,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              }
+            ],
+            "subjectAttribution": {
+              "attribution": "SCORING_UNRESOLVED",
+              "modelError": false
+            }
+          },
+          "routing": {
+            "actualPairs": [
+              "IRAS/IRAS_CORPORATE_TAX"
+            ],
+            "expectedPass": true,
+            "hasIssueOwner": false,
+            "contextualWasRouted": false,
+            "noIrasForUnsupported": true,
+            "passed": false
+          },
+          "local": {
+            "topicStates": {
+              "iras-foreign-sourced-income": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "issueStates": {
+              "company-foreign-dividend-receipt-treatment": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "authorityStates": {
+              "IRAS": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "passed": true
+          },
+          "governed": {
+            "lifecycleDiagnostics": [
+              {
+                "issueId": "company-foreign-dividend-receipt-treatment",
+                "expectedStatus": "VERIFIED",
+                "stage": "GOVERNED_RETRIEVAL",
+                "state": "pipeline_failure"
+              }
+            ],
+            "stages": {
+              "GOVERNED_RETRIEVAL": false,
+              "EVIDENCE_ADMISSION": false,
+              "CLAIM_VERIFICATION": false,
+              "REQUESTED_CONCEPT_COVERAGE": false
+            }
+          },
+          "application": {
+            "issueStatuses": {
+              "company-foreign-dividend-receipt-treatment": {
+                "expected": "UNRESOLVED",
+                "passed": false
+              }
+            },
+            "overallStatus": "INSUFFICIENT",
+            "applicationStatusesPassed": false,
+            "overallAllowed": false,
+            "ruleVerifiedUnresolvedApplicationPreserved": false,
+            "passed": false
+          }
+        },
+        "stageVerdicts": {
+          "SEMANTIC_VALIDATION": false,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false,
+          "WORKSTREAM_ROUTING": false,
+          "LOCAL_CAPABILITY": true,
+          "GOVERNED_RETRIEVAL": false,
+          "EVIDENCE_ADMISSION": false,
+          "CLAIM_VERIFICATION": false,
+          "REQUESTED_CONCEPT_COVERAGE": false,
+          "APPLICATION_STATUS": false,
+          "OVERALL_STATUS": false,
+          "INTEGRITY": true
+        },
+        "firstFailure": "SEMANTIC_VALIDATION",
+        "productionDiagnostics": {
+          "local": {
+            "available": true,
+            "runtimeStatus": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "referenceDate": "2026-10-08",
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 0,
+            "topicObservations": [
+              {
+                "topicId": "iras-foreign-sourced-income",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": true,
+                "substantiveScopeIncomplete": false,
+                "admitted": false,
+                "literalVerified": false,
+                "topicCovered": false,
+                "needsReviewCandidate": false,
+                "candidateCount": 0,
+                "state": "EXPECTED_LOCAL_GAP",
+                "expected": "EXPECTED_LOCAL_GAP"
+              }
+            ],
+            "issues": [
+              {
+                "issueId": "issue_6c92782a",
+                "subject": "Foreign-sourced Income and Exemptions",
+                "authority": "IRAS",
+                "domain": "IRAS_INCOME_TAX",
+                "population": "COMPANY",
+                "operation": "OTHER",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": false,
+                  "admitted": false,
+                  "verified": false,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "NO_CANDIDATE_EVIDENCE",
+                  "IRAS_SCOPE_NOT_COVERED",
+                  "NO_VERIFIED_CLAIM",
+                  "ISSUE_CONCEPT_UNCOVERED"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [],
+                "sources": []
+              }
+            ]
+          },
+          "governed": {
+            "available": true,
+            "status": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "workstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_6c92782a",
+                    "subject": "Foreign-sourced Income and Exemptions",
+                    "authority": "IRAS",
+                    "domain": "IRAS_INCOME_TAX",
+                    "population": "COMPANY",
+                    "operation": "OTHER",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": true,
+                      "retrievalAttempted": true,
+                      "evidenceFound": false,
+                      "admitted": false,
+                      "verified": false,
+                      "covered": false
+                    },
+                    "evidenceStatus": "INSUFFICIENT",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [
+                      "PROVIDER_ERROR"
+                    ],
+                    "retrievalAttempts": [],
+                    "verifiedClaims": [],
+                    "sources": []
+                  }
+                ]
+              }
+            ],
+            "topLevelGaps": [
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL"
+            ],
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 0,
+            "fetchValidationObservations": [
+              {
+                "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+                "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+                "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+                "status": "SUCCESS",
+                "pageTitle": "Companies Receiving Foreign Income",
+                "contentHash": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+                "rawContentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+                "rawContentBytes": 275481,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": true,
+                "topicMatched": true,
+                "titleMatched": true,
+                "contentMatched": true
+              },
+              {
+                "url": "https://www.iras.gov.sg/sitemap",
+                "sourceUrl": "https://www.iras.gov.sg/sitemap",
+                "finalUrl": "https://www.iras.gov.sg/sitemap",
+                "status": "SUCCESS",
+                "contentHash": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentBytes": 412426,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": false,
+                "topicMatched": false,
+                "titleMatched": false,
+                "contentMatched": false
+              },
+              {
+                "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/corporate-income-tax-rate-rebates-and-tax-exemption-schemes",
+                "status": "THREW",
+                "topicValidationPresent": true,
+                "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+              }
+            ],
+            "governedIssueObservations": []
+          }
+        }
+      },
+      "adapterResultSha256": "6430eac74f53bc808769dc14b9ab04be0b8f951664d9d7ea3937dc214f79bfef",
+      "replayHealthy": false,
+      "replayFailureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "blockedUrlObservations": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/corporate-income-tax-rate-rebates-and-tax-exemption-schemes",
+          "method": "GET",
+          "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+        }
+      ],
+      "blockedNetworkObservations": [],
+      "completedAtUtc": "2026-10-08T23:55:16.513Z"
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "status": "FAILED",
+      "passed": false,
+      "failureCode": "V4_PROVIDER_TIMEOUT",
+      "firstFailure": "SEMANTIC_TRANSPORT",
+      "adapterStageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "layerVerdicts": {
+        "semantic": {
+          "stages": {
+            "SEMANTIC_VALIDATION": false,
+            "SEMANTIC_ISSUE_IDENTITY": false,
+            "SEMANTIC_DIMENSIONS": false,
+            "TOPIC_OWNERSHIP": false,
+            "REQUESTED_CONCEPT_OWNERSHIP": false
+          },
+          "validInterpretation": false,
+          "identityPass": false,
+          "dimensionsPass": false,
+          "specificityPass": false,
+          "matchedIssueCount": 0,
+          "expectedIssueCount": 1,
+          "actualIssueCount": 0,
+          "pairs": [],
+          "topicOwnership": [
+            {
+              "topicId": "iras-corporate-tax-residency",
+              "issueId": "general-company-tax-residency-rule",
+              "contextual": false,
+              "owned": false
+            }
+          ],
+          "routingTopicOwnership": [],
+          "validatedRoutingTopicIds": [],
+          "independentInventory": {
+            "topicIds": [
+              "iras-corporate-tax-residency"
+            ],
+            "materialTopicIds": [
+              "iras-corporate-tax-residency"
+            ],
+            "routingOnlyTopicIds": [],
+            "unresolvedTopicTextCount": 0
+          },
+          "unrepresentedInventory": [],
+          "unassignedResidualCount": 0,
+          "conceptOwnership": [
+            {
+              "conceptId": "company-tax-residency",
+              "issueId": "general-company-tax-residency-rule",
+              "markerPass": true,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            }
+          ],
+          "subjectAttribution": {
+            "attribution": "SCORING_UNRESOLVED",
+            "modelError": false
+          }
+        },
+        "routing": {
+          "actualPairs": [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ],
+          "expectedPass": true,
+          "hasIssueOwner": true,
+          "contextualWasRouted": false,
+          "noIrasForUnsupported": true,
+          "passed": true
+        },
+        "local": {
+          "topicStates": {
+            "iras-corporate-tax-residency": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "issueStates": {
+            "general-company-tax-residency-rule": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "authorityStates": {
+            "IRAS": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "governed": {
+          "lifecycleDiagnostics": [
+            {
+              "issueId": "general-company-tax-residency-rule",
+              "expectedStatus": "VERIFIED",
+              "stage": "GOVERNED_RETRIEVAL",
+              "state": "pipeline_failure"
+            }
+          ],
+          "stages": {
+            "GOVERNED_RETRIEVAL": false,
+            "EVIDENCE_ADMISSION": false,
+            "CLAIM_VERIFICATION": false,
+            "REQUESTED_CONCEPT_COVERAGE": false
+          }
+        },
+        "application": {
+          "issueStatuses": {
+            "general-company-tax-residency-rule": {
+              "expected": "NOT_REQUIRED",
+              "passed": false
+            }
+          },
+          "overallStatus": "INSUFFICIENT",
+          "applicationStatusesPassed": false,
+          "overallAllowed": false,
+          "ruleVerifiedUnresolvedApplicationPreserved": true,
+          "passed": false
+        }
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "failureStage": "SEMANTIC_TRANSPORT",
+      "semanticSendInvocations": 1,
+      "approvedProviderFetchCount": 1,
+      "semanticResponseSha256": null,
+      "semanticResponseBytes": null,
+      "partialProviderResponse": {
+        "kind": "GEMINI_HTTP_ENVELOPE",
+        "status": null,
+        "failureCode": "V4_PROVIDER_TIMEOUT",
+        "truncated": false,
+        "bodyBase64": "",
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0
+      },
+      "adapterResult": {
+        "caseId": "corporate-residency-general-rule",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true,
+          "issues": [
+            {
+              "id": "issue_14cbfb5c",
+              "subject": "Company Tax Residency",
+              "population": "COMPANY",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "OTHER",
+              "mappedTopicIds": [
+                "iras-corporate-tax-residency"
+              ],
+              "status": "MAPPED"
+            }
+          ]
+        },
+        "semanticUnderstanding": {
+          "mode": "DETERMINISTIC_FALLBACK",
+          "failure": "TIMEOUT",
+          "sendCount": 1,
+          "transportError": "V4_PROVIDER_TIMEOUT"
+        },
+        "layerVerdicts": {
+          "semantic": {
+            "stages": {
+              "SEMANTIC_VALIDATION": false,
+              "SEMANTIC_ISSUE_IDENTITY": false,
+              "SEMANTIC_DIMENSIONS": false,
+              "TOPIC_OWNERSHIP": false,
+              "REQUESTED_CONCEPT_OWNERSHIP": false
+            },
+            "validInterpretation": false,
+            "identityPass": false,
+            "dimensionsPass": false,
+            "specificityPass": false,
+            "matchedIssueCount": 0,
+            "expectedIssueCount": 1,
+            "actualIssueCount": 0,
+            "pairs": [],
+            "topicOwnership": [
+              {
+                "topicId": "iras-corporate-tax-residency",
+                "issueId": "general-company-tax-residency-rule",
+                "contextual": false,
+                "owned": false
+              }
+            ],
+            "routingTopicOwnership": [],
+            "validatedRoutingTopicIds": [],
+            "independentInventory": {
+              "topicIds": [
+                "iras-corporate-tax-residency"
+              ],
+              "materialTopicIds": [
+                "iras-corporate-tax-residency"
+              ],
+              "routingOnlyTopicIds": [],
+              "unresolvedTopicTextCount": 0
+            },
+            "unrepresentedInventory": [],
+            "unassignedResidualCount": 0,
+            "conceptOwnership": [
+              {
+                "conceptId": "company-tax-residency",
+                "issueId": "general-company-tax-residency-rule",
+                "markerPass": true,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              }
+            ],
+            "subjectAttribution": {
+              "attribution": "SCORING_UNRESOLVED",
+              "modelError": false
+            }
+          },
+          "routing": {
+            "actualPairs": [
+              "IRAS/IRAS_CORPORATE_TAX"
+            ],
+            "expectedPass": true,
+            "hasIssueOwner": true,
+            "contextualWasRouted": false,
+            "noIrasForUnsupported": true,
+            "passed": true
+          },
+          "local": {
+            "topicStates": {
+              "iras-corporate-tax-residency": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "issueStates": {
+              "general-company-tax-residency-rule": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "authorityStates": {
+              "IRAS": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "passed": true
+          },
+          "governed": {
+            "lifecycleDiagnostics": [
+              {
+                "issueId": "general-company-tax-residency-rule",
+                "expectedStatus": "VERIFIED",
+                "stage": "GOVERNED_RETRIEVAL",
+                "state": "pipeline_failure"
+              }
+            ],
+            "stages": {
+              "GOVERNED_RETRIEVAL": false,
+              "EVIDENCE_ADMISSION": false,
+              "CLAIM_VERIFICATION": false,
+              "REQUESTED_CONCEPT_COVERAGE": false
+            }
+          },
+          "application": {
+            "issueStatuses": {
+              "general-company-tax-residency-rule": {
+                "expected": "NOT_REQUIRED",
+                "passed": false
+              }
+            },
+            "overallStatus": "INSUFFICIENT",
+            "applicationStatusesPassed": false,
+            "overallAllowed": false,
+            "ruleVerifiedUnresolvedApplicationPreserved": true,
+            "passed": false
+          }
+        },
+        "stageVerdicts": {
+          "SEMANTIC_VALIDATION": false,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false,
+          "WORKSTREAM_ROUTING": true,
+          "LOCAL_CAPABILITY": true,
+          "GOVERNED_RETRIEVAL": false,
+          "EVIDENCE_ADMISSION": false,
+          "CLAIM_VERIFICATION": false,
+          "REQUESTED_CONCEPT_COVERAGE": false,
+          "APPLICATION_STATUS": false,
+          "OVERALL_STATUS": false,
+          "INTEGRITY": true
+        },
+        "firstFailure": "SEMANTIC_VALIDATION",
+        "productionDiagnostics": {
+          "local": {
+            "available": true,
+            "runtimeStatus": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "referenceDate": "2026-10-08",
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 0,
+            "topicObservations": [
+              {
+                "topicId": "iras-corporate-tax-residency",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": true,
+                "substantiveScopeIncomplete": false,
+                "admitted": false,
+                "literalVerified": false,
+                "topicCovered": false,
+                "needsReviewCandidate": false,
+                "candidateCount": 0,
+                "state": "EXPECTED_LOCAL_GAP",
+                "expected": "EXPECTED_LOCAL_GAP"
+              }
+            ],
+            "issues": [
+              {
+                "issueId": "issue_14cbfb5c",
+                "subject": "Company Tax Residency",
+                "authority": "IRAS",
+                "domain": "IRAS_INCOME_TAX",
+                "population": "COMPANY",
+                "operation": "OTHER",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": false,
+                  "admitted": false,
+                  "verified": false,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "NO_CANDIDATE_EVIDENCE",
+                  "IRAS_SCOPE_NOT_COVERED",
+                  "NO_VERIFIED_CLAIM",
+                  "ISSUE_CONCEPT_UNCOVERED"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [],
+                "sources": []
+              }
+            ]
+          },
+          "governed": {
+            "available": true,
+            "status": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "workstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_14cbfb5c",
+                    "subject": "Company Tax Residency",
+                    "authority": "IRAS",
+                    "domain": "IRAS_INCOME_TAX",
+                    "population": "COMPANY",
+                    "operation": "OTHER",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": true,
+                      "retrievalAttempted": true,
+                      "evidenceFound": true,
+                      "admitted": true,
+                      "verified": true,
+                      "covered": true
+                    },
+                    "evidenceStatus": "VERIFIED",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [],
+                    "retrievalAttempts": [
+                      {
+                        "topicId": "iras-corporate-tax-residency",
+                        "fetchStatus": "SUCCESS",
+                        "pageTitle": "Tax Residency of a Company/ Certificate of Residence"
+                      },
+                      {
+                        "topicId": "iras-authority-query-how-do-singapore-tax-rules-determine-whether-a-c",
+                        "fetchStatus": "SUCCESS",
+                        "pageTitle": "Tax Residency of a Company/ Certificate of Residence"
+                      }
+                    ],
+                    "verifiedClaims": [
+                      {
+                        "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                        "quote": "Your company is a tax resident of Singapore when its control and management is exercised in Singapore."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                        "quote": "Generally, a company is considered a Singapore tax resident for a particular Year of Assessment (YA) if the control and management of its business was exercised in Singapore in the preceding calendar year. For example, a company is a Singapore tax resident for YA 2025 if the control and management of its business was exercised in Singapore for the whole of 2024."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                        "quote": "The Certificate of Residence (COR) is a letter issued by IRAS to certify that the company is a tax resident of Singapore for the purpose of claiming tax benefits under the DTAs that Singapore has concluded with other jurisdictions. It is generally required by the foreign tax authority to prove that the company is a Singapore tax resident."
+                      }
+                    ],
+                    "sources": [
+                      {
+                        "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                        "sourceStatus": "NEEDS_REVIEW",
+                        "provenance": "LIVE_EXTERNAL",
+                        "documentTitle": "Tax Residency of a Company/ Certificate of Residence",
+                        "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                        "contentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+                        "documentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "topLevelGaps": [
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL"
+            ],
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 0,
+            "fetchValidationObservations": [
+              {
+                "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                "status": "SUCCESS",
+                "pageTitle": "Tax Residency of a Company/ Certificate of Residence",
+                "contentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+                "rawContentSha256": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+                "rawContentBytes": 261347,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": true,
+                "topicMatched": true,
+                "titleMatched": true,
+                "contentMatched": true
+              },
+              {
+                "url": "https://www.iras.gov.sg/sitemap",
+                "sourceUrl": "https://www.iras.gov.sg/sitemap",
+                "finalUrl": "https://www.iras.gov.sg/sitemap",
+                "status": "SUCCESS",
+                "contentHash": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentBytes": 412426,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": false,
+                "topicMatched": false,
+                "titleMatched": false,
+                "contentMatched": false
+              }
+            ],
+            "governedIssueObservations": []
+          }
+        }
+      },
+      "adapterResultSha256": "fc222fe79c94e3eb5d324e0e8dfa48eccf5e0cd8ec5f110058f9de5111be059e",
+      "replayHealthy": true,
+      "blockedUrlObservations": [],
+      "blockedNetworkObservations": [],
+      "completedAtUtc": "2026-10-08T23:55:31.734Z"
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "status": "FAILED",
+      "passed": false,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "firstFailure": "INTEGRITY",
+      "adapterStageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": false,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "layerVerdicts": {
+        "semantic": {
+          "stages": {
+            "SEMANTIC_VALIDATION": false,
+            "SEMANTIC_ISSUE_IDENTITY": false,
+            "SEMANTIC_DIMENSIONS": false,
+            "TOPIC_OWNERSHIP": false,
+            "REQUESTED_CONCEPT_OWNERSHIP": false
+          },
+          "validInterpretation": false,
+          "identityPass": false,
+          "dimensionsPass": false,
+          "specificityPass": false,
+          "matchedIssueCount": 0,
+          "expectedIssueCount": 1,
+          "actualIssueCount": 0,
+          "pairs": [],
+          "topicOwnership": [
+            {
+              "topicId": "iras-withholding-tax",
+              "issueId": "general-wht-royalty-rules",
+              "contextual": false,
+              "owned": false
+            },
+            {
+              "topicId": "iras-withholding-tax-interest-royalties",
+              "issueId": "general-wht-royalty-rules",
+              "contextual": false,
+              "owned": false
+            }
+          ],
+          "routingTopicOwnership": [],
+          "validatedRoutingTopicIds": [],
+          "independentInventory": {
+            "topicIds": [
+              "iras-withholding-tax",
+              "iras-withholding-tax-interest-royalties"
+            ],
+            "materialTopicIds": [
+              "iras-withholding-tax",
+              "iras-withholding-tax-interest-royalties"
+            ],
+            "routingOnlyTopicIds": [],
+            "unresolvedTopicTextCount": 0
+          },
+          "unrepresentedInventory": [],
+          "unassignedResidualCount": 0,
+          "conceptOwnership": [
+            {
+              "conceptId": "withholding-tax",
+              "issueId": "general-wht-royalty-rules",
+              "markerPass": true,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            },
+            {
+              "conceptId": "royalty-payment",
+              "issueId": "general-wht-royalty-rules",
+              "markerPass": true,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            },
+            {
+              "conceptId": "nonresident-company-recipient",
+              "issueId": "general-wht-royalty-rules",
+              "markerPass": false,
+              "topicPass": false,
+              "extractionPass": false,
+              "passed": false
+            }
+          ],
+          "subjectAttribution": {
+            "attribution": "SCORING_UNRESOLVED",
+            "modelError": false
+          }
+        },
+        "routing": {
+          "actualPairs": [
+            "IRAS/IRAS_CORPORATE_TAX"
+          ],
+          "expectedPass": true,
+          "hasIssueOwner": true,
+          "contextualWasRouted": false,
+          "noIrasForUnsupported": true,
+          "passed": true
+        },
+        "local": {
+          "topicStates": {
+            "iras-withholding-tax": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            },
+            "iras-withholding-tax-interest-royalties": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "VERIFIED_LOCAL_RULE",
+              "passed": false
+            }
+          },
+          "issueStates": {
+            "general-wht-royalty-rules": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "authorityStates": {
+            "IRAS": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "passed": false
+        },
+        "governed": {
+          "lifecycleDiagnostics": [
+            {
+              "issueId": "general-wht-royalty-rules",
+              "expectedStatus": "VERIFIED",
+              "stage": "GOVERNED_RETRIEVAL",
+              "state": "pipeline_failure"
+            }
+          ],
+          "stages": {
+            "GOVERNED_RETRIEVAL": false,
+            "EVIDENCE_ADMISSION": false,
+            "CLAIM_VERIFICATION": false,
+            "REQUESTED_CONCEPT_COVERAGE": false
+          }
+        },
+        "application": {
+          "issueStatuses": {
+            "general-wht-royalty-rules": {
+              "expected": "NOT_REQUIRED",
+              "passed": false
+            }
+          },
+          "overallStatus": "INSUFFICIENT",
+          "applicationStatusesPassed": false,
+          "overallAllowed": false,
+          "ruleVerifiedUnresolvedApplicationPreserved": true,
+          "passed": false
+        }
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": false,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": false
+      },
+      "failureStage": "INTEGRITY",
+      "semanticSendInvocations": 1,
+      "approvedProviderFetchCount": 1,
+      "semanticResponseSha256": null,
+      "semanticResponseBytes": null,
+      "partialProviderResponse": {
+        "kind": "GEMINI_HTTP_ENVELOPE",
+        "status": 503,
+        "failureCode": "V4_PROVIDER_HTTP_503",
+        "truncated": false,
+        "bodyBase64": "ewogICJlcnJvciI6IHsKICAgICJjb2RlIjogNTAzLAogICAgIm1lc3NhZ2UiOiAiVGhpcyBtb2RlbCBpcyBjdXJyZW50bHkgZXhwZXJpZW5jaW5nIGhpZ2ggZGVtYW5kLiBTcGlrZXMgaW4gZGVtYW5kIGFyZSB1c3VhbGx5IHRlbXBvcmFyeS4gUGxlYXNlIHRyeSBhZ2FpbiBsYXRlci4iLAogICAgInN0YXR1cyI6ICJVTkFWQUlMQUJMRSIKICB9Cn0K",
+        "bodySha256": "01f5c7d4e4d8ec06c8098777e731b3d552ba518feb02b681f6c569edcd9c6f6d",
+        "bodyBytes": 198
+      },
+      "adapterResult": {
+        "caseId": "wht-royalty-general-rule",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true,
+          "issues": [
+            {
+              "id": "issue_f14120ab",
+              "subject": "Withholding Tax on Payments to Non-residents; Withholding Tax on Interest and Royalties",
+              "population": "COMPANY",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "OTHER",
+              "mappedTopicIds": [
+                "iras-withholding-tax",
+                "iras-withholding-tax-interest-royalties"
+              ],
+              "status": "MAPPED"
+            }
+          ]
+        },
+        "semanticUnderstanding": {
+          "mode": "DETERMINISTIC_FALLBACK",
+          "failure": "PROVIDER_ERROR",
+          "sendCount": 1,
+          "transportError": "V4_PROVIDER_HTTP_503"
+        },
+        "layerVerdicts": {
+          "semantic": {
+            "stages": {
+              "SEMANTIC_VALIDATION": false,
+              "SEMANTIC_ISSUE_IDENTITY": false,
+              "SEMANTIC_DIMENSIONS": false,
+              "TOPIC_OWNERSHIP": false,
+              "REQUESTED_CONCEPT_OWNERSHIP": false
+            },
+            "validInterpretation": false,
+            "identityPass": false,
+            "dimensionsPass": false,
+            "specificityPass": false,
+            "matchedIssueCount": 0,
+            "expectedIssueCount": 1,
+            "actualIssueCount": 0,
+            "pairs": [],
+            "topicOwnership": [
+              {
+                "topicId": "iras-withholding-tax",
+                "issueId": "general-wht-royalty-rules",
+                "contextual": false,
+                "owned": false
+              },
+              {
+                "topicId": "iras-withholding-tax-interest-royalties",
+                "issueId": "general-wht-royalty-rules",
+                "contextual": false,
+                "owned": false
+              }
+            ],
+            "routingTopicOwnership": [],
+            "validatedRoutingTopicIds": [],
+            "independentInventory": {
+              "topicIds": [
+                "iras-withholding-tax",
+                "iras-withholding-tax-interest-royalties"
+              ],
+              "materialTopicIds": [
+                "iras-withholding-tax",
+                "iras-withholding-tax-interest-royalties"
+              ],
+              "routingOnlyTopicIds": [],
+              "unresolvedTopicTextCount": 0
+            },
+            "unrepresentedInventory": [],
+            "unassignedResidualCount": 0,
+            "conceptOwnership": [
+              {
+                "conceptId": "withholding-tax",
+                "issueId": "general-wht-royalty-rules",
+                "markerPass": true,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              },
+              {
+                "conceptId": "royalty-payment",
+                "issueId": "general-wht-royalty-rules",
+                "markerPass": true,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              },
+              {
+                "conceptId": "nonresident-company-recipient",
+                "issueId": "general-wht-royalty-rules",
+                "markerPass": false,
+                "topicPass": false,
+                "extractionPass": false,
+                "passed": false
+              }
+            ],
+            "subjectAttribution": {
+              "attribution": "SCORING_UNRESOLVED",
+              "modelError": false
+            }
+          },
+          "routing": {
+            "actualPairs": [
+              "IRAS/IRAS_CORPORATE_TAX"
+            ],
+            "expectedPass": true,
+            "hasIssueOwner": true,
+            "contextualWasRouted": false,
+            "noIrasForUnsupported": true,
+            "passed": true
+          },
+          "local": {
+            "topicStates": {
+              "iras-withholding-tax": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              },
+              "iras-withholding-tax-interest-royalties": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "VERIFIED_LOCAL_RULE",
+                "passed": false
+              }
+            },
+            "issueStates": {
+              "general-wht-royalty-rules": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "authorityStates": {
+              "IRAS": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "passed": false
+          },
+          "governed": {
+            "lifecycleDiagnostics": [
+              {
+                "issueId": "general-wht-royalty-rules",
+                "expectedStatus": "VERIFIED",
+                "stage": "GOVERNED_RETRIEVAL",
+                "state": "pipeline_failure"
+              }
+            ],
+            "stages": {
+              "GOVERNED_RETRIEVAL": false,
+              "EVIDENCE_ADMISSION": false,
+              "CLAIM_VERIFICATION": false,
+              "REQUESTED_CONCEPT_COVERAGE": false
+            }
+          },
+          "application": {
+            "issueStatuses": {
+              "general-wht-royalty-rules": {
+                "expected": "NOT_REQUIRED",
+                "passed": false
+              }
+            },
+            "overallStatus": "INSUFFICIENT",
+            "applicationStatusesPassed": false,
+            "overallAllowed": false,
+            "ruleVerifiedUnresolvedApplicationPreserved": true,
+            "passed": false
+          }
+        },
+        "stageVerdicts": {
+          "SEMANTIC_VALIDATION": false,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false,
+          "WORKSTREAM_ROUTING": true,
+          "LOCAL_CAPABILITY": false,
+          "GOVERNED_RETRIEVAL": false,
+          "EVIDENCE_ADMISSION": false,
+          "CLAIM_VERIFICATION": false,
+          "REQUESTED_CONCEPT_COVERAGE": false,
+          "APPLICATION_STATUS": false,
+          "OVERALL_STATUS": false,
+          "INTEGRITY": true
+        },
+        "firstFailure": "SEMANTIC_VALIDATION",
+        "productionDiagnostics": {
+          "local": {
+            "available": true,
+            "runtimeStatus": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "referenceDate": "2026-10-08",
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 2,
+            "topicObservations": [
+              {
+                "topicId": "iras-withholding-tax",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": false,
+                "substantiveScopeIncomplete": true,
+                "admitted": true,
+                "literalVerified": false,
+                "topicCovered": true,
+                "needsReviewCandidate": false,
+                "candidateCount": 2,
+                "state": "EXPECTED_LOCAL_GAP",
+                "expected": "EXPECTED_LOCAL_GAP"
+              },
+              {
+                "topicId": "iras-withholding-tax-interest-royalties",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": false,
+                "substantiveScopeIncomplete": false,
+                "admitted": true,
+                "literalVerified": true,
+                "topicCovered": true,
+                "needsReviewCandidate": false,
+                "candidateCount": 2,
+                "state": "VERIFIED_LOCAL_RULE",
+                "expected": "EXPECTED_LOCAL_GAP"
+              }
+            ],
+            "issues": [
+              {
+                "issueId": "issue_f14120ab",
+                "subject": "Withholding Tax on Payments to Non-residents; Withholding Tax on Interest and Royalties",
+                "authority": "IRAS",
+                "domain": "IRAS_INCOME_TAX",
+                "population": "COMPANY",
+                "operation": "OTHER",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": true,
+                  "admitted": true,
+                  "verified": true,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "ISSUE_CONCEPT_UNCOVERED"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [
+                  {
+                    "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+                    "quote": "Interest and other specified loan-related payments to a non-resident may be subject to Singapore withholding tax under Section 45. Confirm Singapore source, recipient status, applicable exemption or treaty relief, the payment date and the applicable rate before concluding that tax must be withheld."
+                  }
+                ],
+                "sources": [
+                  {
+                    "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+                    "sourceStatus": "VERIFIED",
+                    "provenance": "LOCAL_STATIC",
+                    "documentTitle": "Income Tax Act 1947",
+                    "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "contentHash": "671dfe2aa7d45d888f81263ad10b6ad4f5b7d98ccfb8799a043b56c1780949b1"
+                  }
+                ]
+              }
+            ]
+          },
+          "governed": {
+            "available": true,
+            "status": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "workstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_f14120ab",
+                    "subject": "Withholding Tax on Payments to Non-residents; Withholding Tax on Interest and Royalties",
+                    "authority": "IRAS",
+                    "domain": "IRAS_INCOME_TAX",
+                    "population": "COMPANY",
+                    "operation": "OTHER",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": true,
+                      "retrievalAttempted": true,
+                      "evidenceFound": false,
+                      "admitted": false,
+                      "verified": false,
+                      "covered": false
+                    },
+                    "evidenceStatus": "INSUFFICIENT",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [
+                      "PROVIDER_ERROR"
+                    ],
+                    "retrievalAttempts": [],
+                    "verifiedClaims": [],
+                    "sources": []
+                  }
+                ]
+              }
+            ],
+            "topLevelGaps": [
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL"
+            ],
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 2,
+            "fetchValidationObservations": [
+              {
+                "url": "https://www.iras.gov.sg/sitemap",
+                "sourceUrl": "https://www.iras.gov.sg/sitemap",
+                "finalUrl": "https://www.iras.gov.sg/sitemap",
+                "status": "SUCCESS",
+                "contentHash": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentBytes": 412426,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": false,
+                "topicMatched": false,
+                "titleMatched": false,
+                "contentMatched": false
+              },
+              {
+                "url": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company",
+                "status": "THREW",
+                "topicValidationPresent": true,
+                "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+              }
+            ],
+            "governedIssueObservations": []
+          }
+        }
+      },
+      "adapterResultSha256": "bcd0531683c31a16795410ba0cb6890a9d6c4aa40900afcca32ecea59a4bff0b",
+      "replayHealthy": false,
+      "replayFailureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "blockedUrlObservations": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company",
+          "method": "GET",
+          "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+        }
+      ],
+      "blockedNetworkObservations": [],
+      "completedAtUtc": "2026-10-08T23:55:40.407Z"
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "status": "FAILED",
+      "passed": false,
+      "failureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "firstFailure": "INTEGRITY",
+      "adapterStageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "layerVerdicts": {
+        "semantic": {
+          "stages": {
+            "SEMANTIC_VALIDATION": false,
+            "SEMANTIC_ISSUE_IDENTITY": false,
+            "SEMANTIC_DIMENSIONS": false,
+            "TOPIC_OWNERSHIP": false,
+            "REQUESTED_CONCEPT_OWNERSHIP": false
+          },
+          "validInterpretation": false,
+          "identityPass": false,
+          "dimensionsPass": false,
+          "specificityPass": false,
+          "matchedIssueCount": 0,
+          "expectedIssueCount": 1,
+          "actualIssueCount": 0,
+          "pairs": [],
+          "topicOwnership": [
+            {
+              "topicId": "iras-gst-input-tax",
+              "issueId": "general-gst-input-tax-recovery-rules",
+              "contextual": false,
+              "owned": false
+            }
+          ],
+          "routingTopicOwnership": [],
+          "validatedRoutingTopicIds": [],
+          "independentInventory": {
+            "topicIds": [
+              "iras-gst-input-tax"
+            ],
+            "materialTopicIds": [
+              "iras-gst-input-tax"
+            ],
+            "routingOnlyTopicIds": [],
+            "unresolvedTopicTextCount": 0
+          },
+          "unrepresentedInventory": [],
+          "unassignedResidualCount": 0,
+          "conceptOwnership": [
+            {
+              "conceptId": "affirmative-input-tax-recovery",
+              "issueId": "general-gst-input-tax-recovery-rules",
+              "markerPass": true,
+              "topicPass": false,
+              "extractionPass": true,
+              "passed": false
+            }
+          ],
+          "subjectAttribution": {
+            "attribution": "SCORING_UNRESOLVED",
+            "modelError": false
+          }
+        },
+        "routing": {
+          "actualPairs": [
+            "IRAS/IRAS_GST"
+          ],
+          "expectedPass": true,
+          "hasIssueOwner": false,
+          "contextualWasRouted": false,
+          "noIrasForUnsupported": true,
+          "passed": false
+        },
+        "local": {
+          "topicStates": {
+            "iras-gst-input-tax": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "issueStates": {
+            "general-gst-input-tax-recovery-rules": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "authorityStates": {
+            "IRAS": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "governed": {
+          "lifecycleDiagnostics": [
+            {
+              "issueId": "general-gst-input-tax-recovery-rules",
+              "expectedStatus": "VERIFIED",
+              "stage": "GOVERNED_RETRIEVAL",
+              "state": "pipeline_failure"
+            }
+          ],
+          "stages": {
+            "GOVERNED_RETRIEVAL": false,
+            "EVIDENCE_ADMISSION": false,
+            "CLAIM_VERIFICATION": false,
+            "REQUESTED_CONCEPT_COVERAGE": false
+          }
+        },
+        "application": {
+          "issueStatuses": {
+            "general-gst-input-tax-recovery-rules": {
+              "expected": "NOT_REQUIRED",
+              "passed": false
+            }
+          },
+          "overallStatus": "INSUFFICIENT",
+          "applicationStatusesPassed": false,
+          "overallAllowed": false,
+          "ruleVerifiedUnresolvedApplicationPreserved": true,
+          "passed": false
+        }
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": false,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": false
+      },
+      "failureStage": "INTEGRITY",
+      "semanticSendInvocations": 1,
+      "approvedProviderFetchCount": 1,
+      "semanticResponseSha256": null,
+      "semanticResponseBytes": null,
+      "partialProviderResponse": {
+        "kind": "GEMINI_HTTP_ENVELOPE",
+        "status": null,
+        "failureCode": "V4_PROVIDER_TIMEOUT",
+        "truncated": false,
+        "bodyBase64": "",
+        "bodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bodyBytes": 0
+      },
+      "adapterResult": {
+        "caseId": "gst-input-tax-general-rule",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true,
+          "issues": [
+            {
+              "id": "issue_e308dbb4",
+              "subject": "Input Tax Claims and Tax Invoice Requirements",
+              "population": "UNKNOWN",
+              "domain": "IRAS_GST",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "OTHER",
+              "mappedTopicIds": [
+                "iras-gst-input-tax"
+              ],
+              "status": "MAPPED"
+            }
+          ]
+        },
+        "semanticUnderstanding": {
+          "mode": "DETERMINISTIC_FALLBACK",
+          "failure": "TIMEOUT",
+          "sendCount": 1,
+          "transportError": "V4_PROVIDER_TIMEOUT"
+        },
+        "layerVerdicts": {
+          "semantic": {
+            "stages": {
+              "SEMANTIC_VALIDATION": false,
+              "SEMANTIC_ISSUE_IDENTITY": false,
+              "SEMANTIC_DIMENSIONS": false,
+              "TOPIC_OWNERSHIP": false,
+              "REQUESTED_CONCEPT_OWNERSHIP": false
+            },
+            "validInterpretation": false,
+            "identityPass": false,
+            "dimensionsPass": false,
+            "specificityPass": false,
+            "matchedIssueCount": 0,
+            "expectedIssueCount": 1,
+            "actualIssueCount": 0,
+            "pairs": [],
+            "topicOwnership": [
+              {
+                "topicId": "iras-gst-input-tax",
+                "issueId": "general-gst-input-tax-recovery-rules",
+                "contextual": false,
+                "owned": false
+              }
+            ],
+            "routingTopicOwnership": [],
+            "validatedRoutingTopicIds": [],
+            "independentInventory": {
+              "topicIds": [
+                "iras-gst-input-tax"
+              ],
+              "materialTopicIds": [
+                "iras-gst-input-tax"
+              ],
+              "routingOnlyTopicIds": [],
+              "unresolvedTopicTextCount": 0
+            },
+            "unrepresentedInventory": [],
+            "unassignedResidualCount": 0,
+            "conceptOwnership": [
+              {
+                "conceptId": "affirmative-input-tax-recovery",
+                "issueId": "general-gst-input-tax-recovery-rules",
+                "markerPass": true,
+                "topicPass": false,
+                "extractionPass": true,
+                "passed": false
+              }
+            ],
+            "subjectAttribution": {
+              "attribution": "SCORING_UNRESOLVED",
+              "modelError": false
+            }
+          },
+          "routing": {
+            "actualPairs": [
+              "IRAS/IRAS_GST"
+            ],
+            "expectedPass": true,
+            "hasIssueOwner": false,
+            "contextualWasRouted": false,
+            "noIrasForUnsupported": true,
+            "passed": false
+          },
+          "local": {
+            "topicStates": {
+              "iras-gst-input-tax": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "issueStates": {
+              "general-gst-input-tax-recovery-rules": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "authorityStates": {
+              "IRAS": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "passed": true
+          },
+          "governed": {
+            "lifecycleDiagnostics": [
+              {
+                "issueId": "general-gst-input-tax-recovery-rules",
+                "expectedStatus": "VERIFIED",
+                "stage": "GOVERNED_RETRIEVAL",
+                "state": "pipeline_failure"
+              }
+            ],
+            "stages": {
+              "GOVERNED_RETRIEVAL": false,
+              "EVIDENCE_ADMISSION": false,
+              "CLAIM_VERIFICATION": false,
+              "REQUESTED_CONCEPT_COVERAGE": false
+            }
+          },
+          "application": {
+            "issueStatuses": {
+              "general-gst-input-tax-recovery-rules": {
+                "expected": "NOT_REQUIRED",
+                "passed": false
+              }
+            },
+            "overallStatus": "INSUFFICIENT",
+            "applicationStatusesPassed": false,
+            "overallAllowed": false,
+            "ruleVerifiedUnresolvedApplicationPreserved": true,
+            "passed": false
+          }
+        },
+        "stageVerdicts": {
+          "SEMANTIC_VALIDATION": false,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false,
+          "WORKSTREAM_ROUTING": false,
+          "LOCAL_CAPABILITY": true,
+          "GOVERNED_RETRIEVAL": false,
+          "EVIDENCE_ADMISSION": false,
+          "CLAIM_VERIFICATION": false,
+          "REQUESTED_CONCEPT_COVERAGE": false,
+          "APPLICATION_STATUS": false,
+          "OVERALL_STATUS": false,
+          "INTEGRITY": true
+        },
+        "firstFailure": "SEMANTIC_VALIDATION",
+        "productionDiagnostics": {
+          "local": {
+            "available": true,
+            "runtimeStatus": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "referenceDate": "2026-10-08",
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 1,
+            "topicObservations": [
+              {
+                "topicId": "iras-gst-input-tax",
+                "governedWorkstreamObserved": true,
+                "noGoverningWorkstream": false,
+                "retrievalCompleted": true,
+                "noEligibleCandidate": false,
+                "substantiveScopeIncomplete": true,
+                "admitted": true,
+                "literalVerified": false,
+                "topicCovered": true,
+                "needsReviewCandidate": false,
+                "candidateCount": 1,
+                "state": "EXPECTED_LOCAL_GAP",
+                "expected": "EXPECTED_LOCAL_GAP"
+              }
+            ],
+            "issues": [
+              {
+                "issueId": "issue_e308dbb4",
+                "subject": "Input Tax Claims and Tax Invoice Requirements",
+                "authority": "IRAS",
+                "domain": "IRAS_GST",
+                "population": "UNKNOWN",
+                "operation": "OTHER",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": true,
+                  "admitted": true,
+                  "verified": false,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "NO_VERIFIED_CLAIM",
+                  "ISSUE_CONCEPT_UNCOVERED"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [],
+                "sources": []
+              }
+            ]
+          },
+          "governed": {
+            "available": true,
+            "status": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "workstreams": [
+              {
+                "authority": "IRAS",
+                "domain": "IRAS_GST",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_e308dbb4",
+                    "subject": "Input Tax Claims and Tax Invoice Requirements",
+                    "authority": "IRAS",
+                    "domain": "IRAS_GST",
+                    "population": "UNKNOWN",
+                    "operation": "OTHER",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": true,
+                      "retrievalAttempted": true,
+                      "evidenceFound": false,
+                      "admitted": false,
+                      "verified": false,
+                      "covered": false
+                    },
+                    "evidenceStatus": "INSUFFICIENT",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [
+                      "PROVIDER_ERROR"
+                    ],
+                    "retrievalAttempts": [],
+                    "verifiedClaims": [],
+                    "sources": []
+                  }
+                ]
+              }
+            ],
+            "topLevelGaps": [
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL"
+            ],
+            "candidateGroupCount": 1,
+            "candidateGroupRecordCount": 1,
+            "fetchValidationObservations": [
+              {
+                "url": "https://www.iras.gov.sg/sitemap",
+                "sourceUrl": "https://www.iras.gov.sg/sitemap",
+                "finalUrl": "https://www.iras.gov.sg/sitemap",
+                "status": "SUCCESS",
+                "contentHash": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+                "rawContentBytes": 412426,
+                "contentHashBoundToObservedBytes": true,
+                "topicValidationPresent": false,
+                "topicMatched": false,
+                "titleMatched": false,
+                "contentMatched": false
+              },
+              {
+                "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+                "status": "THREW",
+                "topicValidationPresent": true,
+                "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+              }
+            ],
+            "governedIssueObservations": []
+          }
+        }
+      },
+      "adapterResultSha256": "e03393f4485210b306ccac3f670796a97072b0a9698f1bfe17066a7bb23e056b",
+      "replayHealthy": false,
+      "replayFailureCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY",
+      "blockedUrlObservations": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+          "method": "GET",
+          "errorCode": "V4_REPLAY_REQUEST_OUTSIDE_APPROVED_INVENTORY"
+        }
+      ],
+      "blockedNetworkObservations": [],
+      "completedAtUtc": "2026-10-08T23:56:02.249Z"
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "status": "PASSED",
+      "passed": true,
+      "failureCode": null,
+      "firstFailure": null,
+      "adapterStageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "layerVerdicts": {
+        "semantic": {
+          "stages": {
+            "SEMANTIC_VALIDATION": true,
+            "SEMANTIC_ISSUE_IDENTITY": true,
+            "SEMANTIC_DIMENSIONS": true,
+            "TOPIC_OWNERSHIP": true,
+            "REQUESTED_CONCEPT_OWNERSHIP": true
+          },
+          "validInterpretation": true,
+          "identityPass": true,
+          "dimensionsPass": true,
+          "specificityPass": true,
+          "matchedIssueCount": 1,
+          "expectedIssueCount": 1,
+          "actualIssueCount": 1,
+          "pairs": [
+            {
+              "actualIndex": 0,
+              "expectedIndex": 0,
+              "expectedIssueId": "sfrsi-6-mineral-exploration-evaluation",
+              "dimensions": {
+                "governingAuthority": true,
+                "contextualAuthority": true,
+                "domain": true,
+                "population": true,
+                "operation": true
+              },
+              "subjectGuard": {
+                "passed": true,
+                "explicitContradiction": false
+              }
+            }
+          ],
+          "topicOwnership": [],
+          "routingTopicOwnership": [],
+          "validatedRoutingTopicIds": [],
+          "independentInventory": {
+            "topicIds": [],
+            "materialTopicIds": [],
+            "routingOnlyTopicIds": [],
+            "unresolvedTopicTextCount": 2
+          },
+          "unrepresentedInventory": [],
+          "unassignedResidualCount": 0,
+          "conceptOwnership": [
+            {
+              "conceptId": "sfrsi-6-exploration-evaluation",
+              "issueId": "sfrsi-6-mineral-exploration-evaluation",
+              "markerPass": true,
+              "topicPass": true,
+              "extractionPass": true,
+              "passed": true
+            }
+          ],
+          "subjectAttribution": {
+            "attribution": "MATCHED",
+            "modelError": false
+          }
+        },
+        "routing": {
+          "actualPairs": [
+            "ACCOUNTING_STANDARDS/ACCOUNTING"
+          ],
+          "expectedPass": true,
+          "hasIssueOwner": true,
+          "contextualWasRouted": false,
+          "noIrasForUnsupported": true,
+          "passed": true
+        },
+        "local": {
+          "topicStates": {},
+          "issueStates": {
+            "sfrsi-6-mineral-exploration-evaluation": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "authorityStates": {
+            "ACCOUNTING_STANDARDS": {
+              "expected": "EXPECTED_LOCAL_GAP",
+              "actual": "EXPECTED_LOCAL_GAP",
+              "passed": true
+            }
+          },
+          "passed": true
+        },
+        "governed": {
+          "lifecycleDiagnostics": [],
+          "stages": {
+            "GOVERNED_RETRIEVAL": true,
+            "EVIDENCE_ADMISSION": true,
+            "CLAIM_VERIFICATION": true,
+            "REQUESTED_CONCEPT_COVERAGE": true
+          },
+          "expectedNoCoverageTopic": true,
+          "expectedNoClaims": true
+        },
+        "application": {
+          "issueStatuses": {
+            "sfrsi-6-mineral-exploration-evaluation": {
+              "expected": "NOT_REQUIRED",
+              "actual": "NOT_REQUIRED",
+              "passed": true
+            }
+          },
+          "overallStatus": "INSUFFICIENT",
+          "applicationStatusesPassed": true,
+          "overallAllowed": true,
+          "ruleVerifiedUnresolvedApplicationPreserved": true,
+          "passed": true
+        }
+      },
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "failureStage": null,
+      "semanticSendInvocations": 1,
+      "approvedProviderFetchCount": 1,
+      "semanticResponseSha256": "486d6786bd7b49e06a8856d6b29e0c9cf7c3f51bd312102d51a95da5d423541b",
+      "semanticResponseBytes": 1077,
+      "semanticResponseBase64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIkFDQ09VTlRJTkdfU1RBTkRBUkRTIgogIF0sCiAgImNvbnRleHR1YWxBdXRob3JpdGllcyI6IFtdLAogICJkb21haW4iOiAiQUNDT1VOVElORyIsCiAgInBvcHVsYXRpb24iOiAiQ09NUEFOWSIsCiAgInByaW1hcnlTdWJqZWN0IjogImV4cGxvcmF0aW9uIGFuZCBldmFsdWF0aW9uIG9mIG1pbmVyYWwgcmVzb3VyY2VzIiwKICAiY29uY2VwdHMiOiBbCiAgICB7CiAgICAgICJjb25jZXB0IjogImV4cGxvcmF0aW9uIGFuZCBldmFsdWF0aW9uIGV4cGVuZGl0dXJlcyIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJTRlJTKEkpIDYiLAogICAgICAicm9sZSI6ICJQUklNQVJZIgogICAgfSwKICAgIHsKICAgICAgImNvbmNlcHQiOiAiYWNjb3VudGluZyBydWxlcyIsCiAgICAgICJyb2xlIjogIlJFTEFURUQiCiAgICB9CiAgXSwKICAicmVxdWVzdGVkT3BlcmF0aW9uIjogIkVYUExBSU5fUlVMRSIsCiAgImZhY3RzRXhwbGljaXRseVByb3ZpZGVkIjogW10sCiAgImNvbmZpZGVuY2UiOiAwLjk1LAogICJpc3N1ZXMiOiBbCiAgICB7CiAgICAgICJzdWJqZWN0IjogImFjY291bnRpbmcgcnVsZXMgZm9yIGV4cGxvcmF0aW9uIGFuZCBldmFsdWF0aW9uIG9mIG1pbmVyYWwgcmVzb3VyY2VzIHVuZGVyIFNGUlMoSSkgNiIsCiAgICAgICJwb3B1bGF0aW9uIjogIkNPTVBBTlkiLAogICAgICAiZG9tYWluIjogIkFDQ09VTlRJTkciLAogICAgICAiZ292ZXJuaW5nQXV0aG9yaXRpZXMiOiBbCiAgICAgICAgIkFDQ09VTlRJTkdfU1RBTkRBUkRTIgogICAgICBdLAogICAgICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogW10sCiAgICAgICJvcGVyYXRpb24iOiAiRVhQTEFJTl9SVUxFIiwKICAgICAgIm1hcHBlZFRvcGljSWRzIjogW10sCiAgICAgICJldmlkZW5jZVJlcXVpcmVtZW50IjogIkFVVEhPUklUQVRJVkVfU09VUkNFIiwKICAgICAgImNvbmZpZGVuY2UiOiAwLjk1CiAgICB9CiAgXQp9",
+      "semanticResponse": "{\n  \"schemaVersion\": 2,\n  \"jurisdiction\": [\n    \"Singapore\"\n  ],\n  \"authorityCandidates\": [\n    \"ACCOUNTING_STANDARDS\"\n  ],\n  \"contextualAuthorities\": [],\n  \"domain\": \"ACCOUNTING\",\n  \"population\": \"COMPANY\",\n  \"primarySubject\": \"exploration and evaluation of mineral resources\",\n  \"concepts\": [\n    {\n      \"concept\": \"exploration and evaluation expenditures\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"SFRS(I) 6\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"accounting rules\",\n      \"role\": \"RELATED\"\n    }\n  ],\n  \"requestedOperation\": \"EXPLAIN_RULE\",\n  \"factsExplicitlyProvided\": [],\n  \"confidence\": 0.95,\n  \"issues\": [\n    {\n      \"subject\": \"accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6\",\n      \"population\": \"COMPANY\",\n      \"domain\": \"ACCOUNTING\",\n      \"governingAuthorities\": [\n        \"ACCOUNTING_STANDARDS\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"EXPLAIN_RULE\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.95\n    }\n  ]\n}",
+      "adapterResult": {
+        "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+        "interpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "primarySubject": "exploration and evaluation of mineral resources",
+          "concepts": [
+            {
+              "concept": "exploration and evaluation expenditures",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "SFRS(I) 6",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "accounting rules",
+              "role": "RELATED"
+            }
+          ],
+          "requestedOperation": "EXPLAIN_RULE",
+          "requiresUserSpecificFacts": false,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [],
+          "confidence": 0.95,
+          "issues": [
+            {
+              "subject": "accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6",
+              "population": "COMPANY",
+              "domain": "ACCOUNTING",
+              "governingAuthorities": [
+                "ACCOUNTING_STANDARDS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 0.95
+            }
+          ]
+        },
+        "issuePlan": {
+          "source": "SEMANTIC_ISSUES",
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true,
+          "issues": [
+            {
+              "id": "issue_71916b9a",
+              "subject": "accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6",
+              "population": "COMPANY",
+              "domain": "ACCOUNTING",
+              "governingAuthorities": [
+                "ACCOUNTING_STANDARDS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [],
+              "unresolvedReason": "NO_COVERAGE_TOPIC",
+              "status": "UNRESOLVED"
+            }
+          ]
+        },
+        "semanticUnderstanding": {
+          "mode": "SEMANTIC_INTERPRETATION",
+          "sendCount": 1,
+          "response": {
+            "parsed": true,
+            "valid": true,
+            "responseSha256": "486d6786bd7b49e06a8856d6b29e0c9cf7c3f51bd312102d51a95da5d423541b",
+            "responseBytes": 1077
+          }
+        },
+        "layerVerdicts": {
+          "semantic": {
+            "stages": {
+              "SEMANTIC_VALIDATION": true,
+              "SEMANTIC_ISSUE_IDENTITY": true,
+              "SEMANTIC_DIMENSIONS": true,
+              "TOPIC_OWNERSHIP": true,
+              "REQUESTED_CONCEPT_OWNERSHIP": true
+            },
+            "validInterpretation": true,
+            "identityPass": true,
+            "dimensionsPass": true,
+            "specificityPass": true,
+            "matchedIssueCount": 1,
+            "expectedIssueCount": 1,
+            "actualIssueCount": 1,
+            "pairs": [
+              {
+                "actualIndex": 0,
+                "expectedIndex": 0,
+                "expectedIssueId": "sfrsi-6-mineral-exploration-evaluation",
+                "dimensions": {
+                  "governingAuthority": true,
+                  "contextualAuthority": true,
+                  "domain": true,
+                  "population": true,
+                  "operation": true
+                },
+                "subjectGuard": {
+                  "passed": true,
+                  "explicitContradiction": false
+                }
+              }
+            ],
+            "topicOwnership": [],
+            "routingTopicOwnership": [],
+            "validatedRoutingTopicIds": [],
+            "independentInventory": {
+              "topicIds": [],
+              "materialTopicIds": [],
+              "routingOnlyTopicIds": [],
+              "unresolvedTopicTextCount": 2
+            },
+            "unrepresentedInventory": [],
+            "unassignedResidualCount": 0,
+            "conceptOwnership": [
+              {
+                "conceptId": "sfrsi-6-exploration-evaluation",
+                "issueId": "sfrsi-6-mineral-exploration-evaluation",
+                "markerPass": true,
+                "topicPass": true,
+                "extractionPass": true,
+                "passed": true
+              }
+            ],
+            "subjectAttribution": {
+              "attribution": "MATCHED",
+              "modelError": false
+            }
+          },
+          "routing": {
+            "actualPairs": [
+              "ACCOUNTING_STANDARDS/ACCOUNTING"
+            ],
+            "expectedPass": true,
+            "hasIssueOwner": true,
+            "contextualWasRouted": false,
+            "noIrasForUnsupported": true,
+            "passed": true
+          },
+          "local": {
+            "topicStates": {},
+            "issueStates": {
+              "sfrsi-6-mineral-exploration-evaluation": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "authorityStates": {
+              "ACCOUNTING_STANDARDS": {
+                "expected": "EXPECTED_LOCAL_GAP",
+                "actual": "EXPECTED_LOCAL_GAP",
+                "passed": true
+              }
+            },
+            "passed": true
+          },
+          "governed": {
+            "lifecycleDiagnostics": [],
+            "stages": {
+              "GOVERNED_RETRIEVAL": true,
+              "EVIDENCE_ADMISSION": true,
+              "CLAIM_VERIFICATION": true,
+              "REQUESTED_CONCEPT_COVERAGE": true
+            },
+            "expectedNoCoverageTopic": true,
+            "expectedNoClaims": true
+          },
+          "application": {
+            "issueStatuses": {
+              "sfrsi-6-mineral-exploration-evaluation": {
+                "expected": "NOT_REQUIRED",
+                "actual": "NOT_REQUIRED",
+                "passed": true
+              }
+            },
+            "overallStatus": "INSUFFICIENT",
+            "applicationStatusesPassed": true,
+            "overallAllowed": true,
+            "ruleVerifiedUnresolvedApplicationPreserved": true,
+            "passed": true
+          }
+        },
+        "stageVerdicts": {
+          "SEMANTIC_VALIDATION": true,
+          "SEMANTIC_ISSUE_IDENTITY": true,
+          "SEMANTIC_DIMENSIONS": true,
+          "TOPIC_OWNERSHIP": true,
+          "REQUESTED_CONCEPT_OWNERSHIP": true,
+          "WORKSTREAM_ROUTING": true,
+          "LOCAL_CAPABILITY": true,
+          "GOVERNED_RETRIEVAL": true,
+          "EVIDENCE_ADMISSION": true,
+          "CLAIM_VERIFICATION": true,
+          "REQUESTED_CONCEPT_COVERAGE": true,
+          "APPLICATION_STATUS": true,
+          "OVERALL_STATUS": true,
+          "INTEGRITY": true
+        },
+        "productionDiagnostics": {
+          "local": {
+            "available": true,
+            "runtimeStatus": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "referenceDate": "2026-10-08",
+            "candidateGroupCount": 0,
+            "candidateGroupRecordCount": 0,
+            "topicObservations": [],
+            "issues": [
+              {
+                "issueId": "issue_71916b9a",
+                "subject": "accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6",
+                "authority": "ACCOUNTING_STANDARDS",
+                "domain": "ACCOUNTING",
+                "population": "COMPANY",
+                "operation": "EXPLAIN_RULE",
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": false,
+                  "retrievalAttempted": false,
+                  "evidenceFound": false,
+                  "admitted": false,
+                  "verified": false,
+                  "covered": false
+                },
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "gaps": [
+                  "NO_COVERAGE_TOPIC"
+                ],
+                "retrievalAttempts": [],
+                "verifiedClaims": [],
+                "sources": []
+              }
+            ]
+          },
+          "governed": {
+            "available": true,
+            "status": "INSUFFICIENT",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "workstreams": [
+              {
+                "authority": "ACCOUNTING_STANDARDS",
+                "domain": "ACCOUNTING",
+                "issueCount": 1,
+                "issues": [
+                  {
+                    "issueId": "issue_71916b9a",
+                    "subject": "accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6",
+                    "authority": "ACCOUNTING_STANDARDS",
+                    "domain": "ACCOUNTING",
+                    "population": "COMPANY",
+                    "operation": "EXPLAIN_RULE",
+                    "lifecycle": {
+                      "requested": true,
+                      "mapped": false,
+                      "retrievalAttempted": false,
+                      "evidenceFound": false,
+                      "admitted": false,
+                      "verified": false,
+                      "covered": false
+                    },
+                    "evidenceStatus": "INSUFFICIENT",
+                    "applicationStatus": "NOT_REQUIRED",
+                    "gaps": [
+                      "NO_COVERAGE_TOPIC"
+                    ],
+                    "retrievalAttempts": [],
+                    "verifiedClaims": [],
+                    "sources": []
+                  }
+                ]
+              }
+            ],
+            "topLevelGaps": [
+              "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+              "UNROUTED_MATERIAL_CONCEPT",
+              "UNROUTED_MATERIAL_CONCEPT",
+              "UNROUTED_MATERIAL_CONCEPT"
+            ],
+            "candidateGroupCount": 0,
+            "candidateGroupRecordCount": 0,
+            "fetchValidationObservations": [],
+            "governedIssueObservations": [
+              {
+                "source": "actual_issue_plan_and_governed_runtime",
+                "coverageStatus": "NO_COVERAGE_TOPIC",
+                "irAsWorkstreamCount": 0,
+                "plannedIrasIssueCount": 0,
+                "plannedIrasTopicIds": [],
+                "candidateCount": 0,
+                "claimCount": 0,
+                "observedRecordIds": [],
+                "recordConflicts": []
+              }
+            ]
+          }
+        }
+      },
+      "adapterResultSha256": "ff20fd327a49acc9ff3537adc05c2a7f71bec8c790e50b9635065edd642ff4a2",
+      "replayHealthy": true,
+      "blockedUrlObservations": [],
+      "blockedNetworkObservations": [],
+      "completedAtUtc": "2026-10-08T23:56:11.726Z"
+    }
+  ],
+  "originalConsumedRun": {
+    "namespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+    "observed": {
+      "passed": 2,
+      "failed": 1,
+      "notRun": 6
+    },
+    "journalSha256": "0a93f3ae8ae1385a8c3c26f24fc1037fc868b08ecd957d536b442b399eca2bc7",
+    "consumptionMarkerSha256": "7dc26419455e23babe8f57b35ab33e9398514f0cea670b5cd27842d97bd88f0e",
+    "unchangedAtCompletion": true
+  },
+  "combinedObservedCounts": {
+    "passed": 3,
+    "failed": 6,
+    "notRun": 0
+  },
+  "actualSemanticDispatchInvocations": 6,
+  "approvedGeminiFetchRequests": 6,
+  "authorizedGeminiCalls": 6,
+  "model": "gemini-3.5-flash-lite",
+  "transportTimeoutMs": 8000,
+  "minimumStartGapMs": 15250,
+  "retries": 0,
+  "providerProbes": 0,
+  "newOfficialSourceRequests": 0,
+  "capturePayloadSha256": "77c07c267c0c94cb6f38ca92bfb6fa9c0fdd9e49fb64e9dcf40f1a3f242e7f19",
+  "evidenceLockSha256": "aa5c88eeb19c3ef891b09fa3c49f25e20620263f2121faf346403f6012fd445b",
+  "usageObservedAtUtc": "2026-10-08T23:54:52Z",
+  "immutableInputsPassed": true,
+  "fullNineCaseAcceptanceProven": false,
+  "canonicalAcceptanceArtifactCreated": false,
+  "completedAtUtc": "2026-10-08T23:56:11.746Z"
+}

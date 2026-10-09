@@ -561,6 +561,7 @@ const individualOverseasTopic = 'iras-individual-overseas-employment';
 const genericEmploymentLive = {
   ...liveCandidate,
   id: 'LIVE_GENERIC_EMPLOYMENT_WORD',
+  domain: 'IRAS_TAX',
   tags: [individualOverseasTopic],
   sourceText: 'Employment terms depend on the contract and relevant tax rules.',
   officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not',

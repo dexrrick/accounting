@@ -1,0 +1,53 @@
+{
+  "profile": "iras-v4-new-post-repair-run-authorization-request",
+  "freshNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "recaptureReason": "Production and evaluation fingerprints changed; preserved previous capture cannot be relabeled with new code bindings",
+  "semanticScope": {
+    "maximumResponseBytes": 65536,
+    "timeoutMs": 8000,
+    "maximumCalls": 9,
+    "retries": 0,
+    "minimumStartGapMs": 15250,
+    "liveSourceRetrieval": false,
+    "model": "gemini-3.5-flash-lite",
+    "callsPerCase": 1
+  },
+  "status": "AWAITING_NEW_HUMAN_AUTHORIZATION_AND_RESOURCE_WINDOW",
+  "requestedActions": [
+    "One fresh code-bound official IRAS capture of the same reviewed 15 request identities",
+    "One new fixed nine-case Gemini acceptance attempt after fresh source, capability, allowance and quota checks pass"
+  ],
+  "reviewedCommit": "66bdb77777f945f19d17cfe1559f4d6f9f9acfae",
+  "sourceScope": {
+    "maximumPlannedRequestsPerFamily": 4,
+    "approvedIdentities": 15,
+    "defaultExecutorMaximumRequestsPerFamily": 10,
+    "maximumCaptureAgeHours": 24,
+    "transportRetries": 0,
+    "maximumPlannedRequests": 15,
+    "sourceHosts": [
+      "iras.gov.sg",
+      "www.iras.gov.sg"
+    ],
+    "defaultExecutorMaximumRequests": 60,
+    "inventoryExpanded": false
+  },
+  "authorizationGranted": false,
+  "priorAuthorizationReusable": false,
+  "previousRetry": "FAILED_CONSUMED_4_RESPONSES_2_PASS_2_FAIL_5_NOT_RUN",
+  "fullAcceptanceProven": false,
+  "nextRequired": [
+    "New explicit authorization for this separate attempt",
+    "Fresh resource observation and reviewed projection/reserve",
+    "Bind execution launcher to these manifests and current authorization; syntax and independent review",
+    "Verify branded live capabilities and acquisition permit under actual preflight",
+    "Fresh code-bound capture and evidence lock",
+    "Independent outcome review and checkpoint"
+  ],
+  "verifiedBindingSha256": {
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/preparation/runner-configuration.json": "f7712ede781edb10e6057d17d1d3a373d48b2f6825c7793377ccbcaf85f69852",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/preparation/preregistration.json": "feafc2a67e0cf56da4f71d3d6424b1ef23b0b4344a4e27e39d403eec62451aeb",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/preparation/activation-configuration.json": "9e0f55d7d4e72555f51cf9f280cf5e959b8cadd1245c2e08a8e515f772c1b1fc"
+  },
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf"
+}

@@ -1,0 +1,1022 @@
+{
+  "profile": "GEMINI_LIVE_RERUN_OFFLINE_FAILURE_ANALYSIS",
+  "newProviderCalls": 0,
+  "newSourceRequests": 0,
+  "observations": [
+    {
+      "caseId": "private-expense-treatment",
+      "question": "Our Singapore company paid SGD 900 for the director's private holiday and recorded it as travel expense. What is its corporate income-tax treatment?",
+      "expectedIssues": [
+        {
+          "id": "company-private-expense-tax-treatment",
+          "subject": "corporate income-tax treatment of company expense for director's private holiday",
+          "matchAny": [
+            [
+              "company",
+              "private",
+              "holiday",
+              "tax"
+            ],
+            [
+              "corporate",
+              "expense",
+              "treatment"
+            ]
+          ],
+          "population": [
+            "COMPANY"
+          ],
+          "domain": [
+            "IRAS_INCOME_TAX"
+          ],
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthoritiesAnyOf": [
+            [],
+            [
+              "ACCOUNTING_STANDARDS"
+            ]
+          ],
+          "operation": [
+            "DETERMINE_TREATMENT"
+          ]
+        }
+      ],
+      "actualIssues": [
+        {
+          "subject": "corporate income-tax treatment of director's private holiday expense",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        }
+      ],
+      "suppliedFacts": [
+        "Singapore company",
+        "Paid SGD 900 for director's private holiday",
+        "Recorded as travel expense"
+      ],
+      "concepts": [
+        {
+          "concept": "corporate income tax",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "tax deductibility",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "director benefits",
+          "role": "RELATED"
+        },
+        {
+          "concept": "travel expense",
+          "role": "CONTEXT_ONLY"
+        }
+      ],
+      "semanticScoring": {
+        "stages": {
+          "SEMANTIC_VALIDATION": true,
+          "SEMANTIC_ISSUE_IDENTITY": true,
+          "SEMANTIC_DIMENSIONS": true,
+          "TOPIC_OWNERSHIP": true,
+          "REQUESTED_CONCEPT_OWNERSHIP": true
+        },
+        "validInterpretation": true,
+        "identityPass": true,
+        "dimensionsPass": true,
+        "specificityPass": true,
+        "matchedIssueCount": 1,
+        "expectedIssueCount": 1,
+        "actualIssueCount": 1,
+        "pairs": [
+          {
+            "actualIndex": 0,
+            "expectedIndex": 0,
+            "expectedIssueId": "company-private-expense-tax-treatment",
+            "dimensions": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "subjectGuard": {
+              "passed": true,
+              "explicitContradiction": false
+            }
+          }
+        ],
+        "topicOwnership": [
+          {
+            "topicId": "iras-cit-deductibility",
+            "issueId": "company-private-expense-tax-treatment",
+            "contextual": false,
+            "owned": true
+          },
+          {
+            "topicId": "iras-cit-disallowed-expenses",
+            "issueId": "company-private-expense-tax-treatment",
+            "contextual": false,
+            "owned": true
+          }
+        ],
+        "routingTopicOwnership": [],
+        "validatedRoutingTopicIds": [],
+        "independentInventory": {
+          "topicIds": [
+            "iras-cit-deductibility",
+            "iras-cit-disallowed-expenses"
+          ],
+          "materialTopicIds": [
+            "iras-cit-deductibility",
+            "iras-cit-disallowed-expenses"
+          ],
+          "routingOnlyTopicIds": [],
+          "unresolvedTopicTextCount": 0
+        },
+        "unrepresentedInventory": [],
+        "unassignedResidualCount": 0,
+        "conceptOwnership": [
+          {
+            "conceptId": "private-expense-deductibility",
+            "issueId": "company-private-expense-tax-treatment",
+            "markerPass": true,
+            "topicPass": true,
+            "extractionPass": true,
+            "passed": true
+          },
+          {
+            "conceptId": "private-expense-disallowance",
+            "issueId": "company-private-expense-tax-treatment",
+            "markerPass": true,
+            "topicPass": true,
+            "extractionPass": true,
+            "passed": true
+          }
+        ],
+        "subjectAttribution": {
+          "attribution": "MATCHED",
+          "modelError": false
+        }
+      },
+      "reconciledIssuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "corporate income-tax treatment of director's private holiday expense",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [
+              "iras-cit-deductibility",
+              "iras-cit-disallowed-expenses"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95,
+            "id": "issue_a0baa149",
+            "status": "MAPPED"
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      },
+      "requestedConcepts": [
+        {
+          "id": "semantic_corporate_income_tax",
+          "label": "corporate income tax",
+          "terms": [
+            "corporate income tax"
+          ],
+          "topicIds": []
+        },
+        {
+          "id": "semantic_tax_deductibility",
+          "label": "tax deductibility",
+          "terms": [
+            "tax deductibility"
+          ],
+          "topicIds": [
+            "iras-cit-deductibility"
+          ]
+        },
+        {
+          "id": "semantic_director_benefits",
+          "label": "director benefits",
+          "terms": [
+            "director benefits"
+          ],
+          "topicIds": []
+        }
+      ],
+      "failedStages": [
+        "OVERALL_STATUS"
+      ],
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "PASSED",
+        "fallbackUsed": false,
+        "failureChain": [],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 2185,
+            "retryScheduled": false
+          }
+        ]
+      },
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+          "requestIdentitySha256": "cbe64ce0f24295732025dc8ceade94cb96a3b3352aaac874183ad51b180ec636",
+          "captured": true
+        }
+      ],
+      "governedStatus": "INSUFFICIENT",
+      "topLevelGaps": [
+        "UNROUTED_MATERIAL_CONCEPT"
+      ],
+      "ruleEvidence": [
+        {
+          "subject": "corporate income-tax treatment of director's private holiday expense",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [],
+          "lifecycle": {
+            "requested": true,
+            "mapped": true,
+            "retrievalAttempted": true,
+            "evidenceFound": true,
+            "admitted": true,
+            "verified": true,
+            "covered": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "question": "Our Singapore company received a dividend from its Thai subsidiary in the current year. Explain the company's Singapore corporate income-tax treatment for this receipt.",
+      "expectedIssues": [
+        {
+          "id": "company-foreign-dividend-receipt-treatment",
+          "subject": "corporate income-tax treatment of foreign dividend received by company",
+          "matchAny": [
+            [
+              "company",
+              "foreign",
+              "dividend",
+              "tax"
+            ],
+            [
+              "corporate",
+              "dividend",
+              "receipt"
+            ]
+          ],
+          "population": [
+            "COMPANY"
+          ],
+          "domain": [
+            "IRAS_INCOME_TAX"
+          ],
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthoritiesAnyOf": [
+            []
+          ],
+          "operation": [
+            "DETERMINE_TREATMENT"
+          ]
+        }
+      ],
+      "actualIssues": [
+        {
+          "subject": "foreign dividend tax treatment",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.95
+        }
+      ],
+      "suppliedFacts": [
+        "Singapore company received a dividend from its Thai subsidiary in the current year"
+      ],
+      "concepts": [
+        {
+          "concept": "foreign dividend",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "corporate income tax",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "subsidiary",
+          "role": "CONTEXT_ONLY"
+        }
+      ],
+      "semanticScoring": {
+        "stages": {
+          "SEMANTIC_VALIDATION": true,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false
+        },
+        "validInterpretation": true,
+        "identityPass": false,
+        "dimensionsPass": false,
+        "specificityPass": true,
+        "matchedIssueCount": 0,
+        "expectedIssueCount": 1,
+        "actualIssueCount": 1,
+        "pairs": [],
+        "topicOwnership": [
+          {
+            "topicId": "iras-foreign-sourced-income",
+            "issueId": "company-foreign-dividend-receipt-treatment",
+            "contextual": false,
+            "owned": false
+          }
+        ],
+        "routingTopicOwnership": [],
+        "validatedRoutingTopicIds": [],
+        "independentInventory": {
+          "topicIds": [
+            "iras-foreign-sourced-income"
+          ],
+          "materialTopicIds": [
+            "iras-foreign-sourced-income"
+          ],
+          "routingOnlyTopicIds": [],
+          "unresolvedTopicTextCount": 0
+        },
+        "unrepresentedInventory": [],
+        "unassignedResidualCount": 0,
+        "conceptOwnership": [
+          {
+            "conceptId": "foreign-dividend-receipt",
+            "issueId": "company-foreign-dividend-receipt-treatment",
+            "markerPass": true,
+            "topicPass": false,
+            "extractionPass": true,
+            "passed": false
+          }
+        ],
+        "subjectAttribution": {
+          "attribution": "SCORING_UNRESOLVED",
+          "modelError": false
+        }
+      },
+      "reconciledIssuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "foreign dividend tax treatment",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [
+              "iras-foreign-sourced-income"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95,
+            "id": "issue_e57f41be",
+            "status": "MAPPED"
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      },
+      "requestedConcepts": [
+        {
+          "id": "foreign_dividend_receipt_tax_treatment",
+          "label": "Tax treatment of foreign dividend receipt",
+          "terms": [
+            "foreign dividend receipt",
+            "foreign-sourced income",
+            "dividend received in Singapore"
+          ],
+          "topicIds": [
+            "iras-foreign-sourced-income"
+          ]
+        },
+        {
+          "id": "semantic_corporate_income_tax",
+          "label": "corporate income tax",
+          "terms": [
+            "corporate income tax"
+          ],
+          "topicIds": []
+        }
+      ],
+      "failedStages": [
+        "SEMANTIC_ISSUE_IDENTITY",
+        "SEMANTIC_DIMENSIONS",
+        "TOPIC_OWNERSHIP",
+        "REQUESTED_CONCEPT_OWNERSHIP",
+        "WORKSTREAM_ROUTING",
+        "GOVERNED_RETRIEVAL",
+        "EVIDENCE_ADMISSION",
+        "CLAIM_VERIFICATION",
+        "REQUESTED_CONCEPT_COVERAGE",
+        "APPLICATION_STATUS",
+        "OVERALL_STATUS"
+      ],
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "FAILED",
+        "fallbackUsed": false,
+        "failureChain": [
+          {
+            "stage": "INTERPRETATION",
+            "outcome": "FAILED"
+          }
+        ],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1899,
+            "retryScheduled": false
+          }
+        ]
+      },
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "requestIdentitySha256": "2ebbadcb1a282729f4cd6839e1052ea7f07d177924c0254e38eb03373e3ca900",
+          "captured": true
+        }
+      ],
+      "governedStatus": "INSUFFICIENT",
+      "topLevelGaps": [
+        "UNROUTED_MATERIAL_CONCEPT"
+      ],
+      "ruleEvidence": [
+        {
+          "subject": "foreign dividend tax treatment",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [],
+          "lifecycle": {
+            "requested": true,
+            "mapped": true,
+            "retrievalAttempted": true,
+            "evidenceFound": true,
+            "admitted": true,
+            "verified": true,
+            "covered": true
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "question": "What are the general Singapore withholding-tax rules when a company pays royalties to a non-resident company?",
+      "expectedIssues": [
+        {
+          "id": "general-wht-royalty-rules",
+          "subject": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "matchAny": [
+            [
+              "withholding",
+              "tax",
+              "royalty"
+            ],
+            [
+              "withholding",
+              "tax",
+              "royalties"
+            ],
+            [
+              "wht",
+              "royalty",
+              "non-resident"
+            ]
+          ],
+          "population": [
+            "COMPANY"
+          ],
+          "domain": [
+            "IRAS_INCOME_TAX"
+          ],
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthoritiesAnyOf": [
+            []
+          ],
+          "operation": [
+            "EXPLAIN_RULE"
+          ]
+        }
+      ],
+      "actualIssues": [
+        {
+          "subject": "withholding tax rules for royalties paid to non-resident companies",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.95
+        }
+      ],
+      "suppliedFacts": [],
+      "concepts": [
+        {
+          "concept": "withholding tax",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "royalties",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "non-resident company",
+          "role": "RELATED"
+        }
+      ],
+      "semanticScoring": {
+        "stages": {
+          "SEMANTIC_VALIDATION": true,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": true,
+          "TOPIC_OWNERSHIP": true,
+          "REQUESTED_CONCEPT_OWNERSHIP": false
+        },
+        "validInterpretation": true,
+        "identityPass": false,
+        "dimensionsPass": true,
+        "specificityPass": true,
+        "matchedIssueCount": 1,
+        "expectedIssueCount": 1,
+        "actualIssueCount": 1,
+        "pairs": [
+          {
+            "actualIndex": 0,
+            "expectedIndex": 0,
+            "expectedIssueId": "general-wht-royalty-rules",
+            "dimensions": {
+              "governingAuthority": true,
+              "contextualAuthority": true,
+              "domain": true,
+              "population": true,
+              "operation": true
+            },
+            "subjectGuard": {
+              "passed": false,
+              "explicitContradiction": false
+            }
+          }
+        ],
+        "topicOwnership": [
+          {
+            "topicId": "iras-withholding-tax",
+            "issueId": "general-wht-royalty-rules",
+            "contextual": false,
+            "owned": true
+          },
+          {
+            "topicId": "iras-withholding-tax-interest-royalties",
+            "issueId": "general-wht-royalty-rules",
+            "contextual": false,
+            "owned": true
+          }
+        ],
+        "routingTopicOwnership": [],
+        "validatedRoutingTopicIds": [],
+        "independentInventory": {
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ],
+          "materialTopicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ],
+          "routingOnlyTopicIds": [],
+          "unresolvedTopicTextCount": 0
+        },
+        "unrepresentedInventory": [],
+        "unassignedResidualCount": 0,
+        "conceptOwnership": [
+          {
+            "conceptId": "withholding-tax",
+            "issueId": "general-wht-royalty-rules",
+            "markerPass": true,
+            "topicPass": true,
+            "extractionPass": true,
+            "passed": true
+          },
+          {
+            "conceptId": "royalty-payment",
+            "issueId": "general-wht-royalty-rules",
+            "markerPass": true,
+            "topicPass": true,
+            "extractionPass": true,
+            "passed": true
+          },
+          {
+            "conceptId": "nonresident-company-recipient",
+            "issueId": "general-wht-royalty-rules",
+            "markerPass": false,
+            "topicPass": true,
+            "extractionPass": true,
+            "passed": false
+          }
+        ],
+        "subjectAttribution": {
+          "attribution": "SCORING_UNRESOLVED",
+          "modelError": false,
+          "expectedIssueId": "general-wht-royalty-rules"
+        }
+      },
+      "reconciledIssuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "withholding tax rules for royalties paid to non-resident companies",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [
+              "iras-withholding-tax",
+              "iras-withholding-tax-interest-royalties"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95,
+            "id": "issue_d4916850",
+            "status": "MAPPED"
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      },
+      "requestedConcepts": [
+        {
+          "id": "semantic_withholding_tax",
+          "label": "withholding tax",
+          "terms": [
+            "withholding tax"
+          ],
+          "topicIds": [
+            "iras-withholding-tax"
+          ]
+        },
+        {
+          "id": "semantic_royalties",
+          "label": "royalties",
+          "terms": [
+            "royalties"
+          ],
+          "topicIds": []
+        },
+        {
+          "id": "semantic_non_resident_company",
+          "label": "non-resident company",
+          "terms": [
+            "non-resident company"
+          ],
+          "topicIds": []
+        }
+      ],
+      "failedStages": [
+        "SEMANTIC_ISSUE_IDENTITY",
+        "REQUESTED_CONCEPT_OWNERSHIP",
+        "LOCAL_CAPABILITY",
+        "GOVERNED_RETRIEVAL",
+        "EVIDENCE_ADMISSION",
+        "CLAIM_VERIFICATION",
+        "REQUESTED_CONCEPT_COVERAGE",
+        "OVERALL_STATUS"
+      ],
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "FAILED",
+        "fallbackUsed": false,
+        "failureChain": [
+          {
+            "stage": "INTERPRETATION",
+            "outcome": "FAILED"
+          },
+          {
+            "stage": "RETRIEVAL_INTEGRITY",
+            "code": "OFFLINE_REQUEST_OUTSIDE_CAPTURE_INVENTORY"
+          }
+        ],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1786,
+            "retryScheduled": false
+          }
+        ]
+      },
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/sitemap",
+          "requestIdentitySha256": "7e964fb326f76640e8da469080672fe088af74b25b23ffaeba983766c209b0b0",
+          "captured": true
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company",
+          "requestIdentitySha256": "6cfce596b5e93f7e095598cc09c0f60e98269e1cf2eae1573fd34c008ae11704",
+          "captured": false
+        }
+      ],
+      "governedStatus": "INSUFFICIENT",
+      "topLevelGaps": [],
+      "ruleEvidence": [
+        {
+          "subject": "withholding tax rules for royalties paid to non-resident companies",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "gaps": [
+            "PROVIDER_ERROR"
+          ],
+          "lifecycle": {
+            "requested": true,
+            "mapped": true,
+            "retrievalAttempted": true,
+            "evidenceFound": false,
+            "admitted": false,
+            "verified": false,
+            "covered": false
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "question": "What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?",
+      "expectedIssues": [
+        {
+          "id": "general-gst-input-tax-recovery-rules",
+          "subject": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+          "matchAny": [
+            [
+              "gst",
+              "input",
+              "tax",
+              "business",
+              "purchases"
+            ],
+            [
+              "input",
+              "tax",
+              "recovery",
+              "gst-registered",
+              "company"
+            ]
+          ],
+          "population": [
+            "COMPANY"
+          ],
+          "domain": [
+            "IRAS_GST"
+          ],
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthoritiesAnyOf": [
+            []
+          ],
+          "operation": [
+            "EXPLAIN_RULE"
+          ]
+        }
+      ],
+      "actualIssues": [
+        {
+          "subject": "general GST input tax claim rules for business purchases",
+          "population": "COMPANY",
+          "domain": "IRAS_GST",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 1
+        }
+      ],
+      "suppliedFacts": [],
+      "concepts": [
+        {
+          "concept": "input tax claim",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "GST-registered company",
+          "role": "CONTEXT_ONLY"
+        },
+        {
+          "concept": "business purchases",
+          "role": "RELATED"
+        }
+      ],
+      "semanticScoring": {
+        "stages": {
+          "SEMANTIC_VALIDATION": true,
+          "SEMANTIC_ISSUE_IDENTITY": false,
+          "SEMANTIC_DIMENSIONS": false,
+          "TOPIC_OWNERSHIP": false,
+          "REQUESTED_CONCEPT_OWNERSHIP": false
+        },
+        "validInterpretation": true,
+        "identityPass": false,
+        "dimensionsPass": false,
+        "specificityPass": true,
+        "matchedIssueCount": 0,
+        "expectedIssueCount": 1,
+        "actualIssueCount": 1,
+        "pairs": [],
+        "topicOwnership": [
+          {
+            "topicId": "iras-gst-input-tax",
+            "issueId": "general-gst-input-tax-recovery-rules",
+            "contextual": false,
+            "owned": false
+          }
+        ],
+        "routingTopicOwnership": [],
+        "validatedRoutingTopicIds": [],
+        "independentInventory": {
+          "topicIds": [
+            "iras-gst-input-tax"
+          ],
+          "materialTopicIds": [
+            "iras-gst-input-tax"
+          ],
+          "routingOnlyTopicIds": [],
+          "unresolvedTopicTextCount": 0
+        },
+        "unrepresentedInventory": [],
+        "unassignedResidualCount": 0,
+        "conceptOwnership": [
+          {
+            "conceptId": "affirmative-input-tax-recovery",
+            "issueId": "general-gst-input-tax-recovery-rules",
+            "markerPass": true,
+            "topicPass": false,
+            "extractionPass": true,
+            "passed": false
+          }
+        ],
+        "subjectAttribution": {
+          "attribution": "SCORING_UNRESOLVED",
+          "modelError": false
+        }
+      },
+      "reconciledIssuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "general GST input tax claim rules for business purchases",
+            "population": "COMPANY",
+            "domain": "IRAS_GST",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [
+              "iras-gst-input-tax"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1,
+            "id": "issue_63d7dce9",
+            "status": "MAPPED"
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      },
+      "requestedConcepts": [
+        {
+          "id": "semantic_input_tax_claim",
+          "label": "input tax claim",
+          "terms": [
+            "input tax claim"
+          ],
+          "topicIds": [
+            "iras-gst-input-tax"
+          ]
+        },
+        {
+          "id": "semantic_business_purchases",
+          "label": "business purchases",
+          "terms": [
+            "business purchases"
+          ],
+          "topicIds": []
+        }
+      ],
+      "failedStages": [
+        "SEMANTIC_ISSUE_IDENTITY",
+        "SEMANTIC_DIMENSIONS",
+        "TOPIC_OWNERSHIP",
+        "REQUESTED_CONCEPT_OWNERSHIP",
+        "WORKSTREAM_ROUTING",
+        "GOVERNED_RETRIEVAL",
+        "EVIDENCE_ADMISSION",
+        "CLAIM_VERIFICATION",
+        "REQUESTED_CONCEPT_COVERAGE",
+        "APPLICATION_STATUS",
+        "OVERALL_STATUS"
+      ],
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "FAILED",
+        "fallbackUsed": false,
+        "failureChain": [
+          {
+            "stage": "INTERPRETATION",
+            "outcome": "FAILED"
+          }
+        ],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1972,
+            "retryScheduled": false
+          }
+        ]
+      },
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "requestIdentitySha256": "ca4a428029262989739a0b48ff490530acabcad66d71fa1c32201bec47fc8cb5",
+          "captured": true
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+          "requestIdentitySha256": "fe67dd1f2582ccc85bf2f649d2aec68b127295062d346cecc81069d4850ac1f8",
+          "captured": true
+        }
+      ],
+      "governedStatus": "INSUFFICIENT",
+      "topLevelGaps": [
+        "UNROUTED_MATERIAL_CONCEPT"
+      ],
+      "ruleEvidence": [
+        {
+          "subject": "general GST input tax claim rules for business purchases",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "gaps": [],
+          "lifecycle": {
+            "requested": true,
+            "mapped": true,
+            "retrievalAttempted": true,
+            "evidenceFound": true,
+            "admitted": true,
+            "verified": true,
+            "covered": true
+          }
+        }
+      ]
+    }
+  ]
+}

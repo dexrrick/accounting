@@ -1,0 +1,44 @@
+{
+  "dateSingapore": "09/10/2026",
+  "status": "STOPPED_AFTER_VALIDATION_LIVE_DIAGNOSTIC_DEFERRED",
+  "userConstraint": "Stop before five-hour remaining allowance reaches 5%; do not consume reset credits or purchase credits.",
+  "lastObservedFiveHourRemainingPercent": 3,
+  "usageNote": "Checkpoint was created at 13% remaining. Next observation after final suite completion showed 3%; requested 5% reserve was missed. Stop immediately; no reset credits used.",
+  "historicalIntegrity": "27 protected files unchanged; historical-integrity-final.json",
+  "liveDiagnosticDeferred": true,
+  "newProviderCallsThisRepairCycle": 0,
+  "newOfficialSourceRequestsThisRepairCycle": 0,
+  "implemented": [
+    "Preserve semantic concept roles and scope metadata; compact prompt guidance stays below existing 9000-character limit.",
+    "Bind bounded travel and corporate-tax descriptor families to uniquely matching requested issues without suppressing separate requests.",
+    "Attribute topicless gaps to actual semantic authority/domain; unsupported accounting retains NO_COVERAGE_TOPIC without false IRAS attribution.",
+    "V4 SFRS(I) 6 matching accepts equivalent spaced/joined acronyms and mineral-resource subjects without a standard marker, while rejecting explicit wrong/multiple references and mixed or narrowed subjects.",
+    "Replay both retained nine-response Gemini batches with repository-relative protected hashes and ambient network blocking."
+  ],
+  "changedFilesThisCycle": [
+    "src/services/semanticQuestionUnderstanding.ts",
+    "src/services/authorityWorkstreams.ts",
+    "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.mjs",
+    "scripts/replay_gemini_downstream_repairs.mjs",
+    "tests/regression/test_gemini_downstream_repair_boundaries.mjs",
+    "tests/regression/test_gemini_downstream_repair_replay.mjs"
+  ],
+  "validation": {
+    "independentReview": "PASSED after joined-SFRSI6 boundary repair; no remaining material findings",
+    "targetedRegressions": "PASSED including 18 retained responses, ownership boundaries, prompt budgets, V4 acceptance and authority workstreams",
+    "lint": "PASSED; existing warnings remain; lint-final.log",
+    "build": "PASSED; existing bundle/deprecation warnings remain; build-final.log",
+    "smoke": "PASSED, 106.45 seconds; smoke-final.log",
+    "fullSuite": "PASSED, 136.88 seconds; full-final.log",
+    "initialFailuresResolved": "TypeScript union typing and oversized prompt fixed. Initial sandbox smoke also encountered Windows temporary-file EPERM failures; final smoke passed with approved execution."
+  },
+  "evidenceLimit": "Saved replays use official-source captures dated 08/10/2026. They do not establish fresh Gemini acceptance or fresh official-source availability. Diagnostic passes include expected missing-fact and unsupported outcomes.",
+  "resumeSteps": [
+    "Check current usage first. Preserve all existing workspace edits; repository had substantial uncommitted work before this cycle.",
+    "Read this checkpoint and final validation logs. Do not rerun passing checks without a relevant change.",
+    "Verify historical-inputs-before.json against current files; all 27 historical reports/captures/contracts must remain unchanged.",
+    "When sufficient usage is available, prepare a fresh usage snapshot for scripts/rerun_gemini_remediation.mjs and run its --check, then --run in a NEW live-rerun-* directory. Existing consumed runs must never be reused.",
+    "Use the configured model/provider and existing one-shot bounded launcher, at most 18 physical requests for nine cases. No new official-source calls. Protect current code and both previous live-run artifacts with before/after hashes.",
+    "Analyze and report new live outcomes honestly; do not relabel historical failures or treat offline replay as live acceptance."
+  ]
+}

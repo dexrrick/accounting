@@ -1,0 +1,127 @@
+{
+  "probe": "iras-factual-conjunction-residual-probe-v1",
+  "mode": "PRE_FIX_API_FREE_DIAGNOSIS",
+  "evidenceScope": {
+    "resolver": "exported defaultQueryTopicResolver.decomposeQuery",
+    "reconciliation": "exported classifyQuestion + reconcileQuestionUnderstanding",
+    "semanticInput": "locally constructed schema-v2 interpretation accepted by validateSemanticQuestionInterpretation",
+    "queryMaterial": "FROZEN_FIXTURE_IN_MEMORY_PLUS_SYNTHETIC_CONTROLS",
+    "networkCalls": 0,
+    "modelCalls": 0,
+    "rawQuestionsPersisted": false,
+    "rawResidualTextPersisted": false,
+    "semanticSubjectsPersisted": false
+  },
+  "cases": [
+    {
+      "caseId": "private_fixture_factual_and",
+      "querySha256": "f94f8f18d37146b7785568c6bfc52058785b1ae7406a240841d5ecf68e44c261",
+      "resolver": {
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ],
+        "unresolvedFragmentCount": 2,
+        "unresolvedFragmentSha256": [
+          "3ea04d34c39d208b9d756a3fae67c4ed9106eb2954b88d4951a510d48d05a6f3",
+          "9e7bacd0d538d9ae40dffa78feb714ad1bc1a3d543a5232c914d6fe06770d3a1"
+        ]
+      },
+      "issuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issueCount": 1,
+        "issues": [
+          {
+            "status": "MAPPED",
+            "topicIds": [
+              "iras-cit-deductibility",
+              "iras-cit-disallowed-expenses"
+            ]
+          }
+        ],
+        "hasUnmappedResidual": true,
+        "coverageEstablished": false
+      }
+    },
+    {
+      "caseId": "private_fixture_punctuation_control",
+      "querySha256": "6eac01cb462224a209b5de1a3f79ae1026570ddaa2ec9fd6691c6f70096773c8",
+      "resolver": {
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ],
+        "unresolvedFragmentCount": 0,
+        "unresolvedFragmentSha256": []
+      },
+      "issuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issueCount": 1,
+        "issues": [
+          {
+            "status": "MAPPED",
+            "topicIds": [
+              "iras-cit-deductibility",
+              "iras-cit-disallowed-expenses"
+            ]
+          }
+        ],
+        "hasUnmappedResidual": false,
+        "coverageEstablished": true
+      }
+    },
+    {
+      "caseId": "independent_second_topic_control",
+      "querySha256": "19b6526ceebf91ad28ec819962f968f85c7810fe92864019ad58b02a1fa0a15e",
+      "resolver": {
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses",
+          "iras-foreign-sourced-income"
+        ],
+        "unresolvedFragmentCount": 3,
+        "unresolvedFragmentSha256": [
+          "080614440fb2bb51e6b75680400e9251153e27a67e7f883c9aecdd3436e4cb0b",
+          "3ea04d34c39d208b9d756a3fae67c4ed9106eb2954b88d4951a510d48d05a6f3",
+          "9e7bacd0d538d9ae40dffa78feb714ad1bc1a3d543a5232c914d6fe06770d3a1"
+        ]
+      },
+      "issuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issueCount": 2,
+        "issues": [
+          {
+            "status": "MAPPED",
+            "topicIds": [
+              "iras-cit-deductibility",
+              "iras-cit-disallowed-expenses"
+            ]
+          },
+          {
+            "status": "UNRESOLVED",
+            "topicIds": [
+              "iras-foreign-sourced-income"
+            ],
+            "unresolvedReason": "UNASSIGNED_QUERY_TOPIC"
+          }
+        ],
+        "hasUnmappedResidual": true,
+        "coverageEstablished": false
+      }
+    }
+  ],
+  "interpretation": {
+    "observedBoundary": "FACTUAL_CONJUNCTION_SPLIT_TO_UNRESOLVED_FRAGMENTS",
+    "punctuationControl": "SAME_TOPIC_IDS_AND_MAPPED_ISSUE_RESIDUAL_CLEARED",
+    "punctuationTransform": "CONJUNCTION_REPLACED_WITH_SEMICOLON_ONLY",
+    "controls": [
+      "OMITTED_SECOND_TOPIC_UNASSIGNED"
+    ],
+    "limits": [
+      "PUNCTUATION_RESULT_IS_CASE_SPECIFIC",
+      "EXTRA_REQUEST_CONTROL_IS_SYNTHETIC",
+      "DOES_NOT_ESTABLISH_MODEL_INTERPRETATION_CAUSALITY",
+      "DOES_NOT_VALIDATE_TAX_TREATMENT"
+    ]
+  }
+}

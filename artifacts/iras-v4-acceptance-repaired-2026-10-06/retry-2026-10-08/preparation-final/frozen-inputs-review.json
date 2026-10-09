@@ -1,0 +1,14 @@
+{
+  "reviewedAtUtc": "2026-10-07T17:01:09.5646178Z",
+  "sourceInventoryDigest": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "promptRows": 9,
+  "reviewer": "/root/offline_repair_review",
+  "boundRawFilesVerified": 593,
+  "namespaceAbsent": true,
+  "profile": "iras-v4-retry-frozen-inputs-independent-review",
+  "freezeValidationSha256": "75ce97b8858f0d0c5edc9a49c23af7df5a57bdf031bd83316a80b8b021bdf083",
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "callsMade": 0,
+  "sourceInventoryCount": 15,
+  "protectedInputsVerified": 21
+}

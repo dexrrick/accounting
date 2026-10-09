@@ -1,0 +1,462 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "private-wht-source-phrase-diagnostic-v1",
+  "mode": "API_FREE_APPROVED_REGISTRY_AND_SYNTHETIC_MAPPED_PAGE_PROBES",
+  "referenceDate": "2026-10-02",
+  "selectedCaseIds": [
+    "private-holiday-expense",
+    "wht-royalty-general-rule"
+  ],
+  "modelRequests": 0,
+  "ambientFetchCalls": 0,
+  "sourceHintSnapshot": [
+    {
+      "caseId": "private-holiday-expense",
+      "topicIds": [
+        "iras-cit-disallowed-expenses",
+        "iras-cit-deductibility"
+      ],
+      "topics": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "paragraphHints": [
+            "private expense",
+            "non-deductible business expense"
+          ],
+          "sectionHints": [],
+          "keywords": [
+            "non-deductible expense",
+            "non-deductible threshold",
+            "prohibited deduction",
+            "section 15 deduction",
+            "entertainment expense tax",
+            "entertainment expenses",
+            "company passenger motor car expenses",
+            "s-plate passenger car tax deduction"
+          ]
+        },
+        {
+          "topicId": "iras-cit-deductibility",
+          "paragraphHints": [],
+          "sectionHints": [],
+          "keywords": [
+            "tax deductibility",
+            "deductibility",
+            "tax deductible",
+            "deductible for tax",
+            "staff welfare expense tax",
+            "staff welfare",
+            "entertainment expenses"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "topics": [
+        {
+          "topicId": "iras-withholding-tax",
+          "paragraphHints": [],
+          "sectionHints": [],
+          "keywords": [
+            "withholding tax",
+            "withholding-tax",
+            "wht",
+            "section 45 withholding",
+            "non-resident payment"
+          ]
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "paragraphHints": [],
+          "sectionHints": [],
+          "keywords": [
+            "interest withholding tax",
+            "royalty withholding tax",
+            "royalties paid overseas"
+          ]
+        }
+      ]
+    }
+  ],
+  "caveats": [
+    "The private plural-only probe is a minimal grammatical-number transformation of the original local fixture; approved Section 15 wording is a separate comparison. Source-map pages are synthetic in-memory HTML.",
+    "The WHT category table is synthetic and states no rate or substantive tax conclusion; its royalty label is separated from the withholding-tax heading.",
+    "Attempt statuses identify the generic mapped-page compatibility stage only; normalized title/content flags are omitted. These probes do not reproduce or infer unretained V4 raw page text."
+  ],
+  "probes": [
+    {
+      "caseId": "private-holiday-expense",
+      "variant": "singular-local-control",
+      "selectedTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "sourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "sourcePhraseSha256Prefixes": [
+        "69011a27ba49"
+      ],
+      "mapFetchCount": 1,
+      "mapFetchUrlSha256Prefixes": [
+        "cfcda100ac01"
+      ],
+      "sourceMapPath": "MAPPED_SOURCE",
+      "selectedCandidateRecordCount": 2,
+      "eligibleRecordCount": 2,
+      "rejectedCandidateCodes": [],
+      "uncoveredTopicIds": [
+        "iras-authority-query-concept-semantic-corporate-income-tax-treatment-of-directo"
+      ],
+      "uncoveredConceptIds": [
+        "semantic_corporate_income_tax_treatment_of_director_s_pri"
+      ],
+      "attempts": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-cit-deductibility",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        }
+      ]
+    },
+    {
+      "caseId": "private-holiday-expense",
+      "variant": "plural-only-control",
+      "selectedTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "sourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "sourcePhraseSha256Prefixes": [
+        "be8bd5834126"
+      ],
+      "mapFetchCount": 2,
+      "mapFetchUrlSha256Prefixes": [
+        "cfcda100ac01",
+        "cfcda100ac01"
+      ],
+      "sourceMapPath": "MAPPED_SOURCE",
+      "selectedCandidateRecordCount": 1,
+      "eligibleRecordCount": 1,
+      "rejectedCandidateCodes": [],
+      "uncoveredTopicIds": [
+        "iras-cit-disallowed-expenses",
+        "iras-authority-query-concept-semantic-corporate-income-tax-treatment-of-directo"
+      ],
+      "uncoveredConceptIds": [
+        "semantic_corporate_income_tax_treatment_of_director_s_pri"
+      ],
+      "attempts": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-cit-deductibility",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        }
+      ]
+    },
+    {
+      "caseId": "private-holiday-expense",
+      "variant": "approved-statute-wording",
+      "selectedTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "sourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "sourcePhraseSha256Prefixes": [
+        "4a4e936d4363"
+      ],
+      "mapFetchCount": 2,
+      "mapFetchUrlSha256Prefixes": [
+        "cfcda100ac01",
+        "cfcda100ac01"
+      ],
+      "sourceMapPath": "MAPPED_SOURCE_REJECTED",
+      "selectedCandidateRecordCount": 0,
+      "eligibleRecordCount": 0,
+      "rejectedCandidateCodes": [],
+      "uncoveredTopicIds": [
+        "iras-cit-disallowed-expenses",
+        "iras-cit-deductibility",
+        "iras-authority-query-concept-semantic-corporate-income-tax-treatment-of-directo"
+      ],
+      "uncoveredConceptIds": [
+        "semantic_corporate_income_tax_treatment_of_director_s_pri"
+      ],
+      "attempts": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-cit-deductibility",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        }
+      ]
+    },
+    {
+      "caseId": "private-holiday-expense",
+      "variant": "unrelated-sibling-control",
+      "selectedTopicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ],
+      "sourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "sourcePhraseSha256Prefixes": [
+        "b96524f79942"
+      ],
+      "mapFetchCount": 2,
+      "mapFetchUrlSha256Prefixes": [
+        "cfcda100ac01",
+        "cfcda100ac01"
+      ],
+      "sourceMapPath": "MAPPED_SOURCE_REJECTED",
+      "selectedCandidateRecordCount": 0,
+      "eligibleRecordCount": 0,
+      "rejectedCandidateCodes": [],
+      "uncoveredTopicIds": [
+        "iras-cit-disallowed-expenses",
+        "iras-cit-deductibility",
+        "iras-authority-query-concept-semantic-corporate-income-tax-treatment-of-directo"
+      ],
+      "uncoveredConceptIds": [
+        "semantic_corporate_income_tax_treatment_of_director_s_pri"
+      ],
+      "attempts": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-cit-deductibility",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "variant": "contiguous-phrase-control",
+      "selectedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "sourceMapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "sourcePhraseSha256Prefixes": [
+        "e0485af49780"
+      ],
+      "mapFetchCount": 3,
+      "mapFetchUrlSha256Prefixes": [
+        "f28c53120b92",
+        "dc9d22a4c281",
+        "ac4c15f03b69"
+      ],
+      "sourceMapPath": "MAPPED_SOURCE",
+      "selectedCandidateRecordCount": 5,
+      "eligibleRecordCount": 5,
+      "rejectedCandidateCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptIds": [],
+      "attempts": [
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "variant": "category-table-only",
+      "selectedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "sourceMapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "sourcePhraseSha256Prefixes": [
+        "c70d2dc47ceb"
+      ],
+      "mapFetchCount": 3,
+      "mapFetchUrlSha256Prefixes": [
+        "f28c53120b92",
+        "dc9d22a4c281",
+        "ac4c15f03b69"
+      ],
+      "sourceMapPath": "MAPPED_SOURCE",
+      "selectedCandidateRecordCount": 3,
+      "eligibleRecordCount": 3,
+      "rejectedCandidateCodes": [],
+      "uncoveredTopicIds": [
+        "iras-withholding-tax-interest-royalties",
+        "iras-authority-query-concept-semantic-general-singapore-withholding-tax-rules-f"
+      ],
+      "uncoveredConceptIds": [
+        "semantic_general_singapore_withholding_tax_rules_for_comp"
+      ],
+      "attempts": [
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+          "fetchStatus": "SUCCESS",
+          "rejectionStage": "MAPPED_PAGE_ADMITTED_TO_EXCERPT_CHECKS"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        }
+      ]
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "variant": "unrelated-sibling-control",
+      "selectedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "sourceMapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "sourcePhraseSha256Prefixes": [
+        "9ad01a6bc011"
+      ],
+      "mapFetchCount": 5,
+      "mapFetchUrlSha256Prefixes": [
+        "f28c53120b92",
+        "dc9d22a4c281",
+        "ac4c15f03b69",
+        "f28c53120b92",
+        "dc9d22a4c281"
+      ],
+      "sourceMapPath": "MAPPED_SOURCE_REJECTED",
+      "selectedCandidateRecordCount": 0,
+      "eligibleRecordCount": 0,
+      "rejectedCandidateCodes": [],
+      "uncoveredTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties",
+        "iras-authority-query-concept-semantic-general-singapore-withholding-tax-rules-f"
+      ],
+      "uncoveredConceptIds": [
+        "semantic_general_singapore_withholding_tax_rules_for_comp"
+      ],
+      "attempts": [
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-withholding-tax",
+          "sourceMapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "rejectionStage": "MAPPED_PAGE_TOPIC_COMPATIBILITY"
+        }
+      ]
+    }
+  ]
+}

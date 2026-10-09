@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
+import {
+  sha256,
+  writeFrozenRunnerConfiguration,
+  runOfflineIntegrityCheck,
+  validateReviewedAcquisitionPermit
+} from '../scripts/iras_v4_capture_replay_runner.mjs';
+
+const root = process.cwd();
+const gitExecutable = 'C:/Users/Admin/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/git/cmd/git.exe';
+const reviewedCommit = '5db0905b49826ef9c834f917c93261c733e82d1c';
+const directory = root + '/artifacts/iras-v4-runner-integrity-2026-10-06';
+const runnerConfigurationPath = directory + '/runner-configuration.json';
+const frozen = await writeFrozenRunnerConfiguration({ outputPath: runnerConfigurationPath, root, gitExecutable, reviewedCommit });
+console.log('FROZEN_CONFIGURATION_CREATED:' + JSON.stringify(frozen));
+const check = await runOfflineIntegrityCheck({ bindingPath: runnerConfigurationPath, root, gitExecutable });
+console.log('OFFLINE_CHECK:' + JSON.stringify(check));
+const before = (await readdir(directory)).sort();
+await assert.rejects(
+  validateReviewedAcquisitionPermit({ runnerConfigurationPath, root, gitExecutable }),
+  /V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED/
+);
+assert.deepEqual((await readdir(directory)).sort(), before, 'HOLD probe must not create reservation or output');
+const document = JSON.parse(await readFile(runnerConfigurationPath, 'utf8'));
+assert.equal(document.captureInventory, null);
+assert.equal(document.productionEvidenceAdapterSha256, null);
+assert.equal(document.preregistrationSha256, null);
+const result = {
+  reviewedCommit, frozen, check,
+  validFrozenConfigurationLiveHoldProbe: {
+    result: 'PASS', error: 'V4_LIVE_CAPTURE_INVENTORY_NOT_REVIEWED',
+    fileAndCommitValidationPassedBeforeRejection: true,
+    acquisitionPermitGranted: false, reservationOrOutputCreated: false,
+    officialCalls: 0, providerCalls: 0
+  },
+  boundFileCount: document.fileRows.length,
+  runnerConfigurationSha256: sha256(await readFile(runnerConfigurationPath)),
+  liveAcceptance: 'HOLD'
+};
+await writeFile(root + '/.tmp/v4-runner-windows-freeze-result.json', JSON.stringify(result, null, 2) + '\n', { flag: 'wx' });
+console.log('VALID_FROZEN_CONFIGURATION_LIVE_HOLD_PROBE:PASSED');

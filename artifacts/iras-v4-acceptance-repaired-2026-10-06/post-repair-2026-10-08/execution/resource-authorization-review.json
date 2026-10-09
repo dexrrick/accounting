@@ -1,0 +1,51 @@
+{
+  "profile": "iras-v4-post-repair-resource-authorization-review",
+  "status": "INDEPENDENT_RESOURCE_REVIEW_COMPLETE",
+  "templateOnly": false,
+  "disposition": "APPROVED_FOR_FIXED_SCOPE",
+  "independentReviewer": true,
+  "reviewer": "/root/review_launcher",
+  "reviewedAtUtc": "2026-10-08T14:25:50Z",
+  "authorizationSha256": "279bea689627e3b6e72bf7f7c7282cca67cb18a73e244d6dc98af010b7e5b486",
+  "approvalEvidenceSha256": "303b08b0959910edaa2464a105cd019a0e83d50f0a458080376b0ce591cb5513",
+  "authorizationRequestSha256": "56ed641e0d787a74ee42326b477b5e19a889d82e3b08f093b7794a0771b9149c",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "reviewedCommit": "66bdb77777f945f19d17cfe1559f4d6f9f9acfae",
+  "launcherSha256": "bdb88348c5acf9d04c5ee42636fe20e4d03ea34a92fd1429b65afe2248a3e6a9",
+  "resourceProjectionSha256": "934a8ac5f93731d959bfc4256f7a907753268770b731c5810b42b0f91cd6de88",
+  "runnerConfigurationSha256": "f7712ede781edb10e6057d17d1d3a373d48b2f6825c7793377ccbcaf85f69852",
+  "preregistrationSha256": "feafc2a67e0cf56da4f71d3d6424b1ef23b0b4344a4e27e39d403eec62451aeb",
+  "activationConfigurationSha256": "9e0f55d7d4e72555f51cf9f280cf5e959b8cadd1245c2e08a8e515f772c1b1fc",
+  "freezeValidationSha256": "e27209aef958ddc8512edb09fe108544da26c9cd76c0aa8c5f52b88ce8666442",
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "verifiedBindingSha256": {
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/preparation/runner-configuration.json": "f7712ede781edb10e6057d17d1d3a373d48b2f6825c7793377ccbcaf85f69852",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/preparation/preregistration.json": "feafc2a67e0cf56da4f71d3d6424b1ef23b0b4344a4e27e39d403eec62451aeb",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/preparation/activation-configuration.json": "9e0f55d7d4e72555f51cf9f280cf5e959b8cadd1245c2e08a8e515f772c1b1fc"
+  },
+  "quotaSource": "current post-repair approval evidence; no provider probe or inferred higher capacity",
+  "quotaConfirmationScope": "Current explicit human quota confirmation for gemini-3.5-flash-lite, exactly nine one-per-case calls, configured credential, 8000 ms timeout, zero retries or probes, 15250 ms minimum start gap, and no additional requests; fresh allowance gate required.",
+  "planningEstimate": {
+    "fiveHourCostPercentagePoints": 40,
+    "weeklyCostPercentagePoints": 15,
+    "reserveAfterProjectionMinimumFiveHourPercent": 8,
+    "reserveAfterProjectionMinimumWeeklyPercent": 4,
+    "checkpointAtRemainingPercent": 10,
+    "finishAboveRemainingPercent": 5
+  },
+  "freshAllowanceObservationRequired": true,
+  "providerQuotaProbeAuthorized": false,
+  "automaticRetryAuthorized": false,
+  "additionalCaptureAuthorized": false,
+  "approvalVerifiedAgainstCurrentChat": true,
+  "approvalUserMessageId": "01a11be5-b3f7-7382-ad50-3e9f4f84371b",
+  "resourceObservation": {
+    "sourceTool": "mcp__codex_app__get_usage_limits",
+    "observedAtUtc": "2026-10-08T14:25:50Z",
+    "ordinaryUsageAllowed": true,
+    "fiveHourRemainingPercent": 80,
+    "weeklyRemainingPercent": 87,
+    "projectedFiveHourRemainingPercent": 40,
+    "projectedWeeklyRemainingPercent": 72
+  }
+}

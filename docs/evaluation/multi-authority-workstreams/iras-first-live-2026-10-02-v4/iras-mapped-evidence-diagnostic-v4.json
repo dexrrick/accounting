@@ -1,0 +1,860 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-mapped-evidence-diagnostic-v4",
+  "mode": "LIVE_SOURCE_MAPPED_PAGES_ONLY_NO_MODEL",
+  "referenceDate": "2026-10-02",
+  "selectedCaseIds": [
+    "private-holiday-expense",
+    "foreign-dividend-treatment",
+    "company-residency-general",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule"
+  ],
+  "sourceMaps": [
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-corporate-tax-residency"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-foreign-sourced-income"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    }
+  ],
+  "modelRequests": 0,
+  "discoveryRequests": 0,
+  "searchRequests": 0,
+  "suppressedDiscoveryAdapterInvocations": 2,
+  "suppressedSearchAdapterInvocations": 2,
+  "maximumActualGets": 16,
+  "actualGetCount": 8,
+  "cacheReuseCount": 5,
+  "policyRejectionCount": 0,
+  "transportEvents": [
+    {
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:21.170Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:21.464Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:21.686Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:21.811Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:21.887Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:21.997Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:22.081Z"
+    },
+    {
+      "mapIds": [
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "host": "www.iras.gov.sg",
+      "status": "HTTP_STATUS",
+      "fetchedAt": "2026-10-02T11:35:22.196Z"
+    }
+  ],
+  "directMapProbes": [
+    {
+      "caseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-cit-deductibility",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": false,
+                "dividend": true,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": false,
+                "dividend": true,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": false,
+                    "dividend": true,
+                    "inputTax": false
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 65,
+                    "firstColonEndedBlockIndex": 10,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 2,
+                    "completeProseBlockCountAfterFirstColon": 7,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+              "attemptStatuses": [
+                "TOPIC_MISMATCH"
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0,
+              "candidateConceptFlags": {
+                "company": false,
+                "tax": false,
+                "residency": false,
+                "dividend": false,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": false,
+                "tax": false,
+                "residency": false,
+                "dividend": false,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": []
+            }
+          ]
+        }
+      ],
+      "candidateCount": 1,
+      "admittedCount": 1,
+      "uncoveredTopicCount": 1
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": true,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": true,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": true,
+                    "dividend": true,
+                    "inputTax": false
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 40,
+                    "firstColonEndedBlockIndex": 0,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 16,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "candidateCount": 1,
+      "admittedCount": 1,
+      "uncoveredTopicCount": 0
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "maps": [
+            {
+              "mapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": true,
+                    "dividend": false,
+                    "inputTax": false
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 24,
+                    "firstColonEndedBlockIndex": 2,
+                    "nextBlockHasVisibleListMarker": false,
+                    "completeProseBlockCountBeforeFirstColon": 1,
+                    "completeProseBlockCountAfterFirstColon": 9,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "candidateCount": 1,
+      "admittedCount": 1,
+      "uncoveredTopicCount": 0
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-withholding-tax",
+          "maps": [
+            {
+              "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": true,
+                    "dividend": false,
+                    "inputTax": false
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 51,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 10,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            },
+            {
+              "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": true,
+                    "dividend": false,
+                    "inputTax": false
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 37,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 12,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            },
+            {
+              "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": true,
+                "dividend": false,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": true,
+                    "dividend": false,
+                    "inputTax": false
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 40,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": true,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 17,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "maps": [
+            {
+              "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+              "attemptStatuses": [
+                "TOPIC_MISMATCH"
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0,
+              "candidateConceptFlags": {
+                "company": false,
+                "tax": false,
+                "residency": false,
+                "dividend": false,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": false,
+                "tax": false,
+                "residency": false,
+                "dividend": false,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": []
+            },
+            {
+              "mapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+              "attemptStatuses": [
+                "TOPIC_MISMATCH"
+              ],
+              "candidateCount": 0,
+              "admittedCount": 0,
+              "candidateConceptFlags": {
+                "company": false,
+                "tax": false,
+                "residency": false,
+                "dividend": false,
+                "inputTax": false
+              },
+              "admittedConceptFlags": {
+                "company": false,
+                "tax": false,
+                "residency": false,
+                "dividend": false,
+                "inputTax": false
+              },
+              "sourceBlockSummaries": []
+            }
+          ]
+        }
+      ],
+      "candidateCount": 3,
+      "admittedCount": 3,
+      "uncoveredTopicCount": 1
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "topicRows": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "maps": [
+            {
+              "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": false,
+                "dividend": false,
+                "inputTax": true
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": false,
+                "dividend": false,
+                "inputTax": true
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": false,
+                    "dividend": false,
+                    "inputTax": true
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 36,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": false,
+                    "completeProseBlockCountBeforeFirstColon": 0,
+                    "completeProseBlockCountAfterFirstColon": 19,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            },
+            {
+              "mapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+              "attemptStatuses": [
+                "SUCCESS"
+              ],
+              "candidateCount": 1,
+              "admittedCount": 1,
+              "candidateConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": false,
+                "dividend": false,
+                "inputTax": true
+              },
+              "admittedConceptFlags": {
+                "company": true,
+                "tax": true,
+                "residency": false,
+                "dividend": false,
+                "inputTax": true
+              },
+              "sourceBlockSummaries": [
+                {
+                  "mapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+                  "conceptFlags": {
+                    "company": true,
+                    "tax": true,
+                    "residency": false,
+                    "dividend": false,
+                    "inputTax": true
+                  },
+                  "sourceBlocks": {
+                    "sourceBlockCount": 41,
+                    "firstColonEndedBlockIndex": 1,
+                    "nextBlockHasVisibleListMarker": false,
+                    "completeProseBlockCountBeforeFirstColon": 1,
+                    "completeProseBlockCountAfterFirstColon": 20,
+                    "knownNavigationBlockCountBeforeFirstColon": 0,
+                    "firstColonBlockWouldStopSelectionByShape": false
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "candidateCount": 2,
+      "admittedCount": 2,
+      "uncoveredTopicCount": 0
+    }
+  ],
+  "renderedEvidence": [
+    {
+      "caseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "acceptedClaimCount": 3,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "directProbeCandidateConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": false,
+        "dividend": true,
+        "inputTax": false
+      },
+      "renderContextAdmittedConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": false,
+        "dividend": false,
+        "inputTax": false
+      }
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "acceptedClaimCount": 3,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "directProbeCandidateConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": true,
+        "dividend": true,
+        "inputTax": false
+      },
+      "renderContextAdmittedConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": true,
+        "dividend": true,
+        "inputTax": false
+      }
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueIndex": 0,
+      "acceptedClaimCount": 3,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "directProbeCandidateConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": true,
+        "dividend": false,
+        "inputTax": false
+      },
+      "renderContextAdmittedConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": true,
+        "dividend": false,
+        "inputTax": false
+      }
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "acceptedClaimCount": 2,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "directProbeCandidateConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": true,
+        "dividend": false,
+        "inputTax": false
+      },
+      "renderContextAdmittedConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": true,
+        "dividend": false,
+        "inputTax": false
+      }
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "acceptedClaimCount": 1,
+      "rejectedClaimCount": 0,
+      "rejectedReasonCounts": {},
+      "answerPath": "VALIDATED_LOCAL",
+      "uncoveredTopicIds": [],
+      "directProbeCandidateConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": false,
+        "dividend": false,
+        "inputTax": true
+      },
+      "renderContextAdmittedConceptFlags": {
+        "company": true,
+        "tax": true,
+        "residency": false,
+        "dividend": false,
+        "inputTax": true
+      }
+    }
+  ],
+  "runtimeIssues": [
+    {
+      "caseId": "private-holiday-expense",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "UNRESOLVED",
+      "finalVerifiedClaimCount": 1,
+      "finalSourceCount": 1,
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_HAS_VERIFIED_CLAIMS"
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "UNRESOLVED",
+      "finalVerifiedClaimCount": 0,
+      "finalSourceCount": 0,
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_ZERO_VERIFIED"
+    },
+    {
+      "caseId": "company-residency-general",
+      "issueIndex": 0,
+      "overallStatus": "VERIFIED",
+      "evidenceStatus": "VERIFIED",
+      "applicationStatus": "NOT_REQUIRED",
+      "finalVerifiedClaimCount": 3,
+      "finalSourceCount": 1,
+      "gapCodes": [],
+      "inferredStageFromCounts": "FINAL_RUNTIME_HAS_VERIFIED_CLAIMS"
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "NOT_REQUIRED",
+      "finalVerifiedClaimCount": 1,
+      "finalSourceCount": 1,
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_HAS_VERIFIED_CLAIMS"
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "issueIndex": 0,
+      "overallStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "NOT_REQUIRED",
+      "finalVerifiedClaimCount": 0,
+      "finalSourceCount": 0,
+      "gapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "inferredStageFromCounts": "FINAL_RUNTIME_ZERO_VERIFIED"
+    }
+  ],
+  "preregistrationSha256": "70b9914ae49ee80920568a1539de87b769558c5ed11169d867778c2f266f5279",
+  "preregistrationFileSha256": "c881761866a4ccb04ad6763a17496ecd23ab588e14f1930986d453a9dad04a4b",
+  "sourceFingerprintCount": 16,
+  "historicalFingerprintCount": 133
+}

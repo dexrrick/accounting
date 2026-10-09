@@ -1,0 +1,14 @@
+{
+  "profile": "iras-v4-user-resource-override-preparation-validation",
+  "userInstruction": "please continue\nignore the 88% threshold",
+  "builderOwnedFiles": ["launch-user-override.mjs.txt", "offline-controls-user-override.mjs.txt", "resource-projection-user-override.json"],
+  "checks": {"builderNode22SyntaxBothModules": "PASS", "builderFocusedSyntheticControls": "PASS", "builderTargetedOxlintDenyWarnings": "PASS_NO_WARNINGS", "independentDiffReview": "NO_MATERIAL_IMPLEMENTATION_FINDINGS"},
+  "controls": {"58PercentFiveHour19PercentWeeklyAccepted": true, "57PercentFiveHourRejected": true, "18PercentWeeklyRejected": true, "missingExactHumanOverrideRejected": true, "malformedRecordedGateRejected": true, "actualInvalidCLIAndMissingAuthorizationObservedCountersEach": {"runnerImports": 0, "capabilityLoads": 0, "credentialReads": 0, "launcherWrites": 0, "requests": 0}},
+  "providerCallsDuringPreparation": 0,
+  "credentialsReadDuringBuilderOrReview": false,
+  "originalArtifactsAndFrozenInputsUnchanged": true,
+  "fullFrozenCheckRepeatedDuringPreparation": false,
+  "accountingValidation": "Prior smoke/build retained; no production or frozen accounting/source inputs changed. Actual execution still performs frozen verification before dispatch.",
+  "liveRequirements": ["Authorization bound to this separate committed preparation", "Fresh actual usage at post-validation rendezvous", "Fresh user-confirmed credential-bound Gemini headroom", "Fresh original source evidence", "No consumed, partial, present or uncertain canonical outputs"],
+  "resourceEstimateLimitation": "50/15 execution-only estimate is unmeasured and uncertain; shared activity can invalidate allowance. Monitor actual remaining allowance, begin checkpoint at10%, finish above5%."
+}

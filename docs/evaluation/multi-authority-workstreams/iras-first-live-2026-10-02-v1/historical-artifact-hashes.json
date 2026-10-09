@@ -1,0 +1,446 @@
+{
+  "baselineCommit": "d194d2bc7121b2c9a1deec562f77eafdfb98cd90",
+  "artifacts": [
+    {
+      "path": "tests/evaluation/singapore/semantic-reliability-post-guidance.json",
+      "sha256": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6"
+    },
+    {
+      "path": "tests/evaluation/singapore/semantic-question-heldout.json",
+      "sha256": "8b33031fdedd731654cf4e07596a2388f751815bd7267ad5c05aac40429aaddd"
+    },
+    {
+      "path": "tests/evaluation/singapore/semantic-question-adversarial.json",
+      "sha256": "1916e93a6b25354f194aa3f52833bebb7225cb3dd45863b0ee10cf67a8b43c81"
+    },
+    {
+      "path": "tests/evaluation/singapore/semantic-operation-followup.json",
+      "sha256": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe"
+    },
+    {
+      "path": "tests/evaluation/singapore/semantic-intent-boundaries.json",
+      "sha256": "139d418fb06820d34270c1499fbf825a3f19699121620f1a1df1f1198ba9f71a"
+    },
+    {
+      "path": "tests/evaluation/singapore/semantic-contract-followup.json",
+      "sha256": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1"
+    },
+    {
+      "path": "tests/evaluation/singapore/reviewed-knowledge.json",
+      "sha256": "8ffbf724b5e3a694f07decd73c70901d7e3b2adc6f633530e459b9573e337190"
+    },
+    {
+      "path": "tests/evaluation/singapore/multi-authority-workstreams.json",
+      "sha256": "ef71d58687e8b13be55ce1b07e5c0cc32458c3cd52bc511ab396f4c3058face1"
+    },
+    {
+      "path": "tests/evaluation/singapore/multi-authority-workstreams-live.json",
+      "sha256": "92d54edad671d537cd4c38467a49663fcef3e5463ac79d14f81450dcb7de1b18"
+    },
+    {
+      "path": "tests/evaluation/singapore/multi-authority-workstreams-heldout.json",
+      "sha256": "297d1999dd24899833819cc0b7ee803f0680fdca9c0e35c6088a8e0e234e1c35"
+    },
+    {
+      "path": "tests/evaluation/singapore/multi-authority-workstreams-corrected.json",
+      "sha256": "c15aa10f9acff1e805c16d4ef703707dd46a5b1c36b0a2f23ab3886d88a390cb"
+    },
+    {
+      "path": "tests/evaluation/singapore/iras-unseen-live.json",
+      "sha256": "2d225fb945d1fb34a62c7cf29b34647eb1c25d9fd220045a6002dd0371c4bb0c"
+    },
+    {
+      "path": "tests/evaluation/singapore/iras-source-map.json",
+      "sha256": "ac8b4aff5e5796219d7d2a132e1871157e82d1b769056fd563c8e55228b79027"
+    },
+    {
+      "path": "tests/evaluation/singapore/iras-answer-e2e.json",
+      "sha256": "c957096c65b690e2852c64eb4b8fb08ffa46bdd174a98aeb0169fa867620227c"
+    },
+    {
+      "path": "tests/evaluation/singapore/iras-answer-e2e-review.md",
+      "sha256": "e0c2947af1016e188cf5cf4d4c5d38d775ee08a07e5bf4c00ba8e471f4ab050f"
+    },
+    {
+      "path": "tests/evaluation/singapore/gemini-seed.json",
+      "sha256": "896be8815f59ec6bdd64306eea5ebe4efdb2dba12b8cde5ca5470b9788d1393d"
+    },
+    {
+      "path": "tests/evaluation/singapore/consolidation-source-map.json",
+      "sha256": "9400817641c8ee00ead1c71de28e9d0e9f5a3fde775ad560b0d2362e4a431bec"
+    },
+    {
+      "path": "tests/evaluation/singapore/authority-relief-targeted.json",
+      "sha256": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-protected-hashes.json",
+      "sha256": "dba02105671fed2e170daf099094b7ee2962331e11b8d67260a6650ade5fe758"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-local-checkpoint.md",
+      "sha256": "dc4f8f2a7f6813d128eb7891a341e4a0507ee6c8d7c900d77d985dc53f4cd717"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-checkpoint.md",
+      "sha256": "d92b4048002d75c5cc17644947c4f2a89a03686f824143fba61c2102200058ce"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/semantic-wire-format-targeted-live.md",
+      "sha256": "a0b9213ea99a7bea02dd5896b4defd38b23a6c48fef65f07fc0ce886f34fa673"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/semantic-wire-format-targeted-live.json",
+      "sha256": "2b50c9726a302bf86355cb4034739134587b03c3c578ac5075de158bb0d2490c"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/pre-live-fingerprints.json",
+      "sha256": "89644b169568b12465c5d8526c3c945e23604cfaa6a78ff4fad43060e17472e2"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-wire-format-live-2026-10-02/post-live-verification.json",
+      "sha256": "676fff42c4841b2d593712c938aaaeeda30bd3948683a2b70b61678d14cc4a14"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-timeout-controlled-baseline.md",
+      "sha256": "25b21a120a63512b7cdd2b521539950ae09f189ff56cad2ac315d453058f1734"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-timeout-controlled-baseline.json",
+      "sha256": "2808012d32a05041c364f1dec9ad3e11712aedf0fd6900cc1e7dd2764f005958"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-reliability-post-guidance-live.md",
+      "sha256": "e700604b746a8b1e11d7163e44bab0f0503460e22932fb41822e1173e3de9dec"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-reliability-post-guidance-live.json",
+      "sha256": "a59b3fa4bf8ffd4b784d4cf107f2a5554c12f336be9723e0e41f10ab4b3f2097"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-provider-schema-diagnosis.md",
+      "sha256": "1c71258d8290d6758452e9b1da71c29c0e135ee035e4f7d0e07b961376b46a26"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-operation-followup-live.md",
+      "sha256": "e77f667b3f51fa05ca799aac7c101d8c76b5ca724862c177e6aa836dddafaaf0"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-operation-followup-live.json",
+      "sha256": "993afdcd5f45a4b06cdd5edd45295019ca466398ce0e88796b87d54cde1325cb"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-live-audit.md",
+      "sha256": "844094afb94c7ad4f15a99fc36316fe99dae66ca94842abfa2679e861f8fe6c5"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-live-adjudications.json",
+      "sha256": "24d9ce9057495ef37684fe8c7c5c8eac569b888624a99198b55ccad8ee2cf89b"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-timeout-analysis.md",
+      "sha256": "f791f6792205145cb1d9a316d054b379aa316ec37531b6d6f94335659fa04a12"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-targeted-live.md",
+      "sha256": "eba86c6aad73e43f6d7d9ac819c1236bca41adf0c5c2bc0d3b7ac3e6242aacc4"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-targeted-live.json",
+      "sha256": "d829a99df8a9a464f889afd3bc40e8f4b2e29a0072bb135feedb13faa2b626f9"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-protected-hashes.json",
+      "sha256": "26b1a04f7af97905e828394602ad7c64b6bb45b22103049e9578a55305695eb2"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-start.md",
+      "sha256": "aecc2d5469edca3a9a1248559cf5e3238ae6789627430e138afe63096610812f"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-checkpoint.md",
+      "sha256": "6da3dcdeb7ecbc6ce9160692b524fd2f216ca1bb179770f165c1a57cfd2d8295"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-intent-followup-audit.md",
+      "sha256": "275652c139de2112dd6a5207c90eef6fdcfa5cbf847f39ec9bb6945196a3be60"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-v2-checkpoint.md",
+      "sha256": "1a71f3c03fcf0b652d085c16dcc41b5da3f9a5577f4148d4bae008ee4a301a4d"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-v2-audit.md",
+      "sha256": "a4169bb880e75b24045b3c79b66ac0fbb504ac34f6ea673aab47c4df3a7c6a3e"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-followup-v2-live.md",
+      "sha256": "cf0ea2da3f89006bf16570c7be90e35690a4bea075a26e745cd91ec2f59d3640"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-followup-v2-live.json",
+      "sha256": "58787adb4f69d4db922714154b1a4448fd55e2ee9186f03dff4bbb3f44337850"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-diagnosis-baseline.md",
+      "sha256": "52fde5b0c89f61edd9dc5cb43cd9ba7a9991aaf1ab4ed1596d58ea3021f1aa1a"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-contract-diagnosis-baseline.json",
+      "sha256": "f84dca5335be1312d709e5867688485aa174ea5c938ccb9777ae72de3e6ced44"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-checkpoint.md",
+      "sha256": "62f27acf8e3d192eb1048c5595bae45b84112d4aeb9d629e3ded8be77e22f2df"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-authority-relief-contract-audit.md",
+      "sha256": "c83de57fe98f366f053cfc105a8ae01346fd5b3d5a5891baf7de726dabd37329"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/semantic-audit.md",
+      "sha256": "09a40a2334f4bddeb7d9a0d474bb309dd583ece65f908ac6e74ca2a3efe1e9be"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-resume-checkpoint.md",
+      "sha256": "c615f81dc1e1eccfac991b6ccb3b1241629f5686a87e6098eb35ae29124603ac"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-local-routing-diagnosis.json",
+      "sha256": "36bed43b75683a193f060cec29a9003bd3f1721f2ec94c2d152d3ea1b6ff4151"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-checkpoint.md",
+      "sha256": "1cc2349b573908087c8532e80de47928adae4d606ab9c0d5983ef6fd8d867a0c"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-2026-10-01/authority-relief-targeted-live.md",
+      "sha256": "3351b1e1928a1e578af6f7f3d991e9dc5cfbe61bd7bb83984ef20f712018676b"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-live-2026-10-01/authority-relief-targeted-live.json",
+      "sha256": "c2e65adad723943605d74cab8733672aa2cfb904d50174b2d669b24a963baa62"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-final-local-routing-diagnosis.json",
+      "sha256": "376ff7982c009845c927027ad6981902043e6f4d902250c1c972286b94da4e64"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-contract-audit.md",
+      "sha256": "d7eb8955a7dd41a6c8e5213bae9b23a32a7ebafbc7553f7a82a4558860eb72fd"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/resolver-coverage-baseline-diagnosis.json",
+      "sha256": "84a55eebbb45a77785899ba3fa98e43a7960840edfdbdb96428281f1a7565979"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/oracle-evaluation.md",
+      "sha256": "913f572a301b4da02a5ddc1d724c1baddd33b6c510c04a8edf100e15548b791a"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/oracle-evaluation.json",
+      "sha256": "f5d3b2ce9de0947f913bee35a5b6f5f8b2779f4e1c558310709830178789557e"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-protected-hashes.json",
+      "sha256": "42122bfc4ed59c0f3ab47c2130989a2a4874ea76bfca9980777a94e212d24256"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-post-inspection.json",
+      "sha256": "3fe63f1a7f0ab02a3fbcdb11701128d0658db879b762b7128adfdc02f65eb21c"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-comparison.json",
+      "sha256": "decd5a57bbc1f03e66f86f789ddb539bebcb7db1e5d57c647cc46512128c8f2a"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-checkpoint.md",
+      "sha256": "b166f233b7a589b4f8cbebf077d865a6e1928f52b7dfe5473312a3fa22dc9749"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-baseline-inspection.json",
+      "sha256": "f5861a11e63f9e262187e998aec0328734ed830af2f2c63e3c3f1439eecc91c2"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-audit.md",
+      "sha256": "8381725c43dece643a548a2fc24a33463d3c97fcce1912d1ef04093988c70f44"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/operation-followup-comparable-baseline.json",
+      "sha256": "537736bd79d9616562b30214544b8d4811318efc54dafd9455f941ce5cabbb6c"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/live-sources-evaluation.md",
+      "sha256": "37ad7f5abfbd6a99a257f5d7009d6bad39a66971e7c340f890e3ca66f410e3f7"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/live-sources-evaluation.json",
+      "sha256": "46b51a07ff897937e01ecff8b67328157acbe342b053ace3fcb919b42edb56a5"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/live-semantic-evaluation.md",
+      "sha256": "e642c6ba01b7c9ec4d014630927b4adabdc318424084dd52251cc8649eefe6c7"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/live-semantic-evaluation.json",
+      "sha256": "8ccad78f9623da692c8ac39fd950330864ff25ae0383fe05e1d60c8a2af22120"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/heldout-live-semantic-evaluation.md",
+      "sha256": "1943678d0367e85cec8ccb6f3eccff7f8b673395d527bbbfc3e186642899cff2"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/heldout-live-semantic-evaluation.json",
+      "sha256": "370449cc53c1b3ab5d23e1e7d116d1336c11536f3e7c55404acb218d2dda0fb4"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-structured-output-compatibility-diagnosis.md",
+      "sha256": "932fb42e96982bad9773303e562b2fc0d6ee1e7a80f26e33a7cdc0b93fbda16b"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/targeted-pre-live-usage.json",
+      "sha256": "8454c670e36beeb943433ee24c4791f1dc53d32cca923185caf70eafb44b78bc"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/targeted-pre-live-fingerprints.json",
+      "sha256": "85c624da6d0c224581400a80dc00720b7957e7e4c68e4bead82cdfc08530c652"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/targeted-post-live-verification.json",
+      "sha256": "f7b4036ca901fe4c2ed3801a52b3ae838c0c1832eeae268fb2b3b5f77a7474fe"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/semantic-wire-format-targeted-live.md",
+      "sha256": "2e109e58f9517326050582134cfefdc67379db42bab759ec6b7f6b2c7e637f2e"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/semantic-wire-format-targeted-live.json",
+      "sha256": "88e9b32f4ef588afe8a4f18bdd23b8964ff2a8b0dde28d2fc700906df75e2c04"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/numeric-bounds.json",
+      "sha256": "62e8473ecde25c72f696056cac8455f570b912e6fcb92a93a9ebb7a939b94f66"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/nested-object.json",
+      "sha256": "d3ebc92918a16850f4331078f2f7f6c29417fde591de9adcd757154ee75f05d6"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/minimal-old.json",
+      "sha256": "49a4fc163b0e3a957d4f6f2a80a642fd30fb7a5e6963e5a77a915a191f24dcea"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/minimal-current.json",
+      "sha256": "f9a1c5213569e65e02a0856e4701a7ec9903d5ae0551bc2d673a75a518f6f77e"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/local-validation.json",
+      "sha256": "50de8e0a97ce8a4a515112eb6e3e8f6f19141dc5d43da73dbdbf6ee761daa773"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-old.json",
+      "sha256": "776eb075281145b796a05969f711e240567be7fb6e5b3928d4f5ab89cd91cc95"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-no-max-items-current.json",
+      "sha256": "20acc96a23e88c6204e3603bb14c8a982e6bcdd8d4da16ce651fe22ccda8982f"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-no-issue-max-items-current.json",
+      "sha256": "bd351febc686828f84056a0d387f3f9e667b2c525000279f5c003c031b9a5fef"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/full-current.json",
+      "sha256": "aeff2a79fcfc6e20c43db9df35a22c517a61599ccc11f681529b2d6005b52226"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/final-checkpoint.json",
+      "sha256": "1911c5ea7dfca1670023e709c59691f431d31e4154f0facb3c92944aaa4e0381"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/enum-string.json",
+      "sha256": "45b409193c8e962a8dc6b940c330581ebdc68e064470144b4024d3e0d3025f00"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/enum-numeric.json",
+      "sha256": "364117b76424591e22cfe3e1ebda8d01f5c469feb8828796e17c687dd05bf827"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/artifact-review.json",
+      "sha256": "fab931281c27a462684623425d25e3ca5010b38ed7bc566e420e8eafa5c2c202"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/array.json",
+      "sha256": "066a752a8317f9c841dd89fd3068419873e823043755d5fa3fe3edd061fd0383"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/array-bounds.json",
+      "sha256": "79b7e92f467c468e0c5f68d15b2a9c2170990863d286fcbd881824f0cda15673"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/gemini-compatibility-live-2026-10-02/additional-properties.json",
+      "sha256": "088d9c4c47d589375e38931654273458ddc15bca7f012f6241847b8b3e176362"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-routing-replay.md",
+      "sha256": "304922ba82145e5cc53ccd676efbdadb79980363537f1d1a725e9249b5509590"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-routing-replay.json",
+      "sha256": "2317d84372a8a401e5fb3fbda506041281c256fe115ccab32e738deb4d794bc6"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-rescore.md",
+      "sha256": "34e68a98bca2273e8b45f7851b6be5e38b35f6dd717247762b350bf55ab785e3"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-rescore.json",
+      "sha256": "47eb56c702981348e706dcdfb9d262574284ca83718eadfa115c23e7a16b2c97"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-replay.md",
+      "sha256": "304922ba82145e5cc53ccd676efbdadb79980363537f1d1a725e9249b5509590"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-saved-response-replay.json",
+      "sha256": "2317d84372a8a401e5fb3fbda506041281c256fe115ccab32e738deb4d794bc6"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-live-semantic-evaluation.md",
+      "sha256": "0d11409c9e2bc7302078a82e51575a7af947b37b23dbba7ef414a75d07450930"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/corrected-live-semantic-evaluation.json",
+      "sha256": "1494ad19fdaa7f7fa2daa9a17510791a82e669873b4effcee2874931fab92e00"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/contract-followup-protected-hashes.json",
+      "sha256": "66272a79e5e3d7f91ace37ee978b6b3a798b42839fe6a175e2fd17505f6264c9"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/contract-followup-comparable-baseline.json",
+      "sha256": "a44bfc81373f3baf6505efaf80825c8bbbd26e33c25006d83969e4b70db7c4b1"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/contract-consistency-checkpoint.md",
+      "sha256": "7ddca903f175e4d3736fd50cd67447cca62da4bf19495ea580a11afac1a71e3a"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/contract-consistency-audit.md",
+      "sha256": "60a6b4e45a96d3abf03f842b9ffcdd8c66d91b38950ef6baa8711520b15347ac"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/authority-relief-resume-checkpoint.md",
+      "sha256": "3dc243233aa54c0430c5c8321f7abce064d3fd7abb3be7f627aa56cb0ba4731b"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/authority-relief-protected-hashes.json",
+      "sha256": "b42b76c662b234b3c27760704f7f3dc79ee2c7160f414226186542d6c12fdc46"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/authority-relief-local-routing-diagnosis.json",
+      "sha256": "aec9695b1c999b82530770f0b52f3ffbe4feabeca16517a554dc0b3379b93fa1"
+    }
+  ],
+  "initialVerificationPassed": true
+}

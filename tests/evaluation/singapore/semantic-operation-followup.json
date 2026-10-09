@@ -1,0 +1,649 @@
+{
+  "expectedModel": "gemini-3.5-flash-lite",
+  "schemaVersion": 1,
+  "runs": {
+    "paraphrasesAndAdversarial": 1,
+    "originalABCD": 1
+  },
+  "issueContracts": {
+    "adversarial-C": [
+      {
+        "id": "employee-accommodation-benefit-tax",
+        "subject": "employee tax on accommodation benefit",
+        "matchAny": [
+          [
+            "employee",
+            "tax",
+            "accommodat"
+          ],
+          [
+            "employee",
+            "tax",
+            "benefit"
+          ],
+          [
+            "staff",
+            "tax",
+            "housing"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "C": [
+      {
+        "id": "company-housing-cost-deductibility",
+        "subject": "corporate income-tax deductibility of staff housing cost",
+        "matchAny": [
+          [
+            "company",
+            "deduct"
+          ],
+          [
+            "corporate",
+            "deduct"
+          ],
+          [
+            "business",
+            "deduct"
+          ],
+          [
+            "company",
+            "tax",
+            "housing"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      },
+      {
+        "id": "employee-housing-benefit-tax",
+        "subject": "employee income-tax treatment of housing benefit",
+        "matchAny": [
+          [
+            "employee",
+            "tax",
+            "housing"
+          ],
+          [
+            "employee",
+            "tax",
+            "benefit"
+          ],
+          [
+            "staff",
+            "tax",
+            "accommodat"
+          ],
+          [
+            "employment",
+            "benefit",
+            "tax"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "A": [
+      {
+        "id": "employer-cpf-contribution",
+        "subject": "employer CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employer",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "company",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employer",
+            "provident",
+            "contribut"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employer",
+            "cpf",
+            "position"
+          ],
+          [
+            "employer",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "employee-cpf-contribution",
+        "subject": "employee compulsory CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employee",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employee",
+            "provident",
+            "contribut"
+          ],
+          [
+            "mandatory",
+            "cpf",
+            "salary"
+          ],
+          [
+            "compulsory",
+            "cpf",
+            "salary"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employee",
+            "cpf",
+            "position"
+          ],
+          [
+            "employee",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "individual-cpf-tax-relief",
+        "subject": "individual income tax relief for compulsory CPF",
+        "matchAny": [
+          [
+            "income",
+            "tax",
+            "relief"
+          ],
+          [
+            "personal",
+            "tax",
+            "relief"
+          ],
+          [
+            "cpf",
+            "relief"
+          ],
+          [
+            "tax",
+            "claim",
+            "cpf"
+          ]
+        ],
+        "population": [
+          "INDIVIDUAL",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "CPF"
+          ]
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY",
+          "EXPLAIN_INTERACTION",
+          "EXPLAIN_RULE"
+        ]
+      }
+    ],
+    "general-interaction": [
+      {
+        "id": "general-interaction",
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "operation": [
+          "EXPLAIN_INTERACTION"
+        ],
+        "population": [
+          "UNKNOWN",
+          "COMPANY"
+        ],
+        "matchAny": [
+          [
+            "recogn"
+          ],
+          [
+            "measure"
+          ],
+          [
+            "interaction"
+          ]
+        ],
+        "subject": "general-interaction",
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ]
+      }
+    ],
+    "adversarial-D": [
+      {
+        "id": "foreign-worker-work-pass",
+        "subject": "work-pass requirements for foreign employee",
+        "matchAny": [
+          [
+            "foreign",
+            "employee",
+            "work",
+            "pass"
+          ],
+          [
+            "work",
+            "pass",
+            "requirement"
+          ]
+        ],
+        "population": [
+          "EMPLOYER",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "MOM_EMPLOYMENT"
+        ],
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE",
+          "CHECK_ELIGIBILITY"
+        ]
+      },
+      {
+        "id": "foreign-worker-salary-income-tax",
+        "subject": "income-tax treatment of foreign employee salary",
+        "matchAny": [
+          [
+            "employee",
+            "salary",
+            "tax"
+          ],
+          [
+            "employment",
+            "income",
+            "tax"
+          ],
+          [
+            "foreign",
+            "worker",
+            "income",
+            "tax"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE",
+          "INDIVIDUAL"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY"
+        ]
+      }
+    ],
+    "general-recognition": [
+      {
+        "id": "general-recognition",
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "operation": [
+          "EXPLAIN_RULE"
+        ],
+        "population": [
+          "UNKNOWN",
+          "COMPANY"
+        ],
+        "matchAny": [
+          [
+            "intangible"
+          ],
+          [
+            "recogn"
+          ]
+        ],
+        "subject": "general-recognition",
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ]
+      }
+    ],
+    "journal-entry": [
+      {
+        "id": "journal-entry",
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "operation": [
+          "PREPARE_JOURNAL"
+        ],
+        "population": [
+          "UNKNOWN",
+          "COMPANY"
+        ],
+        "matchAny": [
+          [
+            "furniture"
+          ],
+          [
+            "journal"
+          ]
+        ],
+        "subject": "journal-entry",
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ]
+      }
+    ],
+    "employer-filing": [
+      {
+        "id": "employer-filing",
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "operation": [
+          "FILING_REQUIREMENT"
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "matchAny": [
+          [
+            "report"
+          ],
+          [
+            "fil"
+          ]
+        ],
+        "subject": "employer payroll income-tax reports",
+        "contextualAuthoritiesAnyOf": [
+          []
+        ]
+      }
+    ],
+    "general-compare": [
+      {
+        "id": "general-compare",
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "operation": [
+          "COMPARE"
+        ],
+        "population": [
+          "UNKNOWN",
+          "COMPANY"
+        ],
+        "matchAny": [
+          [
+            "compar"
+          ],
+          [
+            "initial"
+          ],
+          [
+            "subsequent"
+          ]
+        ],
+        "subject": "general-compare",
+        "contextualAuthoritiesAnyOf": [
+          [],
+          [
+            "IFRS_FOUNDATION"
+          ]
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "A-original",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "An employee earns SGD 6,000 per month. What CPF contributions must the employer and employee make, and how do the employee's compulsory CPF contributions affect personal income tax relief?"
+    },
+    {
+      "id": "A-paraphrase-2",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+      "expectedIssueIds": [
+        "employer-cpf-contribution",
+        "individual-cpf-tax-relief"
+      ]
+    },
+    {
+      "id": "C-original",
+      "contract": "C",
+      "runGroup": "expanded",
+      "question": "Our company pays an employee's housing allowance. Is it deductible to the company and is it taxable to the employee?"
+    },
+    {
+      "id": "C-paraphrase-3",
+      "contract": "C",
+      "runGroup": "expanded",
+      "question": "Is the employee taxed on a housing allowance before considering whether the company may deduct what it paid?"
+    },
+    {
+      "id": "C-paraphrase-4",
+      "contract": "C",
+      "runGroup": "expanded",
+      "question": "Our firm gives an employee a housing benefit. How is it treated for the employee's tax and for the company's deduction?"
+    },
+    {
+      "id": "adversarial-C-employee-benefit",
+      "contract": "adversarial-C",
+      "runGroup": "expanded",
+      "question": "The employer provides accommodation to staff. What tax does the employee pay on the benefit?"
+    },
+    {
+      "id": "adversarial-D-workpass-and-salary-tax",
+      "contract": "adversarial-D",
+      "runGroup": "expanded",
+      "question": "A foreign employee needs a work pass and the company needs to know whether his salary is taxable.",
+      "benchmarkNote": "The work-pass clause is background or ambiguous in this wording; the historical expected scope remains unchanged for comparison."
+    },
+    {
+      "contract": "general-recognition",
+      "question": "What are the general principles for recognizing intangible assets under IFRS?",
+      "runGroup": "expanded",
+      "id": "control-general-recognition"
+    },
+    {
+      "contract": "general-compare",
+      "question": "Compare initial recognition and subsequent measurement of equipment under IFRS.",
+      "runGroup": "expanded",
+      "id": "control-general-comparison"
+    },
+    {
+      "contract": "journal-entry",
+      "question": "Prepare the journal entry for our company's purchase of office furniture for SGD 2,400 cash, excluding GST.",
+      "runGroup": "expanded",
+      "id": "control-journal-entry"
+    },
+    {
+      "contract": "employer-filing",
+      "question": "Which income-tax payroll reports must our business file as an employer?",
+      "runGroup": "expanded",
+      "id": "control-employer-filing"
+    },
+    {
+      "contract": "general-interaction",
+      "question": "Explain generally how recognition and measurement decisions relate in financial reporting under IFRS.",
+      "runGroup": "expanded",
+      "id": "control-general-interaction"
+    }
+  ],
+  "expectedWorkstreams": {
+    "adversarial-C": [
+      "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+    ],
+    "C": [
+      "IRAS/IRAS_CORPORATE_TAX",
+      "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+    ],
+    "A": [
+      "CPF/CPF_PAYROLL",
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "general-interaction": [
+      "ACCOUNTING_STANDARDS/ACCOUNTING"
+    ],
+    "adversarial-D": [
+      "MOM/MOM_EMPLOYMENT",
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "general-recognition": [
+      "ACCOUNTING_STANDARDS/ACCOUNTING"
+    ],
+    "journal-entry": [
+      "ACCOUNTING_STANDARDS/ACCOUNTING"
+    ],
+    "employer-filing": [
+      "IRAS/IRAS_EMPLOYER_REPORTING"
+    ],
+    "general-compare": [
+      "ACCOUNTING_STANDARDS/ACCOUNTING"
+    ]
+  },
+  "suite": "Operation follow-up: seven corrected cases and five independent operation controls",
+  "purpose": "One final focused production-path evaluation after stable implementation. Historical labels unchanged; no held-out tuning cases."
+}

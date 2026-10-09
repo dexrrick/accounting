@@ -1,0 +1,16 @@
+{
+  "profile": "iras-v4-fresh-capture-launch-result",
+  "status": "FAILED_NO_AUTOMATIC_RETRY",
+  "executionMode": "BOUNDED_OFFICIAL_IRAS_CAPTURE_ONLY",
+  "reviewedCommit": "a9924a8931209fa6df723e8faaefc21914368d82",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
+  "launcherSha256": "eb54f4a0e148a17babc83a47f445d14f65fa2fd031c09513ee55ef3993af784a",
+  "authorizationSha256": "521e4922f01d13b4811bb858aafe6ddedfd56b401389e7e840370f9cd3892ad9",
+  "resourceProjectionSha256": "0bba5ea1d86c492c5ceae26e809914a0d8e531953112f7bbc847c4a6aca4228f",
+  "resourceReviewSha256": "904f0f094a02a2e8bf10fb91e34d2e6f8675cc06844d90e2b26ab46262a47b3a",
+  "freezeValidationSha256": "c381c4728cdd1ae0788576e938114109c6c1314b4738c4c3e16e16dbc7d99ec1",
+  "phase": "CAPTURE_PAYLOAD_VALIDATION",
+  "failureCode": "CAPTURE_PAYLOAD_DOCUMENT_MISMATCH",
+  "providerCredentialRead": false,
+  "completedAtUtc": "2026-10-07T15:25:18.741Z"
+}

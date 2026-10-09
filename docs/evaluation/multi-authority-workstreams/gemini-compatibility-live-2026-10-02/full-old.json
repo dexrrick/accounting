@@ -1,0 +1,25 @@
+{
+  "mode": "full-old",
+  "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 0,
+  "timeoutMs": 8000,
+  "startedAt": "2026-10-02T00:42:46.133Z",
+  "requestCount": 1,
+  "validJson": false,
+  "matchesSchema": false,
+  "category": "PROVIDER_ERROR",
+  "generationConfigFields": [
+    "responseMimeType",
+    "responseJsonSchema",
+    "temperature"
+  ],
+  "httpStatus": 400,
+  "diagnostic": {
+    "httpStatus": 400,
+    "providerCode": 400,
+    "providerStatus": "INVALID_ARGUMENT",
+    "safeMessage": "Gemini request failed."
+  },
+  "finishedAt": "2026-10-02T00:42:47.386Z"
+}

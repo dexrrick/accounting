@@ -1,0 +1,62 @@
+{
+  "sourceCommit": "e67309a",
+  "noProviderCallsMade": true,
+  "historicalRequestAttempts": 42,
+  "allAttemptLatency": {
+    "median": 4607,
+    "p95": 8010,
+    "max": 8017
+  },
+  "nonTimeoutLatency": {
+    "median": 2644,
+    "p95": 7545,
+    "max": 7694
+  },
+  "observations": [
+    {
+      "caseId": "A-paraphrase-3",
+      "promptChars": 8018,
+      "systemChars": 259,
+      "promptBytes": 8018,
+      "systemBytes": 259,
+      "promptSha256": "289ce1f1f89266add01a2cbf13a0b7fba7ded77512bb379acff01ce043e6a454",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0
+    },
+    {
+      "caseId": "A-paraphrase-4",
+      "promptChars": 7994,
+      "systemChars": 259,
+      "promptBytes": 7994,
+      "systemBytes": 259,
+      "promptSha256": "68c0f77f2ed366efe556084835095c658021b80bcb4bc7d696a35c6478a96361",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0
+    },
+    {
+      "caseId": "D-original",
+      "promptChars": 7948,
+      "systemChars": 259,
+      "promptBytes": 7948,
+      "systemBytes": 259,
+      "promptSha256": "466cf394b697d9900271994b2c1dff50cbef053361829da19703d56f670edd6f",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0
+    },
+    {
+      "caseId": "D-paraphrase-1",
+      "promptChars": 7972,
+      "systemChars": 259,
+      "promptBytes": 7972,
+      "systemBytes": 259,
+      "promptSha256": "957958510a63d4e57a2a09333669e8accc6b5beafcf5cf9e8764b3b1b402e3e3",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0
+    }
+  ],
+  "historicalInvalidResponseLimitation": "Raw invalid bodies and provider finish reasons were not retained; malformed JSON, schema mismatch and truncation cannot be retrospectively distinguished."
+}

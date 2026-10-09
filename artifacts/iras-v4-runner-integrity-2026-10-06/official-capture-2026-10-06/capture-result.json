@@ -1,0 +1,57 @@
+{
+  "profile": "iras-v4-official-source-capture-2026-10-06",
+  "status": "OFFICIAL_CAPTURE_FAILED_SEMANTIC_ACCEPTANCE_HELD",
+  "executionMode": "BOUNDED_OFFICIAL_SOURCE_CAPTURE_ONLY",
+  "semanticAcceptance": "HOLD_NOT_RUN",
+  "providerTransportInvoked": false,
+  "startedAt": "2026-10-06T06:08:54.463Z",
+  "reviewedCommit": "a30dd0a5d8a5b405dcab5dad460bf86c8bcf1b96",
+  "paths": {
+    "marker": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-reserved.json",
+    "journal": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-partial.jsonl",
+    "payload": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-payload.json",
+    "evidenceLock": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/evidence-lock.json",
+    "result": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-result.json"
+  },
+  "preflight": {
+    "freezeValidationSha256": "27f7346b8837c947af7ae3b646ca33b10a1b0e99e08fb8422357d8f5279022bd",
+    "generalValidationSha256": "eba41d6c2148c56a603ccf1bd64e319f9056dedd560a7f926c7e64005fc7b9e2",
+    "checkpointPreservationSha256": "f59efde75437da2d91da295d9ef750e024113bb3053b4660dd4a9b3968c459bb",
+    "checkpointReverificationSha256": "a30628f5ae1c804db69776e2a270c8f0b934a3ebadde3eee9cbf511f193b4399",
+    "savedCheckpointRowsVerified": 589,
+    "savedCheckpointRowsMismatched": 0,
+    "reviewedCommit": "a30dd0a5d8a5b405dcab5dad460bf86c8bcf1b96",
+    "outputNamespaceWasAbsent": true
+  },
+  "failure": {
+    "phase": "OFFICIAL_SOURCE_CAPTURE",
+    "code": "CAPTURE_PAYLOAD_FILE_DOCUMENT_MISMATCH + actual - expected ... Skipped lines    {     activationConfigurationFileSha256: '5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30',     activationConfigurationSha256: 'e7edc14987859e0d1f51c07450b46f8f1fed46502ae08eebaa19921a1b9026ac',     cacheReuses: [],     captureCompletedAt: '2026-10-06T07:46:59.594Z', ...       preregistrationSha256: '483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3', -     productionRetriever: undefin"
+  },
+  "capture": {
+    "captureStatus": "COMPLETE",
+    "runnerDispatchCount": 15,
+    "reservedRequestCount": 15,
+    "recordedEntryCount": 15,
+    "terminalIntegrityFailure": null,
+    "evidenceLockCreated": false,
+    "payloadPath": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-payload.json",
+    "payloadSha256": "7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9",
+    "requestCount": 15,
+    "familyCounts": {
+      "corporate-residency": 2,
+      "foreign-income": 2,
+      "gst": 3,
+      "private-expense": 2,
+      "relief": 2,
+      "withholding-tax": 4
+    },
+    "httpStatusCounts": {
+      "HTTP_200": 15
+    }
+  },
+  "evidenceLock": null,
+  "headAtLaunch": "2419b98037d5608c60e8b4ccb259db80810b9919",
+  "captureStartedAt": "2026-10-06T06:17:07.081Z",
+  "captureCompletedAt": "2026-10-06T07:46:59.648Z",
+  "finishedAt": "2026-10-06T07:46:59.675Z"
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "Path": "D:\\Accounting\\docs\\evaluation\\multi-authority-workstreams\\corrected-live-semantic-evaluation.json",
+    "Hash": "1494AD19FDAA7F7FA2DAA9A17510791A82E669873B4EFFCEE2874931FAB92E00"
+  },
+  {
+    "Path": "D:\\Accounting\\docs\\evaluation\\multi-authority-workstreams\\corrected-live-semantic-evaluation.md",
+    "Hash": "0D11409C9E2BC7302078A82E51575A7AF947B37B23DBBA7EF414A75D07450930"
+  },
+  {
+    "Path": "D:\\Accounting\\docs\\evaluation\\multi-authority-workstreams\\heldout-live-semantic-evaluation.json",
+    "Hash": "370449CC53C1B3AB5D23E1E7D116D1336C11536F3E7C55404ACB218D2DDA0FB4"
+  },
+  {
+    "Path": "D:\\Accounting\\docs\\evaluation\\multi-authority-workstreams\\heldout-live-semantic-evaluation.md",
+    "Hash": "1943678D0367E85CEC8CCB6F3ECCFF7F8B673395D527BBBFC3E186642899CFF2"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\evaluation\\singapore\\multi-authority-workstreams-corrected.json",
+    "Hash": "C15AA10F9ACFF1E805C16D4EF703707DD46A5B1C36B0A2F23AB3886D88A390CB"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\evaluation\\singapore\\multi-authority-workstreams-heldout.json",
+    "Hash": "297D1999DD24899833819CC0B7EE803F0680FDCA9C0E35C6088A8E0E234E1C35"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\evaluation\\singapore\\semantic-operation-followup.json",
+    "Hash": "569C64EFEEE4A0685998EBEAA5BE79E98F89BF2DCC86346E3EA1533C80815BFE"
+  }
+]

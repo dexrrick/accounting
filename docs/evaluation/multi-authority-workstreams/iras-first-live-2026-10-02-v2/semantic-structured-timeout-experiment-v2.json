@@ -1,0 +1,774 @@
+{
+  "schemaVersion": 2,
+  "protocolVersion": "semantic-structured-timeout-v2",
+  "model": "gemini-3.5-flash-lite",
+  "caseIds": [
+    "corporate-residency-general-rule",
+    "target-mixed-ifrs-singapore-accounting",
+    "A-paraphrase-2"
+  ],
+  "timeoutArmsMs": [
+    8000,
+    12000,
+    15000
+  ],
+  "observationsPerCaseArm": 2,
+  "productionTimeoutAtMeasurementMs": 8000,
+  "transportOverride": "timeoutMs-only",
+  "recommendationPolicy": {
+    "defaultTimeoutMs": 8000,
+    "requireValidCompletionsAboveDefaultAcrossCases": 2,
+    "minimumDistinctCasesAboveDefault": 2,
+    "minimumTimeoutReductionVsDefault": 2,
+    "comparisonSampleCountPerArm": 6,
+    "comparableValidity": "candidate valid-interpretation count must be at least the 8000ms arm count",
+    "choose": "shortest arm meeting every criterion; otherwise retain 8000ms",
+    "pilotCaveat": "n=6 per arm is a limited pilot, not statistical proof"
+  },
+  "minimumStartGapMs": 15250,
+  "minimumObservedStartGapMs": 17276,
+  "pacingPolicy": "Wait the full minimum gap after each completed scheduled request; provider-request start gaps are measured monotonically.",
+  "scheduledCallCount": 18,
+  "requestCount": 18,
+  "observations": [
+    {
+      "caseId": "corporate-residency-general-rule",
+      "timeoutMs": 8000,
+      "replicate": 1,
+      "requestStartGapMs": null,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": false,
+      "promptChars": 8834,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 913,
+      "completionLatencyMs": 2245.07,
+      "responseChars": 913,
+      "firstRequest": true
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "timeoutMs": 12000,
+      "replicate": 1,
+      "requestStartGapMs": 17520,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": false,
+      "promptChars": 8834,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 939,
+      "completionLatencyMs": 2015.27,
+      "responseChars": 939
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "timeoutMs": 15000,
+      "replicate": 1,
+      "requestStartGapMs": 17276,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8834,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 892,
+      "completionLatencyMs": 2116.95,
+      "responseChars": 892
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "timeoutMs": 12000,
+      "replicate": 1,
+      "requestStartGapMs": 17392,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8873,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 1183,
+      "completionLatencyMs": 2181.95,
+      "responseChars": 1183
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "timeoutMs": 15000,
+      "replicate": 1,
+      "requestStartGapMs": 17458,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8873,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 1093,
+      "completionLatencyMs": 2229.28,
+      "responseChars": 1093
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "timeoutMs": 8000,
+      "replicate": 1,
+      "requestStartGapMs": 17498,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8873,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 964,
+      "completionLatencyMs": 2102.73,
+      "responseChars": 964
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "timeoutMs": 15000,
+      "replicate": 1,
+      "requestStartGapMs": 17373,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8908,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 2,
+      "outputBytes": 1482,
+      "completionLatencyMs": 2570.28,
+      "responseChars": 1482
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "timeoutMs": 8000,
+      "replicate": 1,
+      "requestStartGapMs": 17839,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8908,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 2,
+      "outputBytes": 1484,
+      "completionLatencyMs": 2274.79,
+      "responseChars": 1484
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "timeoutMs": 12000,
+      "replicate": 1,
+      "requestStartGapMs": 17545,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8908,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 2,
+      "outputBytes": 1512,
+      "completionLatencyMs": 2521.61,
+      "responseChars": 1512
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "timeoutMs": 12000,
+      "replicate": 2,
+      "requestStartGapMs": 17790,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8908,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 2,
+      "outputBytes": 1530,
+      "completionLatencyMs": 2514.17,
+      "responseChars": 1530
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "timeoutMs": 8000,
+      "replicate": 2,
+      "requestStartGapMs": 17783,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8908,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 2,
+      "outputBytes": 1476,
+      "completionLatencyMs": 2387.89,
+      "responseChars": 1476
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "timeoutMs": 15000,
+      "replicate": 2,
+      "requestStartGapMs": 17650,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8908,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 2,
+      "outputBytes": 1520,
+      "completionLatencyMs": 2623.72,
+      "responseChars": 1520
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "timeoutMs": 8000,
+      "replicate": 2,
+      "requestStartGapMs": 17894,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8873,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 1130,
+      "completionLatencyMs": 2473.4,
+      "responseChars": 1130
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "timeoutMs": 15000,
+      "replicate": 2,
+      "requestStartGapMs": 17737,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8873,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 1159,
+      "completionLatencyMs": 2124.66,
+      "responseChars": 1159
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "timeoutMs": 12000,
+      "replicate": 2,
+      "requestStartGapMs": 17397,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": true,
+      "promptChars": 8873,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 1186,
+      "completionLatencyMs": 2579.32,
+      "responseChars": 1186
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "timeoutMs": 15000,
+      "replicate": 2,
+      "requestStartGapMs": 17848,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": false,
+      "promptChars": 8834,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 927,
+      "completionLatencyMs": 2091.04,
+      "responseChars": 927
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "timeoutMs": 12000,
+      "replicate": 2,
+      "requestStartGapMs": 17363,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": false,
+      "promptChars": 8834,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 895,
+      "completionLatencyMs": 2087.2,
+      "responseChars": 895
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "timeoutMs": 8000,
+      "replicate": 2,
+      "requestStartGapMs": 17350,
+      "outcome": "RESPONSE_RECEIVED",
+      "responseReceived": true,
+      "validInterpretation": true,
+      "semanticCorrect": false,
+      "promptChars": 8834,
+      "systemChars": 259,
+      "schemaChars": 3126,
+      "issueCount": 1,
+      "outputBytes": 925,
+      "completionLatencyMs": 1912.02,
+      "responseChars": 925
+    }
+  ],
+  "armSummaries": {
+    "8000": {
+      "scheduledCount": 6,
+      "responseReceivedCount": 6,
+      "validInterpretationCount": 6,
+      "semanticCorrectCount": 4,
+      "timeoutCount": 0,
+      "providerFailureCount": 0,
+      "completionLatencyMs": {
+        "count": 6,
+        "min": 1912.02,
+        "median": 2245.07,
+        "p95": 2473.4,
+        "max": 2473.4
+      },
+      "timeoutCensoredDurationMs": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      },
+      "providerFailureDurationMs": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      },
+      "descriptiveInputsAmongReceivedResponses": {
+        "promptChars": {
+          "count": 6,
+          "min": 8834,
+          "median": 8873,
+          "p95": 8908,
+          "max": 8908
+        },
+        "issueCountAmongValidInterpretations": {
+          "count": 6,
+          "min": 1,
+          "median": 1,
+          "p95": 2,
+          "max": 2
+        },
+        "outputBytesForNonemptyResponses": {
+          "count": 6,
+          "min": 913,
+          "median": 964,
+          "p95": 1484,
+          "max": 1484
+        },
+        "receivedResponseDescriptors": [
+          {
+            "caseId": "corporate-residency-general-rule",
+            "promptChars": 8834,
+            "issueCount": 1,
+            "outputBytes": 913,
+            "completionLatencyMs": 2245.07
+          },
+          {
+            "caseId": "target-mixed-ifrs-singapore-accounting",
+            "promptChars": 8873,
+            "issueCount": 1,
+            "outputBytes": 964,
+            "completionLatencyMs": 2102.73
+          },
+          {
+            "caseId": "A-paraphrase-2",
+            "promptChars": 8908,
+            "issueCount": 2,
+            "outputBytes": 1484,
+            "completionLatencyMs": 2274.79
+          },
+          {
+            "caseId": "A-paraphrase-2",
+            "promptChars": 8908,
+            "issueCount": 2,
+            "outputBytes": 1476,
+            "completionLatencyMs": 2387.89
+          },
+          {
+            "caseId": "target-mixed-ifrs-singapore-accounting",
+            "promptChars": 8873,
+            "issueCount": 1,
+            "outputBytes": 1130,
+            "completionLatencyMs": 2473.4
+          },
+          {
+            "caseId": "corporate-residency-general-rule",
+            "promptChars": 8834,
+            "issueCount": 1,
+            "outputBytes": 925,
+            "completionLatencyMs": 1912.02
+          }
+        ]
+      }
+    },
+    "12000": {
+      "scheduledCount": 6,
+      "responseReceivedCount": 6,
+      "validInterpretationCount": 6,
+      "semanticCorrectCount": 4,
+      "timeoutCount": 0,
+      "providerFailureCount": 0,
+      "completionLatencyMs": {
+        "count": 6,
+        "min": 2015.27,
+        "median": 2181.95,
+        "p95": 2579.32,
+        "max": 2579.32
+      },
+      "timeoutCensoredDurationMs": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      },
+      "providerFailureDurationMs": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      },
+      "descriptiveInputsAmongReceivedResponses": {
+        "promptChars": {
+          "count": 6,
+          "min": 8834,
+          "median": 8873,
+          "p95": 8908,
+          "max": 8908
+        },
+        "issueCountAmongValidInterpretations": {
+          "count": 6,
+          "min": 1,
+          "median": 1,
+          "p95": 2,
+          "max": 2
+        },
+        "outputBytesForNonemptyResponses": {
+          "count": 6,
+          "min": 895,
+          "median": 1183,
+          "p95": 1530,
+          "max": 1530
+        },
+        "receivedResponseDescriptors": [
+          {
+            "caseId": "corporate-residency-general-rule",
+            "promptChars": 8834,
+            "issueCount": 1,
+            "outputBytes": 939,
+            "completionLatencyMs": 2015.27
+          },
+          {
+            "caseId": "target-mixed-ifrs-singapore-accounting",
+            "promptChars": 8873,
+            "issueCount": 1,
+            "outputBytes": 1183,
+            "completionLatencyMs": 2181.95
+          },
+          {
+            "caseId": "A-paraphrase-2",
+            "promptChars": 8908,
+            "issueCount": 2,
+            "outputBytes": 1512,
+            "completionLatencyMs": 2521.61
+          },
+          {
+            "caseId": "A-paraphrase-2",
+            "promptChars": 8908,
+            "issueCount": 2,
+            "outputBytes": 1530,
+            "completionLatencyMs": 2514.17
+          },
+          {
+            "caseId": "target-mixed-ifrs-singapore-accounting",
+            "promptChars": 8873,
+            "issueCount": 1,
+            "outputBytes": 1186,
+            "completionLatencyMs": 2579.32
+          },
+          {
+            "caseId": "corporate-residency-general-rule",
+            "promptChars": 8834,
+            "issueCount": 1,
+            "outputBytes": 895,
+            "completionLatencyMs": 2087.2
+          }
+        ]
+      }
+    },
+    "15000": {
+      "scheduledCount": 6,
+      "responseReceivedCount": 6,
+      "validInterpretationCount": 6,
+      "semanticCorrectCount": 5,
+      "timeoutCount": 0,
+      "providerFailureCount": 0,
+      "completionLatencyMs": {
+        "count": 6,
+        "min": 2091.04,
+        "median": 2124.66,
+        "p95": 2623.72,
+        "max": 2623.72
+      },
+      "timeoutCensoredDurationMs": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      },
+      "providerFailureDurationMs": {
+        "count": 0,
+        "min": null,
+        "median": null,
+        "p95": null,
+        "max": null
+      },
+      "descriptiveInputsAmongReceivedResponses": {
+        "promptChars": {
+          "count": 6,
+          "min": 8834,
+          "median": 8873,
+          "p95": 8908,
+          "max": 8908
+        },
+        "issueCountAmongValidInterpretations": {
+          "count": 6,
+          "min": 1,
+          "median": 1,
+          "p95": 2,
+          "max": 2
+        },
+        "outputBytesForNonemptyResponses": {
+          "count": 6,
+          "min": 892,
+          "median": 1093,
+          "p95": 1520,
+          "max": 1520
+        },
+        "receivedResponseDescriptors": [
+          {
+            "caseId": "corporate-residency-general-rule",
+            "promptChars": 8834,
+            "issueCount": 1,
+            "outputBytes": 892,
+            "completionLatencyMs": 2116.95
+          },
+          {
+            "caseId": "target-mixed-ifrs-singapore-accounting",
+            "promptChars": 8873,
+            "issueCount": 1,
+            "outputBytes": 1093,
+            "completionLatencyMs": 2229.28
+          },
+          {
+            "caseId": "A-paraphrase-2",
+            "promptChars": 8908,
+            "issueCount": 2,
+            "outputBytes": 1482,
+            "completionLatencyMs": 2570.28
+          },
+          {
+            "caseId": "A-paraphrase-2",
+            "promptChars": 8908,
+            "issueCount": 2,
+            "outputBytes": 1520,
+            "completionLatencyMs": 2623.72
+          },
+          {
+            "caseId": "target-mixed-ifrs-singapore-accounting",
+            "promptChars": 8873,
+            "issueCount": 1,
+            "outputBytes": 1159,
+            "completionLatencyMs": 2124.66
+          },
+          {
+            "caseId": "corporate-residency-general-rule",
+            "promptChars": 8834,
+            "issueCount": 1,
+            "outputBytes": 927,
+            "completionLatencyMs": 2091.04
+          }
+        ]
+      }
+    }
+  },
+  "promptSchemaFingerprints": {
+    "corporate-residency-general-rule": {
+      "promptSha256": "374f5c4258820ac75cddcf4c0742ff009efa29a794a462af2973560d748a641d",
+      "promptChars": 8834,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "schemaBytes": 3126,
+      "schemaChars": 3126
+    },
+    "target-mixed-ifrs-singapore-accounting": {
+      "promptSha256": "ff46b6d0d09fc2931694f33dcf06ff5b7c91a21ea2ecb6f2d8e8825b361c097f",
+      "promptChars": 8873,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "schemaBytes": 3126,
+      "schemaChars": 3126
+    },
+    "A-paraphrase-2": {
+      "promptSha256": "96163fb78f88c9138808f6aad207eccdc9313f4bde85e9adf6a5f258b6fe0062",
+      "promptChars": 8908,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "schemaBytes": 3126,
+      "schemaChars": 3126
+    }
+  },
+  "schemaComplexity": {
+    "sha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+    "chars": 3126,
+    "uniqueSchemas": 1,
+    "relationshipToLatency": "Not identifiable in this experiment because schema complexity is held constant."
+  },
+  "sourceFingerprints": {
+    "semanticInterpretation": "ad9400db0f4debf5c395cbc689849a49168543b0ffcd834e51d79edc51a6f7bd",
+    "transport": "80a7000cda3df7de0659613a9097aef32f32aa0618624c3c5770b90778e5e51c",
+    "classifier": "f58bf13f0a553b9681ae12c771bcd27cbf70611b7ed82aa401af40e34ed03883",
+    "authorityWorkstreams": "28d880c3c67e3a5d36cc9d88b9afd05b0a2d0a5ebc28e793f284c9f9910b7f1e",
+    "responseDiagnostics": "ddf799863e4c296c09e536865334d633522918a85fbf351846678cb879ab2448",
+    "issueScoring": "e0d88769b0248f77c358fbb4a2363ab835d0ba8defc71a37988d4f2deafeb63e",
+    "queryTopicResolver": "a72c3bb7215d44cfad54464b63b86d4c39007e2b1f4b1a711562fe8f6342ca9e",
+    "coverageRegistry": "6533dcc5d49ede4465b9347edc9c7a873470107aa26ba8ad0c339ecfd2cf5bfd",
+    "releaseContract": "d33b3473d31ac5953f029890e0b969a3b5dde6c13b5bb10144d50c042083906f",
+    "profileConfig": "0128d2643a3f5278c73070ed33a5b6053ccb68bf3edbb0396cc407b75545f4bf",
+    "inheritedV1ProfileConfig": "c8e5341ef4fc0962b82f6545622d8a9e790d73b5d646de4af3381f37ed2f2ed4",
+    "historicalArtifactManifest": "5adcd54a3118c1fab8eca88cae896035b158b9f54dddf1f3e133b33cfc08c18f",
+    "semanticContractEvaluationRunner": "08da512001dcd5ebbc32e51b969174d42925bc33e31060dff8e3504d8fc173a9",
+    "semanticIntentCliRunner": "99de5047992f80ce53d7e645432f72c512384b6e305cf841d42a5e74127cd507",
+    "timeoutExperimentRunner": "2220ddc9635f6047020c8ad748271b785634d6b1e787b9e9058d39e0feb89cad"
+  },
+  "fixtureFingerprints": {
+    "semanticContractFollowup": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1",
+    "semanticOperationFollowup": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe",
+    "semanticReliabilityPostGuidance": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6",
+    "comparableBaseline": "a44bfc81373f3baf6505efaf80825c8bbbd26e33c25006d83969e4b70db7c4b1",
+    "authorityReliefTargeted": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb",
+    "semanticIntentBoundaries": "139d418fb06820d34270c1499fbf825a3f19699121620f1a1df1f1198ba9f71a",
+    "irasFirstV1Profile": "c8e5341ef4fc0962b82f6545622d8a9e790d73b5d646de4af3381f37ed2f2ed4",
+    "irasFirstV2Profile": "0128d2643a3f5278c73070ed33a5b6053ccb68bf3edbb0396cc407b75545f4bf"
+  },
+  "semanticInterpretationHashWithoutTimeout": "27afb67ca8dca0fddc0124c572d095f4095de3026bb584f52e58cfb7907d1105",
+  "sourceHashesConsistent": true,
+  "fixtureHashesConsistent": true,
+  "protectedHistoricalArtifacts": {
+    "baselineCommit": "4bd3abc9c22619401f22aa8abba73af61b5d6217",
+    "artifactCount": 118,
+    "verifiedBefore": true,
+    "verifiedAfter": true
+  },
+  "protocolGuardsPassed": true,
+  "timeoutRecommendation": {
+    "selectedTimeoutMs": 8000,
+    "decision": "RETAIN_8000",
+    "protocolGuardsPassed": true,
+    "armCounts": [
+      {
+        "timeoutMs": 8000,
+        "scheduledCount": 6,
+        "responseReceivedCount": 6,
+        "validInterpretationCount": 6,
+        "semanticCorrectCount": 4,
+        "timeoutCount": 0,
+        "providerFailureCount": 0
+      },
+      {
+        "timeoutMs": 12000,
+        "scheduledCount": 6,
+        "responseReceivedCount": 6,
+        "validInterpretationCount": 6,
+        "semanticCorrectCount": 4,
+        "timeoutCount": 0,
+        "providerFailureCount": 0
+      },
+      {
+        "timeoutMs": 15000,
+        "scheduledCount": 6,
+        "responseReceivedCount": 6,
+        "validInterpretationCount": 6,
+        "semanticCorrectCount": 5,
+        "timeoutCount": 0,
+        "providerFailureCount": 0
+      }
+    ],
+    "criteriaByArm": [
+      {
+        "timeoutMs": 12000,
+        "scheduledCount": 6,
+        "responseReceivedCount": 6,
+        "validInterpretationCount": 6,
+        "semanticCorrectCount": 4,
+        "timeoutCount": 0,
+        "providerFailureCount": 0,
+        "validCompletionsAboveDefault": 0,
+        "distinctCasesAboveDefault": 0,
+        "timeoutReductionVsDefault": 0,
+        "validityComparable": true,
+        "enoughLongValidCompletions": false,
+        "enoughTimeoutReduction": false,
+        "meetsPolicy": false
+      },
+      {
+        "timeoutMs": 15000,
+        "scheduledCount": 6,
+        "responseReceivedCount": 6,
+        "validInterpretationCount": 6,
+        "semanticCorrectCount": 5,
+        "timeoutCount": 0,
+        "providerFailureCount": 0,
+        "validCompletionsAboveDefault": 0,
+        "distinctCasesAboveDefault": 0,
+        "timeoutReductionVsDefault": 0,
+        "validityComparable": true,
+        "enoughLongValidCompletions": false,
+        "enoughTimeoutReduction": false,
+        "meetsPolicy": false
+      }
+    ]
+  },
+  "startedAt": "2026-10-02T07:57:57.033Z",
+  "completedAt": "2026-10-02T08:02:57.688Z"
+}

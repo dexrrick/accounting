@@ -1,0 +1,34 @@
+{
+  "profile": "GEMINI_LIVE_FAILURE_ANALYSIS",
+  "caseCount": 9,
+  "passed": 9,
+  "notAssessed": 0,
+  "dispatchAttempts": 9,
+  "http200": 9,
+  "timeouts": 0,
+  "http503": 0,
+  "scheduledRetries": 0,
+  "blockedNetworkAttempts": 0,
+  "timingPolicy": {
+    "name": "EXTENDED",
+    "maxAttempts": 2,
+    "perAttemptTimeoutMs": 20000,
+    "totalBudgetMs": 45000
+  },
+  "successfulElapsedMs": [
+    2337,
+    2282,
+    2533,
+    2313,
+    2323,
+    2159,
+    2353,
+    2310,
+    2262
+  ],
+  "extendedAllowanceExercised": false,
+  "deadlineCausationEstablished": false,
+  "sourceReferenceDate": "2026-10-08",
+  "acceptanceProven": false,
+  "conclusion": "All9cases passed. All responses completed below8s. Recovery does not establish longer-deadline causation. No fresh official sources assessed."
+}

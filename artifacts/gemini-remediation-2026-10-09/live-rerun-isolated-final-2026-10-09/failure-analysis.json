@@ -1,0 +1,14 @@
+{
+  "profile":"ISOLATED_TRANSPORT_FAILURE_ANALYSIS",
+  "providerDispatchAttempts":9,
+  "http200FirstAttempts":9,
+  "passed":8,
+  "failed":1,
+  "retries":0,
+  "blockedNetworkAttempts":0,
+  "newProviderCallsDuringAnalysis":0,
+  "newSourceRequestsDuringAnalysis":0,
+  "sourceReferenceDate":"2026-10-08",
+  "acceptanceProven":false,
+  "failures":[{"caseId":"foreign-dividend-receipt-treatment","failedStages":["OVERALL_STATUS"],"issueEvidence":"VERIFIED","requestedConceptCoverage":true,"gap":"UNROUTED_MATERIAL_CONCEPT","descriptor":{"concept":"subsidiary","role":"RELATED"},"finding":"Original question identifies subsidiary as background payer for parent-company foreign-dividend receipt; no separate subsidiary outcome requested."}]
+}

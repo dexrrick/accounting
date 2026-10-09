@@ -1,0 +1,64 @@
+{
+  "profile": "IRAS_V4_OFFLINE_PRIVATE_EXPENSE_PARAGRAPH_CHARACTERIZATION",
+  "acceptanceResult": false,
+  "liveCallsMade": 0,
+  "capturesMade": 0,
+  "caseId": "private-expense-treatment",
+  "capturedBodySha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+  "productionFetchValidation": {
+    "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+    "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+    "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+    "status": "SUCCESS",
+    "pageTitle": "IRAS | Business Expenses",
+    "contentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+    "rawContentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+    "rawContentBytes": 280190,
+    "contentHashBoundToObservedBytes": true,
+    "topicValidationPresent": true,
+    "topicMatched": true,
+    "titleMatched": true,
+    "contentMatched": true
+  },
+  "validator": {
+    "isValid": true,
+    "pageTitle": "IRAS | Business Expenses",
+    "extractedTextBytes": 11492
+  },
+  "issueScope": {
+    "subject": "corporate income-tax treatment of director's private holiday expense",
+    "population": "COMPANY",
+    "domain": "IRAS_INCOME_TAX",
+    "governingAuthorities": [
+      "IRAS"
+    ],
+    "mappedTopicIds": [
+      "iras-cit-deductibility",
+      "iras-cit-disallowed-expenses"
+    ],
+    "requestedConcepts": [
+      {
+        "id": "semantic_income_tax_deductibility",
+        "label": "income-tax deductibility",
+        "topicIds": [
+          "iras-cit-deductibility"
+        ]
+      },
+      {
+        "id": "semantic_director_s_private_expense",
+        "label": "director's private expense",
+        "topicIds": []
+      }
+    ]
+  },
+  "directParagraph": {
+    "sha256": "f56c10a13d5b1320a56256c94de49e9044a734b1cee0e9a34e55a756c061b098",
+    "bytes": 340,
+    "supportedByExistingRuleGate": true
+  },
+  "existingSelector": {
+    "selectedBytes": 5014,
+    "preservedCompleteParagraph": true,
+    "supportedByExistingRuleGate": true
+  }
+}

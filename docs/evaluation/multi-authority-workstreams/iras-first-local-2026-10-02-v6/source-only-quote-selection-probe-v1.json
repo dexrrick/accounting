@@ -1,0 +1,407 @@
+{
+  "schemaVersion": 1,
+  "diagnosticOnly": true,
+  "interpretation": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY; hashes_and_counts_only; no_rule_inference",
+  "referenceDate": "2026-10-02",
+  "savedSourceFingerprints": {
+    "foreign": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+    "gst": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+  },
+  "selectorMechanicsInspected": {
+    "lexicalScore": "2 * distinctTopicTokenMatches + 3 * distinctQueryTokenMatches",
+    "candidatesKeptPerRecord": 5,
+    "acceptedClaimsCappedPerSource": 3,
+    "totalQuoteBoundForOneTopic": 5,
+    "scoreTraceIsDiagnosticOnly": true
+  },
+  "caseDiagnoses": [
+    {
+      "caseId": "foreign-dividend-treatment",
+      "sourceOnly": {
+        "admittedHelperSupportedRecordCount": 1,
+        "rendererAcceptedCompleteSupportedRuleCount": 1,
+        "centralFinalHelperSupportedClaimCount": 1
+      },
+      "syntheticDistractors": {
+        "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+        "paragraphCount": 6,
+        "higherScoringSyntheticParagraphCount": 6,
+        "completeRuleProjectedRank": 7,
+        "completeRuleWithinPerRecordTopFive": false,
+        "acceptedQuoteCount": 3,
+        "acceptedQuotesMatchingSyntheticParagraphs": 3,
+        "rendererAcceptedHelperSupportedQuoteCount": 0,
+        "centralFinalHelperSupportedClaimCount": 0
+      },
+      "incompleteControl": {
+        "helperSupported": false,
+        "rendererAcceptedHelperSupportedQuoteCount": 0,
+        "centralFinalHelperSupportedClaimCount": 0
+      },
+      "interpretation": "In this synthetic composition, the complete rule falls outside the per-record top five before the separate three-per-source cap is applied."
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "sourceOnly": {
+        "admittedHelperSupportedRecordCount": 1,
+        "rendererAcceptedCompleteSupportedRuleCount": 1,
+        "centralFinalHelperSupportedClaimCount": 1
+      },
+      "syntheticDistractors": {
+        "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+        "paragraphCount": 6,
+        "higherScoringSyntheticParagraphCount": 6,
+        "completeRuleProjectedRank": 7,
+        "completeRuleWithinPerRecordTopFive": false,
+        "acceptedQuoteCount": 3,
+        "acceptedQuotesMatchingSyntheticParagraphs": 3,
+        "rendererAcceptedHelperSupportedQuoteCount": 0,
+        "centralFinalHelperSupportedClaimCount": 0
+      },
+      "incompleteControl": {
+        "helperSupported": false,
+        "rendererAcceptedHelperSupportedQuoteCount": 0,
+        "centralFinalHelperSupportedClaimCount": 0
+      },
+      "interpretation": "In this synthetic composition, the complete rule falls outside the per-record top five before the separate three-per-source cap is applied."
+    }
+  ],
+  "transportAndModel": {
+    "ambientFetchCalls": 0,
+    "injectedMappedGetCalls": 18,
+    "closedKnownMappedGetCalls": 6,
+    "closedKnownMappedSourceMapIds": [
+      "IRAS_GST_INVOICING_SOURCE_MAP"
+    ],
+    "unexpectedMappedGetCalls": 0,
+    "discoveryCalls": 0,
+    "searchCalls": 0,
+    "modelCalls": 0,
+    "modelResponse": "EMPTY_LOCAL_OBJECT"
+  },
+  "results": [
+    {
+      "caseId": "foreign-dividend-treatment",
+      "topicId": "iras-foreign-sourced-income",
+      "sourceMapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "variant": "source_only",
+      "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+      "sourceDocumentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+      "savedRuleSha256": "aff821190beabdd1f6b14f03127b8410200d1f401ad49e70b9bc9526f5e56645",
+      "savedRuleDirectHelperSupport": true,
+      "incompleteControlHelperSupport": false,
+      "gstStandaloneLeadingBulletOmitted": false,
+      "syntheticDistractorCount": 0,
+      "syntheticDistractorSha256": [],
+      "mappedFetchCount": 2,
+      "eligibleMappedRecordCount": 1,
+      "eligibleMappedRecordSourceTextSha256": [
+        "081a22788293d1d54b552f5b25bd0c8d917295071ceed00ce0ad59b6f4109ff6"
+      ],
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteRuleCount": 1,
+      "rendererAcceptedMappedQuoteCount": 1,
+      "rendererRejectedClaimCount": 0,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 1,
+      "rendererAcceptedMappedQuotesPreservingCompleteRuleCount": 1,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "aff821190beabdd1f6b14f03127b8410200d1f401ad49e70b9bc9526f5e56645",
+          "supportedRequestedConceptCount": 1,
+          "preservesCompleteSavedRule": true,
+          "matchesSyntheticDistractor": false
+        }
+      ],
+      "rendererAcceptedWithinThreePerSource": true,
+      "centralFinalVerifiedClaimCount": 1,
+      "centralFinalHelperSupportedClaimCount": 1,
+      "finalEvidenceStatus": "VERIFIED",
+      "finalApplicationStatus": "UNRESOLVED",
+      "finalGapCodes": []
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "topicId": "iras-foreign-sourced-income",
+      "sourceMapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "variant": "distractors_before_and_after",
+      "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+      "sourceDocumentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+      "savedRuleSha256": "aff821190beabdd1f6b14f03127b8410200d1f401ad49e70b9bc9526f5e56645",
+      "savedRuleDirectHelperSupport": true,
+      "incompleteControlHelperSupport": false,
+      "gstStandaloneLeadingBulletOmitted": false,
+      "syntheticDistractorCount": 6,
+      "syntheticDistractorSha256": [
+        "f234333bf4c9dc761650db31ac312a3167950985598cb4f3c2569e544abd6547",
+        "ecd8d5b4de7e51bd9194c9eb1041100931ee442fa76220f0dce55d6c0baa1d56",
+        "08fd1a2d00a4dcd097b6944577dc31cb3950d2368eb731dfba26b7749c630ad8",
+        "36e3ddf3eae242e07115380b031df4203acbbfdb0cbf6dca35adc4ad36a6a321",
+        "1d7b7e9f63a2fb2720e071b6562373d172ae216d2e4d764885efcb0a10cac435",
+        "356437913ae86edae041757316b6c174ea8b8e1bba0a803193c3c35c6bd641e2"
+      ],
+      "syntheticDistractorScoreProjection": {
+        "rankedCandidateCount": 7,
+        "savedRuleLexicalScore": 13,
+        "savedRuleRank": 7,
+        "higherScoringSyntheticCandidateCount": 6,
+        "savedRuleInsidePerRecordTopFive": false,
+        "allSyntheticCandidatesStructurallyEligible": true,
+        "allProjectedCandidatesStructurallyEligible": true
+      },
+      "mappedFetchCount": 2,
+      "eligibleMappedRecordCount": 1,
+      "eligibleMappedRecordSourceTextSha256": [
+        "b54836ac85c5fa5fec63f655fca79db744b438a10d2023daac6c167c6e0980fa"
+      ],
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteRuleCount": 1,
+      "rendererAcceptedMappedQuoteCount": 3,
+      "rendererRejectedClaimCount": 0,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedQuotesPreservingCompleteRuleCount": 0,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "f234333bf4c9dc761650db31ac312a3167950985598cb4f3c2569e544abd6547",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": true
+        },
+        {
+          "quoteSha256": "ecd8d5b4de7e51bd9194c9eb1041100931ee442fa76220f0dce55d6c0baa1d56",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": true
+        },
+        {
+          "quoteSha256": "08fd1a2d00a4dcd097b6944577dc31cb3950d2368eb731dfba26b7749c630ad8",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": true
+        }
+      ],
+      "rendererAcceptedWithinThreePerSource": true,
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "finalEvidenceStatus": "INSUFFICIENT",
+      "finalApplicationStatus": "UNRESOLVED",
+      "finalGapCodes": [
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ]
+    },
+    {
+      "caseId": "foreign-dividend-treatment",
+      "topicId": "iras-foreign-sourced-income",
+      "sourceMapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "variant": "incomplete_only",
+      "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+      "sourceDocumentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+      "savedRuleSha256": "aff821190beabdd1f6b14f03127b8410200d1f401ad49e70b9bc9526f5e56645",
+      "savedRuleDirectHelperSupport": true,
+      "incompleteControlHelperSupport": false,
+      "gstStandaloneLeadingBulletOmitted": false,
+      "syntheticDistractorCount": 0,
+      "syntheticDistractorSha256": [],
+      "mappedFetchCount": 2,
+      "eligibleMappedRecordCount": 1,
+      "eligibleMappedRecordSourceTextSha256": [
+        "75e26f2a9fa83430a1e494c2684bdf1d69a4420aeb4497e2fa394caf9041634f"
+      ],
+      "eligibleMappedRecordHelperSupportedCount": 0,
+      "eligibleMappedRecordPreservingCompleteRuleCount": 0,
+      "rendererAcceptedMappedQuoteCount": 1,
+      "rendererRejectedClaimCount": 0,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedQuotesPreservingCompleteRuleCount": 0,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "2bc3f7c4c615e4d3846e0fb2540e93a1f62bf3d79c8d097d62e1073d6bbe18ff",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": false
+        }
+      ],
+      "rendererAcceptedWithinThreePerSource": true,
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "finalEvidenceStatus": "INSUFFICIENT",
+      "finalApplicationStatus": "UNRESOLVED",
+      "finalGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "topicId": "iras-gst-input-tax",
+      "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+      "variant": "source_only",
+      "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+      "sourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedRuleSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedRuleDirectHelperSupport": true,
+      "incompleteControlHelperSupport": false,
+      "gstStandaloneLeadingBulletOmitted": true,
+      "syntheticDistractorCount": 0,
+      "syntheticDistractorSha256": [],
+      "mappedFetchCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordSourceTextSha256": [
+        "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+        "722214493f99d55f71f41bb115dc632c175385a7da0b9a99049330e5acb482d4"
+      ],
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteRuleCount": 1,
+      "rendererAcceptedMappedQuoteCount": 2,
+      "rendererRejectedClaimCount": 0,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 1,
+      "rendererAcceptedMappedQuotesPreservingCompleteRuleCount": 1,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": false
+        },
+        {
+          "quoteSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+          "supportedRequestedConceptCount": 1,
+          "preservesCompleteSavedRule": true,
+          "matchesSyntheticDistractor": false
+        }
+      ],
+      "rendererAcceptedWithinThreePerSource": true,
+      "centralFinalVerifiedClaimCount": 1,
+      "centralFinalHelperSupportedClaimCount": 1,
+      "finalEvidenceStatus": "VERIFIED",
+      "finalApplicationStatus": "NOT_REQUIRED",
+      "finalGapCodes": []
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "topicId": "iras-gst-input-tax",
+      "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+      "variant": "distractors_before_and_after",
+      "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+      "sourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedRuleSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedRuleDirectHelperSupport": true,
+      "incompleteControlHelperSupport": false,
+      "gstStandaloneLeadingBulletOmitted": true,
+      "syntheticDistractorCount": 6,
+      "syntheticDistractorSha256": [
+        "885deb55889e95c65817c082c5e08a6be6ac31db060dbc0cd045e3674fff54e9",
+        "9ca61ebcb215c7111146050c16463cf21bd73c10dc6570f8ea36b9cea5922a85",
+        "9a109e5be7fa22fc4fe6ba6ee1d7c0bc6d95d0f7c628205ed3458caba3e41993",
+        "e414962d4993d7979740cdb2e8c1ea29757b97759cc5c4345e0d4c559dbcfa8c",
+        "f42b4c137a5919ca67d6dcfad9f31e269e7c44e1eea70ac5559f75651167cb8f",
+        "39304df4662b40d0d374cfd74d8dec05506a903c94fb78f57b84a052dbf27e39"
+      ],
+      "syntheticDistractorScoreProjection": {
+        "rankedCandidateCount": 7,
+        "savedRuleLexicalScore": 21,
+        "savedRuleRank": 7,
+        "higherScoringSyntheticCandidateCount": 6,
+        "savedRuleInsidePerRecordTopFive": false,
+        "allSyntheticCandidatesStructurallyEligible": true,
+        "allProjectedCandidatesStructurallyEligible": true
+      },
+      "mappedFetchCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordSourceTextSha256": [
+        "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+        "ac8bfdecd14fd21f0d8edfc8b6777afa0b46dc37948ac505231f62d2c3c03a25"
+      ],
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteRuleCount": 1,
+      "rendererAcceptedMappedQuoteCount": 3,
+      "rendererRejectedClaimCount": 0,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedQuotesPreservingCompleteRuleCount": 0,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "885deb55889e95c65817c082c5e08a6be6ac31db060dbc0cd045e3674fff54e9",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": true
+        },
+        {
+          "quoteSha256": "9ca61ebcb215c7111146050c16463cf21bd73c10dc6570f8ea36b9cea5922a85",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": true
+        },
+        {
+          "quoteSha256": "9a109e5be7fa22fc4fe6ba6ee1d7c0bc6d95d0f7c628205ed3458caba3e41993",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": true
+        }
+      ],
+      "rendererAcceptedWithinThreePerSource": true,
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "finalEvidenceStatus": "INSUFFICIENT",
+      "finalApplicationStatus": "NOT_REQUIRED",
+      "finalGapCodes": [
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ]
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "topicId": "iras-gst-input-tax",
+      "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+      "variant": "incomplete_only",
+      "composition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE_OR_BLOCK_ADJACENCY",
+      "sourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedRuleSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedRuleDirectHelperSupport": true,
+      "incompleteControlHelperSupport": false,
+      "gstStandaloneLeadingBulletOmitted": true,
+      "syntheticDistractorCount": 0,
+      "syntheticDistractorSha256": [],
+      "mappedFetchCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordSourceTextSha256": [
+        "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+        "c6b8d0dd0f13ac89ce575697c8cee21a4954c85100fd5d75cbadc1af083739fd"
+      ],
+      "eligibleMappedRecordHelperSupportedCount": 0,
+      "eligibleMappedRecordPreservingCompleteRuleCount": 0,
+      "rendererAcceptedMappedQuoteCount": 2,
+      "rendererRejectedClaimCount": 0,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedQuotesPreservingCompleteRuleCount": 0,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": false
+        },
+        {
+          "quoteSha256": "1f6ac091113be90172dc3e8657fc54b9aa639f7270f29e51b9815fdb9d01b9a2",
+          "supportedRequestedConceptCount": 0,
+          "preservesCompleteSavedRule": false,
+          "matchesSyntheticDistractor": false
+        }
+      ],
+      "rendererAcceptedWithinThreePerSource": true,
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "finalEvidenceStatus": "INSUFFICIENT",
+      "finalApplicationStatus": "NOT_REQUIRED",
+      "finalGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ]
+    }
+  ]
+}

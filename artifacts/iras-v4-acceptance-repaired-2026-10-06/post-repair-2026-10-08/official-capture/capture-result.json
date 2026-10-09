@@ -1,0 +1,144 @@
+{
+  "profile": "iras-v4-fresh-capture-launch-result",
+  "status": "CAPTURED_AND_LOCKED",
+  "executionMode": "BOUNDED_OFFICIAL_IRAS_CAPTURE_ONLY",
+  "reviewedCommit": "66bdb77777f945f19d17cfe1559f4d6f9f9acfae",
+  "headAtLaunch": "506bd395d050f57c5e8c6202492fb8acd38ce8c5",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "launcherSha256": "bdb88348c5acf9d04c5ee42636fe20e4d03ea34a92fd1429b65afe2248a3e6a9",
+  "authorizationSha256": "279bea689627e3b6e72bf7f7c7282cca67cb18a73e244d6dc98af010b7e5b486",
+  "resourceProjectionSha256": "934a8ac5f93731d959bfc4256f7a907753268770b731c5810b42b0f91cd6de88",
+  "resourceReviewSha256": "d927fa1be568a6634a0319f5ac769ccd6feb2a2f863de50c61c114e8db5e8dee",
+  "freezeValidationSha256": "e27209aef958ddc8512edb09fe108544da26c9cd76c0aa8c5f52b88ce8666442",
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "requestCount": 15,
+  "planRows": [
+    {
+      "family": "corporate-residency",
+      "purpose": "DISCOVERY",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 412426,
+      "contentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61"
+    },
+    {
+      "family": "corporate-residency",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 261347,
+      "contentSha256": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36"
+    },
+    {
+      "family": "foreign-income",
+      "purpose": "DISCOVERY",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 412426,
+      "contentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61"
+    },
+    {
+      "family": "foreign-income",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 275481,
+      "contentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+    },
+    {
+      "family": "gst",
+      "purpose": "DISCOVERY",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 412426,
+      "contentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61"
+    },
+    {
+      "family": "gst",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 300279,
+      "contentSha256": "28b1dd80ca783b88da57d445543924b3c352f59f815400cfb737a886e5520a39"
+    },
+    {
+      "family": "gst",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 327887,
+      "contentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+    },
+    {
+      "family": "private-expense",
+      "purpose": "DISCOVERY",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 412426,
+      "contentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61"
+    },
+    {
+      "family": "private-expense",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 280190,
+      "contentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+    },
+    {
+      "family": "relief",
+      "purpose": "DISCOVERY",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 412426,
+      "contentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61"
+    },
+    {
+      "family": "relief",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 290951,
+      "contentSha256": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa"
+    },
+    {
+      "family": "withholding-tax",
+      "purpose": "DISCOVERY",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 412426,
+      "contentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61"
+    },
+    {
+      "family": "withholding-tax",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 260783,
+      "contentSha256": "25c6de0c2fd4d1d02103484329e9d3af77ea55886d512a754d43890fae64dc83"
+    },
+    {
+      "family": "withholding-tax",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 270606,
+      "contentSha256": "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b"
+    },
+    {
+      "family": "withholding-tax",
+      "purpose": "SOURCE",
+      "status": "SUCCESS",
+      "httpStatus": 200,
+      "contentBytes": 333143,
+      "contentSha256": "c68048a192053d1d7cee5bac956409f9e10c4a1e1cf4475353f1ea98489cf7bf"
+    }
+  ],
+  "capturePayloadSha256": "77c07c267c0c94cb6f38ca92bfb6fa9c0fdd9e49fb64e9dcf40f1a3f242e7f19",
+  "evidenceLockSha256": "aa5c88eeb19c3ef891b09fa3c49f25e20620263f2121faf346403f6012fd445b",
+  "capturedAt": "2026-10-08T14:43:24.380Z",
+  "sourceReferenceDate": "2026-10-08",
+  "semanticCalls": 0,
+  "providerCredentialRead": false,
+  "completedAtUtc": "2026-10-08T16:13:02.881Z"
+}

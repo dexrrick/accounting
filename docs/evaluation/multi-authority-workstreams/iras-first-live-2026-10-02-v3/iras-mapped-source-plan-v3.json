@@ -1,0 +1,117 @@
+{
+  "profileVersion": "iras-first-source-diagnostic-v3",
+  "mode": "PLAN_ONLY_NO_NETWORK",
+  "selectedCaseIds": [
+    "target-relief-entitlement",
+    "target-relief-amount",
+    "A-paraphrase-2",
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "selectedCaseCount": 9,
+  "selectedIrasIssueCount": 8,
+  "uniqueSourceMapCount": 9,
+  "uniqueSourceMapUrlCount": 9,
+  "maximumActualGetCount": 18,
+  "preregisteredMapFetches": [
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-corporate-tax-residency"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-foreign-sourced-income"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-individual-cpf-relief"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    },
+    {
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "host": "www.iras.gov.sg",
+      "mapIds": [
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ]
+    }
+  ],
+  "modelRequests": 0,
+  "liveInvocation": "node --import tsx tests/evaluation/singapore/iras-mapped-source-diagnostic-v3.mjs --live-source"
+}

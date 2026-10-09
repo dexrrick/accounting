@@ -1,0 +1,59 @@
+{
+  "profile": "iras-v4-supervisor-user-resource-override-plan",
+  "recordedAt": "2026-10-06T11:11:37Z",
+  "userInstruction": "please continue\nignore the 88% threshold",
+  "authority": "Direct human instruction after the original pre-reservation HOLD; supersedes the earlier instruction to keep the 88% requirement.",
+  "previousOutcome": {
+    "status": "HOLD_UNCONSUMED",
+    "firstFailure": "PROJECTED_RESERVE_NOT_MET",
+    "providerCalls": 0,
+    "namespaceEmpty": true,
+    "retryPerformed": false,
+    "independentReview": "No material findings; actual response within62.719 seconds and87/74 observation supports projected7/59 reserve failure."
+  },
+  "decision": {
+    "newArtifactsOnly": true,
+    "originalLauncherAndOutcomeRetained": true,
+    "estimatedRemainingFiveHourCostPercentagePoints": 50,
+    "estimatedRemainingWeeklyCostPercentagePoints": 15,
+    "minimumProjectedReserves": {
+      "fiveHourPercent": 8,
+      "weeklyPercent": 4
+    },
+    "resultingRemainingAllowanceGate": {
+      "fiveHourPercent": 58,
+      "weeklyPercent": 19
+    },
+    "rationale": "The user explicitly superseded the original 88% derived gate. The old80/15 bound carried the whole earlier development/capture cycle, which is no longer the remaining scope. This execution-only50/15 estimate conservatively covers a bounded existing nine-case run, repeated frozen validations, supervision, independent outcome review and commit without recapture or remedial implementation. It is not measured consumption or a guarantee; account activity is shared. The original observed94->87 five-hour/75->74 weekly decrease covers the latest preflight plus supervision and may include shared activity, not isolated provider cost."
+  },
+  "preserved": {
+    "frozenRunnerInputs": true,
+    "frozenAccountingAndSourceChecks": true,
+    "fixedSemanticNamespace": true,
+    "nineMaximumProviderCalls": true,
+    "zeroProviderRetries": true,
+    "sourceEvidenceFreshness": true,
+    "postValidationIndependentUsageReading": true,
+    "credentialBoundQuotaConfirmation": true,
+    "checkpointAt10Percent": true,
+    "finishAbove5Percent": true,
+    "noAutomaticCreditReset": true
+  },
+  "ownership": {
+    "builder": [
+      "launch-user-override.mjs.txt",
+      "offline-controls-user-override.mjs.txt",
+      "resource-projection-user-override.json"
+    ],
+    "supervisor": [
+      "This plan",
+      "original HOLD outcome",
+      "independent review records",
+      "new authorization bound to committed reviewed override launcher",
+      "execution and final result"
+    ],
+    "reviewer": "Independent review after builder; do not rerun full frozen validation."
+  },
+  "validation": "Syntax and focused offline controls for the separate launcher; retained accounting smoke/build because no production/frozen input changes. Actual execute verifies the complete frozen checkout again.",
+  "authorizationInterpretation": "User's direct continue/ignore-threshold message authorizes the reviewed resource exception and another gated invocation while zero provider calls have been consumed. Create a separate authorization record bound to the newly reviewed committed launcher. No retries after provider consumption or uncertain output state."
+}

@@ -1,0 +1,14 @@
+{
+  "profile": "GST_BINDING_LIVE_FAILURE_ANALYSIS",
+  "providerRequests": 9,
+  "passed": 7,
+  "failed": 2,
+  "newProviderCallsDuringAnalysis": 0,
+  "newSourceRequestsDuringAnalysis": 0,
+  "sourceReferenceDate": "2026-10-08",
+  "acceptanceProven": false,
+  "failures": [
+    {"caseId":"wht-royalty-general-rule","failedStages":["OVERALL_STATUS"],"issueEvidence":"VERIFIED","requestedConceptCoverage":true,"gap":"UNROUTED_MATERIAL_CONCEPT","concepts":[{"concept":"withholding tax","role":"PRIMARY"},{"concept":"royalty payment","role":"PRIMARY"},{"concept":"non-resident company","role":"CONTEXT_ONLY"}]},
+    {"caseId":"gst-input-tax-general-rule","failedStages":["OVERALL_STATUS"],"issueEvidence":"VERIFIED","requestedConceptCoverage":true,"gap":"UNROUTED_MATERIAL_CONCEPT","concepts":[{"concept":"GST input tax","role":"PRIMARY"},{"concept":"business purchases","role":"RELATED"},{"concept":"GST-registered company","role":"CONTEXT_ONLY"}]}
+  ]
+}

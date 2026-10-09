@@ -1,0 +1,29 @@
+{
+  "profile": "iras-v4-post-repair-launcher-independent-review",
+  "disposition": "NO_REMAINING_MATERIAL_FINDINGS",
+  "reviewer": "/root/review_launcher",
+  "builder": "/root/prepare_launcher",
+  "reviewedAtUtc": "2026-10-08T14:21:15Z",
+  "launcherCommit": "ea761cd199979a8b2fb9cceb3f6f197dacc72984",
+  "scopedFiles": 6,
+  "offlineTests": "PASS_4_OF_4",
+  "syntax": "PASS_NODE22",
+  "supervisorPostCommitOfflineCheck": "PASS",
+  "boundFilesVerified": 594,
+  "protectedHistoricalFilesVerified": 36,
+  "promptRowsCrossBound": 9,
+  "captureInventoryRows": 15,
+  "rawPreparationPinsVerified": 5,
+  "rawExecutionPinsVerified": 1,
+  "authorizationStatus": "PENDING",
+  "findingsResolved": [
+    "Accept new human approval regardless of whether wording matches an earlier reply; bind authority to current chat, scope and evidence.",
+    "Only sanitized failure codes logged.",
+    "Approval and independent resource review templates contain mandatory schema fields."
+  ],
+  "validationLimits": [
+    "Authorized live preflight, capabilities and acquisition permits remain deferred.",
+    "No fresh capture or Gemini call; nine-case acceptance remains unproven.",
+    "Reviewer inspected positive bound-file checks structurally; builder and supervisor each ran a complete offline check."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "profile": "iras-v4-fresh-live-resource-checkpoint",
+  "reviewedProjectionFiveHourPoints": 40,
+  "geminiAuthorizationUnspent": true,
+  "semanticStatus": "HOLD_PROJECTED_FIVE_HOUR_RESERVE_NOT_MET",
+  "observedAtUtc": "2026-10-06T14:51:34.1139001Z",
+  "weeklyRemainingPercent": 63,
+  "consumedNamespaceAbsent": true,
+  "authorizedGeminiCalls": 9,
+  "fiveHourRemainingPercent": 41,
+  "reviewedProjectionWeeklyPoints": 15,
+  "projectedAfterWeeklyPercent": 48,
+  "noProjectionLowered": true,
+  "requiredReserveFiveHourPercent": 8,
+  "resourceResetAtUnixSeconds": 1791312814,
+  "requiredReserveWeeklyPercent": 4,
+  "officialCaptureStatus": "AUTHORIZED_INDEPENDENT_PRECONDITION_TO_COMPLETE",
+  "projectedAfterFiveHourPercent": 1
+}

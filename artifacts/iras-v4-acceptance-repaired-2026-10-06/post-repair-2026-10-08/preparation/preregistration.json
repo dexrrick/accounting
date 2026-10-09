@@ -1,0 +1,87 @@
+{
+  "frozen": true,
+  "profile": "iras-first-targeted-acceptance-v4",
+  "contractSha256": "5fc338c51794522307e79c10e8e51958700553e0709090d6b9343146b709a26d",
+  "productionFingerprintSha256": "2815c70b1a2b32e771f3c646e0fa32872e8a68aa56724881ec7cb494a6cdcbb4",
+  "sourceFingerprintSha256": "2815c70b1a2b32e771f3c646e0fa32872e8a68aa56724881ec7cb494a6cdcbb4",
+  "schemaPromptFingerprintSha256": "da33413ca7dd1145f6f004e56c3c035568d09ec2014618caafc18c7738b26067",
+  "protectedHistorySha256": "aeef14d202f870a42d0db81f61d841faa461981c32f800903cab0929c405ffdb",
+  "evaluationFingerprintSha256": "e79876bedd9fccad531bed579e7f759e20d693cdefc71ad5d59f515a72b3b78f",
+  "promptFingerprints": [
+    {
+      "caseId": "target-relief-entitlement",
+      "promptSha256": "c76005669e8c5ba0207631073595ffb7f4f4a13505bf1cb7ee1ddf8112b78eba",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8825,
+      "systemChars": 259
+    },
+    {
+      "caseId": "target-relief-amount",
+      "promptSha256": "7b5e8f876c7a0d5245f51c9dc084b8f42f6e5b592ef44c6e2d4f8dab1e878562",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8832,
+      "systemChars": 259
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "promptSha256": "96163fb78f88c9138808f6aad207eccdc9313f4bde85e9adf6a5f258b6fe0062",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8908,
+      "systemChars": 259
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "promptSha256": "3facae27a35cff5eaf4ec3b71677ba42ec0f4460c5e178e917cc56e827b74ed0",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8906,
+      "systemChars": 259
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "promptSha256": "ab9c9e3f4564893a843ab316bfce103ca77b6734bd3ce338c047baed557777bc",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8926,
+      "systemChars": 259
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "promptSha256": "374f5c4258820ac75cddcf4c0742ff009efa29a794a462af2973560d748a641d",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8834,
+      "systemChars": 259
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "promptSha256": "7b22ee7f378108e08c65b24b45a179ff3526fe52abdd23f0ec30b71fab10dba5",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8867,
+      "systemChars": 259
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "promptSha256": "e99bbe4f7eb620a0f53ec7af562e861f2d7ed78504f545e3ad4e8982850444c7",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8872,
+      "systemChars": 259
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "promptSha256": "9bf9830b7b2d6cb06449a6c3c126d28c4c84f71a423d48c481dd2b4494c698ca",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "schemaSha256": "f51a2d5a6c9a897f589ae115ea3c81adadd063861012ae0f96a54ebd6aa21eda",
+      "promptChars": 8863,
+      "systemChars": 259
+    }
+  ],
+  "activationInputsSha256": "bdc8c11bb2cbbc3af696ff59df767cad78538800bef13aab120e32ee44ef7604",
+  "status": "FROZEN_PREREGISTRATION",
+  "targetedAcceptanceExecuted": false
+}

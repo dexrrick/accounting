@@ -1,0 +1,51 @@
+{
+  "adjudicatedOn": "2026-09-30",
+  "purpose": "Supervisor and independent-reviewer interpretation of frozen-score mismatches; production, fixtures, matcher and raw live reports are unchanged.",
+  "correctedBenchmark": {
+    "sourceReport": "corrected-live-semantic-evaluation.json",
+    "adjustments": [{
+      "runId": "originalABCD-2",
+      "caseId": "D-paraphrase-1",
+      "modelIssueIndex": 1,
+      "expectedIssueId": "sfrsi-expense-accounting",
+      "subject": "accounting treatment under SFRS(I)",
+      "failureLayer": "SCORING_PHRASE_GAP",
+      "reason": "The question explicitly requests the same expense's financial-statement treatment. The issue identifies that accounting outcome, even though its subject omits the expense/cost anchor. This is one additional semantic match, not a model omission or invented issue."
+    }],
+    "rawMetrics": {
+      "issueRecall": { "correct": 70, "total": 71 },
+      "issuePrecision": { "correct": 70, "total": 72 },
+      "completeQuestionIssueCoverage": { "correct": 28, "total": 42 }
+    },
+    "manuallyAdjudicatedIssueMetrics": {
+      "issueRecall": { "correct": 71, "total": 71 },
+      "issuePrecision": { "correct": 71, "total": 72 },
+      "completeQuestionIssueCoverage": { "correct": 29, "total": 42 }
+    },
+    "otherFindings": [{
+      "runId": "expanded-1",
+      "caseId": "C-paraphrase-3",
+      "failureLayer": "MODEL_FALSE_ISSUE",
+      "reason": "A third interaction issue repeats two separately requested tax outcomes; the question does not request another interaction outcome. The extra issue remains a precision error."
+    }, {
+      "runId": "expanded-1",
+      "caseId": "adversarial-E-three-authorities",
+      "failureLayer": "AMBIGUOUS_ROLE_AND_FAILURE_TAXONOMY_LABEL",
+      "reason": "The reporting actor is unspecified. EMPLOYEE violates the fixture's UNKNOWN population contract, but the final IRAS/UNKNOWN stream correctly remains unresolved. No reconciled issue is REJECTED; the reporting issue has NO_COVERAGE_TOPIC. The raw RECONCILIATION_REJECTION count is therefore not evidence of an actual rejected issue."
+    }]
+  },
+  "heldOut": {
+    "status": "INDEPENDENTLY_REVIEWED",
+    "sourceReport": "heldout-live-semantic-evaluation.json",
+    "scoringAdjustments": [],
+    "issueRecall": { "correct": 23, "total": 23 },
+    "issuePrecision": { "correct": 23, "total": 23 },
+    "completeQuestionIssueCoverage": { "correct": 19, "total": 20 },
+    "operationAccuracy": { "correct": 22, "total": 23 },
+    "findings": [
+      "heldout-different-populations: employee personal-relief eligibility incorrectly uses EXPLAIN_RULE; employer calculation is correctly CALCULATE.",
+      "heldout-explicit-dual, originalABCD-3: INVALID_RESPONSE; no raw invalid body available for detailed schema diagnosis.",
+      "Unfamiliar charge and unidentified reporter remain uncovered/unknown and evidence-incomplete."
+    ]
+  }
+}

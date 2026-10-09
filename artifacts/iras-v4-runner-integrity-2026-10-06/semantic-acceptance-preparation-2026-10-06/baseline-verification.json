@@ -1,0 +1,25 @@
+{
+  "profile": "iras-v4-semantic-acceptance-preparation",
+  "status": "BASELINE_RAW_BYTES_VERIFIED_LIVE_ACCEPTANCE_HELD",
+  "recordedAt": "2026-10-06T08:32:52Z",
+  "head": "80e64ad07011c586705c53be59d5372e81b5ee2d",
+  "branch": "codex/multi-authority-workstreams",
+  "workingTreeCleanBeforePreparation": true,
+  "boundFileCount": 592,
+  "rawByteMismatchCount": 0,
+  "semanticNamespaceAbsent": true,
+  "providerCalls": 0,
+  "officialRequests": 0,
+  "credentialsRead": false,
+  "nineCallAuthorizationRecorded": false,
+  "evidenceExpiresAt": "2026-10-07T06:26:38.150Z",
+  "retainedArtifactSha256": {
+    "capture-payload.json": "7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9",
+    "capture-partial.jsonl": "3efaea58fbfd55fe57075930c4a6d33ebe5ed5bcdbecd86b7bda6acda898daa9",
+    "capture-reserved.json": "8508ccdaac24bfcec6bbc8369e4d7179ec0b7586bb0614bd41a39283e7aa58bf",
+    "capture-result.json": "15bb1aa377dba8e3b12a7c001bd4089dcbba735ce940fec5705dace5885fc8a9",
+    "evidence-lock.json": "36f1ac828e25ab0cc4f9879954efa1479ab3e68122043d2ccff255f8dd57dac1",
+    "completion-result.json": "22ca1252c3ae2fd99326fa2835ebd2c0e70cffdcdfd511ef6135aa51f6b5e524"
+  },
+  "verificationScope": "Independent supervisor PowerShell raw hash check against current frozen fileRows and retained final-validation artifactRows; existing runner full committed-checkout verification remains required for launcher validation and execution."
+}

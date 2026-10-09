@@ -1,0 +1,409 @@
+{
+  "provenance": "Synthetic API-free controlled-transport run; not current IRAS content or live acceptance",
+  "baseCommit": "69928fc",
+  "date": "2026-10-06",
+  "families": {
+    "V4_CONTROLLED_FOREIGN_DIVIDEND": {
+      "positive": {
+        "lifecycle": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": true,
+          "verified": true,
+          "covered": true
+        },
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "UNRESOLVED",
+        "overall": "CONDITIONAL"
+      },
+      "negative": {
+        "lifecycle": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": false,
+          "verified": false,
+          "covered": false
+        },
+        "evidenceStatus": "INSUFFICIENT",
+        "claims": 0,
+        "stages": [
+          "SUCCESS"
+        ],
+        "gaps": [
+          "NO_ADMITTED_EVIDENCE",
+          "IRAS_SCOPE_NOT_COVERED",
+          "NO_VERIFIED_CLAIM",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ],
+        "applicationStatus": "UNRESOLVED",
+        "overall": "INSUFFICIENT"
+      }
+    },
+    "V4_CONTROLLED_RESIDENCY": {
+      "positive": {
+        "lifecycle": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": true,
+          "verified": true,
+          "covered": true
+        },
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "overall": "VERIFIED"
+      },
+      "negative": {
+        "lifecycle": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": false,
+          "admitted": false,
+          "verified": false,
+          "covered": false
+        },
+        "evidenceStatus": "INSUFFICIENT",
+        "claims": 0,
+        "stages": [
+          "TOPIC_MISMATCH"
+        ],
+        "gaps": [
+          "NO_CANDIDATE_EVIDENCE",
+          "IRAS_SCOPE_NOT_COVERED",
+          "NO_VERIFIED_CLAIM",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ],
+        "applicationStatus": "NOT_REQUIRED",
+        "overall": "INSUFFICIENT"
+      }
+    },
+    "V4_CONTROLLED_WHT": {
+      "positive": {
+        "lifecycle": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": true,
+          "verified": true,
+          "covered": true
+        },
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "overall": "VERIFIED",
+        "attempts": [
+          "SUCCESS",
+          "SUCCESS",
+          "SUCCESS",
+          "SUCCESS",
+          "SUCCESS",
+          "SUCCESS"
+        ]
+      },
+      "negatives": [
+        {
+          "lifecycle": {
+            "requested": true,
+            "mapped": true,
+            "retrievalAttempted": true,
+            "evidenceFound": true,
+            "admitted": true,
+            "verified": false,
+            "covered": false
+          },
+          "evidenceStatus": "INSUFFICIENT",
+          "claims": 0,
+          "stages": [
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS"
+          ],
+          "gaps": [
+            "IRAS_SCOPE_NOT_COVERED",
+            "NO_VERIFIED_CLAIM",
+            "ISSUE_CONCEPT_UNCOVERED",
+            "ISSUE_CONCEPT_UNCOVERED",
+            "ISSUE_CONCEPT_UNCOVERED"
+          ],
+          "applicationStatus": "NOT_REQUIRED",
+          "overall": "INSUFFICIENT"
+        },
+        {
+          "lifecycle": {
+            "requested": true,
+            "mapped": true,
+            "retrievalAttempted": true,
+            "evidenceFound": true,
+            "admitted": true,
+            "verified": false,
+            "covered": false
+          },
+          "evidenceStatus": "INSUFFICIENT",
+          "claims": 0,
+          "stages": [
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS",
+            "SUCCESS"
+          ],
+          "gaps": [
+            "IRAS_SCOPE_NOT_COVERED",
+            "NO_VERIFIED_CLAIM",
+            "ISSUE_CONCEPT_UNCOVERED",
+            "ISSUE_CONCEPT_UNCOVERED",
+            "ISSUE_CONCEPT_UNCOVERED"
+          ],
+          "applicationStatus": "NOT_REQUIRED",
+          "overall": "INSUFFICIENT"
+        }
+      ]
+    },
+    "V4_CONTROLLED_GST": {
+      "positive": {
+        "lifecycle": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": true,
+          "verified": true,
+          "covered": true
+        },
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "overall": "VERIFIED",
+        "attempts": [
+          "SUCCESS",
+          "SUCCESS"
+        ]
+      },
+      "negative": {
+        "lifecycle": {
+          "requested": true,
+          "mapped": true,
+          "retrievalAttempted": true,
+          "evidenceFound": true,
+          "admitted": true,
+          "verified": false,
+          "covered": false
+        },
+        "evidenceStatus": "INSUFFICIENT",
+        "claims": 0,
+        "stages": [
+          "SUCCESS",
+          "TOPIC_MISMATCH"
+        ],
+        "gaps": [
+          "IRAS_SCOPE_NOT_COVERED",
+          "NO_VERIFIED_CLAIM",
+          "ISSUE_CONCEPT_UNCOVERED",
+          "ISSUE_CONCEPT_UNCOVERED"
+        ],
+        "applicationStatus": "NOT_REQUIRED",
+        "overall": "INSUFFICIENT"
+      }
+    }
+  },
+  "fixtureManifest": [
+    {
+      "family": "foreign-dividend-receipt-treatment",
+      "polarity": "positive",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income"
+      ],
+      "bodyBytes": 452,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "87c4c574cc9a47ce473d6260243ade5c74e397ac64a9996fe84e0f6a36f24974"
+    },
+    {
+      "family": "foreign-dividend-receipt-treatment",
+      "polarity": "negative",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income"
+      ],
+      "bodyBytes": 480,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "24760d8de9e32fcf20bcac1d7287b3c924775c5a1738c65d4eb24d70bbde924e"
+    },
+    {
+      "family": "corporate-residency-general-rule",
+      "polarity": "positive",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence"
+      ],
+      "bodyBytes": 588,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "8979324b774268dfeef2007c6005b2629adbeb479edc1c88a0fcccadf05f8177"
+    },
+    {
+      "family": "corporate-residency-general-rule",
+      "polarity": "negative",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence"
+      ],
+      "bodyBytes": 423,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "e4c0f462b7f1613945de083528a2845c594c5f5819a46e33faff3d9b7704af2e"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "positive",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates"
+      ],
+      "bodyBytes": 509,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "13183d9d90f8a67f518c6c8f2f45d3536d5488ffd3da907f09db07879a4d9e63"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "positive",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "bodyBytes": 487,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "b28635b3dd46ae8e3881cc0c2cd3236e167b97b06d331d7d551fe0f99a8d93b6"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "positive",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)"
+      ],
+      "bodyBytes": 465,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "5cc3d358d342037d7d66abcd0edab4a7d2eb0785b877227a0ee6b6aca7a63b15"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "negative-interest-only",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates"
+      ],
+      "bodyBytes": 441,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "73d70e7ee95f0fb1d9724629f6d3db44995dc21a80ac8a8fde0f2c14fb772706"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "negative-interest-only",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "bodyBytes": 419,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "d47aca2a452b8b5e658738fb2c61c6f731100a002617f9f7c8107506a3d5074d"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "negative-interest-only",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)"
+      ],
+      "bodyBytes": 397,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "a2e32602c7ed3346b845bd83767ceb41cf09df9d9e773c6fb5bec8958a4ce597"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "negative-missing-recipient",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates"
+      ],
+      "bodyBytes": 387,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "5f788b6f95de139b949dba4ff00cf7775cf7e37b607c47d2ef05eca7a70d65d5"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "negative-missing-recipient",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "bodyBytes": 365,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "95312c3eb9a3dd8d39c39f654eded2edcdaecc05c1e749fb5680e9f4a28cb756"
+    },
+    {
+      "family": "wht-royalty-general-rule",
+      "polarity": "negative-missing-recipient",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)"
+      ],
+      "bodyBytes": 343,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "6adfe06b60ee67bcd31b1afa2cfb71c73bb48cc6afbac22cfd76145ed9e944c7"
+    },
+    {
+      "family": "gst-input-tax-general-rule",
+      "polarity": "positive",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "bodyBytes": 358,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "4fbb300cd65d51542a0942bb56140f9828575552f9523197f373250702fbb4f6"
+    },
+    {
+      "family": "gst-input-tax-general-rule",
+      "polarity": "positive",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers"
+      ],
+      "bodyBytes": 330,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "99ec87e1b22640c29d71ea08b696a7e02a74a190e36a6613a5a2aa0c468af3dc"
+    },
+    {
+      "family": "gst-input-tax-general-rule",
+      "polarity": "negative-blocked-only",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "bodyBytes": 564,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "00d6dac6fba89734bdd2385e5179d2fc0e9e74ddbb4fdc5b998e5f9b961cc7d1"
+    },
+    {
+      "family": "gst-input-tax-general-rule",
+      "polarity": "negative-blocked-only",
+      "urls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers"
+      ],
+      "bodyBytes": 536,
+      "synthetic": true,
+      "provenance": "synthetic API-free test body; not live or authoritative IRAS content",
+      "sha256": "31f7cf976230a5c076c073942957c18ec7fe817ea7f706e89b02b4a318f40e98"
+    }
+  ]
+}

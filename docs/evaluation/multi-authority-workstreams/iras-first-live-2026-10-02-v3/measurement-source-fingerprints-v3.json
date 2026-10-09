@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "baselineCommit": "5c4469023003bc4e247366c76c3e65f9deed761f",
+  "recordedBeforeMappedSourceLive": true,
+  "files": [
+    {
+      "path": "src/services/authorityWorkstreams.ts",
+      "sha256": "3ce030aecec8afc48e3f2b9cf74c5e3c0d77a3610093b9ede5396c56cd1a05f2"
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "ad9400db0f4debf5c395cbc689849a49168543b0ffcd834e51d79edc51a6f7bd"
+    },
+    {
+      "path": "src/services/groundingContextBuilder.ts",
+      "sha256": "626d48746e60b2e68d9fb52ce16c9278c9273f27037bfafc624420995dd11f88"
+    },
+    {
+      "path": "src/retrieval/controlledWebRetriever.ts",
+      "sha256": "f92cca4e8890542b1e7c82ca216a92df3120f20e233005379d3c9904c7fca898"
+    },
+    {
+      "path": "src/retrieval/officialSourceTransport.ts",
+      "sha256": "2f79dc45c32e98a47bd97037ff60f0c18f98e28c99b90b5eea1640e562bc9ad5"
+    },
+    {
+      "path": "src/retrieval/evidenceQualityGate.ts",
+      "sha256": "8730498150be05c4f6484bafa76581dfb2727f056261efc089b772b33aabf501"
+    },
+    {
+      "path": "src/standards/coverageRegistry.ts",
+      "sha256": "6533dcc5d49ede4465b9347edc9c7a873470107aa26ba8ad0c339ecfd2cf5bfd"
+    },
+    {
+      "path": "src/standards/unifiedSourceModel.ts",
+      "sha256": "0378663d4dbda6b841179f6d2b41a01b0e724d211a3441a15407cbe87440aa34"
+    },
+    {
+      "path": "tests/evaluation/singapore/iras-mapped-source-diagnostic-v3.mjs",
+      "sha256": "7856e454cfcade1a1440a5618efa4943e1dbce3ddd954e50c84b7a8bcafa1fb2"
+    },
+    {
+      "path": "tests/evaluation/singapore/semantic-residency-diagnostic-v3.mjs",
+      "sha256": "427fa2930314c8a9428b0b87578a4787d3c8de590644fa5992359bf07e581f5c"
+    },
+    {
+      "path": "tests/evaluation/singapore/semantic-residency-diagnostic-v3-config.json",
+      "sha256": "304fa005a233a56161a8a964842d6582e9b21ad19224f2d7863aaafa66778408"
+    },
+    {
+      "path": "tests/fixtures/irasResolverCases.mjs",
+      "sha256": "3f7b1d8f4e7af1bda05bb017b589b71fec8a65f95fbfde67350876d5af32e2f6"
+    },
+    {
+      "path": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v3/iras-mapped-source-plan-v3.json",
+      "sha256": "a78c70a5805361dfc645230537fb01c66b1303451c37a7ee533c6307315011fe"
+    }
+  ]
+}

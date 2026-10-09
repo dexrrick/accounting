@@ -1,0 +1,22 @@
+{
+  "lint": "PASS_WITH_EXISTING_WARNINGS",
+  "diffCheck": "PASS",
+  "profile": "iras-v4-post-retry-supervisor-validation",
+  "build": "PASS_WITH_EXISTING_WARNINGS",
+  "capturesMade": 0,
+  "smoke": "PASS_88.29_SECONDS",
+  "fullSuite": "PASS_152.15_SECONDS",
+  "previousSmokeFailure": "Legitimate quick-links rate metadata filtered; fixed without weakening body gate",
+  "additionalGeminiCalls": 0,
+  "focusedRegressions": "PASS",
+  "hashes": {
+    "test-smoke-final.log": "6ddfd3b055faafac61ff47acb39c52e1a4da4c1b742340ce4fa5b35c606fe49d",
+    "lint-final.log": "218d3a15aad0bac7a4c8b4e0c922137cf2b93543c5225d51c0bf6d633260c53a",
+    "replay-after-fixes.json": "822e044f12e3dc8d81fe43ade2c69dfd9fdb0f8bb2769eebc5941772db76bf9b",
+    "full-test-final.log": "248a0351c0c2adc179e8e39462da0d4fa9174bb80761b813634da5886e46fad8",
+    "baseline-replay.json": "a0f1f0a6ad8913895d61fc73cf706aa7de26d4d27e0ca2350310ae9de7229a37",
+    "build-final.log": "15b8d96f72e8850091445f5208c5537e54a60cb7e78d957a335828fe0c3e8803"
+  },
+  "observedAtUtc": "2026-10-08T13:22:58.7008344Z",
+  "status": "PASS"
+}

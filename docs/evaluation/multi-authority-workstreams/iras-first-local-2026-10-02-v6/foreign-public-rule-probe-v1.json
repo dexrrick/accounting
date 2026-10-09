@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "profile": "IRAS_FOREIGN_PUBLIC_RULE_PROBE_V1",
+  "sourceComposition": "SYNTHETIC_COMPOSITION_NOT_ORIGINAL_PAGE",
+  "fixedCaseId": "foreign-dividend-treatment",
+  "fixedTopicId": "iras-foreign-sourced-income",
+  "fixedConceptId": "semantic_singapore_corporate_tax_treatment_of_dividend_fr",
+  "approvedMapIds": [
+    "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+  ],
+  "savedUnitIds": [
+    "V2:10",
+    "V2:37",
+    "V1:41"
+  ],
+  "savedDocumentHashMatch": true,
+  "directUnitHelperFlags": [
+    {
+      "savedBlockId": "V2:10",
+      "helperRecognized": true,
+      "helperSupported": false
+    },
+    {
+      "savedBlockId": "V2:37",
+      "helperRecognized": true,
+      "helperSupported": false
+    },
+    {
+      "savedBlockId": "V1:41",
+      "helperRecognized": true,
+      "helperSupported": false
+    }
+  ],
+  "syntheticCompositionHelperSupported": false,
+  "customGetCount": 1,
+  "customGetMapIds": [
+    "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+  ],
+  "customGetStatuses": [
+    200
+  ],
+  "ambientFetchCount": 0,
+  "discoveryCalls": 0,
+  "searchCalls": 0,
+  "modelCallCount": 0,
+  "mapAttempts": [
+    {
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "topicId": "iras-foreign-sourced-income",
+      "fetchStatus": "OTHER_STATUS"
+    }
+  ],
+  "contextEligibleRecordCount": 1,
+  "contextUncoveredConceptCount": 1,
+  "sourceRecordFlags": [
+    {
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "provenance": "LIVE_EXTERNAL",
+      "associatedTopic": true,
+      "retainedBlockFlags": [
+        true,
+        true,
+        true
+      ]
+    }
+  ],
+  "rendererAcceptedClaimCount": 2,
+  "rendererRejectedClaimCount": 0,
+  "acceptedClaimFlags": [
+    {
+      "claimIndex": 0,
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "helperRecognized": true,
+      "helperSupported": false,
+      "retainedBlockFlags": [
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "claimIndex": 1,
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "helperRecognized": true,
+      "helperSupported": false,
+      "retainedBlockFlags": [
+        false,
+        true,
+        false
+      ]
+    }
+  ],
+  "supportedAcceptedQuoteCount": 0,
+  "finalVerifiedClaimCount": 0,
+  "finalClaimFlags": [],
+  "finalEvidenceStatus": "INSUFFICIENT",
+  "finalApplicationStatus": "UNRESOLVED",
+  "finalGapCodes": [
+    "IRAS_SCOPE_NOT_COVERED",
+    "NO_VERIFIED_CLAIM",
+    "ISSUE_CONCEPT_UNCOVERED",
+    "ISSUE_CONCEPT_UNCOVERED"
+  ],
+  "finalLifecycle": {
+    "requested": true,
+    "mapped": true,
+    "retrievalAttempted": true,
+    "evidenceFound": true,
+    "admitted": true,
+    "verified": false,
+    "covered": false
+  },
+  "firstFailureBoundary": "GENERAL_RULE_SUPPORT_AFTER_LITERAL_ACCEPTANCE",
+  "productionBaseline": "080bcf29da25a479d2a3947ad9efcd97963056c5"
+}

@@ -1,0 +1,450 @@
+// Reviewable one-shot official-source capture launcher.
+// Run only after this text is independently reviewed, from D:\Accounting, with Node 22 and the approved network policy.
+// The launcher performs bounded IRAS source/discovery capture only. It never invokes the semantic phase or reads a provider key.
+// Execute the saved ES module text with:
+//   Get-Content -Raw 'artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/launch.mjs.txt' | & 'C:\nvm4w\nodejs\node.exe' --import tsx --input-type=module -
+
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { access, mkdir, open, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const ROOT = 'D:/Accounting';
+const GIT = 'C:/Users/Admin/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/git/cmd/git.exe';
+const REVIEWED_COMMIT = 'a30dd0a5d8a5b405dcab5dad460bf86c8bcf1b96';
+const EXPECTED_HEAD_COMMIT = '114eec284be5954e24688d0c6177ec0b3de45daf';
+const ACTIVATION_DIR = 'artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix';
+const BASE_DIR = 'artifacts/iras-v4-activation-2026-10-06';
+const CHECKPOINT_DIR = 'artifacts/iras-v4-runner-integrity-2026-10-06/windows-pathspec-fix';
+const CAPTURE_DIR = 'artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06';
+const CHECKPOINT_RUNNER = 'artifacts/iras-v4-runner-integrity-2026-10-06/runner-configuration.json';
+const CURRENT_RUNNER = `${ACTIVATION_DIR}/runner-configuration-current.json`;
+const PREREGISTRATION = `${ACTIVATION_DIR}/preregistration.json`;
+const ACTIVATION = `${ACTIVATION_DIR}/activation-configuration.json`;
+const CANDIDATE_INVENTORY = 'artifacts/iras-v4-runner-integrity-2026-10-06/activation/capture-inventory-candidate.json';
+const FREEZE_VALIDATION = `${ACTIVATION_DIR}/freeze-validation.json`;
+const GENERAL_VALIDATION = `${BASE_DIR}/validation.json`;
+const CHECKPOINT_PRESERVATION = `${BASE_DIR}/checkpoint-preservation.json`;
+const CHECKPOINT_REVERIFICATION = `${BASE_DIR}/checkpoint-reverification.json`;
+const SEMANTIC_HOLD = 'HOLD_NOT_RUN';
+
+const EXPECTED_RAW_HASHES = Object.freeze({
+  [FREEZE_VALIDATION]: '27f7346b8837c947af7ae3b646ca33b10a1b0e99e08fb8422357d8f5279022bd',
+  [GENERAL_VALIDATION]: 'eba41d6c2148c56a603ccf1bd64e319f9056dedd560a7f926c7e64005fc7b9e2',
+  [CHECKPOINT_PRESERVATION]: 'f59efde75437da2d91da295d9ef750e024113bb3053b4660dd4a9b3968c459bb',
+  [CHECKPOINT_REVERIFICATION]: 'a30628f5ae1c804db69776e2a270c8f0b934a3ebad de3eee9cbf511f193b4399'.replaceAll(' ', ''),
+  [CHECKPOINT_RUNNER]: '0d23efe222c4153030e2e91e445911e0d439fd399125144d294ae5c169183008',
+  [`${CHECKPOINT_DIR}/validation.json`]: '3b7bc97a58ec12cd12f372b9df2899b0052fb0defe058ed455814bed034efa51',
+  [`${CHECKPOINT_DIR}/independent-review.md`]: '4698b81dc408eb20eabd0026818c09585af211b7015f894bde39633bfb8efbff',
+  [`${CHECKPOINT_DIR}/supervisor-final-report.md`]: 'd14c9a87f9fd5061e01443310193bff99bfdb6a8729675905a94afd3c875bdaa',
+  '.tmp/v4-runner-windows-pathspec-fix.log': '769bcb00c2554bd52c4a3696410187ae5bea465d8ab40d064fbbd9606b6e7713',
+  '.tmp/v4-runner-windows-smoke.log': 'f62fb729b39099d2f9d3ad65e68e24f7452092926dd0d8b70a5fb7558ca81b00',
+  '.tmp/v4-runner-windows-freeze.log': '0ed0b25dde6e68e3001a37b2cd1166058329ed8ee652b03c0148fb8d1935f222',
+  [`${ACTIVATION_DIR}/runner-configuration-current.json`]: '15fbd23e629c5a13538ea380dccfcf260523670a71da026d8357fe6fba8b8806',
+  [PREREGISTRATION]: '483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3',
+  [ACTIVATION]: '5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30',
+  [CANDIDATE_INVENTORY]: '67604879581a5d3581d9954639f92dd89aa5c1a9bea6192927c1d0b44de4a4b9'
+});
+
+const EXPECTED_CHECKPOINT_ROWS = Object.freeze([
+  { path: CHECKPOINT_RUNNER, sha256: EXPECTED_RAW_HASHES[CHECKPOINT_RUNNER] },
+  { path: `${CHECKPOINT_DIR}/validation.json`, sha256: EXPECTED_RAW_HASHES[`${CHECKPOINT_DIR}/validation.json`] },
+  { path: `${CHECKPOINT_DIR}/independent-review.md`, sha256: EXPECTED_RAW_HASHES[`${CHECKPOINT_DIR}/independent-review.md`] },
+  { path: `${CHECKPOINT_DIR}/supervisor-final-report.md`, sha256: EXPECTED_RAW_HASHES[`${CHECKPOINT_DIR}/supervisor-final-report.md`] },
+  { path: '.tmp/v4-runner-windows-pathspec-fix.log', sha256: EXPECTED_RAW_HASHES['.tmp/v4-runner-windows-pathspec-fix.log'] },
+  { path: '.tmp/v4-runner-windows-smoke.log', sha256: EXPECTED_RAW_HASHES['.tmp/v4-runner-windows-smoke.log'] },
+  { path: '.tmp/v4-runner-windows-freeze.log', sha256: EXPECTED_RAW_HASHES['.tmp/v4-runner-windows-freeze.log'] }
+]);
+
+const EXPECTED_FREEZE_MANIFESTS = Object.freeze([
+  { path: CURRENT_RUNNER, sha256: EXPECTED_RAW_HASHES[CURRENT_RUNNER] },
+  { path: PREREGISTRATION, sha256: EXPECTED_RAW_HASHES[PREREGISTRATION] },
+  { path: ACTIVATION, sha256: EXPECTED_RAW_HASHES[ACTIVATION] }
+]);
+
+const EXPECTED_BOUND_MODULES = Object.freeze({
+  'src/standards/approvedSourceRegistry.ts': 'c43d964e05ba5497e284a25c2127d29a1bd09a7185af20f963b68d44c3a803cc',
+  'src/standards/unifiedSourceModel.ts': '0378663d4dbda6b841179f6d2b41a01b0e724d211a3441a15407cbe87440aa34',
+  'src/retrieval/officialSitemapDiscovery.ts': 'cd23e461e436fd897ff81cf99a6e272db4dead2b7d3165e9c43d1dce28033e0a'
+});
+
+const OUTPUTS = Object.freeze({
+  marker: `${CAPTURE_DIR}/capture-reserved.json`,
+  journal: `${CAPTURE_DIR}/capture-partial.jsonl`,
+  payload: `${CAPTURE_DIR}/capture-payload.json`,
+  evidenceLock: `${CAPTURE_DIR}/evidence-lock.json`,
+  result: `${CAPTURE_DIR}/capture-result.json`
+});
+
+const sha256 = value => createHash('sha256').update(value).digest('hex');
+const stableJson = value => JSON.stringify(value);
+const absolute = relative => path.resolve(ROOT, relative);
+const logPhase = (phase, status, details = {}) => {
+  console.log(JSON.stringify({ phase, status, ...details }));
+};
+
+async function readRaw(relative) {
+  return await readFile(absolute(relative));
+}
+
+async function assertRawHash(relative, expected) {
+  const actual = sha256(await readRaw(relative));
+  assert.equal(actual, expected, `CAPTURE_PREFLIGHT_RAW_HASH_MISMATCH:${relative}`);
+  return actual;
+}
+
+async function readJson(relative) {
+  return JSON.parse((await readRaw(relative)).toString('utf8'));
+}
+
+async function assertPathAbsent(relative) {
+  try {
+    await access(absolute(relative));
+    throw new Error(`CAPTURE_OUTPUT_ALREADY_EXISTS:${relative}`);
+  } catch (error) {
+    if (error?.message?.startsWith('CAPTURE_OUTPUT_ALREADY_EXISTS:')) throw error;
+    if (error?.code !== 'ENOENT') throw error;
+  }
+}
+
+async function writeAuditOnce(document) {
+  const destination = absolute(OUTPUTS.result);
+  await mkdir(path.dirname(destination), { recursive: true });
+  const handle = await open(destination, 'wx');
+  const bytes = Buffer.from(JSON.stringify(document, null, 2) + '\n', 'utf8');
+  try {
+    await handle.writeFile(bytes);
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+  return sha256(bytes);
+}
+
+function safeFailure(error) {
+  return String(error?.message || error || 'UNKNOWN_CAPTURE_FAILURE').replace(/[\r\n\0]/g, ' ').slice(0, 500);
+}
+
+function countHttpStatuses(entries = []) {
+  const counts = {};
+  for (const entry of entries) {
+    const key = entry.failure ? `FAILED_${entry.failure}` : `HTTP_${entry.status}`;
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  return counts;
+}
+
+const startedAt = new Date().toISOString();
+let phase = 'INITIAL_PREFLIGHT';
+let runner;
+let transport;
+let capturePayload;
+let auditWritten = false;
+const report = {
+  profile: 'iras-v4-official-source-capture-2026-10-06',
+  status: 'FAILED',
+  executionMode: 'BOUNDED_OFFICIAL_SOURCE_CAPTURE_ONLY',
+  semanticAcceptance: SEMANTIC_HOLD,
+  providerTransportInvoked: false,
+  startedAt,
+  reviewedCommit: REVIEWED_COMMIT,
+  paths: OUTPUTS,
+  preflight: {},
+  failure: null,
+  capture: null,
+  evidenceLock: null
+};
+
+try {
+  logPhase(phase, 'STARTED');
+  assert.equal(path.resolve(process.cwd()).replaceAll('\\', '/'), ROOT, 'CAPTURE_LAUNCH_WRONG_ROOT');
+  assert.equal(Number(process.versions.node.split('.')[0]), 22, 'CAPTURE_LAUNCH_REQUIRES_NODE_22');
+  assert.equal(path.resolve(GIT), path.resolve(process.env.CODEX_GIT_EXECUTABLE || ''),
+    'CAPTURE_LAUNCH_EXPLICIT_GIT_PATH_MISMATCH');
+  execFileSync(GIT, ['-C', ROOT, 'merge-base', '--is-ancestor', EXPECTED_HEAD_COMMIT, 'HEAD']);
+  report.headAtLaunch = execFileSync(GIT, ['-C', ROOT, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+
+  for (const [relative, expected] of Object.entries(EXPECTED_RAW_HASHES)) {
+    await assertRawHash(relative, expected);
+  }
+  const freezeValidation = await readJson(FREEZE_VALIDATION);
+  assert.equal(freezeValidation.status, 'FROZEN_API_FREE_HOLD');
+  assert.equal(freezeValidation.reviewedCommit, REVIEWED_COMMIT);
+  assert.equal(freezeValidation.boundFileCount, 592);
+  assert.equal(freezeValidation.boundFileMismatches, 0);
+  assert.equal(freezeValidation.archivedCheckpointHashesUnchanged, true);
+  assert.equal(freezeValidation.immutableFingerprintsUnchanged, true);
+  assert.equal(freezeValidation.officialRequests, 0);
+  assert.equal(freezeValidation.providerRequests, 0);
+  assert.equal(freezeValidation.liveReservations, 0);
+  assert.deepEqual(freezeValidation.manifests, EXPECTED_FREEZE_MANIFESTS);
+
+  const generalValidation = await readJson(GENERAL_VALIDATION);
+  assert.equal(generalValidation.externalNetworkBlocked, true);
+  assert.equal(generalValidation.focusedRunner, 'PASS');
+  assert.equal(generalValidation.focusedAdapter, 'PASS');
+  assert.equal(generalValidation.independentReview, 'NO_UNRESOLVED_MATERIAL_FINDINGS');
+
+  const preserved = await readJson(CHECKPOINT_PRESERVATION);
+  assert.equal(preserved.checkpointRowsVerified, 589);
+  assert.equal(preserved.checkpointRowsMismatched, 0);
+  assert.deepEqual(preserved.rows, EXPECTED_CHECKPOINT_ROWS);
+  const reverified = await readJson(CHECKPOINT_REVERIFICATION);
+  assert.equal(reverified.status, 'ALL_ARCHIVED_CONFIG_REPORT_AND_VALIDATION_HASHES_UNCHANGED');
+  assert.deepEqual(reverified.rows.map(row => ({ path: row.path, expectedSha256: row.expectedSha256,
+    actualSha256: row.actualSha256, unchanged: row.unchanged })), EXPECTED_CHECKPOINT_ROWS.map(row => ({
+    path: row.path, expectedSha256: row.sha256, actualSha256: row.sha256, unchanged: true
+  })));
+
+  for (const relative of Object.values(OUTPUTS)) await assertPathAbsent(relative);
+  report.preflight = {
+    freezeValidationSha256: EXPECTED_RAW_HASHES[FREEZE_VALIDATION],
+    generalValidationSha256: EXPECTED_RAW_HASHES[GENERAL_VALIDATION],
+    checkpointPreservationSha256: EXPECTED_RAW_HASHES[CHECKPOINT_PRESERVATION],
+    checkpointReverificationSha256: EXPECTED_RAW_HASHES[CHECKPOINT_REVERIFICATION],
+    savedCheckpointRowsVerified: preserved.checkpointRowsVerified,
+    savedCheckpointRowsMismatched: preserved.checkpointRowsMismatched,
+    reviewedCommit: REVIEWED_COMMIT,
+    outputNamespaceWasAbsent: true
+  };
+  logPhase(phase, 'PASSED', { checkpointRowsVerified: preserved.checkpointRowsVerified });
+
+  phase = 'ACTIVATION_AND_MODULE_BINDINGS';
+  logPhase(phase, 'STARTED');
+  const runnerUrl = pathToFileURL(absolute('scripts/iras_v4_capture_replay_runner.mjs')).href;
+  runner = await import(runnerUrl);
+  const [runnerBytes, preregBytes, activationBytes, candidateBytes] = await Promise.all([
+    readRaw(CURRENT_RUNNER), readRaw(PREREGISTRATION), readRaw(ACTIVATION), readRaw(CANDIDATE_INVENTORY)
+  ]);
+  const runnerConfiguration = JSON.parse(runnerBytes.toString('utf8'));
+  const preregistration = JSON.parse(preregBytes.toString('utf8'));
+  const activationDocument = JSON.parse(activationBytes.toString('utf8'));
+  const candidate = JSON.parse(candidateBytes.toString('utf8'));
+  assert.equal(runnerConfiguration.captureInventory, null, 'CAPTURE_CURRENT_RUNNER_MUST_REMAIN_NULL_ACTIVATION');
+  assert.equal(runnerConfiguration.productionEvidenceAdapterSha256, null, 'CAPTURE_CURRENT_RUNNER_MUST_REMAIN_NULL_ADAPTER');
+  assert.equal(runnerConfiguration.preregistrationSha256, null, 'CAPTURE_CURRENT_RUNNER_MUST_REMAIN_NULL_PREREGISTRATION');
+  assert.equal(candidate.status, 'API_FREE_CANDIDATE_NOT_FROZEN');
+  assert.equal(runner.captureInventoryDigest(candidate.inventory), candidate.inventorySha256,
+    'CAPTURE_INVENTORY_CANDIDATE_DIGEST_INVALID');
+  assert.deepEqual(candidate.inventory, activationDocument.captureInventory,
+    'CAPTURE_INVENTORY_NOT_EQUAL_TO_FROZEN_ACTIVATION');
+  assert.equal(activationDocument.captureInventorySha256, candidate.inventorySha256,
+    'CAPTURE_FROZEN_INVENTORY_HASH_MISMATCH');
+
+  const boundFiles = new Map(runnerConfiguration.fileRows.map(row => [row.path, row.sha256]));
+  const provenance = {};
+  for (const [file, expected] of Object.entries(EXPECTED_BOUND_MODULES)) {
+    assert.equal(boundFiles.get(file), expected, `CAPTURE_PROVENANCE_FILE_NOT_IN_CURRENT_BINDING:${file}`);
+    assert.equal(sha256(await readRaw(file)), expected, `CAPTURE_PROVENANCE_FILE_CHANGED:${file}`);
+  }
+  provenance.sourceRegistrySha256 = EXPECTED_BOUND_MODULES['src/standards/approvedSourceRegistry.ts'];
+  provenance.sourceMapSha256 = EXPECTED_BOUND_MODULES['src/standards/unifiedSourceModel.ts'];
+  provenance.discoveryPolicySha256 = EXPECTED_BOUND_MODULES['src/retrieval/officialSitemapDiscovery.ts'];
+
+  const verifiedActivation = await runner.verifyFrozenActivationConfiguration({
+    activationConfigurationPath: absolute(ACTIVATION), root: ROOT, gitExecutable: GIT
+  });
+  assert.equal(verifiedActivation.sha256, EXPECTED_RAW_HASHES[ACTIVATION]);
+  assert.equal(verifiedActivation.runnerConfiguration.integrityBindingSha256, runnerConfiguration.integrityBindingSha256);
+  assert.equal(verifiedActivation.preregistration.profile, 'iras-first-targeted-acceptance-v4');
+  assert.equal(sha256(preregBytes), EXPECTED_RAW_HASHES[PREREGISTRATION]);
+  assert.equal(preregistration.activationInputsSha256, activationDocument.activationInputsSha256);
+  assert.deepEqual(preregistration.promptFingerprints, runnerConfiguration.designFingerprints.promptFingerprints);
+
+  const executionCapability = await runner.loadReviewedV4ExecutionCapability({
+    activationConfigurationPath: absolute(ACTIVATION), root: ROOT, gitExecutable: GIT
+  });
+  const acquisitionPermit = await runner.validateReviewedAcquisitionPermit({
+    runnerConfigurationPath: absolute(CURRENT_RUNNER),
+    activationConfigurationPath: absolute(ACTIVATION), root: ROOT, gitExecutable: GIT
+  });
+  assert.equal(acquisitionPermit.integrityBindingSha256, runnerConfiguration.integrityBindingSha256);
+  assert.equal(acquisitionPermit.captureInventorySha256, candidate.inventorySha256);
+  assert.equal(acquisitionPermit.activationConfigurationSha256, executionCapability.activationConfigurationSha256);
+  assert.equal(acquisitionPermit.activationConfigurationFileSha256, executionCapability.activationConfigurationFileSha256);
+  assert.equal(acquisitionPermit.preregistrationSha256, EXPECTED_RAW_HASHES[PREREGISTRATION]);
+  logPhase(phase, 'PASSED', { inventorySha256: candidate.inventorySha256,
+    activationConfigurationSha256: executionCapability.activationConfigurationSha256 });
+
+  phase = 'CAPTURE_TRANSPORT_CONSTRUCTION';
+  logPhase(phase, 'STARTED');
+  const liveTransport = runner.createCaptureTransport({
+    markerPath: absolute(OUTPUTS.marker),
+    journalPath: absolute(OUTPUTS.journal),
+    payloadPath: absolute(OUTPUTS.payload),
+    integrityBindingSha256: runnerConfiguration.integrityBindingSha256,
+    preregistrationSha256: EXPECTED_RAW_HASHES[PREREGISTRATION],
+    runnerConfigurationPath: absolute(CURRENT_RUNNER),
+    activationConfigurationPath: absolute(ACTIVATION),
+    preregistrationPath: absolute(PREREGISTRATION),
+    gitExecutable: GIT,
+    provenance,
+    acquisitionPermit,
+    executionCapability,
+    root: ROOT
+  });
+  assert.equal(liveTransport.synthetic, false);
+  assert.equal(liveTransport.executionCapability, executionCapability);
+  assert.equal(liveTransport.acquisitionPermit, acquisitionPermit);
+  transport = liveTransport;
+  logPhase(phase, 'PASSED');
+
+  phase = 'OFFICIAL_SOURCE_CAPTURE';
+  report.status = 'CAPTURE_RUNNING';
+  report.captureStartedAt = new Date().toISOString();
+  logPhase(phase, 'STARTED');
+  const captureRun = await runner.runBoundedCapture({
+    transport,
+    runnerConfigurationPath: absolute(CURRENT_RUNNER),
+    activationConfigurationPath: absolute(ACTIVATION),
+    executionCapability,
+    preregistrationPath: absolute(PREREGISTRATION),
+    root: ROOT,
+    gitExecutable: GIT
+  });
+  assert.equal(captureRun.synthetic, false);
+  assert.equal(captureRun.capture.document.captureStatus, 'COMPLETE');
+  const loadedPayload = await runner.loadCapturePayload(absolute(OUTPUTS.payload), ROOT);
+  assert.equal(loadedPayload.sha256, captureRun.capture.sha256, 'CAPTURE_PAYLOAD_FILE_HASH_MISMATCH');
+  assert.deepEqual(loadedPayload.payload, captureRun.capture.document, 'CAPTURE_PAYLOAD_FILE_DOCUMENT_MISMATCH');
+
+  phase = 'CAPTURE_PAYLOAD_BINDING_VALIDATION';
+  logPhase(phase, 'STARTED');
+  const validated = runner.validateCapturePayload(loadedPayload.payload, {
+    now: new Date(),
+    expectedIntegrityBindingSha256: runnerConfiguration.integrityBindingSha256,
+    expectedPreregistrationSha256: EXPECTED_RAW_HASHES[PREREGISTRATION],
+    expectedActivationConfigurationSha256: activationDocument.activationConfigurationSha256,
+    expectedActivationConfigurationFileSha256: EXPECTED_RAW_HASHES[ACTIVATION],
+    expectedCaptureInventory: activationDocument.captureInventory,
+    syntheticMode: false,
+    requireComplete: true
+  });
+
+  const planRows = captureRun.result?.rows;
+  const expectedPlan = activationDocument.captureInventory.filter(row => row.purpose !== 'REDIRECT');
+  assert.equal(captureRun.result?.profile, 'iras-v4-capture-plan', 'CAPTURE_EXECUTOR_RESULT_PROFILE_INVALID');
+  assert.ok(Array.isArray(planRows), 'CAPTURE_EXECUTOR_RESULT_ROWS_MISSING');
+  assert.equal(planRows.length, expectedPlan.length, 'CAPTURE_EXECUTOR_RESULT_ROW_COUNT_MISMATCH');
+  for (let index = 0; index < expectedPlan.length; index += 1) {
+    const expected = expectedPlan[index];
+    const actual = planRows[index];
+    assert.equal(actual.family, expected.family, `CAPTURE_EXECUTOR_RESULT_FAMILY_MISMATCH:${index}`);
+    assert.equal(actual.purpose, expected.purpose, `CAPTURE_EXECUTOR_RESULT_PURPOSE_MISMATCH:${index}`);
+    assert.equal(actual.url, expected.url, `CAPTURE_EXECUTOR_RESULT_URL_MISMATCH:${index}`);
+    assert.deepEqual(actual.sourceRecordIds, expected.provenance.sourceRecordIds,
+      `CAPTURE_EXECUTOR_RESULT_SOURCE_PROVENANCE_MISMATCH:${index}`);
+    assert.deepEqual(actual.topicIds, expected.provenance.topicIds,
+      `CAPTURE_EXECUTOR_RESULT_TOPIC_PROVENANCE_MISMATCH:${index}`);
+    assert.equal(actual.status, 'SUCCESS', `CAPTURE_EXECUTOR_REQUEST_FAILED:${index}`);
+    assert.ok(Number.isInteger(actual.httpStatus) && actual.httpStatus >= 200 && actual.httpStatus < 400,
+      `CAPTURE_EXECUTOR_HTTP_STATUS_INVALID:${index}`);
+    assert.ok(Number.isSafeInteger(actual.contentBytes) && actual.contentBytes >= 0,
+      `CAPTURE_EXECUTOR_CONTENT_LENGTH_INVALID:${index}`);
+    if (actual.contentSha256 !== null) assert.match(actual.contentSha256, /^[a-f0-9]{64}$/);
+  }
+  assert.equal(validated.entryCount, loadedPayload.payload.requestCount);
+  const expectedFamilyCounts = Object.fromEntries([...new Set(expectedPlan.map(row => row.family))].sort()
+    .map(family => [family, expectedPlan.filter(row => row.family === family).length]));
+  // Any extra payload entries are explicit inventory redirect requests observed from a source Location.
+  const redirectCount = activationDocument.captureInventory.filter(row => row.purpose === 'REDIRECT').length;
+  assert.ok(loadedPayload.payload.requestCount >= expectedPlan.length, 'CAPTURE_REQUEST_COUNT_BELOW_PLAN');
+  assert.ok(loadedPayload.payload.requestCount <= expectedPlan.length + redirectCount,
+    'CAPTURE_REQUEST_COUNT_EXCEEDS_EXPLICIT_REDIRECT_BUDGET');
+  for (const [family, count] of Object.entries(expectedFamilyCounts)) {
+    assert.ok(loadedPayload.payload.familyCounts[family] >= count, `CAPTURE_FAMILY_REQUEST_COUNT_BELOW_PLAN:${family}`);
+  }
+  logPhase(phase, 'PASSED', { requestCount: loadedPayload.payload.requestCount,
+    familyCounts: loadedPayload.payload.familyCounts });
+
+  phase = 'EVIDENCE_LOCK';
+  logPhase(phase, 'STARTED');
+  const evidenceLock = await runner.writeFrozenEvidenceLock({
+    outputPath: absolute(OUTPUTS.evidenceLock),
+    payloadPath: absolute(OUTPUTS.payload),
+    runnerConfigurationPath: absolute(CURRENT_RUNNER),
+    activationConfigurationPath: absolute(ACTIVATION),
+    gitExecutable: GIT,
+    preregistrationPath: absolute(PREREGISTRATION),
+    root: ROOT
+  });
+  const earliest = Date.parse(evidenceLock.lock.earliestAcquisitionAt);
+  assert.ok(Number.isFinite(earliest), 'CAPTURE_EARLIEST_TIME_INVALID');
+  const expiresAt = new Date(earliest + 24 * 60 * 60 * 1000).toISOString();
+  assert.equal(evidenceLock.lock.capturedAt, evidenceLock.lock.earliestAcquisitionAt);
+  assert.equal(evidenceLock.lock.sourceReferenceDate, evidenceLock.lock.earliestAcquisitionAt.slice(0, 10));
+
+  report.status = 'OFFICIAL_CAPTURE_COMPLETE_SEMANTIC_ACCEPTANCE_HELD';
+  report.captureCompletedAt = new Date().toISOString();
+  report.capture = {
+    payloadPath: OUTPUTS.payload,
+    payloadSha256: loadedPayload.sha256,
+    captureStatus: loadedPayload.payload.captureStatus,
+    earliestAcquisitionAt: evidenceLock.lock.earliestAcquisitionAt,
+    evidenceWindowExpiresAt: expiresAt,
+    windowHours: 24,
+    requestCount: validated.entryCount,
+    familyCounts: validated.familyCounts,
+    httpStatusCounts: countHttpStatuses(loadedPayload.payload.entries),
+    cacheReuseCount: loadedPayload.payload.cacheReuses.length,
+    inventorySha256: loadedPayload.payload.captureInventorySha256
+  };
+  report.evidenceLock = {
+    path: OUTPUTS.evidenceLock,
+    sha256: evidenceLock.sha256,
+    capturePayloadSha256: evidenceLock.lock.capturePayloadSha256,
+    capturedAt: evidenceLock.lock.capturedAt,
+    sourceReferenceDate: evidenceLock.lock.sourceReferenceDate
+  };
+  report.failure = null;
+  logPhase(phase, 'PASSED', { evidenceWindowExpiresAt: expiresAt });
+} catch (error) {
+  report.status = 'OFFICIAL_CAPTURE_FAILED_SEMANTIC_ACCEPTANCE_HELD';
+  report.failure = { phase, code: safeFailure(error) };
+  report.captureCompletedAt = new Date().toISOString();
+  if (transport) {
+    report.capture = {
+      captureStatus: null,
+      runnerDispatchCount: transport.requestCount,
+      reservedRequestCount: transport.reservedRequestCount,
+      recordedEntryCount: transport.entries.length,
+      terminalIntegrityFailure: transport.terminalIntegrityFailure,
+      evidenceLockCreated: false
+    };
+  }
+  try {
+    const payloadBytes = await readFile(absolute(OUTPUTS.payload));
+    capturePayload = JSON.parse(payloadBytes.toString('utf8'));
+    report.capture = {
+      ...(report.capture || {}),
+      payloadPath: OUTPUTS.payload,
+      payloadSha256: sha256(payloadBytes),
+      captureStatus: capturePayload.captureStatus,
+      requestCount: capturePayload.requestCount,
+      familyCounts: capturePayload.familyCounts,
+      httpStatusCounts: countHttpStatuses(capturePayload.entries),
+      terminalIntegrityFailure: capturePayload.terminalIntegrityFailure,
+      evidenceLockCreated: false
+    };
+  } catch (payloadError) {
+    if (payloadError?.code !== 'ENOENT') report.capturePayloadReadFailure = safeFailure(payloadError);
+  }
+  logPhase(phase, 'FAILED', { code: report.failure.code,
+    runnerDispatchCount: report.capture?.runnerDispatchCount ?? null,
+    recordedEntryCount: report.capture?.recordedEntryCount ?? null });
+}
+
+report.finishedAt = new Date().toISOString();
+try {
+  report.resultSha256 = await writeAuditOnce(report);
+  auditWritten = true;
+  logPhase('AUDIT_RESULT', 'SAVED_WITH_EXCLUSIVE_CREATE', { path: OUTPUTS.result, sha256: report.resultSha256 });
+} catch (error) {
+  logPhase('AUDIT_RESULT', 'SAVE_FAILED', { code: safeFailure(error), priorAuditPreserved: true });
+}
+
+if (!auditWritten || report.status !== 'OFFICIAL_CAPTURE_COMPLETE_SEMANTIC_ACCEPTANCE_HELD') {
+  process.exitCode = 1;
+}

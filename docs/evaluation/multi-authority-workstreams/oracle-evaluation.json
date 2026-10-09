@@ -1,0 +1,1654 @@
+{
+  "summary": {
+    "suite": "Singapore multi-authority workstreams held-out oracle",
+    "mode": "ORACLE_ROUTING_WITH_LOCAL_REVIEWED_SOURCES",
+    "oracleMode": true,
+    "modelUnderstandingMeasured": false,
+    "sourceAccessMode": "LOCAL_REVIEWED_ONLY",
+    "liveSourceRetrievalRequested": false,
+    "liveEvidenceMeasured": false,
+    "cases": 4,
+    "expectedScopeCasesPassed": 4,
+    "overallStatusCounts": {
+      "VERIFIED": 0,
+      "CONDITIONAL": 0,
+      "INSUFFICIENT": 4
+    },
+    "limitations": [
+      "Oracle issue plans measure deterministic reconciliation and retrieval, not live-model understanding.",
+      "The local run uses reviewed local records and disables source discovery; it does not measure live-source availability.",
+      "A topic intentionally left unmapped by the independent taxonomy remains uncovered even when its oracle meaning is clear."
+    ]
+  },
+  "cases": [
+    {
+      "id": "A-cpf-and-personal-income-tax-relief",
+      "queryLabel": "An employee earns [amount] per month. What CPF contributions must the employer and employee make, and how do the employee's compulsory CPF contributions affect ",
+      "oracleMode": true,
+      "modelUnderstandingMeasured": false,
+      "oracleSemanticInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "issues": [
+          {
+            "subject": "employer CPF contribution obligations",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          },
+          {
+            "subject": "employee CPF contribution obligations",
+            "population": "EMPLOYEE",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          },
+          {
+            "subject": "employee personal income tax relief for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          }
+        ]
+      },
+      "rawQueryRetained": true,
+      "materialIssues": [
+        {
+          "id": "issue_80a46a4d",
+          "subject": "employer CPF contribution obligations",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "MAPPED"
+        },
+        {
+          "id": "issue_acad69df",
+          "subject": "employee CPF contribution obligations",
+          "population": "EMPLOYEE",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "MAPPED"
+        },
+        {
+          "id": "issue_7e4d5b0a",
+          "subject": "employee personal income tax relief for compulsory CPF contributions",
+          "population": "INDIVIDUAL",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "MAPPED"
+        }
+      ],
+      "mappedIds": [
+        {
+          "issueId": "issue_80a46a4d",
+          "topicIds": [
+            "cpf_contribution_rates"
+          ]
+        },
+        {
+          "issueId": "issue_acad69df",
+          "topicIds": [
+            "cpf_contribution_rates"
+          ]
+        },
+        {
+          "issueId": "issue_7e4d5b0a",
+          "topicIds": [
+            "iras-individual-cpf-relief"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "issueIds": [
+            "issue_80a46a4d",
+            "issue_acad69df"
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_INDIVIDUAL_TAX",
+          "issueIds": [
+            "issue_7e4d5b0a"
+          ]
+        }
+      ],
+      "retrievedWorkstreams": [
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "sourceSections": [
+            "CPF_CONTRIBUTIONS"
+          ],
+          "populations": [
+            "EMPLOYER",
+            "EMPLOYEE"
+          ],
+          "issueIds": [
+            "issue_80a46a4d",
+            "issue_acad69df"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_80a46a4d",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "retrievalTrace": {
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "ATTEMPTED",
+                    "reason": "The stage was attempted and requires evidence admission."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  }
+                ]
+              }
+            },
+            {
+              "issueId": "issue_acad69df",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "retrievalTrace": {
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "ATTEMPTED",
+                    "reason": "The stage was attempted and requires evidence admission."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  }
+                ]
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "employer CPF contribution obligations",
+            "employee CPF contribution obligations"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "CANDIDATE_REJECTED",
+              "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "NO_ADMITTED_EVIDENCE",
+              "reason": "No candidate passed the evidence admission checks for this issue.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "NO_VERIFIED_CLAIM",
+              "reason": "No complete source quotation passed claim verification for this issue.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "ISSUE_CONCEPT_UNCOVERED",
+              "reason": "Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "subject": "employer CPF contribution obligations"
+            },
+            {
+              "code": "CANDIDATE_REJECTED",
+              "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "subject": "employee CPF contribution obligations"
+            },
+            {
+              "code": "NO_ADMITTED_EVIDENCE",
+              "reason": "No candidate passed the evidence admission checks for this issue.",
+              "subject": "employee CPF contribution obligations"
+            },
+            {
+              "code": "NO_VERIFIED_CLAIM",
+              "reason": "No complete source quotation passed claim verification for this issue.",
+              "subject": "employee CPF contribution obligations"
+            },
+            {
+              "code": "ISSUE_CONCEPT_UNCOVERED",
+              "reason": "Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "subject": "employee CPF contribution obligations"
+            }
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_INDIVIDUAL_TAX",
+          "sourceSections": [
+            "IRAS_INDIVIDUAL_TAX"
+          ],
+          "populations": [
+            "INDIVIDUAL"
+          ],
+          "issueIds": [
+            "issue_7e4d5b0a"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_7e4d5b0a",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "retrievalTrace": {
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  }
+                ],
+                "attempts": []
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "employee personal income tax relief for compulsory CPF contributions"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "NO_CANDIDATE_EVIDENCE",
+              "reason": "No source evidence was found for this issue.",
+              "subject": "employee personal income tax relief for compulsory CPF contributions"
+            },
+            {
+              "code": "IRAS_SCOPE_NOT_COVERED",
+              "reason": "IRAS admission did not cover every scoped topic and requested concept for this issue.",
+              "subject": "employee personal income tax relief for compulsory CPF contributions"
+            },
+            {
+              "code": "NO_VERIFIED_CLAIM",
+              "reason": "No complete source quotation passed claim verification for this issue.",
+              "subject": "employee personal income tax relief for compulsory CPF contributions"
+            },
+            {
+              "code": "ISSUE_CONCEPT_UNCOVERED",
+              "reason": "Verified quotations do not support the requested topic iras-individual-cpf-relief.",
+              "subject": "employee personal income tax relief for compulsory CPF contributions"
+            },
+            {
+              "code": "ISSUE_CONCEPT_UNCOVERED",
+              "reason": "Verified quotations do not support the requested concept cpf_relief.",
+              "subject": "employee personal income tax relief for compulsory CPF contributions"
+            }
+          ]
+        }
+      ],
+      "workstreamEvidenceStatuses": [
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_INDIVIDUAL_TAX",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        }
+      ],
+      "overallEvidenceStatus": "INSUFFICIENT",
+      "overallApplicationStatus": "UNRESOLVED",
+      "overallStatus": "INSUFFICIENT",
+      "renderedSections": {
+        "queryMatchesRawQuestion": true,
+        "status": "INSUFFICIENT",
+        "sections": [
+          {
+            "authority": "CPF",
+            "authorityLabel": "CPF Board",
+            "domain": "CPF_PAYROLL",
+            "domainLabel": "CPF contributions",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_80a46a4d",
+                "subject": "employer CPF contribution obligations",
+                "population": "Employer",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+                  "No candidate passed the evidence admission checks for this issue.",
+                  "No complete source quotation passed claim verification for this issue.",
+                  "Verified quotations do not support the requested topic cpf_contribution_rates."
+                ]
+              },
+              {
+                "id": "issue_acad69df",
+                "subject": "employee CPF contribution obligations",
+                "population": "Employee",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+                  "No candidate passed the evidence admission checks for this issue.",
+                  "No complete source quotation passed claim verification for this issue.",
+                  "Verified quotations do not support the requested topic cpf_contribution_rates."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "employer CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "employer CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+              "employer CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+              "employer CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "employee CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "employee CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+              "employee CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+              "employee CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates."
+            ]
+          },
+          {
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_INDIVIDUAL_TAX",
+            "domainLabel": "Individual income tax",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_7e4d5b0a",
+                "subject": "employee personal income tax relief for compulsory CPF contributions",
+                "population": "Individual",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "No source evidence was found for this issue.",
+                  "IRAS admission did not cover every scoped topic and requested concept for this issue.",
+                  "No complete source quotation passed claim verification for this issue.",
+                  "Verified quotations do not support the requested topic iras-individual-cpf-relief.",
+                  "Verified quotations do not support the requested concept cpf_relief."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "employee personal income tax relief for compulsory CPF contributions: No source evidence was found for this issue.",
+              "employee personal income tax relief for compulsory CPF contributions: IRAS admission did not cover every scoped topic and requested concept for this issue.",
+              "employee personal income tax relief for compulsory CPF contributions: No complete source quotation passed claim verification for this issue.",
+              "employee personal income tax relief for compulsory CPF contributions: Verified quotations do not support the requested topic iras-individual-cpf-relief.",
+              "employee personal income tax relief for compulsory CPF contributions: Verified quotations do not support the requested concept cpf_relief."
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "employer CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+          "employer CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+          "employer CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+          "employer CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates.",
+          "employee CPF contribution obligations: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+          "employee CPF contribution obligations: No candidate passed the evidence admission checks for this issue.",
+          "employee CPF contribution obligations: No complete source quotation passed claim verification for this issue.",
+          "employee CPF contribution obligations: Verified quotations do not support the requested topic cpf_contribution_rates.",
+          "employee personal income tax relief for compulsory CPF contributions: No source evidence was found for this issue.",
+          "employee personal income tax relief for compulsory CPF contributions: IRAS admission did not cover every scoped topic and requested concept for this issue.",
+          "employee personal income tax relief for compulsory CPF contributions: No complete source quotation passed claim verification for this issue.",
+          "employee personal income tax relief for compulsory CPF contributions: Verified quotations do not support the requested topic iras-individual-cpf-relief.",
+          "employee personal income tax relief for compulsory CPF contributions: Verified quotations do not support the requested concept cpf_relief."
+        ]
+      },
+      "localNoProviderComparison": {
+        "interpretationMode": "DETERMINISTIC_FALLBACK",
+        "interpretationFailure": "NO_PROVIDER",
+        "modelUnderstandingMeasured": false,
+        "mappedIssueCount": 2,
+        "plannedWorkstreams": [
+          {
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL"
+          },
+          {
+            "authority": "IRAS",
+            "domain": "IRAS_INDIVIDUAL_TAX"
+          }
+        ],
+        "retrievedWorkstreams": [
+          {
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED"
+          },
+          {
+            "authority": "IRAS",
+            "domain": "IRAS_INDIVIDUAL_TAX",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED"
+          }
+        ],
+        "overallStatus": "INSUFFICIENT"
+      },
+      "sourceAccessMode": "LOCAL_REVIEWED_ONLY",
+      "liveSourceRetrievalRequested": false,
+      "liveEvidenceMeasured": false,
+      "liveAcceptedRecordCount": 0
+    },
+    {
+      "id": "B-mom-cpf-and-iras-employer-reporting",
+      "queryLabel": "We hired a foreign employee in Singapore. What employment/work-pass requirements apply, whether CPF contributions are required, and what employer tax reporting ",
+      "oracleMode": true,
+      "modelUnderstandingMeasured": false,
+      "oracleSemanticInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "issues": [
+          {
+            "subject": "employment conditions for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [
+              "mom-employment-act-coverage"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          },
+          {
+            "subject": "work-pass requirements for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [
+              "mom-employment-act-coverage",
+              "unknown-topic-id"
+            ],
+            "evidenceRequirement": "UNRESOLVED"
+          },
+          {
+            "subject": "employer CPF contribution obligations for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          },
+          {
+            "subject": "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "FILING_REQUIREMENT",
+            "mappedTopicIds": [
+              "iras-employer-ir21",
+              "iras-ais-employment-income"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          }
+        ]
+      },
+      "rawQueryRetained": true,
+      "materialIssues": [
+        {
+          "id": "issue_4f0892bf",
+          "subject": "employment conditions for a foreign employee",
+          "population": "EMPLOYER",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "id": "issue_cd33f83c",
+          "subject": "work-pass requirements for a foreign employee",
+          "population": "EMPLOYER",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "id": "issue_ddf2aa0b",
+          "subject": "employer CPF contribution obligations for a foreign employee",
+          "population": "EMPLOYER",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CHECK_ELIGIBILITY",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "MAPPED"
+        },
+        {
+          "id": "issue_5bebec39",
+          "subject": "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee",
+          "population": "EMPLOYER",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "FILING_REQUIREMENT",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "mappedIds": [
+        {
+          "issueId": "issue_4f0892bf",
+          "topicIds": []
+        },
+        {
+          "issueId": "issue_cd33f83c",
+          "topicIds": []
+        },
+        {
+          "issueId": "issue_ddf2aa0b",
+          "topicIds": [
+            "cpf_contribution_rates"
+          ]
+        },
+        {
+          "issueId": "issue_5bebec39",
+          "topicIds": []
+        }
+      ],
+      "plannedWorkstreams": [
+        {
+          "authority": "MOM",
+          "domain": "MOM_EMPLOYMENT",
+          "issueIds": [
+            "issue_4f0892bf",
+            "issue_cd33f83c"
+          ]
+        },
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "issueIds": [
+            "issue_ddf2aa0b"
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_EMPLOYER_REPORTING",
+          "issueIds": [
+            "issue_5bebec39"
+          ]
+        }
+      ],
+      "retrievedWorkstreams": [
+        {
+          "authority": "MOM",
+          "domain": "MOM_EMPLOYMENT",
+          "sourceSections": [],
+          "populations": [
+            "EMPLOYER"
+          ],
+          "issueIds": [
+            "issue_4f0892bf",
+            "issue_cd33f83c"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_4f0892bf",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              }
+            },
+            {
+              "issueId": "issue_cd33f83c",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "employment conditions for a foreign employee",
+            "work-pass requirements for a foreign employee"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "NO_COVERAGE_TOPIC",
+              "reason": "The issue has no resolved authority and topic mapping for this workstream.",
+              "subject": "employment conditions for a foreign employee"
+            },
+            {
+              "code": "NO_COVERAGE_TOPIC",
+              "reason": "The issue has no resolved authority and topic mapping for this workstream.",
+              "subject": "work-pass requirements for a foreign employee"
+            }
+          ]
+        },
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "sourceSections": [
+            "CPF_CONTRIBUTIONS"
+          ],
+          "populations": [
+            "EMPLOYER"
+          ],
+          "issueIds": [
+            "issue_ddf2aa0b"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_ddf2aa0b",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "retrievalTrace": {
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "ATTEMPTED",
+                    "reason": "The stage was attempted and requires evidence admission."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "This retrieval stage was skipped by the configured scope."
+                  }
+                ]
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "employer CPF contribution obligations for a foreign employee"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "CANDIDATE_REJECTED",
+              "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "subject": "employer CPF contribution obligations for a foreign employee"
+            },
+            {
+              "code": "NO_ADMITTED_EVIDENCE",
+              "reason": "No candidate passed the evidence admission checks for this issue.",
+              "subject": "employer CPF contribution obligations for a foreign employee"
+            },
+            {
+              "code": "NO_VERIFIED_CLAIM",
+              "reason": "No complete source quotation passed claim verification for this issue.",
+              "subject": "employer CPF contribution obligations for a foreign employee"
+            },
+            {
+              "code": "ISSUE_CONCEPT_UNCOVERED",
+              "reason": "Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "subject": "employer CPF contribution obligations for a foreign employee"
+            }
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_EMPLOYER_REPORTING",
+          "sourceSections": [],
+          "populations": [
+            "EMPLOYER"
+          ],
+          "issueIds": [
+            "issue_5bebec39"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_5bebec39",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "NO_COVERAGE_TOPIC",
+              "reason": "The issue has no resolved authority and topic mapping for this workstream.",
+              "subject": "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee"
+            }
+          ]
+        }
+      ],
+      "workstreamEvidenceStatuses": [
+        {
+          "authority": "MOM",
+          "domain": "MOM_EMPLOYMENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        },
+        {
+          "authority": "CPF",
+          "domain": "CPF_PAYROLL",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_EMPLOYER_REPORTING",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        }
+      ],
+      "overallEvidenceStatus": "INSUFFICIENT",
+      "overallApplicationStatus": "UNRESOLVED",
+      "overallStatus": "INSUFFICIENT",
+      "renderedSections": {
+        "queryMatchesRawQuestion": true,
+        "status": "INSUFFICIENT",
+        "sections": [
+          {
+            "authority": "MOM",
+            "authorityLabel": "Ministry of Manpower",
+            "domain": "MOM_EMPLOYMENT",
+            "domainLabel": "Employment requirements",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_4f0892bf",
+                "subject": "employment conditions for a foreign employee",
+                "population": "Employer",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              },
+              {
+                "id": "issue_cd33f83c",
+                "subject": "work-pass requirements for a foreign employee",
+                "population": "Employer",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "employment conditions for a foreign employee: The issue has no resolved authority and topic mapping for this workstream.",
+              "work-pass requirements for a foreign employee: The issue has no resolved authority and topic mapping for this workstream."
+            ]
+          },
+          {
+            "authority": "CPF",
+            "authorityLabel": "CPF Board",
+            "domain": "CPF_PAYROLL",
+            "domainLabel": "CPF contributions",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_ddf2aa0b",
+                "subject": "employer CPF contribution obligations for a foreign employee",
+                "population": "Employer",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+                  "No candidate passed the evidence admission checks for this issue.",
+                  "No complete source quotation passed claim verification for this issue.",
+                  "Verified quotations do not support the requested topic cpf_contribution_rates."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "employer CPF contribution obligations for a foreign employee: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+              "employer CPF contribution obligations for a foreign employee: No candidate passed the evidence admission checks for this issue.",
+              "employer CPF contribution obligations for a foreign employee: No complete source quotation passed claim verification for this issue.",
+              "employer CPF contribution obligations for a foreign employee: Verified quotations do not support the requested topic cpf_contribution_rates."
+            ]
+          },
+          {
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_EMPLOYER_REPORTING",
+            "domainLabel": "Employer reporting",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_5bebec39",
+                "subject": "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee",
+                "population": "Employer",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee: The issue has no resolved authority and topic mapping for th"
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "employment conditions for a foreign employee: The issue has no resolved authority and topic mapping for this workstream.",
+          "work-pass requirements for a foreign employee: The issue has no resolved authority and topic mapping for this workstream.",
+          "employer CPF contribution obligations for a foreign employee: Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+          "employer CPF contribution obligations for a foreign employee: No candidate passed the evidence admission checks for this issue.",
+          "employer CPF contribution obligations for a foreign employee: No complete source quotation passed claim verification for this issue.",
+          "employer CPF contribution obligations for a foreign employee: Verified quotations do not support the requested topic cpf_contribution_rates.",
+          "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee: The issue has no resolved authority and topic mapping for th",
+          "employment conditions for a foreign employee: No reviewed topic was resolved for this issue",
+          "work-pass requirements for a foreign employee: No reviewed topic was resolved for this issue",
+          "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee: No reviewed topic was resolved for this issue"
+        ]
+      },
+      "localNoProviderComparison": {
+        "interpretationMode": "DETERMINISTIC_FALLBACK",
+        "interpretationFailure": "NO_PROVIDER",
+        "modelUnderstandingMeasured": false,
+        "mappedIssueCount": 1,
+        "plannedWorkstreams": [
+          {
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL"
+          }
+        ],
+        "retrievedWorkstreams": [
+          {
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED"
+          }
+        ],
+        "overallStatus": "INSUFFICIENT"
+      },
+      "sourceAccessMode": "LOCAL_REVIEWED_ONLY",
+      "liveSourceRetrievalRequested": false,
+      "liveEvidenceMeasured": false,
+      "liveAcceptedRecordCount": 0
+    },
+    {
+      "id": "C-iras-corporate-and-employee-tax-domains",
+      "queryLabel": "Our company pays an employee's housing allowance. Is it deductible to the company and is it taxable to the employee?",
+      "oracleMode": true,
+      "modelUnderstandingMeasured": false,
+      "oracleSemanticInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "issues": [
+          {
+            "subject": "company income tax deductibility of housing allowance expense",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [
+              "iras-cit-deductibility"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          },
+          {
+            "subject": "employee benefits in kind income tax treatment of housing allowance",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [
+              "iras-employment-benefits"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          }
+        ]
+      },
+      "rawQueryRetained": true,
+      "materialIssues": [
+        {
+          "id": "issue_bf3d770e",
+          "subject": "company income tax deductibility of housing allowance expense",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CHECK_ELIGIBILITY",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "id": "issue_795acc38",
+          "subject": "employee benefits in kind income tax treatment of housing allowance",
+          "population": "EMPLOYEE",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "mappedIds": [
+        {
+          "issueId": "issue_bf3d770e",
+          "topicIds": []
+        },
+        {
+          "issueId": "issue_795acc38",
+          "topicIds": []
+        }
+      ],
+      "plannedWorkstreams": [
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_CORPORATE_TAX",
+          "issueIds": [
+            "issue_bf3d770e"
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_EMPLOYMENT_BENEFITS",
+          "issueIds": [
+            "issue_795acc38"
+          ]
+        }
+      ],
+      "retrievedWorkstreams": [
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_CORPORATE_TAX",
+          "sourceSections": [],
+          "populations": [
+            "COMPANY"
+          ],
+          "issueIds": [
+            "issue_bf3d770e"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_bf3d770e",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "company income tax deductibility of housing allowance expense"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "NO_COVERAGE_TOPIC",
+              "reason": "The issue has no resolved authority and topic mapping for this workstream.",
+              "subject": "company income tax deductibility of housing allowance expense"
+            }
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_EMPLOYMENT_BENEFITS",
+          "sourceSections": [],
+          "populations": [
+            "EMPLOYEE"
+          ],
+          "issueIds": [
+            "issue_795acc38"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_795acc38",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "employee benefits in kind income tax treatment of housing allowance"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "NO_COVERAGE_TOPIC",
+              "reason": "The issue has no resolved authority and topic mapping for this workstream.",
+              "subject": "employee benefits in kind income tax treatment of housing allowance"
+            }
+          ]
+        }
+      ],
+      "workstreamEvidenceStatuses": [
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_CORPORATE_TAX",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_EMPLOYMENT_BENEFITS",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        }
+      ],
+      "overallEvidenceStatus": "INSUFFICIENT",
+      "overallApplicationStatus": "UNRESOLVED",
+      "overallStatus": "INSUFFICIENT",
+      "renderedSections": {
+        "queryMatchesRawQuestion": true,
+        "status": "INSUFFICIENT",
+        "sections": [
+          {
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_CORPORATE_TAX",
+            "domainLabel": "Corporate income tax",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_bf3d770e",
+                "subject": "company income tax deductibility of housing allowance expense",
+                "population": "Company",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "company income tax deductibility of housing allowance expense: The issue has no resolved authority and topic mapping for this workstream."
+            ]
+          },
+          {
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_EMPLOYMENT_BENEFITS",
+            "domainLabel": "Employment income and benefits",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_795acc38",
+                "subject": "employee benefits in kind income tax treatment of housing allowance",
+                "population": "Employee",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "employee benefits in kind income tax treatment of housing allowance: The issue has no resolved authority and topic mapping for this workstream."
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "company income tax deductibility of housing allowance expense: The issue has no resolved authority and topic mapping for this workstream.",
+          "employee benefits in kind income tax treatment of housing allowance: The issue has no resolved authority and topic mapping for this workstream.",
+          "company income tax deductibility of housing allowance expense: No reviewed topic was resolved for this issue",
+          "employee benefits in kind income tax treatment of housing allowance: No reviewed topic was resolved for this issue"
+        ]
+      },
+      "localNoProviderComparison": {
+        "interpretationMode": "DETERMINISTIC_FALLBACK",
+        "interpretationFailure": "NO_PROVIDER",
+        "modelUnderstandingMeasured": false,
+        "mappedIssueCount": 0,
+        "plannedWorkstreams": [],
+        "retrievedWorkstreams": [],
+        "overallStatus": "INSUFFICIENT"
+      },
+      "sourceAccessMode": "LOCAL_REVIEWED_ONLY",
+      "liveSourceRetrievalRequested": false,
+      "liveEvidenceMeasured": false,
+      "liveAcceptedRecordCount": 0
+    },
+    {
+      "id": "D-accounting-standards-and-iras-corporate-tax",
+      "queryLabel": "How should an expense be recorded under SFRS(I), and is it deductible for Singapore corporate income tax?",
+      "oracleMode": true,
+      "modelUnderstandingMeasured": false,
+      "oracleSemanticInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "issues": [
+          {
+            "subject": "SFRS(I) accounting treatment of an expense",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "PREPARE_JOURNAL",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "UNRESOLVED"
+          },
+          {
+            "subject": "corporate income tax deductibility of company expenses",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [
+              "cit_section_14"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS"
+          }
+        ]
+      },
+      "rawQueryRetained": true,
+      "materialIssues": [
+        {
+          "id": "issue_c5ebe779",
+          "subject": "SFRS(I) accounting treatment of an expense",
+          "population": "COMPANY",
+          "domain": "ACCOUNTING",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "PREPARE_JOURNAL",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "id": "issue_66f370e3",
+          "subject": "corporate income tax deductibility of company expenses",
+          "population": "COMPANY",
+          "domain": "IRAS_INCOME_TAX",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CHECK_ELIGIBILITY",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "mappedIds": [
+        {
+          "issueId": "issue_c5ebe779",
+          "topicIds": []
+        },
+        {
+          "issueId": "issue_66f370e3",
+          "topicIds": []
+        }
+      ],
+      "plannedWorkstreams": [
+        {
+          "authority": "ACCOUNTING_STANDARDS",
+          "domain": "ACCOUNTING",
+          "issueIds": [
+            "issue_c5ebe779"
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_CORPORATE_TAX",
+          "issueIds": [
+            "issue_66f370e3"
+          ]
+        }
+      ],
+      "retrievedWorkstreams": [
+        {
+          "authority": "ACCOUNTING_STANDARDS",
+          "domain": "ACCOUNTING",
+          "sourceSections": [],
+          "populations": [
+            "COMPANY"
+          ],
+          "issueIds": [
+            "issue_c5ebe779"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_c5ebe779",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "SFRS(I) accounting treatment of an expense"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "NO_COVERAGE_TOPIC",
+              "reason": "The issue has no resolved authority and topic mapping for this workstream.",
+              "subject": "SFRS(I) accounting treatment of an expense"
+            }
+          ]
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_CORPORATE_TAX",
+          "sourceSections": [],
+          "populations": [
+            "COMPANY"
+          ],
+          "issueIds": [
+            "issue_66f370e3"
+          ],
+          "issueRetrieval": [
+            {
+              "issueId": "issue_66f370e3",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              }
+            }
+          ],
+          "acceptedOfficialSources": [],
+          "coveredConcepts": [],
+          "uncoveredConcepts": [
+            "corporate income tax deductibility of company expenses"
+          ],
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "gaps": [
+            {
+              "code": "NO_COVERAGE_TOPIC",
+              "reason": "The issue has no resolved authority and topic mapping for this workstream.",
+              "subject": "corporate income tax deductibility of company expenses"
+            }
+          ]
+        }
+      ],
+      "workstreamEvidenceStatuses": [
+        {
+          "authority": "ACCOUNTING_STANDARDS",
+          "domain": "ACCOUNTING",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        },
+        {
+          "authority": "IRAS",
+          "domain": "IRAS_CORPORATE_TAX",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED"
+        }
+      ],
+      "overallEvidenceStatus": "INSUFFICIENT",
+      "overallApplicationStatus": "UNRESOLVED",
+      "overallStatus": "INSUFFICIENT",
+      "renderedSections": {
+        "queryMatchesRawQuestion": true,
+        "status": "INSUFFICIENT",
+        "sections": [
+          {
+            "authority": "ACCOUNTING_STANDARDS",
+            "authorityLabel": "Singapore accounting standards",
+            "domain": "ACCOUNTING",
+            "domainLabel": "Accounting treatment",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_c5ebe779",
+                "subject": "SFRS(I) accounting treatment of an expense",
+                "population": "Company",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "SFRS(I) accounting treatment of an expense: The issue has no resolved authority and topic mapping for this workstream."
+            ]
+          },
+          {
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_CORPORATE_TAX",
+            "domainLabel": "Corporate income tax",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_66f370e3",
+                "subject": "corporate income tax deductibility of company expenses",
+                "population": "Company",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "corporate income tax deductibility of company expenses: The issue has no resolved authority and topic mapping for this workstream."
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "SFRS(I) accounting treatment of an expense: The issue has no resolved authority and topic mapping for this workstream.",
+          "corporate income tax deductibility of company expenses: The issue has no resolved authority and topic mapping for this workstream.",
+          "SFRS(I) accounting treatment of an expense: No reviewed topic was resolved for this issue",
+          "corporate income tax deductibility of company expenses: No reviewed topic was resolved for this issue"
+        ]
+      },
+      "localNoProviderComparison": {
+        "interpretationMode": "DETERMINISTIC_FALLBACK",
+        "interpretationFailure": "NO_PROVIDER",
+        "modelUnderstandingMeasured": false,
+        "mappedIssueCount": 0,
+        "plannedWorkstreams": [],
+        "retrievedWorkstreams": [],
+        "overallStatus": "INSUFFICIENT"
+      },
+      "sourceAccessMode": "LOCAL_REVIEWED_ONLY",
+      "liveSourceRetrievalRequested": false,
+      "liveEvidenceMeasured": false,
+      "liveAcceptedRecordCount": 0
+    }
+  ]
+}

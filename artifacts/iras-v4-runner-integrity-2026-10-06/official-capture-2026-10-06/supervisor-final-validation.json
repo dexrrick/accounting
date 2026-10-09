@@ -1,0 +1,48 @@
+{
+  "status": "OFFICIAL_EVIDENCE_LOCKED_SEMANTIC_ACCEPTANCE_HELD",
+  "officialRequests": 15,
+  "http200Count": 15,
+  "acquisitionFailures": 0,
+  "redirects": 0,
+  "providerRequests": 0,
+  "acceptanceReservations": 0,
+  "productionReplayRows": 15,
+  "productionReplaySuccessRows": 15,
+  "sourceInputBindingsVerified": 592,
+  "sourceInputBindingMismatches": 0,
+  "originalAcquisitionAuditPreserved": true,
+  "priorAuditCause": "LAUNCHER_JSON_REPRESENTATION_MISMATCH",
+  "earliestAcquisitionAt": "2026-10-06T06:26:38.150Z",
+  "evidenceWindowExpiresAt": "2026-10-07T06:26:38.150Z",
+  "remainingFiveHourPercentAtCheckpoint": 21,
+  "remainingWeeklyPercentAtCheckpoint": 74,
+  "resourceBufferMet": true,
+  "officialCaptureLogSha256": "3ed894870c2736fb2b30bcf95e3af87cfd1ab89500345850c60d7d7fc474d4bc",
+  "offlineCompletionLogSha256": "c7eeafec836395d99dda81bf668fd5ca2aef76c28ea7b0d516e9fc03c16ccd91",
+  "artifactRows": [
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/evidence-lock.json",
+      "sha256": "36f1ac828e25ab0cc4f9879954efa1479ab3e68122043d2ccff255f8dd57dac1"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/completion-result.json",
+      "sha256": "22ca1252c3ae2fd99326fa2835ebd2c0e70cffdcdfd511ef6135aa51f6b5e524"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-payload.json",
+      "sha256": "7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-partial.jsonl",
+      "sha256": "3efaea58fbfd55fe57075930c4a6d33ebe5ed5bcdbecd86b7bda6acda898daa9"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-reserved.json",
+      "sha256": "8508ccdaac24bfcec6bbc8369e4d7179ec0b7586bb0614bd41a39283e7aa58bf"
+    },
+    {
+      "path": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-result.json",
+      "sha256": "15bb1aa377dba8e3b12a7c001bd4089dcbba735ce940fec5705dace5885fc8a9"
+    }
+  ]
+}

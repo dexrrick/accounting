@@ -1,0 +1,42 @@
+{
+  "profile": "iras-v4-semantic-gate-response",
+  "requestId": "3c4a8b5b-c6c5-4825-9ff4-380a3428f30a",
+  "launcherSha256": "3c4ae3ce2e8fc995cc88272015d9af6224f0cac2a5967f29ecc52e8aa44411ad",
+  "projectionSha256": "daa332cb1e7bf11d017611ff8849423a13e871bdf9f89d5dd43e0c2e2b8b3578",
+  "suppliedAt": "2026-10-06T11:09:23.452Z",
+  "usageObservation": {
+    "sourceTool": "mcp__codex_app__get_usage_limits",
+    "observedAt": "2026-10-06T11:09:06Z",
+    "rawPayload": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ordinaryUsageAllowed\":true,\"rateLimits\":{\"limitId\":\"codex\",\"limitName\":null,\"normalModelSlug\":null,\"primary\":{\"usedPercent\":13,\"windowDurationMins\":300,\"resetsAt\":1791297986},\"secondary\":{\"usedPercent\":26,\"windowDurationMins\":10080,\"resetsAt\":1791815038},\"credits\":{\"hasCredits\":false,\"unlimited\":false,\"balance\":\"0\"},\"individualLimit\":null,\"spendControlReached\":false,\"planType\":\"team\",\"rateLimitReachedType\":null},\"rateLimitsByLimitId\":{\"codex\":{\"limitId\":\"codex\",\"limitName\":null,\"normalModelSlug\":null,\"primary\":{\"usedPercent\":13,\"windowDurationMins\":300,\"resetsAt\":1791297986},\"secondary\":{\"usedPercent\":26,\"windowDurationMins\":10080,\"resetsAt\":1791815038},\"credits\":{\"hasCredits\":false,\"unlimited\":false,\"balance\":\"0\"},\"individualLimit\":null,\"spendControlReached\":false,\"planType\":\"team\",\"rateLimitReachedType\":null}},\"rateLimitResetCredits\":{\"availableCount\":1,\"credits\":[{\"id\":\"RateLimitResetCredit_6ae15608ad4081919145e85bcf66cd09\",\"resetType\":\"codexRateLimits\",\"status\":\"available\",\"grantedAt\":1790708634,\"expiresAt\":1793300634,\"title\":\"Full reset (Weekly + 5 hr)\",\"description\":\"Thanks for using Codex! You've been granted one free rate limit reset.\"}]},\"accountId\":\"44d350a1-6fa3-4925-b3f4-e4a358caf35b\",\"rateLimitUpsell\":null}"
+        }
+      ],
+      "isError": false
+    }
+  },
+  "providerQuotaEvidence": {
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "source": "Direct user confirmation in this chat that previously supplied API allowance is current and available for the nine frozen requests using the configured .env.local key; not independently observed provider-dashboard data",
+    "observedAt": "2026-10-06T10:57:01Z",
+    "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+    "reportedLimits": {
+      "requestsPerMinute": 15,
+      "tokensPerMinute": 250000,
+      "requestsPerDay": 500
+    },
+    "currentHeadroom": {
+      "confirmedRequestCapacity": 9,
+      "confirmedForNineFrozenRequests": true,
+      "frozenRequestTokenLimitsSupported": true,
+      "preregistrationSha256": "483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3"
+    },
+    "userConfirmationText": "please do so it is confirmed",
+    "providerProbeMade": false,
+    "providerDashboardObserved": false,
+    "configuredProjectIdentityIndependentlyVerified": false
+  }
+}

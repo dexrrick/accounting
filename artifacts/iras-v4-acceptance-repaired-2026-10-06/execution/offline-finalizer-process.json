@@ -1,0 +1,13 @@
+{
+  "processId": 27748,
+  "stderr": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/offline-finalizer.stderr.log",
+  "credentialReadAllowed": false,
+  "launchedAtUtc": "2026-10-07T15:36:10.1458159Z",
+  "profile": "iras-v4-offline-finalizer-process",
+  "sourceRequestsAllowed": 0,
+  "geminiRequestsAllowed": 0,
+  "finalizerSha256": "766fcc4eb49c82e9e04ade312a42ea833709639c39c76c584a5b7b5de6b862ed",
+  "completion": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/capture-recovery-completion.json",
+  "stdout": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/offline-finalizer.stdout.log",
+  "failure": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/capture-recovery-completion-failure.json"
+}

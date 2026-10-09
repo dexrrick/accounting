@@ -1,0 +1,42 @@
+{
+  "status": "OFFLINE_BINDINGS_VERIFIED_CAPTURE_AND_SEMANTIC_EXECUTION_HELD",
+  "reviewedCommit": "a9924a8931209fa6df723e8faaefc21914368d82",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
+  "namespaceAbsent": true,
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "captureInventoryCount": 15,
+  "bindings": {
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/runner-configuration.json": "c28d78859dce8ab2907ee50baddf5f4b424ed2328ccf6cbee4115a9bd9eaf078",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/preregistration.json": "0f6e0e99f7751fb230c39d4172adda9ceb777d97303ba38e5e42c4cf3382a265",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/activation-configuration.json": "b61044862f157a93c4529a054309ade4da03666f96bf6d77111a3e46a53b2c3b"
+  },
+  "promptRowsVerified": 9,
+  "liveCallsMade": 0,
+  "capturesMade": 0,
+  "reservationOrDispatchOccurred": false,
+  "protectedInputsUnchanged": true,
+  "protectedInputSha256": {
+    "before": {
+      "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4/runner-v4.partial.jsonl": "bbaed3f8caaa2a20fc46307bacf6bff94107b2fc04b3fd8e111e34e5b8a74da2",
+      "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4/consumed-v4.json": "e880df98cb6ea73860446de7023b1ff3dc80cd727746d593d199dd574e83a819",
+      "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-payload.json": "7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9",
+      "artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix/activation-configuration.json": "5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30",
+      "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.json": "f0721dfee27482035c2dfe97891fdd4bf59cee3afc3ecc22acfb89f2694c3063",
+      "artifacts/iras-v4-offline-repairs-2026-10-06/baseline-replay.json": "e82f9e92b404aa96e1d28979a7ba3eccfdd3c68553968ce0ec955fb7c2ceb5d9"
+    },
+    "after": {
+      "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4/runner-v4.partial.jsonl": "bbaed3f8caaa2a20fc46307bacf6bff94107b2fc04b3fd8e111e34e5b8a74da2",
+      "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-run-v4/consumed-v4.json": "e880df98cb6ea73860446de7023b1ff3dc80cd727746d593d199dd574e83a819",
+      "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-payload.json": "7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9",
+      "artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix/activation-configuration.json": "5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30",
+      "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.json": "f0721dfee27482035c2dfe97891fdd4bf59cee3afc3ecc22acfb89f2694c3063",
+      "artifacts/iras-v4-offline-repairs-2026-10-06/baseline-replay.json": "e82f9e92b404aa96e1d28979a7ba3eccfdd3c68553968ce0ec955fb7c2ceb5d9"
+    }
+  },
+  "nextRequired": [
+    "NEW_CAPTURE_AUTHORIZATION",
+    "FRESH_CODE_BOUND_CAPTURE_AND_EVIDENCE_LOCK",
+    "CURRENT_SHARED_ALLOWANCE_AND_PROVIDER_QUOTA",
+    "NEW_NINE_CASE_GEMINI_AUTHORIZATION"
+  ]
+}

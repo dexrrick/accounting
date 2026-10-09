@@ -1,0 +1,25 @@
+{
+  "reviewer": "compatibility_review",
+  "implementationCommit": "35118fb00e2f1fe35e053e950bba9e4b5d2fbd7a",
+  "findings": [],
+  "disposition": "HOLD MERGE",
+  "verified": {
+    "sourceFingerprints": 10,
+    "fixtureFingerprints": 6,
+    "protectedEntries": 32,
+    "previousFailedCycleArtifactsUnchanged": 4,
+    "providerJsonResponses": "6/6",
+    "strictValidatorValid": "6/6",
+    "overallTargetedAcceptance": "3/6",
+    "minimumRequestStartGapMs": 17104,
+    "finalTen": "NOT RUN",
+    "privacyScan": "PASS",
+    "reportMatchesEvidence": true
+  },
+  "reviewActions": {
+    "testsRerun": false,
+    "liveCalls": false,
+    "credentialReads": false,
+    "sourceEdits": false
+  }
+}

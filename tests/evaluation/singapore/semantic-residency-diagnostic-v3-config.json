@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 3,
+  "profileVersion": "semantic-residency-diagnostic-v3",
+  "outputPrefix": "semantic-residency-diagnostic-v3",
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "temperature": 0,
+  "jsonMode": true,
+  "retryCount": 0,
+  "minimumStartGapMs": 15250,
+  "observationsPerQuestion": 2,
+  "questionIds": [
+    "corporate-residency-original-general",
+    "corporate-residency-general-paraphrase",
+    "corporate-residency-case-applied-control"
+  ],
+  "schedule": [
+    { "questionId": "corporate-residency-original-general", "replicate": 1 },
+    { "questionId": "corporate-residency-general-paraphrase", "replicate": 1 },
+    { "questionId": "corporate-residency-case-applied-control", "replicate": 1 },
+    { "questionId": "corporate-residency-case-applied-control", "replicate": 2 },
+    { "questionId": "corporate-residency-general-paraphrase", "replicate": 2 },
+    { "questionId": "corporate-residency-original-general", "replicate": 2 }
+  ],
+  "questions": [
+    {
+      "id": "corporate-residency-original-general",
+      "question": "How do Singapore tax rules determine whether a company is tax resident here?",
+      "expected": {
+        "rootOperation": ["EXPLAIN_RULE"],
+        "rootPopulation": ["COMPANY"],
+        "rootDomain": ["IRAS_INCOME_TAX"],
+        "rootAuthorities": ["IRAS"],
+        "rootContextualAuthoritiesAnyOf": [[]],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "subject": "general rule for company tax residency in Singapore",
+            "matchAny": [
+              ["company", "tax", "residency"], ["company", "tax", "residence"], ["company", "tax", "resident"],
+              ["tax", "residency", "singapore"], ["tax", "residence", "singapore"], ["tax", "resident", "singapore"]
+            ],
+            "population": ["COMPANY"],
+            "domain": ["IRAS_INCOME_TAX"],
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthoritiesAnyOf": [[]],
+            "operation": ["EXPLAIN_RULE"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "corporate-residency-general-paraphrase",
+      "question": "Explain the general Singapore corporate income-tax rules for determining a company's tax residence.",
+      "expected": {
+        "rootOperation": ["EXPLAIN_RULE"],
+        "rootPopulation": ["COMPANY"],
+        "rootDomain": ["IRAS_INCOME_TAX"],
+        "rootAuthorities": ["IRAS"],
+        "rootContextualAuthoritiesAnyOf": [[]],
+        "requiresUserSpecificFacts": false,
+        "issueCount": 1,
+        "issues": [
+          {
+            "subject": "general Singapore corporate income-tax rule for determining company tax residence",
+            "matchAny": [
+              ["company", "tax", "residency"], ["company", "tax", "residence"], ["company", "tax", "resident"],
+              ["tax", "residency", "singapore"], ["tax", "residence", "singapore"], ["tax", "resident", "singapore"],
+              ["corporate", "income", "tax", "residence"]
+            ],
+            "population": ["COMPANY"],
+            "domain": ["IRAS_INCOME_TAX"],
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthoritiesAnyOf": [[]],
+            "operation": ["EXPLAIN_RULE"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "corporate-residency-case-applied-control",
+      "question": "Our company's directors make its strategic decisions in Singapore. Determine its Singapore tax-residency treatment for the current year.",
+      "expected": {
+        "rootOperation": ["DETERMINE_TREATMENT"],
+        "rootPopulation": ["COMPANY"],
+        "rootDomain": ["IRAS_INCOME_TAX"],
+        "rootAuthorities": ["IRAS"],
+        "rootContextualAuthoritiesAnyOf": [[]],
+        "requiresUserSpecificFacts": true,
+        "issueCount": 1,
+        "issues": [
+          {
+            "subject": "company tax-residency treatment given directors' strategic decisions in Singapore for the current year",
+            "matchAny": [
+              ["company", "tax", "residency"], ["company", "tax", "residence"], ["company", "tax", "resident"],
+              ["directors", "strategic", "decisions"]
+            ],
+            "population": ["COMPANY"],
+            "domain": ["IRAS_INCOME_TAX"],
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthoritiesAnyOf": [[]],
+            "operation": ["DETERMINE_TREATMENT"]
+          }
+        ]
+      }
+    }
+  ],
+  "protectedObservationBaseline": "docs/evaluation/multi-authority-workstreams/residency-diagnostic-v3/protected-observation-baseline.json"
+}

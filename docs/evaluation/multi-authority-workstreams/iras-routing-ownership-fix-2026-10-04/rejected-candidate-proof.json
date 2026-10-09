@@ -1,0 +1,230 @@
+{
+  "provenance": "Prospective API-free production reconciliation of explicit retained synthetic semantic mocks; not model accuracy or IRAS evidence acceptance",
+  "startingSha": "53cf1399a90981c5c537fe9935bb53f8d53860b9",
+  "retainedProof": {
+    "path": "docs/evaluation/multi-authority-workstreams/iras-first-targeted-acceptance-2026-10-04-v4/routing-classification-proof.json",
+    "sha256": "636b5e3376f17a646a86c2dd3f062053c5687239298871942fd98426fff1bf48"
+  },
+  "productionFingerprints": [
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "9c2b9b7ff4328cdca5055dabcab005eeef320d588ee5457d9f910fa5bbb68acc"
+    },
+    {
+      "path": "src/retrieval/queryTopicResolver.ts",
+      "sha256": "5523f7f0f731cfda3d3f4cb0213f5b6be5cfc826686cd06fcb305baec53022e9"
+    },
+    {
+      "path": "src/standards/coverageRegistry.ts",
+      "sha256": "5c83fba15b177cabc0066dacf5edae9922c3d5862fc6f1db2685c9e4fb4eb16b"
+    }
+  ],
+  "providerCalls": 0,
+  "liveSourceRequests": 0,
+  "caseId": "A-paraphrase-2",
+  "question": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+  "rows": [
+    {
+      "subject": "individual income tax relief for compulsory CPF",
+      "rootMode": "CPF_FIRST",
+      "issuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_bcb18344",
+            "status": "MAPPED"
+          },
+          {
+            "subject": "individual income tax relief for compulsory CPF",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_bba26f02",
+            "status": "MAPPED",
+            "routingTopicIds": [
+              "iras-individual-reliefs"
+            ]
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      }
+    },
+    {
+      "subject": "individual income tax relief for compulsory CPF",
+      "rootMode": "UNKNOWN_MIXED",
+      "issuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_bcb18344",
+            "status": "MAPPED"
+          },
+          {
+            "subject": "individual income tax relief for compulsory CPF",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [
+              "iras-individual-cpf-relief"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_bba26f02",
+            "status": "MAPPED",
+            "routingTopicIds": [
+              "iras-individual-reliefs"
+            ]
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      }
+    },
+    {
+      "subject": "individual personal tax relief claim for compulsory CPF contributions",
+      "rootMode": "CPF_FIRST",
+      "issuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_bcb18344",
+            "status": "MAPPED"
+          },
+          {
+            "subject": "individual personal tax relief claim for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [
+              "iras-individual-cpf-relief",
+              "iras-individual-reliefs"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_23728db8",
+            "status": "MAPPED",
+            "routingTopicIds": [
+              "iras-individual-reliefs"
+            ]
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      }
+    },
+    {
+      "subject": "individual personal tax relief claim for compulsory CPF contributions",
+      "rootMode": "UNKNOWN_MIXED",
+      "issuePlan": {
+        "source": "SEMANTIC_ISSUES",
+        "issues": [
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [
+              "cpf_contribution_rates"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_bcb18344",
+            "status": "MAPPED"
+          },
+          {
+            "subject": "individual personal tax relief claim for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [
+              "iras-individual-cpf-relief",
+              "iras-individual-reliefs"
+            ],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96,
+            "id": "issue_23728db8",
+            "status": "MAPPED",
+            "routingTopicIds": [
+              "iras-individual-reliefs"
+            ]
+          }
+        ],
+        "coverageEstablished": true,
+        "hasUnmappedResidual": false
+      }
+    }
+  ]
+}

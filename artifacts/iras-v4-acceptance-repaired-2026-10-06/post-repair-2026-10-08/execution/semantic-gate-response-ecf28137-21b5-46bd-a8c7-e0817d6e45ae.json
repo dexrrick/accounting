@@ -1,0 +1,24 @@
+{
+  "profile": "iras-v4-semantic-continuation-gate-response",
+  "requestId": "ecf28137-21b5-46bd-a8c7-e0817d6e45ae",
+  "requestSha256": "54109fed90d0c787bdd5d8d1bc8be6f3e6197e5a518f1aed67856babb8b2a635",
+  "launcherSha256": "97e807d1562636cd531eafed2b4cfc06e025b0ad6f6cfc7c38ec84bd52834d7e",
+  "approvalSha256": "ac487157136e28c4f7857f54af43fc47d540c8cb1a8f72e65e777737ca719f7c",
+  "projectionSha256": "d78085b48a085567f87de6792cfe68901faf9acc6490c52745ebd76eb00c066d",
+  "resourceReviewSha256": "af55877062c2036a47037108c512b9ffe51843bc557a8b7b713092f4a51f7e5e",
+  "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "suppliedAtUtc": "2026-10-08T16:49:11Z",
+  "usageObservation": {
+    "sourceTool": "mcp__codex_app__get_usage_limits",
+    "observedAtUtc": "2026-10-08T16:49:11Z",
+    "toolResult": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ordinaryUsageAllowed\":true,\"rateLimits\":{\"limitId\":\"codex\",\"limitName\":null,\"normalModelSlug\":null,\"primary\":{\"usedPercent\":74,\"windowDurationMins\":300,\"resetsAt\":1791486089},\"secondary\":{\"usedPercent\":21,\"windowDurationMins\":10080,\"resetsAt\":1791992808},\"credits\":{\"hasCredits\":false,\"unlimited\":false,\"balance\":null},\"individualLimit\":null,\"spendControlReached\":false,\"planType\":\"team\",\"rateLimitReachedType\":null},\"rateLimitsByLimitId\":{\"codex\":{\"limitId\":\"codex\",\"limitName\":null,\"normalModelSlug\":null,\"primary\":{\"usedPercent\":74,\"windowDurationMins\":300,\"resetsAt\":1791486089},\"secondary\":{\"usedPercent\":21,\"windowDurationMins\":10080,\"resetsAt\":1791992808},\"credits\":{\"hasCredits\":false,\"unlimited\":false,\"balance\":null},\"individualLimit\":null,\"spendControlReached\":false,\"planType\":\"team\",\"rateLimitReachedType\":null}},\"rateLimitResetCredits\":{\"availableCount\":2,\"credits\":[{\"id\":\"RateLimitResetCredit_bc7d5ed4afb08191991485ca52c9eb0a\",\"resetType\":\"codexRateLimits\",\"status\":\"available\",\"grantedAt\":1790708782,\"expiresAt\":1793300782,\"title\":\"Full reset (Weekly + 5 hr)\",\"description\":\"Thanks for using Codex! You've been granted one free rate limit reset.\"},{\"id\":\"RateLimitResetCredit_f57bbe953e348191a1e243807f46de2c\",\"resetType\":\"codexRateLimits\",\"status\":\"available\",\"grantedAt\":1791416010,\"expiresAt\":1794008010,\"title\":\"Full reset (Weekly + 5 hr)\",\"description\":\"Thanks for using Codex! You've been granted one free rate limit reset.\"}]},\"accountId\":\"44d350a1-6fa3-4925-b3f4-e4a358caf35b\",\"rateLimitUpsell\":null}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

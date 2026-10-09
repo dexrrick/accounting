@@ -578,10 +578,10 @@ const branchContext = await buildGroundedReasoningContext(branchIncomeQuery, nul
     async searchOfficialDomainCandidates(request) { branchSearchRequests.push(request); return []; }
   }
 });
-assert.ok(branchFetchCalls.includes(gstDecoyUrl), 'The discovered GST candidate is independently fetched before scope rejection.');
+assert.ok(!branchFetchCalls.includes(gstDecoyUrl), 'An explicitly mismatched GST route is rejected before a page fetch for corporate income tax.');
 assert.ok(branchContext.sourceMapFallbackTrace?.attempts.some(attempt => attempt.candidateUrl === gstDecoyUrl &&
-  attempt.fetchStatus === 'DOMAIN_MISMATCH' && /GST domain/.test(attempt.error || '')),
-  `A GST-page candidate is rejected with a domain-specific trace reason for an IRAS corporate-income query: ${JSON.stringify(branchContext.sourceMapFallbackTrace?.attempts)}`);
+  attempt.fetchStatus === 'DOMAIN_MISMATCH' && /tax area conflicts/.test(attempt.error || '')),
+  `A GST-page candidate is rejected with a domain-specific trace reason for an IRAS corporate-income query before fetching: ${JSON.stringify(branchContext.sourceMapFallbackTrace?.attempts)}`);
 assert.ok(branchSearchRequests.length > 0, 'Rejected sitemap evidence does not stop the final official-domain search stage.');
 assert.ok(branchContext.sourceMapFallbackTrace?.stages?.some(stage => stage.stage === 'OFFICIAL_DOMAIN_SEARCH' && stage.status === 'EXHAUSTED'));
 assert.equal(branchContext.evidenceQuality?.status, 'INSUFFICIENT');

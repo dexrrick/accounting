@@ -1,0 +1,52 @@
+{
+  "provenance": "Selected fields from independent reviewer stdout on the rejected candidate; explicit synthetic semantic fixture, not provider output or IRAS evidence",
+  "runtime": "Node v22.23.2 with ambient external networking blocked",
+  "probe": "reviewer-probe.mjs.txt",
+  "exitCode": 0,
+  "providerCalls": 0,
+  "liveSourceRequests": 0,
+  "rows": [
+    {
+      "query": "What individual tax relief categories are available, plus explain CPF relief for employees?",
+      "validated": true,
+      "scopes": ["what individual tax relief categories are available, plus explain cpf relief for employees?"],
+      "inventoryTopicIds": ["iras-individual-reliefs", "iras-individual-cpf-relief"],
+      "unresolvedTopics": [],
+      "observedIssueCount": 1,
+      "observedSubject": "CPF relief for employees",
+      "observedMappedTopicIds": ["iras-individual-cpf-relief"],
+      "observedRoutingTopicIds": ["iras-individual-reliefs"],
+      "observedCoverageEstablished": true,
+      "observedHasUnmappedResidual": false,
+      "expectedMaterialScopePreserved": false
+    },
+    {
+      "query": "I need an overview of individual tax relief categories. Can I claim CPF relief for employees?",
+      "validated": true,
+      "scopes": ["i need an overview of individual tax relief categories. can i claim cpf relief for employees?"],
+      "inventoryTopicIds": ["iras-individual-reliefs", "iras-individual-cpf-relief"],
+      "unresolvedTopics": [],
+      "observedIssueCount": 1,
+      "observedSubject": "CPF relief for employees",
+      "observedMappedTopicIds": ["iras-individual-cpf-relief"],
+      "observedRoutingTopicIds": ["iras-individual-reliefs"],
+      "observedCoverageEstablished": true,
+      "observedHasUnmappedResidual": false,
+      "expectedMaterialScopePreserved": false
+    },
+    {
+      "query": "Explain individual tax relief categories, including CPF relief for employees.",
+      "validated": true,
+      "scopes": ["explain individual tax relief categories, including cpf relief for employees."],
+      "inventoryTopicIds": ["iras-individual-reliefs", "iras-individual-cpf-relief"],
+      "unresolvedTopics": [],
+      "observedIssueCount": 1,
+      "observedSubject": "CPF relief for employees",
+      "observedMappedTopicIds": ["iras-individual-cpf-relief"],
+      "observedRoutingTopicIds": ["iras-individual-reliefs"],
+      "observedCoverageEstablished": true,
+      "observedHasUnmappedResidual": false,
+      "expectedMaterialScopePreserved": false
+    }
+  ]
+}

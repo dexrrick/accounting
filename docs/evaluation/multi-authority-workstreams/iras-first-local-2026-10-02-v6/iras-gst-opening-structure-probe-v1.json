@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 1,
+  "diagnosticOnly": true,
+  "interpretation": "SYNTHETIC_HTML_ARRANGEMENTS_OF_INTACT_SAVED_PUBLIC_GST_BLOCK; DOES_NOT_ESTABLISH_ORIGINAL_LIVE_HTML_STRUCTURE_OR_ADJACENCY; no_tax_rule_inference",
+  "referenceDate": "2026-10-02",
+  "source": {
+    "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+    "topicId": "iras-gst-input-tax",
+    "savedBlockIndex": 7,
+    "savedUnitKind": "HEADING_AND_BLOCK",
+    "savedSourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+    "savedExcerptSha256": "ac98501d942e1a646c5b8bedce803f0df600a82ec3da1057c8bbab860098a429",
+    "savedOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+    "savedStandaloneBulletIncluded": true,
+    "savedOpeningSentenceCount": 3,
+    "savedOpeningDirectHelperSupport": true
+  },
+  "observedMechanism": {
+    "separateBulletAndRuleBlocks": "The saved standalone bullet block is excluded while the following unmarked complete paragraph remains selectable in this synthetic arrangement.",
+    "bulletAttachedToOpening": "When the public HTML extractor produces a bullet-prefixed block containing the complete opening, the renderer selects no helper-supported complete opening; central evidence remains insufficient.",
+    "colonBoundaryControls": "Synthetic colon-plus-visible-list and colon-plus-unmarked-prose arrangements both suppress the following opening through distinct structural boundaries.",
+    "colonVisibleListEligibleRecordHelperSupportCount": 0,
+    "colonVisibleListInterpretation": "The colon-plus-visible-list row has zero full-record helper-supported records although the exact saved opening directly supports the helper. This combines a full-record helper-boundary loss with the selector colon/list boundary and does not isolate selector behavior alone.",
+    "limit": "These measurements distinguish possible extraction/selector mechanisms only; the saved public text block does not establish original live HTML tags or adjacency."
+  },
+  "transportAndModel": {
+    "ambientFetchCalls": 0,
+    "selectedMappedGetCalls": 12,
+    "closedKnownMappedGetCalls": 12,
+    "unexpectedMappedCalls": 0,
+    "nonGetOrRedirectModeCalls": 0,
+    "discoveryCalls": 0,
+    "searchCalls": 0,
+    "modelCalls": 0
+  },
+  "arrangementResults": [
+    {
+      "arrangementId": "body_only_bullet_disclosed_removed",
+      "composition": "SYNTHETIC_HTML_ARRANGEMENT_NOT_ORIGINAL_PAGE_OR_LIVE_HTML",
+      "boundaryDisclosure": "synthetic body paragraph containing only saved rule block 2; saved leading bullet omitted",
+      "savedStandaloneBulletRetained": false,
+      "savedSourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedExcerptSha256": "ac98501d942e1a646c5b8bedce803f0df600a82ec3da1057c8bbab860098a429",
+      "savedOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedOpeningSentenceCount": 3,
+      "directSavedOpeningHelperSupport": true,
+      "selectedMappedGetCount": 2,
+      "closedKnownMappedGetCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteOpeningCount": 1,
+      "extractedBoundaryCounts": {
+        "blockCount": 2,
+        "openingContainedInExtractedBlockCount": 1,
+        "openingExtractedBlockIndexes": [
+          1
+        ],
+        "standaloneBulletBlockCount": 0,
+        "bulletPrefixedBlockCount": 0,
+        "precedingColonEndedBlockCount": 0,
+        "extractedSourceTextSha256": "722214493f99d55f71f41bb115dc632c175385a7da0b9a99049330e5acb482d4"
+      },
+      "rendererAcceptedMappedQuoteCount": 2,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 1,
+      "rendererAcceptedMappedCompleteOpeningCount": 1,
+      "rendererAcceptedWithinThreePerSource": true,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": false,
+          "helperSupportedForRequestedConcept": false
+        },
+        {
+          "quoteSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": true,
+          "helperSupportedForRequestedConcept": true
+        }
+      ],
+      "rendererRejectedClaimCount": 0,
+      "centralFinalEvidenceStatus": "VERIFIED",
+      "centralFinalApplicationStatus": "NOT_REQUIRED",
+      "centralFinalVerifiedClaimCount": 1,
+      "centralFinalHelperSupportedClaimCount": 1,
+      "centralFinalCompleteOpeningCount": 1,
+      "centralGapCodes": [],
+      "mappedAttemptStatuses": [
+        "SUCCESS",
+        "HTTP_ERROR"
+      ]
+    },
+    {
+      "arrangementId": "saved_excerpt_blocks_standalone_bullet",
+      "composition": "SYNTHETIC_HTML_ARRANGEMENT_NOT_ORIGINAL_PAGE_OR_LIVE_HTML",
+      "boundaryDisclosure": "synthetic HTML paragraphs mirror the two saved text blocks exactly: standalone bullet, then complete opening",
+      "savedStandaloneBulletRetained": true,
+      "savedSourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedExcerptSha256": "ac98501d942e1a646c5b8bedce803f0df600a82ec3da1057c8bbab860098a429",
+      "savedOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedOpeningSentenceCount": 3,
+      "directSavedOpeningHelperSupport": true,
+      "selectedMappedGetCount": 2,
+      "closedKnownMappedGetCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteOpeningCount": 1,
+      "extractedBoundaryCounts": {
+        "blockCount": 3,
+        "openingContainedInExtractedBlockCount": 1,
+        "openingExtractedBlockIndexes": [
+          2
+        ],
+        "standaloneBulletBlockCount": 1,
+        "bulletPrefixedBlockCount": 1,
+        "precedingColonEndedBlockCount": 0,
+        "extractedSourceTextSha256": "61b86ea5019ec06631ff2c5e54cee3068f382c74fec9b1138884895048f6075e"
+      },
+      "rendererAcceptedMappedQuoteCount": 2,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 1,
+      "rendererAcceptedMappedCompleteOpeningCount": 1,
+      "rendererAcceptedWithinThreePerSource": true,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": false,
+          "helperSupportedForRequestedConcept": false
+        },
+        {
+          "quoteSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": true,
+          "helperSupportedForRequestedConcept": true
+        }
+      ],
+      "rendererRejectedClaimCount": 0,
+      "centralFinalEvidenceStatus": "VERIFIED",
+      "centralFinalApplicationStatus": "NOT_REQUIRED",
+      "centralFinalVerifiedClaimCount": 1,
+      "centralFinalHelperSupportedClaimCount": 1,
+      "centralFinalCompleteOpeningCount": 1,
+      "centralGapCodes": [],
+      "mappedAttemptStatuses": [
+        "SUCCESS",
+        "HTTP_ERROR"
+      ]
+    },
+    {
+      "arrangementId": "saved_excerpt_text_inside_one_paragraph",
+      "composition": "SYNTHETIC_HTML_ARRANGEMENT_NOT_ORIGINAL_PAGE_OR_LIVE_HTML",
+      "boundaryDisclosure": "synthetic single paragraph containing the intact saved excerpt text, including its embedded bullet and newlines",
+      "savedStandaloneBulletRetained": true,
+      "savedSourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedExcerptSha256": "ac98501d942e1a646c5b8bedce803f0df600a82ec3da1057c8bbab860098a429",
+      "savedOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedOpeningSentenceCount": 3,
+      "directSavedOpeningHelperSupport": true,
+      "selectedMappedGetCount": 2,
+      "closedKnownMappedGetCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteOpeningCount": 1,
+      "extractedBoundaryCounts": {
+        "blockCount": 2,
+        "openingContainedInExtractedBlockCount": 1,
+        "openingExtractedBlockIndexes": [
+          1
+        ],
+        "standaloneBulletBlockCount": 0,
+        "bulletPrefixedBlockCount": 1,
+        "precedingColonEndedBlockCount": 0,
+        "extractedSourceTextSha256": "61b86ea5019ec06631ff2c5e54cee3068f382c74fec9b1138884895048f6075e"
+      },
+      "rendererAcceptedMappedQuoteCount": 1,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedCompleteOpeningCount": 0,
+      "rendererAcceptedWithinThreePerSource": true,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": false,
+          "helperSupportedForRequestedConcept": false
+        }
+      ],
+      "rendererRejectedClaimCount": 0,
+      "centralFinalEvidenceStatus": "INSUFFICIENT",
+      "centralFinalApplicationStatus": "NOT_REQUIRED",
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "centralFinalCompleteOpeningCount": 0,
+      "centralGapCodes": [
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "mappedAttemptStatuses": [
+        "SUCCESS",
+        "HTTP_ERROR"
+      ]
+    },
+    {
+      "arrangementId": "synthetic_li_with_nested_paragraph",
+      "composition": "SYNTHETIC_HTML_ARRANGEMENT_NOT_ORIGINAL_PAGE_OR_LIVE_HTML",
+      "boundaryDisclosure": "synthetic visible list item containing a paragraph with the unchanged saved opening",
+      "savedStandaloneBulletRetained": false,
+      "savedSourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedExcerptSha256": "ac98501d942e1a646c5b8bedce803f0df600a82ec3da1057c8bbab860098a429",
+      "savedOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedOpeningSentenceCount": 3,
+      "directSavedOpeningHelperSupport": true,
+      "selectedMappedGetCount": 2,
+      "closedKnownMappedGetCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteOpeningCount": 1,
+      "extractedBoundaryCounts": {
+        "blockCount": 4,
+        "openingContainedInExtractedBlockCount": 1,
+        "openingExtractedBlockIndexes": [
+          2
+        ],
+        "standaloneBulletBlockCount": 2,
+        "bulletPrefixedBlockCount": 3,
+        "precedingColonEndedBlockCount": 0,
+        "extractedSourceTextSha256": "13168a2e64b090810b1268541cb7a4a0d54695fbf2ddd19c209ff727eecefa4a"
+      },
+      "rendererAcceptedMappedQuoteCount": 1,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedCompleteOpeningCount": 0,
+      "rendererAcceptedWithinThreePerSource": true,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": false,
+          "helperSupportedForRequestedConcept": false
+        }
+      ],
+      "rendererRejectedClaimCount": 0,
+      "centralFinalEvidenceStatus": "INSUFFICIENT",
+      "centralFinalApplicationStatus": "NOT_REQUIRED",
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "centralFinalCompleteOpeningCount": 0,
+      "centralGapCodes": [
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "mappedAttemptStatuses": [
+        "SUCCESS",
+        "HTTP_ERROR"
+      ]
+    },
+    {
+      "arrangementId": "synthetic_colon_intro_followed_by_visible_list",
+      "composition": "SYNTHETIC_HTML_ARRANGEMENT_NOT_ORIGINAL_PAGE_OR_LIVE_HTML",
+      "boundaryDisclosure": "synthetic colon-ended topic label followed by a visible list item containing the unchanged saved opening",
+      "savedStandaloneBulletRetained": false,
+      "savedSourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedExcerptSha256": "ac98501d942e1a646c5b8bedce803f0df600a82ec3da1057c8bbab860098a429",
+      "savedOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedOpeningSentenceCount": 3,
+      "directSavedOpeningHelperSupport": true,
+      "selectedMappedGetCount": 2,
+      "closedKnownMappedGetCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordHelperSupportedCount": 0,
+      "eligibleMappedRecordPreservingCompleteOpeningCount": 1,
+      "extractedBoundaryCounts": {
+        "blockCount": 3,
+        "openingContainedInExtractedBlockCount": 1,
+        "openingExtractedBlockIndexes": [
+          2
+        ],
+        "standaloneBulletBlockCount": 0,
+        "bulletPrefixedBlockCount": 1,
+        "precedingColonEndedBlockCount": 1,
+        "extractedSourceTextSha256": "98a4593abd22e11e87594de70665f77f58c77f92f5b5a64acf9c5d9f78cc0020"
+      },
+      "rendererAcceptedMappedQuoteCount": 1,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedCompleteOpeningCount": 0,
+      "rendererAcceptedWithinThreePerSource": true,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": false,
+          "helperSupportedForRequestedConcept": false
+        }
+      ],
+      "rendererRejectedClaimCount": 0,
+      "centralFinalEvidenceStatus": "INSUFFICIENT",
+      "centralFinalApplicationStatus": "NOT_REQUIRED",
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "centralFinalCompleteOpeningCount": 0,
+      "centralGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "mappedAttemptStatuses": [
+        "SUCCESS",
+        "HTTP_ERROR"
+      ]
+    },
+    {
+      "arrangementId": "synthetic_colon_intro_followed_by_unmarked_prose",
+      "composition": "SYNTHETIC_HTML_ARRANGEMENT_NOT_ORIGINAL_PAGE_OR_LIVE_HTML",
+      "boundaryDisclosure": "synthetic colon-ended topic label followed by ordinary prose containing the unchanged saved opening",
+      "savedStandaloneBulletRetained": false,
+      "savedSourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "savedExcerptSha256": "ac98501d942e1a646c5b8bedce803f0df600a82ec3da1057c8bbab860098a429",
+      "savedOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+      "savedOpeningSentenceCount": 3,
+      "directSavedOpeningHelperSupport": true,
+      "selectedMappedGetCount": 2,
+      "closedKnownMappedGetCount": 2,
+      "eligibleMappedRecordCount": 2,
+      "eligibleMappedRecordHelperSupportedCount": 1,
+      "eligibleMappedRecordPreservingCompleteOpeningCount": 1,
+      "extractedBoundaryCounts": {
+        "blockCount": 3,
+        "openingContainedInExtractedBlockCount": 1,
+        "openingExtractedBlockIndexes": [
+          2
+        ],
+        "standaloneBulletBlockCount": 0,
+        "bulletPrefixedBlockCount": 0,
+        "precedingColonEndedBlockCount": 1,
+        "extractedSourceTextSha256": "98e1ae59e193226d8901d4b1cf3f35c12363c8607d0bacc90954a11851bd6003"
+      },
+      "rendererAcceptedMappedQuoteCount": 1,
+      "rendererAcceptedMappedHelperSupportedQuoteCount": 0,
+      "rendererAcceptedMappedCompleteOpeningCount": 0,
+      "rendererAcceptedWithinThreePerSource": true,
+      "acceptedQuoteHashesAndFlags": [
+        {
+          "quoteSha256": "3ff480730196a6f1d5750721fee4a7711a99126ff817d226038b80ae0eb48216",
+          "sourceRecordIdKnown": true,
+          "preservesCompleteSavedOpening": false,
+          "helperSupportedForRequestedConcept": false
+        }
+      ],
+      "rendererRejectedClaimCount": 0,
+      "centralFinalEvidenceStatus": "INSUFFICIENT",
+      "centralFinalApplicationStatus": "NOT_REQUIRED",
+      "centralFinalVerifiedClaimCount": 0,
+      "centralFinalHelperSupportedClaimCount": 0,
+      "centralFinalCompleteOpeningCount": 0,
+      "centralGapCodes": [
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "mappedAttemptStatuses": [
+        "SUCCESS",
+        "HTTP_ERROR"
+      ]
+    }
+  ]
+}

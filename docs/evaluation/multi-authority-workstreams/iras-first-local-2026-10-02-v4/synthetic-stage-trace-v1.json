@@ -1,0 +1,224 @@
+{
+  "baseline": "22f4ae5a4f1173dc89991d602fcf30a5129012ad",
+  "mode": "synthetic-api-free",
+  "referenceDate": "2026-10-02",
+  "fixtureNotice": "These short passages are hand-authored fixtures for stage tracing. They are not retained IRAS page text or verbatim quotations from IRAS.",
+  "ambientNetworkCalls": 0,
+  "modelCalls": 0,
+  "historicalV3PassageAndClaimCounts": "NR; not reconstructed from lost raw HTML",
+  "cases": [
+    {
+      "id": "private-holiday-expense",
+      "topicId": "iras-cit-deductibility",
+      "sourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-cit-deductibility",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "passageBlockCount": 2,
+      "selectedCandidateClaimCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "literalRejectedReasons": [],
+      "finalIssueClaimCount": 1,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "NONE"
+    },
+    {
+      "id": "foreign-dividend-treatment",
+      "topicId": "iras-foreign-sourced-income",
+      "sourceMapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "sourceMapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "passageBlockCount": 2,
+      "selectedCandidateClaimCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "literalRejectedReasons": [],
+      "finalIssueClaimCount": 0,
+      "finalIssueGapCodes": [
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "ISSUE_SUBJECT_CONCEPT_FILTER"
+    },
+    {
+      "id": "company-residency-general",
+      "topicId": "iras-corporate-tax-residency",
+      "sourceMapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "sourceMapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+          "status": "TOPIC_MISMATCH",
+          "reason": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        }
+      ],
+      "candidateRecordCount": 0,
+      "admittedRecordCount": 0,
+      "passageBlockCount": 0,
+      "selectedCandidateClaimCount": 0,
+      "literalVerifiedClaimCount": 0,
+      "literalRejectedReasons": [],
+      "finalIssueClaimCount": 0,
+      "finalIssueGapCodes": [
+        "NO_CANDIDATE_EVIDENCE",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "uncoveredTopicIds": [
+        "iras-corporate-tax-residency"
+      ],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "PAGE_OR_EXCERPT_COMPATIBILITY"
+    },
+    {
+      "id": "wht-royalty-general-rule",
+      "topicId": "iras-withholding-tax-interest-royalties",
+      "sourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 2,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "status": "DOMAIN_MISMATCH",
+          "reason": "The fetched IRAS page is in the withholding-tax domain, which does not match the corporate-income topic."
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "status": "DOMAIN_MISMATCH",
+          "reason": "The fetched IRAS page is in the withholding-tax domain, which does not match the corporate-income topic."
+        }
+      ],
+      "candidateRecordCount": 0,
+      "admittedRecordCount": 0,
+      "passageBlockCount": 0,
+      "selectedCandidateClaimCount": 0,
+      "literalVerifiedClaimCount": 0,
+      "literalRejectedReasons": [],
+      "finalIssueClaimCount": 0,
+      "finalIssueGapCodes": [
+        "NO_CANDIDATE_EVIDENCE",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "uncoveredTopicIds": [
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "URL_DOMAIN_QUERY_COMPATIBILITY"
+    },
+    {
+      "id": "gst-input-tax-general-rule",
+      "topicId": "iras-gst-input-tax",
+      "sourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 2,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "status": "TOPIC_MISMATCH",
+          "reason": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+          "status": "TOPIC_MISMATCH",
+          "reason": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        }
+      ],
+      "candidateRecordCount": 0,
+      "admittedRecordCount": 0,
+      "passageBlockCount": 0,
+      "selectedCandidateClaimCount": 0,
+      "literalVerifiedClaimCount": 0,
+      "literalRejectedReasons": [],
+      "finalIssueClaimCount": 0,
+      "finalIssueGapCodes": [
+        "NO_CANDIDATE_EVIDENCE",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "uncoveredTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "PAGE_OR_EXCERPT_COMPATIBILITY"
+    }
+  ],
+  "negativeControls": [
+    {
+      "id": "unrelated-iras-page-topic",
+      "firstFailingStage": "PAGE_OR_EXCERPT_COMPATIBILITY",
+      "candidateRecordCount": 0,
+      "statuses": [
+        "TOPIC_MISMATCH"
+      ]
+    },
+    {
+      "id": "unrelated-sibling-topic",
+      "firstFailingStage": "PAGE_OR_EXCERPT_COMPATIBILITY",
+      "candidateRecordCount": 0,
+      "statuses": [
+        "TOPIC_MISMATCH"
+      ]
+    },
+    {
+      "id": "wrong-evidence-domain",
+      "firstFailingStage": "NONE",
+      "admittedRecordCount": 1,
+      "rejectionCodes": []
+    },
+    {
+      "id": "official-map-url-without-evidence-text",
+      "firstFailingStage": "EVIDENCE_ADMISSION",
+      "admittedRecordCount": 0,
+      "rejectionCodes": [
+        "SOURCE_MAP_POINTER_NOT_EVIDENCE"
+      ]
+    }
+  ],
+  "cpfUnchangedControl": {
+    "status": "VERIFIED",
+    "issueEvidenceStatus": "VERIFIED",
+    "finalIssueClaimCount": 1
+  }
+}

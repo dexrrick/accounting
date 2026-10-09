@@ -1,0 +1,23 @@
+{
+  "profile": "iras-v4-remaining-six-diagnostic-consumption",
+  "status": "CONSUMED_NO_RETRY",
+  "semanticProfile": "DIAGNOSTIC_CONTINUATION",
+  "launcherSha256": "cd624ebc36b2fcaec06d61058239031e937eea9bb18ce842065a21e88781672b",
+  "authorizationSha256": "83cc1ef8b39a80cbf29bf6642cd33d3fa71439d2767d084c4ffae5e9c964c821",
+  "independentReviewSha256": "a5d3ba47e65c5999b768df51847e0b086a8b82d61bf1f807307303c1f44d4324",
+  "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "usageObservedAtUtc": "2026-10-08T23:54:52Z",
+  "caseIds": [
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "authorizedGeminiCalls": 6,
+  "retries": 0,
+  "providerProbesAuthorized": 0,
+  "liveSourceRetrieval": false,
+  "consumedAtUtc": "2026-10-08T23:54:53.043Z"
+}

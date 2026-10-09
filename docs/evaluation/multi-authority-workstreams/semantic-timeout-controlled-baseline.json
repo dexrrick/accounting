@@ -1,0 +1,2318 @@
+{
+  "summary": {
+    "schemaVersion": 1,
+    "experiment": "semantic-question-timeout-reliability",
+    "mode": "LIVE_SEMANTIC_RELIABILITY_EXPERIMENT",
+    "model": "gemini-3.5-flash-lite",
+    "temperature": 0,
+    "minRequestStartIntervalMs": 15250,
+    "retries": 0,
+    "fixtureSha256": "c15aa10f9acff1e805c16d4ef703707dd46a5b1c36b0a2f23ab3886d88a390cb",
+    "sourceHashes": {
+      "semanticQuestionUnderstanding": "4a032381ca71bffb6fd6b7c93ce8f8ff57a21a549486b5483ded01e223d1e221",
+      "aiTransport": "e1f65b7baa6e8a546a369ce4079445f11daaecd23fea714d92264e8b6bfea265"
+    },
+    "plan": {
+      "protocol": "semantic-reliability-timeout-v1",
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "timeoutArmsMs": [
+        8000,
+        15000
+      ],
+      "observationsPerCaseAndArm": 2,
+      "minRequestStartIntervalMs": 15250,
+      "retries": 0,
+      "fixtureSha256": "c15aa10f9acff1e805c16d4ef703707dd46a5b1c36b0a2f23ab3886d88a390cb",
+      "sourceHashes": {
+        "semanticQuestionUnderstanding": "4a032381ca71bffb6fd6b7c93ce8f8ff57a21a549486b5483ded01e223d1e221",
+        "aiTransport": "e1f65b7baa6e8a546a369ce4079445f11daaecd23fea714d92264e8b6bfea265"
+      },
+      "schedule": [
+        {
+          "callId": "A-paraphrase-3::observation-1::timeout-8000",
+          "caseId": "A-paraphrase-3",
+          "observation": 1,
+          "timeoutMs": 8000,
+          "scheduleIndex": 1
+        },
+        {
+          "callId": "A-paraphrase-3::observation-1::timeout-15000",
+          "caseId": "A-paraphrase-3",
+          "observation": 1,
+          "timeoutMs": 15000,
+          "scheduleIndex": 2
+        },
+        {
+          "callId": "A-paraphrase-3::observation-2::timeout-15000",
+          "caseId": "A-paraphrase-3",
+          "observation": 2,
+          "timeoutMs": 15000,
+          "scheduleIndex": 3
+        },
+        {
+          "callId": "A-paraphrase-3::observation-2::timeout-8000",
+          "caseId": "A-paraphrase-3",
+          "observation": 2,
+          "timeoutMs": 8000,
+          "scheduleIndex": 4
+        },
+        {
+          "callId": "A-paraphrase-4::observation-1::timeout-15000",
+          "caseId": "A-paraphrase-4",
+          "observation": 1,
+          "timeoutMs": 15000,
+          "scheduleIndex": 5
+        },
+        {
+          "callId": "A-paraphrase-4::observation-1::timeout-8000",
+          "caseId": "A-paraphrase-4",
+          "observation": 1,
+          "timeoutMs": 8000,
+          "scheduleIndex": 6
+        },
+        {
+          "callId": "A-paraphrase-4::observation-2::timeout-8000",
+          "caseId": "A-paraphrase-4",
+          "observation": 2,
+          "timeoutMs": 8000,
+          "scheduleIndex": 7
+        },
+        {
+          "callId": "A-paraphrase-4::observation-2::timeout-15000",
+          "caseId": "A-paraphrase-4",
+          "observation": 2,
+          "timeoutMs": 15000,
+          "scheduleIndex": 8
+        },
+        {
+          "callId": "D-original::observation-1::timeout-8000",
+          "caseId": "D-original",
+          "observation": 1,
+          "timeoutMs": 8000,
+          "scheduleIndex": 9
+        },
+        {
+          "callId": "D-original::observation-1::timeout-15000",
+          "caseId": "D-original",
+          "observation": 1,
+          "timeoutMs": 15000,
+          "scheduleIndex": 10
+        },
+        {
+          "callId": "D-original::observation-2::timeout-15000",
+          "caseId": "D-original",
+          "observation": 2,
+          "timeoutMs": 15000,
+          "scheduleIndex": 11
+        },
+        {
+          "callId": "D-original::observation-2::timeout-8000",
+          "caseId": "D-original",
+          "observation": 2,
+          "timeoutMs": 8000,
+          "scheduleIndex": 12
+        },
+        {
+          "callId": "D-paraphrase-1::observation-1::timeout-15000",
+          "caseId": "D-paraphrase-1",
+          "observation": 1,
+          "timeoutMs": 15000,
+          "scheduleIndex": 13
+        },
+        {
+          "callId": "D-paraphrase-1::observation-1::timeout-8000",
+          "caseId": "D-paraphrase-1",
+          "observation": 1,
+          "timeoutMs": 8000,
+          "scheduleIndex": 14
+        },
+        {
+          "callId": "D-paraphrase-1::observation-2::timeout-8000",
+          "caseId": "D-paraphrase-1",
+          "observation": 2,
+          "timeoutMs": 8000,
+          "scheduleIndex": 15
+        },
+        {
+          "callId": "D-paraphrase-1::observation-2::timeout-15000",
+          "caseId": "D-paraphrase-1",
+          "observation": 2,
+          "timeoutMs": 15000,
+          "scheduleIndex": 16
+        }
+      ]
+    },
+    "planSha256": "dc016245e64b8941c557aed0103d2e799e3bbbc70a801db7d22931ff745b2336",
+    "scheduledRequests": 16,
+    "completedRequests": 16,
+    "validInterpretations": 11,
+    "timeoutCount": 0,
+    "invalidResponseCount": 5,
+    "armResults": [
+      {
+        "timeoutMs": 8000,
+        "requests": 8,
+        "validInterpretations": 5,
+        "timeoutCount": 0,
+        "invalidResponseCount": 3,
+        "diagnostics": {
+          "CONTRADICTORY_FIELDS": 2,
+          "VALID_SCHEMA": 5,
+          "MALFORMED_JSON": 1
+        },
+        "latencyMs": {
+          "median": 2379,
+          "p95": 4821,
+          "max": 4821
+        },
+        "operationDimensionAccuracy": {
+          "correct": 9,
+          "total": 9,
+          "rate": 1
+        },
+        "dimensionScores": {
+          "governingAuthority": {
+            "correct": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "contextualAuthority": {
+            "correct": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "domain": {
+            "correct": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "population": {
+            "correct": 9,
+            "total": 9,
+            "rate": 1
+          },
+          "operation": {
+            "correct": 9,
+            "total": 9,
+            "rate": 1
+          }
+        }
+      },
+      {
+        "timeoutMs": 15000,
+        "requests": 8,
+        "validInterpretations": 6,
+        "timeoutCount": 0,
+        "invalidResponseCount": 2,
+        "diagnostics": {
+          "CONTRADICTORY_FIELDS": 2,
+          "VALID_SCHEMA": 6
+        },
+        "latencyMs": {
+          "median": 2347,
+          "p95": 4760,
+          "max": 4760
+        },
+        "operationDimensionAccuracy": {
+          "correct": 13,
+          "total": 13,
+          "rate": 1
+        },
+        "dimensionScores": {
+          "governingAuthority": {
+            "correct": 13,
+            "total": 13,
+            "rate": 1
+          },
+          "contextualAuthority": {
+            "correct": 13,
+            "total": 13,
+            "rate": 1
+          },
+          "domain": {
+            "correct": 13,
+            "total": 13,
+            "rate": 1
+          },
+          "population": {
+            "correct": 13,
+            "total": 13,
+            "rate": 1
+          },
+          "operation": {
+            "correct": 13,
+            "total": 13,
+            "rate": 1
+          }
+        }
+      }
+    ],
+    "caseArmSignatureComparisons": [
+      {
+        "caseId": "A-paraphrase-3",
+        "arms": {
+          "8000": {
+            "signatures": [
+              null,
+              null
+            ],
+            "stable": null,
+            "assessed": false
+          },
+          "15000": {
+            "signatures": [
+              null,
+              null
+            ],
+            "stable": null,
+            "assessed": false
+          }
+        },
+        "timeoutArmsDiffer": null,
+        "timeoutArmsDifferAssessed": false
+      },
+      {
+        "caseId": "A-paraphrase-4",
+        "arms": {
+          "8000": {
+            "signatures": [
+              "9e4c4afa9b40a12b62b250d2cf8b9da96ca46f36299aa858fc3b6544bc2d9b67",
+              null
+            ],
+            "stable": null,
+            "assessed": false
+          },
+          "15000": {
+            "signatures": [
+              "34c17402a9ad4042df4e09a9a292e1fb924ff023d1312934b266d987bd0e3136",
+              "34c17402a9ad4042df4e09a9a292e1fb924ff023d1312934b266d987bd0e3136"
+            ],
+            "stable": true,
+            "assessed": true
+          }
+        },
+        "timeoutArmsDiffer": null,
+        "timeoutArmsDifferAssessed": false
+      },
+      {
+        "caseId": "D-original",
+        "arms": {
+          "8000": {
+            "signatures": [
+              "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f",
+              "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f"
+            ],
+            "stable": true,
+            "assessed": true
+          },
+          "15000": {
+            "signatures": [
+              "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f",
+              "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f"
+            ],
+            "stable": true,
+            "assessed": true
+          }
+        },
+        "timeoutArmsDiffer": false,
+        "timeoutArmsDifferAssessed": true
+      },
+      {
+        "caseId": "D-paraphrase-1",
+        "arms": {
+          "8000": {
+            "signatures": [
+              "47447ed7f10f834a1e8b334747e21fa5cc2e7f3fa8a615d6bcc559a7313aaac3",
+              "47447ed7f10f834a1e8b334747e21fa5cc2e7f3fa8a615d6bcc559a7313aaac3"
+            ],
+            "stable": true,
+            "assessed": true
+          },
+          "15000": {
+            "signatures": [
+              "bdab1abf2a3a9e1ea914edc814a6c4de44f594ddc9896454ccb195c858b1d71b",
+              "bdab1abf2a3a9e1ea914edc814a6c4de44f594ddc9896454ccb195c858b1d71b"
+            ],
+            "stable": true,
+            "assessed": true
+          }
+        },
+        "timeoutArmsDiffer": true,
+        "timeoutArmsDifferAssessed": true
+      }
+    ],
+    "note": "Descriptive 4-case comparison; two observations per timeout arm and case. This is not a statistical causal guarantee.",
+    "startedAt": "2026-09-30T13:05:19.303Z",
+    "updatedAt": "2026-09-30T13:09:11.468Z",
+    "complete": true
+  },
+  "calls": [
+    {
+      "callId": "A-paraphrase-3::observation-1::timeout-8000",
+      "caseId": "A-paraphrase-3",
+      "observation": 1,
+      "scheduleIndex": 1,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:05:19.304Z",
+      "latencyMs": 4821,
+      "validInterpretation": false,
+      "semanticFailure": "INVALID_RESPONSE",
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "CONTRADICTORY_FIELDS",
+        "responseChars": 1744,
+        "responseUtf8Bytes": 1744
+      },
+      "promptSha256": "289ce1f1f89266add01a2cbf13a0b7fba7ded77512bb379acff01ce043e6a454",
+      "promptChars": 8018,
+      "promptUtf8Bytes": 8018,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 0,
+        "total": 3,
+        "rate": 0
+      },
+      "issuePrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        }
+      },
+      "expectedIssueMatches": [],
+      "actualIssueCount": 0,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [],
+      "semanticSignatureSha256": null,
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreamSetAccuracy": false,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "CANDIDATE_REJECTED",
+        "NO_ADMITTED_EVIDENCE",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "A-paraphrase-3::observation-1::timeout-15000",
+      "caseId": "A-paraphrase-3",
+      "observation": 1,
+      "scheduleIndex": 2,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:05:34.568Z",
+      "latencyMs": 2252,
+      "validInterpretation": false,
+      "semanticFailure": "INVALID_RESPONSE",
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "CONTRADICTORY_FIELDS",
+        "responseChars": 1742,
+        "responseUtf8Bytes": 1742
+      },
+      "promptSha256": "289ce1f1f89266add01a2cbf13a0b7fba7ded77512bb379acff01ce043e6a454",
+      "promptChars": 8018,
+      "promptUtf8Bytes": 8018,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 0,
+        "total": 3,
+        "rate": 0
+      },
+      "issuePrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        }
+      },
+      "expectedIssueMatches": [],
+      "actualIssueCount": 0,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [],
+      "semanticSignatureSha256": null,
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreamSetAccuracy": false,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "CANDIDATE_REJECTED",
+        "NO_ADMITTED_EVIDENCE",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "A-paraphrase-3::observation-2::timeout-15000",
+      "caseId": "A-paraphrase-3",
+      "observation": 2,
+      "scheduleIndex": 3,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:05:49.828Z",
+      "latencyMs": 2347,
+      "validInterpretation": false,
+      "semanticFailure": "INVALID_RESPONSE",
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "CONTRADICTORY_FIELDS",
+        "responseChars": 1801,
+        "responseUtf8Bytes": 1801
+      },
+      "promptSha256": "289ce1f1f89266add01a2cbf13a0b7fba7ded77512bb379acff01ce043e6a454",
+      "promptChars": 8018,
+      "promptUtf8Bytes": 8018,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 0,
+        "total": 3,
+        "rate": 0
+      },
+      "issuePrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        }
+      },
+      "expectedIssueMatches": [],
+      "actualIssueCount": 0,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [],
+      "semanticSignatureSha256": null,
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreamSetAccuracy": false,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "CANDIDATE_REJECTED",
+        "NO_ADMITTED_EVIDENCE",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "A-paraphrase-3::observation-2::timeout-8000",
+      "caseId": "A-paraphrase-3",
+      "observation": 2,
+      "scheduleIndex": 4,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:06:05.091Z",
+      "latencyMs": 2993,
+      "validInterpretation": false,
+      "semanticFailure": "INVALID_RESPONSE",
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "CONTRADICTORY_FIELDS",
+        "responseChars": 1807,
+        "responseUtf8Bytes": 1807
+      },
+      "promptSha256": "289ce1f1f89266add01a2cbf13a0b7fba7ded77512bb379acff01ce043e6a454",
+      "promptChars": 8018,
+      "promptUtf8Bytes": 8018,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 0,
+        "total": 3,
+        "rate": 0
+      },
+      "issuePrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        }
+      },
+      "expectedIssueMatches": [],
+      "actualIssueCount": 0,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [],
+      "semanticSignatureSha256": null,
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "finalWorkstreamSetAccuracy": false,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "CANDIDATE_REJECTED",
+        "NO_ADMITTED_EVIDENCE",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "A-paraphrase-4::observation-1::timeout-15000",
+      "caseId": "A-paraphrase-4",
+      "observation": 1,
+      "scheduleIndex": 5,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:06:20.353Z",
+      "latencyMs": 3527,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1854,
+        "responseUtf8Bytes": 1854
+      },
+      "promptSha256": "68c0f77f2ed366efe556084835095c658021b80bcb4bc7d696a35c6478a96361",
+      "promptChars": 7994,
+      "promptUtf8Bytes": 7994,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "population": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employee-cpf-contribution",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "employer-cpf-contribution",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "individual-cpf-tax-relief",
+          "modelIssueIndex": 2,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 3,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [
+        {
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYEE",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "EMPLOYEE",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "34c17402a9ad4042df4e09a9a292e1fb924ff023d1312934b266d987bd0e3136",
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "A-paraphrase-4::observation-1::timeout-8000",
+      "caseId": "A-paraphrase-4",
+      "observation": 1,
+      "scheduleIndex": 6,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:06:35.613Z",
+      "latencyMs": 2630,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1842,
+        "responseUtf8Bytes": 1842
+      },
+      "promptSha256": "68c0f77f2ed366efe556084835095c658021b80bcb4bc7d696a35c6478a96361",
+      "promptChars": 7994,
+      "promptUtf8Bytes": 7994,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "population": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employer-cpf-contribution",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "employee-cpf-contribution",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "individual-cpf-tax-relief",
+          "modelIssueIndex": 2,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 3,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [
+        {
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYEE",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "DETERMINE_TREATMENT",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "9e4c4afa9b40a12b62b250d2cf8b9da96ca46f36299aa858fc3b6544bc2d9b67",
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "A-paraphrase-4::observation-2::timeout-8000",
+      "caseId": "A-paraphrase-4",
+      "observation": 2,
+      "scheduleIndex": 7,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:06:50.864Z",
+      "latencyMs": 2600,
+      "validInterpretation": false,
+      "semanticFailure": "INVALID_RESPONSE",
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "MALFORMED_JSON",
+        "responseChars": 1882,
+        "responseUtf8Bytes": 1882
+      },
+      "promptSha256": "68c0f77f2ed366efe556084835095c658021b80bcb4bc7d696a35c6478a96361",
+      "promptChars": 7994,
+      "promptUtf8Bytes": 7994,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 0,
+        "total": 3,
+        "rate": 0
+      },
+      "issuePrecision": {
+        "correct": 0,
+        "total": 0,
+        "rate": null
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "contextualAuthority": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "domain": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "population": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        },
+        "operation": {
+          "correct": 0,
+          "total": 0,
+          "rate": null
+        }
+      },
+      "expectedIssueMatches": [],
+      "actualIssueCount": 0,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [],
+      "semanticSignatureSha256": null,
+      "plannedWorkstreams": [],
+      "finalWorkstreams": [],
+      "finalWorkstreamSetAccuracy": false,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "EMPTY_ISSUE_PLAN",
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "A-paraphrase-4::observation-2::timeout-15000",
+      "caseId": "A-paraphrase-4",
+      "observation": 2,
+      "scheduleIndex": 8,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:07:06.123Z",
+      "latencyMs": 2454,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1804,
+        "responseUtf8Bytes": 1804
+      },
+      "promptSha256": "68c0f77f2ed366efe556084835095c658021b80bcb4bc7d696a35c6478a96361",
+      "promptChars": 7994,
+      "promptUtf8Bytes": 7994,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 3,
+        "total": 3,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "population": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 3,
+          "total": 3,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "employee-cpf-contribution",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "employer-cpf-contribution",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "individual-cpf-tax-relief",
+          "modelIssueIndex": 2,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 3,
+      "expectedIssueCount": 3,
+      "actualIssueDimensions": [
+        {
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYEE",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CALCULATE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "EMPLOYEE",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "34c17402a9ad4042df4e09a9a292e1fb924ff023d1312934b266d987bd0e3136",
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-original::observation-1::timeout-8000",
+      "caseId": "D-original",
+      "observation": 1,
+      "scheduleIndex": 9,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:07:21.387Z",
+      "latencyMs": 2379,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1410,
+        "responseUtf8Bytes": 1410
+      },
+      "promptSha256": "466cf394b697d9900271994b2c1dff50cbef053361829da19703d56f670edd6f",
+      "promptChars": 7948,
+      "promptUtf8Bytes": 7948,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "population": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "sfrsi-expense-accounting",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f",
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-original::observation-1::timeout-15000",
+      "caseId": "D-original",
+      "observation": 1,
+      "scheduleIndex": 10,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:07:36.651Z",
+      "latencyMs": 4760,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1453,
+        "responseUtf8Bytes": 1453
+      },
+      "promptSha256": "466cf394b697d9900271994b2c1dff50cbef053361829da19703d56f670edd6f",
+      "promptChars": 7948,
+      "promptUtf8Bytes": 7948,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "population": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "sfrsi-expense-accounting",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f",
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-original::observation-2::timeout-15000",
+      "caseId": "D-original",
+      "observation": 2,
+      "scheduleIndex": 11,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:07:51.900Z",
+      "latencyMs": 2294,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1469,
+        "responseUtf8Bytes": 1469
+      },
+      "promptSha256": "466cf394b697d9900271994b2c1dff50cbef053361829da19703d56f670edd6f",
+      "promptChars": 7948,
+      "promptUtf8Bytes": 7948,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "population": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "sfrsi-expense-accounting",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f",
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-original::observation-2::timeout-8000",
+      "caseId": "D-original",
+      "observation": 2,
+      "scheduleIndex": 12,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:08:07.162Z",
+      "latencyMs": 2049,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1453,
+        "responseUtf8Bytes": 1453
+      },
+      "promptSha256": "466cf394b697d9900271994b2c1dff50cbef053361829da19703d56f670edd6f",
+      "promptChars": 7948,
+      "promptUtf8Bytes": 7948,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "population": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "sfrsi-expense-accounting",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "44fd80b8abfdb040de04a1a857898fc61479f69a336a875bca264842e7696a9f",
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-paraphrase-1::observation-1::timeout-15000",
+      "caseId": "D-paraphrase-1",
+      "observation": 1,
+      "scheduleIndex": 13,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:08:22.423Z",
+      "latencyMs": 1961,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1405,
+        "responseUtf8Bytes": 1405
+      },
+      "promptSha256": "957958510a63d4e57a2a09333669e8accc6b5beafcf5cf9e8764b3b1b402e3e3",
+      "promptChars": 7972,
+      "promptUtf8Bytes": 7972,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "issuePrecision": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "population": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "bdab1abf2a3a9e1ea914edc814a6c4de44f594ddc9896454ccb195c858b1d71b",
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNASSIGNED_QUERY_TOPIC",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-paraphrase-1::observation-1::timeout-8000",
+      "caseId": "D-paraphrase-1",
+      "observation": 1,
+      "scheduleIndex": 14,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:08:37.679Z",
+      "latencyMs": 2011,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1501,
+        "responseUtf8Bytes": 1501
+      },
+      "promptSha256": "957958510a63d4e57a2a09333669e8accc6b5beafcf5cf9e8764b3b1b402e3e3",
+      "promptChars": 7972,
+      "promptUtf8Bytes": 7972,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "issuePrecision": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "population": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "47447ed7f10f834a1e8b334747e21fa5cc2e7f3fa8a615d6bcc559a7313aaac3",
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNASSIGNED_QUERY_TOPIC",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-paraphrase-1::observation-2::timeout-8000",
+      "caseId": "D-paraphrase-1",
+      "observation": 2,
+      "scheduleIndex": 15,
+      "timeoutMs": 8000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:08:52.938Z",
+      "latencyMs": 2111,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1464,
+        "responseUtf8Bytes": 1464
+      },
+      "promptSha256": "957958510a63d4e57a2a09333669e8accc6b5beafcf5cf9e8764b3b1b402e3e3",
+      "promptChars": 7972,
+      "promptUtf8Bytes": 7972,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "issuePrecision": {
+        "correct": 1,
+        "total": 2,
+        "rate": 0.5
+      },
+      "completeQuestionIssueCoverage": false,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "population": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 1,
+          "total": 1,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "47447ed7f10f834a1e8b334747e21fa5cc2e7f3fa8a615d6bcc559a7313aaac3",
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNASSIGNED_QUERY_TOPIC",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    },
+    {
+      "callId": "D-paraphrase-1::observation-2::timeout-15000",
+      "caseId": "D-paraphrase-1",
+      "observation": 2,
+      "scheduleIndex": 16,
+      "timeoutMs": 15000,
+      "model": "gemini-3.5-flash-lite",
+      "temperature": 0,
+      "minRequestStartIntervalMs": 15250,
+      "requestStartedAt": "2026-09-30T13:09:08.203Z",
+      "latencyMs": 3254,
+      "validInterpretation": true,
+      "semanticFailure": null,
+      "providerStatus": null,
+      "transportDiagnostic": null,
+      "responseDiagnostic": {
+        "category": "VALID_SCHEMA",
+        "responseChars": 1462,
+        "responseUtf8Bytes": 1462
+      },
+      "promptSha256": "957958510a63d4e57a2a09333669e8accc6b5beafcf5cf9e8764b3b1b402e3e3",
+      "promptChars": 7972,
+      "promptUtf8Bytes": 7972,
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "systemChars": 259,
+      "systemUtf8Bytes": 259,
+      "issueRecall": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "completeQuestionIssueCoverage": true,
+      "dimensionScores": {
+        "governingAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "population": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 2,
+          "total": 2,
+          "rate": 1
+        }
+      },
+      "expectedIssueMatches": [
+        {
+          "expectedIssueId": "company-expense-tax-deductibility",
+          "modelIssueIndex": 0,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        },
+        {
+          "expectedIssueId": "sfrsi-expense-accounting",
+          "modelIssueIndex": 1,
+          "dimensions": {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        }
+      ],
+      "actualIssueCount": 2,
+      "expectedIssueCount": 2,
+      "actualIssueDimensions": [
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        },
+        {
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": []
+        }
+      ],
+      "semanticSignatureSha256": "bdab1abf2a3a9e1ea914edc814a6c4de44f594ddc9896454ccb195c858b1d71b",
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "finalWorkstreamSetAccuracy": true,
+      "runtimeStatus": "INSUFFICIENT",
+      "evidenceStatus": "INSUFFICIENT",
+      "gapCodes": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNASSIGNED_QUERY_TOPIC",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_COVERAGE_TOPIC"
+      ],
+      "routingEvidenceGuardCorrect": true,
+      "routingDiagnostic": null,
+      "sourceHashStable": true
+    }
+  ]
+}
