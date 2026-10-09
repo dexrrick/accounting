@@ -24,7 +24,7 @@ export interface OfficialSourceDiscoveryProviderConfig {
   lexicalDiscovery: boolean;
 }
 
-/** Discovery configuration is provider data; IRAS is the sole configured provider in this phase. */
+/** Discovery configuration is provider data; IRAS and CPF use their first-party indexes with bounded discovery. */
 export const OFFICIAL_SOURCE_DISCOVERY_PROVIDERS: Readonly<Record<string, OfficialSourceDiscoveryProviderConfig>> = Object.freeze({
   IRAS: Object.freeze({
     authority: 'IRAS',
@@ -32,6 +32,17 @@ export const OFFICIAL_SOURCE_DISCOVERY_PROVIDERS: Readonly<Record<string, Offici
     sitemapUrls: Object.freeze(['https://www.iras.gov.sg/sitemap']),
     preferredHosts: Object.freeze(['www.iras.gov.sg', 'iras.gov.sg']),
     searchSite: 'iras.gov.sg',
+    searchEndpoint: 'https://html.duckduckgo.com/html/',
+    searchRedirectHost: 'duckduckgo.com',
+    searchRedirectParameter: 'uddg',
+    lexicalDiscovery: true
+  }),
+  CPF: Object.freeze({
+    authority: 'CPF',
+    approvedHosts: Object.freeze(['www.cpf.gov.sg', 'cpf.gov.sg']),
+    sitemapUrls: Object.freeze(['https://www.cpf.gov.sg/employer/sitemap', 'https://www.cpf.gov.sg/member/sitemap']),
+    preferredHosts: Object.freeze(['www.cpf.gov.sg', 'cpf.gov.sg']),
+    searchSite: 'cpf.gov.sg',
     searchEndpoint: 'https://html.duckduckgo.com/html/',
     searchRedirectHost: 'duckduckgo.com',
     searchRedirectParameter: 'uddg',
@@ -172,6 +183,7 @@ function normalizedPath(url: URL): string {
 }
 
 function inferAuthority(host: string): string {
+  if (host === 'cpf.gov.sg' || host === 'www.cpf.gov.sg') return 'CPF';
   if (host === 'iras.gov.sg' || host === 'www.iras.gov.sg') return 'IRAS';
   if (host === 'ifrs.org' || host === 'www.ifrs.org') return 'IFRS Foundation';
   if (host === 'sso.agc.gov.sg') return 'AGC';
@@ -448,7 +460,19 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
 
   private async getSitemapEntries(host: string, approvedHosts: readonly string[], request: OfficialSourceDiscoveryRequest): Promise<OfficialSourceIndexEntry[]> {
     const allowedHosts = new Set(approvedHosts.map(item => item.toLowerCase()));
-    const configuredSitemaps = (request.sitemapUrls || []).flatMap(value => {
+    // CPF publishes separate employer/member indexes. Select the relevant one
+    // before applying the existing one-sitemap cap; never crawl both broadly.
+    const memberTopic = request.topicId === 'cpf-cash-top-up-tax-relief';
+    const employerTopic = request.topicDomainId === 'CPF_PAYROLL_LEVIES' ||
+      request.topicDomainId === 'CPF_CONTRIBUTIONS' && !memberTopic;
+    const memberScope = request.authority === 'CPF' && (memberTopic || !employerTopic &&
+      /cash[-\s]+top[-\s]?up|retirement|medisave|cpf life|housing|member/i.test(
+        `${request.topicId} ${request.topicTitle} ${request.scopeQuery || request.query}`
+      ));
+    const configuredSitemaps = [...(request.sitemapUrls || [])]
+      .sort((a, b) => request.authority === 'CPF'
+        ? Number(b.includes(memberScope ? '/member/' : '/employer/')) - Number(a.includes(memberScope ? '/member/' : '/employer/'))
+        : 0).flatMap(value => {
       try {
         const url = new URL(value);
         return url.protocol === 'https:' && allowedHosts.has(url.hostname.toLowerCase()) ? [url.toString()] : [];
