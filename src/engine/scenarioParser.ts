@@ -16,6 +16,7 @@ import { isDeferredTaxInquiry, startsNewAccountingScenario } from '../services/c
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
 import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
+import { matchBasicTransaction } from './basicTransactions';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -395,6 +396,11 @@ export async function parseAccountingQuery(
   } else if (q.includes('usd') && !q.includes('sgd')) {
     functionalCurrency = 'USD';
   }
+
+  // Basic bookkeeping is always matched before broad expense/lease keywords.
+  // Do not route missing facts to a fabricated journal.
+  const basicTransaction = matchBasicTransaction(query);
+  if (basicTransaction) return basicTransaction;
 
   // =========================================================================
   // SCENARIO -2: EXPENDITURE CAPITALISATION VS EXPENSE (SFRS(I) 1-38 / 1-16 vs IRAS S14/S15)
@@ -2056,27 +2062,47 @@ export async function parseAccountingQuery(
   // SCENARIO B: LEASES (IFRS 16 / SFRS(I) 16)
   // e.g. "i have a rental agreement for 3 years, paying 1 month sgd3,000"
   // =========================================================================
-  if (q.includes('rental') || q.includes('lease') || q.includes('rent') || q.includes('tenancy')) {
-    let termYears = 3;
-    const yearMatch = query.match(/(\d+)\s*(?:years?|yrs?)/i);
+  if (/\b(?:lease|tenancy)\b|\brental\s+agreement\b/i.test(query)) {
+    let termYears = 0;
+    const yearMatch = query.match(/\b(\d+)\s*[-–]?\s*(?:years?|yrs?)\b/i);
     if (yearMatch && yearMatch[1]) {
       termYears = parseInt(yearMatch[1], 10);
     }
 
     let termMonths = termYears * 12;
-    const monthTermMatch = query.match(/(\d+)\s*(?:months?|mos?)/i);
+    const monthTermMatch = query.match(/\b(\d+)\s*[-–]?\s*(?:months?|mos?)\b/i);
     if (monthTermMatch && monthTermMatch[1] && !yearMatch) {
       termMonths = parseInt(monthTermMatch[1], 10);
       termYears = Math.round(termMonths / 12 * 10) / 10;
     }
+    if (!yearMatch && !monthTermMatch) {
+      return {
+        scenarioType: 'LEASE_IFRS16', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION',
+        primaryDomain: 'ACCOUNTING_SFRS', rawQuery: query,
+        transactionTitle: 'Lease term clarification required', functionalCurrency,
+        transactionCurrency: functionalCurrency, directGroups: [], isComplete: false,
+        missingFields: [{ fieldKey: 'leaseTerm', fieldName: 'Lease term',
+          prompt: 'What is the contractual lease term (in months or years)?',
+          whyNeeded: 'The present value of lease payments must not be calculated from an assumed lease term.' }]
+      };
+    }
 
-    let monthlyRent = 3000;
-    const rentMatch = query.match(/(?:paying|rent(?:al)?|cost)?\s*(?:1\s*month|\/month|monthly|per\s*month)?\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i)
-      || query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)/i);
-
-    if (rentMatch && rentMatch[1]) {
-      const parsed = parseFloat(rentMatch[1].replace(/,/g, ''));
-      if (parsed > 50) monthlyRent = parsed;
+    // A lease-term numeral is not a rental amount. Read an explicitly
+    // identified payment instead of assuming SGD 3,000 per month.
+    const rentMatch = query.match(/(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)\s*(?:\/\s*(?:month|mo)|per\s+month|monthly)/i)
+      || query.match(/(?:rent(?:al)?|paying|monthly payment)\s*(?:of|is|at|:)??\s*(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)/i)
+      || query.match(/paying\s+(?:1\s+month|monthly)\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const monthlyRent = rentMatch ? Number(rentMatch[1].replace(/,/g, '')) : 0;
+    if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
+      return {
+        scenarioType: 'LEASE_IFRS16', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION',
+        primaryDomain: 'ACCOUNTING_SFRS', rawQuery: query,
+        transactionTitle: 'Monthly lease payment clarification required', functionalCurrency,
+        transactionCurrency: functionalCurrency, directGroups: [], isComplete: false,
+        missingFields: [{ fieldKey: 'leasePayment', fieldName: 'Monthly lease payment',
+          prompt: 'What is the monthly lease payment amount?',
+          whyNeeded: 'A lease liability cannot be measured without contractual lease payments.' }]
+      };
     }
 
     let discountRateAnnual = 5.0;

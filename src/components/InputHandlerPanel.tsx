@@ -65,20 +65,20 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
       case 'MULTI_AUTHORITY':
         return { label: 'Multi-Authority Scope', color: 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800' };
       default:
-        return { label: 'Singapore Jurisdiction', color: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-[#242F46] dark:text-slate-200 dark:border-[#2B374E]' };
+        return { label: 'Singapore Jurisdiction', color: 'bg-workspace-raised text-slate-800 border-workspace-border dark:bg-workspace-raised dark:text-workspace-secondary dark:border-workspace-border' };
     }
   };
 
   const domainBadge = getDomainBadge(scenario.primaryDomain);
 
   return (
-    <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden transition-colors duration-200">
+    <div className="bg-workspace-panel rounded-2xl border border-workspace-border dark:border-workspace-border shadow-none overflow-hidden transition-colors duration-200">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200 dark:border-[#2B374E] bg-slate-50/80 dark:bg-[#151D2C]">
+      <div className="p-4 border-b border-workspace-border dark:border-workspace-border bg-workspace-raised/80 dark:bg-workspace-panel">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-ynab-navy dark:bg-[#242F46] text-white flex items-center justify-center border border-slate-700/30 dark:border-[#2B374E] shadow-sm shrink-0">
-              <Sparkles className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
+            <div className="w-9 h-9 rounded-xl bg-workspace-raised dark:bg-workspace-raised text-white flex items-center justify-center border border-slate-700/30 dark:border-workspace-border shadow-sm shrink-0">
+              <Sparkles className="w-4 h-4 text-workspace-accent-text dark:text-workspace-accent-text" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -91,7 +91,7 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
                   </span>
                 )}
                 {scenario.transactionTitle && (
-                  <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-[#242F46] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#2B374E] rounded font-mono text-[11px] font-semibold">
+                  <span className="px-2.5 py-0.5 bg-workspace-raised dark:bg-workspace-raised text-slate-800 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border rounded font-mono text-[11px] font-semibold">
                     {scenario.transactionTitle}
                   </span>
                 )}
@@ -100,19 +100,19 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-[#151D2C] border border-emerald-200 dark:border-emerald-900/60 px-2.5 py-1 rounded-lg">
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-workspace-panel border border-emerald-200 dark:border-emerald-900/60 px-2.5 py-1 rounded-lg">
               <span className="w-1.5 h-1.5 rounded-full bg-ynab-green"></span>
               {scenario.missingFields?.length ? `${scenario.missingFields.length} detail${scenario.missingFields.length === 1 ? '' : 's'} needed` : 'Facts Synchronized'}
             </span>
             <button type="button" onClick={() => setIsExpanded(value => !value)}
               aria-expanded={isExpanded} aria-controls="transaction-facts-content"
-              className="flex items-center gap-1 text-[11px] font-semibold text-ynab-blue dark:text-blue-400 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#242F46]">
+              className="flex items-center gap-1 text-[11px] font-semibold text-workspace-accent-text dark:text-workspace-accent-text px-2 py-1 rounded-lg hover:bg-workspace-hover dark:hover:bg-workspace-hover">
               {isExpanded ? 'Hide facts' : 'Show facts'}
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
             </button>
             <button
               onClick={onResetToDefaults}
-              className="text-slate-400 hover:text-slate-800 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-[#242F46] transition-colors"
+              className="text-workspace-muted hover:text-slate-800 dark:hover:text-white p-1.5 rounded-lg hover:bg-workspace-hover dark:hover:bg-workspace-hover transition-colors"
               title="Reset scenario"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -130,16 +130,16 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
                 key={idx}
                 className={`p-3.5 rounded-xl border flex flex-col justify-between min-h-[84px] overflow-hidden transition-all shadow-xs ${
                   fact.highlight
-                    ? 'border-amber-300 bg-amber-50/60 dark:border-amber-600/60 dark:bg-[#242F46]'
-                    : 'bg-slate-50/70 dark:bg-[#111827] border-slate-200 dark:border-[#2B374E] hover:border-slate-300 dark:hover:border-slate-600'
+                    ? 'border-amber-300 bg-amber-50/60 dark:border-amber-600/60 dark:bg-workspace-raised'
+                    : 'bg-workspace-raised/70 dark:bg-workspace-input border-workspace-border dark:border-workspace-border hover:border-slate-300 dark:hover:border-workspace-border'
                 }`}
               >
                 <div className="flex flex-wrap items-start justify-between gap-1.5 min-w-0">
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider leading-snug break-words min-w-0">
+                  <span className="text-[11px] font-semibold text-workspace-muted dark:text-workspace-muted uppercase tracking-wider leading-snug break-words min-w-0">
                     {fact.label}
                   </span>
                   {fact.badge && (
-                    <span className="inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2B374E] font-medium leading-none whitespace-nowrap">
+                    <span className="inline-flex items-center text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-workspace-raised text-slate-700 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border font-medium leading-none whitespace-nowrap">
                       {fact.badge}
                     </span>
                   )}
@@ -151,21 +151,21 @@ export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
             ))}
           </div>
         ) : (
-          <div className="p-6 bg-slate-50 dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-[#2B374E] text-center text-xs text-slate-500 dark:text-slate-400">
+          <div className="p-6 bg-workspace-raised dark:bg-workspace-input rounded-xl border border-workspace-border dark:border-workspace-border text-center text-xs text-workspace-muted dark:text-workspace-muted">
             Transaction facts synchronized with accounting journal.
           </div>
         )}
 
         {/* Transaction / Statutory Summary Footer */}
         {scenario.directGroups && scenario.directGroups.length > 0 && scenario.directGroups.some(g => (g.lines?.length || 0) > 0) ? (
-          <div className="p-3 bg-slate-50 dark:bg-[#151D2C] rounded-xl border border-slate-200 dark:border-[#2B374E] flex items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-              <Layers className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
+          <div className="p-3 bg-workspace-raised dark:bg-workspace-panel rounded-xl border border-workspace-border dark:border-workspace-border flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-slate-700 dark:text-workspace-secondary">
+              <Layers className="w-4 h-4 text-workspace-accent-text dark:text-workspace-accent-text" />
               <span>
                 <strong>{scenario.directGroups.length}</strong> Journal Entry {scenario.directGroups.length === 1 ? 'Group' : 'Groups'} Generated
               </span>
             </div>
-            <div className="font-mono text-slate-500 dark:text-slate-400 text-xs">
+            <div className="font-mono text-workspace-muted dark:text-workspace-muted text-xs">
               Currency: <strong className="text-slate-800 dark:text-white">{scenario.functionalCurrency}</strong>
             </div>
           </div>

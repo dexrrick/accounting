@@ -6,4 +6,6 @@ The diagnostic selected the extended policy of 20 seconds per attempt, 45 second
 
 Lint, build, smoke, and full-suite checks previously passed, as recorded in the remediation report. The live run used retained source captures referenced to 08/10/2026; fresh official-source availability and canonical acceptance remain follow-up work (`acceptanceProven: false`). No new source requests were made.
 
-The follow-up is representative production timing and fresh-source canonical verification. It should not be an arbitrary repeat of the diagnostic rerun. Existing [PR #2](https://github.com/dexrrick/accounting/pull/2) is being prepared for merge and is not yet merged.
+The follow-up is representative production timing and fresh-source canonical verification. It is tracked separately in [issue #9](https://github.com/dexrrick/accounting/issues/9). Existing [PR #2](https://github.com/dexrrick/accounting/pull/2) is being prepared for merge.
+
+Current `main` (`d3f32a5`) was integrated, preserving the Workspace UI, routine bookkeeping journals, and authority-evidence presentation. Independent integration review found no material issues. Post-integration lint, build, and smoke passed; smoke completed in 110.25 seconds. Full-suite and GitHub CI results are checked before the authorized PR merge.

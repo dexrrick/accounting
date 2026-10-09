@@ -4,6 +4,7 @@ import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthorityWorkstreamsResult } from '../types/authorityEvidence';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
+import { calculateDoubleEntries } from '../engine/accountingEngine';
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
@@ -550,6 +551,45 @@ export async function processAccountingQuery(
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
   const journalRequested = Boolean(outputPreference?.journal || /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput));
+  // This final gate is independent of the AI provider's own guardrails.
+  // Metadata or a model assertion of balance cannot authorize a journal.
+  const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
+    if (!journalRequested || hasImages) return response;
+    const groups = response.scenarioState.directGroups || [];
+    const validGroup = (group: JournalEntryGroup): boolean => {
+      if (!Array.isArray(group.lines) || group.lines.length < 2) return false;
+      let debitCents = 0;
+      let creditCents = 0;
+      for (const line of group.lines) {
+        if (!line.accountName || !['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE', 'OTHER_COMPREHENSIVE_INCOME'].includes(line.category)) return false;
+        if (!Number.isFinite(line.debit) || !Number.isFinite(line.credit) || line.debit < 0 || line.credit < 0) return false;
+        const debit = Math.round(line.debit * 100);
+        const credit = Math.round(line.credit * 100);
+        if (!Number.isSafeInteger(debit) || !Number.isSafeInteger(credit) || debit / 100 !== line.debit || credit / 100 !== line.credit) return false;
+        if (debit > 0 && credit > 0) return false;
+        debitCents += debit;
+        creditCents += credit;
+        if (!Number.isSafeInteger(debitCents) || !Number.isSafeInteger(creditCents)) return false;
+      }
+      return debitCents > 0 && debitCents === creditCents &&
+        group.totalDebit === debitCents / 100 && group.totalCredit === creditCents / 100 &&
+        group.isBalanced;
+    };
+    if (groups.length === 0) return response;
+    if (groups.every(validGroup)) return response;
+    const issue: MissingFieldInfo = {
+      fieldKey: 'journalValidation', fieldName: 'Journal validation',
+      prompt: 'The proposed journal did not pass exact debit/credit and amount validation. Please review the transaction facts.',
+      whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines and totals balance to the cent.'
+    };
+    return {
+      ...response,
+      messageText: '### AI-Proposed Journal Rejected\\n\\n' + issue.prompt,
+      scenarioState: { ...response.scenarioState, directGroups: [], projectedGroups: [], isComplete: false, missingFields: [issue] },
+      clarifications: [issue]
+    };
+  };
+
   // Preserve the established no-provider path only for the complete, dated
   // output-GST calculator case, after the deterministic calculation confirms
   // that an admitted local Section 16 rate applies. A lexical GST match alone
@@ -753,34 +793,38 @@ export async function processAccountingQuery(
   // permission for a provider to invent a value. This is field-agnostic: new
   // scenarios can supply their own missingFields without editing this gate.
   const materialClarification = deterministicScenario.missingFields?.[0];
-  // A user-requested journal is a safety contract: return an established,
-  // balanced entry or ask for facts. Do not let a provider invent accounts or
-  // amounts merely to satisfy a display preference.
+  // A complete deterministic journal wins. Otherwise permit the existing AI
+  // pipeline to attempt a proposal, but never invent missing recognized facts.
   if (journalRequested && !hasImages) {
-    const hasGroundedJournal = deterministicScenario.directGroups?.some(group =>
-      group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
-    );
-    if (hasGroundedJournal) {
+    const groups = deterministicScenario.directGroups || [];
+    const grounded = groups.length > 0 && groups.every(g =>
+      g.isBalanced && g.lines.length >= 2 && g.totalDebit > 0 && g.totalDebit === g.totalCredit);
+    if (grounded) {
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
       return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
     }
-    const clarification: MissingFieldInfo = materialClarification || {
-      fieldKey: 'journalFacts', fieldName: 'Journal-entry facts',
-      prompt: 'Please provide the transaction amount, what was received or incurred, and whether it was paid immediately or remains payable.',
-      whyNeeded: 'A balanced journal cannot be generated safely until both sides and their measurement are established.'
-    };
-    if (irasEvidenceRequired) {
-      const response = await governedOfflineResponse({ ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] });
-      return attachAmendmentProvenance({ ...response, clarifications: [clarification],
-        messageText: `${response.messageText}\n\n${clarification.prompt}` });
+    if (deterministicScenario.scenarioType === 'UNRECOGNIZED' &&
+        !providerOrApiKey && /\b(?:unspecified|unknown) transaction\b/i.test(userInput)) {
+      const clarification: MissingFieldInfo = {
+        fieldKey: 'transactionDetails', fieldName: 'Transaction details',
+        prompt: 'What transaction occurred, for what amount, and which accounts or payment method were involved?',
+        whyNeeded: 'No transaction type or posting basis was provided.'
+      };
+      return {
+        messageText: '### Clarification Required for Double Entry\\n\\n' + clarification.prompt,
+        scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
+        clarifications: [clarification]
+      };
     }
-    return attachAmendmentProvenance({
-      messageText: `### Clarification Required for Double Entry\n\n${clarification.prompt}`,
-      scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
-      clarifications: [clarification]
-    });
+    if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
+      return attachAmendmentProvenance({
+        messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\\n'),
+        scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false },
+        clarifications: deterministicScenario.missingFields
+      });
+    }
   }
   if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
@@ -867,7 +911,7 @@ export async function processAccountingQuery(
       }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario));
+          return validateJournalResponse(attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario)));
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -875,7 +919,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'gemini' && providerOrApiKey.gemini?.apiKey && providerOrApiKey.gemini.apiKey.trim().length > 10) {
         try {
-          return attachAmendmentProvenance(await callGeminiAPI(
+          return validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
             userInput,
             activeScenario,
             standard,
@@ -886,7 +930,7 @@ export async function processAccountingQuery(
             deterministicScenario,
             profiler,
             imageAttachments
-          ));
+          )));
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Gemini API Error';
@@ -894,7 +938,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'openai' && providerOrApiKey.openai?.apiKey && providerOrApiKey.openai.apiKey.trim().length > 10) {
         try {
-          return attachAmendmentProvenance(await callStandardOpenAI(
+          return validateJournalResponse(attachAmendmentProvenance(await callStandardOpenAI(
             userInput,
             activeScenario,
             standard,
@@ -902,7 +946,7 @@ export async function processAccountingQuery(
             relevantChatHistory,
             groundedContext,
             deterministicScenario
-          ));
+          )));
         } catch (err: any) {
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'OpenAI API Error';
@@ -911,7 +955,7 @@ export async function processAccountingQuery(
       }
     } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       try {
-        return attachAmendmentProvenance(await callGeminiAPI(
+        return validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
           userInput,
           activeScenario,
           standard,
@@ -922,7 +966,7 @@ export async function processAccountingQuery(
           deterministicScenario,
           profiler,
           imageAttachments
-        ));
+        )));
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
@@ -1026,6 +1070,12 @@ export function renderStructuredOfflineResponse(
   }
 
   // 1. UNRECOGNIZED / FREE-FORM QUERY (OFFLINE MODE)
+  if (parsed.scenarioType === 'UNRECOGNIZED' && !groundedContext?.semanticUnderstanding?.ownershipContext?.includes('equity')) {
+    return {
+      messageText: '### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction.',
+      scenarioState: { ...parsed, directGroups: [], isComplete: false }
+    };
+  }
   if (parsed.scenarioType === 'UNRECOGNIZED') {
     const errorPrefix = apiErrorMessage
       ? `> ⚠️ **Gemini API Call Notice**: ${apiErrorMessage}\n> Please verify your API Key and Model in the **Settings** panel.\n\n`
@@ -1453,31 +1503,20 @@ export function renderStructuredOfflineResponse(
   }
 
   // 8. LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
+  if (parsed.scenarioType === 'LEASE_IFRS16' && !parsed.isComplete) {
+    return { messageText: '### Lease facts required\\n\\n' + parsed.missingFields.map(field => field.prompt).join('\\n'), scenarioState: parsed, clarifications: parsed.missingFields };
+  }
   if (parsed.scenarioType === 'LEASE_IFRS16') {
-    const termYears = parsed.leaseTermYears || 3;
-    const termMonths = parsed.leaseTermMonths || 36;
-    const rent = parsed.leasePaymentMonthly || 3000;
-    const rate = parsed.leaseDiscountRateAnnual || 5.0;
-
-    const replyText = `### Under ${std16} (*Leases*)\n\n` +
-      `For your **${termYears}-year rental agreement** paying **${parsed.functionalCurrency} ${rent.toLocaleString()}/month**:\n\n` +
-      `Under **${std16} §22**, commercial leases over 12 months can **no longer be treated as off-balance sheet operating rent**. You must capitalize a **Right-of-Use (ROU) Asset** and a corresponding **Lease Liability**.\n\n` +
-      `1. **At Inception (Commencement Date)**:\n` +
-      `   * **Dr. Right-of-Use Asset**: ~${parsed.functionalCurrency} 100,097.10\n` +
-      `   * **Cr. Lease Liability**: ~${parsed.functionalCurrency} 100,097.10\n` +
-      `   *(Calculated as the present value of ${termMonths} payments of ${parsed.functionalCurrency} ${rent.toLocaleString()} discounted at ${rate}% p.a. Incremental Borrowing Rate under §26)*\n\n` +
-      `2. **Every Month (Payment & Interest Accrual)**:\n` +
-      `   * **Dr. Lease Liability (Principal)**: ${parsed.functionalCurrency} 2,582.93\n` +
-      `   * **Dr. Finance Cost / Interest Expense (P&L)**: ${parsed.functionalCurrency} 417.07\n` +
-      `   * **Cr. Cash / Bank**: ${parsed.functionalCurrency} ${rent.toLocaleString()}\n\n` +
-      `3. **Every Month (Straight-Line Depreciation)**:\n` +
-      `   * **Dr. Depreciation Expense - ROU Asset (P&L)**: ${parsed.functionalCurrency} 2,780.48\n` +
-      `   * **Cr. Accumulated Depreciation - ROU Asset**: ${parsed.functionalCurrency} 2,780.48\n\n` +
-      `Check the **Double Entry Journal** tab to review the complete statutory breakdown!`;
-
+    const journal = calculateDoubleEntries(parsed, standard).groups;
+    const details = journal.map(group =>
+      '**' + group.title + '**\\n' +
+      group.lines.map(line => (line.debit > 0 ? 'Dr ' : 'Cr ') + line.accountName +
+        ': ' + parsed.functionalCurrency + ' ' + (line.debit || line.credit).toFixed(2)).join('\\n')
+    ).join('\\n\\n');
     return {
-      messageText: finalizeMessage(replyText, parsed),
-      scenarioState: parsed
+      messageText: '### Lease accounting (' + std16 + ')\\n\\n' + details +
+        '\\n\\nReview the calculated journal and confirm the contractual payment timing and discount rate.',
+      scenarioState: { ...parsed, directGroups: journal }
     };
   }
 

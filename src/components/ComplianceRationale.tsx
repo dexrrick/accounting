@@ -104,20 +104,20 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
     : 'Singapore Statutory & Tax Directives';
 
   return (
-    <div className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden space-y-6 flex flex-col transition-colors duration-200">
+    <div className="bg-workspace-panel rounded-2xl border border-workspace-border dark:border-workspace-border shadow-none overflow-hidden space-y-6 flex flex-col transition-colors duration-200">
       {/* Statutory Header */}
-      <div className="order-1 p-4 bg-slate-50/80 dark:bg-[#151D2C] text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-[#2B374E]">
+      <div className="order-1 p-4 bg-workspace-raised/80 dark:bg-workspace-panel text-slate-900 dark:text-white flex items-center justify-between border-b border-workspace-border dark:border-workspace-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-ynab-navy dark:bg-[#242F46] flex items-center justify-center text-white border border-slate-700/20 dark:border-[#2B374E] shadow-xs">
-            <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
+          <div className="w-8 h-8 rounded-lg bg-workspace-raised dark:bg-workspace-raised flex items-center justify-center text-white border border-slate-700/20 dark:border-workspace-border shadow-xs">
+            <ShieldCheck className="w-4 h-4 text-workspace-accent-text dark:text-workspace-accent-text" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 font-sans">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-workspace-text font-sans">
                 Statutory Compliance & Legal Authority
               </h3>
               {primaryDomain && (
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2B374E] font-medium">
+                <span className="text-[9px] font-mono px-2 py-0.5 rounded-md bg-workspace-raised dark:bg-workspace-raised text-slate-700 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border font-medium">
                   {currentIrasPresentation?.domainLabel || primaryDomain}
                 </span>
               )}
@@ -129,10 +129,10 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
           href="https://sso.agc.gov.sg"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-[#242F46] dark:hover:bg-[#2D3B58] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#2B374E] text-[11px] font-medium transition-colors"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-workspace-raised hover:bg-slate-200 dark:bg-workspace-raised dark:hover:bg-workspace-hover text-slate-700 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border text-[11px] font-medium transition-colors"
         >
           <span>Singapore Statutes Online</span>
-          <ExternalLink className="w-3 h-3 text-slate-400" />
+          <ExternalLink className="w-3 h-3 text-workspace-muted" />
         </a>
       </div>
 
@@ -190,14 +190,14 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       {/* Dual Authority Comparison: Financial Reporting (SFRS(I)) vs Singapore Tax Treatment (IRAS) */}
       {(accountingTreatmentSummary || singaporeTaxTreatmentSummary) && (
         <div className="order-5 px-5 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
-            <Scale className="w-4 h-4 text-slate-400" />
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-workspace-secondary font-sans">
+            <Scale className="w-4 h-4 text-workspace-muted" />
             <span>Financial Reporting vs Singapore Tax Bifurcation</span>
           </div>
 
           <div className={`grid grid-cols-1 ${showTaxTreatment ? 'md:grid-cols-2' : ''} gap-4`}>
             {/* Column 1: Financial Reporting Treatment */}
-            <div className="p-4 bg-indigo-50/50 dark:bg-[#1A2234] border border-indigo-200/80 dark:border-indigo-900/50 rounded-xl space-y-2.5 shadow-xs">
+            <div className="p-4 bg-indigo-50/50 dark:bg-workspace-panel border border-indigo-200/80 dark:border-indigo-900/50 rounded-xl space-y-2.5 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/70 text-indigo-800 dark:text-indigo-200 border border-indigo-200 dark:border-indigo-800">
@@ -205,16 +205,16 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     ASC / SFRS(I) Treatment
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">Financial Reporting</span>
+                <span className="text-[10px] font-mono text-workspace-muted dark:text-workspace-muted">Financial Reporting</span>
               </div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">Financial Statement Recognition & Policies</h4>
-              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white/90 dark:bg-[#151D2C] p-3 rounded-lg border border-indigo-100 dark:border-indigo-950">
+              <p className="text-xs text-slate-700 dark:text-workspace-secondary leading-relaxed bg-white/90 dark:bg-workspace-panel p-3 rounded-lg border border-indigo-100 dark:border-indigo-950">
                 {accountingTreatmentSummary || 'Standard SFRS(I) double entry recognition applies according to accrual basis accounting.'}
               </p>
             </div>
 
             {/* Only display a tax analysis when the answer contains a tax analysis. */}
-            {showTaxTreatment && <div className="p-4 bg-emerald-50/50 dark:bg-[#162724] border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl space-y-2.5 shadow-xs">
+            {showTaxTreatment && <div className="p-4 bg-emerald-50/50 dark:bg-workspace-panel border border-emerald-200/80 dark:border-emerald-900/50 rounded-xl space-y-2.5 shadow-xs">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/70 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
@@ -222,10 +222,10 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     IRAS Tax & GST Treatment
                   </span>
                 </div>
-                <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">Tax Computation</span>
+                <span className="text-[10px] font-mono text-workspace-muted dark:text-workspace-muted">Tax Computation</span>
               </div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">Tax Deductibility, Capital Allowances & GST</h4>
-              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white/90 dark:bg-[#151D2C] p-3 rounded-lg border border-emerald-100 dark:border-emerald-950">
+              <p className="text-xs text-slate-700 dark:text-workspace-secondary leading-relaxed bg-white/90 dark:bg-workspace-panel p-3 rounded-lg border border-emerald-100 dark:border-emerald-950">
                 {singaporeTaxTreatmentSummary}
               </p>
             </div>
@@ -236,12 +236,12 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
 
       {/* Regulatory Mandates (ACRA / MOM / CPF) */}
       {regulatoryMandatesSummary && (
-        <div className="order-6 mx-5 p-4 bg-slate-50 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 font-sans">
-            <ShieldCheck className="w-4 h-4 text-ynab-blue dark:text-blue-400" />
+        <div className="order-6 mx-5 p-4 bg-workspace-raised dark:bg-workspace-panel border border-workspace-border dark:border-workspace-border rounded-xl space-y-2">
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-workspace-secondary font-sans">
+            <ShieldCheck className="w-4 h-4 text-workspace-accent-text dark:text-workspace-accent-text" />
             <span>Singapore Regulatory Compliance Mandates</span>
           </div>
-          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-white dark:bg-[#1C2538] p-3 rounded-lg border border-slate-200 dark:border-[#2B374E]">
+          <p className="text-xs text-slate-700 dark:text-workspace-secondary leading-relaxed bg-workspace-panel p-3 rounded-lg border border-workspace-border dark:border-workspace-border">
             {regulatoryMandatesSummary}
           </p>
         </div>
@@ -250,36 +250,36 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       {currentIrasPresentation && (
         <section className="order-4 px-5 space-y-4" aria-label="IRAS verified evidence presentation">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
-              <Scale className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-workspace-secondary font-sans">
+              <Scale className="w-4 h-4 text-workspace-muted" />
               <span>Supporting Official Guidance</span>
             </div>
             {currentIrasPresentation.sourceGroups.map(group => (
-              <article key={group.key} className="rounded-xl border border-slate-200 dark:border-[#2B374E] bg-slate-50/70 dark:bg-[#151D2C] p-3.5 space-y-2">
+              <article key={group.key} className="rounded-xl border border-workspace-border dark:border-workspace-border bg-workspace-raised/70 dark:bg-workspace-panel p-3.5 space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h5 className="text-xs font-semibold text-slate-900 dark:text-white">{group.title}</h5>
                   {group.canonicalUrl && (
                     <a href={group.canonicalUrl} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[10px] text-ynab-blue dark:text-blue-400 hover:underline">
+                      className="inline-flex items-center gap-1 text-[10px] text-workspace-accent-text dark:text-workspace-accent-text hover:underline">
                       Official source <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
                 </div>
                 <div className="space-y-3">
                   {visiblePassages(group).map((passage, index) => (
-                    <div key={`${group.key}-${index}`} className="min-w-0 border-l-2 border-slate-300 dark:border-slate-600 pl-3 py-1">
-                      <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-relaxed text-slate-800 dark:text-slate-200">{passage.text}</p>
+                    <div key={`${group.key}-${index}`} className="min-w-0 border-l-2 border-slate-300 dark:border-workspace-border pl-3 py-1">
+                      <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-[11px] leading-relaxed text-slate-800 dark:text-workspace-secondary">{passage.text}</p>
                       {passage.supportKind === 'REVIEWED_EDITORIAL_SUMMARY' && (
-                        <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-workspace-muted dark:text-workspace-muted">
                           Reviewed local summary (non-verbatim)
                         </p>
                       )}
                       {passage.claimReferences.some(reference => reference.validFrom || reference.validTo) && (
-                        <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-workspace-muted dark:text-workspace-muted">
                           Applicability: {passage.claimReferences.map(reference => `${reference.validFrom ? formatSingaporeDate(reference.validFrom) : 'unknown'} to ${reference.validTo ? formatSingaporeDate(reference.validTo) : 'open-ended'}`).join('; ')}
                         </p>
                       )}
-                      {!group.canonicalUrl && <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-slate-500 dark:text-slate-400">No independently verified page URL is available for this passage.</p>}
+                      {!group.canonicalUrl && <p className="mt-1 break-words [overflow-wrap:anywhere] text-[10px] text-workspace-muted dark:text-workspace-muted">No independently verified page URL is available for this passage.</p>}
                     </div>
                   ))}
                 </div>
@@ -298,8 +298,8 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       {/* Advisory Breakdown Cards (if available) */}
       {!currentIrasPresentation && advisories && advisories.length > 0 && (
         <div className="order-4 px-5 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
-            <Scale className="w-4 h-4 text-slate-400" />
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-workspace-secondary font-sans">
+            <Scale className="w-4 h-4 text-workspace-muted" />
             <span>{directivesLabel}</span>
           </div>
 
@@ -309,7 +309,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               return (
                 <div
                   key={idx}
-                  className="p-4 bg-slate-50/70 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-3 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-xs"
+                  className="p-4 bg-workspace-raised/70 dark:bg-workspace-panel border border-workspace-border dark:border-workspace-border rounded-xl space-y-3 hover:border-slate-300 dark:hover:border-workspace-border transition-colors shadow-xs"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -329,29 +329,29 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                           href={safeUrl}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] text-ynab-blue dark:text-blue-400 hover:underline transition-colors"
+                          className="inline-flex items-center gap-1 text-[11px] text-workspace-accent-text dark:text-workspace-accent-text hover:underline transition-colors"
                         >
                           <span>Official Legislation</span>
-                          <ExternalLink className="w-3 h-3 text-slate-400" />
+                          <ExternalLink className="w-3 h-3 text-workspace-muted" />
                         </a>
                       ) : null;
                     })()}
                   </div>
 
                   <h4 className="font-semibold text-slate-900 dark:text-white text-xs">{adv.topic}</h4>
-                  <p className="text-slate-700 dark:text-slate-300 text-[11px] leading-relaxed bg-white dark:bg-[#1C2538] p-3 rounded-lg border border-slate-200 dark:border-[#2B374E]">
+                  <p className="text-slate-700 dark:text-workspace-secondary text-[11px] leading-relaxed bg-workspace-panel p-3 rounded-lg border border-workspace-border dark:border-workspace-border">
                     {adv.summary}
                   </p>
 
                   {adv.keyRules && adv.keyRules.length > 0 && (
                     <div className="space-y-1.5 pt-1">
-                      <div className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                      <div className="text-[10px] uppercase font-bold text-workspace-muted dark:text-workspace-muted tracking-wider">
                         Key Statutory Rules & Thresholds:
                       </div>
-                      <ul className="space-y-1 text-[11px] text-slate-700 dark:text-slate-300">
+                      <ul className="space-y-1 text-[11px] text-slate-700 dark:text-workspace-secondary">
                         {adv.keyRules.map((rule, rIdx) => (
                           <li key={rIdx} className="flex items-start gap-2 leading-relaxed">
-                            <span className="text-slate-400 font-bold">•</span>
+                            <span className="text-workspace-muted font-bold">•</span>
                             <span>{rule}</span>
                           </li>
                         ))}
@@ -360,7 +360,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                   )}
 
                   {(adv.isTaxDeductible !== undefined || adv.isGstClaimable !== undefined) && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-[#2B374E]">
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-workspace-border dark:border-workspace-border">
                       {adv.isTaxDeductible !== undefined && (
                         <span className={`text-[10px] px-2.5 py-0.5 rounded-md font-medium border ${
                           adv.isTaxDeductible
@@ -392,16 +392,16 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
       <div className="order-7 p-5 pt-0 space-y-4 text-xs">
         {officialAnswerLinks.length > 0 && (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-workspace-secondary">
               <ExternalLink className="w-4 h-4" /> Official links supplied with this answer
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            <p className="text-[11px] text-workspace-muted dark:text-workspace-muted">
               An official destination alone does not verify every claim. Review the citation status below where available.
             </p>
             <div className="flex flex-wrap gap-2">
               {officialAnswerLinks.map(link => (
                 <a key={link.url} href={link.url} target="_blank" rel="noreferrer"
-                  className="text-[11px] text-ynab-blue dark:text-blue-400 hover:underline border border-slate-200 dark:border-[#2B374E] rounded-lg px-2.5 py-1.5">
+                  className="text-[11px] text-workspace-accent-text dark:text-workspace-accent-text hover:underline border border-workspace-border dark:border-workspace-border rounded-lg px-2.5 py-1.5">
                   {link.title} ↗
                 </a>
               ))}
@@ -410,16 +410,16 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
         )}
         {citations.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-sans">
-              <FileText className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-workspace-secondary font-sans">
+              <FileText className="w-4 h-4 text-workspace-muted" />
               <span>Standard Accounting & Statutory Citations</span>
             </div>
 
             {/* Prominent Structural Verification Disclosure Notice */}
-            <div className="p-3 bg-slate-100/90 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl text-[11px] text-slate-600 dark:text-slate-400 flex items-start gap-2.5 leading-relaxed">
-              <Info className="w-4 h-4 text-slate-500 dark:text-slate-400 shrink-0 mt-0.5" />
+            <div className="p-3 bg-workspace-raised/90 dark:bg-workspace-panel border border-workspace-border dark:border-workspace-border rounded-xl text-[11px] text-slate-600 dark:text-workspace-muted flex items-start gap-2.5 leading-relaxed">
+              <Info className="w-4 h-4 text-workspace-muted dark:text-workspace-muted shrink-0 mt-0.5" />
               <div>
-                <span className="font-semibold text-slate-800 dark:text-slate-200">Structural Verification Notice:</span>{' '}
+                <span className="font-semibold text-slate-800 dark:text-workspace-secondary">Structural Verification Notice:</span>{' '}
                 Structural verification checks that the statute, section, governing authority, and official URL exist in verified Singapore repositories and match the retrieved evidence scope. It confirms anti-fabrication and structural validity, but does <strong>NOT</strong> certify semantic claim validity or replace professional accounting advice.
               </div>
             </div>
@@ -438,7 +438,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                   return (
                     <div
                       key={cIdx}
-                      className="p-3.5 bg-slate-50/70 dark:bg-[#151D2C] border border-slate-200 dark:border-[#2B374E] rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-600 transition-colors shadow-xs"
+                      className="p-3.5 bg-workspace-raised/70 dark:bg-workspace-panel border border-workspace-border dark:border-workspace-border rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-workspace-border transition-colors shadow-xs"
                     >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -446,11 +446,11 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                           {cite.sourcePublisher || badge.label}
                         </span>
                         {cite.sourcePublisher === 'IFRS Foundation' && cite.authority === 'ACRA' && (
-                          <span className="text-[9px] px-2 py-0.5 rounded-md border font-medium bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                          <span className="text-[9px] px-2 py-0.5 rounded-md border font-medium bg-workspace-raised text-slate-600 border-workspace-border dark:bg-workspace-raised dark:text-workspace-secondary dark:border-workspace-border">
                             Singapore framework authority: ACRA / ASC
                           </span>
                         )}
-                        <span className="font-semibold text-slate-900 dark:text-slate-200 font-mono text-xs">
+                        <span className="font-semibold text-slate-900 dark:text-workspace-secondary font-mono text-xs">
                           {cite.standard} {cite.paragraph}
                         </span>
                         {(() => {
@@ -483,7 +483,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                                 </span>
                               )}
                               {freshness === 'HISTORICAL_SUPERSEDED' && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded font-medium border bg-workspace-raised text-slate-700 border-slate-300 dark:bg-workspace-raised dark:text-workspace-secondary dark:border-workspace-border">
                                   📜 Historical {matched?.validTo ? `(to ${matched.validTo})` : '(Superseded)'}
                                 </span>
                               )}
@@ -510,13 +510,13 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                             href={safeCiteUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[10px] text-ynab-blue dark:text-blue-400 hover:underline flex items-center gap-1 transition-colors"
+                            className="text-[10px] text-workspace-accent-text dark:text-workspace-accent-text hover:underline flex items-center gap-1 transition-colors"
                           >
                             <span>Source</span>
                             <ExternalLink className="w-2.5 h-2.5" />
                           </a>
                         ) : (
-                          <span className="text-[10px] bg-slate-100 dark:bg-[#242F46] text-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded border border-slate-200 dark:border-[#2B374E] font-medium">
+                          <span className="text-[10px] bg-workspace-raised dark:bg-workspace-raised text-slate-700 dark:text-workspace-secondary px-1.5 py-0.2 rounded border border-workspace-border dark:border-workspace-border font-medium">
                             Mandatory
                           </span>
                         );
@@ -527,14 +527,14 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                       const matched = defaultCitationVerifier.verifyCitation(cite).matchedRecord;
                       if (matched?.validFrom || matched?.validTo) {
                         return (
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                          <div className="text-[10px] text-workspace-muted dark:text-workspace-muted font-mono">
                             Applicability Window: {matched.validFrom || 'Initial'} to {matched.validTo || 'Present (In Force)'}
                           </div>
                         );
                       }
                       return null;
                     })()}
-                    <p className="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed italic bg-white dark:bg-[#1C2538] p-2.5 rounded-lg border border-slate-200 dark:border-[#2B374E]">
+                    <p className="text-slate-600 dark:text-workspace-muted text-[11px] leading-relaxed italic bg-workspace-panel p-2.5 rounded-lg border border-workspace-border dark:border-workspace-border">
                       "{cite.text}"
                     </p>
                   </div>
@@ -542,7 +542,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               });
             })()}
             </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 italic mt-1.5">
+            <p className="text-[10px] text-workspace-muted dark:text-workspace-muted italic mt-1.5">
               * Structural verification confirms the cited standard, section/paragraph, governing authority, and official source URL exist in verified repositories. It does not constitute legal or audit sign-off or prove semantic claim validity.
             </p>
           </div>
@@ -563,7 +563,7 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                 {assumptions.map((a) => (
-                  <div key={a.id} className="p-2.5 rounded-lg bg-white/80 dark:bg-[#1C2538] border border-amber-200/70 dark:border-amber-900/40 text-[11px] space-y-1">
+                  <div key={a.id} className="p-2.5 rounded-lg bg-white/80 dark:bg-workspace-panel border border-amber-200/70 dark:border-amber-900/40 text-[11px] space-y-1">
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-slate-900 dark:text-white capitalize">{a.field}</span>
                       <span className={`text-[9px] px-1.5 py-0.2 rounded font-medium border ${a.materiality === 'HIGH'
@@ -572,11 +572,11 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                         {a.materiality} Materiality
                       </span>
                     </div>
-                    <div className="text-slate-700 dark:text-slate-300">
-                      <span className="text-slate-500 dark:text-slate-400">Assumed Value: </span>
+                    <div className="text-slate-700 dark:text-workspace-secondary">
+                      <span className="text-workspace-muted dark:text-workspace-muted">Assumed Value: </span>
                       <strong className="font-mono">{String(a.assumedValue)}</strong>
                     </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-[10px] leading-tight">{a.basisOrRationale}</p>
+                    <p className="text-workspace-muted dark:text-workspace-muted text-[10px] leading-tight">{a.basisOrRationale}</p>
                   </div>
                 ))}
               </div>

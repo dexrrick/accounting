@@ -7,6 +7,7 @@ const projectRoot = path.resolve(__dirname, '..');
 const tsxCli = path.join(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 
 const testSuites = [
+  { name: 'Basic Bookkeeping Journal Templates', file: 'test_basic_bookkeeping.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'AI Semantic Extraction & Schema Validation Gate', file: 'test_ai_semantic_extraction.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Question Understanding & Guarded Routing', file: 'test_semantic_question_understanding.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Per-Issue Semantic Operation Contracts', file: 'test_semantic_operations.mjs', layer: 'input-understanding', tier: 'smoke' },
