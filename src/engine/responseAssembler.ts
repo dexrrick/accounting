@@ -908,7 +908,7 @@ export function assembleDeterministicResponse(
           : `### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
         messageText += `\n---\n\n${entryHeader}`;
 
-        const isPendingValuation = !grp.isBalanced || grp.authorityStatus === 'CONDITIONAL' || grp.lines.every(l => l.debit === 0 && l.credit === 0);
+        const isPendingValuation = !grp.isBalanced || grp.lines.every(l => l.debit === 0 && l.credit === 0);
         if (isPendingValuation) {
           messageText += `> ⚠️ **Uncertified Journal Proposal**: Account selections proposed by AI. Monetary amounts are uncalculated because required transaction values were not provided. Do not post to general ledger without independent valuation.\n\n`;
         }
@@ -963,7 +963,7 @@ export function assembleDeterministicResponse(
           : `### Double Entry Journal: ${grp.title} (${grp.eventDate})\n\n`;
         messageText += `---\n\n${entryHeader}`;
 
-        const isPendingValuation = !grp.isBalanced || grp.authorityStatus === 'CONDITIONAL' || grp.lines.every(l => l.debit === 0 && l.credit === 0);
+        const isPendingValuation = !grp.isBalanced || grp.lines.every(l => l.debit === 0 && l.credit === 0);
         if (isPendingValuation) {
           messageText += `> ⚠️ **Uncertified Journal Proposal**: Account selections proposed by AI. Monetary amounts are uncalculated because required transaction values were not provided. Do not post to general ledger without independent valuation.\n\n`;
         }
