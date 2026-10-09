@@ -73,6 +73,16 @@ for (const wording of [
   await run(wording, 'Trade Receivables', 'Revenue', 1800);
 }
 
+// A trailing full stop is sentence punctuation, not an unfinished decimal.
+for (const ending of ['.', '. Give the journal entry.', '. Which account is debited?']) {
+  await run('We sold goods for SGD 1,800 on credit' + ending, 'Trade Receivables', 'Revenue', 1800);
+}
+const rounded = await parseAccountingQuery('We sold goods for SGD 1,800.50 on credit.', null);
+assert.equal(rounded.directGroups?.[0]?.totalDebit, 1800.5);
+const invalidPrecision = await parseAccountingQuery('We sold goods for SGD 1,800.123 on credit.', null);
+assert.ok(invalidPrecision.missingFields.some(field => field.fieldKey === 'amount'));
+assert.equal(invalidPrecision.directGroups?.length, 0);
+
 const missing = await parseAccountingQuery('Record a bank transfer', null);
 assert.equal(missing.scenarioType, 'BASIC_BOOKKEEPING');
 assert.deepEqual(new Set(missing.missingFields.map(f => f.fieldKey)), new Set(['amount', 'sourceAccount', 'destinationAccount']));
