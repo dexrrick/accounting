@@ -28,6 +28,7 @@ import {
   getOfficialSourceDiscoveryProviderConfig,
   isOfficialSourceCandidateMateriallyRelevant,
   isIrasSourceUrlAreaCompatible,
+  isAcraCompanySourceUrlCompatible,
   OfficialDomainSearchAdapter as DefaultOfficialDomainSearchAdapter,
   OfficialSitemapDiscoveryAdapter
 } from '../retrieval/officialSitemapDiscovery';
@@ -773,8 +774,22 @@ const CPF_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
   'cpf-cash-top-up-tax-relief': ['Top up to enjoy higher retirement payouts', 'Top up your MediSave savings']
 };
 
+const ACRA_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
+  'acra_annual-returns': ['Filing annual returns', 'Deadline & requirements for annual returns'],
+  acra_financial_statements: ['Preparing financial statements', 'Financial reporting duties for directors'],
+  acra_xbrl: ['Filing financial statements in XBRL format', 'Financial statements: Filing requirements & exemptions'],
+  acra_small_company: ['Audit exemptions: Small company concept'],
+  'acra_audit-requirements': ['Audit exemptions: Small company concept'],
+  acra_directors: ['Company directors’ duties & key obligations'],
+  'acra_share-allotments': ['Allotment of shares', 'Filing a return of allotment of shares'],
+  acra_rorc: ['Register of registrable controllers'],
+  'acra_nominee-arrangements': ['Registers of nominee directors and nominee shareholders'],
+  'acra_accounting-records': ['Company directors’ duties & key obligations'],
+  acra_record_retention: ['Company directors’ duties & key obligations']
+};
+
 function getTopicDiscoveryHints(topic: MappedCoverageTopic): string[] {
-  return [...(topic.aliases || []), ...topic.keywords, ...(CPF_DISCOVERY_TITLE_HINTS[topic.id] || [])];
+  return [...(topic.aliases || []), ...topic.keywords, ...(CPF_DISCOVERY_TITLE_HINTS[topic.id] || []), ...(ACRA_DISCOVERY_TITLE_HINTS[topic.id] || [])];
 }
 
 function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
@@ -786,6 +801,10 @@ function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
     ...(topic.id === 'cpf-contribution-due-dates' ? ['due date for CPF contributions', 'late payment interest'] : []),
     // The member retirement article calls these cash top-ups without a CPF prefix.
     ...(topic.id === 'cpf-cash-top-up-tax-relief' ? ['cash top-up', 'cash top-ups'] : []),
+    ...(topic.id === 'acra_annual-returns' ? ['annual returns', 'annual return'] : []),
+    ...(topic.id === 'acra_xbrl' ? ['XBRL financial statements', 'Full XBRL', 'Simplified XBRL'] : []),
+    ...(topic.id === 'acra_directors' ? ['directors duties', 'duties and obligations', 'company directors'] : []),
+    ...(topic.id === 'acra_share-allotments' ? ['return of share allotment', 'return of allotment'] : []),
     ...(topic.requiredContentTerms || []),
     ...(topic.paragraphHints || []),
     ...(topic.sectionHints || [])
@@ -827,7 +846,8 @@ function rankRelevantOfficialPageLinks(
     let candidate: URL;
     try { candidate = new URL(link.href, parent); } catch { continue; }
     if (candidate.protocol !== 'https:' || candidate.username || candidate.password ||
-        !approvedHosts.includes(candidate.hostname.toLowerCase())) continue;
+        !approvedHosts.includes(candidate.hostname.toLowerCase()) ||
+        !isAcraCompanySourceUrlCompatible(topic.domainId, candidate.toString())) continue;
     candidate.hash = '';
     if (candidate.toString() === parent.toString()) continue;
     const searchable = normalizeEvidenceText(`${candidate.pathname} ${link.text}`);
@@ -951,11 +971,18 @@ function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   if (topic.domainId === 'ACCOUNTING_SFRS') return [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS];
   if (topic.domainId.startsWith('IRAS_')) return [...APPROVED_IRAS_DISCOVERY_HOSTS];
   if (topic.domainId.startsWith('CPF_')) return [...(getOfficialSourceDiscoveryProviderConfig('CPF')?.approvedHosts || [])];
+  if (topic.domainId === 'ACRA_COMPANIES') return [...(getOfficialSourceDiscoveryProviderConfig('ACRA')?.approvedHosts || [])];
   return [];
 }
 
+function discoveryProviderForTopic(topic: MappedCoverageTopic) {
+  // ACRA also publishes accounting standards; preserve their existing ASC/IFRS routes.
+  if (topic.authorities[0] === 'ACRA' && topic.domainId !== 'ACRA_COMPANIES') return undefined;
+  return getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+}
+
 function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
-  const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+  const providerConfig = discoveryProviderForTopic(topic);
   if (providerConfig) return [...providerConfig.approvedHosts];
   return approvedHostsForTopic(topic);
 }
@@ -991,7 +1018,7 @@ function hasVerifiedHistoricalStatutoryScope(
   targetIsHistorical: boolean,
   query: string
 ): boolean {
-  if (!topic.domainId.startsWith('IRAS_') && !topic.domainId.startsWith('CPF_')) return true;
+  if (!topic.domainId.startsWith('IRAS_') && !topic.domainId.startsWith('CPF_') && topic.domainId !== 'ACRA_COMPANIES') return true;
   if (isUndatedHistoricalStatutoryRequest(topic, query)) return false;
   if (!targetIsHistorical || !targetDate) return true;
   return Boolean(pointer?.validFrom && pointer.validTo && targetDate >= pointer.validFrom && targetDate <= pointer.validTo);
@@ -999,7 +1026,8 @@ function hasVerifiedHistoricalStatutoryScope(
 
 function isUndatedHistoricalStatutoryRequest(topic: MappedCoverageTopic, query: string): boolean {
   if (!UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query) &&
-      !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query))) return false;
+      !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query)) &&
+      !(topic.domainId === 'ACRA_COMPANIES' && /\b(?:historical|historic|old|older|previous|former|superseded)\b(?:[\s-]+[a-z]+){0,6}[\s-]+(?:rules?|requirements?|deadlines?|exemptions?|filings?|obligations?)\b/i.test(query))) return false;
   // “Prior-year losses” identifies the vintage of a loss balance, not a
   // request for a superseded rule. Current carry-forward guidance may be
   // retrieved, while eligibility still waits on the YA and continuity facts.
@@ -1222,12 +1250,14 @@ export async function resolveMappedOfficialSourceFallback(
   ): Promise<AuthoritativeSourceRecord | undefined> => {
     const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
     const cpfDiscovery = topic.domainId.startsWith('CPF_') && !pointer;
-    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery
-      ? [topic.title, ...(topic.aliases || []), ...topic.keywords, ...(cpfDiscovery ? CPF_DISCOVERY_TITLE_HINTS[topic.id] || [] : [])]
+    const acraDiscovery = topic.domainId === 'ACRA_COMPANIES' && !pointer;
+    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery || acraDiscovery
+      ? [topic.title, ...getTopicDiscoveryHints(topic)]
         .filter(value => normalizeEvidenceText(value).split(' ').filter(Boolean).length >= 2)
       : [];
     const expectation = {
-      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] : [])],
+      preferMainContent: topic.domainId === 'ACRA_COMPANIES',
+      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] : acraDiscovery ? ['ACRA', 'Accounting and Corporate Regulatory Authority'] : [])],
       expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedStatutoryTitles,
         discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
@@ -1267,10 +1297,32 @@ export async function resolveMappedOfficialSourceFallback(
     if (result.status !== 'SUCCESS' || !result.content || !result.finalUrl || !result.topicMatched ||
         !isApprovedSingaporeSourceUrl(result.finalUrl) || !approvedHostsForTopic(topic).includes(finalHost)) return undefined;
 
+    if (!isAcraCompanySourceUrlCompatible(topic.domainId, result.finalUrl)) {
+      attempt.fetchStatus = 'DOMAIN_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA page addresses a different entity type or accounting-standard authority scope.';
+      return undefined;
+    }
+    if (topic.domainId === 'ACRA_COMPANIES' && /^\/manage\/companies(?:\/legal-requirements-common-offences)?\/?$/i.test(new URL(result.finalUrl).pathname)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'ACRA navigation index is discovery metadata, not topic-specific rule evidence.';
+      return undefined;
+    }
+
     // Recheck the raw HTML at this boundary as well as in ControlledWebRetriever.
     // Injected adapters and cached/custom retrievers must not make navigation
     // labels or a generic shell sufficient topic evidence.
-    const contentValidation = defaultExternalSourceValidator.validateTopicContent(result.content, expectation);
+    // Isomer's breadcrumbs and related-page cards sit inside main. Exclude
+    // headings and standalone/card links for company guidance. Inline-linked
+    // legal wording remains intact in rule prose, lists and tables.
+    const ruleDocument = topic.domainId === 'ACRA_COMPANIES'
+      ? result.content.replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ')
+        .replace(/<(p|div|li)\b[^>]*>\s*<a\b[^>]*>(?:(?!<\/a\s*>)[\s\S])*<\/a\s*>\s*<\/\1\s*>/gi, ' ')
+        .replace(/<a\b[^>]*>([\s\S]*?)<\/a\s*>/gi, (anchor, contents: string) =>
+          /<(?:div|section|p)\b/i.test(contents) ? ' ' : anchor)
+      : result.content;
+    const contentValidation = defaultExternalSourceValidator.validateTopicContent(ruleDocument, expectation);
     if (!contentValidation.isValid) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.titleMatched = false;
@@ -1361,7 +1413,7 @@ export async function resolveMappedOfficialSourceFallback(
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
-    const historicalStatutoryQuery = (topic.domainId.startsWith('IRAS_') || topic.domainId.startsWith('CPF_')) && Boolean(
+    const historicalStatutoryQuery = (topic.domainId.startsWith('IRAS_') || topic.domainId.startsWith('CPF_') || topic.domainId === 'ACRA_COMPANIES') && Boolean(
       isUndatedHistoricalStatutoryRequest(topic, query) ||
       targetIsHistorical
     );
@@ -1497,7 +1549,7 @@ export async function resolveMappedOfficialSourceFallback(
     const expectedPointers = work?.pointers || [];
     const declaredSourceUrls = expectedPointers.map(pointer => pointer.officialSourceUrl)
       .filter((url): url is string => Boolean(url));
-    const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+    const providerConfig = discoveryProviderForTopic(topic);
     const discoveryRequest: OfficialSourceDiscoveryRequest = {
       query: options.semanticDiscoveryQuery || query,
       scopeQuery: query,
@@ -1607,7 +1659,7 @@ export async function resolveMappedOfficialSourceFallback(
     const work = topicWork.find(item => item.topic.id === topic.id);
     if (work?.historicalStatutoryQuery || topicCovered(topic)) return;
     const approvedHosts = discoveryHostsForTopic(topic);
-    const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+    const providerConfig = discoveryProviderForTopic(topic);
     if (!providerConfig?.searchSite || !approvedHosts.includes(providerConfig.searchSite)) return;
     const expectedPointers = work?.pointers || [];
     const declaredSourceUrls = expectedPointers.map(pointer => pointer.officialSourceUrl)
