@@ -459,8 +459,12 @@ const cpfReliefChildOnly = await runCpfReliefIssue(['iras-individual-cpf-relief'
 const cpfReliefWithParent = await runCpfReliefIssue(['iras-individual-reliefs', 'iras-individual-cpf-relief']);
 const childIssueResult = cpfReliefChildOnly.result.workstreams[0].issues[0];
 const parentAndChildIssueResult = cpfReliefWithParent.result.workstreams[0].issues[0];
-assert.equal(childIssueResult.evidenceStatus, 'VERIFIED');
-assert.equal(parentAndChildIssueResult.evidenceStatus, 'VERIFIED');
+assert.equal(childIssueResult.evidenceStatus, 'INSUFFICIENT',
+  'Unregistered synthetic local CPF relief text cannot verify a scoped claim.');
+assert.equal(parentAndChildIssueResult.evidenceStatus, 'INSUFFICIENT',
+  'Adding a routing parent cannot make unregistered synthetic local evidence verifiable.');
+assert.equal(childIssueResult.verifiedClaims.length, 0);
+assert.equal(parentAndChildIssueResult.verifiedClaims.length, 0);
 assert.deepEqual(
   [parentAndChildIssueResult.evidenceStatus, parentAndChildIssueResult.lifecycle.covered, parentAndChildIssueResult.verifiedClaims.map(claim => claim.quote)],
   [childIssueResult.evidenceStatus, childIssueResult.lifecycle.covered, childIssueResult.verifiedClaims.map(claim => claim.quote)],

@@ -3,6 +3,10 @@ import type { AuthorityEvidenceStatus, AuthorityApplicationStatus } from '../typ
 import type { SemanticAuthority } from '../services/semanticQuestionUnderstanding';
 import type { VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import {
+  isCurrentRequestCompletenessContext,
+  type RequestCompletenessContext
+} from '../services/requestCompleteness';
 import { getSafeOfficialUrl } from './statutoryLinkResolver';
 
 export interface AuthorityPresentedClaim {
@@ -54,6 +58,7 @@ export interface AuthorityPresentedWorkstream {
 /** A render-ready, query-bound projection. This contains no new accounting synthesis. */
 export interface AuthorityEvidencePresentation {
   query: string;
+  requestCompletenessContext?: RequestCompletenessContext;
   status: AuthorityOverallStatus;
   evidenceStatus: AuthorityEvidenceStatus;
   applicationStatus: AuthorityApplicationStatus;
@@ -105,8 +110,14 @@ function populationLabel(population: string): string {
   return labels[population] || population;
 }
 
-function normalizedQuery(query: string): string {
-  return query.normalize('NFKC').replace(/\s+/g, ' ').trim();
+const trustedPresentations = new WeakSet<object>();
+
+function freezeOwnedPresentation<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const child of Object.values(value as Record<string, unknown>)) freezeOwnedPresentation(child);
+    Object.freeze(value);
+  }
+  return value;
 }
 
 function gapLabel(subject: string, reason: string): string {
@@ -278,19 +289,27 @@ export function createAuthorityEvidencePresentation(result: AuthorityWorkstreams
     .filter(issue => issue.status !== 'MAPPED')
     .map(userFacingPlanGap);
   const gaps = [...issueGaps, ...planGaps];
-  return {
+  const requestCompletenessContext = isCurrentRequestCompletenessContext(result.requestCompletenessContext, result.query)
+    ? result.requestCompletenessContext : undefined;
+  const presentation: AuthorityEvidencePresentation = {
     query: result.query,
+    ...(requestCompletenessContext ? { requestCompletenessContext } : {}),
     status,
     evidenceStatus,
     applicationStatus,
     workstreams,
     gaps: [...new Set(gaps)]
   };
+  const frozen = freezeOwnedPresentation(presentation);
+  if (requestCompletenessContext) trustedPresentations.add(frozen as object);
+  return frozen;
 }
 
 export function hasCurrentAuthorityEvidencePresentation(
   presentation: AuthorityEvidencePresentation | undefined,
   rawQuery: string | undefined
 ): presentation is AuthorityEvidencePresentation {
-  return Boolean(presentation && rawQuery && normalizedQuery(presentation.query) === normalizedQuery(rawQuery));
+  return Boolean(presentation && rawQuery && trustedPresentations.has(presentation as object) &&
+    presentation.query === rawQuery &&
+    isCurrentRequestCompletenessContext(presentation.requestCompletenessContext, rawQuery));
 }

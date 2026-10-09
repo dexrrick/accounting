@@ -133,9 +133,10 @@ const fullyMappedRelief = reconcile(contextualQuery, validateSemanticQuestionInt
     mappedTopicIds: ['iras-individual-cpf-relief', 'iras-individual-reliefs']
   }
 }), contextualQuery));
-assert.equal(fullyMappedRelief.issuePlan.coverageEstablished, true,
-  'A validated IRAS relief issue that owns both IRAS topics remains complete when CPF rates are contextual.');
-assert.equal(fullyMappedRelief.issuePlan.hasUnmappedResidual, false);
+assert.equal(fullyMappedRelief.issuePlan.coverageEstablished, false,
+  'A broad relief subject cannot own the query’s narrow compulsory CPF request, even when the contextual rate remains separate.');
+assert.equal(fullyMappedRelief.issuePlan.hasUnmappedResidual, true,
+  'The unmatched narrow CPF request remains visible as residual scope.');
 assert.deepEqual(fullyMappedRelief.issuePlan.issues.find(issue => issue.domain === 'IRAS_INCOME_TAX')?.contextualTopicIds,
   ['cpf_contribution_rates']);
 assert.equal(fullyMappedRelief.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL' ||

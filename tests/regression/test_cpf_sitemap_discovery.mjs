@@ -4,6 +4,8 @@ import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import { OfficialSitemapDiscoveryAdapter, OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officialSitemapDiscovery.ts';
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { resolveMappedOfficialSourceFallback } from '../../src/services/groundingContextBuilder.ts';
+import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
+import { ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
 
 const provider = OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.CPF;
 assert.deepEqual(provider.approvedHosts, ['www.cpf.gov.sg', 'cpf.gov.sg']);
@@ -65,6 +67,57 @@ assert.ok(!sitemap.records[0].sourceText.includes('SITEMAP_METADATA_ONLY'));
 assert.ok(!sitemap.calls.some(url => url.includes('unapproved.example') || url.startsWith('http:')));
 assert.ok(!sitemap.calls.includes('https://www.cpf.gov.sg/member/sitemap'), 'Employer scope fetches only its selected index.');
 assert.ok(!sitemap.calls.some(url => url.includes('duckduckgo')), 'Adequate sitemap evidence stops before search.');
+
+// Discovery and the exact-query safeguards coexist without promoting a fetched
+// candidate to reviewed evidence or allowing CPF evidence to answer an IRAS ask.
+const combinedQuery = 'Explain employer CPF contributions and explain personal tax relief for compulsory CPF contributions.';
+const combinedIssues = [
+  {
+    subject: 'employer CPF contributions', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
+    governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['cpf-ordinary-wages'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96
+  },
+  {
+    subject: 'personal tax relief for compulsory CPF contributions', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: ['CPF'], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['iras-individual-cpf-relief'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96
+  }
+];
+const combinedObservation = {
+  mode: 'SEMANTIC_INTERPRETATION',
+  interpretation: {
+    schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['CPF', 'IRAS'], contextualAuthorities: [],
+    domain: 'UNKNOWN', population: 'UNKNOWN', primarySubject: combinedQuery, concepts: [], requestedOperation: 'OTHER',
+    factsExplicitlyProvided: [], confidence: 0.96, issues: combinedIssues
+  }
+};
+const combinedContext = ensureRequestCompletenessContext(combinedQuery, undefined, combinedObservation);
+assert.equal(combinedContext.evaluation.status, 'COMPLETE');
+const capturedRequests = [];
+const candidateProvider = authority => ({
+  authority,
+  async retrieve(request) {
+    capturedRequests.push(request);
+    return { candidates: sitemap.records };
+  }
+});
+const combined = await buildAuthorityWorkstreams(combinedQuery, {
+  source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false,
+  issues: combinedIssues.map((issue, index) => ({ ...issue, id: `cpf-discovery-integration-${index}`, status: 'MAPPED' }))
+}, {
+  referenceDate: '2026-10-09', questionUnderstanding: combinedObservation, requestCompletenessContext: combinedContext,
+  providers: { CPF: candidateProvider('CPF'), IRAS: candidateProvider('IRAS') }
+});
+assert.equal(combined.requestCompletenessContext, combinedContext);
+assert.equal(combined.requestCompletenessContext.inventory.outcomes.length, 2,
+  'Per-authority retrieval retains both exact-query requested outcomes.');
+assert.ok(capturedRequests.every(request => request.originalQuery === combinedQuery));
+assert.equal(combined.workstreams.find(stream => stream.authority === 'CPF').evidenceStatus, 'INSUFFICIENT',
+  'A discovered CPF candidate remains outside the reviewed-local CPF admission route.');
+assert.equal(combined.workstreams.find(stream => stream.authority === 'IRAS').evidenceStatus, 'INSUFFICIENT',
+  'CPF sitemap evidence cannot verify IRAS personal relief.');
+assert.ok(combined.workstreams.every(stream => stream.verifiedClaims.length === 0));
+assert.equal(sitemap.records[0].lifecycleState, 'CANDIDATE');
 
 const dueDates = await run('cpf-contribution-due-dates', 'What is the CPF payment deadline?');
 assert.equal(dueDates.records.length, 1, JSON.stringify(dueDates.trace));

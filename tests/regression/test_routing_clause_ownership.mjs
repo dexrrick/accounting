@@ -9,6 +9,11 @@ import {
   analyzeRequestedTopicScope,
   proveRequestedTopicOwnership
 } from '../../src/services/requestedTopicOwnership.ts';
+import {
+  describeRawRequestSubject,
+  effectiveRawRequestSubjectFacets,
+  inventoryRawRequest
+} from '../../src/services/rawRequestInventory.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 
 const retainedProof = JSON.parse(readFileSync(new URL(
@@ -101,16 +106,88 @@ for (const query of partitionQueries) {
 }
 
 const narrowCpfQuery = 'Can I claim personal tax relief on my compulsory CPF contributions?';
-for (const childSubject of ['CPF relief for employees', 'individual personal tax relief on compulsory CPF contributions']) {
-  const narrow = reconcile(narrowCpfQuery, [issue(childSubject)]);
-  assert.equal(narrow.issuePlan.coverageEstablished, true, `A represented narrow CPF request is complete: ${childSubject}`);
-  assert.deepEqual(narrow.issuePlan.issues[0].mappedTopicIds, ['iras-individual-cpf-relief']);
-  assert.deepEqual(narrow.issuePlan.issues[0].routingTopicIds, ['iras-individual-reliefs']);
-}
+const narrow = reconcile(narrowCpfQuery, [issue('individual personal tax relief on compulsory CPF contributions')]);
+assert.equal(narrow.issuePlan.coverageEstablished, true, 'A represented narrow CPF request is complete.');
+assert.deepEqual(narrow.issuePlan.issues[0].mappedTopicIds, ['iras-individual-cpf-relief']);
+assert.deepEqual(narrow.issuePlan.issues[0].routingTopicIds, ['iras-individual-reliefs']);
+const whitespaceNarrowCpf = reconcile(`  ${narrowCpfQuery}  `, [issue('individual personal tax relief on compulsory CPF contributions')]);
+assert.equal(whitespaceNarrowCpf.issuePlan.coverageEstablished, true,
+  'Leading/trailing whitespace and terminal punctuation do not break exact CPF source-span matching.');
 
-const employeeRelief = reconcile(narrowCpfQuery, [issue('CPF relief for employees', { population: 'EMPLOYEE' })]);
-assert.equal(employeeRelief.issuePlan.coverageEstablished, true,
-  'A directly mapped employee relief issue can own an individual CPF eligibility request.');
+const salaryEmployeeReliefQuery = 'For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?';
+const salaryEmployeeRelief = reconcile(salaryEmployeeReliefQuery, [
+  issue('employee personal tax relief eligibility for compulsory CPF', {
+    population: 'EMPLOYEE', operation: 'CHECK_ELIGIBILITY'
+  }),
+  issue('employer compulsory CPF contribution amount', {
+    population: 'EMPLOYER', domain: 'CPF_PAYROLL', governingAuthorities: ['CPF'], operation: 'CALCULATE'
+  })
+]);
+assert.equal(salaryEmployeeRelief.issuePlan.coverageEstablished, true,
+  'A salary fact plus the separately requested employer obligation bounds the individual-to-employee relief refinement.');
+
+const noSalaryContextQuery = 'What can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?';
+const noSalaryContext = reconcile(noSalaryContextQuery, [
+  issue('employee personal tax relief eligibility for compulsory CPF', { population: 'EMPLOYEE', operation: 'CHECK_ELIGIBILITY' }),
+  issue('employer compulsory CPF contribution amount', {
+    population: 'EMPLOYER', domain: 'CPF_PAYROLL', governingAuthorities: ['CPF'], operation: 'CALCULATE'
+  })
+]);
+assert.equal(noSalaryContext.issuePlan.coverageEstablished, false,
+  'An employer request without the explicit salary frame cannot refine an individual relief request to an employee.');
+
+const noEmployerContextQuery = 'For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF?';
+const noEmployerContext = reconcile(noEmployerContextQuery, [
+  issue('employee personal tax relief eligibility for compulsory CPF', { population: 'EMPLOYEE', operation: 'CHECK_ELIGIBILITY' })
+]);
+assert.equal(noEmployerContext.issuePlan.coverageEstablished, false,
+  'A salary frame without a separate employer CPF obligation cannot refine an individual relief request to an employee.');
+
+const salaryEmployeeInventory = inventoryRawRequest(salaryEmployeeReliefQuery);
+const salaryEmployeeReliefOutcome = salaryEmployeeInventory.outcomes.find(outcome => outcome.identity === 'CPF_RELIEF');
+const salaryEmployeeReliefDescriptor = describeRawRequestSubject('employee personal tax relief eligibility for compulsory CPF');
+assert.ok(salaryEmployeeReliefOutcome && salaryEmployeeReliefDescriptor);
+assert.deepEqual(effectiveRawRequestSubjectFacets(salaryEmployeeReliefOutcome, salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', salaryEmployeeInventory), ['COMPULSORY']);
+assert.equal(effectiveRawRequestSubjectFacets(salaryEmployeeReliefOutcome, salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY'), undefined,
+  'Without the full raw salary-and-employer context, INDIVIDUAL cannot be widened to EMPLOYEE.');
+assert.equal(effectiveRawRequestSubjectFacets(salaryEmployeeReliefOutcome,
+  describeRawRequestSubject('CPF relief for employees'), 'EMPLOYEE', 'CHECK_ELIGIBILITY', salaryEmployeeInventory), undefined,
+  'The employee-beneficiary descriptor cannot borrow the bounded individual-claimant refinement.');
+assert.equal(effectiveRawRequestSubjectFacets(salaryEmployeeReliefOutcome, salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CALCULATE', salaryEmployeeInventory), undefined,
+  'The bounded alias is eligibility-only.');
+
+const wrongBeneficiaryInventory = structuredClone(salaryEmployeeInventory);
+wrongBeneficiaryInventory.outcomes[0].beneficiary = 'EMPLOYEE';
+assert.equal(effectiveRawRequestSubjectFacets(wrongBeneficiaryInventory.outcomes[0], salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', wrongBeneficiaryInventory), undefined,
+  'An employee-beneficiary raw outcome cannot masquerade as individual relief.');
+const wrongReliefFacetInventory = structuredClone(salaryEmployeeInventory);
+wrongReliefFacetInventory.outcomes[0].facets = [];
+assert.equal(effectiveRawRequestSubjectFacets(wrongReliefFacetInventory.outcomes[0], salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', wrongReliefFacetInventory), undefined,
+  'The bounded refinement requires the explicit compulsory-contribution facet.');
+const wrongEmployerActorInventory = structuredClone(salaryEmployeeInventory);
+wrongEmployerActorInventory.outcomes[1].actors = ['EMPLOYEE'];
+assert.equal(effectiveRawRequestSubjectFacets(wrongEmployerActorInventory.outcomes[0], salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', wrongEmployerActorInventory), undefined,
+  'The supporting second atom must explicitly belong to the employer.');
+const wrongEmployerOperationInventory = structuredClone(salaryEmployeeInventory);
+wrongEmployerOperationInventory.outcomes[1].operation = 'EXPLAIN_RULE';
+assert.equal(effectiveRawRequestSubjectFacets(wrongEmployerOperationInventory.outcomes[0], salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', wrongEmployerOperationInventory), undefined,
+  'The supporting employer atom must be the supported must/pay calculation.');
+const wrongEmployerFacetInventory = structuredClone(salaryEmployeeInventory);
+wrongEmployerFacetInventory.outcomes[1].facets = [];
+assert.equal(effectiveRawRequestSubjectFacets(wrongEmployerFacetInventory.outcomes[0], salaryEmployeeReliefDescriptor,
+  'EMPLOYEE', 'CHECK_ELIGIBILITY', wrongEmployerFacetInventory), undefined,
+  'The supporting employer atom must retain its explicit obligation facet.');
+
+const employeeRelief = reconcile(narrowCpfQuery, [issue('CPF relief for employees')]);
+assert.equal(employeeRelief.issuePlan.coverageEstablished, false,
+  'An employee-specific relief description cannot own a compulsory-contribution request for the individual claimant.');
 
 const namedSrs = reconcile('Explain SRS contribution relief.', [issue('SRS contribution relief', { operation: 'EXPLAIN_RULE' })]);
 assert.equal(namedSrs.issuePlan.coverageEstablished, true, 'Registry noun phrases generalize beyond CPF relief.');
@@ -118,18 +195,61 @@ assert.ok(namedSrs.issuePlan.issues[0].mappedTopicIds.includes('iras-individual-
 
 const repeatedCpf = 'Explain personal tax relief on compulsory CPF contributions and explain personal tax relief on compulsory CPF contributions?';
 const repeated = reconcile(repeatedCpf, [issue('individual personal tax relief on compulsory CPF contributions', { operation: 'EXPLAIN_RULE' })]);
-assert.equal(repeated.issuePlan.coverageEstablished, true, 'Repeated child requests are parsed and owned occurrence by occurrence.');
+assert.equal(repeated.issuePlan.coverageEstablished, false,
+  'One semantic issue cannot be reused as owner of two repeated request atoms.');
 assertPartition(repeatedCpf, analyzeRequestedTopicScope(repeatedCpf));
+
+const unsupportedRawCouldQuery = 'Could I claim personal tax relief on my compulsory CPF contributions?';
+const unsupportedRawCould = reconcile(unsupportedRawCouldQuery, [
+  issue('CPF relief for employees', {
+    population: 'EMPLOYEE', operation: 'CHECK_ELIGIBILITY', mappedTopicIds: ['iras-individual-cpf-relief']
+  })
+]);
+assert.equal(unsupportedRawCould.issuePlan.coverageEstablished, false,
+  'An unsupported Could-I raw form cannot be owned by an employee-beneficiary descriptor.');
+assertPartition(unsupportedRawCouldQuery, analyzeRequestedTopicScope(unsupportedRawCouldQuery));
+
+const unsupportedMandatoryQuery = 'Can I claim personal tax relief for mandatory CPF contributions?';
+const unsupportedMandatory = reconcile(unsupportedMandatoryQuery, [
+  issue('individual personal income tax relief for compulsory CPF contributions', {
+    operation: 'CHECK_ELIGIBILITY', mappedTopicIds: ['iras-individual-cpf-relief']
+  })
+]);
+assert.equal(unsupportedMandatory.issuePlan.coverageEstablished, false,
+  'A mandatory CPF variant without a supported raw outcome cannot be owned by an unknown descriptor.');
+assertPartition(unsupportedMandatoryQuery, analyzeRequestedTopicScope(unsupportedMandatoryQuery));
 
 const representedBroadQuery = 'Explain individual tax relief categories and explain CPF relief for employees?';
 const representedBroad = reconcile(representedBroadQuery, [
   issue('individual tax relief categories', { operation: 'EXPLAIN_RULE' }),
-  issue('CPF relief for employees', { operation: 'EXPLAIN_RULE' })
+  issue('CPF relief for employees', { operation: 'EXPLAIN_RULE', population: 'EMPLOYEE' })
 ]);
 assert.equal(representedBroad.issuePlan.coverageEstablished, true,
   'A separately represented generic relief request and a child request are both accountable.');
 assert.deepEqual(representedBroad.issuePlan.issues.find(item => item.mappedTopicIds.includes('iras-individual-reliefs'))?.mappedTopicIds,
   ['iras-individual-reliefs']);
+
+const mixedSrsAndCpfQuery = 'Explain CPF relief for employees and explain SRS contribution relief.';
+const mixedSrsAndCpf = reconcile(mixedSrsAndCpfQuery, [
+  issue('CPF relief for employees', { operation: 'EXPLAIN_RULE', population: 'EMPLOYEE' }),
+  issue('SRS contribution relief', { operation: 'EXPLAIN_RULE' })
+]);
+assert.equal(mixedSrsAndCpf.issuePlan.coverageEstablished, true,
+  'A supported CPF atom keeps its independent raw descriptor proof when the same query includes supported SRS grammar.');
+const srsFirstAndCpfQuery = 'Explain SRS contribution relief and explain personal tax relief for compulsory CPF contributions.';
+const srsFirstAndCpf = reconcile(srsFirstAndCpfQuery, [
+  issue('SRS contribution relief', { operation: 'EXPLAIN_RULE' }),
+  issue('individual personal tax relief on compulsory CPF contributions', { operation: 'EXPLAIN_RULE' })
+]);
+assert.equal(srsFirstAndCpf.issuePlan.coverageEstablished, true,
+  'The exact CPF span remains independently verifiable when unsupported pilot inventory stops at a supported SRS sibling.');
+const alteredCpfFacetQuery = 'Explain individual tax relief categories and explain personal tax relief for compulsory CPF contributions?';
+const alteredCpfFacet = reconcile(alteredCpfFacetQuery, [
+  issue('individual tax relief categories', { operation: 'EXPLAIN_RULE' }),
+  issue('personal CPF tax relief', { operation: 'EXPLAIN_RULE' })
+]);
+assert.equal(alteredCpfFacet.issuePlan.coverageEstablished, false,
+  'A broad overview plus a CPF issue that drops the requested compulsory facet remains incomplete.');
 
 const parentOnly = reconcile('Explain individual tax relief categories.', [
   issue('individual tax relief categories', { operation: 'EXPLAIN_RULE' })
@@ -225,6 +345,52 @@ for (const incompatible of [
   const proof = proveRequestedTopicOwnership(narrowCpfQuery, [incompatible], rawIds, ['iras-individual-cpf-relief']);
   assert.equal(proof.complete, false, 'A topic ID alone cannot bypass wrong authority, domain, or population.');
 }
+
+const employerCpfQuery = 'What does the employer have to pay into CPF?';
+const employerCpfIds = new Set(['cpf_contribution_rates']);
+const employerCpfOwner = {
+  subject: 'employer CPF contribution amount', mappedTopicIds: ['cpf_contribution_rates'], domain: 'CPF_PAYROLL',
+  population: 'EMPLOYER', governingAuthorities: ['CPF'], operation: 'CALCULATE'
+};
+const employerAmountProof = proveRequestedTopicOwnership(
+  employerCpfQuery, [employerCpfOwner], employerCpfIds, []
+);
+assert.equal(employerAmountProof.complete, true,
+  'An exact employer amount descriptor can own the supported required-payment calculation.');
+const employerObligationProof = proveRequestedTopicOwnership(
+  employerCpfQuery, [{ ...employerCpfOwner, subject: 'employer CPF contribution obligation' }], employerCpfIds, []
+);
+assert.equal(employerObligationProof.complete, true,
+  'An explicit obligation descriptor owns the same must/pay calculation with its obligation facet.');
+const employerWrongOperationProof = proveRequestedTopicOwnership(
+  employerCpfQuery, [{ ...employerCpfOwner, operation: 'EXPLAIN_RULE' }], employerCpfIds, []
+);
+assert.equal(employerWrongOperationProof.complete, false,
+  'The amount alias cannot own the required-payment calculation under an explanation operation.');
+const employerWrongActorProof = proveRequestedTopicOwnership(
+  employerCpfQuery, [{ ...employerCpfOwner, population: 'EMPLOYEE' }], employerCpfIds, []
+);
+assert.equal(employerWrongActorProof.complete, false,
+  'The employer-specific amount alias cannot own another actor’s contribution request.');
+const repeatedEmployerQuery = `${employerCpfQuery.slice(0, -1)}, and ${employerCpfQuery.slice(0, -1)}?`;
+const repeatedEmployerProof = proveRequestedTopicOwnership(
+  repeatedEmployerQuery, [employerCpfOwner], employerCpfIds, []
+);
+assert.equal(repeatedEmployerProof.complete, false,
+  'One employer CPF issue cannot own two repeated employer contribution requests.');
+const duplicateEmployerProof = proveRequestedTopicOwnership(
+  employerCpfQuery, [employerCpfOwner, { ...employerCpfOwner }], employerCpfIds, []
+);
+assert.equal(duplicateEmployerProof.complete, false,
+  'A request with two equally compatible semantic owners fails closed as ambiguous.');
+const unknownCpfDescriptorProof = proveRequestedTopicOwnership(
+  narrowCpfQuery,
+  [{ ...issue('unrecognized compulsory CPF tax allowance', { operation: 'CHECK_ELIGIBILITY', mappedTopicIds: ['iras-individual-cpf-relief'] }), subject: 'unrecognized compulsory CPF tax allowance' }],
+  rawIds,
+  ['iras-individual-cpf-relief']
+);
+assert.equal(unknownCpfDescriptorProof.complete, false,
+  'An unknown CPF issue descriptor cannot claim a supported raw CPF request.');
 
 // The inferred umbrella is not substantive evidence scope. Exercise the actual
 // workstream request path with in-memory providers and inspect its topic IDs.

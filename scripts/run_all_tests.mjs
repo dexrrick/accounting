@@ -30,6 +30,7 @@ const testSuites = [
   { name: 'Semantic Contract Follow-Up Runner', file: 'test_semantic_contract_followup_runner.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Material Issue Decomposition & Authority Ownership', file: 'test_material_issue_decomposition.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Authority Workstream Evidence Isolation & Coverage', file: 'test_authority_workstreams.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Exact-Query Request Completeness Diagnostics', file: 'test_request_completeness_diagnostics.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Prospective Current Scope V2 Compatibility (Archived V4/V5/V8/V9 Controls)', file: 'test_current_scope_v2_archived_compatibility.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'Semantic Residency Subject Diagnostic V4', file: 'test_semantic_residency_subject_diagnostic_v4.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'IRAS Mapped Evidence Diagnostic V4', file: 'test_iras_mapped_evidence_diagnostic_v4.mjs', layer: 'evaluation-safety', tier: 'smoke' },
