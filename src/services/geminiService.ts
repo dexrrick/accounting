@@ -727,6 +727,19 @@ export async function processAccountingQuery(
       profiler.logSummary();
       return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
     }
+    if (deterministicScenario.scenarioType === 'UNRECOGNIZED' &&
+        !providerOrApiKey && /\b(?:unspecified|unknown) transaction\b/i.test(userInput)) {
+      const clarification: MissingFieldInfo = {
+        fieldKey: 'transactionDetails', fieldName: 'Transaction details',
+        prompt: 'What transaction occurred, for what amount, and which accounts or payment method were involved?',
+        whyNeeded: 'No transaction type or posting basis was provided.'
+      };
+      return {
+        messageText: '### Clarification Required for Double Entry\\n\\n' + clarification.prompt,
+        scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
+        clarifications: [clarification]
+      };
+    }
     if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
       return attachAmendmentProvenance({
         messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\\n'),
