@@ -524,6 +524,45 @@ export async function processAccountingQuery(
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
   const journalRequested = Boolean(outputPreference?.journal || /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput));
+  // This final gate is independent of the AI provider's own guardrails.
+  // Metadata or a model assertion of balance cannot authorize a journal.
+  const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
+    if (!journalRequested || hasImages) return response;
+    const groups = response.scenarioState.directGroups || [];
+    const validGroup = (group: JournalEntryGroup): boolean => {
+      if (!Array.isArray(group.lines) || group.lines.length < 2) return false;
+      let debitCents = 0;
+      let creditCents = 0;
+      for (const line of group.lines) {
+        if (!line.accountName || !['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE', 'OTHER_COMPREHENSIVE_INCOME'].includes(line.category)) return false;
+        if (!Number.isFinite(line.debit) || !Number.isFinite(line.credit) || line.debit < 0 || line.credit < 0) return false;
+        const debit = Math.round(line.debit * 100);
+        const credit = Math.round(line.credit * 100);
+        if (!Number.isSafeInteger(debit) || !Number.isSafeInteger(credit) || debit / 100 !== line.debit || credit / 100 !== line.credit) return false;
+        if (debit > 0 && credit > 0) return false;
+        debitCents += debit;
+        creditCents += credit;
+        if (!Number.isSafeInteger(debitCents) || !Number.isSafeInteger(creditCents)) return false;
+      }
+      return debitCents > 0 && debitCents === creditCents &&
+        group.totalDebit === debitCents / 100 && group.totalCredit === creditCents / 100 &&
+        group.isBalanced;
+    };
+    if (groups.length === 0) return response;
+    if (groups.every(validGroup)) return response;
+    const issue: MissingFieldInfo = {
+      fieldKey: 'journalValidation', fieldName: 'Journal validation',
+      prompt: 'The proposed journal did not pass exact debit/credit and amount validation. Please review the transaction facts.',
+      whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines and totals balance to the cent.'
+    };
+    return {
+      ...response,
+      messageText: '### AI-Proposed Journal Rejected\\n\\n' + issue.prompt,
+      scenarioState: { ...response.scenarioState, directGroups: [], projectedGroups: [], isComplete: false, missingFields: [issue] },
+      clarifications: [issue]
+    };
+  };
+
   // Preserve the established no-provider path only for the complete, dated
   // output-GST calculator case, after the deterministic calculation confirms
   // that an admitted local Section 16 rate applies. A lexical GST match alone
@@ -771,7 +810,7 @@ export async function processAccountingQuery(
       }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario));
+          return validateJournalResponse(attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario)));
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -779,7 +818,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'gemini' && providerOrApiKey.gemini?.apiKey && providerOrApiKey.gemini.apiKey.trim().length > 10) {
         try {
-          return attachAmendmentProvenance(await callGeminiAPI(
+          return validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
             userInput,
             activeScenario,
             standard,
@@ -790,7 +829,7 @@ export async function processAccountingQuery(
             deterministicScenario,
             profiler,
             imageAttachments
-          ));
+          )));
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Gemini API Error';
@@ -798,7 +837,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'openai' && providerOrApiKey.openai?.apiKey && providerOrApiKey.openai.apiKey.trim().length > 10) {
         try {
-          return attachAmendmentProvenance(await callStandardOpenAI(
+          return validateJournalResponse(attachAmendmentProvenance(await callStandardOpenAI(
             userInput,
             activeScenario,
             standard,
@@ -815,7 +854,7 @@ export async function processAccountingQuery(
       }
     } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       try {
-        return attachAmendmentProvenance(await callGeminiAPI(
+        return validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
           userInput,
           activeScenario,
           standard,
@@ -826,7 +865,7 @@ export async function processAccountingQuery(
           deterministicScenario,
           profiler,
           imageAttachments
-        ));
+        )));
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
