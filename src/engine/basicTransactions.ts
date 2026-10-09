@@ -80,6 +80,35 @@ function expenseAccounts(query: string): Pair {
   return { debit: expense(kind), credit: cashPaid ? cash() : bank() };
 }
 
+// Owner drawings are an equity transaction for sole proprietors, but "owner"
+// alone does not identify the legal form of the business. Never default a
+// company's director/shareholder withdrawal to proprietor drawings.
+const personalOwnerWithdrawal = (query: string): boolean =>
+  /\b(?:owner|sole proprietor|sole proprietorship)\b/i.test(query) &&
+  /\b(?:personal use|private use|personal expense|drawings|draw|draws|withdrawal|withdraw|withdrew|takes?|took)\b/i.test(query) &&
+  /\b(?:business|firm|company)\b/i.test(query) &&
+  !/\b(?:contribut(?:e|ion)|invest(?:ed|ment)?|put into|deposit(?:ed)?)\b/i.test(query);
+
+const ownerDrawingsTemplate: Template = {
+  id: 'SOLE_PROPRIETOR_DRAWINGS', title: 'Owner cash withdrawal for personal use',
+  patterns: [],
+  accounts: query => {
+    if (!/\bsole propriet(?:or|orship)\b/i.test(query)) {
+      return { missing: [need('entityType', 'Business entity type',
+        /\b(?:company|pte\.? ltd\.?|limited)\b/i.test(query)
+          ? 'Is this a recoverable advance to the director/shareholder, an approved dividend, or another type of payment?'
+          : 'Is this business a sole proprietorship or a company?')] };
+    }
+    const fromCash = /\b(?:cash on hand|petty cash|cash)\b/i.test(query) && !/\bbank\b/i.test(query);
+    const fromBank = /\b(?:bank|current account|savings account)\b/i.test(query) && !fromCash;
+    if (!fromCash && !fromBank) return { debit: equity("Owner's Drawings"), missing: [
+      need('paymentAccount', 'Payment source', 'Was the money taken from physical cash or a business bank account?')
+    ] };
+    return { debit: equity("Owner's Drawings"), credit: fromCash ? cash() : bank() };
+  },
+  rationale: 'SGD amount is provided if shown below. For a sole proprietorship, personal withdrawal is Dr Owner\'s Drawings / Cr Cash or Cash at Bank. For a company, the debit depends on the nature of the payment; it must not automatically be treated as proprietor drawings.'
+};
+
 const templates: Template[] = [
   {
     id: 'PETTY_CASH_WITHDRAWAL', title: 'Cash withdrawal to petty cash',
@@ -88,16 +117,16 @@ const templates: Template[] = [
     rationale: 'Internal transfer between two asset accounts; no revenue or expense and no GST arises merely from moving cash.'
   },
   {
+    id: 'CUSTOMER_RECEIPT', title: 'Receipt of outstanding customer invoice',
+    patterns: [/\b(?:receipt|received|receives|receiving|receive|collect|collected|settling|settlement|paid)\b/i, /\b(?:customer|client)\b/i, /\b(?:invoice|receivable|outstanding)\b/i],
+    accounts: q => ({ debit: /\b(?:in cash|cash in hand)\b/i.test(q) ? cash() : bank(), credit: receivable() }),
+    rationale: 'Settlement of an existing receivable is not a second sale or second revenue recognition.'
+  },
+  {
     id: 'BANK_TRANSFER', title: 'Bank-to-bank transfer',
     patterns: [/\b(?:transfer|transferred|moving|move|moved)\b/i, /\b(?:bank|account)\b/i],
     accounts: bankTransfer,
     rationale: 'Internal transfer between bank asset accounts; no profit-or-loss impact and no GST.'
-  },
-  {
-    id: 'CUSTOMER_RECEIPT', title: 'Receipt of outstanding customer invoice',
-    patterns: [/\b(?:receipt|received|receive|collect|collected|settling|settlement|paid)\b/i, /\b(?:customer|client)\b/i, /\b(?:invoice|receivable|outstanding)\b/i],
-    accounts: q => ({ debit: /\b(?:in cash|cash in hand)\b/i.test(q) ? cash() : bank(), credit: receivable() }),
-    rationale: 'Settlement of an existing receivable is not a second sale or second revenue recognition.'
   },
   {
     id: 'CREDIT_SALE', title: 'Credit sale',
@@ -153,7 +182,12 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
       /\brental agreement\b/i.test(query) ||
       /\b(?:USD|EUR|GBP|AUD|MYR|JPY|CNY)\b/i.test(query)) return undefined;
 
-  const template = templates.find(item => item.patterns.every(pattern => pattern.test(query)));
+  // Customer invoice settlements take priority over a generic "bank transfer".
+  // A third-party payment is not a transfer between the entity's own accounts.
+  const externalParty = /\b(?:customer|client|supplier|vendor|third.party)\b/i.test(query);
+  const template = personalOwnerWithdrawal(query) ? ownerDrawingsTemplate :
+    templates.find(item => (!externalParty || item.id !== 'BANK_TRANSFER') &&
+      item.patterns.every(pattern => pattern.test(query)));
   if (!template) return undefined;
   const pair = template.accounts(query);
   const cents = amountCents(query);
