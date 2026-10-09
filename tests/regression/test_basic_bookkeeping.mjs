@@ -41,6 +41,12 @@ const lease = await parseAccountingQuery('3-year office lease, SGD 1,000/month, 
 assert.equal(lease.scenarioType, 'LEASE_IFRS16');
 assert.equal(lease.leaseTermMonths, 36);
 assert.ok(calculateDoubleEntries(lease, 'SFRS_I').groups.length > 0);
+for (const phrasing of ['3 year office lease, SGD 1,000/month, 5% rate', '36-month office lease, SGD 1,000/month, 5% rate']) {
+  const variant = await parseAccountingQuery(phrasing, null);
+  assert.equal(variant.scenarioType, 'LEASE_IFRS16', phrasing);
+  assert.equal(variant.leaseTermMonths, 36, phrasing);
+  assert.ok(calculateDoubleEntries(variant, 'SFRS_I').groups.length > 0, phrasing);
+}
 const unknown = await processAccountingQuery('Record an unknown transaction SGD 500', null, 'SFRS_I');
 assert.match(unknown.messageText, /not supported|clarification/i);
 console.log('PASS | Basic bookkeeping journals, property-style amount checks, lease routing and offline failure');
