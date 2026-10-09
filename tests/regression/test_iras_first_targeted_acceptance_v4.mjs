@@ -35,6 +35,7 @@ import {
   parseSemanticResponseSafelyV4,
   PROFILE,
   readV4Contract,
+  RESOURCE_POLICY,
   reserveConsumption,
   scoreApplicationStatusV4,
   scoreGovernedEvidenceV4,
@@ -590,7 +591,7 @@ const requestGuard = createRequestBudgetGuard({ clock: () => guardClock.value,
 for (const caseId of CASE_IDS) await requestGuard.invoke(caseId, async () => { sent += 1; return '{}'; });
 assert.equal(sent, 9);
 assert.deepEqual([...requestGuard.counts.values()], Array(9).fill(1));
-assert.equal(guardClock.value, 8 * 15_250, 'Fake-clock pacing observes all eight inter-call gaps without wall-clock waits.');
+assert.ok(guardClock.value >= 8 * 15_250, 'Fake-clock pacing observes all eight inter-call minimum gaps without wall-clock waits.');
 await assert.rejects(() => requestGuard.invoke(CASE_IDS[8], async () => { sent += 1; }), /V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED/);
 assert.equal(sent, 9, 'The exact-nine guard blocks a retry before it reaches the callback.');
 
@@ -606,6 +607,29 @@ await assert.rejects(() => concurrentGuard.invoke(CASE_IDS[1], async () => { con
 releasePacing();
 assert.equal(await secondRequest, 'second');
 assert.equal(concurrentSent, 1);
+const fractionalClock = { value: 0 };
+const fractionalWaits = [];
+const fractionalStarts = [];
+const fractionalGuard = createRequestBudgetGuard({ caseIds: CASE_IDS.slice(0, 2), clock: () => fractionalClock.value,
+  sleep: async ms => { fractionalWaits.push(ms); fractionalClock.value += ms - 1.25; } });
+await fractionalGuard.invoke(CASE_IDS[0], async () => { fractionalStarts.push(fractionalClock.value); return 'first'; });
+await fractionalGuard.invoke(CASE_IDS[1], async () => { fractionalStarts.push(fractionalClock.value); return 'second'; });
+assert.equal(fractionalWaits.length, 2, 'A fractional early timer wake is rechecked and waits again within the bounded retry count.');
+assert.ok(fractionalStarts[1] - fractionalStarts[0] >= RESOURCE_POLICY.minimumStartGapMs,
+  'A fractional timer wake cannot dispatch before the minimum inter-call interval.');
+
+let stagnantWaits = 0;
+let stagnantSends = 0;
+const stagnantGuard = createRequestBudgetGuard({ caseIds: CASE_IDS.slice(0, 2), clock: () => 0,
+  sleep: async () => { stagnantWaits += 1; } });
+await stagnantGuard.invoke(CASE_IDS[0], async () => { stagnantSends += 1; return 'first'; });
+await assert.rejects(() => stagnantGuard.invoke(CASE_IDS[1], async () => { stagnantSends += 1; return 'second'; }),
+  /V4_PACING_CLOCK_NOT_ADVANCING/);
+assert.equal(stagnantWaits, 3, 'A non-advancing clock exhausts only the fixed small pacing wait bound.');
+assert.equal(stagnantSends, 1, 'A non-advancing clock fails closed before dispatch.');
+await assert.rejects(() => stagnantGuard.invoke(CASE_IDS[1], async () => { stagnantSends += 1; }),
+  /V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED/, 'The failed pacing reservation cannot be duplicated or reordered.');
+assert.equal(stagnantSends, 1);
 const failedGuard = createRequestBudgetGuard({ caseIds: [CASE_IDS[0]], clock: () => 0, sleep: async () => {} });
 await assert.rejects(() => failedGuard.invoke(CASE_IDS[0], async () => { throw new Error('synthetic transport failure'); }), /synthetic transport failure/);
 await assert.rejects(() => failedGuard.invoke(CASE_IDS[0], async () => 'retry'), /V4_EXTRA_OR_OUT_OF_ORDER_CALL_BLOCKED/,
@@ -1139,6 +1163,7 @@ const privateMissingQualificationResponses = { [fixturePageUrl]: privateMissingQ
 const privateMissingQualificationRun = await runControlledIras(privateQuery, privateResolved.issuePlan,
   privateResolved.understanding, withControlledDiscoveryFixtures(privateMissingQualificationResponses));
 const privateMissingQualificationIssue = privateMissingQualificationRun.result.workstreams.flatMap(workstream => workstream.issues)[0];
+const privateIssue = privateResolved.issuePlan.issues[0];
 assertNoControlledFixtureMisses(privateMissingQualificationRun, 'Private-expense missing-qualification negative control');
 assert.deepEqual(privateMissingQualificationRun.requests, [fixturePageUrl, controlledSitemapUrl]);
 assert.deepEqual(privateMissingQualificationRun.transportObservations.map(item => item.status), [200, 200]);
@@ -1165,7 +1190,6 @@ assert.equal(privateRetainedSection15Claim?.quote, UNIFIED_SOURCE_REGISTRY.ITA_S
 assert.match(privateRetainedSection15Claim.quote, /subject to statutory exceptions/i);
 console.log(`V4_CONTROLLED_PRIVATE_MISSING_QUALIFICATION ${JSON.stringify(observeControlledIrasRun(privateMissingQualificationRun))}`);
 
-const privateIssue = privateResolved.issuePlan.issues[0];
 const privateTopics = privateIssue.mappedTopicIds;
 const sec14OnlyQuality = evaluateIrasQuality(privateQuery, privateResolved.understanding, privateIssue.subject,
   privateIssue.population, privateTopics, [UNIFIED_SOURCE_REGISTRY.ITA_SEC14_GENERAL_DEDUCTION]);

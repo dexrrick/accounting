@@ -182,18 +182,85 @@ const reasons = [
 ];
 for (const [result, expectedReason] of reasons) {
   assert.equal(result.failure, 'INVALID_RESPONSE');
+  assert.equal(result.assessmentStatus, 'FAILED', 'a received but invalid model response is a semantic failure');
   assert.equal(result.failureReason, expectedReason);
   assert.equal(JSON.stringify(result).includes('RAW_PROVIDER_SENTINEL'), false);
   assert.equal(JSON.stringify(result).includes('RAW_SCHEMA_SENTINEL'), false);
 }
 const lowConfidence = await interpretFailure(JSON.stringify({ ...mixedPayload, confidence: 0.2 }));
 assert.equal(lowConfidence.failure, 'LOW_CONFIDENCE');
+assert.equal(lowConfidence.assessmentStatus, 'FAILED');
 assert.equal(lowConfidence.failureReason, undefined);
 const providerError = await interpretFailure(new Error('provider raw body SECRET_PROVIDER_ERROR_SENTINEL'));
 assert.equal(providerError.failure, 'PROVIDER_ERROR');
+assert.equal(providerError.assessmentStatus, 'NOT_ASSESSED', 'provider failures do not count as bad semantic interpretation');
 assert.equal(providerError.failureReason, undefined);
 assert.equal(JSON.stringify(providerError).includes('SECRET_PROVIDER_ERROR_SENTINEL'), false);
-assert.equal(JSON.stringify(await interpretMock(mixedQuestion, mixedPayload)).includes('failureReason'), false,
+const successfulInterpretation = await interpretMock(mixedQuestion, mixedPayload);
+assert.equal(successfulInterpretation.assessmentStatus, 'PASSED');
+assert.equal(successfulInterpretation.transportAttempts.length, 0, 'injected send functions remain a single call and may omit transport telemetry');
+assert.equal(JSON.stringify(successfulInterpretation).includes('failureReason'), false,
   'Successful interpretations do not carry a failure diagnostic.');
+
+let injectedCalls = 0;
+let injectedOptions;
+const injectedTransientFailure = await interpretSemanticQuestion('Diagnostic-only probe.', provider, async (_prompt, _system, _provider, options) => {
+  injectedCalls += 1;
+  injectedOptions = options;
+  throw new Error('Gemini API request failed with HTTP 503. The provider response was withheld for security.');
+});
+assert.equal(injectedCalls, 1, 'a caller-supplied transport is never replayed by the semantic layer');
+assert.deepEqual(Object.keys(injectedOptions).sort(), ['jsonMode', 'responseJsonSchema', 'temperature', 'timeoutMs'],
+  'injected transports retain the archived four-option request contract');
+assert.equal(injectedTransientFailure.failure, 'PROVIDER_ERROR');
+assert.equal(injectedTransientFailure.assessmentStatus, 'NOT_ASSESSED');
+assert.equal(injectedTransientFailure.providerStatus, 503);
+assert.deepEqual(injectedTransientFailure.transportAttempts, [], 'custom transport can remain one-shot without synthetic retry diagnostics');
+
+const previousFetch = globalThis.fetch;
+try {
+  let transportCalls = 0;
+  globalThis.fetch = async () => {
+    transportCalls += 1;
+    return new Response('temporary overload', { status: 503 });
+  };
+  const exhaustedTransport = await interpretSemanticQuestion('Diagnostic-only probe.', provider);
+  assert.equal(transportCalls, 2, 'the default Gemini transport retries one transient response once');
+  assert.equal(exhaustedTransport.assessmentStatus, 'NOT_ASSESSED');
+  assert.deepEqual(exhaustedTransport.transportAttempts.map(item => [item.status, item.failureCategory, item.retryScheduled]), [
+    [503, 'HTTP_STATUS', true], [503, 'HTTP_STATUS', false]
+  ]);
+
+  transportCalls = 0;
+  globalThis.fetch = async () => {
+    transportCalls += 1;
+    const text = transportCalls === 1 ? undefined : JSON.stringify(mixedPayload);
+    return text === undefined
+      ? new Response('temporary overload', { status: 503 })
+      : new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 });
+  };
+  const recoveredTransport = await interpretSemanticQuestion(mixedQuestion, provider);
+  assert.equal(transportCalls, 2, 'the managed production transport retries once after HTTP 503');
+  assert.equal(recoveredTransport.assessmentStatus, 'PASSED');
+  assert.equal(recoveredTransport.mode, 'SEMANTIC_INTERPRETATION');
+  assert.deepEqual(recoveredTransport.transportAttempts.map(item => [item.status, item.retryScheduled]), [[503, true], [200, false]],
+    'managed semantic results retain both redacted attempt outcomes');
+
+  transportCalls = 0;
+  globalThis.fetch = async () => {
+    transportCalls += 1;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{ malformed' }] } }] }), { status: 200 });
+  };
+  const malformedTransportResponse = await interpretSemanticQuestion('Diagnostic-only probe.', provider);
+  assert.equal(transportCalls, 1, 'a malformed model response is not retried');
+  assert.equal(malformedTransportResponse.failure, 'INVALID_RESPONSE');
+  assert.equal(malformedTransportResponse.assessmentStatus, 'FAILED');
+  assert.deepEqual(malformedTransportResponse.transportAttempts.map(item => [item.status, item.retryScheduled]), [[200, false]]);
+} finally {
+  globalThis.fetch = previousFetch;
+}
+
+assert.equal((await interpretSemanticQuestion('Question?', undefined, async () => { throw new Error('must not call'); })).assessmentStatus,
+  'NOT_ASSESSED', 'questions without a configured provider are unassessed');
 
 console.log(`Semantic operation contract regressions passed; promptChars=${capturedPrompt.length}.`);

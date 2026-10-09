@@ -1,0 +1,95 @@
+{
+  "profile": "LIVE_DOWNSTREAM_SUPERVISOR_FAILURE_ANALYSIS",
+  "providerRequests": 9,
+  "passed": 6,
+  "failed": 3,
+  "newProviderCallsDuringAnalysis": 0,
+  "newSourceRequestsDuringAnalysis": 0,
+  "failures": [
+    {
+      "caseId": "private-expense-treatment",
+      "failedStages": [
+        "OVERALL_STATUS"
+      ],
+      "subjects": [
+        "corporate income-tax treatment of director's private holiday expense"
+      ],
+      "concepts": [
+        {
+          "concept": "income-tax deductibility",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "travel expense",
+          "role": "RELATED"
+        },
+        {
+          "concept": "director benefits",
+          "role": "CONTEXT_ONLY"
+        }
+      ],
+      "topLevelGaps": [
+        "UNROUTED_MATERIAL_CONCEPT"
+      ]
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "failedStages": [
+        "OVERALL_STATUS"
+      ],
+      "subjects": [
+        "corporate tax residency rules"
+      ],
+      "concepts": [
+        {
+          "concept": "tax residency",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "corporate tax",
+          "role": "RELATED"
+        },
+        {
+          "concept": "control and management",
+          "role": "RELATED"
+        }
+      ],
+      "topLevelGaps": [
+        "UNROUTED_MATERIAL_CONCEPT"
+      ]
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "failedStages": [
+        "SEMANTIC_ISSUE_IDENTITY",
+        "SEMANTIC_DIMENSIONS",
+        "WORKSTREAM_ROUTING",
+        "APPLICATION_STATUS"
+      ],
+      "subjects": [
+        "exploration and evaluation accounting rules under SFRS(I) 6"
+      ],
+      "concepts": [
+        {
+          "concept": "exploration and evaluation of mineral resources",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "SFRS(I) 6",
+          "role": "PRIMARY"
+        },
+        {
+          "concept": "accounting rules",
+          "role": "RELATED"
+        }
+      ],
+      "topLevelGaps": [
+        "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "UNROUTED_MATERIAL_CONCEPT",
+        "UNROUTED_MATERIAL_CONCEPT"
+      ]
+    }
+  ],
+  "independentReviewCompleted": true
+}

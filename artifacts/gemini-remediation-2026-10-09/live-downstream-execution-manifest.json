@@ -1,0 +1,38 @@
+{
+  "profile": "SUPERVISOR_LIVE_DOWNSTREAM_RUN_MANIFEST",
+  "model": "gemini-3.5-flash-lite",
+  "outputDirectory": "artifacts/gemini-remediation-2026-10-09/live-rerun-downstream-2026-10-09",
+  "maximumProviderRequests": 18,
+  "sourceReferenceDate": "2026-10-08",
+  "before": {
+    "src/services/aiTransport.ts": "54e41eb81c7c893644901ec39af63c20d5c126adb90e9f47844efed85564dd42",
+    "src/services/semanticQuestionUnderstanding.ts": "ce0427894ece623fd5d13edc30cd6bc28291e4abc9df6bebaff4ac61e5ab4b61",
+    "src/services/authorityWorkstreams.ts": "5973c3e5aca8d7b0766b1704ecf86c95d2fcbbb27ac41a596d0f27c8a2058f62",
+    "src/services/groundingContextBuilder.ts": "fab4ea1e2dbd7324a99749b7eaacf4e934e12fbfc91078ef7328903ffdc146f9",
+    "src/retrieval/irasRuleConceptSupport.ts": "05772b7bae54f992317e7d8976c0f3f66d28ba4761069e3100a3fa19a2aaeb8d",
+    "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.mjs": "4b5fe40b326fb52bd71eab3d8cbad843966cbcffae6b93d80e021be8a6118f49",
+    "scripts/rerun_gemini_remediation.mjs": "e98b6cc3b7c0f8a6c6cf0bea4311b27c5b2d900f7dc741fe68e28b585b5c3133",
+    "scripts/iras_v4_production_acceptance_adapter.mjs": "94a27f0dc26c8cca418fc7edcbc263772df470dd404624be2f25ed4613713540",
+    "scripts/iras_v4_capture_replay_runner.mjs": "4d55dcae08b7ca792d37dbb4ec5cee5bb791fa6e5adbd73b692246ea92fbaa87",
+    "artifacts/gemini-remediation-2026-10-09/live-rerun-2026-10-09/summary.json": "dd972bb583d7b77e78462971ea11cb08b9df63ae6cf0e68455f4390d3fa6f878",
+    "artifacts/gemini-remediation-2026-10-09/live-rerun-2026-10-09/runner.partial.jsonl": "fb02f6c5825d4d15110760e7f4bb932b5c2bec4dc29ab7c97d826e61cafaf6d1",
+    "artifacts/gemini-remediation-2026-10-09/live-rerun-2026-10-09/consumed.json": "bafae38f4db970f4e670a53b3ebefd29268afbcd73007fb46d84925c4c8f0a0e",
+    "artifacts/gemini-remediation-2026-10-09/downstream-repairs-2026-10-09/replay-report.json": "45e6e56f442f15b42b3ece65cee5e4eca8294bb89255396565a99e653a20df90"
+  },
+  "after": {
+    "src/services/aiTransport.ts": "54e41eb81c7c893644901ec39af63c20d5c126adb90e9f47844efed85564dd42",
+    "src/services/semanticQuestionUnderstanding.ts": "ce0427894ece623fd5d13edc30cd6bc28291e4abc9df6bebaff4ac61e5ab4b61",
+    "src/services/authorityWorkstreams.ts": "5973c3e5aca8d7b0766b1704ecf86c95d2fcbbb27ac41a596d0f27c8a2058f62",
+    "src/services/groundingContextBuilder.ts": "fab4ea1e2dbd7324a99749b7eaacf4e934e12fbfc91078ef7328903ffdc146f9",
+    "src/retrieval/irasRuleConceptSupport.ts": "05772b7bae54f992317e7d8976c0f3f66d28ba4761069e3100a3fa19a2aaeb8d",
+    "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.mjs": "4b5fe40b326fb52bd71eab3d8cbad843966cbcffae6b93d80e021be8a6118f49",
+    "scripts/rerun_gemini_remediation.mjs": "e98b6cc3b7c0f8a6c6cf0bea4311b27c5b2d900f7dc741fe68e28b585b5c3133",
+    "scripts/iras_v4_production_acceptance_adapter.mjs": "94a27f0dc26c8cca418fc7edcbc263772df470dd404624be2f25ed4613713540",
+    "scripts/iras_v4_capture_replay_runner.mjs": "4d55dcae08b7ca792d37dbb4ec5cee5bb791fa6e5adbd73b692246ea92fbaa87",
+    "artifacts/gemini-remediation-2026-10-09/live-rerun-2026-10-09/summary.json": "dd972bb583d7b77e78462971ea11cb08b9df63ae6cf0e68455f4390d3fa6f878",
+    "artifacts/gemini-remediation-2026-10-09/live-rerun-2026-10-09/runner.partial.jsonl": "fb02f6c5825d4d15110760e7f4bb932b5c2bec4dc29ab7c97d826e61cafaf6d1",
+    "artifacts/gemini-remediation-2026-10-09/live-rerun-2026-10-09/consumed.json": "bafae38f4db970f4e670a53b3ebefd29268afbcd73007fb46d84925c4c8f0a0e",
+    "artifacts/gemini-remediation-2026-10-09/downstream-repairs-2026-10-09/replay-report.json": "45e6e56f442f15b42b3ece65cee5e4eca8294bb89255396565a99e653a20df90"
+  },
+  "codeAndPriorArtifactsUnchanged": true
+}

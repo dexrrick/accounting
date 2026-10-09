@@ -33,6 +33,7 @@ import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '..
 import { UNIFIED_SOURCE_REGISTRY } from '../src/standards/unifiedSourceModel.ts';
 import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../src/retrieval/officialSitemapDiscovery.ts';
 import { SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA } from '../src/services/semanticQuestionUnderstanding.ts';
+import { diagnoseGeminiCaseFailure } from './gemini_failure_diagnostics.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const RUNNER_PROFILE = 'iras-v4-runner-integrity';
@@ -2800,6 +2801,7 @@ async function runFixedV4CaseLoop({
       ...(semanticState.responseBase64 ? { semanticResponseBase64: semanticState.responseBase64 } : {}),
       ...(semanticState.providerResponsePartial ? { providerResponsePartial: semanticState.providerResponsePartial } : {})
     };
+    row.failureDiagnostics = diagnoseGeminiCaseFailure(row);
     rows.push(row);
     if (failure && (caseError || !requestGuard.counts.has(caseId) ||
         ['INTEGRITY', 'SEMANTIC_TRANSPORT'].includes(semanticState.failureStage))) {

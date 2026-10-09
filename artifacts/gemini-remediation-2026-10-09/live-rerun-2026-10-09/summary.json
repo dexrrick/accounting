@@ -1,0 +1,3608 @@
+{
+  "profile": "GEMINI_REMEDIATION_LIVE_DIAGNOSTIC",
+  "liveProvider": true,
+  "acceptanceProven": false,
+  "sourceEvidenceMode": "RETAINED_CAPTURE_REPLAY",
+  "sourceReferenceDate": "2026-10-08",
+  "capturedAt": "2026-10-08T14:43:24.380Z",
+  "freshOfficialAvailabilityAssessed": false,
+  "newSourceRequests": 0,
+  "usage": {
+    "sourceTool": "mcp__codex_app__get_usage_limits",
+    "observedAtUtc": "2026-10-09T00:42:37.315Z",
+    "ordinaryUsageAllowed": true,
+    "primaryRemainingPercent": 82,
+    "secondaryRemainingPercent": 76
+  },
+  "executionStartedAt": "2026-10-09T00:43:18.599Z",
+  "model": "gemini-3.5-flash-lite",
+  "productionCodeSha256": {
+    "src/services/aiTransport.ts": "54e41eb81c7c893644901ec39af63c20d5c126adb90e9f47844efed85564dd42",
+    "src/services/semanticQuestionUnderstanding.ts": "ce0427894ece623fd5d13edc30cd6bc28291e4abc9df6bebaff4ac61e5ab4b61",
+    "src/services/groundingContextBuilder.ts": "facbee6b69967963daf1244a1bc328abf387ef1347ccc02e6050f599a9bc8342"
+  },
+  "protectedInputSha256": {
+    "before": {
+      "original": "0a93f3ae8ae1385a8c3c26f24fc1037fc868b08ecd957d536b442b399eca2bc7",
+      "originalConsumed": "7dc26419455e23babe8f57b35ab33e9398514f0cea670b5cd27842d97bd88f0e",
+      "remaining": "833b14fe798a46309e0355eacaaf3ced07dda964524a1e5967e3cf4bf9e15ee4",
+      "remainingJournal": "8d7f7c60fcd84e69dade2ec0af337a623903c1855358b34d93fb3ffbaba0d894",
+      "remainingConsumed": "9eafefe5994a9f781395e58e5acfc1cf60ff61b3d1c741c1ee8d8bf11d8ed984",
+      "activation": "9e0f55d7d4e72555f51cf9f280cf5e959b8cadd1245c2e08a8e515f772c1b1fc",
+      "capture": "77c07c267c0c94cb6f38ca92bfb6fa9c0fdd9e49fb64e9dcf40f1a3f242e7f19",
+      "lock": "aa5c88eeb19c3ef891b09fa3c49f25e20620263f2121faf346403f6012fd445b"
+    },
+    "after": {
+      "original": "0a93f3ae8ae1385a8c3c26f24fc1037fc868b08ecd957d536b442b399eca2bc7",
+      "originalConsumed": "7dc26419455e23babe8f57b35ab33e9398514f0cea670b5cd27842d97bd88f0e",
+      "remaining": "833b14fe798a46309e0355eacaaf3ced07dda964524a1e5967e3cf4bf9e15ee4",
+      "remainingJournal": "8d7f7c60fcd84e69dade2ec0af337a623903c1855358b34d93fb3ffbaba0d894",
+      "remainingConsumed": "9eafefe5994a9f781395e58e5acfc1cf60ff61b3d1c741c1ee8d8bf11d8ed984",
+      "activation": "9e0f55d7d4e72555f51cf9f280cf5e959b8cadd1245c2e08a8e515f772c1b1fc",
+      "capture": "77c07c267c0c94cb6f38ca92bfb6fa9c0fdd9e49fb64e9dcf40f1a3f242e7f19",
+      "lock": "aa5c88eeb19c3ef891b09fa3c49f25e20620263f2121faf346403f6012fd445b"
+    }
+  },
+  "protectedInputsUnchanged": true,
+  "providerRequestCount": 9,
+  "blockedNetworkAttemptCount": 0,
+  "cases": [
+    {
+      "caseId": "target-relief-entitlement",
+      "status": "PASSED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS",
+          "CPF"
+        ],
+        "contextualAuthorities": [
+          "CPF"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal tax relief on compulsory CPF contributions",
+        "concepts": [
+          {
+            "concept": "personal tax relief",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "compulsory CPF contributions",
+            "role": "PRIMARY"
+          }
+        ],
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "personal tax relief eligibility for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 2226,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "9b82c3f401c6122af0e42855c9e1a5eef1dd25fb56634344eceb97f03b44ecea",
+          "responseBytes": 1025
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIklSQVMiLAogICAgIkNQRiIKICBdLAogICJjb250ZXh0dWFsQXV0aG9yaXRpZXMiOiBbCiAgICAiQ1BGIgogIF0sCiAgImRvbWFpbiI6ICJJUkFTX0lOQ09NRV9UQVgiLAogICJwb3B1bGF0aW9uIjogIklORElWSURVQUwiLAogICJwcmltYXJ5U3ViamVjdCI6ICJwZXJzb25hbCB0YXggcmVsaWVmIG9uIGNvbXB1bHNvcnkgQ1BGIGNvbnRyaWJ1dGlvbnMiLAogICJjb25jZXB0cyI6IFsKICAgIHsKICAgICAgImNvbmNlcHQiOiAicGVyc29uYWwgdGF4IHJlbGllZiIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJjb21wdWxzb3J5IENQRiBjb250cmlidXRpb25zIiwKICAgICAgInJvbGUiOiAiUFJJTUFSWSIKICAgIH0KICBdLAogICJyZXF1ZXN0ZWRPcGVyYXRpb24iOiAiQ0hFQ0tfRUxJR0lCSUxJVFkiLAogICJmYWN0c0V4cGxpY2l0bHlQcm92aWRlZCI6IFtdLAogICJjb25maWRlbmNlIjogMC45NSwKICAiaXNzdWVzIjogWwogICAgewogICAgICAic3ViamVjdCI6ICJwZXJzb25hbCB0YXggcmVsaWVmIGVsaWdpYmlsaXR5IGZvciBjb21wdWxzb3J5IENQRiBjb250cmlidXRpb25zIiwKICAgICAgInBvcHVsYXRpb24iOiAiSU5ESVZJRFVBTCIsCiAgICAgICJkb21haW4iOiAiSVJBU19JTkNPTUVfVEFYIiwKICAgICAgImdvdmVybmluZ0F1dGhvcml0aWVzIjogWwogICAgICAgICJJUkFTIgogICAgICBdLAogICAgICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogWwogICAgICAgICJDUEYiCiAgICAgIF0sCiAgICAgICJvcGVyYXRpb24iOiAiQ0hFQ0tfRUxJR0lCSUxJVFkiLAogICAgICAibWFwcGVkVG9waWNJZHMiOiBbXSwKICAgICAgImV2aWRlbmNlUmVxdWlyZW1lbnQiOiAiQVVUSE9SSVRBVElWRV9TT1VSQ0UiLAogICAgICAiY29uZmlkZW5jZSI6IDAuOTUKICAgIH0KICBdCn0=",
+        "sha256": "9b82c3f401c6122af0e42855c9e1a5eef1dd25fb56634344eceb97f03b44ecea",
+        "bytes": 1025
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 2226,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "target-relief-entitlement",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:43:18.617Z",
+          "startedAtMonotonicMs": 353.549,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+          "requestIdentitySha256": "afd20305c04847b93d6f28170b2b66032d13376d06f729b538e42a73d7d887b1",
+          "captured": true
+        }
+      ],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "topicObservations": [
+            {
+              "topicId": "iras-individual-cpf-relief",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": true,
+              "substantiveScopeIncomplete": false,
+              "admitted": false,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": false,
+              "candidateCount": 0,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_3b7f6592",
+              "subject": "personal tax relief eligibility for compulsory CPF contributions",
+              "authority": "IRAS",
+              "domain": "IRAS_INCOME_TAX",
+              "population": "INDIVIDUAL",
+              "operation": "CHECK_ELIGIBILITY",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "UNRESOLVED",
+              "gaps": [
+                "NO_CANDIDATE_EVIDENCE",
+                "IRAS_SCOPE_NOT_COVERED",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "CONDITIONAL",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "UNRESOLVED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_INDIVIDUAL_TAX",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_3b7f6592",
+                  "subject": "personal tax relief eligibility for compulsory CPF contributions",
+                  "authority": "IRAS",
+                  "domain": "IRAS_INCOME_TAX",
+                  "population": "INDIVIDUAL",
+                  "operation": "CHECK_ELIGIBILITY",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": true,
+                    "verified": true,
+                    "covered": true
+                  },
+                  "evidenceStatus": "VERIFIED",
+                  "applicationStatus": "UNRESOLVED",
+                  "gaps": [],
+                  "retrievalAttempts": [
+                    {
+                      "topicId": "iras-individual-cpf-relief",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees"
+                    }
+                  ],
+                  "verifiedClaims": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "Please note that a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including relief on compulsory/voluntary CPF contributions) for each Year of Assessment (YA)."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "CPF Relief is capped by the amount of compulsory employee CPF contributions made on Ordinary Wages and Additional Wages under the CPF Act."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "You may claim CPF Relief for making employee CPF contributions on wages that have not exceeded the Ordinary Wage ceiling and Additional Wage ceiling."
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "sourceStatus": "NEEDS_REVIEW",
+                      "provenance": "LIVE_EXTERNAL",
+                      "documentTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                      "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                      "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                      "documentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [],
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "status": "SUCCESS",
+              "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+              "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+              "rawContentSha256": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+              "rawContentBytes": 290951,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "governedIssueObservations": [
+            {
+              "issueId": "personal-cpf-relief",
+              "authority": "IRAS",
+              "operation": "CHECK_ELIGIBILITY",
+              "ruleEvidenceStatus": "VERIFIED",
+              "providerError": false,
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": true
+              },
+              "gaps": [],
+              "candidateCount": 1,
+              "candidateInventoryKind": "observed_through_call_records_plus_actual_returned_sources",
+              "candidateCountBasis": "distinct observed record IDs from through-call retriever groups scoped to actual mapped topics and actual returned issue sources",
+              "observedRecordIds": [
+                "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+              ],
+              "eligibleRecordIds": [
+                "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+              ],
+              "candidateRecordProvenanceCounts": {
+                "LIVE_EXTERNAL": 1
+              },
+              "transportBinding": {
+                "path": "production_through_call_unique_fetch_content_hash_binding",
+                "complete": true,
+                "reasons": [],
+                "liveSourceIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "boundSourceIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "observedAttempts": [
+                  {
+                    "topicId": "iras-individual-cpf-relief",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                    "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "associationBasis": "sanitized_production_attempt_plus_unique_observed_validated_fetch"
+                  }
+                ]
+              },
+              "actualReturnedSourceCount": 1,
+              "rejectedCount": 0,
+              "rejectedCandidates": [],
+              "verifiedClaimCount": 3,
+              "verifiedClaims": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "Please note that a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including relief on compulsory/voluntary CPF contributions) for each Year of Assessment (YA)."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "CPF Relief is capped by the amount of compulsory employee CPF contributions made on Ordinary Wages and Additional Wages under the CPF Act."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "You may claim CPF Relief for making employee CPF contributions on wages that have not exceeded the Ordinary Wage ceiling and Additional Wage ceiling."
+                }
+              ],
+              "requestedConceptCoverage": true,
+              "evidenceQuality": {
+                "status": "RETRIEVED_SUFFICIENT",
+                "eligibleRecordIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "rejectedRecords": [],
+                "coveredTopicIds": [
+                  "iras-individual-cpf-relief"
+                ],
+                "uncoveredTopicIds": [],
+                "requestedConcepts": [
+                  "CPF Relief / compulsory CPF contributions"
+                ],
+                "coveredConcepts": [
+                  "CPF Relief / compulsory CPF contributions"
+                ],
+                "uncoveredConcepts": []
+              },
+              "recordDiagnostics": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LIVE_EXTERNAL",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "lifecycleState": "CANDIDATE",
+                  "sourceTextSha256": "14f62e4a50136e93af2900aeac1e751747fba913d727351bb2031babe9257c24",
+                  "sourceTextBytes": 5011,
+                  "documentTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                  "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                  "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                  "documentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                  "tags": [
+                    "iras-individual-cpf-relief"
+                  ]
+                }
+              ],
+              "recordConflicts": []
+            }
+          ]
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "PASSED",
+        "fallbackUsed": false,
+        "failureChain": [],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 2226,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "target-relief-amount",
+      "status": "PASSED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [
+          "CPF"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "INDIVIDUAL",
+        "primarySubject": "personal income tax relief for compulsory CPF contributions",
+        "concepts": [
+          {
+            "concept": "personal tax relief",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "compulsory CPF contributions",
+            "role": "PRIMARY"
+          }
+        ],
+        "requestedOperation": "CALCULATE",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": true,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "personal tax relief for compulsory CPF contributions calculation",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 1980,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "8f8080e6110ca1dde46fb205711131485d0b24fc7ab6d7fd17bad3bfd9084aee",
+          "responseBytes": 1006
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIklSQVMiCiAgXSwKICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogWwogICAgIkNQRiIKICBdLAogICJkb21haW4iOiAiSVJBU19JTkNPTUVfVEFYIiwKICAicG9wdWxhdGlvbiI6ICJJTkRJVklEVUFMIiwKICAicHJpbWFyeVN1YmplY3QiOiAicGVyc29uYWwgaW5jb21lIHRheCByZWxpZWYgZm9yIGNvbXB1bHNvcnkgQ1BGIGNvbnRyaWJ1dGlvbnMiLAogICJjb25jZXB0cyI6IFsKICAgIHsKICAgICAgImNvbmNlcHQiOiAicGVyc29uYWwgdGF4IHJlbGllZiIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJjb21wdWxzb3J5IENQRiBjb250cmlidXRpb25zIiwKICAgICAgInJvbGUiOiAiUFJJTUFSWSIKICAgIH0KICBdLAogICJyZXF1ZXN0ZWRPcGVyYXRpb24iOiAiQ0FMQ1VMQVRFIiwKICAiZmFjdHNFeHBsaWNpdGx5UHJvdmlkZWQiOiBbXSwKICAiY29uZmlkZW5jZSI6IDAuOTUsCiAgImlzc3VlcyI6IFsKICAgIHsKICAgICAgInN1YmplY3QiOiAicGVyc29uYWwgdGF4IHJlbGllZiBmb3IgY29tcHVsc29yeSBDUEYgY29udHJpYnV0aW9ucyBjYWxjdWxhdGlvbiIsCiAgICAgICJwb3B1bGF0aW9uIjogIklORElWSURVQUwiLAogICAgICAiZG9tYWluIjogIklSQVNfSU5DT01FX1RBWCIsCiAgICAgICJnb3Zlcm5pbmdBdXRob3JpdGllcyI6IFsKICAgICAgICAiSVJBUyIKICAgICAgXSwKICAgICAgImNvbnRleHR1YWxBdXRob3JpdGllcyI6IFsKICAgICAgICAiQ1BGIgogICAgICBdLAogICAgICAib3BlcmF0aW9uIjogIkNBTENVTEFURSIsCiAgICAgICJtYXBwZWRUb3BpY0lkcyI6IFtdLAogICAgICAiZXZpZGVuY2VSZXF1aXJlbWVudCI6ICJBVVRIT1JJVEFUSVZFX1NPVVJDRSIsCiAgICAgICJjb25maWRlbmNlIjogMC45NQogICAgfQogIF0KfQ==",
+        "sha256": "8f8080e6110ca1dde46fb205711131485d0b24fc7ab6d7fd17bad3bfd9084aee",
+        "bytes": 1006
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1980,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "target-relief-amount",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:43:33.880Z",
+          "startedAtMonotonicMs": 15616.432,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+          "requestIdentitySha256": "afd20305c04847b93d6f28170b2b66032d13376d06f729b538e42a73d7d887b1",
+          "captured": true
+        }
+      ],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "topicObservations": [
+            {
+              "topicId": "iras-individual-cpf-relief",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": true,
+              "substantiveScopeIncomplete": false,
+              "admitted": false,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": false,
+              "candidateCount": 0,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_2bedb53a",
+              "subject": "personal tax relief for compulsory CPF contributions calculation",
+              "authority": "IRAS",
+              "domain": "IRAS_INCOME_TAX",
+              "population": "INDIVIDUAL",
+              "operation": "CALCULATE",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "UNRESOLVED",
+              "gaps": [
+                "NO_CANDIDATE_EVIDENCE",
+                "IRAS_SCOPE_NOT_COVERED",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "CONDITIONAL",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "UNRESOLVED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_INDIVIDUAL_TAX",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_2bedb53a",
+                  "subject": "personal tax relief for compulsory CPF contributions calculation",
+                  "authority": "IRAS",
+                  "domain": "IRAS_INCOME_TAX",
+                  "population": "INDIVIDUAL",
+                  "operation": "CALCULATE",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": true,
+                    "verified": true,
+                    "covered": true
+                  },
+                  "evidenceStatus": "VERIFIED",
+                  "applicationStatus": "UNRESOLVED",
+                  "gaps": [],
+                  "retrievalAttempts": [
+                    {
+                      "topicId": "iras-individual-cpf-relief",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees"
+                    }
+                  ],
+                  "verifiedClaims": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "Please note that a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including relief on compulsory/voluntary CPF contributions) for each Year of Assessment (YA)."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "CPF Relief is capped by the amount of compulsory employee CPF contributions made on Ordinary Wages and Additional Wages under the CPF Act."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "You may claim CPF Relief for making employee CPF contributions on wages that have not exceeded the Ordinary Wage ceiling and Additional Wage ceiling."
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "sourceStatus": "NEEDS_REVIEW",
+                      "provenance": "LIVE_EXTERNAL",
+                      "documentTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                      "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                      "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                      "documentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [],
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "status": "SUCCESS",
+              "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+              "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+              "rawContentSha256": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+              "rawContentBytes": 290951,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "governedIssueObservations": [
+            {
+              "issueId": "personal-cpf-relief-amount",
+              "authority": "IRAS",
+              "operation": "CALCULATE",
+              "ruleEvidenceStatus": "VERIFIED",
+              "providerError": false,
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": true
+              },
+              "gaps": [],
+              "candidateCount": 1,
+              "candidateInventoryKind": "observed_through_call_records_plus_actual_returned_sources",
+              "candidateCountBasis": "distinct observed record IDs from through-call retriever groups scoped to actual mapped topics and actual returned issue sources",
+              "observedRecordIds": [
+                "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+              ],
+              "eligibleRecordIds": [
+                "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+              ],
+              "candidateRecordProvenanceCounts": {
+                "LIVE_EXTERNAL": 1
+              },
+              "transportBinding": {
+                "path": "production_through_call_unique_fetch_content_hash_binding",
+                "complete": true,
+                "reasons": [],
+                "liveSourceIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "boundSourceIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "observedAttempts": [
+                  {
+                    "topicId": "iras-individual-cpf-relief",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                    "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "associationBasis": "sanitized_production_attempt_plus_unique_observed_validated_fetch"
+                  }
+                ]
+              },
+              "actualReturnedSourceCount": 1,
+              "rejectedCount": 0,
+              "rejectedCandidates": [],
+              "verifiedClaimCount": 3,
+              "verifiedClaims": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "Please note that a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including relief on compulsory/voluntary CPF contributions) for each Year of Assessment (YA)."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "CPF Relief is capped by the amount of compulsory employee CPF contributions made on Ordinary Wages and Additional Wages under the CPF Act."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "You may claim CPF Relief for making employee CPF contributions on wages that have not exceeded the Ordinary Wage ceiling and Additional Wage ceiling."
+                }
+              ],
+              "requestedConceptCoverage": true,
+              "evidenceQuality": {
+                "status": "RETRIEVED_SUFFICIENT",
+                "eligibleRecordIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "rejectedRecords": [],
+                "coveredTopicIds": [
+                  "iras-individual-cpf-relief"
+                ],
+                "uncoveredTopicIds": [],
+                "requestedConcepts": [
+                  "CPF Relief / compulsory CPF contributions"
+                ],
+                "coveredConcepts": [
+                  "CPF Relief / compulsory CPF contributions"
+                ],
+                "uncoveredConcepts": []
+              },
+              "recordDiagnostics": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LIVE_EXTERNAL",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "lifecycleState": "CANDIDATE",
+                  "sourceTextSha256": "14f62e4a50136e93af2900aeac1e751747fba913d727351bb2031babe9257c24",
+                  "sourceTextBytes": 5011,
+                  "documentTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                  "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                  "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                  "documentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                  "tags": [
+                    "iras-individual-cpf-relief"
+                  ]
+                }
+              ],
+              "recordConflicts": []
+            }
+          ]
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "PASSED",
+        "fallbackUsed": false,
+        "failureChain": [],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1980,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "status": "PASSED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "personal tax relief on compulsory CPF and employer CPF contribution obligations",
+        "concepts": [
+          {
+            "concept": "compulsory CPF",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "personal income tax relief",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "employer CPF contribution",
+            "role": "PRIMARY"
+          }
+        ],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "Monthly earnings of SGD 6,000"
+        ],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "personal tax relief on compulsory CPF",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95
+          },
+          {
+            "subject": "employer CPF contribution amount",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 2239,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "456679ad6192290cc54b56e209f8da134bd9eda06406378af805f34ca6f38666",
+          "responseBytes": 1484
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIlVOS05PV04iCiAgXSwKICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogW10sCiAgImRvbWFpbiI6ICJVTktOT1dOIiwKICAicG9wdWxhdGlvbiI6ICJVTktOT1dOIiwKICAicHJpbWFyeVN1YmplY3QiOiAicGVyc29uYWwgdGF4IHJlbGllZiBvbiBjb21wdWxzb3J5IENQRiBhbmQgZW1wbG95ZXIgQ1BGIGNvbnRyaWJ1dGlvbiBvYmxpZ2F0aW9ucyIsCiAgImNvbmNlcHRzIjogWwogICAgewogICAgICAiY29uY2VwdCI6ICJjb21wdWxzb3J5IENQRiIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJwZXJzb25hbCBpbmNvbWUgdGF4IHJlbGllZiIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJlbXBsb3llciBDUEYgY29udHJpYnV0aW9uIiwKICAgICAgInJvbGUiOiAiUFJJTUFSWSIKICAgIH0KICBdLAogICJyZXF1ZXN0ZWRPcGVyYXRpb24iOiAiT1RIRVIiLAogICJmYWN0c0V4cGxpY2l0bHlQcm92aWRlZCI6IFsKICAgICJNb250aGx5IGVhcm5pbmdzIG9mIFNHRCA2LDAwMCIKICBdLAogICJjb25maWRlbmNlIjogMC45NSwKICAiaXNzdWVzIjogWwogICAgewogICAgICAic3ViamVjdCI6ICJwZXJzb25hbCB0YXggcmVsaWVmIG9uIGNvbXB1bHNvcnkgQ1BGIiwKICAgICAgInBvcHVsYXRpb24iOiAiSU5ESVZJRFVBTCIsCiAgICAgICJkb21haW4iOiAiSVJBU19JTkNPTUVfVEFYIiwKICAgICAgImdvdmVybmluZ0F1dGhvcml0aWVzIjogWwogICAgICAgICJJUkFTIgogICAgICBdLAogICAgICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogWwogICAgICAgICJDUEYiCiAgICAgIF0sCiAgICAgICJvcGVyYXRpb24iOiAiQ0hFQ0tfRUxJR0lCSUxJVFkiLAogICAgICAibWFwcGVkVG9waWNJZHMiOiBbXSwKICAgICAgImV2aWRlbmNlUmVxdWlyZW1lbnQiOiAiQVVUSE9SSVRBVElWRV9TT1VSQ0VfQU5EX0NBU0VfRkFDVFMiLAogICAgICAiY29uZmlkZW5jZSI6IDAuOTUKICAgIH0sCiAgICB7CiAgICAgICJzdWJqZWN0IjogImVtcGxveWVyIENQRiBjb250cmlidXRpb24gYW1vdW50IiwKICAgICAgInBvcHVsYXRpb24iOiAiRU1QTE9ZRVIiLAogICAgICAiZG9tYWluIjogIkNQRl9QQVlST0xMIiwKICAgICAgImdvdmVybmluZ0F1dGhvcml0aWVzIjogWwogICAgICAgICJDUEYiCiAgICAgIF0sCiAgICAgICJjb250ZXh0dWFsQXV0aG9yaXRpZXMiOiBbXSwKICAgICAgIm9wZXJhdGlvbiI6ICJDQUxDVUxBVEUiLAogICAgICAibWFwcGVkVG9waWNJZHMiOiBbXSwKICAgICAgImV2aWRlbmNlUmVxdWlyZW1lbnQiOiAiQVVUSE9SSVRBVElWRV9TT1VSQ0VfQU5EX0NBU0VfRkFDVFMiLAogICAgICAiY29uZmlkZW5jZSI6IDAuOTUKICAgIH0KICBdCn0=",
+        "sha256": "456679ad6192290cc54b56e209f8da134bd9eda06406378af805f34ca6f38666",
+        "bytes": 1484
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 2239,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "A-paraphrase-2",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:43:49.134Z",
+          "startedAtMonotonicMs": 30870.8329,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+          "requestIdentitySha256": "afd20305c04847b93d6f28170b2b66032d13376d06f729b538e42a73d7d887b1",
+          "captured": true
+        }
+      ],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 2,
+          "candidateGroupRecordCount": 5,
+          "topicObservations": [
+            {
+              "topicId": "iras-individual-cpf-relief",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": true,
+              "substantiveScopeIncomplete": false,
+              "admitted": false,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": false,
+              "candidateCount": 0,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            },
+            {
+              "topicId": "cpf_contribution_rates",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": false,
+              "substantiveScopeIncomplete": true,
+              "admitted": false,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": true,
+              "candidateCount": 5,
+              "state": "INVALID_LOCAL_EVIDENCE",
+              "expected": "INVALID_LOCAL_EVIDENCE"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_6d80e8ce",
+              "subject": "personal tax relief on compulsory CPF",
+              "authority": "IRAS",
+              "domain": "IRAS_INCOME_TAX",
+              "population": "INDIVIDUAL",
+              "operation": "CHECK_ELIGIBILITY",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "UNRESOLVED",
+              "gaps": [
+                "NO_CANDIDATE_EVIDENCE",
+                "IRAS_SCOPE_NOT_COVERED",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED",
+                "ISSUE_CONCEPT_UNCOVERED",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            },
+            {
+              "issueId": "issue_bcb18344",
+              "subject": "employer CPF contribution amount",
+              "authority": "CPF",
+              "domain": "CPF_PAYROLL",
+              "population": "EMPLOYER",
+              "operation": "CALCULATE",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "UNRESOLVED",
+              "gaps": [
+                "CANDIDATE_REJECTED",
+                "NO_ADMITTED_EVIDENCE",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_INDIVIDUAL_TAX",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_6d80e8ce",
+                  "subject": "personal tax relief on compulsory CPF",
+                  "authority": "IRAS",
+                  "domain": "IRAS_INCOME_TAX",
+                  "population": "INDIVIDUAL",
+                  "operation": "CHECK_ELIGIBILITY",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": true,
+                    "verified": true,
+                    "covered": true
+                  },
+                  "evidenceStatus": "VERIFIED",
+                  "applicationStatus": "UNRESOLVED",
+                  "gaps": [],
+                  "retrievalAttempts": [
+                    {
+                      "topicId": "iras-individual-cpf-relief",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees"
+                    }
+                  ],
+                  "verifiedClaims": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "CPF Relief is given to encourage individuals to save for their retirement. Employees who are Singapore Citizens or Singapore Permanent Residents may claim CPF Relief."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "Please note that a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including relief on compulsory/voluntary CPF contributions) for each Year of Assessment (YA)."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "quote": "CPF Relief is capped by the amount of compulsory employee CPF contributions made on Ordinary Wages and Additional Wages under the CPF Act."
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                      "sourceStatus": "NEEDS_REVIEW",
+                      "provenance": "LIVE_EXTERNAL",
+                      "documentTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                      "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                      "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                      "documentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "authority": "CPF",
+              "domain": "CPF_PAYROLL",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_bcb18344",
+                  "subject": "employer CPF contribution amount",
+                  "authority": "CPF",
+                  "domain": "CPF_PAYROLL",
+                  "population": "EMPLOYER",
+                  "operation": "CALCULATE",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": false,
+                    "verified": false,
+                    "covered": false
+                  },
+                  "evidenceStatus": "INSUFFICIENT",
+                  "applicationStatus": "UNRESOLVED",
+                  "gaps": [
+                    "CANDIDATE_REJECTED",
+                    "NO_ADMITTED_EVIDENCE",
+                    "NO_VERIFIED_CLAIM",
+                    "ISSUE_CONCEPT_UNCOVERED"
+                  ],
+                  "retrievalAttempts": [],
+                  "verifiedClaims": [],
+                  "sources": []
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [],
+          "candidateGroupCount": 2,
+          "candidateGroupRecordCount": 5,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+              "status": "SUCCESS",
+              "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+              "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+              "rawContentSha256": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+              "rawContentBytes": 290951,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "governedIssueObservations": [
+            {
+              "issueId": "individual-cpf-tax-relief",
+              "authority": "IRAS",
+              "operation": "CHECK_ELIGIBILITY",
+              "ruleEvidenceStatus": "VERIFIED",
+              "providerError": false,
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": true
+              },
+              "gaps": [],
+              "candidateCount": 1,
+              "candidateInventoryKind": "observed_through_call_records_plus_actual_returned_sources",
+              "candidateCountBasis": "distinct observed record IDs from through-call retriever groups scoped to actual mapped topics and actual returned issue sources",
+              "observedRecordIds": [
+                "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+              ],
+              "eligibleRecordIds": [
+                "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+              ],
+              "candidateRecordProvenanceCounts": {
+                "LIVE_EXTERNAL": 1
+              },
+              "transportBinding": {
+                "path": "production_through_call_unique_fetch_content_hash_binding",
+                "complete": true,
+                "reasons": [],
+                "liveSourceIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "boundSourceIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "observedAttempts": [
+                  {
+                    "topicId": "iras-individual-cpf-relief",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                    "pageTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "associationBasis": "sanitized_production_attempt_plus_unique_observed_validated_fetch"
+                  }
+                ]
+              },
+              "actualReturnedSourceCount": 1,
+              "rejectedCount": 0,
+              "rejectedCandidates": [],
+              "verifiedClaimCount": 3,
+              "verifiedClaims": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "CPF Relief is given to encourage individuals to save for their retirement. Employees who are Singapore Citizens or Singapore Permanent Residents may claim CPF Relief."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "Please note that a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including relief on compulsory/voluntary CPF contributions) for each Year of Assessment (YA)."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "quote": "CPF Relief is capped by the amount of compulsory employee CPF contributions made on Ordinary Wages and Additional Wages under the CPF Act."
+                }
+              ],
+              "requestedConceptCoverage": true,
+              "evidenceQuality": {
+                "status": "RETRIEVED_SUFFICIENT",
+                "eligibleRecordIds": [
+                  "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979"
+                ],
+                "rejectedRecords": [],
+                "coveredTopicIds": [
+                  "iras-individual-cpf-relief"
+                ],
+                "uncoveredTopicIds": [],
+                "requestedConcepts": [
+                  "CPF Relief / compulsory CPF contributions"
+                ],
+                "coveredConcepts": [
+                  "CPF Relief / compulsory CPF contributions"
+                ],
+                "uncoveredConcepts": []
+              },
+              "recordDiagnostics": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-individual-cpf-relief_c89b1fad9979",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LIVE_EXTERNAL",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "lifecycleState": "CANDIDATE",
+                  "sourceTextSha256": "b78c02a93d71768b28622a1608a831ef54c2bd6fe41ac984f02be17cee97433c",
+                  "sourceTextBytes": 5010,
+                  "documentTitle": "IRAS | Central Provident Fund (CPF) Relief for employees",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                  "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+                  "contentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                  "documentHash": "c89b1fad9979ce5431ae5c6150eff76f342d371ba72d0546eb98571e54368bfa",
+                  "tags": [
+                    "iras-individual-cpf-relief"
+                  ]
+                }
+              ],
+              "recordConflicts": []
+            },
+            {
+              "issueId": "employer-cpf-contribution",
+              "authority": "CPF",
+              "operation": "CALCULATE",
+              "ruleEvidenceStatus": "INSUFFICIENT",
+              "providerError": false,
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "gaps": [
+                "CANDIDATE_REJECTED",
+                "NO_ADMITTED_EVIDENCE",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "candidateCount": 5,
+              "candidateInventoryKind": "actual_through_call_records_plus_actual_returned_sources",
+              "candidateCountBasis": "distinct observed record IDs from through-call retriever groups scoped to actual mapped topics and actual returned issue sources",
+              "observedRecordIds": [
+                "CPFA_SEC7_FIRST_SCHEDULE",
+                "CPF_RATES_BY_AGE_2026",
+                "CPF_WAGE_CEILINGS_2026",
+                "CPF_ACCOUNT_ALLOCATION_RATES",
+                "CPF_SDL_SKILLS_DEVELOPMENT_LEVY"
+              ],
+              "eligibleRecordIds": [],
+              "candidateRecordProvenanceCounts": {
+                "LOCAL_STATIC": 5
+              },
+              "actualReturnedSourceCount": 0,
+              "rejectedCount": 2,
+              "rejectedCandidates": [
+                {
+                  "recordId": "CPF_RATES_BY_AGE_2026",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "provenance": "LOCAL_STATIC",
+                  "eligibilityGateResult": "LOCAL_SOURCE_NOT_VERIFIED",
+                  "baseEligible": false,
+                  "eligibilityRejectionCode": "LOCAL_SOURCE_NOT_VERIFIED"
+                },
+                {
+                  "recordId": "CPF_SDL_SKILLS_DEVELOPMENT_LEVY",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "provenance": "LOCAL_STATIC",
+                  "eligibilityGateResult": "LOCAL_SOURCE_NOT_VERIFIED",
+                  "baseEligible": false,
+                  "eligibilityRejectionCode": "LOCAL_SOURCE_NOT_VERIFIED"
+                }
+              ],
+              "verifiedClaimCount": 0,
+              "verifiedClaims": [],
+              "requestedConceptCoverage": false,
+              "recordDiagnostics": [
+                {
+                  "recordId": "CPFA_SEC7_FIRST_SCHEDULE",
+                  "authority": "CPF",
+                  "domain": "CPF_BOARD",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "bfe25680e997fa1f2422ec73d62a57175c976274acb73e9656c1f2e180f91174",
+                  "sourceTextBytes": 349,
+                  "documentTitle": "Central Provident Fund Act 1953",
+                  "officialSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-",
+                  "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-",
+                  "contentHash": "f33e6bd6f9ebcb697ee40f6dd1f6a160d9c058b3758273f9b86885e8d476a48f",
+                  "tags": [
+                    "cpf act section 7",
+                    "first schedule",
+                    "cpf rounding",
+                    "employee cpf 20%",
+                    "employer cpf 17%",
+                    "cpf calculation",
+                    "cents discarded"
+                  ]
+                },
+                {
+                  "recordId": "CPF_RATES_BY_AGE_2026",
+                  "authority": "CPF",
+                  "domain": "CPF_BOARD",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "39d09714a7f41a5f9c1af375c9535de0215da90c11e55d3ccc52facdeb27d8f9",
+                  "sourceTextBytes": 195,
+                  "documentTitle": "Central Provident Fund Act 1953",
+                  "officialSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+                  "canonicalSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+                  "contentHash": "629015f857475c21f4f576fbdfb0254a6475d89deb15675373093df25814a873",
+                  "tags": [
+                    "cpf rates by age",
+                    "cpf contribution table",
+                    "senior worker cpf",
+                    "cpf 55 60",
+                    "cpf rates 2026",
+                    "cpf age brackets"
+                  ],
+                  "eligibilityGateResult": "LOCAL_SOURCE_NOT_VERIFIED"
+                },
+                {
+                  "recordId": "CPF_WAGE_CEILINGS_2026",
+                  "authority": "CPF",
+                  "domain": "CPF_BOARD",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "c752f02f1e2438aa31584b4b3b257b702d118c3e117e5fc23242de2dd0c577e6",
+                  "sourceTextBytes": 324,
+                  "documentTitle": "Central Provident Fund Act 1953",
+                  "officialSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+                  "canonicalSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+                  "contentHash": "c91ad833f25828023e1cbfec8d81c0e68a978dcb255940122f9db829ebb4708a",
+                  "tags": [
+                    "cpf ceiling",
+                    "ordinary wage ceiling",
+                    "wage ceiling",
+                    "2026 cpf",
+                    "cpf ceiling 2026",
+                    "8000 ceiling",
+                    "ow ceiling 8000",
+                    "aw ceiling",
+                    "cpf contribution",
+                    "monthly contribution rate",
+                    "ordinary wage 8000",
+                    "cpf rates 2026"
+                  ]
+                },
+                {
+                  "recordId": "CPF_ACCOUNT_ALLOCATION_RATES",
+                  "authority": "CPF",
+                  "domain": "CPF_BOARD",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "7473716200ffe355f682c31a3214d4311383af55adfd90b8bbf1f16d2dd65f8e",
+                  "sourceTextBytes": 255,
+                  "documentTitle": "Central Provident Fund Act 1953",
+                  "officialSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr13-",
+                  "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr13-",
+                  "contentHash": "74ce148df293cf92e909aedd4a9ec1129a71e9d653b3c951ebadaf9de64e7dba",
+                  "tags": [
+                    "cpf account allocation",
+                    "ordinary account",
+                    "special account",
+                    "medisave account",
+                    "oa sa ma ratio",
+                    "section 13"
+                  ]
+                },
+                {
+                  "recordId": "CPF_SDL_SKILLS_DEVELOPMENT_LEVY",
+                  "authority": "CPF",
+                  "domain": "CPF_BOARD",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "97e0d1fa52dbd3c7d10d8484b13fb541c43683f2a43a155ae10b782361817356",
+                  "sourceTextBytes": 173,
+                  "documentTitle": "Skills Development Levy Act 1979",
+                  "officialSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/skills-development-levy",
+                  "canonicalSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/skills-development-levy",
+                  "contentHash": "cc2179506f5d2efdbcfa03380f9eb5b8e93e389078c1dd440f631b11f94674a9",
+                  "tags": [
+                    "sdl",
+                    "skills development levy",
+                    "sdl formula",
+                    "max 11.25",
+                    "min 2.00"
+                  ],
+                  "eligibilityGateResult": "LOCAL_SOURCE_NOT_VERIFIED"
+                }
+              ],
+              "recordConflicts": []
+            }
+          ]
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "PASSED",
+        "fallbackUsed": false,
+        "failureChain": [],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 2239,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "private-expense-treatment",
+      "status": "FAILED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "corporate income-tax treatment of director's private holiday expense",
+        "concepts": [
+          {
+            "concept": "corporate income tax",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "tax deductibility",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "director benefits",
+            "role": "RELATED"
+          },
+          {
+            "concept": "travel expense",
+            "role": "CONTEXT_ONLY"
+          }
+        ],
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "Singapore company",
+          "Paid SGD 900 for director's private holiday",
+          "Recorded as travel expense"
+        ],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "corporate income-tax treatment of director's private holiday expense",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 2185,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "3a881de8b7e3f3635cb0bf171ece92c36d9565a469f82623d9d802cd319cf55d",
+          "responseBytes": 1336
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIklSQVMiCiAgXSwKICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogWwogICAgIkFDQ09VTlRJTkdfU1RBTkRBUkRTIgogIF0sCiAgImRvbWFpbiI6ICJJUkFTX0lOQ09NRV9UQVgiLAogICJwb3B1bGF0aW9uIjogIkNPTVBBTlkiLAogICJwcmltYXJ5U3ViamVjdCI6ICJjb3Jwb3JhdGUgaW5jb21lLXRheCB0cmVhdG1lbnQgb2YgZGlyZWN0b3IncyBwcml2YXRlIGhvbGlkYXkgZXhwZW5zZSIsCiAgImNvbmNlcHRzIjogWwogICAgewogICAgICAiY29uY2VwdCI6ICJjb3Jwb3JhdGUgaW5jb21lIHRheCIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJ0YXggZGVkdWN0aWJpbGl0eSIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJkaXJlY3RvciBiZW5lZml0cyIsCiAgICAgICJyb2xlIjogIlJFTEFURUQiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJ0cmF2ZWwgZXhwZW5zZSIsCiAgICAgICJyb2xlIjogIkNPTlRFWFRfT05MWSIKICAgIH0KICBdLAogICJyZXF1ZXN0ZWRPcGVyYXRpb24iOiAiREVURVJNSU5FX1RSRUFUTUVOVCIsCiAgImZhY3RzRXhwbGljaXRseVByb3ZpZGVkIjogWwogICAgIlNpbmdhcG9yZSBjb21wYW55IiwKICAgICJQYWlkIFNHRCA5MDAgZm9yIGRpcmVjdG9yJ3MgcHJpdmF0ZSBob2xpZGF5IiwKICAgICJSZWNvcmRlZCBhcyB0cmF2ZWwgZXhwZW5zZSIKICBdLAogICJjb25maWRlbmNlIjogMC45NSwKICAiaXNzdWVzIjogWwogICAgewogICAgICAic3ViamVjdCI6ICJjb3Jwb3JhdGUgaW5jb21lLXRheCB0cmVhdG1lbnQgb2YgZGlyZWN0b3IncyBwcml2YXRlIGhvbGlkYXkgZXhwZW5zZSIsCiAgICAgICJwb3B1bGF0aW9uIjogIkNPTVBBTlkiLAogICAgICAiZG9tYWluIjogIklSQVNfSU5DT01FX1RBWCIsCiAgICAgICJnb3Zlcm5pbmdBdXRob3JpdGllcyI6IFsKICAgICAgICAiSVJBUyIKICAgICAgXSwKICAgICAgImNvbnRleHR1YWxBdXRob3JpdGllcyI6IFsKICAgICAgICAiQUNDT1VOVElOR19TVEFOREFSRFMiCiAgICAgIF0sCiAgICAgICJvcGVyYXRpb24iOiAiREVURVJNSU5FX1RSRUFUTUVOVCIsCiAgICAgICJtYXBwZWRUb3BpY0lkcyI6IFtdLAogICAgICAiZXZpZGVuY2VSZXF1aXJlbWVudCI6ICJBVVRIT1JJVEFUSVZFX1NPVVJDRV9BTkRfQ0FTRV9GQUNUUyIsCiAgICAgICJjb25maWRlbmNlIjogMC45NQogICAgfQogIF0KfQ==",
+        "sha256": "3a881de8b7e3f3635cb0bf171ece92c36d9565a469f82623d9d802cd319cf55d",
+        "bytes": 1336
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 2185,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "private-expense-treatment",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:44:04.387Z",
+          "startedAtMonotonicMs": 46123.4155,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+          "requestIdentitySha256": "cbe64ce0f24295732025dc8ceade94cb96a3b3352aaac874183ad51b180ec636",
+          "captured": true
+        }
+      ],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 3,
+          "topicObservations": [
+            {
+              "topicId": "iras-cit-disallowed-expenses",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": false,
+              "substantiveScopeIncomplete": false,
+              "admitted": true,
+              "literalVerified": true,
+              "topicCovered": true,
+              "needsReviewCandidate": false,
+              "candidateCount": 3,
+              "state": "VERIFIED_LOCAL_RULE",
+              "expected": "VERIFIED_LOCAL_RULE"
+            },
+            {
+              "topicId": "iras-cit-deductibility",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": false,
+              "substantiveScopeIncomplete": true,
+              "admitted": true,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": false,
+              "candidateCount": 3,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_a0baa149",
+              "subject": "corporate income-tax treatment of director's private holiday expense",
+              "authority": "IRAS",
+              "domain": "IRAS_INCOME_TAX",
+              "population": "COMPANY",
+              "operation": "DETERMINE_TREATMENT",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "UNRESOLVED",
+              "gaps": [
+                "IRAS_SCOPE_NOT_COVERED",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [
+                {
+                  "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                  "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+                }
+              ],
+              "sources": [
+                {
+                  "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                  "sourceStatus": "VERIFIED",
+                  "provenance": "LOCAL_STATIC",
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                  "contentHash": "9c90e5dfcf808f1ef5a9e1f0e7df242df8def1537ac010f4d658042ad3db246e"
+                }
+              ]
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_CORPORATE_TAX",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_a0baa149",
+                  "subject": "corporate income-tax treatment of director's private holiday expense",
+                  "authority": "IRAS",
+                  "domain": "IRAS_INCOME_TAX",
+                  "population": "COMPANY",
+                  "operation": "DETERMINE_TREATMENT",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": true,
+                    "verified": true,
+                    "covered": true
+                  },
+                  "evidenceStatus": "VERIFIED",
+                  "applicationStatus": "UNRESOLVED",
+                  "gaps": [],
+                  "retrievalAttempts": [
+                    {
+                      "topicId": "iras-cit-deductibility",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Business Expenses"
+                    }
+                  ],
+                  "verifiedClaims": [
+                    {
+                      "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                      "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407",
+                      "quote": "Non-deductible business expenses are expenses you or your employees pay for that do not fulfil the conditions above. These include personal expenses (such as travel, or entertainment not fully related to the running of the business) and capital expenses (such as expenses incurred to incorporate a company and the purchase of fixed assets)."
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                      "sourceStatus": "VERIFIED",
+                      "provenance": "LOCAL_STATIC",
+                      "documentTitle": "Income Tax Act 1947",
+                      "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                      "contentHash": "9c90e5dfcf808f1ef5a9e1f0e7df242df8def1537ac010f4d658042ad3db246e"
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407",
+                      "sourceStatus": "NEEDS_REVIEW",
+                      "provenance": "LIVE_EXTERNAL",
+                      "documentTitle": "IRAS | Business Expenses",
+                      "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+                      "contentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+                      "documentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [
+            "UNROUTED_MATERIAL_CONCEPT"
+          ],
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 3,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+              "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+              "status": "SUCCESS",
+              "pageTitle": "IRAS | Business Expenses",
+              "contentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+              "rawContentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+              "rawContentBytes": 280190,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "governedIssueObservations": [
+            {
+              "issueId": "company-private-expense-tax-treatment",
+              "authority": "IRAS",
+              "operation": "DETERMINE_TREATMENT",
+              "ruleEvidenceStatus": "VERIFIED",
+              "providerError": false,
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": true
+              },
+              "gaps": [],
+              "candidateCount": 4,
+              "candidateInventoryKind": "observed_through_call_records_plus_actual_returned_sources",
+              "candidateCountBasis": "distinct observed record IDs from through-call retriever groups scoped to actual mapped topics and actual returned issue sources",
+              "observedRecordIds": [
+                "ITA_SEC14_GENERAL_DEDUCTION",
+                "ITA_SEC15_1_K_MOTOR_CAR",
+                "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407"
+              ],
+              "eligibleRecordIds": [
+                "ITA_SEC14_GENERAL_DEDUCTION",
+                "ITA_SEC15_1_K_MOTOR_CAR",
+                "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407"
+              ],
+              "candidateRecordProvenanceCounts": {
+                "LOCAL_STATIC": 3,
+                "LIVE_EXTERNAL": 1
+              },
+              "transportBinding": {
+                "path": "production_through_call_unique_fetch_content_hash_binding",
+                "complete": true,
+                "reasons": [],
+                "liveSourceIds": [
+                  "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407"
+                ],
+                "boundSourceIds": [
+                  "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407"
+                ],
+                "observedAttempts": [
+                  {
+                    "topicId": "iras-cit-deductibility",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+                    "pageTitle": "IRAS | Business Expenses",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "associationBasis": "sanitized_production_attempt_plus_unique_observed_validated_fetch"
+                  }
+                ]
+              },
+              "actualReturnedSourceCount": 2,
+              "rejectedCount": 0,
+              "rejectedCandidates": [],
+              "verifiedClaimCount": 2,
+              "verifiedClaims": [
+                {
+                  "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                  "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407",
+                  "quote": "Non-deductible business expenses are expenses you or your employees pay for that do not fulfil the conditions above. These include personal expenses (such as travel, or entertainment not fully related to the running of the business) and capital expenses (such as expenses incurred to incorporate a company and the purchase of fixed assets)."
+                }
+              ],
+              "requestedConceptCoverage": true,
+              "evidenceQuality": {
+                "status": "RETRIEVED_SUFFICIENT",
+                "eligibleRecordIds": [
+                  "ITA_SEC14_GENERAL_DEDUCTION",
+                  "ITA_SEC15_1_K_MOTOR_CAR",
+                  "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                  "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407"
+                ],
+                "rejectedRecords": [],
+                "coveredTopicIds": [
+                  "iras-cit-disallowed-expenses",
+                  "iras-cit-deductibility"
+                ],
+                "uncoveredTopicIds": [],
+                "requestedConcepts": [
+                  "tax deductibility"
+                ],
+                "coveredConcepts": [
+                  "tax deductibility"
+                ],
+                "uncoveredConcepts": []
+              },
+              "recordDiagnostics": [
+                {
+                  "recordId": "ITA_SEC14_GENERAL_DEDUCTION",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "46587644444d8700bcd2739695ce606e5c3ecdba89274739d8582130f8180cf3",
+                  "sourceTextBytes": 222,
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-",
+                  "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=pr14-",
+                  "contentHash": "824e2e654f1ef08b0cf9e1766580e696d11e0f2fd27021ccb6c00e74996da6a7",
+                  "tags": [
+                    "tax deduction",
+                    "deductible expenses",
+                    "section 14",
+                    "business expenses",
+                    "p&l deduction"
+                  ]
+                },
+                {
+                  "recordId": "ITA_SEC15_1_K_MOTOR_CAR",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "5908c08547c5d76b70f3c65a406019d31343a3ca04f56f2506af0effc6072b68",
+                  "sourceTextBytes": 474,
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                  "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                  "contentHash": "5297592282d17f3983342a0fa4ca939a9276fad0ba36307f95f55dda66df04b3",
+                  "tags": [
+                    "car expenses",
+                    "passenger car",
+                    "motor car",
+                    "s-plate",
+                    "car depreciation",
+                    "section 15(1)(k)"
+                  ]
+                },
+                {
+                  "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "266efb07c304896db831df025c22766047ba6cf893681b56f74ca3104d7634ba",
+                  "sourceTextBytes": 488,
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                  "canonicalSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+                  "contentHash": "9c90e5dfcf808f1ef5a9e1f0e7df242df8def1537ac010f4d658042ad3db246e",
+                  "tags": [
+                    "non-deductible",
+                    "prohibited expenses",
+                    "section 15",
+                    "add-back"
+                  ]
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-cit-deductibility_dbb24a33a407",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LIVE_EXTERNAL",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "lifecycleState": "CANDIDATE",
+                  "sourceTextSha256": "ee10c18ded92bcab3d74ad1289356dc08565cba55d9b3c23f6fabc303a8318d2",
+                  "sourceTextBytes": 5014,
+                  "documentTitle": "IRAS | Business Expenses",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+                  "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+                  "contentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+                  "documentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+                  "tags": [
+                    "iras-cit-deductibility"
+                  ]
+                }
+              ],
+              "recordConflicts": []
+            }
+          ]
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "PASSED",
+        "fallbackUsed": false,
+        "failureChain": [],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 2185,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "status": "FAILED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "foreign dividend tax treatment",
+        "concepts": [
+          {
+            "concept": "foreign dividend",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "corporate income tax",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "subsidiary",
+            "role": "CONTEXT_ONLY"
+          }
+        ],
+        "requestedOperation": "DETERMINE_TREATMENT",
+        "requiresUserSpecificFacts": true,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "Singapore company received a dividend from its Thai subsidiary in the current year"
+        ],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "foreign dividend tax treatment",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 1899,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "b09148ac246d4268da34e84d02237ae290025964541f7bb2db291cd77e275a18",
+          "responseBytes": 1122
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIklSQVMiCiAgXSwKICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogWwogICAgIkFDQ09VTlRJTkdfU1RBTkRBUkRTIgogIF0sCiAgImRvbWFpbiI6ICJJUkFTX0lOQ09NRV9UQVgiLAogICJwb3B1bGF0aW9uIjogIkNPTVBBTlkiLAogICJwcmltYXJ5U3ViamVjdCI6ICJmb3JlaWduIGRpdmlkZW5kIHRheCB0cmVhdG1lbnQiLAogICJjb25jZXB0cyI6IFsKICAgIHsKICAgICAgImNvbmNlcHQiOiAiZm9yZWlnbiBkaXZpZGVuZCIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJjb3Jwb3JhdGUgaW5jb21lIHRheCIsCiAgICAgICJyb2xlIjogIlBSSU1BUlkiCiAgICB9LAogICAgewogICAgICAiY29uY2VwdCI6ICJzdWJzaWRpYXJ5IiwKICAgICAgInJvbGUiOiAiQ09OVEVYVF9PTkxZIgogICAgfQogIF0sCiAgInJlcXVlc3RlZE9wZXJhdGlvbiI6ICJERVRFUk1JTkVfVFJFQVRNRU5UIiwKICAiZmFjdHNFeHBsaWNpdGx5UHJvdmlkZWQiOiBbCiAgICAiU2luZ2Fwb3JlIGNvbXBhbnkgcmVjZWl2ZWQgYSBkaXZpZGVuZCBmcm9tIGl0cyBUaGFpIHN1YnNpZGlhcnkgaW4gdGhlIGN1cnJlbnQgeWVhciIKICBdLAogICJjb25maWRlbmNlIjogMC45NSwKICAiaXNzdWVzIjogWwogICAgewogICAgICAic3ViamVjdCI6ICJmb3JlaWduIGRpdmlkZW5kIHRheCB0cmVhdG1lbnQiLAogICAgICAicG9wdWxhdGlvbiI6ICJDT01QQU5ZIiwKICAgICAgImRvbWFpbiI6ICJJUkFTX0lOQ09NRV9UQVgiLAogICAgICAiZ292ZXJuaW5nQXV0aG9yaXRpZXMiOiBbCiAgICAgICAgIklSQVMiCiAgICAgIF0sCiAgICAgICJjb250ZXh0dWFsQXV0aG9yaXRpZXMiOiBbXSwKICAgICAgIm9wZXJhdGlvbiI6ICJERVRFUk1JTkVfVFJFQVRNRU5UIiwKICAgICAgIm1hcHBlZFRvcGljSWRzIjogW10sCiAgICAgICJldmlkZW5jZVJlcXVpcmVtZW50IjogIkFVVEhPUklUQVRJVkVfU09VUkNFX0FORF9DQVNFX0ZBQ1RTIiwKICAgICAgImNvbmZpZGVuY2UiOiAwLjk1CiAgICB9CiAgXQp9",
+        "sha256": "b09148ac246d4268da34e84d02237ae290025964541f7bb2db291cd77e275a18",
+        "bytes": 1122
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1899,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "foreign-dividend-receipt-treatment",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:44:19.649Z",
+          "startedAtMonotonicMs": 61386.4878,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "requestIdentitySha256": "2ebbadcb1a282729f4cd6839e1052ea7f07d177924c0254e38eb03373e3ca900",
+          "captured": true
+        }
+      ],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "topicObservations": [
+            {
+              "topicId": "iras-foreign-sourced-income",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": true,
+              "substantiveScopeIncomplete": false,
+              "admitted": false,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": false,
+              "candidateCount": 0,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_e57f41be",
+              "subject": "foreign dividend tax treatment",
+              "authority": "IRAS",
+              "domain": "IRAS_INCOME_TAX",
+              "population": "COMPANY",
+              "operation": "DETERMINE_TREATMENT",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "UNRESOLVED",
+              "gaps": [
+                "NO_CANDIDATE_EVIDENCE",
+                "IRAS_SCOPE_NOT_COVERED",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "UNRESOLVED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_CORPORATE_TAX",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_e57f41be",
+                  "subject": "foreign dividend tax treatment",
+                  "authority": "IRAS",
+                  "domain": "IRAS_INCOME_TAX",
+                  "population": "COMPANY",
+                  "operation": "DETERMINE_TREATMENT",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": true,
+                    "verified": true,
+                    "covered": true
+                  },
+                  "evidenceStatus": "VERIFIED",
+                  "applicationStatus": "UNRESOLVED",
+                  "gaps": [],
+                  "retrievalAttempts": [
+                    {
+                      "topicId": "iras-foreign-sourced-income",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "Companies Receiving Foreign Income"
+                    }
+                  ],
+                  "verifiedClaims": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-foreign-sourced-income_4f7b80b92ab8",
+                      "quote": "Foreign income refers to income derived from outside Singapore. Generally, such income is taxable in Singapore when remitted to and received in Singapore. Where the foreign income arises from a trade or business carried on in Singapore, it is taxable in Singapore upon accrual, regardless of whether it is received in Singapore."
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-foreign-sourced-income_4f7b80b92ab8",
+                      "sourceStatus": "NEEDS_REVIEW",
+                      "provenance": "LIVE_EXTERNAL",
+                      "documentTitle": "Companies Receiving Foreign Income",
+                      "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+                      "contentHash": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+                      "documentHash": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [
+            "UNROUTED_MATERIAL_CONCEPT"
+          ],
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+              "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+              "status": "SUCCESS",
+              "pageTitle": "Companies Receiving Foreign Income",
+              "contentHash": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+              "rawContentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+              "rawContentBytes": 275481,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "governedIssueObservations": []
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "FAILED",
+        "fallbackUsed": false,
+        "failureChain": [
+          {
+            "stage": "INTERPRETATION",
+            "outcome": "FAILED"
+          }
+        ],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1899,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "status": "PASSED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "corporate tax residency determination",
+        "concepts": [
+          {
+            "concept": "corporate tax residency",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "control and management",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "corporate tax residency determination rules",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 1677,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "87d46f64b80db7a0f90b4063f4f8204dd834e0486fda42acb9ef591d6e2f065c",
+          "responseBytes": 927
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIklSQVMiCiAgXSwKICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogW10sCiAgImRvbWFpbiI6ICJJUkFTX0lOQ09NRV9UQVgiLAogICJwb3B1bGF0aW9uIjogIkNPTVBBTlkiLAogICJwcmltYXJ5U3ViamVjdCI6ICJjb3Jwb3JhdGUgdGF4IHJlc2lkZW5jeSBkZXRlcm1pbmF0aW9uIiwKICAiY29uY2VwdHMiOiBbCiAgICB7CiAgICAgICJjb25jZXB0IjogImNvcnBvcmF0ZSB0YXggcmVzaWRlbmN5IiwKICAgICAgInJvbGUiOiAiUFJJTUFSWSIKICAgIH0sCiAgICB7CiAgICAgICJjb25jZXB0IjogImNvbnRyb2wgYW5kIG1hbmFnZW1lbnQiLAogICAgICAicm9sZSI6ICJSRUxBVEVEIgogICAgfQogIF0sCiAgInJlcXVlc3RlZE9wZXJhdGlvbiI6ICJFWFBMQUlOX1JVTEUiLAogICJmYWN0c0V4cGxpY2l0bHlQcm92aWRlZCI6IFtdLAogICJjb25maWRlbmNlIjogMC45NSwKICAiaXNzdWVzIjogWwogICAgewogICAgICAic3ViamVjdCI6ICJjb3Jwb3JhdGUgdGF4IHJlc2lkZW5jeSBkZXRlcm1pbmF0aW9uIHJ1bGVzIiwKICAgICAgInBvcHVsYXRpb24iOiAiQ09NUEFOWSIsCiAgICAgICJkb21haW4iOiAiSVJBU19JTkNPTUVfVEFYIiwKICAgICAgImdvdmVybmluZ0F1dGhvcml0aWVzIjogWwogICAgICAgICJJUkFTIgogICAgICBdLAogICAgICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogW10sCiAgICAgICJvcGVyYXRpb24iOiAiRVhQTEFJTl9SVUxFIiwKICAgICAgIm1hcHBlZFRvcGljSWRzIjogW10sCiAgICAgICJldmlkZW5jZVJlcXVpcmVtZW50IjogIkFVVEhPUklUQVRJVkVfU09VUkNFIiwKICAgICAgImNvbmZpZGVuY2UiOiAwLjk1CiAgICB9CiAgXQp9",
+        "sha256": "87d46f64b80db7a0f90b4063f4f8204dd834e0486fda42acb9ef591d6e2f065c",
+        "bytes": 927
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1677,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "corporate-residency-general-rule",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:44:34.908Z",
+          "startedAtMonotonicMs": 76645.3268,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+          "requestIdentitySha256": "28317ba31e9f468f973f58431a3439a6704e59473759d82c1a3c080db0a96a23",
+          "captured": true
+        }
+      ],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "topicObservations": [
+            {
+              "topicId": "iras-corporate-tax-residency",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": true,
+              "substantiveScopeIncomplete": false,
+              "admitted": false,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": false,
+              "candidateCount": 0,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_7e3dbcc4",
+              "subject": "corporate tax residency determination rules",
+              "authority": "IRAS",
+              "domain": "IRAS_INCOME_TAX",
+              "population": "COMPANY",
+              "operation": "EXPLAIN_RULE",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED",
+              "gaps": [
+                "NO_CANDIDATE_EVIDENCE",
+                "IRAS_SCOPE_NOT_COVERED",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "VERIFIED",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_CORPORATE_TAX",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_7e3dbcc4",
+                  "subject": "corporate tax residency determination rules",
+                  "authority": "IRAS",
+                  "domain": "IRAS_INCOME_TAX",
+                  "population": "COMPANY",
+                  "operation": "EXPLAIN_RULE",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": true,
+                    "verified": true,
+                    "covered": true
+                  },
+                  "evidenceStatus": "VERIFIED",
+                  "applicationStatus": "NOT_REQUIRED",
+                  "gaps": [],
+                  "retrievalAttempts": [
+                    {
+                      "topicId": "iras-corporate-tax-residency",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "Tax Residency of a Company/ Certificate of Residence"
+                    }
+                  ],
+                  "verifiedClaims": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                      "quote": "Your company is a tax resident of Singapore when its control and management is exercised in Singapore."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                      "quote": "Generally, a company is considered a Singapore tax resident for a particular Year of Assessment (YA) if the control and management of its business was exercised in Singapore in the preceding calendar year. For example, a company is a Singapore tax resident for YA 2025 if the control and management of its business was exercised in Singapore for the whole of 2024."
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                      "quote": "The Certificate of Residence (COR) is a letter issued by IRAS to certify that the company is a tax resident of Singapore for the purpose of claiming tax benefits under the DTAs that Singapore has concluded with other jurisdictions. It is generally required by the foreign tax authority to prove that the company is a Singapore tax resident."
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                      "sourceStatus": "NEEDS_REVIEW",
+                      "provenance": "LIVE_EXTERNAL",
+                      "documentTitle": "Tax Residency of a Company/ Certificate of Residence",
+                      "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                      "contentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+                      "documentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [],
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 0,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+              "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+              "status": "SUCCESS",
+              "pageTitle": "Tax Residency of a Company/ Certificate of Residence",
+              "contentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+              "rawContentSha256": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+              "rawContentBytes": 261347,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "governedIssueObservations": [
+            {
+              "issueId": "general-company-tax-residency-rule",
+              "authority": "IRAS",
+              "operation": "EXPLAIN_RULE",
+              "ruleEvidenceStatus": "VERIFIED",
+              "providerError": false,
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": true
+              },
+              "gaps": [],
+              "candidateCount": 1,
+              "candidateInventoryKind": "observed_through_call_records_plus_actual_returned_sources",
+              "candidateCountBasis": "distinct observed record IDs from through-call retriever groups scoped to actual mapped topics and actual returned issue sources",
+              "observedRecordIds": [
+                "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873"
+              ],
+              "eligibleRecordIds": [
+                "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873"
+              ],
+              "candidateRecordProvenanceCounts": {
+                "LIVE_EXTERNAL": 1
+              },
+              "transportBinding": {
+                "path": "production_through_call_unique_fetch_content_hash_binding",
+                "complete": true,
+                "reasons": [],
+                "liveSourceIds": [
+                  "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873"
+                ],
+                "boundSourceIds": [
+                  "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873"
+                ],
+                "observedAttempts": [
+                  {
+                    "topicId": "iras-corporate-tax-residency",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                    "pageTitle": "Tax Residency of a Company/ Certificate of Residence",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "associationBasis": "sanitized_production_attempt_plus_unique_observed_validated_fetch"
+                  }
+                ]
+              },
+              "actualReturnedSourceCount": 1,
+              "rejectedCount": 0,
+              "rejectedCandidates": [],
+              "verifiedClaimCount": 3,
+              "verifiedClaims": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                  "quote": "Your company is a tax resident of Singapore when its control and management is exercised in Singapore."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                  "quote": "Generally, a company is considered a Singapore tax resident for a particular Year of Assessment (YA) if the control and management of its business was exercised in Singapore in the preceding calendar year. For example, a company is a Singapore tax resident for YA 2025 if the control and management of its business was exercised in Singapore for the whole of 2024."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                  "quote": "The Certificate of Residence (COR) is a letter issued by IRAS to certify that the company is a tax resident of Singapore for the purpose of claiming tax benefits under the DTAs that Singapore has concluded with other jurisdictions. It is generally required by the foreign tax authority to prove that the company is a Singapore tax resident."
+                }
+              ],
+              "requestedConceptCoverage": true,
+              "evidenceQuality": {
+                "status": "RETRIEVED_SUFFICIENT",
+                "eligibleRecordIds": [
+                  "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873"
+                ],
+                "rejectedRecords": [],
+                "coveredTopicIds": [
+                  "iras-corporate-tax-residency"
+                ],
+                "uncoveredTopicIds": [],
+                "requestedConcepts": [
+                  "Company tax residency rule"
+                ],
+                "coveredConcepts": [
+                  "Company tax residency rule"
+                ],
+                "uncoveredConcepts": []
+              },
+              "recordDiagnostics": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-corporate-tax-residency_c0cf0d72f873",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LIVE_EXTERNAL",
+                  "sourceStatus": "NEEDS_REVIEW",
+                  "lifecycleState": "CANDIDATE",
+                  "sourceTextSha256": "6562860f664c8c6f36ede78193a21af3a361042711a04ee2f0b9cf62be2fd4ef",
+                  "sourceTextBytes": 2943,
+                  "documentTitle": "Tax Residency of a Company/ Certificate of Residence",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                  "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+                  "contentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+                  "documentHash": "c0cf0d72f87305c1cb82a25c472c91cd10aeeb396ea236a5e5ade733c325ae36",
+                  "tags": [
+                    "iras-corporate-tax-residency"
+                  ]
+                }
+              ],
+              "recordConflicts": []
+            }
+          ]
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "PASSED",
+        "fallbackUsed": false,
+        "failureChain": [],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1677,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "status": "FAILED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": false,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": false,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "COMPANY",
+        "primarySubject": "withholding tax rules on royalties paid to non-resident companies",
+        "concepts": [
+          {
+            "concept": "withholding tax",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "royalties",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "non-resident company",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "withholding tax rules for royalties paid to non-resident companies",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 1786,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "4a376eee85f711f386584befbf0950aba1b0e969d12dee4ed0a73fc7f0d5425d",
+          "responseBytes": 1035
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIklSQVMiCiAgXSwKICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogW10sCiAgImRvbWFpbiI6ICJJUkFTX0lOQ09NRV9UQVgiLAogICJwb3B1bGF0aW9uIjogIkNPTVBBTlkiLAogICJwcmltYXJ5U3ViamVjdCI6ICJ3aXRoaG9sZGluZyB0YXggcnVsZXMgb24gcm95YWx0aWVzIHBhaWQgdG8gbm9uLXJlc2lkZW50IGNvbXBhbmllcyIsCiAgImNvbmNlcHRzIjogWwogICAgewogICAgICAiY29uY2VwdCI6ICJ3aXRoaG9sZGluZyB0YXgiLAogICAgICAicm9sZSI6ICJQUklNQVJZIgogICAgfSwKICAgIHsKICAgICAgImNvbmNlcHQiOiAicm95YWx0aWVzIiwKICAgICAgInJvbGUiOiAiUFJJTUFSWSIKICAgIH0sCiAgICB7CiAgICAgICJjb25jZXB0IjogIm5vbi1yZXNpZGVudCBjb21wYW55IiwKICAgICAgInJvbGUiOiAiUkVMQVRFRCIKICAgIH0KICBdLAogICJyZXF1ZXN0ZWRPcGVyYXRpb24iOiAiRVhQTEFJTl9SVUxFIiwKICAiZmFjdHNFeHBsaWNpdGx5UHJvdmlkZWQiOiBbXSwKICAiY29uZmlkZW5jZSI6IDAuOTUsCiAgImlzc3VlcyI6IFsKICAgIHsKICAgICAgInN1YmplY3QiOiAid2l0aGhvbGRpbmcgdGF4IHJ1bGVzIGZvciByb3lhbHRpZXMgcGFpZCB0byBub24tcmVzaWRlbnQgY29tcGFuaWVzIiwKICAgICAgInBvcHVsYXRpb24iOiAiQ09NUEFOWSIsCiAgICAgICJkb21haW4iOiAiSVJBU19JTkNPTUVfVEFYIiwKICAgICAgImdvdmVybmluZ0F1dGhvcml0aWVzIjogWwogICAgICAgICJJUkFTIgogICAgICBdLAogICAgICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogW10sCiAgICAgICJvcGVyYXRpb24iOiAiRVhQTEFJTl9SVUxFIiwKICAgICAgIm1hcHBlZFRvcGljSWRzIjogW10sCiAgICAgICJldmlkZW5jZVJlcXVpcmVtZW50IjogIkFVVEhPUklUQVRJVkVfU09VUkNFIiwKICAgICAgImNvbmZpZGVuY2UiOiAwLjk1CiAgICB9CiAgXQp9",
+        "sha256": "4a376eee85f711f386584befbf0950aba1b0e969d12dee4ed0a73fc7f0d5425d",
+        "bytes": 1035
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1786,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "wht-royalty-general-rule",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:44:50.162Z",
+          "startedAtMonotonicMs": 91899.1734,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/sitemap",
+          "requestIdentitySha256": "7e964fb326f76640e8da469080672fe088af74b25b23ffaeba983766c209b0b0",
+          "captured": true
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company",
+          "requestIdentitySha256": "6cfce596b5e93f7e095598cc09c0f60e98269e1cf2eae1573fd34c008ae11704",
+          "captured": false
+        }
+      ],
+      "failureCode": "OFFLINE_REQUEST_OUTSIDE_CAPTURE_INVENTORY",
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 2,
+          "topicObservations": [
+            {
+              "topicId": "iras-withholding-tax",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": false,
+              "substantiveScopeIncomplete": true,
+              "admitted": true,
+              "literalVerified": false,
+              "topicCovered": true,
+              "needsReviewCandidate": false,
+              "candidateCount": 2,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            },
+            {
+              "topicId": "iras-withholding-tax-interest-royalties",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": false,
+              "substantiveScopeIncomplete": false,
+              "admitted": true,
+              "literalVerified": true,
+              "topicCovered": true,
+              "needsReviewCandidate": false,
+              "candidateCount": 2,
+              "state": "VERIFIED_LOCAL_RULE",
+              "expected": "EXPECTED_LOCAL_GAP"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_d4916850",
+              "subject": "withholding tax rules for royalties paid to non-resident companies",
+              "authority": "IRAS",
+              "domain": "IRAS_INCOME_TAX",
+              "population": "COMPANY",
+              "operation": "EXPLAIN_RULE",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": true,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED",
+              "gaps": [
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [
+                {
+                  "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+                  "quote": "Withholding tax on royalties, technical services and management fees paid to non-residents depends on the nature of the rights or services, where services are physically performed, recipient residence, treaty position and payment date. Services performed in Singapore can attract non-final withholding at the prevailing corporate income tax rate."
+                },
+                {
+                  "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+                  "quote": "Interest and other specified loan-related payments to a non-resident may be subject to Singapore withholding tax under Section 45. Confirm Singapore source, recipient status, applicable exemption or treaty relief, the payment date and the applicable rate before concluding that tax must be withheld."
+                }
+              ],
+              "sources": [
+                {
+                  "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+                  "sourceStatus": "VERIFIED",
+                  "provenance": "LOCAL_STATIC",
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                  "contentHash": "b14bf40ae98fd9c366c243f4acc0f1f6fe4e17e867d79b4f61fc6f484b8c4f14"
+                },
+                {
+                  "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+                  "sourceStatus": "VERIFIED",
+                  "provenance": "LOCAL_STATIC",
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                  "contentHash": "671dfe2aa7d45d888f81263ad10b6ad4f5b7d98ccfb8799a043b56c1780949b1"
+                }
+              ]
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_CORPORATE_TAX",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_d4916850",
+                  "subject": "withholding tax rules for royalties paid to non-resident companies",
+                  "authority": "IRAS",
+                  "domain": "IRAS_INCOME_TAX",
+                  "population": "COMPANY",
+                  "operation": "EXPLAIN_RULE",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": false,
+                    "admitted": false,
+                    "verified": false,
+                    "covered": false
+                  },
+                  "evidenceStatus": "INSUFFICIENT",
+                  "applicationStatus": "NOT_REQUIRED",
+                  "gaps": [
+                    "PROVIDER_ERROR"
+                  ],
+                  "retrievalAttempts": [],
+                  "verifiedClaims": [],
+                  "sources": []
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [],
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 2,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/sitemap",
+              "sourceUrl": "https://www.iras.gov.sg/sitemap",
+              "finalUrl": "https://www.iras.gov.sg/sitemap",
+              "status": "SUCCESS",
+              "contentHash": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+              "rawContentSha256": "7beaba297d4be985a02dbb33dd692ba4e81d9838de770ba0fd68de71ac68ea61",
+              "rawContentBytes": 412426,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": false,
+              "topicMatched": false,
+              "titleMatched": false,
+              "contentMatched": false
+            },
+            {
+              "url": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company",
+              "status": "THREW",
+              "topicValidationPresent": true,
+              "errorCode": "OFFLINE_REQUEST_OUTSIDE_CAPTURE_INVENTORY"
+            }
+          ],
+          "governedIssueObservations": [
+            {
+              "issueId": "general-wht-royalty-rules",
+              "authority": "IRAS",
+              "operation": "EXPLAIN_RULE",
+              "ruleEvidenceStatus": "INSUFFICIENT",
+              "providerError": true,
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "gaps": [
+                "PROVIDER_ERROR"
+              ],
+              "candidateCount": 2,
+              "candidateInventoryKind": "observed_through_call_records_plus_actual_returned_sources",
+              "candidateCountBasis": "distinct observed record IDs from through-call retriever groups scoped to actual mapped topics and actual returned issue sources",
+              "observedRecordIds": [
+                "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+                "ITA_SEC45_WITHHOLDING_TAX"
+              ],
+              "eligibleRecordIds": [
+                "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+                "ITA_SEC45_WITHHOLDING_TAX"
+              ],
+              "candidateRecordProvenanceCounts": {
+                "LOCAL_STATIC": 2
+              },
+              "transportBinding": {
+                "path": "production_through_call_unique_fetch_content_hash_binding",
+                "complete": true,
+                "reasons": [],
+                "liveSourceIds": [],
+                "boundSourceIds": [],
+                "observedAttempts": []
+              },
+              "actualReturnedSourceCount": 0,
+              "rejectedCount": 0,
+              "rejectedCandidates": [],
+              "verifiedClaimCount": 0,
+              "verifiedClaims": [],
+              "requestedConceptCoverage": false,
+              "evidenceQuality": {
+                "status": "LOCAL_SUFFICIENT",
+                "eligibleRecordIds": [
+                  "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+                  "ITA_SEC45_WITHHOLDING_TAX"
+                ],
+                "rejectedRecords": [],
+                "coveredTopicIds": [
+                  "iras-withholding-tax",
+                  "iras-withholding-tax-interest-royalties"
+                ],
+                "uncoveredTopicIds": [],
+                "requestedConcepts": [
+                  "withholding tax"
+                ],
+                "coveredConcepts": [
+                  "withholding tax"
+                ],
+                "uncoveredConcepts": []
+              },
+              "recordDiagnostics": [
+                {
+                  "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "de6c495592f4599d63ee8169cc6a1b6a836ec92078cad8acab0ded9d51567a48",
+                  "sourceTextBytes": 346,
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                  "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                  "contentHash": "b14bf40ae98fd9c366c243f4acc0f1f6fe4e17e867d79b4f61fc6f484b8c4f14",
+                  "tags": [
+                    "section 45a",
+                    "royalties withholding",
+                    "technical service fees",
+                    "management fees",
+                    "withholding non-resident"
+                  ]
+                },
+                {
+                  "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+                  "authority": "IRAS",
+                  "domain": "IRAS_TAX",
+                  "provenance": "LOCAL_STATIC",
+                  "sourceStatus": "VERIFIED",
+                  "lifecycleState": "ACTIVE",
+                  "sourceTextSha256": "b9bf684bb7bdae9a6579bfe72a65cc6706043848f3b795e9173c4727a004bb4e",
+                  "sourceTextBytes": 299,
+                  "documentTitle": "Income Tax Act 1947",
+                  "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                  "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                  "contentHash": "671dfe2aa7d45d888f81263ad10b6ad4f5b7d98ccfb8799a043b56c1780949b1",
+                  "tags": [
+                    "withholding tax",
+                    "section 45",
+                    "interest withholding",
+                    "non-resident interest",
+                    "15% final tax"
+                  ]
+                }
+              ],
+              "recordConflicts": []
+            }
+          ]
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "FAILED",
+        "fallbackUsed": false,
+        "failureChain": [
+          {
+            "stage": "INTERPRETATION",
+            "outcome": "FAILED"
+          },
+          {
+            "stage": "RETRIEVAL_INTEGRITY",
+            "code": "OFFLINE_REQUEST_OUTSIDE_CAPTURE_INVENTORY"
+          }
+        ],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1786,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "status": "FAILED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": false,
+        "SEMANTIC_DIMENSIONS": false,
+        "TOPIC_OWNERSHIP": false,
+        "REQUESTED_CONCEPT_OWNERSHIP": false,
+        "WORKSTREAM_ROUTING": false,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": false,
+        "EVIDENCE_ADMISSION": false,
+        "CLAIM_VERIFICATION": false,
+        "REQUESTED_CONCEPT_COVERAGE": false,
+        "APPLICATION_STATUS": false,
+        "OVERALL_STATUS": false,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "IRAS_GST",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax claims on business purchases",
+        "concepts": [
+          {
+            "concept": "input tax claim",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "GST-registered company",
+            "role": "CONTEXT_ONLY"
+          },
+          {
+            "concept": "business purchases",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "general GST input tax claim rules for business purchases",
+            "population": "COMPANY",
+            "domain": "IRAS_GST",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 1972,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "ba99932dc62998fd2d6a5ea9d0767347abdb68415605c74a49abd281d751358d",
+          "responseBytes": 1002
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIklSQVMiCiAgXSwKICAiY29udGV4dHVhbEF1dGhvcml0aWVzIjogW10sCiAgImRvbWFpbiI6ICJJUkFTX0dTVCIsCiAgInBvcHVsYXRpb24iOiAiQ09NUEFOWSIsCiAgInByaW1hcnlTdWJqZWN0IjogIkdTVCBpbnB1dCB0YXggY2xhaW1zIG9uIGJ1c2luZXNzIHB1cmNoYXNlcyIsCiAgImNvbmNlcHRzIjogWwogICAgewogICAgICAiY29uY2VwdCI6ICJpbnB1dCB0YXggY2xhaW0iLAogICAgICAicm9sZSI6ICJQUklNQVJZIgogICAgfSwKICAgIHsKICAgICAgImNvbmNlcHQiOiAiR1NULXJlZ2lzdGVyZWQgY29tcGFueSIsCiAgICAgICJyb2xlIjogIkNPTlRFWFRfT05MWSIKICAgIH0sCiAgICB7CiAgICAgICJjb25jZXB0IjogImJ1c2luZXNzIHB1cmNoYXNlcyIsCiAgICAgICJyb2xlIjogIlJFTEFURUQiCiAgICB9CiAgXSwKICAicmVxdWVzdGVkT3BlcmF0aW9uIjogIkVYUExBSU5fUlVMRSIsCiAgImZhY3RzRXhwbGljaXRseVByb3ZpZGVkIjogW10sCiAgImNvbmZpZGVuY2UiOiAxLjAsCiAgImlzc3VlcyI6IFsKICAgIHsKICAgICAgInN1YmplY3QiOiAiZ2VuZXJhbCBHU1QgaW5wdXQgdGF4IGNsYWltIHJ1bGVzIGZvciBidXNpbmVzcyBwdXJjaGFzZXMiLAogICAgICAicG9wdWxhdGlvbiI6ICJDT01QQU5ZIiwKICAgICAgImRvbWFpbiI6ICJJUkFTX0dTVCIsCiAgICAgICJnb3Zlcm5pbmdBdXRob3JpdGllcyI6IFsKICAgICAgICAiSVJBUyIKICAgICAgXSwKICAgICAgImNvbnRleHR1YWxBdXRob3JpdGllcyI6IFtdLAogICAgICAib3BlcmF0aW9uIjogIkVYUExBSU5fUlVMRSIsCiAgICAgICJtYXBwZWRUb3BpY0lkcyI6IFtdLAogICAgICAiZXZpZGVuY2VSZXF1aXJlbWVudCI6ICJBVVRIT1JJVEFUSVZFX1NPVVJDRSIsCiAgICAgICJjb25maWRlbmNlIjogMS4wCiAgICB9CiAgXQp9",
+        "sha256": "ba99932dc62998fd2d6a5ea9d0767347abdb68415605c74a49abd281d751358d",
+        "bytes": 1002
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1972,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "gst-input-tax-general-rule",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:45:05.416Z",
+          "startedAtMonotonicMs": 107153.3871,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [
+        {
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "requestIdentitySha256": "ca4a428029262989739a0b48ff490530acabcad66d71fa1c32201bec47fc8cb5",
+          "captured": true
+        },
+        {
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+          "requestIdentitySha256": "fe67dd1f2582ccc85bf2f649d2aec68b127295062d346cecc81069d4850ac1f8",
+          "captured": true
+        }
+      ],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 1,
+          "topicObservations": [
+            {
+              "topicId": "iras-gst-input-tax",
+              "governedWorkstreamObserved": true,
+              "noGoverningWorkstream": false,
+              "retrievalCompleted": true,
+              "noEligibleCandidate": false,
+              "substantiveScopeIncomplete": true,
+              "admitted": true,
+              "literalVerified": false,
+              "topicCovered": false,
+              "needsReviewCandidate": false,
+              "candidateCount": 1,
+              "state": "EXPECTED_LOCAL_GAP",
+              "expected": "EXPECTED_LOCAL_GAP"
+            }
+          ],
+          "issues": [
+            {
+              "issueId": "issue_63d7dce9",
+              "subject": "general GST input tax claim rules for business purchases",
+              "authority": "IRAS",
+              "domain": "IRAS_GST",
+              "population": "COMPANY",
+              "operation": "EXPLAIN_RULE",
+              "lifecycle": {
+                "requested": true,
+                "mapped": true,
+                "retrievalAttempted": true,
+                "evidenceFound": true,
+                "admitted": true,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED",
+              "gaps": [
+                "IRAS_SCOPE_NOT_COVERED",
+                "NO_VERIFIED_CLAIM",
+                "ISSUE_CONCEPT_UNCOVERED",
+                "ISSUE_CONCEPT_UNCOVERED"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "workstreams": [
+            {
+              "authority": "IRAS",
+              "domain": "IRAS_GST",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_63d7dce9",
+                  "subject": "general GST input tax claim rules for business purchases",
+                  "authority": "IRAS",
+                  "domain": "IRAS_GST",
+                  "population": "COMPANY",
+                  "operation": "EXPLAIN_RULE",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": true,
+                    "retrievalAttempted": true,
+                    "evidenceFound": true,
+                    "admitted": true,
+                    "verified": true,
+                    "covered": true
+                  },
+                  "evidenceStatus": "VERIFIED",
+                  "applicationStatus": "NOT_REQUIRED",
+                  "gaps": [],
+                  "retrievalAttempts": [
+                    {
+                      "topicId": "iras-gst-input-tax",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Conditions for Claiming Input Tax"
+                    },
+                    {
+                      "topicId": "iras-gst-input-tax",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "Invoicing Customers"
+                    }
+                  ],
+                  "verifiedClaims": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-gst-input-tax_780eec83478e",
+                      "quote": "When purchasing from GST-registered suppliers or importing goods into Singapore, you may have incurred GST (input tax). You can claim the input tax incurred when you satisfy all of the conditions for making such a claim."
+                    }
+                  ],
+                  "sources": [
+                    {
+                      "recordId": "LIVE_TOPIC_iras-gst-input-tax_780eec83478e",
+                      "sourceStatus": "NEEDS_REVIEW",
+                      "provenance": "LIVE_EXTERNAL",
+                      "documentTitle": "IRAS | Conditions for Claiming Input Tax",
+                      "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+                      "contentHash": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+                      "documentHash": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [
+            "UNROUTED_MATERIAL_CONCEPT"
+          ],
+          "candidateGroupCount": 1,
+          "candidateGroupRecordCount": 1,
+          "fetchValidationObservations": [
+            {
+              "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+              "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+              "status": "SUCCESS",
+              "pageTitle": "IRAS | Conditions for Claiming Input Tax",
+              "contentHash": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+              "rawContentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+              "rawContentBytes": 327887,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            },
+            {
+              "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+              "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+              "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+              "status": "SUCCESS",
+              "pageTitle": "Invoicing Customers",
+              "contentHash": "28b1dd80ca783b88da57d445543924b3c352f59f815400cfb737a886e5520a39",
+              "rawContentSha256": "28b1dd80ca783b88da57d445543924b3c352f59f815400cfb737a886e5520a39",
+              "rawContentBytes": 300279,
+              "contentHashBoundToObservedBytes": true,
+              "topicValidationPresent": true,
+              "topicMatched": true,
+              "titleMatched": true,
+              "contentMatched": true
+            }
+          ],
+          "governedIssueObservations": []
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "FAILED",
+        "fallbackUsed": false,
+        "failureChain": [
+          {
+            "stage": "INTERPRETATION",
+            "outcome": "FAILED"
+          }
+        ],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1972,
+            "retryScheduled": false
+          }
+        ]
+      }
+    },
+    {
+      "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+      "status": "PASSED",
+      "assessmentStatus": "PASSED",
+      "inventoryHealthy": true,
+      "stageVerdicts": {
+        "SEMANTIC_VALIDATION": true,
+        "SEMANTIC_ISSUE_IDENTITY": true,
+        "SEMANTIC_DIMENSIONS": true,
+        "TOPIC_OWNERSHIP": true,
+        "REQUESTED_CONCEPT_OWNERSHIP": true,
+        "WORKSTREAM_ROUTING": true,
+        "LOCAL_CAPABILITY": true,
+        "GOVERNED_RETRIEVAL": true,
+        "EVIDENCE_ADMISSION": true,
+        "CLAIM_VERIFICATION": true,
+        "REQUESTED_CONCEPT_COVERAGE": true,
+        "APPLICATION_STATUS": true,
+        "OVERALL_STATUS": true,
+        "INTEGRITY": true
+      },
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "ACCOUNTING",
+        "population": "UNKNOWN",
+        "primarySubject": "exploration and evaluation of mineral resources accounting rules under SFRS(I) 6",
+        "concepts": [
+          {
+            "concept": "exploration and evaluation",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "mineral resources",
+            "role": "RELATED"
+          },
+          {
+            "concept": "accounting standards",
+            "role": "CONTEXT_ONLY"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "general accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6",
+            "population": "UNKNOWN",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      },
+      "semanticUnderstanding": {
+        "mode": "SEMANTIC_INTERPRETATION",
+        "assessmentStatus": "PASSED",
+        "transportAttempts": [
+          {
+            "attempt": 1,
+            "status": 200,
+            "elapsedMs": 1546,
+            "retryScheduled": false
+          }
+        ],
+        "sendCount": 1,
+        "response": {
+          "parsed": true,
+          "valid": true,
+          "responseSha256": "b58132638316ae3af499906153b8584723c8545c8e8299172a853d85aea2d322",
+          "responseBytes": 1120
+        }
+      },
+      "semanticResponse": {
+        "base64": "ewogICJzY2hlbWFWZXJzaW9uIjogMiwKICAianVyaXNkaWN0aW9uIjogWwogICAgIlNpbmdhcG9yZSIKICBdLAogICJhdXRob3JpdHlDYW5kaWRhdGVzIjogWwogICAgIkFDQ09VTlRJTkdfU1RBTkRBUkRTIgogIF0sCiAgImNvbnRleHR1YWxBdXRob3JpdGllcyI6IFtdLAogICJkb21haW4iOiAiQUNDT1VOVElORyIsCiAgInBvcHVsYXRpb24iOiAiVU5LTk9XTiIsCiAgInByaW1hcnlTdWJqZWN0IjogImV4cGxvcmF0aW9uIGFuZCBldmFsdWF0aW9uIG9mIG1pbmVyYWwgcmVzb3VyY2VzIGFjY291bnRpbmcgcnVsZXMgdW5kZXIgU0ZSUyhJKSA2IiwKICAiY29uY2VwdHMiOiBbCiAgICB7CiAgICAgICJjb25jZXB0IjogImV4cGxvcmF0aW9uIGFuZCBldmFsdWF0aW9uIiwKICAgICAgInJvbGUiOiAiUFJJTUFSWSIKICAgIH0sCiAgICB7CiAgICAgICJjb25jZXB0IjogIm1pbmVyYWwgcmVzb3VyY2VzIiwKICAgICAgInJvbGUiOiAiUkVMQVRFRCIKICAgIH0sCiAgICB7CiAgICAgICJjb25jZXB0IjogImFjY291bnRpbmcgc3RhbmRhcmRzIiwKICAgICAgInJvbGUiOiAiQ09OVEVYVF9PTkxZIgogICAgfQogIF0sCiAgInJlcXVlc3RlZE9wZXJhdGlvbiI6ICJFWFBMQUlOX1JVTEUiLAogICJmYWN0c0V4cGxpY2l0bHlQcm92aWRlZCI6IFtdLAogICJjb25maWRlbmNlIjogMS4wLAogICJpc3N1ZXMiOiBbCiAgICB7CiAgICAgICJzdWJqZWN0IjogImdlbmVyYWwgYWNjb3VudGluZyBydWxlcyBmb3IgZXhwbG9yYXRpb24gYW5kIGV2YWx1YXRpb24gb2YgbWluZXJhbCByZXNvdXJjZXMgdW5kZXIgU0ZSUyhJKSA2IiwKICAgICAgInBvcHVsYXRpb24iOiAiVU5LTk9XTiIsCiAgICAgICJkb21haW4iOiAiQUNDT1VOVElORyIsCiAgICAgICJnb3Zlcm5pbmdBdXRob3JpdGllcyI6IFsKICAgICAgICAiQUNDT1VOVElOR19TVEFOREFSRFMiCiAgICAgIF0sCiAgICAgICJjb250ZXh0dWFsQXV0aG9yaXRpZXMiOiBbXSwKICAgICAgIm9wZXJhdGlvbiI6ICJFWFBMQUlOX1JVTEUiLAogICAgICAibWFwcGVkVG9waWNJZHMiOiBbXSwKICAgICAgImV2aWRlbmNlUmVxdWlyZW1lbnQiOiAiQVVUSE9SSVRBVElWRV9TT1VSQ0UiLAogICAgICAiY29uZmlkZW5jZSI6IDEuMAogICAgfQogIF0KfQ==",
+        "sha256": "b58132638316ae3af499906153b8584723c8545c8e8299172a853d85aea2d322",
+        "bytes": 1120
+      },
+      "providerAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1546,
+          "retryScheduled": false
+        }
+      ],
+      "providerRequests": [
+        {
+          "caseId": "unsupported-sfrsi-6-exploration-evaluation",
+          "attempt": 1,
+          "startedAtUtc": "2026-10-09T00:45:20.679Z",
+          "startedAtMonotonicMs": 122417.5904,
+          "status": 200
+        }
+      ],
+      "blockedNetworkAttempts": [],
+      "evidenceRequests": [],
+      "productionDiagnostics": {
+        "local": {
+          "available": true,
+          "runtimeStatus": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "referenceDate": "2026-10-08",
+          "candidateGroupCount": 0,
+          "candidateGroupRecordCount": 0,
+          "topicObservations": [],
+          "issues": [
+            {
+              "issueId": "issue_1a503a27",
+              "subject": "general accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6",
+              "authority": "ACCOUNTING_STANDARDS",
+              "domain": "ACCOUNTING",
+              "population": "UNKNOWN",
+              "operation": "EXPLAIN_RULE",
+              "lifecycle": {
+                "requested": true,
+                "mapped": false,
+                "retrievalAttempted": false,
+                "evidenceFound": false,
+                "admitted": false,
+                "verified": false,
+                "covered": false
+              },
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED",
+              "gaps": [
+                "NO_COVERAGE_TOPIC"
+              ],
+              "retrievalAttempts": [],
+              "verifiedClaims": [],
+              "sources": []
+            }
+          ]
+        },
+        "governed": {
+          "available": true,
+          "status": "INSUFFICIENT",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "workstreams": [
+            {
+              "authority": "ACCOUNTING_STANDARDS",
+              "domain": "ACCOUNTING",
+              "issueCount": 1,
+              "issues": [
+                {
+                  "issueId": "issue_1a503a27",
+                  "subject": "general accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6",
+                  "authority": "ACCOUNTING_STANDARDS",
+                  "domain": "ACCOUNTING",
+                  "population": "UNKNOWN",
+                  "operation": "EXPLAIN_RULE",
+                  "lifecycle": {
+                    "requested": true,
+                    "mapped": false,
+                    "retrievalAttempted": false,
+                    "evidenceFound": false,
+                    "admitted": false,
+                    "verified": false,
+                    "covered": false
+                  },
+                  "evidenceStatus": "INSUFFICIENT",
+                  "applicationStatus": "NOT_REQUIRED",
+                  "gaps": [
+                    "NO_COVERAGE_TOPIC"
+                  ],
+                  "retrievalAttempts": [],
+                  "verifiedClaims": [],
+                  "sources": []
+                }
+              ]
+            }
+          ],
+          "topLevelGaps": [
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+            "UNROUTED_MATERIAL_CONCEPT",
+            "UNROUTED_MATERIAL_CONCEPT"
+          ],
+          "candidateGroupCount": 0,
+          "candidateGroupRecordCount": 0,
+          "fetchValidationObservations": [],
+          "governedIssueObservations": [
+            {
+              "source": "actual_issue_plan_and_governed_runtime",
+              "coverageStatus": "NO_COVERAGE_TOPIC",
+              "irAsWorkstreamCount": 0,
+              "plannedIrasIssueCount": 0,
+              "plannedIrasTopicIds": [],
+              "candidateCount": 0,
+              "claimCount": 0,
+              "observedRecordIds": [],
+              "recordConflicts": []
+            }
+          ]
+        }
+      },
+      "failureDiagnostics": {
+        "providerOutcome": "RESPONSE_RECEIVED",
+        "assessmentStatus": "PASSED",
+        "fallbackUsed": false,
+        "failureChain": [],
+        "providerAttempts": [
+          {
+            "attempt": 1,
+            "httpStatus": 200,
+            "elapsedMs": 1546,
+            "retryScheduled": false
+          }
+        ]
+      }
+    }
+  ],
+  "passedCaseCount": 5,
+  "failedCaseCount": 4
+}

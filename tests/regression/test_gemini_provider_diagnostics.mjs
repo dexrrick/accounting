@@ -23,6 +23,51 @@ async function withFetch(fetchImpl, run) {
   }
 }
 
+async function flushTransportObservers() {
+  await new Promise(resolve => setTimeout(resolve, 0));
+}
+
+async function flushMicrotasks() {
+  for (let turn = 0; turn < 10; turn += 1) await Promise.resolve();
+}
+
+async function withVirtualTime(run) {
+  const originalNow = Date.now;
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  let currentTime = 1_000_000;
+  let nextTimerId = 0;
+  const timers = new Map();
+  Date.now = () => currentTime;
+  globalThis.setTimeout = (callback, delay = 0, ...args) => {
+    const timerId = ++nextTimerId;
+    timers.set(timerId, { timerId, dueAt: currentTime + Math.max(0, Number(delay) || 0), callback, args });
+    return timerId;
+  };
+  globalThis.clearTimeout = timerId => { timers.delete(timerId); };
+  const advanceBy = async milliseconds => {
+    const target = currentTime + milliseconds;
+    while (true) {
+      const next = [...timers.values()].filter(timer => timer.dueAt <= target)
+        .sort((left, right) => left.dueAt - right.dueAt || left.timerId - right.timerId)[0];
+      if (!next) break;
+      timers.delete(next.timerId);
+      currentTime = next.dueAt;
+      next.callback(...next.args);
+      await flushMicrotasks();
+    }
+    currentTime = target;
+    await flushMicrotasks();
+  };
+  try {
+    await run({ advanceBy, now: () => currentTime });
+  } finally {
+    Date.now = originalNow;
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
+}
+
 async function expectGenericFailure(provider, options = {}) {
   await assert.rejects(
     () => executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, provider, options),
@@ -347,6 +392,254 @@ await withFetch(async () => ({
   clone() { throw new Error('body should not be read when diagnostics are disabled'); }
 }), async () => {
   await expectGenericFailure(SECRET);
+});
+
+let exhaustedCalls = 0;
+await withFetch(async () => { exhaustedCalls += 1; return new Response('overloaded', { status: 503 }); }, async () => {
+  const attempts = [];
+  await assert.rejects(() => executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  }), /Gemini API request failed with HTTP 503\./);
+  await flushTransportObservers();
+  assert.equal(attempts.length, 2, 'opted-in Gemini calls use at most two total attempts');
+  assert.deepEqual(attempts.map(item => [item.attempt, item.status, item.failureCategory, item.retryScheduled]), [
+    [1, 503, 'HTTP_STATUS', true], [2, 503, 'HTTP_STATUS', false]
+  ]);
+  assert.ok(attempts.every(item => Number.isFinite(item.elapsedMs) && item.elapsedMs >= 0));
+  assert.equal(exhaustedCalls, 2);
+});
+
+await withFetch((() => {
+  let calls = 0;
+  return async () => {
+    calls += 1;
+    return calls === 1
+      ? new Response('temporary overload', { status: 503 })
+      : new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'recovered' }] } }] }), { status: 200 });
+  };
+})(), async () => {
+  const attempts = [];
+  const result = await executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  });
+  assert.equal(result, 'recovered');
+  await flushTransportObservers();
+  assert.deepEqual(attempts.map(item => [item.attempt, item.status, item.retryScheduled]), [[1, 503, true], [2, 200, false]]);
+});
+
+await withFetch((() => {
+  let calls = 0;
+  return async (_input, init = {}) => {
+    calls += 1;
+    if (calls === 1) return new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+    });
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'recovered after timeout' }] } }] }), { status: 200 });
+  };
+})(), async () => {
+  const attempts = [];
+  const startedAt = Date.now();
+  const result = await executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    timeoutMs: 25,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  });
+  assert.equal(result, 'recovered after timeout');
+  await flushTransportObservers();
+  assert.deepEqual(attempts.map(item => [item.attempt, item.failureCategory, item.retryScheduled]), [
+    [1, 'TIMEOUT', true], [2, undefined, false]
+  ]);
+  assert.ok(Date.now() - startedAt < 45_000, 'the total retry path remains inside the 45-second wall-time budget');
+});
+
+await withVirtualTime(async clock => {
+  let resolveFetch;
+  let fetchSignal;
+  await withFetch((_input, init = {}) => {
+    fetchSignal = init.signal;
+    return new Promise(resolve => { resolveFetch = resolve; });
+  }, async () => {
+    const attempts = [];
+    const pending = executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+      retryGeminiTransientFailures: true,
+      geminiRetryBudget: 'EXTENDED',
+      timeoutMs: 20_000,
+      onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+    });
+    await flushMicrotasks();
+    await clock.advanceBy(9_250);
+    assert.equal(fetchSignal.aborted, false, 'a valid response may take longer than the former eight-second timeout');
+    resolveFetch(new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: 'slow but valid' }] } }] }), { status: 200 }));
+    assert.equal(await pending, 'slow but valid');
+    await clock.advanceBy(0);
+    assert.deepEqual(attempts.map(item => [item.attempt, item.elapsedMs, item.retryScheduled]), [[1, 9_250, false]]);
+  });
+});
+
+const originalRandom = Math.random;
+Math.random = () => 0;
+try {
+  await withVirtualTime(async clock => {
+    let timeoutCalls = 0;
+    await withFetch(async () => {
+      timeoutCalls += 1;
+      return new Promise(() => {});
+    }, async () => {
+      const attempts = [];
+      const startedAt = clock.now();
+      const pending = executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+        retryGeminiTransientFailures: true,
+        geminiRetryBudget: 'EXTENDED',
+        timeoutMs: 45_000,
+        onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+      }).then(value => ({ value }), error => ({ error }));
+      await flushMicrotasks();
+      await clock.advanceBy(20_500);
+      assert.equal(timeoutCalls, 2, 'the timeout retry begins after the existing 500ms minimum jitter delay');
+      await clock.advanceBy(20_000);
+      const outcome = await pending;
+      assert.match(outcome.error?.message || '', /timed out/i);
+      await clock.advanceBy(0);
+      assert.equal(timeoutCalls, 2, 'a two-attempt request remains capped at two physical calls');
+      assert.deepEqual(attempts.map(item => [item.attempt, item.elapsedMs, item.failureCategory, item.retryScheduled]), [
+        [1, 20_000, 'TIMEOUT', true], [2, 20_000, 'TIMEOUT', false]
+      ]);
+      assert.ok(clock.now() - startedAt <= 45_000,
+        'both 20-second attempts plus the existing backoff remain inside the 45-second total budget');
+    });
+  });
+} finally {
+  Math.random = originalRandom;
+}
+
+await withFetch(async () => new Response('invalid configuration', { status: 400 }), async () => {
+  const attempts = [];
+  await expectGenericFailure(SECRET, {
+    retryGeminiTransientFailures: true,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  });
+  await flushTransportObservers();
+  assert.equal(attempts.length, 1, 'permanent 4xx configuration errors are not retried');
+  assert.equal(attempts[0].retryScheduled, false);
+});
+
+let noOptInCalls = 0;
+await withFetch(async () => { noOptInCalls += 1; return new Response('overloaded', { status: 503 }); }, async () => {
+  const attempts = [];
+  await assert.rejects(() => executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  }), /Gemini API request failed with HTTP 503\./);
+  assert.equal(noOptInCalls, 1, 'Gemini callers keep the original single-attempt default');
+  assert.equal(attempts.length, 0, 'transport diagnostics and retries remain opt-in');
+});
+
+let networkCalls = 0;
+await withFetch(async () => { networkCalls += 1; throw new TypeError('network unavailable'); }, async () => {
+  const attempts = [];
+  await assert.rejects(() => executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  }), /network unavailable/);
+  await flushTransportObservers();
+  assert.equal(networkCalls, 1, 'network failures outside the approved status and timeout set are not retried');
+  assert.equal(attempts[0].failureCategory, 'NETWORK_ERROR');
+  assert.equal(attempts[0].retryScheduled, false);
+});
+
+let openAiCalls = 0;
+await withFetch(async () => { openAiCalls += 1; return new Response('overloaded', { status: 503 }); }, async () => {
+  const openai = {
+    activeProvider: 'openai',
+    azure: { endpoint: '', apiKey: '', deploymentName: '', apiVersion: '' },
+    gemini: { apiKey: SECRET, model: 'gemini-3.5-flash-lite' },
+    openai: { apiKey: 'synthetic-openai-key', model: 'gpt-4o', baseUrl: 'https://api.openai.com/v1' }
+  };
+  const attempts = [];
+  await assert.rejects(() => executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, openai, {
+    retryGeminiTransientFailures: true,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  }), /OpenAI request failed with HTTP 503\./);
+  assert.equal(openAiCalls, 1, 'Gemini retry settings do not change other-provider transport calls');
+  assert.equal(attempts.length, 0, 'the Gemini retry opt-in does not alter other providers');
+});
+
+await withFetch(async (_input, init = {}) => new Promise((_resolve, reject) => {
+  init.signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')), { once: true });
+}), async () => {
+  const controller = new AbortController();
+  const attempts = [];
+  const pending = executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    signal: controller.signal,
+    timeoutMs: 2_000,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  });
+  setTimeout(() => controller.abort(), 10);
+  await assert.rejects(pending, /cancelled/i);
+  await flushTransportObservers();
+  assert.equal(attempts.length, 1, 'external cancellation does not start a second call');
+  assert.equal(attempts[0].failureCategory, 'CANCELLED');
+  assert.equal(attempts[0].retryScheduled, false);
+});
+
+let cancelledBackoffCalls = 0;
+await withFetch(async () => {
+  cancelledBackoffCalls += 1;
+  return new Response('overloaded', { status: 503 });
+}, async () => {
+  const controller = new AbortController();
+  const attempts = [];
+  const pending = executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    signal: controller.signal,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  });
+  setTimeout(() => controller.abort(), 25);
+  await assert.rejects(pending, /cancelled/i);
+  await flushTransportObservers();
+  assert.equal(cancelledBackoffCalls, 1, 'cancellation during retry backoff prevents the second physical call');
+  assert.deepEqual(attempts.map(item => [item.attempt, item.retryScheduled]), [[1, true]]);
+});
+
+let neverSettlingCalls = 0;
+await withFetch(async () => {
+  neverSettlingCalls += 1;
+  return new Promise(() => {});
+}, async () => {
+  const attempts = [];
+  const startedAt = Date.now();
+  await assert.rejects(() => executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    timeoutMs: 25,
+    onTransportAttemptDiagnostic: diagnostic => attempts.push(diagnostic)
+  }), /timed out/i);
+  await flushTransportObservers();
+  assert.equal(neverSettlingCalls, 2, 'a fetch that ignores AbortSignal is bounded to the two-attempt limit');
+  assert.deepEqual(attempts.map(item => [item.attempt, item.failureCategory, item.retryScheduled]), [
+    [1, 'TIMEOUT', true], [2, 'TIMEOUT', false]
+  ]);
+  assert.ok(Date.now() - startedAt < 3_000, 'unresponsive fetches remain bounded by per-attempt deadlines plus one backoff');
+});
+
+await withFetch(async () => new Response('overloaded', { status: 503 }), async () => {
+  const attempts = [];
+  await assert.rejects(() => executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    onTransportAttemptDiagnostic: () => { throw new Error(SECRET); }
+  }), /Gemini API request failed with HTTP 503\./);
+  await executeStructuredLlmCall(PROMPT_SECRET, SYSTEM_SECRET, SECRET, {
+    retryGeminiTransientFailures: true,
+    onTransportAttemptDiagnostic: async diagnostic => {
+      attempts.push(diagnostic);
+      throw new Error(PROMPT_SECRET);
+    }
+  }).catch(() => undefined);
+  await flushTransportObservers();
+  assert.ok(attempts.length > 0, 'asynchronous observer failures do not suppress diagnostics or alter transport behavior');
+  assert.equal(JSON.stringify(attempts).includes(SECRET), false, 'transport diagnostics never expose API keys');
+  assert.equal(JSON.stringify(attempts).includes(PROMPT_SECRET), false, 'transport diagnostics never expose prompts');
 });
 
 console.log('Gemini provider diagnostics are opt-in, bounded, and redact untrusted provider content.');

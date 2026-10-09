@@ -3,7 +3,7 @@ import type { SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import type { ProviderSettings } from '../types/provider';
-import { executeStructuredLlmCall } from './aiTransport';
+import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
 import {
   getRoutingChildTopicIdsMentionedInSubject,
   getRoutingParentIdsForChild,
@@ -180,6 +180,10 @@ export type SemanticQuestionInterpretationV2 = Omit<SemanticQuestionInterpretati
 
 export interface SemanticQuestionUnderstanding {
   mode: QuestionUnderstandingMode;
+  /** Whether the model returned a response that could be assessed against the semantic contract. */
+  assessmentStatus?: 'PASSED' | 'FAILED' | 'NOT_ASSESSED';
+  /** Redacted per-attempt transport outcomes; provider bodies and request content are never included. */
+  transportAttempts?: readonly TransportAttemptDiagnostic[];
   interpretation?: SemanticQuestionInterpretation;
   failure?: 'NO_PROVIDER' | 'INVALID_RESPONSE' | 'LOW_CONFIDENCE' | 'TIMEOUT' | 'PROVIDER_ERROR' | 'RATE_LIMITED' | 'QUERY_TOO_LONG';
   failureReason?: 'RESPONSE_TOO_LARGE' | 'MALFORMED_JSON' | 'CONTRADICTORY_FIELDS' | 'SCHEMA_MISMATCH';
@@ -202,6 +206,12 @@ export interface RequestedQuestionConcept {
   label: string;
   terms: string[];
   topicIds: string[];
+  /** Present only for concepts projected from validated semantic labels. */
+  role?: SemanticConceptRole;
+  /** Broad semantic context for safely attributing a topicless diagnostic. */
+  semanticDomain?: SemanticQuestionDomain;
+  semanticPopulation?: SemanticPopulation;
+  semanticAuthorities?: SemanticAuthority[];
 }
 
 const POPULATIONS = new Set<SemanticPopulation>(SEMANTIC_POPULATION_VALUES);
@@ -347,6 +357,41 @@ function semanticAuthorityCoversTopic(authorities: SemanticAuthority[], topicAut
   return topicAuthorities.some(authority => accepted.has(authority));
 }
 
+const GST_INPUT_TAX_RECOVERY_SUBJECT_WORDS = new Set([
+  'a', 'an', 'the', 'this', 'that', 'general', 'condition', 'conditions', 'rule', 'rules', 'input', 'tax', 'claim',
+  'claims', 'claiming', 'claimed', 'recover', 'recovery', 'recoverable', 'recovering', 'recovered', 'business',
+  'businesses', 'purchase', 'purchases', 'purchasing', 'company', 'companies', 'corporate', 'corporation',
+  'corporations', 'entity', 'entities', 'singapore', 'gst', 'registered', 'of', 'and', 'or', 'to', 'for', 'on',
+  'by', 'from', 'in', 'as', 'under', 'with', 'may', 'be', 'is', 'are', 'subject'
+]);
+const normalizeGstInputTaxText = (value: string) => value.toLowerCase().normalize('NFKD')
+  .replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+function isGstInputTaxRecoverySubject(subject: string): boolean {
+  const normalizedSubject = normalizeGstInputTaxText(subject);
+  return /\binput tax\b/.test(normalizedSubject) && /\b(?:claim\w*|recover\w*)\b/.test(normalizedSubject);
+}
+
+/** Text anchors shared by the narrow GST query-to-issue binding and its concept ownership checks. */
+export function hasBoundedGstInputTaxRecoveryAnchors(query: string, subject: string): boolean {
+  const normalizedQuery = normalizeGstInputTaxText(query);
+  const normalizedSubject = normalizeGstInputTaxText(subject);
+  const subjectWords = normalizedSubject.split(' ').filter(Boolean);
+  const prohibited = /\b(?:unregistered|nonregistered|not registered|output|exempt\w*|eligible|qualif\w*|blocked|disallowed|private|personal|dividend|residen(?:ce|cy|t)|filing|reporting|accounting|journal|payroll|registration|register(?:ing)?)\b/;
+  const additionalOutcome = /\band\s+(?:also\s+)?(?:explain|determine|assess|calculate|compute|prepare|account for|record|report|file|claim|what|how|whether)\b/;
+  const negatedRegistration = /\b(?:not|never|no longer)\b.{0,35}\bgst registered company\b/;
+  const conditionalRegistration = /\b(?:if|whether|when|once|unless|until)\b.{0,55}\b(?:is|are|be|becomes?|became|becoming|gets?|got|will be|would be|could be|might be|may be|register(?:s|ed|ing)?)\b.{0,25}\bgst registered company\b/;
+  const uncertainRegistration = /\b(?:may|might|could|possibly|perhaps|not sure)\b.{0,40}\bgst registered company\b/;
+  const futureRegistration = /\b(?:will|would|plans? to|intends? to|expects? to|aims? to|hopes? to|is planning to|are planning to|has plans to)\b.{0,35}\b(?:be|become|becomes?|becoming|gets?|register(?:s|ed|ing)?)\b.{0,25}\bgst registered company\b/;
+  return subjectWords.length > 0 && subjectWords.every(word => GST_INPUT_TAX_RECOVERY_SUBJECT_WORDS.has(word)) &&
+    /\bgst registered company\b/.test(normalizedQuery) && /\binput tax\b/.test(normalizedQuery) &&
+    /\bbusiness purchases?\b/.test(normalizedQuery) && isGstInputTaxRecoverySubject(normalizedSubject) &&
+    !prohibited.test(normalizedQuery) && !prohibited.test(normalizedSubject) &&
+    !additionalOutcome.test(normalizedQuery) && !negatedRegistration.test(normalizedQuery) &&
+    !conditionalRegistration.test(normalizedQuery) && !uncertainRegistration.test(normalizedQuery) &&
+    !futureRegistration.test(normalizedQuery);
+}
+
 export function canonicalAccountingWorkstreamAuthority(
   domain: SemanticQuestionDomain,
   authority: SemanticAuthority
@@ -355,20 +400,29 @@ export function canonicalAccountingWorkstreamAuthority(
 }
 
 function resolveIssueTopicIds(
+  query: string,
   subject: string,
   domain: SemanticQuestionDomain,
   population: SemanticPopulation,
+  operation: SemanticQuestionOperation,
   governingAuthorities: SemanticAuthority[],
-  independentlyRecognizedTopicIds: ReadonlySet<string>
+  independentlyRecognizedTopicIds: ReadonlySet<string>,
+  issueCount: number
 ): { mappedTopicIds: string[]; routingChildTopicIds: string[] } {
   const allowedDomains = topicDomainsForIssue(domain, population);
   const subjectTopicIds = defaultQueryTopicResolver.decomposeQuery(subject).topics.map(topic => topic.id);
   const subjectTopics = getCoverageTopicsByIds(subjectTopicIds);
+  const bindRecognizedGstTopic = domain === 'IRAS_GST' && population === 'COMPANY' && operation === 'EXPLAIN_RULE' &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'IRAS' && issueCount === 1 &&
+    independentlyRecognizedTopicIds.has('iras-gst-input-tax') && hasBoundedGstInputTaxRecoveryAnchors(query, subject);
+  const topicsForMapping = bindRecognizedGstTopic
+    ? [...new Map([...subjectTopics, ...getCoverageTopicsByIds(['iras-gst-input-tax'])].map(topic => [topic.id, topic])).values()]
+    : subjectTopics;
   const routingChildTopicIds = [...new Set([
-    ...subjectTopics.filter(topic => getRoutingParentIdsForChild(topic.id).length > 0).map(topic => topic.id),
+    ...topicsForMapping.filter(topic => getRoutingParentIdsForChild(topic.id).length > 0).map(topic => topic.id),
     ...getRoutingChildTopicIdsMentionedInSubject(subject)
   ])].sort();
-  const eligibleTopics = subjectTopics.filter(topic =>
+  const eligibleTopics = topicsForMapping.filter(topic =>
     allowedDomains.includes(topic.domainId) &&
     semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain));
   const childParents = new Set(routingChildTopicIds.flatMap(getRoutingParentIdsForChild));
@@ -566,7 +620,7 @@ mappedTopicIds are optional candidate hints; the application derives candidates 
 
 For compound questions, decompose every distinct material outcome the user asks about into its own issue. An issue represents a requested answer or decision, not every noun, fact, or authority mentioned. Do not omit an issue because another authority or topic is more prominent. When the question asks separately about obligations or treatment for different parties, represent those as separate issues when their outcomes can differ; do not merge them just because they share a governing authority or domain. Multiple issues may have the same governing authority but different domains, populations, or operations. Assign exactly one governing authority to each issue and ensure it matches the issue domain. Put an authority in contextualAuthorities only when it is relevant context for that issue but does not govern it; merely mentioning an authority must not create an issue or workstream. Use UNKNOWN rather than inventing unsupported certainty. If a compound question has no single accurate top-level domain or population, set the top-level domain and population to UNKNOWN and put the precise values on issues[]. Use authorityCandidates=[UNKNOWN] when no single top-level authority set applies; never mix UNKNOWN with other top-level authority values.
 
-Separate requested outcomes from background facts and context. Mentioning that an expense was recorded under IFRS/SFRS(I), or that an accounting standard was applied, is context when the user asks only about tax deductibility; create an accounting issue only when the user asks how to recognize, present, measure, disclose, or journalize it. Distinguish a company acting as employer from the company as corporate taxpayer: employer reporting obligations are not the same outcome as company tax deductibility. A company/COMPANY population applies only when the company's own tax position is requested.
+Role semantics: PRIMARY is the main requested outcome; RELATED is a material descriptor or related concept and does not itself require another issue; CONTEXT_ONLY is background. Create separate issues only for independently requested outcomes whose answers may differ. Keep different parties' outcomes separate and distinguish employer duties from company tax. A standard or accounting treatment mentioned only as tax context creates no accounting issue; add one only for a requested recognition, measurement, presentation, disclosure, or journal outcome.
 
 Classify each issue by the subject of the requested outcome. An employee's personal relief claim or salary/employment-income tax is individual income tax (IRAS); an employee benefit/perquisite tax question is employment-benefit tax (IRAS). EMPLOYEE alone does not imply a taxable benefit. Employer reporting is a separate issue only when the employer's reporting duty is requested; if the reporter is not established, use population=UNKNOWN rather than assuming the employee or company is the reporter. A company acting as employer for employment reporting has population=EMPLOYER; COMPANY is reserved for the company's own tax position. An employee's own CPF contribution amount and an employer's CPF contribution amount are separate payroll issues when both are requested.
 
@@ -588,29 +642,54 @@ export async function interpretSemanticQuestion(
   provider?: ProviderSettings | string,
   callStructured: typeof executeStructuredLlmCall = executeStructuredLlmCall
 ): Promise<SemanticQuestionUnderstanding> {
-  if (!hasConfiguredProvider(provider)) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' };
-  if (query.length > 6_000) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'QUERY_TOO_LONG' };
+  const transportAttempts: TransportAttemptDiagnostic[] = [];
+  if (!hasConfiguredProvider(provider)) return {
+    mode: 'DETERMINISTIC_FALLBACK', assessmentStatus: 'NOT_ASSESSED', transportAttempts, failure: 'NO_PROVIDER'
+  };
+  if (query.length > 6_000) return {
+    mode: 'DETERMINISTIC_FALLBACK', assessmentStatus: 'NOT_ASSESSED', transportAttempts, failure: 'QUERY_TOO_LONG'
+  };
   const prompt = `${RESPONSE_SCHEMA}\n\nInterpret this question:\n${query}`;
+  // Injected transports own dispatch and retry policy; keep their established
+  // four-option wire contract stable for archived evaluation senders.
+  const structuredOptions = {
+    jsonMode: true,
+    responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+    timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
+    temperature: 0,
+    ...(callStructured === executeStructuredLlmCall ? {
+      retryGeminiTransientFailures: true,
+      captureTransportAttemptDiagnostics: transportAttempts
+    } : {})
+  };
   try {
-    const response = await callStructured(prompt, SYSTEM_INSTRUCTION, provider, {
-      jsonMode: true,
-      responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
-      timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
-      temperature: 0
-    });
-    if (response.length > 16_000) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE', failureReason: 'RESPONSE_TOO_LARGE' };
+    const response = await callStructured(prompt, SYSTEM_INSTRUCTION, provider, structuredOptions);
+    if (response.length > 16_000) return {
+      mode: 'DETERMINISTIC_FALLBACK', assessmentStatus: 'FAILED', transportAttempts,
+      failure: 'INVALID_RESPONSE', failureReason: 'RESPONSE_TOO_LARGE'
+    };
     let raw: unknown;
     try { raw = JSON.parse(response); } catch {
-      return { mode: 'DETERMINISTIC_FALLBACK', failure: 'INVALID_RESPONSE', failureReason: 'MALFORMED_JSON' };
+      return {
+        mode: 'DETERMINISTIC_FALLBACK', assessmentStatus: 'FAILED', transportAttempts,
+        failure: 'INVALID_RESPONSE', failureReason: 'MALFORMED_JSON'
+      };
     }
     const interpretation = validateSemanticQuestionInterpretation(raw, query);
     if (!interpretation) return {
       mode: 'DETERMINISTIC_FALLBACK',
+      assessmentStatus: 'FAILED',
+      transportAttempts,
       failure: 'INVALID_RESPONSE',
       failureReason: hasSemanticContractContradiction(raw) ? 'CONTRADICTORY_FIELDS' : 'SCHEMA_MISMATCH'
     };
-    if (interpretation.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return { mode: 'DETERMINISTIC_FALLBACK', failure: 'LOW_CONFIDENCE' };
-    return { mode: 'SEMANTIC_INTERPRETATION', interpretation: normalizeGeneralCompanyTaxResidencyRuleInterpretation(query, interpretation) };
+    if (interpretation.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return {
+      mode: 'DETERMINISTIC_FALLBACK', assessmentStatus: 'FAILED', transportAttempts, failure: 'LOW_CONFIDENCE'
+    };
+    return {
+      mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', transportAttempts,
+      interpretation: normalizeGeneralCompanyTaxResidencyRuleInterpretation(query, interpretation)
+    };
   } catch (error) {
     // aiTransport deliberately withholds provider bodies and includes only the HTTP status.
     // Preserve 429 as a transport outcome so callers can retry without scoring it as model quality.
@@ -620,6 +699,8 @@ export async function interpretSemanticQuestion(
     const providerStatus = providerStatusMatch ? Number(providerStatusMatch[1]) : undefined;
     return {
       mode: 'DETERMINISTIC_FALLBACK',
+      assessmentStatus: 'NOT_ASSESSED',
+      transportAttempts,
       failure: providerStatus === 429
         ? 'RATE_LIMITED'
         : error instanceof Error && /abort|timed\s*out|timeout/i.test(error.message) ? 'TIMEOUT' : 'PROVIDER_ERROR',
@@ -916,8 +997,9 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
   const semanticLabels = semantic?.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept) || [];
   const text = `${query} ${semantic?.primarySubject || ''} ${semanticLabels.join(' ')}`.toLowerCase();
   const concepts: RequestedQuestionConcept[] = [];
-  const add = (id: string, label: string, terms: string[], topicIds: string[]) => {
-    if (!concepts.some(item => item.id === id)) concepts.push({ id, label, terms, topicIds });
+  const add = (id: string, label: string, terms: string[], topicIds: string[], metadata?: Pick<RequestedQuestionConcept,
+    'role' | 'semanticDomain' | 'semanticPopulation' | 'semanticAuthorities'>) => {
+    if (!concepts.some(item => item.id === id)) concepts.push({ id, label, terms, topicIds, ...(metadata || {}) });
   };
   const personalReliefContext = /\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\b|\bpersonal\s+relief\b/i.test(text) ||
     /\b(?:srs|cpf)\b/i.test(text) && /\b(?:relief|tax\s+cap|relief\s+cap)\b/i.test(text);
@@ -970,11 +1052,19 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
   const hasSingleCompanyIncomeTaxIssue = semantic?.domain === 'IRAS_INCOME_TAX' && semantic.population === 'COMPANY' &&
     (!semantic.issues || semantic.issues.length === 1 && semantic.issues[0].domain === 'IRAS_INCOME_TAX' &&
       semantic.issues[0].population === 'COMPANY' && semantic.issues[0].governingAuthorities.includes('IRAS'));
+  const hasForeignDividendReceiptDirection =
+    /\b(?:received|receiving|receipt)\b[^.!?]{0,70}\bdividends?\b/i.test(query) ||
+    /\bdividends?\b[^.!?]{0,70}\b(?:received|receiving|receipt)\b/i.test(query);
+  const hasForeignOriginInQuestion =
+    /\b(?:foreign(?:[\s-]+sourced)?|overseas)\s+dividends?\b/i.test(query) ||
+    /\bSingapore company\b.{0,65}\breceiv\w*\b.{0,60}\bdividends?\b.{0,80}\bThai subsidiary\b/i.test(query);
   const asksGeneralForeignDividendReceiptTreatment = hasSingleCompanyIncomeTaxIssue &&
-    /\bdividends?\b/i.test(query) && /\b(?:received|receipt|receiving)\b/i.test(query) &&
+    hasForeignDividendReceiptDirection && hasForeignOriginInQuestion &&
     /\b(?:treatment|taxable|tax|income tax)\b/i.test(query) &&
-    /\bforeign\s+dividend\b/i.test(text) &&
-    !/\b(?:exempt(?:ions?|ed|ing)?|tax[\s-]free|underlying tax|qualif\w+)\b/i.test(query);
+    /\b(?:foreign(?:[\s-]+sourced)?|overseas)\s+dividends?\b/i.test(text) &&
+    !/\b(?:exempt(?:ions?|ed|ing)?|tax[\s-]free|underlying tax|qualif\w+)\b/i.test(query) &&
+    !/\band\s+(?:also\s+)?(?:explain|determine|assess|calculate|compute|prepare|what|how|whether)\b/i.test(query) &&
+    !/\bcompany\b[^.!?]{0,70}\b(?:paid|distributed)\b[^.!?]{0,50}\bdividends?\b/i.test(query);
   if (asksGeneralForeignDividendReceiptTreatment) {
     add('foreign_dividend_receipt_tax_treatment', 'Tax treatment of foreign dividend receipt',
       ['foreign dividend receipt', 'foreign-sourced income', 'dividend received in Singapore'], ['iras-foreign-sourced-income']);
@@ -1023,7 +1113,13 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
       .map(topic => topic.id);
     if (mappedTopics.some(topicId => concepts.some(concept => concept.topicIds.includes(topicId)))) continue;
     const id = `semantic_${normalized.replace(/\s+/g, '_').slice(0, 48)}`;
-    add(id, label, [label], mappedTopics);
+    const semanticConcept = semantic?.concepts.find(item => item.concept === label);
+    add(id, label, [label], mappedTopics, semantic ? {
+      ...(semanticConcept ? { role: semanticConcept.role } : {}),
+      semanticDomain: semantic.domain,
+      semanticPopulation: semantic.population,
+      semanticAuthorities: semantic.authorityCandidates
+    } : undefined);
   }
   return concepts;
 }
@@ -1302,7 +1398,10 @@ function reconcileSemanticIssuePlan(
         governingAuthorities: issue.governingAuthorities.map(authority =>
           canonicalAccountingWorkstreamAuthority(issue.domain, authority))
       };
-      const mapping = resolveIssueTopicIds(routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.governingAuthorities, inventoryIds);
+      const mapping = resolveIssueTopicIds(
+        query, routedIssue.subject, routedIssue.domain, routedIssue.population, routedIssue.operation,
+        routedIssue.governingAuthorities, inventoryIds, semanticIssues.length
+      );
       const mappedTopicIds = mapping.mappedTopicIds;
       const reconciledIssue = {
         ...routedIssue,

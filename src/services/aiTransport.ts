@@ -114,6 +114,27 @@ export type GeminiProviderDiagnostic = Readonly<{
 
 export type GeminiProviderDiagnosticCallback = (diagnostic: GeminiProviderDiagnostic) => void | Promise<void>;
 
+export type TransportAttemptFailureCategory = 'HTTP_STATUS' | 'TIMEOUT' | 'NETWORK_ERROR' | 'CANCELLED' | 'OTHER';
+export interface TransportAttemptDiagnostic {
+  attempt: number;
+  status?: number;
+  failureCategory?: TransportAttemptFailureCategory;
+  elapsedMs: number;
+  retryScheduled: boolean;
+}
+export type TransportAttemptDiagnosticCallback = (diagnostic: Readonly<TransportAttemptDiagnostic>) => void | Promise<void>;
+
+const GEMINI_RETRYABLE_HTTP_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
+const GEMINI_RETRY_MAX_ATTEMPTS = 2;
+const GEMINI_RETRY_TOTAL_BUDGET_MS = 18_000;
+const GEMINI_RETRY_MAX_ATTEMPT_TIMEOUT_MS = 8_000;
+export const GEMINI_EXTENDED_RETRY_POLICY = Object.freeze({
+  name: 'EXTENDED',
+  maxAttempts: GEMINI_RETRY_MAX_ATTEMPTS,
+  perAttemptTimeoutMs: 20_000,
+  totalBudgetMs: 45_000
+} as const);
+
 /** Never expose upstream response bodies: they may echo credentials or submitted content. */
 export function toSafeProviderError(provider: string, status: number): Error {
   return new Error(`${provider} request failed with HTTP ${status}. The provider response was withheld for security.`);
@@ -126,6 +147,16 @@ export interface StructuredLlmOptions {
   responseJsonSchema?: Readonly<Record<string, unknown>>;
   timeoutMs?: number;
   temperature?: number;
+  /** Opts Gemini calls into at most two total attempts for transient HTTP failures and attempt timeouts. */
+  retryGeminiTransientFailures?: boolean;
+  /** Selects the fixed 20s/45s diagnostic budget; ignored unless Gemini transient retries are enabled. */
+  geminiRetryBudget?: 'EXTENDED';
+  /** Optional cancellation signal. External cancellation is never retried. */
+  signal?: AbortSignal;
+  /** Safe per-attempt telemetry. Observer callbacks are dispatched after the transport settles. */
+  onTransportAttemptDiagnostic?: TransportAttemptDiagnosticCallback;
+  /** Internal collector used to attach redacted attempt data to semantic call results. */
+  captureTransportAttemptDiagnostics?: TransportAttemptDiagnostic[];
   /** Optional, redacted diagnostics for failed Gemini HTTP requests. Callback failures are ignored. */
   onGeminiErrorDiagnostic?: GeminiProviderDiagnosticCallback;
 }
@@ -156,12 +187,119 @@ export async function executeStructuredLlmCall(
   providerOrApiKey?: ProviderSettings | string,
   options: StructuredLlmOptions = {}
 ): Promise<string> {
+  if (!options.retryGeminiTransientFailures || !isGeminiRequest(providerOrApiKey)) {
+    return executeStructuredLlmCallOnce(prompt, systemInstruction, providerOrApiKey, options);
+  }
+
+  const startedAt = Date.now();
+  const retryPolicy = options.geminiRetryBudget === 'EXTENDED' ? GEMINI_EXTENDED_RETRY_POLICY : undefined;
+  const totalBudgetMs = retryPolicy?.totalBudgetMs ?? GEMINI_RETRY_TOTAL_BUDGET_MS;
+  const maxAttemptTimeoutMs = retryPolicy?.perAttemptTimeoutMs ?? GEMINI_RETRY_MAX_ATTEMPT_TIMEOUT_MS;
+  const deadline = startedAt + totalBudgetMs;
+  const externalSignal = options.signal;
+  const observerDiagnostics: TransportAttemptDiagnostic[] = [];
+  const flushObserverDiagnostics = () => scheduleTransportAttemptObservers(options.onTransportAttemptDiagnostic, observerDiagnostics);
+  const recordAttempt = (diagnostic: TransportAttemptDiagnostic) => {
+    const safeDiagnostic = Object.freeze(diagnostic);
+    try {
+      options.captureTransportAttemptDiagnostics?.push(safeDiagnostic);
+    } catch {
+      // The diagnostic collector is best-effort, like the callback.
+    }
+    observerDiagnostics.push(safeDiagnostic);
+  };
+  for (let attempt = 1; attempt <= GEMINI_RETRY_MAX_ATTEMPTS; attempt += 1) {
+    if (externalSignal?.aborted) {
+      flushObserverDiagnostics();
+      throw createCancellationError();
+    }
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      flushObserverDiagnostics();
+      throw new Error('Gemini request exceeded its retry time budget.');
+    }
+
+    const attemptStartedAt = Date.now();
+    const attemptTimeoutMs = Math.max(1, Math.min(
+      options.timeoutMs ?? 45_000,
+      maxAttemptTimeoutMs,
+      remainingMs
+    ));
+    const attemptController = new AbortController();
+    let attemptTimedOut = false;
+    const timeoutId = setTimeout(() => {
+      attemptTimedOut = true;
+      attemptController.abort();
+    }, attemptTimeoutMs);
+    const onExternalAbort = () => attemptController.abort();
+    externalSignal?.addEventListener('abort', onExternalAbort, { once: true });
+
+    try {
+      const pending = executeStructuredLlmCallOnce(prompt, systemInstruction, providerOrApiKey, {
+        ...options,
+        timeoutMs: attemptTimeoutMs,
+        signal: attemptController.signal,
+        retryGeminiTransientFailures: false
+      });
+      const result = await raceWithAttemptAbort(pending, attemptController.signal, () => attemptTimedOut);
+      recordAttempt({
+        attempt,
+        status: 200,
+        elapsedMs: Date.now() - attemptStartedAt,
+        retryScheduled: false
+      });
+      flushObserverDiagnostics();
+      return result;
+    } catch (error) {
+      const status = getGeminiHttpStatus(error);
+      const cancelled = Boolean(externalSignal?.aborted);
+      const timedOut = attemptTimedOut && !cancelled;
+      const retryable = !cancelled && (timedOut || (status !== undefined && GEMINI_RETRYABLE_HTTP_STATUSES.has(status)));
+      const retryDelayMs = 500 + Math.floor(Math.random() * 501);
+      const enoughBudgetForRetry = deadline - Date.now() > retryDelayMs + 1;
+      const retryScheduled = retryable && attempt < GEMINI_RETRY_MAX_ATTEMPTS && enoughBudgetForRetry;
+      recordAttempt({
+        attempt,
+        ...(status === undefined ? {} : { status }),
+        failureCategory: cancelled ? 'CANCELLED' : timedOut ? 'TIMEOUT' : status !== undefined ? 'HTTP_STATUS' : isNetworkFailure(error) ? 'NETWORK_ERROR' : 'OTHER',
+        elapsedMs: Date.now() - attemptStartedAt,
+        retryScheduled
+      });
+      if (!retryScheduled) {
+        flushObserverDiagnostics();
+        throw error;
+      }
+      try {
+        await waitForRetryDelay(retryDelayMs, externalSignal);
+      } catch (delayError) {
+        flushObserverDiagnostics();
+        throw delayError;
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      externalSignal?.removeEventListener('abort', onExternalAbort);
+    }
+  }
+
+  flushObserverDiagnostics();
+  throw new Error('Gemini request exceeded its retry time budget.');
+}
+
+async function executeStructuredLlmCallOnce(
+  prompt: string,
+  systemInstruction: string,
+  providerOrApiKey?: ProviderSettings | string,
+  options: StructuredLlmOptions = {}
+): Promise<string> {
   if (prompt.length + systemInstruction.length > MAX_STRUCTURED_LLM_INPUT_CHARS) {
     throw new Error(`AI request exceeds the ${MAX_STRUCTURED_LLM_INPUT_CHARS.toLocaleString()} character safety limit.`);
   }
   const timeoutMs = options.timeoutMs ?? 45000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (options.signal?.aborted) controller.abort();
+  else options.signal?.addEventListener('abort', onExternalAbort, { once: true });
 
   try {
     // 1. Direct Gemini API Key String
@@ -260,6 +398,73 @@ export async function executeStructuredLlmCall(
     throw new Error('No active AI provider configured or valid API key provided.');
   } finally {
     clearTimeout(timeoutId);
+    options.signal?.removeEventListener('abort', onExternalAbort);
+  }
+}
+
+function isGeminiRequest(providerOrApiKey?: ProviderSettings | string): boolean {
+  return typeof providerOrApiKey === 'string'
+    ? providerOrApiKey.trim().length > 10
+    : providerOrApiKey?.activeProvider === 'gemini';
+}
+
+function getGeminiHttpStatus(error: unknown): number | undefined {
+  if (!(error instanceof Error)) return undefined;
+  const match = error.message.match(/^Gemini API request failed with HTTP (\d{3})\./);
+  return match ? Number(match[1]) : undefined;
+}
+
+function isNetworkFailure(error: unknown): boolean {
+  return error instanceof TypeError || (error instanceof Error && /failed to fetch|network|fetch failed/i.test(error.message));
+}
+
+function createCancellationError(): Error {
+  const error = new Error('Gemini request was cancelled.');
+  error.name = 'AbortError';
+  return error;
+}
+
+function raceWithAttemptAbort<T>(pending: Promise<T>, signal: AbortSignal, didTimeout: () => boolean): Promise<T> {
+  if (signal.aborted) {
+    return Promise.reject(didTimeout() ? new Error('Gemini request timed out.') : createCancellationError());
+  }
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(didTimeout() ? new Error('Gemini request timed out.') : createCancellationError());
+    signal.addEventListener('abort', onAbort, { once: true });
+    pending.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
+function waitForRetryDelay(delayMs: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(createCancellationError());
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, delayMs);
+    const onAbort = () => {
+      clearTimeout(timeoutId);
+      signal?.removeEventListener('abort', onAbort);
+      reject(createCancellationError());
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+function scheduleTransportAttemptObservers(
+  callback: TransportAttemptDiagnosticCallback | undefined,
+  diagnostics: readonly TransportAttemptDiagnostic[]
+): void {
+  if (!callback || diagnostics.length === 0) return;
+  for (const diagnostic of diagnostics) {
+    setTimeout(() => {
+      try {
+        const result = callback(diagnostic);
+        if (result && typeof result.then === 'function') void Promise.resolve(result).catch(() => undefined);
+      } catch {
+        // Telemetry is best-effort and cannot change the transport result or its deadline.
+      }
+    }, 0);
   }
 }
 

@@ -154,7 +154,8 @@ const genericIncomeTaxTreatmentUnderstanding = {
     factsExplicitlyProvided: [], confidence: 0.95
   }
 };
-const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-tax treatment', population = 'COMPANY') => {
+const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-tax treatment', population = 'COMPANY',
+  query = genericIncomeTaxTreatmentQuery) => {
   const understanding = {
     ...genericIncomeTaxTreatmentUnderstanding,
     interpretation: {
@@ -165,7 +166,7 @@ const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-t
     }
   };
   const requestedByIssue = new Map();
-  const result = await buildAuthorityWorkstreams(genericIncomeTaxTreatmentQuery, issuePlan(issues), {
+  const result = await buildAuthorityWorkstreams(query, issuePlan(issues), {
     questionUnderstanding: understanding,
     providers: { IRAS: provider('IRAS', async request => {
       requestedByIssue.set(request.issue.id, request.retrievalIntent.requestedConcepts.map(concept => concept.id));
@@ -173,7 +174,7 @@ const runGenericTaxOwnership = async (issues, conceptLabel = 'corporate income-t
     }) },
     referenceDate
   });
-  const conceptId = getRequestedQuestionConcepts(genericIncomeTaxTreatmentQuery, understanding)
+  const conceptId = getRequestedQuestionConcepts(query, understanding)
     .find(concept => concept.label === conceptLabel)?.id;
   return { result, requestedByIssue, conceptId };
 };
@@ -191,12 +192,26 @@ assert.equal(ownedGenericTaxTreatment.requestedByIssue.get('generic-tax-treatmen
   'The generic tax label is assigned for aggregation, not promoted into a redundant retrieval requirement.');
 const ownedGenericCorporateTax = await runGenericTaxOwnership([
   genericTreatmentIssue('generic-corporate-tax-owner', 'Singapore corporate income-tax treatment of a foreign dividend receipt')
-], 'corporate income tax');
+], 'corporate income tax', 'COMPANY',
+  'What is the corporate income-tax treatment for foreign dividends received by a Singapore company?');
 assert.equal(ownedGenericCorporateTax.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'), false,
   'The observed shorter corporate income-tax label is owned by its sole matching issue.');
 assert.equal(ownedGenericCorporateTax.requestedByIssue.get('generic-corporate-tax-owner')
   ?.includes('semantic_corporate_income_tax') || false, false,
   'The shorter corporate tax label does not create a redundant retrieval requirement.');
+const exactThaiDividendReceiptQuery = 'Our Singapore company received a dividend from its Thai subsidiary in the current year. Explain the company\'s Singapore corporate income-tax treatment for this receipt.';
+const exactThaiDividendReceiptOwner = await runGenericTaxOwnership([{
+  ...genericTreatmentIssue('exact-thai-dividend-receipt-owner', 'foreign dividend tax treatment'),
+  mappedTopicIds: ['iras-foreign-sourced-income']
+}], 'corporate income tax', 'COMPANY', exactThaiDividendReceiptQuery);
+assert.equal(exactThaiDividendReceiptOwner.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'), false,
+  'The exact retained Singapore-company receipt from a Thai subsidiary binds its generic corporate-tax label to the mapped foreign-dividend issue.');
+const paidThaiDividendSubject = await runGenericTaxOwnership([{
+  ...genericTreatmentIssue('paid-thai-dividend-subject', 'foreign dividend paid tax treatment'),
+  mappedTopicIds: ['iras-foreign-sourced-income']
+}], 'corporate income tax', 'COMPANY', exactThaiDividendReceiptQuery);
+assert.ok(paidThaiDividendSubject.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+  'A receipt query cannot override the opposite paid-dividend direction in the mapped issue subject.');
 const unrelatedGenericTaxTreatment = await runGenericTaxOwnership([
   genericTreatmentIssue('unrelated-generic-tax-issue', 'company tax treatment of foreign income')
 ]);

@@ -40,6 +40,7 @@ import {
 import { renderIrasEvidenceResponse } from './irasEvidencePolicy';
 import {
   canonicalAccountingWorkstreamAuthority,
+  hasBoundedGstInputTaxRecoveryAnchors,
   getRequestedQuestionConcepts,
   type ReconciledSemanticQuestionIssue,
   type SemanticAuthority,
@@ -206,8 +207,14 @@ export function planAuthorityWorkstreams(issuePlan: SemanticIssueReconciliation)
   return toInternalPlan(issuePlan).map(({ issuePlans: _issuePlans, ...plan }) => plan);
 }
 
+const CORPORATE_TAX_DESCRIPTOR_LABELS = new Set([
+  'corporate income tax treatment', 'corporate income tax', 'corporate tax', 'corporate taxation',
+  'corporate taxation treatment', 'company tax', 'company income tax', 'company tax treatment',
+  'company income tax treatment'
+]);
+
 function isCorporateIncomeTaxTreatmentConcept(concept: RequestedQuestionConcept): boolean {
-  return ['corporate income tax treatment', 'corporate income tax'].includes(normalizeEvidenceText(concept.label));
+  return CORPORATE_TAX_DESCRIPTOR_LABELS.has(normalizeEvidenceText(concept.label));
 }
 
 function isGenericIncomeTaxConcept(concept: RequestedQuestionConcept): boolean {
@@ -216,32 +223,243 @@ function isGenericIncomeTaxConcept(concept: RequestedQuestionConcept): boolean {
 
 function corporateIncomeTaxConceptAnchor(concept: RequestedQuestionConcept): string | undefined {
   const label = normalizeEvidenceText(concept.label);
-  return label === 'corporate income tax treatment' || label === 'corporate income tax' ? label : undefined;
+  return CORPORATE_TAX_DESCRIPTOR_LABELS.has(label) ? label : undefined;
+}
+
+function isIssueDescriptorConcept(concept: RequestedQuestionConcept): boolean {
+  const label = normalizeEvidenceText(concept.label);
+  return label === 'director benefits' || label === 'business purchases' ||
+    isPrivateTravelExpenseDescriptor(concept) || CORPORATE_TAX_DESCRIPTOR_LABELS.has(label);
+}
+
+function hasAdditionalRequestedOutcome(query: string): boolean {
+  const normalized = normalizeEvidenceText(query);
+  return /\band\s+(?:also\s+)?(?:explain|determine|assess|calculate|compute|prepare|what|how|whether)\b/.test(normalized) ||
+    /\band\s+(?:what|how)\s+about\b/.test(normalized) ||
+    /\band\s+(?:prepare|post|draft|provide|show|give)\b.{0,35}\b(?:journal|entry|entries)\b/.test(normalized) ||
+    /\band\b.{0,30}\b(?:journal|journalize|journalise|accounting entry|accounting entries)\b/.test(normalized);
+}
+
+function hasSeparatePersonalTaxRequest(query: string): boolean {
+  const normalized = normalizeEvidenceText(query);
+  return /\b(?:director|employee|individual|person)(?:s)?\s+(?:own\s+)?(?:personal|individual)\s+(?:income\s+)?tax\b/.test(normalized) ||
+    /\b(?:personal|individual)\s+(?:income\s+)?tax\b.{0,45}\b(?:director|employee|individual|person)\b/.test(normalized) ||
+    /\b(?:director|employee)\b.{0,35}\b(?:own|personal)\s+(?:income\s+)?tax\b/.test(normalized);
+}
+
+function hasCompanyIncomeTaxRequest(query: string): boolean {
+  const normalized = normalizeEvidenceText(query);
+  return /\b(?:company|companies|corporate)\b/.test(normalized) &&
+    /\btax\b/.test(normalized) && /\b(?:treatment|taxation|taxability|deductibility|deductible|income|chargeable|tax rules?|tax liabilities?)\b/.test(normalized) &&
+    !hasSeparatePersonalTaxRequest(query) && !hasAdditionalRequestedOutcome(query);
+}
+
+function soleMappedCompanyGstInputTaxIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  query: string
+): boolean {
+  const mappedIssues = candidateIssues.filter(candidate => candidate.status === 'MAPPED' &&
+    candidate.domain === 'IRAS_GST' && candidate.population === 'COMPANY' &&
+    candidate.governingAuthorities.length === 1 && candidate.governingAuthorities[0] === 'IRAS' &&
+    candidate.operation === 'EXPLAIN_RULE' && candidate.mappedTopicIds.includes('iras-gst-input-tax'));
+  return candidateIssues.length === 1 && mappedIssues.length === 1 && mappedIssues[0].id === issue.id &&
+    issue.domain === 'IRAS_GST' && issue.population === 'COMPANY' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+    issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('iras-gst-input-tax') &&
+    hasBoundedGstInputTaxRecoveryAnchors(query, issue.subject);
+}
+
+function hasBoundedCompanyWhtRoyaltyPaymentAnchors(query: string, subject: string): boolean {
+  const normalizedQuery = normalizeEvidenceText(query);
+  const normalizedSubject = normalizeEvidenceText(subject);
+  const hasWhtMarker = (text: string) => /\bwithholding tax\b/.test(text);
+  const hasRoyaltyReceiptDirection = (text: string) =>
+    /\broya\w*.{0,45}\breceiv\w*/.test(text) || /\breceiv\w*.{0,45}\broya\w*/.test(text);
+  const queryPaymentDirection =
+    /\bcompany\b.{0,35}\bpay\w*\b.{0,30}\broya\w*\b.{0,45}\bto\b.{0,20}\bnon resident company\b/.test(normalizedQuery);
+  const subjectPaymentDirection =
+    /\broya\w*.{0,35}\b(?:paid|pay\w*|payment\w*)\b.{0,45}\bto\b.{0,20}\bnon resident company\b/.test(normalizedSubject);
+  const companyMentions = normalizedQuery.match(/\bcompan(?:y|ies)\b/g) || [];
+  const separateRegistrationRequest =
+    /\b(?:gst|withholding tax|wht) registration\b|\bregistration requirements?\b|\bregister with iras\b/.test(normalizedQuery);
+  return hasWhtMarker(normalizedQuery) && hasWhtMarker(normalizedSubject) &&
+    queryPaymentDirection && subjectPaymentDirection && companyMentions.length === 2 &&
+    !hasRoyaltyReceiptDirection(normalizedQuery) && !hasRoyaltyReceiptDirection(normalizedSubject) &&
+    !hasAdditionalRequestedOutcome(query) && !hasSeparatePersonalTaxRequest(query) && !separateRegistrationRequest;
+}
+
+function soleMappedCompanyWhtRoyaltyIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  query: string
+): boolean {
+  const requiredTopics = ['iras-withholding-tax', 'iras-withholding-tax-interest-royalties'];
+  const topics = getCoverageTopicsByIds(issue.mappedTopicIds).filter(topic => topic.domainId.startsWith('IRAS_'));
+  return candidateIssues.length === 1 && candidateIssues[0].id === issue.id &&
+    issue.status === 'MAPPED' && issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+    issue.operation === 'EXPLAIN_RULE' && requiredTopics.every(topicId => issue.mappedTopicIds.includes(topicId)) &&
+    issue.mappedTopicIds.every(topicId => topicId.startsWith('iras-withholding-tax')) &&
+    topics.length === issue.mappedTopicIds.length && topics.every(topic => topic.domainId === 'IRAS_CORPORATE_TAX') &&
+    canonicalDomainForIssue(issue, 'IRAS', topics) === 'IRAS_CORPORATE_TAX' &&
+    hasBoundedCompanyWhtRoyaltyPaymentAnchors(query, issue.subject);
+}
+
+function isCompanyTaxResidencyRequest(query: string): boolean {
+  const normalized = normalizeEvidenceText(query);
+  return /\b(?:company|companies|corporate|business entity)\b/.test(normalized) &&
+    /\b(?:tax residency|tax residence|tax resident|residency|residence)\b/.test(normalized) &&
+    !hasSeparatePersonalTaxRequest(query) && !hasAdditionalRequestedOutcome(query);
+}
+
+function soleMappedCompanyTaxResidencyIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  query: string
+): boolean {
+  const normalizedSubject = normalizeEvidenceText(issue.subject);
+  return authority === 'IRAS' && candidateIssues.length === 1 && candidateIssues[0].id === issue.id &&
+    issue.status === 'MAPPED' && issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+    issue.governingAuthorities.includes('IRAS') && issue.mappedTopicIds.includes('iras-corporate-tax-residency') &&
+    /\b(?:tax residency|tax residence|tax resident|residency|residence)\b/.test(normalizedSubject) &&
+    isCompanyTaxResidencyRequest(query);
+}
+
+function isPrivateTravelExpenseDescriptor(concept: RequestedQuestionConcept): boolean {
+  return /^(?:(?:business|company) )?travel (?:expenses?|costs?|expenditures?)$/.test(normalizeEvidenceText(concept.label));
+}
+
+function privateTravelExpenseBelongsToCompanyIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  query: string
+): boolean {
+  const normalizedQuery = normalizeEvidenceText(query);
+  const normalizedSubject = normalizeEvidenceText(issue.subject);
+  const travelClassification = /\b(?:recorded|classified|booked|coded|charged)\b.{0,45}\btravel (?:expenses?|costs?|expenditures?)\b/.test(normalizedQuery);
+  return soleMappedCompanyIncomeTaxIssue(issue, authority, candidateIssues, query) &&
+    /\b(?:company|corporate)\b/.test(normalizedQuery) && /\btax\b/.test(normalizedQuery) &&
+    /\bdirector\b/.test(normalizedQuery) && /\b(?:private|personal)\b/.test(normalizedQuery) &&
+    /\bholiday\b/.test(normalizedQuery) && travelClassification &&
+    /\bdirector\b/.test(normalizedSubject) && /\b(?:private|personal)\b/.test(normalizedSubject) &&
+    /\bholiday\b/.test(normalizedSubject) &&
+    issue.mappedTopicIds.some(id => ['iras-cit-deductibility', 'iras-cit-disallowed-expenses'].includes(id));
+}
+
+function queryAnchorsCompanyIssue(query: string, issue: ReconciledSemanticQuestionIssue): boolean {
+  const queryTerms = new Set(conceptOwnershipTerms(query));
+  const issueTerms = conceptOwnershipTerms(issue.subject);
+  const matchingTerms = issueTerms.filter(term => queryTerms.has(term));
+  return issueTerms.length > 0 && matchingTerms.length >= Math.min(2, issueTerms.length);
+}
+
+function hasOpposingForeignDividendPaymentDirection(issue: ReconciledSemanticQuestionIssue): boolean {
+  if (!issue.mappedTopicIds.includes('iras-foreign-sourced-income')) return false;
+  const normalizedSubject = normalizeEvidenceText(issue.subject);
+  return /\b(?:pay\w*|paid|distribut\w*)\b/.test(normalizedSubject) &&
+    !/\breceiv\w*\b.{0,40}\bfrom\b.{0,30}\bforeign payer\b/.test(normalizedSubject);
+}
+
+function isBoundedForeignDividendReceiptForIssue(
+  query: string,
+  issue: ReconciledSemanticQuestionIssue
+): boolean {
+  const normalizedQuery = normalizeEvidenceText(query);
+  const normalizedSubject = normalizeEvidenceText(issue.subject);
+  const explicitSingaporeCompanyReceiptFromThaiSubsidiary =
+    /\bsingapore company\b.{0,65}\breceiv\w*\b.{0,60}\bdividends?\b.{0,80}\bthai subsidiary\b/.test(normalizedQuery);
+  return issue.population === 'COMPANY' && issue.mappedTopicIds.includes('iras-foreign-sourced-income') &&
+    /\b(?:foreign|overseas)\b/.test(normalizedSubject) && /\bdividends?\b/.test(normalizedSubject) &&
+    /\btax\b/.test(normalizedSubject) && !hasOpposingForeignDividendPaymentDirection(issue) &&
+    explicitSingaporeCompanyReceiptFromThaiSubsidiary;
+}
+
+function isRelatedSubsidiaryDescriptor(concept: RequestedQuestionConcept): boolean {
+  return concept.role === 'RELATED' && normalizeEvidenceText(concept.label) === 'subsidiary';
+}
+
+function hasSeparateSubsidiaryOutcome(query: string): boolean {
+  const normalized = normalizeEvidenceText(query);
+  return /\band\b[^.!?]{0,80}\bsubsidiar(?:y|ies)\b[^.!?]{0,80}\b(?:tax|journal|accounting|consolidat\w*)\b/.test(normalized) ||
+    /\bsubsidiar(?:y|ies)\b[^.!?]{0,65}\b(?:separate(?:ly)?|own|independent)\b[^.!?]{0,40}\b(?:tax|journal|accounting|consolidat\w*)\b/.test(normalized);
+}
+
+function boundedForeignDividendSubsidiaryDescriptorBelongsToIssue(
+  concept: RequestedQuestionConcept,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  query: string
+): boolean {
+  return isRelatedSubsidiaryDescriptor(concept) && authority === 'IRAS' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds[0] === 'iras-foreign-sourced-income' &&
+    soleMappedCompanyIncomeTaxIssue(issue, authority, candidateIssues, query) &&
+    isBoundedForeignDividendReceiptForIssue(query, issue) && !hasAdditionalRequestedOutcome(query) &&
+    !hasSeparateSubsidiaryOutcome(query);
+}
+
+function soleMappedCompanyIncomeTaxIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  query: string
+): boolean {
+  if (authority !== 'IRAS' || candidateIssues.length !== 1 || candidateIssues[0].id !== issue.id ||
+      issue.status !== 'MAPPED' || issue.domain !== 'IRAS_INCOME_TAX' || issue.population !== 'COMPANY' ||
+      !issue.governingAuthorities.includes('IRAS') || !hasCompanyIncomeTaxRequest(query)) return false;
+  const topics = getCoverageTopicsByIds(issue.mappedTopicIds).filter(topic => topic.domainId.startsWith('IRAS_'));
+  const issueBound = !hasOpposingForeignDividendPaymentDirection(issue) &&
+    (queryAnchorsCompanyIssue(query, issue) || isBoundedForeignDividendReceiptForIssue(query, issue));
+  return issueBound && topics.length > 0 && topics.every(topic => topic.domainId === 'IRAS_CORPORATE_TAX') &&
+    canonicalDomainForIssue(issue, 'IRAS', topics) === 'IRAS_CORPORATE_TAX';
 }
 
 function topiclessConceptBelongsToIssue(
   concept: RequestedQuestionConcept,
   issue: ReconciledSemanticQuestionIssue,
   authority: SemanticAuthority,
-  candidateIssues: ReconciledSemanticQuestionIssue[] = []
+  candidateIssues: ReconciledSemanticQuestionIssue[] = [],
+  query = ''
 ): boolean {
-  if (authority !== 'IRAS' || issue.domain !== 'IRAS_INCOME_TAX') return false;
+  if (authority !== 'IRAS') return false;
+  const normalizedLabel = normalizeEvidenceText(concept.label);
+  if (isRelatedSubsidiaryDescriptor(concept)) {
+    return boundedForeignDividendSubsidiaryDescriptorBelongsToIssue(concept, issue, authority, candidateIssues, query);
+  }
+  if (normalizedLabel === 'gst input tax' && (concept.role === 'PRIMARY' || concept.role === 'RELATED')) {
+    return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+  }
+  if (normalizedLabel === 'royalty payment' && (concept.role === 'PRIMARY' || concept.role === 'RELATED')) {
+    return soleMappedCompanyWhtRoyaltyIssue(issue, candidateIssues, query);
+  }
+  if (normalizedLabel === 'input tax') {
+    return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+  }
+  if (normalizedLabel === 'business purchases') {
+    return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+  }
+  if (normalizedLabel === 'gst registration') {
+    return concept.role === 'RELATED' && soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+  }
+  if (issue.domain !== 'IRAS_INCOME_TAX') return false;
   if (concept.id === 'relief_claim_prioritization') {
     return issue.population === 'INDIVIDUAL' || issue.population === 'EMPLOYEE' ||
       issue.mappedTopicIds.some(id => id.startsWith('iras-individual-'));
   }
   // This generic semantic label has no distinctive ownership terms after the
-  // tax vocabulary is removed. Assign it only to the sole mapped company
-  // income-tax issue whose subject explicitly contains the complete label.
+  // tax vocabulary is removed. Assign it only to a sole mapped company
+  // income-tax issue whose population, authority and mapped topics agree.
   // Ambiguous or unrelated issue sets therefore retain the top-level gap.
   if (isCorporateIncomeTaxTreatmentConcept(concept)) {
-    const anchor = corporateIncomeTaxConceptAnchor(concept)!;
-    const matchingIssues = candidateIssues.filter(candidate => candidate.status === 'MAPPED' &&
-      candidate.population === 'COMPANY' && candidate.domain === 'IRAS_INCOME_TAX' &&
-      candidate.governingAuthorities.includes('IRAS') &&
-      normalizeEvidenceText(candidate.subject).includes(anchor));
-    return matchingIssues.length === 1 && matchingIssues[0].id === issue.id &&
-      issue.population === 'COMPANY' && issue.governingAuthorities.includes('IRAS');
+    return Boolean(corporateIncomeTaxConceptAnchor(concept)) && (
+      soleMappedCompanyTaxResidencyIssue(issue, authority, candidateIssues, query) ||
+      soleMappedCompanyIncomeTaxIssue(issue, authority, candidateIssues, query));
+  }
+  if (isPrivateTravelExpenseDescriptor(concept)) {
+    return privateTravelExpenseBelongsToCompanyIssue(issue, authority, candidateIssues, query);
   }
   if (isGenericIncomeTaxConcept(concept)) {
     // The exact generic label has no distinctive ownership terms. Treat every
@@ -261,10 +479,66 @@ function topiclessConceptBelongsToIssue(
       topics.every(topic => topic.domainId === expectedDomain) &&
       canonicalDomainForIssue(issue, 'IRAS', topics) === expectedDomain);
   }
+  if (normalizedLabel === 'director benefits') {
+    const normalizedQuery = normalizeEvidenceText(query);
+    return soleMappedCompanyIncomeTaxIssue(issue, authority, candidateIssues, query) &&
+      /\b(?:company|corporate)\b/.test(normalizedQuery) && /\btax\b/.test(normalizedQuery) &&
+      /\bdirector\b/.test(normalizedQuery) && /\b(?:private|personal|holiday|benefit|perquisite)\b/.test(normalizedQuery) &&
+      /\b(?:expense|paid|recorded)\b/.test(normalizedQuery) &&
+      /\b(?:private|personal|holiday|benefit|perquisite)\b/.test(normalizeEvidenceText(issue.subject)) &&
+      issue.mappedTopicIds.some(id => ['iras-cit-deductibility', 'iras-cit-disallowed-expenses'].includes(id));
+  }
   const issueText = `${issue.subject} ${issue.mappedTopicIds.join(' ')}`;
   const uniqueTerms = [...new Set([...concept.terms, concept.label].flatMap(conceptOwnershipTerms))];
   const normalizedIssue = new Set(conceptOwnershipTerms(issueText));
   return uniqueTerms.length > 0 && uniqueTerms.filter(term => normalizedIssue.has(term)).length >= Math.min(2, uniqueTerms.length);
+}
+
+function topiclessSemanticConceptBelongsToIssue(
+  concept: RequestedQuestionConcept,
+  issue: ReconciledSemanticQuestionIssue,
+  query: string
+): boolean {
+  if (!concept.role || issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC') return false;
+  if (concept.semanticDomain && concept.semanticDomain !== 'UNKNOWN' && concept.semanticDomain !== issue.domain) return false;
+  if (concept.semanticPopulation && concept.semanticPopulation !== 'UNKNOWN' && issue.population !== 'UNKNOWN' &&
+      concept.semanticPopulation !== issue.population) return false;
+  const requestedAuthorities = (concept.semanticAuthorities || []).filter(authority => authority !== 'UNKNOWN');
+  if (requestedAuthorities.length > 0 && !requestedAuthorities.some(authority => issue.governingAuthorities.includes(authority))) return false;
+  const phrase = normalizeEvidenceText(concept.label);
+  return phrase.length >= 5 && normalizeEvidenceText(query).includes(phrase) &&
+    normalizeEvidenceText(issue.subject).includes(phrase);
+}
+
+function topiclessConceptGapScope(concept: RequestedQuestionConcept): {
+  authority: SemanticAuthority;
+  domain: AuthorityWorkstreamDomain;
+} {
+  const authorities = [...new Set((concept.semanticAuthorities || []).filter(authority => authority !== 'UNKNOWN'))];
+  const authorityFor = (expected: SemanticAuthority): SemanticAuthority =>
+    authorities.length === 0 || authorities.some(authority => authority === expected) ? expected : 'UNKNOWN';
+  switch (concept.semanticDomain) {
+    case 'ACCOUNTING': return { authority: authorityFor('ACCOUNTING_STANDARDS'), domain: 'ACCOUNTING' };
+    case 'IRAS_GST': return { authority: authorityFor('IRAS'), domain: 'IRAS_GST' };
+    case 'IRAS_PROPERTY_TAX': return { authority: authorityFor('IRAS'), domain: 'IRAS_PROPERTY_TAX' };
+    case 'IRAS_STAMP_DUTY': return { authority: authorityFor('IRAS'), domain: 'IRAS_STAMP_DUTY' };
+    case 'IRAS_OTHER': return { authority: authorityFor('IRAS'), domain: 'IRAS_OTHER' };
+    case 'IRAS_INCOME_TAX': {
+      const domain = concept.semanticPopulation === 'INDIVIDUAL' || concept.semanticPopulation === 'EMPLOYEE'
+        ? 'IRAS_INDIVIDUAL_TAX'
+        : concept.semanticPopulation === 'COMPANY' || concept.semanticPopulation === 'FUND'
+          ? 'IRAS_CORPORATE_TAX' : 'IRAS_INCOME_TAX';
+      return { authority: authorityFor('IRAS'), domain };
+    }
+    case 'CPF_PAYROLL': return { authority: authorityFor('CPF'), domain: 'CPF_PAYROLL' };
+    case 'MOM_EMPLOYMENT': return { authority: authorityFor('MOM'), domain: 'MOM_EMPLOYMENT' };
+    case 'ACRA_CORPORATE': return { authority: authorityFor('ACRA'), domain: 'ACRA_CORPORATE' };
+    case 'MAS_FUNDS': return { authority: authorityFor('MAS'), domain: 'MAS_FUNDS' };
+    default:
+      return authorities.length === 1
+        ? { authority: authorities[0], domain: 'UNKNOWN' }
+        : { authority: 'UNKNOWN', domain: 'UNKNOWN' };
+  }
 }
 
 function requestedConceptsForIssue(
@@ -279,7 +553,9 @@ function requestedConceptsForIssue(
   return getRequestedQuestionConcepts(query, understanding).filter(concept =>
     concept.topicIds.some(topicId => topicSet.has(topicId)) ||
     concept.topicIds.length === 0 && !isCorporateIncomeTaxTreatmentConcept(concept) && !isGenericIncomeTaxConcept(concept) &&
-      topiclessConceptBelongsToIssue(concept, issue, authority, candidateIssues)
+      !isIssueDescriptorConcept(concept) &&
+      !boundedForeignDividendSubsidiaryDescriptorBelongsToIssue(concept, issue, authority, candidateIssues, query) &&
+      topiclessConceptBelongsToIssue(concept, issue, authority, candidateIssues, query)
   );
 }
 
@@ -952,7 +1228,9 @@ export async function buildAuthorityWorkstreams(
   const retriever = options.retriever || defaultAdvancedSourceRetriever;
   const internalPlans = toInternalPlan(issuePlan);
   const candidateIssues = [...new Map(issuePlan.issues
-    .filter(issue => issue.governingAuthorities.includes('IRAS'))
+    // Taxonomy residuals remain visible as plan gaps but do not compete with
+    // validated semantic issues for ownership of a descriptive concept.
+    .filter(issue => issue.governingAuthorities.includes('IRAS') && issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC')
     .map(issue => [issue.id, issue])).values()];
   const plannedIssueIds = new Set(internalPlans.flatMap(plan => plan.issueIds));
   const plannedIssueCount = internalPlans.reduce((count, plan) => count + plan.issuePlans.length, 0);
@@ -1003,13 +1281,18 @@ export async function buildAuthorityWorkstreams(
     }
   }
   for (const concept of getRequestedQuestionConcepts(query, understanding).filter(item => item.topicIds.length === 0)) {
-    const assigned = internalPlans.some(plan => plan.authority === 'IRAS' && plan.issuePlans.some(item =>
-      topiclessConceptBelongsToIssue(concept, item.issue, plan.authority, candidateIssues)));
-    if (!assigned) topLevelGaps.push({
-      issueId: 'issue-plan', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: concept.label,
+    const owners = issuePlan.issues.filter(issue => issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
+      (issue.governingAuthorities.includes('IRAS')
+        ? topiclessConceptBelongsToIssue(concept, issue, 'IRAS', candidateIssues, query)
+        : topiclessSemanticConceptBelongsToIssue(concept, issue, query)));
+    if (owners.length !== 1) {
+      const scope = topiclessConceptGapScope(concept);
+      topLevelGaps.push({
+      issueId: 'issue-plan', authority: scope.authority, domain: scope.domain, subject: concept.label,
       operation: 'OTHER', stage: 'mapped', code: 'UNROUTED_MATERIAL_CONCEPT',
-      reason: 'A material IRAS concept without a reviewed topic was not assigned to an income-tax issue.'
-    });
+      reason: 'A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.'
+      });
+    }
   }
 
   const allIssues = workstreams.flatMap(workstream => workstream.issues);

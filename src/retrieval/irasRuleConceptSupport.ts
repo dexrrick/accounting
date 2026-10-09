@@ -67,6 +67,7 @@ function tokenize(value: string): string[] {
 function canonicalWord(value: string): string {
   if (value === 'overseas') return value;
   if (value === 'pays') return 'pay';
+  if (value === 'paid') return 'pay';
   if (value === 'claiming' || value === 'claimed' || value === 'claims') return 'claim';
   if (value === 'recovering' || value === 'recovered' || value === 'recovers') return 'recover';
   if (value === 'recovery' || value === 'recoveries') return 'recovery';
@@ -74,6 +75,29 @@ function canonicalWord(value: string): string {
   if (value.endsWith('ies') && value.length > 4) return `${value.slice(0, -3)}y`;
   if (value.endsWith('s') && !value.endsWith('ss') && value.length > 4) return value.slice(0, -1);
   return value;
+}
+
+function hasOppositeRoyaltyPaymentDirection(subject: string): boolean {
+  const words = tokenize(subject).map(canonicalWord);
+  const royaltyIndex = words.indexOf('royalty');
+  if (royaltyIndex < 0) return false;
+  const beforeRoyalty = words.slice(Math.max(0, royaltyIndex - 5), royaltyIndex);
+  if (beforeRoyalty.includes('nonresident') && beforeRoyalty.includes('pay')) return true;
+
+  const afterRoyalty = words.slice(royaltyIndex + 1);
+  const hasNonresidentBeforeRecipientBoundary = (preposition: 'by' | 'from'): boolean => {
+    const start = afterRoyalty.indexOf(preposition);
+    if (start < 0) return false;
+    const remainder = afterRoyalty.slice(start + 1);
+    const boundary = remainder.indexOf('to');
+    return (boundary < 0 ? remainder : remainder.slice(0, boundary)).includes('nonresident');
+  };
+  if (hasNonresidentBeforeRecipientBoundary('by') || hasNonresidentBeforeRecipientBoundary('from')) return true;
+
+  const toIndex = afterRoyalty.indexOf('to');
+  if (toIndex < 0) return false;
+  const recipient = afterRoyalty.slice(toIndex + 1, toIndex + 5);
+  return recipient.includes('resident') && !recipient.includes('nonresident');
 }
 
 function hasPhrase(words: readonly string[], phrase: readonly string[]): boolean {
@@ -394,6 +418,8 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
   const words = [...subjectWords, ...conceptWords].map(canonicalWord);
   const family = selectedFamily(input, words);
   if (!family) return undefined;
+
+  if (family === 'ROYALTY_WITHHOLDING_TAX' && hasOppositeRoyaltyPaymentDirection(input.subject)) return false;
 
   const expectedDomain = family === 'GST_INPUT_TAX' ? 'IRAS_GST' : 'IRAS_CORPORATE_TAX';
   if (input.domainId !== expectedDomain) return undefined;

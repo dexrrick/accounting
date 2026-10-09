@@ -1,0 +1,19 @@
+{
+  "dateSingapore": "09/10/2026",
+  "status": "FINAL_DIAGNOSTIC_REPAIRS_IN_PROGRESS",
+  "lastObservedFiveHourRemainingPercent": 51,
+  "constraint": "Stop before 5% remaining. Save early with margin. Do not consume reset credits or purchase credits.",
+  "lastLiveRun": "../live-rerun-primary-labels-2026-10-09",
+  "lastLiveOutcome": "6 diagnostic passes / 3 failures; 12 provider dispatch attempts; 7 responses / 2 NOT_ASSESSED cases; 2 blocked native connection attempts. Immutable historical result.",
+  "lastLiveCauses": ["CPF paraphrase HTTP503 then retry timeout; no response", "WHT pacing guard stopped before dispatch; no response", "GST valid recovered response with general input-tax claim title omits business-purchase words"],
+  "validatedBeforeLastLiveRun": "45-response replay, independent alias review, lint, build, smoke and full suite passed. primary-label-repairs logs; full121.21s.",
+  "currentRepairPlan": [
+    "Bind GST shortened general input-tax claim title using explicit original-question business facts and validated scope; preserve required evidence and contradictory/unknown/future/compound guards.",
+    "Make pacing wait tolerate early fractional timer wake using monotonic recheck and bounded waits; preserve 15250ms minimum and request/order caps.",
+    "Diagnostic-only per-request platform HTTPS connection (agent:false, cancellation) behind existing strict fetch/network guard. Preserve URL/key/budget/active-context checks, production transport/provider/timeouts/retries unchanged.",
+    "Replay six historical batches: 52 usable responses, 54 case records, 2 unavailable NOT_ASSESSED; do not label unavailable cases passing. Preserve input hashes and native network blocks."
+  ],
+  "reviewAndValidation": "Pending for current repair; builder working, no live/provider/source requests authorized for builder. Supervisor retains security/integration/final verification.",
+  "evidence": "47 protected historical files in historical-inputs-before.json; supervisor-only absolute-path manifest, never a runtime dependency. Source reference08/10/2026; no fresh source availability or canonical acceptance established.",
+  "resume": ["Check usage before work; preserve all existing uncommitted edits.", "Read current checkpoint and builder/reviewer outputs; do not duplicate passing investigations.", "Freeze source before broad validation to avoid source-fingerprint races.", "Run targeted regressions, independent review, required lint/build/smoke/full on final source. Windows temporary-file tests need approved execution outside sandbox.", "Only supervisor may perform a fresh bounded live nine-case run in a new live-rerun-* directory with fresh usage snapshot. Never reuse consumed directories or relabel old outcomes.", "If provider remains unavailable after bounded retry, report unavailability honestly; do not relax accounting/source/security guardrails to force a pass."]
+}

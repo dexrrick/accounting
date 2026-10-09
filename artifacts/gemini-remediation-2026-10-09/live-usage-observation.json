@@ -1,0 +1,23 @@
+{
+  "sourceTool": "mcp__codex_app__get_usage_limits",
+  "observedAtUtc": "2026-10-09T00:42:37.315Z",
+  "toolResult": {
+    "structuredContent": {
+      "ordinaryUsageAllowed": true,
+      "rateLimitsByLimitId": {
+        "codex": {
+          "primary": {
+            "usedPercent": 18,
+            "windowDurationMins": 300,
+            "resetsAt": 1791523345
+          },
+          "secondary": {
+            "usedPercent": 24,
+            "windowDurationMins": 10080,
+            "resetsAt": 1791992808
+          }
+        }
+      }
+    }
+  }
+}

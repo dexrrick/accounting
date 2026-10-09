@@ -8,6 +8,7 @@ import {
   getSemanticIrasDiscoveryContext,
   interpretSemanticQuestion,
   isShortSemanticFollowUp,
+  SEMANTIC_QUESTION_TIMEOUT_MS,
   projectQuestionUnderstandingDiagnostics,
   reconcileQuestionUnderstanding,
   sanitizeSemanticDiagnosticLabel,
@@ -568,7 +569,7 @@ const interpreted = await interpretSemanticQuestion('How does personal income ta
 });
 assert.equal(interpreted.mode, 'SEMANTIC_INTERPRETATION');
 assert.equal(promptCalls.length, 1);
-assert.ok(promptCalls[0].options.timeoutMs >= 8_000);
+assert.equal(promptCalls[0].options.timeoutMs, SEMANTIC_QUESTION_TIMEOUT_MS);
 assert.match(promptCalls[0].system, /do not answer/i);
 assert.doesNotMatch(promptCalls[0].prompt, /retrieved evidence|conversation history/i);
 const generalCompanyResidencyQuery = 'How do Singapore tax rules determine whether a company is tax resident here?';

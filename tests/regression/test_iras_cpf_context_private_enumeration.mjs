@@ -53,6 +53,22 @@ for (const spelling of ['non-resident', 'non resident', 'nonresident']) {
   assert.equal(supportGeneralIrasRuleConcept(whtInput(`withholding tax on royalty payments to ${spelling} recipients`)), true,
     `Matching canonicalizes ${spelling} without changing the source quotation.`);
 }
+assert.equal(supportGeneralIrasRuleConcept(whtInput('withholding tax rules for royalties paid to non-resident companies')), true,
+  'The actual bounded royalty subject accepts the past-tense payment form for a non-resident company recipient.');
+assert.equal(supportGeneralIrasRuleConcept(whtInput('withholding tax on royalties paid by a Singapore company to non-resident companies')), true,
+  'An explicit Singapore payer followed by a non-resident recipient keeps the payment direction intact.');
+assert.notEqual(supportGeneralIrasRuleConcept(whtInput('withholding tax rules for royalties paid by non-resident companies')), true,
+  'A non-resident company as payer does not satisfy the bounded recipient direction.');
+assert.notEqual(supportGeneralIrasRuleConcept(whtInput('withholding tax rules for royalties received from a non-resident company')), true,
+  'A non-resident company as payer/source does not satisfy the bounded recipient direction.');
+assert.notEqual(supportGeneralIrasRuleConcept(whtInput('withholding tax rules for royalties paid by a non-resident company to a resident company')), true,
+  'Mixed payer and resident-recipient qualifiers remain outside the bounded non-resident-recipient rule.');
+assert.notEqual(supportGeneralIrasRuleConcept(whtInput('withholding tax rules for royalties paid to resident companies')), true,
+  'A resident company recipient does not satisfy the non-resident request.');
+assert.notEqual(supportGeneralIrasRuleConcept({
+  ...whtInput('withholding tax rules for royalties paid to non-resident individuals'),
+  population: 'INDIVIDUAL'
+}), true, 'The company-only royalty rule does not apply to an individual population.');
 assert.equal(supportGeneralIrasRuleConcept({
   ...whtInput('withholding tax on royalty payments to non‑resident recipients'),
   sourceText: 'Royalty payments are subject to withholding tax.'

@@ -3,6 +3,7 @@
 // production interpretation, routing, retrieval, admission, and verification
 // paths with the supplied guarded transports.
 import { createHash } from 'node:crypto';
+import { diagnoseGeminiCaseFailure } from './gemini_failure_diagnostics.mjs';
 import { classifyQuestion } from '../src/classification/questionClassifier.ts';
 import { evaluateEvidenceQuality } from '../src/retrieval/evidenceQualityGate.ts';
 import { OfficialSitemapDiscoveryAdapter } from '../src/retrieval/officialSitemapDiscovery.ts';
@@ -778,6 +779,8 @@ export async function runV4AcceptanceCase({
     failure: semanticUnderstanding.failure,
     failureReason: semanticUnderstanding.failureReason,
     providerStatus: semanticUnderstanding.providerStatus,
+    assessmentStatus: semanticUnderstanding.assessmentStatus,
+    transportAttempts: semanticUnderstanding.transportAttempts,
     sendCount: semanticSends,
     transportError: semanticTransportError,
     response: rawSemanticResponse === undefined ? undefined : (() => {
@@ -918,7 +921,7 @@ export async function runV4AcceptanceCase({
   }
 
   const stageResult = evaluateV4Stages({ semantic, routing, local: localScore, governed, application });
-  return boundResultSize({
+  const result = {
     caseId,
     interpretation: semanticInterpretationProjection(interpretation),
     issuePlan: issuePlanProjection(issuePlan),
@@ -927,5 +930,7 @@ export async function runV4AcceptanceCase({
     stageVerdicts: stageResult.stages,
     firstFailure: stageResult.earliestFailure,
     productionDiagnostics: diagnostics
-  });
+  };
+  result.failureDiagnostics = diagnoseGeminiCaseFailure(result);
+  return boundResultSize(result);
 }

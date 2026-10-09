@@ -97,6 +97,16 @@ export interface SourceMapFallbackTrace {
   attempts: SourceMapFallbackAttempt[];
   /** Status-only sitemap/robots fetch metadata; never a fetched evidence candidate. */
   discoveryFetchAttempts?: Array<{ topicId: string; fetchStatus: string }>;
+  /** Bounded snapshots explain which validated records were considered for each requested coverage scope. */
+  coverageDecisions?: Array<{
+    scope: 'TOPIC' | 'REGISTERED';
+    targetTopicIds: string[];
+    admissionTopicIds: string[];
+    eligibleRecordIds: string[];
+    rejectedRecords: Array<{ recordId: string; code: string; reason: string }>;
+    uncoveredTopicIds: string[];
+    uncoveredConcepts: string[];
+  }>;
   stages?: Array<{ stage: 'LOCAL_VERIFIED' | 'MAPPED_SOURCE' | 'SITEMAP_DISCOVERY' | 'OFFICIAL_DOMAIN_SEARCH' | 'INSUFFICIENT'; status: 'SUFFICIENT' | 'ATTEMPTED' | 'EXHAUSTED' | 'SKIPPED'; reason: string }>;
 }
 
@@ -1153,6 +1163,7 @@ export async function resolveMappedOfficialSourceFallback(
   const records: AuthoritativeSourceRecord[] = [];
   const attempts: SourceMapFallbackAttempt[] = [];
   const discoveryFetchAttempts: NonNullable<SourceMapFallbackTrace['discoveryFetchAttempts']> = [];
+  const coverageDecisions: NonNullable<SourceMapFallbackTrace['coverageDecisions']> = [];
   const sourceMapIds = new Set<string>();
   const finalVerifiedUrls = new Set<string>();
   const discoveredEvidenceIds = new Set<string>();
@@ -1325,8 +1336,30 @@ export async function resolveMappedOfficialSourceFallback(
     finalVerifiedUrls: [...finalVerifiedUrls],
     candidateOnly: records.length > 0,
     attempts,
-    discoveryFetchAttempts
+    discoveryFetchAttempts,
+    coverageDecisions
   });
+  const captureCoverageDecision = (
+    scope: 'TOPIC' | 'REGISTERED',
+    targetTopics: readonly MappedCoverageTopic[],
+    admissionTopics: readonly MappedCoverageTopic[],
+    assessment: EvidenceQualityAssessment
+  ): void => {
+    coverageDecisions.push({
+      scope,
+      targetTopicIds: targetTopics.map(topic => topic.id).slice(0, 20),
+      admissionTopicIds: admissionTopics.map(topic => topic.id).slice(0, 20),
+      eligibleRecordIds: assessment.eligibleRecords.map(record => record.id).slice(0, 20),
+      rejectedRecords: assessment.rejectedRecords.slice(0, 12).map(rejection => ({
+        recordId: rejection.recordId,
+        code: rejection.code,
+        reason: rejection.reason.slice(0, 240)
+      })),
+      uncoveredTopicIds: assessment.uncoveredTopicIds.slice(0, 20),
+      uncoveredConcepts: (assessment.uncoveredConcepts || []).slice(0, 20)
+    });
+    if (coverageDecisions.length > 24) coverageDecisions.shift();
+  };
   const hasAdequateCoverage = (topics: readonly MappedCoverageTopic[]): boolean => {
     if (topics.length === 0) return false;
     const registeredTopics = topics.filter(topic => !topic.id.startsWith('iras-authority-query-'));
@@ -1338,9 +1371,17 @@ export async function resolveMappedOfficialSourceFallback(
           attempt.titleMatched && attempt.contentMatched && attempt.finalUrl === record.canonicalSourceUrl)));
     if (!nonIrasCovered) return false;
     if (irasTopics.length === 0 && provisional.length === 0) return registeredTopics.length > 0;
+    // A concept-only provisional target can be supported by a fetched record
+    // admitted through its registered topic in the same already-routed IRAS
+    // domain. Include those registered topics for evidence admission, while
+    // retaining `topics` as the only requested target for this decision.
+    const provisionalAdmissionTopics = provisional.length > 0
+      ? topicsRequiringFallback.filter(topic => topic.domainId === provisional[0].domainId && topic.domainId.startsWith('IRAS_'))
+      : [];
+    const admissionTopics = [...new Map([...irasTopics, ...provisionalAdmissionTopics].map(topic => [topic.id, topic])).values()];
     const assessment = evaluateEvidenceQuality({
       query,
-      topicIds: irasTopics.map(topic => topic.id),
+      topicIds: admissionTopics.map(topic => topic.id),
       provisionalTopics: provisional,
       records,
       missingFacts: [],
@@ -1350,21 +1391,30 @@ export async function resolveMappedOfficialSourceFallback(
       referenceDate: options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE,
       sourceMapFallbackTrace: currentTrace()
     });
-    return assessment.uncoveredTopicIds.length === 0 && assessment.eligibleRecords.length > 0;
+    captureCoverageDecision('TOPIC', topics, admissionTopics, assessment);
+    const requestedTargetsCovered = topics.every(topic =>
+      !topic.domainId.startsWith('IRAS_') || assessment.coveredTopicIds.includes(topic.id)
+    );
+    return requestedTargetsCovered && assessment.eligibleRecords.length > 0;
   };
   const topicCovered = (topic: MappedCoverageTopic): boolean => hasAdequateCoverage([topic]);
-  const registeredCoverageAssessment = () => evaluateEvidenceQuality({
-    query,
-    topicIds: topicsRequiringFallback.filter(topic => topic.domainId.startsWith('IRAS_')).map(topic => topic.id),
-    provisionalTopics,
-    records,
-    missingFacts: [],
-    requestedConcepts,
-    ...scopedEvidenceRuleInput,
-    authorities: ['IRAS'],
-    referenceDate: options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE,
-    sourceMapFallbackTrace: currentTrace()
-  });
+  const registeredCoverageAssessment = (): EvidenceQualityAssessment => {
+    const registeredTopics = topicsRequiringFallback.filter(topic => topic.domainId.startsWith('IRAS_'));
+    const assessment = evaluateEvidenceQuality({
+      query,
+      topicIds: registeredTopics.map(topic => topic.id),
+      provisionalTopics,
+      records,
+      missingFacts: [],
+      requestedConcepts,
+      ...scopedEvidenceRuleInput,
+      authorities: ['IRAS'],
+      referenceDate: options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE,
+      sourceMapFallbackTrace: currentTrace()
+    });
+    captureCoverageDecision('REGISTERED', [...registeredTopics, ...provisionalTopics], registeredTopics, assessment);
+    return assessment;
+  };
   const unresolvedRegisteredTopics = (): MappedCoverageTopic[] => {
     const uncovered = new Set(registeredCoverageAssessment().uncoveredTopicIds);
     return topicsRequiringFallback.filter(topic => topic.domainId.startsWith('IRAS_')
@@ -1636,6 +1686,7 @@ export async function resolveMappedOfficialSourceFallback(
       candidateOnly: records.length > 0,
       attempts,
       discoveryFetchAttempts,
+      coverageDecisions,
       stages
     }
   };
@@ -1888,7 +1939,10 @@ export async function buildGroundedReasoningContext(
   }), classification.missingFacts) : undefined;
   const localRetrievedIds = new Set(contextualLocalRetrieved.map(record => record.id));
   const locallyUncoveredConcepts = new Set(localQuality?.uncoveredConcepts || []);
-  const fallbackTopicIds = (retrievalOptions.localOnly ? [] : initiallyMatchedCoverage
+  const uncoveredProvisionalDomains = new Set(authorityDiscoveryContexts
+    .filter(topic => localQuality?.uncoveredTopicIds.includes(topic.id))
+    .map(topic => topic.domainId));
+  const normalFallbackTopicIds = [...new Set(retrievalOptions.localOnly ? [] : initiallyMatchedCoverage
     .filter(topic => !irasPolicy || topic.id.startsWith('iras-'))
     .filter(topic => localQuality && topic.id.startsWith('iras-')
       ? localQuality.uncoveredTopicIds.includes(topic.id) ||
@@ -1896,7 +1950,15 @@ export async function buildGroundedReasoningContext(
           evidenceTopicIds.includes(topic.id) &&
           (concept.topicIds.length === 0 || concept.topicIds.includes(topic.id)))
       : topic.status !== 'VALIDATED' || !topic.sourceRecordIds.some(id => localRetrievedIds.has(id)))
-    .map(topic => topic.id));
+    .map(topic => topic.id))];
+  const selectedFallbackDomains = new Set(getCoverageTopicsByIds(normalFallbackTopicIds)
+    .filter(topic => topic.id.startsWith('iras-'))
+    .map(topic => topic.domainId));
+  const registeredTopicsForUncoveredProvisionalScope = retrievalOptions.localOnly ? [] : initiallyMatchedCoverage
+    .filter(topic => topic.id.startsWith('iras-') && uncoveredProvisionalDomains.has(topic.domainId) &&
+      !selectedFallbackDomains.has(topic.domainId))
+    .map(topic => topic.id);
+  const fallbackTopicIds = [...new Set([...normalFallbackTopicIds, ...registeredTopicsForUncoveredProvisionalScope])];
   const needsAuthorityFallback = Boolean(irasPolicy && localQuality &&
     (localQuality.status === 'INSUFFICIENT' || localQuality.uncoveredTopicIds.length > 0));
   const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, {
