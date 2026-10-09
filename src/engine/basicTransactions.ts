@@ -130,13 +130,13 @@ const templates: Template[] = [
   },
   {
     id: 'CREDIT_SALE', title: 'Credit sale',
-    patterns: [/\b(?:sold|sell|sale)\b/i, /\b(?:goods|products|services|merchandise|inventory)\b/i, /\b(?:on credit|on account|credit sale|credit terms)\b/i],
+    patterns: [/\b(?:sold|sell|sells|selling|sale|sales)\b/i, /\b(?:goods|products|services|merchandise|inventory)\b/i, /\b(?:on\s+(?:(?:\d+\s*[-–]?\s*days?\s+)?credit|account)|\d+\s*[-–]?\s*days?\s+(?:credit|payment\s+terms?)|credit\s+(?:sale|terms?|period))\b/i],
     accounts: () => ({ debit: receivable(), credit: revenue() }),
-    rationale: 'Recognise the customer receivable and revenue when the sale is made, subject to applicable revenue recognition requirements.'
+    rationale: 'Recognise the customer receivable and revenue when control passes to the customer (subject to SFRS(I) 15). If inventory is delivered, also debit Cost of Goods Sold and credit Inventory at its carrying cost; that separate cost entry cannot be calculated unless the carrying cost is stated. Assumes the stated sales amount excludes any GST not specified.'
   },
   {
     id: 'CASH_SALE', title: 'Cash sale',
-    patterns: [/\b(?:sold|sell|sale)\b/i, /\b(?:goods|products|services|merchandise)\b/i, /\b(?:cash sale|for cash|cash payment|paid in cash|received cash)\b/i],
+    patterns: [/\b(?:sold|sell|sells|selling|sale|sales)\b/i, /\b(?:goods|products|services|merchandise|inventory)\b/i, /\b(?:cash sale|for cash|cash payment|paid in cash|received cash)\b/i],
     accounts: () => ({ debit: bank(), credit: revenue() }),
     rationale: 'Immediate cash sale (assumed deposited to bank); confirm whether the proceeds instead remain as cash on hand.'
   },
