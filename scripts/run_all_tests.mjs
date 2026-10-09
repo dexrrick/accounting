@@ -99,6 +99,7 @@ const testSuites = [
   { name: 'IRAS Missing Fact Guards', file: 'test_iras_missing_fact_guards.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'IRAS Verified Source Map and Fallback', file: 'test_iras_source_map.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Mapped Source Diagnostic V3 Safety', file: 'test_iras_mapped_source_diagnostic.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'CPF Sitemap Discovery', file: 'test_cpf_sitemap_discovery.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Authority-level Discovery Progression', file: 'test_iras_authority_discovery.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS End-to-End Routing and Retrieval', file: 'test_iras_e2e_routing.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Evidence Quality Gate and Ranking', file: 'test_iras_evidence_quality_gate.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

@@ -756,11 +756,36 @@ function getTopicStandardIdentifiers(topic: MappedCoverageTopic, pointer?: Sourc
   return [...identifiers];
 }
 
+// CPF indexes use umbrella article titles rather than registry topic labels.
+// These aliases rank discovery metadata and identify page titles; fetched text must still contain
+// the original topic's specific content terms before it can become evidence.
+const CPF_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
+  'cpf-ordinary-wages': ['What constitutes wages for CPF contributions'],
+  'cpf-additional-wages': ['What constitutes wages for CPF contributions'],
+  'cpf-bonus-backpay': ['What constitutes wages for CPF contributions'],
+  'cpf-notice-pay-leave-encashment': ['What constitutes wages for CPF contributions'],
+  'cpf-allowances': ['What constitutes wages for CPF contributions'],
+  'cpf_wage_ceiling': ['How much CPF contributions to pay'],
+  'cpf_contribution_rates': ['How much CPF contributions to pay'],
+  'cpf-pr-contribution-rates': ['How much CPF contributions to pay'],
+  'cpf-additional-wage-ceiling': ['How much CPF contributions to pay'],
+  'cpf-contribution-due-dates': ['Enforcement and penalties for non-compliance'],
+  'cpf-cash-top-up-tax-relief': ['Top up to enjoy higher retirement payouts', 'Top up your MediSave savings']
+};
+
+function getTopicDiscoveryHints(topic: MappedCoverageTopic): string[] {
+  return [...(topic.aliases || []), ...topic.keywords, ...(CPF_DISCOVERY_TITLE_HINTS[topic.id] || [])];
+}
+
 function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
   const allTerms = [...new Set([
     topic.title,
     ...(topic.aliases || []),
     ...topic.keywords,
+    // CPF's enforcement article states the due date with this official wording.
+    ...(topic.id === 'cpf-contribution-due-dates' ? ['due date for CPF contributions', 'late payment interest'] : []),
+    // The member retirement article calls these cash top-ups without a CPF prefix.
+    ...(topic.id === 'cpf-cash-top-up-tax-relief' ? ['cash top-up', 'cash top-ups'] : []),
     ...(topic.requiredContentTerms || []),
     ...(topic.paragraphHints || []),
     ...(topic.sectionHints || [])
@@ -925,6 +950,7 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   if (topic.domainId === 'ACCOUNTING_SFRS') return [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS];
   if (topic.domainId.startsWith('IRAS_')) return [...APPROVED_IRAS_DISCOVERY_HOSTS];
+  if (topic.domainId.startsWith('CPF_')) return [...(getOfficialSourceDiscoveryProviderConfig('CPF')?.approvedHosts || [])];
   return [];
 }
 
@@ -957,22 +983,23 @@ function cloneOfficialSourceDiscoveryRequest(request: OfficialSourceDiscoveryReq
 
 const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)[\s-]+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
 
-/** A present-day tax page cannot establish a prior period without pointer-level validity dates. */
-function hasVerifiedHistoricalIrasScope(
+/** Present-day statutory guidance cannot establish a prior period without reviewed validity dates. */
+function hasVerifiedHistoricalStatutoryScope(
   topic: MappedCoverageTopic,
   pointer: SourceMapPointer | undefined,
   targetDate: string | undefined,
   targetIsHistorical: boolean,
   query: string
 ): boolean {
-  if (!topic.domainId.startsWith('IRAS_')) return true;
-  if (isUndatedHistoricalIrasRequest(topic, query)) return false;
+  if (!topic.domainId.startsWith('IRAS_') && !topic.domainId.startsWith('CPF_')) return true;
+  if (isUndatedHistoricalStatutoryRequest(topic, query)) return false;
   if (!targetIsHistorical || !targetDate) return true;
   return Boolean(pointer?.validFrom && pointer.validTo && targetDate >= pointer.validFrom && targetDate <= pointer.validTo);
 }
 
-function isUndatedHistoricalIrasRequest(topic: MappedCoverageTopic, query: string): boolean {
-  if (!UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query)) return false;
+function isUndatedHistoricalStatutoryRequest(topic: MappedCoverageTopic, query: string): boolean {
+  if (!UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query) &&
+      !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query))) return false;
   // “Prior-year losses” identifies the vintage of a loss balance, not a
   // request for a superseded rule. Current carry-forward guidance may be
   // retrieved, while eligibility still waits on the YA and continuity facts.
@@ -1002,7 +1029,9 @@ function makeLiveCandidateEvidence(
       ? 'Accounting Standards Committee / ACRA'
       : host === 'acra.gov.sg' || host === 'www.acra.gov.sg'
         ? 'ACRA'
-        : 'Official source';
+        : host === 'cpf.gov.sg' || host === 'www.cpf.gov.sg'
+          ? 'Central Provident Fund Board (CPF Board)'
+          : 'Official source';
   const record = {
     id: `LIVE_TOPIC_${topic.id}_${contentHash?.slice(0, 12) || Date.now()}`,
     authority: (pointer?.authority || topic.authorities[0] || 'ACRA') as StatutoryAuthority,
@@ -1038,7 +1067,7 @@ function makeLiveCandidateEvidence(
     lastVerifiedDate: currentDate,
     provenance: 'LIVE_EXTERNAL' as const,
     canonicalSourceUrl: url,
-    sourceAuthority: host === 'sso.agc.gov.sg' ? 'AGC' : topic.domainId.startsWith('IRAS_') ? 'IRAS' : 'ACRA',
+    sourceAuthority: host === 'sso.agc.gov.sg' ? 'AGC' : topic.domainId.startsWith('IRAS_') ? 'IRAS' : topic.domainId.startsWith('CPF_') ? 'CPF' : 'ACRA',
     retrievedAt,
     verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
     extractionStatus: 'PARTIAL' as const,
@@ -1113,7 +1142,7 @@ export async function resolveMappedOfficialSourceFallback(
   const targetIsHistorical = targetDateResolution.isHistorical === true && !currentYearYaProxy;
   const registeredIrasTopics = [...expandedTopics.values()].filter(topic => topic.domainId.startsWith('IRAS_'));
   const historicalIrasScopeRequested = targetIsHistorical || registeredIrasTopics.some(topic =>
-    topic.status === 'HISTORICAL' || isUndatedHistoricalIrasRequest(topic, query)
+    topic.status === 'HISTORICAL' || isUndatedHistoricalStatutoryRequest(topic, query)
   ) || (registeredIrasTopics.length === 0 && UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query));
 
   // Determine historical scope before constructing a provisional topic. An
@@ -1192,13 +1221,14 @@ export async function resolveMappedOfficialSourceFallback(
     discoverySourceUrl?: string
   ): Promise<AuthoritativeSourceRecord | undefined> => {
     const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
-    const focusedIrasTitles = irasDiscovery
-      ? [topic.title, ...(topic.aliases || []), ...topic.keywords]
+    const cpfDiscovery = topic.domainId.startsWith('CPF_') && !pointer;
+    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery
+      ? [topic.title, ...(topic.aliases || []), ...topic.keywords, ...(cpfDiscovery ? CPF_DISCOVERY_TITLE_HINTS[topic.id] || [] : [])]
         .filter(value => normalizeEvidenceText(value).split(' ').filter(Boolean).length >= 2)
       : [];
     const expectation = {
-      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : [])],
-      expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedIrasTitles,
+      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] : [])],
+      expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedStatutoryTitles,
         discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
       topicTerms: getTopicContentTerms(topic),
@@ -1331,12 +1361,12 @@ export async function resolveMappedOfficialSourceFallback(
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
-    const historicalIrasQuery = topic.domainId.startsWith('IRAS_') && Boolean(
-      isUndatedHistoricalIrasRequest(topic, query) ||
+    const historicalStatutoryQuery = (topic.domainId.startsWith('IRAS_') || topic.domainId.startsWith('CPF_')) && Boolean(
+      isUndatedHistoricalStatutoryRequest(topic, query) ||
       targetIsHistorical
     );
-    const applicablePointers = pointers.filter(pointer => hasVerifiedHistoricalIrasScope(topic, pointer, targetDate, targetIsHistorical, query));
-    return { topic, pointers, applicablePointers, historicalIrasQuery };
+    const applicablePointers = pointers.filter(pointer => hasVerifiedHistoricalStatutoryScope(topic, pointer, targetDate, targetIsHistorical, query));
+    return { topic, pointers, applicablePointers, historicalStatutoryQuery };
   });
 
   const currentTrace = (): SourceMapFallbackTrace => ({
@@ -1438,11 +1468,11 @@ export async function resolveMappedOfficialSourceFallback(
   const allRequiredCoverageAdequate = (): boolean => registeredCoverageAdequate() && provisionalCoverageAdequate();
 
   // Stage 1: try every applicable reviewed map before beginning any discovery.
-  for (const { topic, applicablePointers, historicalIrasQuery } of topicWork) {
+  for (const { topic, applicablePointers, historicalStatutoryQuery } of topicWork) {
     mappedStageAttempted ||= applicablePointers.length > 0;
-    if (historicalIrasQuery && applicablePointers.length === 0) {
+    if (historicalStatutoryQuery && applicablePointers.length === 0) {
       attempts.push({ topicId: topic.id, fetchStatus: 'HISTORICAL_SCOPE_UNVERIFIED', titleMatched: false, contentMatched: false,
-        error: 'No reviewed source-map pointer validity window covers the requested historical tax period.' });
+        error: 'No reviewed source-map pointer validity window covers the requested historical statutory period.' });
       continue;
     }
     for (const pointer of applicablePointers) {
@@ -1461,7 +1491,7 @@ export async function resolveMappedOfficialSourceFallback(
   const discoverSitemapForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
     const work = topicWork.find(item => item.topic.id === topic.id);
     // Discovered pages have no reviewed period-specific validity metadata.
-    if (work?.historicalIrasQuery) return;
+    if (work?.historicalStatutoryQuery) return;
     const approvedHosts = discoveryHostsForTopic(topic);
     if (approvedHosts.length === 0) return;
     const expectedPointers = work?.pointers || [];
@@ -1477,7 +1507,7 @@ export async function resolveMappedOfficialSourceFallback(
       topicTitle: topic.title,
       standardOrAct: topic.actOrStandard || topic.title,
       approvedHosts,
-      topicHints: [...(topic.aliases || []), ...topic.keywords],
+      topicHints: getTopicDiscoveryHints(topic),
       expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
       declaredSourceUrls,
       sitemapUrls: providerConfig?.sitemapUrls,
@@ -1575,7 +1605,7 @@ export async function resolveMappedOfficialSourceFallback(
 
   const discoverOnlineForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
     const work = topicWork.find(item => item.topic.id === topic.id);
-    if (work?.historicalIrasQuery || topicCovered(topic)) return;
+    if (work?.historicalStatutoryQuery || topicCovered(topic)) return;
     const approvedHosts = discoveryHostsForTopic(topic);
     const providerConfig = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
     if (!providerConfig?.searchSite || !approvedHosts.includes(providerConfig.searchSite)) return;
@@ -1592,7 +1622,7 @@ export async function resolveMappedOfficialSourceFallback(
       topicTitle: topic.title,
       standardOrAct: topic.actOrStandard || topic.title,
       approvedHosts,
-      topicHints: [...(topic.aliases || []), ...topic.keywords],
+      topicHints: getTopicDiscoveryHints(topic),
       expectedTitles: expectedPointers.map(pointer => pointer.documentTitle),
       declaredSourceUrls,
       searchSite: providerConfig.searchSite,
