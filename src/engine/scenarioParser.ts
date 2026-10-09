@@ -2064,13 +2064,13 @@ export async function parseAccountingQuery(
   // =========================================================================
   if (/\b(?:lease|tenancy)\b|\brental\s+agreement\b/i.test(query)) {
     let termYears = 0;
-    const yearMatch = query.match(/(\d+)\s*(?:years?|yrs?)/i);
+    const yearMatch = query.match(/\b(\d+)\s*[-–]?\s*(?:years?|yrs?)\b/i);
     if (yearMatch && yearMatch[1]) {
       termYears = parseInt(yearMatch[1], 10);
     }
 
     let termMonths = termYears * 12;
-    const monthTermMatch = query.match(/(\d+)\s*(?:months?|mos?)/i);
+    const monthTermMatch = query.match(/\b(\d+)\s*[-–]?\s*(?:months?|mos?)\b/i);
     if (monthTermMatch && monthTermMatch[1] && !yearMatch) {
       termMonths = parseInt(monthTermMatch[1], 10);
       termYears = Math.round(termMonths / 12 * 10) / 10;
