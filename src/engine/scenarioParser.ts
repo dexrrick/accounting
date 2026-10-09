@@ -2090,7 +2090,8 @@ export async function parseAccountingQuery(
     // A lease-term numeral is not a rental amount. Read an explicitly
     // identified payment instead of assuming SGD 3,000 per month.
     const rentMatch = query.match(/(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)\s*(?:\/\s*(?:month|mo)|per\s+month|monthly)/i)
-      || query.match(/(?:rent(?:al)?|paying|monthly payment)\s*(?:of|is|at|:)??\s*(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)/i);
+      || query.match(/(?:rent(?:al)?|paying|monthly payment)\s*(?:of|is|at|:)??\s*(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)/i)
+      || query.match(/paying\s+(?:1\s+month|monthly)\s+(?:SGD|S\$|\$)\s*([\d,]+(?:\.\d{1,2})?)/i);
     const monthlyRent = rentMatch ? Number(rentMatch[1].replace(/,/g, '')) : 0;
     if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
       return {
