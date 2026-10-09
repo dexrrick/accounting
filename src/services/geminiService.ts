@@ -3,6 +3,7 @@ import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
+import { calculateDoubleEntries } from '../engine/accountingEngine';
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
@@ -1362,31 +1363,20 @@ export function renderStructuredOfflineResponse(
   }
 
   // 8. LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
+  if (parsed.scenarioType === 'LEASE_IFRS16' && !parsed.isComplete) {
+    return { messageText: '### Lease facts required\\n\\n' + parsed.missingFields.map(field => field.prompt).join('\\n'), scenarioState: parsed, clarifications: parsed.missingFields };
+  }
   if (parsed.scenarioType === 'LEASE_IFRS16') {
-    const termYears = parsed.leaseTermYears || 3;
-    const termMonths = parsed.leaseTermMonths || 36;
-    const rent = parsed.leasePaymentMonthly || 3000;
-    const rate = parsed.leaseDiscountRateAnnual || 5.0;
-
-    const replyText = `### Under ${std16} (*Leases*)\n\n` +
-      `For your **${termYears}-year rental agreement** paying **${parsed.functionalCurrency} ${rent.toLocaleString()}/month**:\n\n` +
-      `Under **${std16} §22**, commercial leases over 12 months can **no longer be treated as off-balance sheet operating rent**. You must capitalize a **Right-of-Use (ROU) Asset** and a corresponding **Lease Liability**.\n\n` +
-      `1. **At Inception (Commencement Date)**:\n` +
-      `   * **Dr. Right-of-Use Asset**: ~${parsed.functionalCurrency} 100,097.10\n` +
-      `   * **Cr. Lease Liability**: ~${parsed.functionalCurrency} 100,097.10\n` +
-      `   *(Calculated as the present value of ${termMonths} payments of ${parsed.functionalCurrency} ${rent.toLocaleString()} discounted at ${rate}% p.a. Incremental Borrowing Rate under §26)*\n\n` +
-      `2. **Every Month (Payment & Interest Accrual)**:\n` +
-      `   * **Dr. Lease Liability (Principal)**: ${parsed.functionalCurrency} 2,582.93\n` +
-      `   * **Dr. Finance Cost / Interest Expense (P&L)**: ${parsed.functionalCurrency} 417.07\n` +
-      `   * **Cr. Cash / Bank**: ${parsed.functionalCurrency} ${rent.toLocaleString()}\n\n` +
-      `3. **Every Month (Straight-Line Depreciation)**:\n` +
-      `   * **Dr. Depreciation Expense - ROU Asset (P&L)**: ${parsed.functionalCurrency} 2,780.48\n` +
-      `   * **Cr. Accumulated Depreciation - ROU Asset**: ${parsed.functionalCurrency} 2,780.48\n\n` +
-      `Check the **Double Entry Journal** tab to review the complete statutory breakdown!`;
-
+    const journal = calculateDoubleEntries(parsed, standard).groups;
+    const details = journal.map(group =>
+      '**' + group.title + '**\\n' +
+      group.lines.map(line => (line.debit > 0 ? 'Dr ' : 'Cr ') + line.accountName +
+        ': ' + parsed.functionalCurrency + ' ' + (line.debit || line.credit).toFixed(2)).join('\\n')
+    ).join('\\n\\n');
     return {
-      messageText: finalizeMessage(replyText, parsed),
-      scenarioState: parsed
+      messageText: '### Lease accounting (' + std16 + ')\\n\\n' + details +
+        '\\n\\nReview the calculated journal and confirm the contractual payment timing and discount rate.',
+      scenarioState: { ...parsed, directGroups: journal }
     };
   }
 
