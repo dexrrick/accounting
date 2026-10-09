@@ -55,6 +55,24 @@ assert.ok(ownerCompany.missingFields.some(field => field.fieldKey === 'entityTyp
 const literalPrompt = await processAccountingQuery('Record a bank transfer', null, 'SFRS_I', '', 'gemini-3.5-flash-lite', [], {journal:true, statutory:false});
 assert.ok(!literalPrompt.messageText.includes('\\\\n'), 'Prompts must use newlines, not literal backslash-n');
 
+// A question describing debit/credit accounts is a journal request even without
+// the literal words "journal entry". No inventory cost is supplied here.
+const creditQuestion = 'If a company sells inventory for SGD 1,800 to a customer on 30 days credit, which account gets debited and which gets credited?';
+await run(creditQuestion, 'Trade Receivables', 'Revenue', 1800);
+const creditResponse = await processAccountingQuery(creditQuestion, null, 'SFRS_I');
+assert.equal(creditResponse.scenarioState.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(creditResponse.scenarioState.directGroups?.length, 1);
+assert.equal(creditResponse.scenarioState.directGroups?.[0].isBalanced, true);
+assert.match(creditResponse.messageText, /Cost of Goods Sold/i);
+assert.match(creditResponse.messageText, /carrying cost/i);
+for (const wording of [
+  'The company sells goods on 30 days credit for SGD 1,800. Which accounts do I debit and credit?',
+  'We sold inventory on 30-day credit terms for SGD 1,800. Give the journal entry.',
+  'Sell products for SGD 1,800 on credit to a customer. Record the double entry.'
+]) {
+  await run(wording, 'Trade Receivables', 'Revenue', 1800);
+}
+
 const missing = await parseAccountingQuery('Record a bank transfer', null);
 assert.equal(missing.scenarioType, 'BASIC_BOOKKEEPING');
 assert.deepEqual(new Set(missing.missingFields.map(f => f.fieldKey)), new Set(['amount', 'sourceAccount', 'destinationAccount']));
