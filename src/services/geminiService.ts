@@ -675,34 +675,25 @@ export async function processAccountingQuery(
   // permission for a provider to invent a value. This is field-agnostic: new
   // scenarios can supply their own missingFields without editing this gate.
   const materialClarification = deterministicScenario.missingFields?.[0];
-  // A user-requested journal is a safety contract: return an established,
-  // balanced entry or ask for facts. Do not let a provider invent accounts or
-  // amounts merely to satisfy a display preference.
+  // A complete deterministic journal wins. Otherwise permit the existing AI
+  // pipeline to attempt a proposal, but never invent missing recognized facts.
   if (journalRequested && !hasImages) {
-    const hasGroundedJournal = deterministicScenario.directGroups?.some(group =>
-      group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
-    );
-    if (hasGroundedJournal) {
+    const groups = deterministicScenario.directGroups || [];
+    const grounded = groups.length > 0 && groups.every(g =>
+      g.isBalanced && g.lines.length >= 2 && g.totalDebit > 0 && g.totalDebit === g.totalCredit);
+    if (grounded) {
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
       return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
     }
-    const clarification: MissingFieldInfo = materialClarification || {
-      fieldKey: 'journalFacts', fieldName: 'Journal-entry facts',
-      prompt: 'Please provide the transaction amount, what was received or incurred, and whether it was paid immediately or remains payable.',
-      whyNeeded: 'A balanced journal cannot be generated safely until both sides and their measurement are established.'
-    };
-    if (irasEvidenceRequired) {
-      const response = await governedOfflineResponse({ ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] });
-      return attachAmendmentProvenance({ ...response, clarifications: [clarification],
-        messageText: `${response.messageText}\n\n${clarification.prompt}` });
+    if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
+      return attachAmendmentProvenance({
+        messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\\n'),
+        scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false },
+        clarifications: deterministicScenario.missingFields
+      });
     }
-    return attachAmendmentProvenance({
-      messageText: `### Clarification Required for Double Entry\n\n${clarification.prompt}`,
-      scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
-      clarifications: [clarification]
-    });
   }
   if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
@@ -938,6 +929,12 @@ export function renderStructuredOfflineResponse(
   }
 
   // 1. UNRECOGNIZED / FREE-FORM QUERY (OFFLINE MODE)
+  if (parsed.scenarioType === 'UNRECOGNIZED' && !groundedContext?.semanticUnderstanding?.ownershipContext?.includes('equity')) {
+    return {
+      messageText: '### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction.',
+      scenarioState: { ...parsed, directGroups: [], isComplete: false }
+    };
+  }
   if (parsed.scenarioType === 'UNRECOGNIZED') {
     const errorPrefix = apiErrorMessage
       ? `> ⚠️ **Gemini API Call Notice**: ${apiErrorMessage}\n> Please verify your API Key and Model in the **Settings** panel.\n\n`
