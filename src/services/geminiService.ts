@@ -742,7 +742,7 @@ export async function processAccountingQuery(
     }
     if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
       return attachAmendmentProvenance({
-        messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\\n'),
+        messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\n'),
         scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false },
         clarifications: deterministicScenario.missingFields
       });
