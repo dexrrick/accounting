@@ -2087,13 +2087,21 @@ export async function parseAccountingQuery(
       };
     }
 
-    let monthlyRent = 3000;
-    const rentMatch = query.match(/(?:paying|rent(?:al)?|cost)?\s*(?:1\s*month|\/month|monthly|per\s*month)?\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i)
-      || query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)/i);
-
-    if (rentMatch && rentMatch[1]) {
-      const parsed = parseFloat(rentMatch[1].replace(/,/g, ''));
-      if (parsed > 50) monthlyRent = parsed;
+    // A lease-term numeral is not a rental amount. Read an explicitly
+    // identified payment instead of assuming SGD 3,000 per month.
+    const rentMatch = query.match(/(?:SGD|S\\$|\\$)\\s*([\\d,]+(?:\\.\\d{1,2})?)\\s*(?:\\/\\s*(?:month|mo)|per\\s+month|monthly)/i)
+      || query.match(/(?:rent(?:al)?|paying|monthly payment)\\s*(?:of|is|at|:)??\\s*(?:SGD|S\\$|\\$)\\s*([\\d,]+(?:\\.\\d{1,2})?)/i);
+    const monthlyRent = rentMatch ? Number(rentMatch[1].replace(/,/g, '')) : 0;
+    if (!Number.isFinite(monthlyRent) || monthlyRent <= 0) {
+      return {
+        scenarioType: 'LEASE_IFRS16', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION',
+        primaryDomain: 'ACCOUNTING_SFRS', rawQuery: query,
+        transactionTitle: 'Monthly lease payment clarification required', functionalCurrency,
+        transactionCurrency: functionalCurrency, directGroups: [], isComplete: false,
+        missingFields: [{ fieldKey: 'leasePayment', fieldName: 'Monthly lease payment',
+          prompt: 'What is the monthly lease payment amount?',
+          whyNeeded: 'A lease liability cannot be measured without contractual lease payments.' }]
+      };
     }
 
     let discountRateAnnual = 5.0;
