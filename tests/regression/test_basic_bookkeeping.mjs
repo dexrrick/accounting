@@ -34,6 +34,27 @@ for (let i = 1; i <= 40; i++) {
   const cents = i * 7919;
   await run('Withdraw SGD ' + (cents / 100).toFixed(2) + ' from business bank into petty cash box', 'Petty Cash', 'Cash at Bank', cents / 100);
 }
+// Live issue: customer invoice settlement must not be captured as an internal bank transfer.
+const customerPayment = "What's the journal entry when the business receives a bank transfer of SGD 1,800 from that customer settling their invoice?";
+await run(customerPayment, 'Cash at Bank', 'Trade Receivables', 1800);
+const prior = await parseAccountingQuery('If the owner takes SGD 300 cash from the business for personal use, what is the correct debit and credit entry', null);
+assert.equal(prior.scenarioType, 'BASIC_BOOKKEEPING');
+assert.deepEqual(prior.missingFields.map(field => field.fieldKey), ['entityType']);
+assert.equal(prior.directGroups?.length, 0);
+const actual = await processAccountingQuery(customerPayment, prior, 'SFRS_I');
+assert.equal(actual.scenarioState.scenarioType, 'BASIC_BOOKKEEPING');
+assert.deepEqual(actual.scenarioState.directGroups?.[0]?.lines.map(line => line.accountName), ['Cash at Bank', 'Trade Receivables']);
+assert.equal(actual.scenarioState.directGroups?.[0]?.totalDebit, 1800);
+const owner = await parseAccountingQuery('The sole proprietor takes SGD 300 cash from the business for personal use', null);
+assert.equal(owner.scenarioType, 'BASIC_BOOKKEEPING');
+assert.deepEqual(owner.directGroups?.[0]?.lines.map(line => line.accountName), ["Owner's Drawings", 'Cash']);
+assert.equal(owner.directGroups?.[0]?.totalDebit, 300);
+const ownerCompany = await parseAccountingQuery('The company owner takes SGD 300 cash from the business for personal use', null);
+assert.equal(ownerCompany.directGroups?.length, 0);
+assert.ok(ownerCompany.missingFields.some(field => field.fieldKey === 'entityType'));
+const literalPrompt = await processAccountingQuery('Record a bank transfer', null, 'SFRS_I', '', 'gemini-3.5-flash-lite', [], {journal:true, statutory:false});
+assert.ok(!literalPrompt.messageText.includes('\\\\n'), 'Prompts must use newlines, not literal backslash-n');
+
 const missing = await parseAccountingQuery('Record a bank transfer', null);
 assert.equal(missing.scenarioType, 'BASIC_BOOKKEEPING');
 assert.deepEqual(new Set(missing.missingFields.map(f => f.fieldKey)), new Set(['amount', 'sourceAccount', 'destinationAccount']));
