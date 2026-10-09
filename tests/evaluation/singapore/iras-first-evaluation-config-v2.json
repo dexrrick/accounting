@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "profileVersion": "iras-first-v2",
+  "targetedOutputPrefix": "iras-first-targeted-v2-live",
+  "finalOutputPrefix": "iras-first-final-v2-live",
+  "targetedCaseIds": [
+    "target-relief-entitlement",
+    "target-relief-amount",
+    "A-paraphrase-2",
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "finalCaseIds": [
+    "A-paraphrase-2",
+    "adversarial-C-employee-benefit",
+    "control-general-recognition",
+    "control-general-interaction",
+    "A-paraphrase-3",
+    "dev-conceptual-illustration",
+    "dev-training-entitlement",
+    "dev-mixed-entry-total",
+    "dev-corporate-filing",
+    "dev-investment-comparison",
+    "target-relief-entitlement",
+    "target-relief-amount"
+  ],
+  "inheritsExistingExpectationsFrom": "iras-first-evaluation-config-v1.json",
+  "caseSpecificityById": {
+    "A-paraphrase-2": true,
+    "adversarial-C-employee-benefit": true,
+    "control-general-recognition": false,
+    "control-general-interaction": false,
+    "A-paraphrase-3": true,
+    "dev-conceptual-illustration": false,
+    "dev-training-entitlement": true,
+    "dev-mixed-entry-total": true,
+    "dev-corporate-filing": false,
+    "dev-investment-comparison": false,
+    "target-relief-entitlement": true,
+    "target-relief-amount": true,
+    "private-expense-treatment": true,
+    "foreign-dividend-receipt-treatment": true,
+    "corporate-residency-general-rule": false,
+    "target-mixed-ifrs-singapore-accounting": false,
+    "wht-royalty-general-rule": false,
+    "gst-input-tax-general-rule": false,
+    "unsupported-sfrsi-6-exploration-evaluation": false
+  },
+  "adjudications": {
+    "target-mixed-ifrs-singapore-accounting": {
+      "version": "iras-first-v2",
+      "contextualAuthoritiesAnyOf": [[], ["IFRS_FOUNDATION"]],
+      "canonicalWorkstream": "ACCOUNTING_STANDARDS/ACCOUNTING",
+      "rationale": "IFRS 16 is explicitly named, so IFRS Foundation may be contextual while Singapore accounting standards remain the governing route."
+    },
+    "dev-investment-comparison": {
+      "version": "iras-first-v2",
+      "populationAnyOf": ["COMPANY", "UNKNOWN"],
+      "coverageOutcome": "UNSUPPORTED",
+      "rationale": "Compare is the intended operation; no comprehensive SFRS(I) investment-topic coverage is claimed in this phase."
+    },
+    "private-expense-treatment": {
+      "version": "iras-first-v2",
+      "contextualAuthoritiesAnyOf": [[], ["ACCOUNTING_STANDARDS"]],
+      "rationale": "The question explicitly says the private holiday payment was recorded as travel expense. Accounting standards may be contextual, while IRAS remains the governing authority and canonical corporate-tax workstream."
+    }
+  },
+  "newTargetedCases": [
+    {
+      "id": "wht-royalty-general-rule",
+      "question": "What are the general Singapore withholding-tax rules when a company pays royalties to a non-resident company?",
+      "expected": [
+        {
+          "id": "general-wht-royalty-rules",
+          "subject": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "matchAny": [
+            ["withholding", "tax", "royalty"],
+            ["withholding", "tax", "royalties"],
+            ["wht", "royalty", "non-resident"]
+          ],
+          "population": ["COMPANY"],
+          "domain": ["IRAS_INCOME_TAX"],
+          "governingAuthorities": ["IRAS"],
+          "contextualAuthoritiesAnyOf": [[]],
+          "operation": ["EXPLAIN_RULE"]
+        }
+      ],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_CORPORATE_TAX"]],
+      "expectedRequiresUserSpecificFacts": false
+    },
+    {
+      "id": "gst-input-tax-general-rule",
+      "question": "What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?",
+      "expected": [
+        {
+          "id": "general-gst-input-tax-recovery-rules",
+          "subject": "general GST input-tax recovery rules for business purchases by a GST-registered company",
+          "matchAny": [
+            ["gst", "input", "tax", "business", "purchases"],
+            ["input", "tax", "recovery", "gst-registered", "company"]
+          ],
+          "population": ["COMPANY"],
+          "domain": ["IRAS_GST"],
+          "governingAuthorities": ["IRAS"],
+          "contextualAuthoritiesAnyOf": [[]],
+          "operation": ["EXPLAIN_RULE"]
+        }
+      ],
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_GST"]],
+      "expectedRequiresUserSpecificFacts": false
+    }
+  ],
+  "timeoutExperiment": {
+    "protocolVersion": "semantic-structured-timeout-v2",
+    "outputPrefix": "semantic-structured-timeout-experiment-v2",
+    "model": "gemini-3.5-flash-lite",
+    "caseIds": [
+      "corporate-residency-general-rule",
+      "target-mixed-ifrs-singapore-accounting",
+      "A-paraphrase-2"
+    ],
+    "timeoutArmsMs": [8000, 12000, 15000],
+    "observationsPerCaseArm": 2,
+    "minimumStartGapMs": 15250,
+    "orderDesign": "Six balanced replicate-cell permutations: each case-arm appears twice, arm positions are balanced, and the second observation reverses/rotates order.",
+    "fixedOptions": {
+      "jsonMode": true,
+      "temperature": 0,
+      "schema": "current SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA",
+      "provider": "Gemini API key string using the existing default model configuration",
+      "retries": 0
+    },
+    "recommendationPolicy": {
+      "defaultTimeoutMs": 8000,
+      "requireValidCompletionsAboveDefaultAcrossCases": 2,
+      "minimumDistinctCasesAboveDefault": 2,
+      "minimumTimeoutReductionVsDefault": 2,
+      "comparisonSampleCountPerArm": 6,
+      "comparableValidity": "candidate valid-interpretation count must be at least the 8000ms arm count",
+      "choose": "shortest arm meeting every criterion; otherwise retain 8000ms",
+      "pilotCaveat": "n=6 per arm is a limited pilot, not statistical proof"
+    }
+  },
+  "baselineProductionTimeoutMs": 8000,
+  "protectedHistoryManifest": "docs/evaluation/multi-authority-workstreams/iras-first-live-2026-10-02-v2/historical-artifact-hashes.json"
+}

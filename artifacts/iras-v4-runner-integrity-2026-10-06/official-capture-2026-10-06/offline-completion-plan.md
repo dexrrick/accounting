@@ -1,0 +1,11 @@
+# Complete retained acquisition without recapture — 06/10/2026
+
+The authorized one-use acquisition executed 15 exact inventory requests, all HTTP 200. Its retained payload is COMPLETE with no terminal integrity failure. The post-capture launcher audit failed at a JavaScript-object comparison: `provenance.productionRetriever` is undefined in the runtime object and is omitted by JSON serialization. The raw payload-file hash check immediately before that comparison passed. This is a local representation failure, not an acquisition failure or permission to repeat requests.
+
+Preserve the original capture reservation, journal, payload and failed audit byte-for-byte. Raw payload SHA-256 is `7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9`; original failed audit SHA-256 is `15bb1aa377dba8e3b12a7c001bd4089dcbba735ce940fec5705dace5885fc8a9`. Independent read-only inspection recomputed all body hashes and frozen inventory identities with zero mismatches, failures or Location headers.
+
+The builder owns only a small standalone artifact finalizer; no source, launcher, capture output or existing manifest changes. Independently review its bytes before execution. Under the global external-network blocker, verify the timeout-corrected frozen bindings and validate the actual payload with `requireComplete: true`. Replay all 15 responses through the reviewed capture-plan export and the real guarded production retriever; require exact inventory/provenance, successful production statuses and content hashes against retained bytes. Save these actual replay diagnostics with an explicit offline-replay label; they do not constitute semantic acceptance.
+
+After those checks, invoke the existing evidence-lock writer against the same capture payload and frozen bindings, then write a separate exclusive completion audit. Preserve the original failed audit; never rewrite it as PASS. No recapture, source expansion, retry, provider key read, Gemini request, semantic execution or acceptance reservation is authorized in this completion.
+
+The evidence window starts at `2026-10-06T06:26:38.150Z` and expires at `2026-10-07T06:26:38.150Z` (14:26:38.150 SGT on 07/10/2026). Completion and replay must not reset freshness. Gemini acceptance remains behind its separate one-use authorization gate.

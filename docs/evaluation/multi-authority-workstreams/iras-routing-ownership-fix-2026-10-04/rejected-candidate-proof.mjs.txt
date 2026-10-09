@@ -1,0 +1,62 @@
+// Prospective API-free replay of immutable pre-fix raw mocks. No provider or retrieval.
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import { classifyQuestion } from '../../../../src/classification/questionClassifier.ts';
+import { reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../../../src/services/semanticQuestionUnderstanding.ts';
+import { matchIssuesV2, scoreIssueDimensionsV2 } from '../../../../tests/evaluation/singapore/multi-authority-issue-scoring-v2.mjs';
+
+const root = new URL('../../../../', import.meta.url);
+const retainedPath = 'docs/evaluation/multi-authority-workstreams/iras-first-targeted-acceptance-2026-10-04-v4/routing-classification-proof.json';
+const retainedBytes = await readFile(new URL(retainedPath, root));
+const retained = JSON.parse(retainedBytes.toString('utf8'));
+const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+assert.equal(sha256(retainedBytes), '636b5e3376f17a646a86c2dd3f062053c5687239298871942fd98426fff1bf48');
+const contract = JSON.parse(await readFile(new URL('tests/evaluation/singapore/iras-first-targeted-acceptance-v4.json', root), 'utf8'));
+const expected = contract.cases.find(row => row.caseId === retained.caseId).semantic.expectedIssues;
+const rows = retained.rows.map(row => {
+  const interpretation = validateSemanticQuestionInterpretation(row.rawMock, retained.question);
+  assert.ok(interpretation);
+  const matched = matchIssuesV2(expected, interpretation.issues);
+  assert.equal(matched.ownerByExpected.size, 2);
+  for (const [expectedIndex, actualIndex] of matched.ownerByExpected) {
+    assert.ok(Object.values(scoreIssueDimensionsV2(interpretation.issues[actualIndex], expected[expectedIndex])).every(Boolean));
+  }
+  const { issuePlan } = reconcileQuestionUnderstanding(retained.question, classifyQuestion(retained.question), {
+    mode: 'SEMANTIC_INTERPRETATION', interpretation
+  });
+  assert.equal(issuePlan.issues.length, 2);
+  assert.equal(issuePlan.coverageEstablished, true);
+  assert.equal(issuePlan.hasUnmappedResidual, false);
+  const iras = issuePlan.issues.find(issue => issue.governingAuthorities.includes('IRAS'));
+  const cpf = issuePlan.issues.find(issue => issue.governingAuthorities.includes('CPF'));
+  assert.ok(iras.mappedTopicIds.includes('iras-individual-cpf-relief'));
+  assert.ok(cpf.mappedTopicIds.includes('cpf_contribution_rates'));
+  assert.equal(iras.operation, 'CHECK_ELIGIBILITY');
+  assert.equal(cpf.operation, 'CALCULATE');
+  return { subject: row.subject, rootMode: row.rootMode, issuePlan };
+});
+const productionFiles = [
+  'src/services/semanticQuestionUnderstanding.ts',
+  'src/retrieval/queryTopicResolver.ts',
+  'src/standards/coverageRegistry.ts'
+];
+const productionFingerprints = await Promise.all(productionFiles.map(async path => ({
+  path, sha256: sha256(await readFile(new URL(path, root)))
+})));
+const proof = {
+  provenance: 'Prospective API-free production reconciliation of explicit retained synthetic semantic mocks; not model accuracy or IRAS evidence acceptance',
+  startingSha: '53cf1399a90981c5c537fe9935bb53f8d53860b9',
+  retainedProof: { path: retainedPath, sha256: sha256(retainedBytes) },
+  productionFingerprints,
+  providerCalls: 0, liveSourceRequests: 0,
+  caseId: retained.caseId, question: retained.question, rows
+};
+const output = new URL('./prospective-proof.json', import.meta.url);
+if (process.argv.length === 3 && process.argv[2] === '--capture') {
+  await writeFile(output, JSON.stringify(proof, null, 2) + '\n', { flag: 'wx' });
+} else {
+  assert.equal(process.argv.length, 2, 'Only read-only replay or exclusive API-free --capture is supported.');
+  assert.deepEqual(proof, JSON.parse(await readFile(output, 'utf8')));
+}
+console.log('PASS: four retained inputs now yield exactly two correctly owned material issues; no routing residual. No provider/source transport.');

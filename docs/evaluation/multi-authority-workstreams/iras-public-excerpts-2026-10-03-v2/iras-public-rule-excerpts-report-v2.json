@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-public-rule-excerpts-v2",
+  "diagnosticOnly": true,
+  "interpretation": "PRESENCE_ONLY_NOT_ENTAILMENT_OR_LIVE_ACCEPTANCE",
+  "maximumActualGets": 2,
+  "actualGetCount": 1,
+  "cacheReuseCount": 0,
+  "transportEvents": [
+    {
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "status": "HTTP_200",
+      "host": "www.iras.gov.sg",
+      "contentHash": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+    }
+  ],
+  "preregistrationSha256": "1c36466f92717f076cd1a737ca74794a7658b36b3d1db0c1b5f4697c9769af2d",
+  "results": [
+    {
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "status": "VALIDATED",
+      "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+      "blockCount": 95,
+      "excerptCount": 8,
+      "truncated": false,
+      "skippedCounts": {
+        "EXCERPT_COUNT_LIMIT": 21
+      },
+      "excerpts": [
+        {
+          "blockIndex": 10,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "Tax Reliefs on Foreign Income\n\nForeign income refers to income derived from outside Singapore. Generally, such income is taxable in Singapore when remitted to and received in Singapore. Where the foreign income arises from a trade or business carried on in Singapore, it is taxable in Singapore upon accrual, regardless of whether it is received in Singapore.",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 13,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "There are tax reliefs available to Singapore tax residents to alleviate the double taxation suffered, such as:\n\n• Exemption or reduction in tax imposed on specified foreign income that is derived in a jurisdiction that has an Avoidance of Double Taxation Agreement with Singapore\n\n• Tax exemption on specified foreign-sourced income such as foreign-sourced dividends, foreign branch profits and foreign-sourced service income under Section 13(8) of the Income Tax Act 1947\n\n• Foreign tax credit for the taxes paid in the foreign jurisdiction against the Singapore tax payable on the same income",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 37,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "Tax Exemption on Specified Foreign-Sourced Income\n\nSingapore tax resident companies may enjoy tax exemption on specified foreign-sourced income that is remitted into Singapore.",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 46,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "Under Section 13(9) of the Income Tax Act 1947, tax exemption is granted when all of the following 3 conditions are met:\n\n• The foreign income has been subject to tax in the foreign jurisdiction from which it is received (known as the 'subject to tax' condition). The rate at which the foreign income was taxed can be different from the headline tax rate;\n\n• The highest Corporate Income Tax rate (i.e. foreign headline tax rate condition) of the foreign jurisdiction from which the income is received is at least 15% at the time the foreign income is received in Singapore; and\n\n• The Comptroller of Income Tax is satisfied that the tax exemption is beneficial to the Singapore tax resident company.",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 50,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "'Subject to Tax' Condition\n\nTo meet this condition, the specified foreign income received in Singapore must have been subject to tax in the foreign country/ territory from which the income is received.",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 58,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "For the purpose of this ‘subject to tax’ condition, tax paid or payable on foreign-sourced dividend received in Singapore includes:\n\n• The dividend tax, which is income tax levied on the dividend by the foreign country/ territory of source\n\n• The underlying tax, which is income tax paid or payable by the dividend paying company on the income out of which the dividend is paid",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 64,
+          "unitKind": "PARAGRAPH",
+          "text": "IRAS is also prepared to accept the consolidated accounts of the foreign dividend paying company and its group companies as proof that the ‘subject to tax’ condition has been met. However, the foreign dividend paying company must be:",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 80,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "Expenses Incurred in Respect of Foreign-Sourced Income\n\nAll expenses incurred in respect of foreign-sourced income received in Singapore that qualifies for tax exemption must be deducted against such foreign-sourced income. These expenses are not available for deduction against any other taxable income.",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "recordedAt": "2026-10-02T00:12:45.485Z",
+  "nodeVersion": "v22.23.1",
+  "evaluationProfile": "semantic-wire-format-targeted-live",
+  "model": "gemini-3.5-flash-lite",
+  "temperature": 0,
+  "jsonMode": true,
+  "responseSchema": "SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA",
+  "timeoutMs": 8000,
+  "minimumStartGapMs": 15250,
+  "noRetries": true,
+  "reviewApproved": true,
+  "localValidation": {
+    "lint": true,
+    "build": true,
+    "smoke": "59/59",
+    "full": "79/79",
+    "diffCheck": true
+  },
+  "usageRemainingPercent": {
+    "fiveHour": 73,
+    "weekly": 75
+  },
+  "sourceFingerprints": {
+    "semanticInterpretation": {
+      "path": "src\\services\\semanticQuestionUnderstanding.ts",
+      "sha256": "b134a7fa737f02969fcc612ee4249d0857fcedcffdd02e4c3f5659d789f3552b"
+    },
+    "transport": {
+      "path": "src\\services\\aiTransport.ts",
+      "sha256": "957f52d57627c108bc65e1e64fbc47ad937c3acdeadb8f22bc8c0622e7f75b3d"
+    },
+    "classifier": {
+      "path": "src\\classification\\questionClassifier.ts",
+      "sha256": "f58bf13f0a553b9681ae12c771bcd27cbf70611b7ed82aa401af40e34ed03883"
+    },
+    "authorityWorkstreams": {
+      "path": "src\\services\\authorityWorkstreams.ts",
+      "sha256": "28d880c3c67e3a5d36cc9d88b9afd05b0a2d0a5ebc28e793f284c9f9910b7f1e"
+    },
+    "responseDiagnostics": {
+      "path": "tests\\evaluation\\singapore\\semantic-contract-diagnosis.mjs",
+      "sha256": "5a57167081b3163e88cff7ad67af97ead3fa78b8637c03940dc6b5a6ad967911"
+    },
+    "issueScoring": {
+      "path": "tests\\evaluation\\singapore\\multi-authority-issue-scoring.mjs",
+      "sha256": "e0d88769b0248f77c358fbb4a2363ab835d0ba8defc71a37988d4f2deafeb63e"
+    },
+    "queryTopicResolver": {
+      "path": "src\\retrieval\\queryTopicResolver.ts",
+      "sha256": "a72c3bb7215d44cfad54464b63b86d4c39007e2b1f4b1a711562fe8f6342ca9e"
+    },
+    "coverageRegistry": {
+      "path": "src\\standards\\coverageRegistry.ts",
+      "sha256": "221bcc48e088f7f2c0e4dca67b4dd0f96b2a0fe493d85727d26743b369541a25"
+    },
+    "semanticContractEvaluationRunner": {
+      "path": "tests\\evaluation\\singapore\\semantic-contract-followup-evaluation.mjs",
+      "sha256": "8f9b5407cd76557fc72f2ff9ca636567b3538b7d0808c0bf2706f420043b991d"
+    },
+    "semanticWireFormatCliRunner": {
+      "path": "tests\\evaluation\\singapore\\semantic-intent-followup-evaluation.mjs",
+      "sha256": "527ed084e3f0820ddcf243909d87f8a038433f02cb3fb47e77811d07fda89c13"
+    }
+  },
+  "fixtureFingerprints": {
+    "semanticContractFollowup": {
+      "path": "tests\\evaluation\\singapore\\semantic-contract-followup.json",
+      "sha256": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1"
+    },
+    "semanticOperationFollowup": {
+      "path": "tests\\evaluation\\singapore\\semantic-operation-followup.json",
+      "sha256": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe"
+    },
+    "semanticReliabilityPostGuidance": {
+      "path": "tests\\evaluation\\singapore\\semantic-reliability-post-guidance.json",
+      "sha256": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6"
+    },
+    "comparableBaseline": {
+      "path": "docs\\evaluation\\multi-authority-workstreams\\contract-followup-comparable-baseline.json",
+      "sha256": "a44bfc81373f3baf6505efaf80825c8bbbd26e33c25006d83969e4b70db7c4b1"
+    },
+    "authorityReliefTargeted": {
+      "path": "tests\\evaluation\\singapore\\authority-relief-targeted.json",
+      "sha256": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb"
+    },
+    "protectedWireFormatHashes": {
+      "path": "docs\\evaluation\\multi-authority-workstreams\\semantic-wire-format-protected-hashes.json",
+      "sha256": "dba02105671fed2e170daf099094b7ee2962331e11b8d67260a6650ade5fe758"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "status": "PASSED",
+  "logSha256": {
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/smoke-final.log": "8675e3ffd79130fe936e2fe5af2508e9e335a565b83fc0910bfb3f46e3fa93bb",
+    "artifacts/iras-v4-offline-repairs-2026-10-06/build.log": "1d23783f30574de9341a1de0d4576875d3d7cdc1ccb08423a1d01f0a4c3a3682",
+    "artifacts/iras-v4-offline-repairs-2026-10-06/full.log": "97803d715bb6afe98a22ceb1be0aae338c2db372b49fc4fd16a91a89df8b6254",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/lint-final.log": "ce729cc1ac78eb5105952baa35decdc04782af06cc2453127c62c336c56e7468"
+  },
+  "observedAtUtc": "2026-10-06T14:11:43.5749230Z",
+  "liveCallsMade": 0,
+  "checks": {
+    "focusedRunnerRegression": "PASS: Node22, reported by builder",
+    "smoke": "PASS: all suites, 89.19 seconds",
+    "harnessSyntax": "PASS: Node22 --check",
+    "diffCheck": "PASS",
+    "priorAccountingRepairBuild": "PASS: TypeScript/build unaffected by runner-only follow-up",
+    "lint": "PASS with existing generated-file/control-regex warnings",
+    "priorFullSuite": "PASS: all suites, 166.66 seconds"
+  },
+  "capturesMade": 0,
+  "semanticNamespaceAbsent": true,
+  "profile": "iras-v4-fresh-namespace-final-validation"
+}

@@ -1,0 +1,80 @@
+{
+  "profile": "iras-v4-semantic-launch-supervisor-outcome",
+  "recordedAt": "2026-10-06T11:10:42.866Z",
+  "status": "HOLD_UNCONSUMED",
+  "firstFailure": "PROJECTED_RESERVE_NOT_MET",
+  "launchHead": "5bbda2a855362cb9a98657be6e41514cc621ab01",
+  "reviewedPreparationCommit": "19b80bdd3d482a6afaf2546bb27bd6bd44aa6e08",
+  "launcherInvocations": 1,
+  "retriesPerformed": 0,
+  "providerCalls": 0,
+  "officialRequests": 0,
+  "semanticAcceptanceExecuted": false,
+  "semanticLayerVerdictsAvailable": false,
+  "credentialSource": ".env.local loaded process-locally with no secret output",
+  "quotaEvidenceSource": "Direct user confirmation of existing allowance as current and available for nine frozen requests; no provider-dashboard observation or probe",
+  "quotaEvidenceShapeAndCredentialBindingRevalidated": true,
+  "quotaGateReachedInLauncher": false,
+  "quotaGateExplanation": "Launcher rejects the Codex projected reserve before quota validation at the rendezvous.",
+  "initialSharedAllowance": {
+    "fiveHourRemainingPercent": 94,
+    "weeklyRemainingPercent": 75
+  },
+  "actualPostRequestAllowance": {
+    "source": "codex",
+    "readable": true,
+    "observedAt": "2026-10-06T11:09:06Z",
+    "fiveHourRemainingPercent": 87,
+    "weeklyRemainingPercent": 74,
+    "projectedFiveHourCostPercentagePoints": 80,
+    "projectedWeeklyCostPercentagePoints": 15
+  },
+  "projectedRemaining": {
+    "fiveHourPercent": 7,
+    "weeklyPercent": 59
+  },
+  "minimumProjectedReserve": {
+    "fiveHourPercent": 8,
+    "weeklyPercent": 4
+  },
+  "launchRequirementUnchanged": {
+    "fiveHourRemainingPercent": 88,
+    "weeklyRemainingPercent": 19
+  },
+  "rendezvous": {
+    "requestedAt": "2026-10-06T11:08:20.733Z",
+    "observedAt": "2026-10-06T11:09:06Z",
+    "suppliedAt": "2026-10-06T11:09:23.452Z",
+    "responseWithin120Seconds": true
+  },
+  "canonicalOutputStates": {
+    "consumed-v4.json": "ABSENT",
+    "acceptance-v4.json": "ABSENT",
+    "acceptance-v4.json.tmp": "ABSENT",
+    "runner-v4.partial.jsonl": "ABSENT"
+  },
+  "semanticNamespaceState": "Directory exists and is empty; runner created it before gates. No consumption marker, partial journal or acceptance output.",
+  "captureExpiresAt": "2026-10-07T06:26:38.150Z",
+  "artifactSha256": {
+    "provider-quota-confirmation-2026-10-06.json": "ba6a2bfc598d4a5fa4e4bc456e368fe81df5d6ab119fd5d7d3c673607be03855",
+    "gate-request-3c4a8b5b-c6c5-4825-9ff4-380a3428f30a.json": "70873ba20459b922bf33cc775cd1d50230b06b41770b3d332096dc583fc1160d",
+    "gate-response-3c4a8b5b-c6c5-4825-9ff4-380a3428f30a.json": "5ea08a021a990aa0e6e07190b4997cbb9ca1d8932ae9837cfb9cbcb3cc8e0b45",
+    "semantic-launch-audit-88c1e6e6-e154-4e07-a56e-ab326be0b654.json": "e7c9d2227e1bffeaf673f57ae2c814fa233e21d7992207407467939a2d71ea9e",
+    "supervisor-launch-output-2026-10-06.txt": "8b1fb79049c101bac75089df3620c9f3401cb19b2925b610b6a3edfb5742ad28"
+  },
+  "validation": {
+    "node22ExecutionRuntime": "v22.23.2",
+    "frozenPreflightAndCapabilityChecks": "Completed before FRESH_GATES",
+    "actualGateFailureIndependentlyReproducedByPureHelper": true,
+    "newJSONArtifactsParse": true,
+    "priorSmokeAndBuildRetained": true,
+    "noProductionOrFrozenInputChanges": true
+  },
+  "stopPolicy": {
+    "checkpointPreparationAtFiveHourRemainingPercent": 10,
+    "finishAboveFiveHourRemainingPercent": 5,
+    "noAutomaticResetCreditConsumption": true
+  },
+  "resumeBoundary": "No retry in this turn. Although the launcher reports the namespace unconsumed/retryPermitted, that does not authorize another invocation under the user zero-retry scope. Preserve this outcome; any later attempt must satisfy the unchanged gates and freshness.",
+  "scope": "Pre-reservation HOLD, not a semantic pass or semantic failure. No recapture, launcher/code change, push, merge or deployment."
+}

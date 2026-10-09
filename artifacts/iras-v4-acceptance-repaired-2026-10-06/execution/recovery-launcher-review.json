@@ -1,0 +1,21 @@
+{
+  "syntax": "PASS: Node22",
+  "checks": [
+    "Capture and semantic inputs both use exact new recovery directory",
+    "Recoveryplan .value and rawcontext/hash/Gitcommit stability verified",
+    "Oldjournal and marker remain immutable with rawSHA checks",
+    "Conservative aggregate27/6 bounded by60/10, no transport retries",
+    "Original593frozenhash bindings preserved",
+    "Paidnine-call authorizationunspent; semantic namespaceunchanged",
+    "40/15projection and8/4reserves unchanged"
+  ],
+  "profile": "iras-v4-recovery-launcher-independent-review",
+  "recoveryPlanSha256": "4f6f1012093c4346af6f6fbe285a791bb8142aa1f54a09b64c7c32dc4d7a7e75",
+  "reviewedAtUtc": "2026-10-07T13:33:56.4202769Z",
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "processSupervision": "Dedicated hidden Node process, stdout/stderr files and explicit PID metadata; monitor until completion, do not rely on idle terminal session",
+  "reviewer": "/root/offline_repair_review",
+  "launcherSha256": "eb54f4a0e148a17babc83a47f445d14f65fa2fd031c09513ee55ef3993af784a",
+  "liveRequestsDuringReview": 0,
+  "runtime": "OFFLINE_COMMITTED_CHECK_NEXT"
+}

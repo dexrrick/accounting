@@ -1,0 +1,22 @@
+{
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "source": "Direct user instruction to proceed and approval in this chat following the explicit request for fresh confirmation that previously stated allowance remains available for this nine-call run; user-reported headroom, no provider-dashboard observation",
+  "observedAt": "2026-10-06T12:12:20Z",
+  "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "reportedLimits": {
+    "requestsPerMinute": 15,
+    "tokensPerMinute": 250000,
+    "requestsPerDay": 500
+  },
+  "currentHeadroom": {
+    "confirmedRequestCapacity": 9,
+    "confirmedForNineFrozenRequests": true,
+    "frozenRequestTokenLimitsSupported": true,
+    "preregistrationSha256": "483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3"
+  },
+  "userConfirmationText": "supervisor please go ahead\ni've approved it",
+  "providerProbeMade": false,
+  "providerDashboardObserved": false,
+  "configuredProjectIdentityIndependentlyVerified": false
+}

@@ -6,6 +6,7 @@ import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { findRecordEligibilityRejection } from '../verification/claimEvidenceVerifier';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
+import { supportGeneralIrasRuleConcept } from './irasRuleConceptSupport';
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 
 export interface EvidenceQualityTraceAttempt {
@@ -43,6 +44,9 @@ export interface EvidenceQualityInput {
   provisionalTopics?: SingaporeCoverageTopic[];
   /** Query-scoped material concepts, used for conservative relevance and coverage checks. */
   requestedConcepts?: RequestedQuestionConcept[];
+  /** Validated issue scope used to distinguish the requested subject from incidental source mentions. */
+  scopedSubject?: string;
+  scopedPopulation?: string;
 }
 
 export interface EvidenceQualityAssessment {
@@ -134,7 +138,22 @@ function directlyStatesReliefPriority(text: string): boolean {
   });
 }
 
-export function matchesRequestedQuestionConcept(text: string, concept: RequestedQuestionConcept): boolean {
+export function matchesRequestedQuestionConcept(
+  text: string,
+  concept: RequestedQuestionConcept,
+  scope?: { domainId: string; topicIds: readonly string[]; subject: string; population?: string }
+): boolean {
+  if (scope) {
+    const ruleSupport = supportGeneralIrasRuleConcept({
+      sourceText: text,
+      domainId: scope.domainId,
+      topicIds: [...scope.topicIds, ...concept.topicIds],
+      subject: scope.subject,
+      population: scope.population,
+      concepts: [concept]
+    });
+    if (ruleSupport !== undefined) return ruleSupport;
+  }
   const normalizedText = normalizeText(text);
   if (concept.id === 'relief_claim_prioritization') {
     return directlyStatesReliefPriority(text);
@@ -200,7 +219,7 @@ function metadataAssociatesRecord(record: AuthoritativeSourceRecord, topic: Sing
   });
 }
 
-function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): boolean {
+export function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): boolean {
   const canonical = UNIFIED_SOURCE_REGISTRY[record.id];
   if (!canonical || canonical.provenance !== 'LOCAL_STATIC') return false;
   // A bound ID is an association only when the evidence payload is the reviewed
@@ -214,10 +233,15 @@ function matchesReviewedLocalRegistryRecord(record: AuthoritativeSourceRecord): 
 }
 
 function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic, query: string): boolean {
-  const text = normalizeText(record.sourceText || '');
+  const sourceText = record.sourceText || '';
+  const text = normalizeText(sourceText);
   if (text.length < 24) return false;
   const concepts = scopedConcepts(topic);
-  if (concepts.length > 0) return concepts.every(concept => matchesRequestedQuestionConcept(text, concept));
+  if (concepts.length > 0) return concepts.every(concept => matchesRequestedQuestionConcept(sourceText, concept, {
+    domainId: topic.domainId,
+    topicIds: [topic.id, ...scopedMappedTopicIds(topic)],
+    subject: concept.label
+  }));
   if (topic.id === 'iras-individual-foreign-tax-credit') {
     // DTA and general double-tax guidance may mention the same income being
     // taxed twice, but that does not establish the separate FTC conditions.
@@ -236,7 +260,10 @@ function distinctiveTextMatches(record: AuthoritativeSourceRecord, topic: Singap
     // group below; sitemap/search metadata never participates.
     return queryMaterialConceptGroups(query).some(group => supportsQueryConceptGroup(textWords, group));
   }
-  const registryPhrases = [topic.title, ...topic.keywords, ...(topic.aliases || [])];
+  const sourceFacingHints = topic.domainId.startsWith('IRAS_')
+    ? [...(topic.paragraphHints || []), ...(topic.sectionHints || [])]
+    : [];
+  const registryPhrases = [topic.title, ...topic.keywords, ...(topic.aliases || []), ...sourceFacingHints];
   for (const phrase of registryPhrases) {
     const normalizedPhrase = normalizeText(phrase);
     if (normalizedPhrase.length >= 9 && text.includes(normalizedPhrase)) return true;
@@ -444,6 +471,7 @@ function isVerifiedLiveCandidate(record: AuthoritativeSourceRecord, topic: Singa
     record.lifecycleState === 'CANDIDATE' && (record.recordRole as string | undefined) === 'DISCOVERED_EVIDENCE' &&
     record.groundingEligible === true && record.sourceType !== 'APPLICATION_RULE' &&
     record.evidenceTier !== 'APPLICATION_RULE' && record.sourceAuthority === 'IRAS' &&
+    topic.authorities.includes(record.authority) && topic.legacyDomains.includes(record.domain) &&
     (!targetDate || isWithinTargetPeriod(record, targetDate)) && traceProvesLiveRecord(record, topic, trace) &&
     Boolean(record.sourceText?.trim());
 }
@@ -514,6 +542,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   const uniqueRecords = [...new Map((input.records || []).map(record => [record.id, record])).values()];
   const rejectedRecords: EvidenceQualityAssessment['rejectedRecords'] = [];
   const eligibleById = new Map<string, AuthoritativeSourceRecord>();
+  const acceptedTopicIdsByRecord = new Map<string, Set<string>>();
   const covered = new Set<string>();
   const localByTopic = new Set<string>();
   const liveByTopic = new Set<string>();
@@ -639,6 +668,41 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       }
       accepted = true;
       eligibleById.set(record.id, record);
+      const scopedTopicIds = [topic.id, ...scopedMappedTopicIds(topic)];
+      const ruleSupportResults = input.scopedSubject?.trim()
+        ? [
+          supportGeneralIrasRuleConcept({
+            sourceText: record.sourceText,
+            domainId: topic.domainId,
+            topicIds: scopedTopicIds,
+            subject: input.scopedSubject,
+            population: input.scopedPopulation
+          }),
+          ...requestedConcepts
+            .filter(concept => concept.topicIds.length === 0 || concept.topicIds.some(id => scopedTopicIds.includes(id)))
+            .map(concept => supportGeneralIrasRuleConcept({
+              sourceText: record.sourceText,
+              domainId: topic.domainId,
+              topicIds: scopedTopicIds,
+              subject: input.scopedSubject!,
+              population: input.scopedPopulation,
+              concepts: [concept]
+            }))
+        ]
+        : [];
+      const scopedRuleSupport = ruleSupportResults.includes(false) ? false
+        : ruleSupportResults.includes(true) ? true : undefined;
+      // A recognized rule family can reject a record as support for this
+      // scoped topic without making the otherwise eligible source unusable.
+      // Undefined preserves existing topic-association behaviour.
+      if (scopedRuleSupport === false) {
+        rejectedCode = 'TOPIC_RULE_SCOPE_NOT_SUPPORTED';
+        rejectedReason = 'The source is eligible, but its text does not support the scoped rule requested for this topic.';
+        continue;
+      }
+      const acceptedTopicIds = acceptedTopicIdsByRecord.get(record.id) || new Set<string>();
+      acceptedTopicIds.add(topic.id);
+      acceptedTopicIdsByRecord.set(record.id, acceptedTopicIds);
       if (!topic.id.startsWith('iras-authority-query-')) {
         covered.add(topic.id);
         if (local) localByTopic.add(topic.id);
@@ -648,22 +712,126 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     if (!accepted) reject(record.id, rejectedCode, rejectedReason);
   }
 
+  const derivedConcepts = requestedConcepts.length > 0 ? requestedConcepts : targetTopics.flatMap(scopedConcepts);
+  const requestedTopicIds = new Set(targetTopics.map(topic => topic.id));
+  const explicitlyScopedMappedTopicIds = new Set(targetTopics
+    .filter(topic => topic.id.startsWith('iras-authority-query-'))
+    .flatMap(topic => scopedMappedTopicIds(topic))
+    .filter(topicId => Boolean(getCoverageTopicById(topicId))));
+  const requestedConceptTopicIds = new Set([...requestedTopicIds, ...explicitlyScopedMappedTopicIds]);
+  const associatedTopicsForConcept = (record: AuthoritativeSourceRecord, concept: RequestedQuestionConcept): SingaporeCoverageTopic[] => {
+    const explicitlyRequestedTopicIds = concept.topicIds.length > 0
+      ? new Set(concept.topicIds.filter(topicId => requestedConceptTopicIds.has(topicId)))
+      : undefined;
+    if (explicitlyRequestedTopicIds && explicitlyRequestedTopicIds.size === 0) return [];
+    return targetTopics.filter(topic => {
+      const inExplicitScope = !explicitlyRequestedTopicIds || explicitlyRequestedTopicIds.has(topic.id) ||
+        topic.id.startsWith('iras-authority-query-') &&
+          scopedMappedTopicIds(topic).some(topicId => explicitlyRequestedTopicIds.has(topicId));
+      return inExplicitScope && metadataAssociatesRecord(record, topic);
+    });
+  };
+  const requestedConceptSupportForRecord = (
+    record: AuthoritativeSourceRecord,
+    concept: RequestedQuestionConcept
+  ): boolean | undefined => {
+    const associatedTopics = associatedTopicsForConcept(record, concept);
+    if (associatedTopics.length === 0) return undefined;
+    const sourceText = record.sourceText || '';
+    const inScopeConceptTopicIds = concept.topicIds.filter(topicId => requestedConceptTopicIds.has(topicId));
+    const scopedResults = associatedTopics.map(topic => supportGeneralIrasRuleConcept({
+      sourceText,
+      domainId: topic.domainId,
+      topicIds: [...new Set([topic.id, ...scopedMappedTopicIds(topic), ...inScopeConceptTopicIds])],
+      subject: input.scopedSubject?.trim() || concept.label,
+      population: input.scopedPopulation,
+      concepts: [concept]
+    }));
+    if (scopedResults.includes(true)) return true;
+    if (scopedResults.includes(false)) return false;
+    return matchesRequestedQuestionConcept(sourceText, concept);
+  };
+  const locallyCoveredConceptIds = new Set(derivedConcepts.filter(concept =>
+    [...eligibleById.values()].some(record => record.provenance === 'LOCAL_STATIC' &&
+      requestedConceptSupportForRecord(record, concept) === true)
+  ).map(concept => concept.id));
+
+  // Keep a live candidate for a topic or requested concept gap not already
+  // supported by validated local content. This preserves local-first behavior
+  // while allowing a live rule to fill a concept gap inside a covered topic.
+  const relevantLiveOnlyForGap = [...eligibleById.values()].filter(record => {
+    if (record.provenance !== 'LIVE_EXTERNAL') return true;
+    // Authority-query records can be useful for an independently supported
+    // concept even while other requested concepts remain uncovered. Keep the
+    // validated partial source available to a conditional answer; it does not
+    // mark the provisional request sufficient and therefore cannot stop the
+    // resolver's remaining discovery stages.
+    if (targetTopics.some(topic => topic.id.startsWith('iras-authority-query-') && metadataAssociatesRecord(record, topic))) return true;
+    const relatedTopics = targetTopics.filter(topic =>
+      metadataAssociatesRecord(record, topic) && covered.has(topic.id) && !localByTopic.has(topic.id)
+    );
+    const supportsUncoveredConcept = derivedConcepts.some(concept => !locallyCoveredConceptIds.has(concept.id) &&
+      requestedConceptSupportForRecord(record, concept) === true);
+    return relatedTopics.length > 0 || supportsUncoveredConcept;
+  });
+  const eligibleRecords = [
+    ...relevantLiveOnlyForGap.filter(record => record.provenance !== 'LIVE_EXTERNAL'),
+    ...relevantLiveOnlyForGap.filter(record => record.provenance === 'LIVE_EXTERNAL')
+  ];
+
+  // Rebuild registered-topic coverage after live-only filtering so a discarded
+  // candidate cannot leave a topic or query concept marked covered.
+  covered.clear();
+  localByTopic.clear();
+  liveByTopic.clear();
+  for (const record of eligibleRecords) {
+    for (const topicId of acceptedTopicIdsByRecord.get(record.id) || []) {
+      const topic = targetTopics.find(candidate => candidate.id === topicId);
+      if (!topic || topic.id.startsWith('iras-authority-query-')) continue;
+      covered.add(topic.id);
+      if (record.provenance === 'LOCAL_STATIC') localByTopic.add(topic.id);
+      else liveByTopic.add(topic.id);
+    }
+  }
+
   const uncoveredConceptGroups: Record<string, string[][]> = {};
   const coveredConceptIds = new Set<string>();
+  const provisionalConceptSupportForRecord = (
+    record: AuthoritativeSourceRecord,
+    concept: RequestedQuestionConcept,
+    topic: SingaporeCoverageTopic
+  ): boolean => {
+    const mappedTopicIds = scopedMappedTopicIds(topic).filter(topicId => explicitlyScopedMappedTopicIds.has(topicId));
+    const applicableConceptTopicIds = concept.topicIds.filter(topicId =>
+      topicId === topic.id || mappedTopicIds.includes(topicId));
+    if (concept.topicIds.length > 0 && applicableConceptTopicIds.length === 0) return false;
+    const scopedTopicIds = [...new Set([
+      topic.id,
+      ...mappedTopicIds,
+      ...applicableConceptTopicIds
+    ])];
+    const scope = {
+      domainId: topic.domainId,
+      topicIds: scopedTopicIds,
+      subject: input.scopedSubject?.trim() || concept.label,
+      population: input.scopedPopulation
+    };
+    return matchesRequestedQuestionConcept(record.sourceText || '', concept, scope);
+  };
   for (const topic of targetTopics.filter(candidate => candidate.id.startsWith('iras-authority-query-'))) {
     const topicConcepts = scopedConcepts(topic);
     const groups = topicConcepts.length > 0
       ? topicConcepts.map(concept => [...new Set(words(concept.label).filter(word => word.length >= 3 && !GENERIC_TOPIC_WORDS.has(word)))])
       : queryMaterialConceptGroups(input.query);
-    const conceptRecords = [...eligibleById.values()].filter(record => {
-      if (recordTopicAssociations(record).has(topic.id)) return true;
-      return getCoverageTopicsByIds([...recordTopicAssociations(record)])
-        .some(associatedTopic => associatedTopic.domainId === topic.domainId);
+    const conceptRecords = eligibleRecords.filter(record => {
+      const associations = recordTopicAssociations(record);
+      if (associations.has(topic.id) || scopedMappedTopicIds(topic).some(topicId => associations.has(topicId))) return true;
+      return getCoverageTopicsByIds([...associations]).some(associatedTopic => associatedTopic.domainId === topic.domainId);
     });
     const combinedConceptWords = new Set(conceptRecords.flatMap(record => words(record.sourceText || '')));
     const supportingGroupIndexes = groups.map((group, index) => topicConcepts.length > 0
-      ? conceptRecords.some(record => matchesRequestedQuestionConcept(record.sourceText || '', topicConcepts[index]))
-      : supportsQueryConceptGroup(combinedConceptWords, group) ? true : false
+      ? conceptRecords.some(record => provisionalConceptSupportForRecord(record, topicConcepts[index], topic))
+      : supportsQueryConceptGroup(combinedConceptWords, group)
     ).map((matched, index) => matched ? index : -1).filter(index => index >= 0);
     const missingGroupIndexes = groups.map((_, index) => index).filter(index => !supportingGroupIndexes.includes(index));
     const missingGroups = missingGroupIndexes.map(index => groups[index]);
@@ -679,43 +847,26 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       continue;
     }
     covered.add(topic.id);
-    const localConceptWords = new Set(conceptRecords.filter(record => record.provenance === 'LOCAL_STATIC')
-      .flatMap(record => words(record.sourceText || '')));
-    const everyGroupHasLocalSupport = groups.every(group => supportsQueryConceptGroup(localConceptWords, group));
+    const everyGroupHasLocalSupport = groups.every((group, index) => topicConcepts.length > 0
+      ? conceptRecords.some(record => record.provenance === 'LOCAL_STATIC' &&
+        provisionalConceptSupportForRecord(record, topicConcepts[index], topic))
+      : supportsQueryConceptGroup(new Set(conceptRecords.filter(record => record.provenance === 'LOCAL_STATIC')
+        .flatMap(record => words(record.sourceText || ''))), group));
     if (everyGroupHasLocalSupport) localByTopic.add(topic.id);
     else liveByTopic.add(topic.id);
   }
 
-  // Keep a live candidate only for a gap not already covered by validated local
-  // content. This mirrors the existing local-first/fallback source lifecycle.
-  const relevantLiveOnlyForGap = [...eligibleById.values()].filter(record => {
-    if (record.provenance !== 'LIVE_EXTERNAL') return true;
-    // Authority-query records can be useful for an independently supported
-    // concept even while other requested concepts remain uncovered. Keep the
-    // validated partial source available to a conditional answer; it does not
-    // mark the provisional request sufficient and therefore cannot stop the
-    // resolver's remaining discovery stages.
-    if (targetTopics.some(topic => topic.id.startsWith('iras-authority-query-') && metadataAssociatesRecord(record, topic))) return true;
-    const relatedTopics = targetTopics.filter(topic =>
-      metadataAssociatesRecord(record, topic) && covered.has(topic.id) && !localByTopic.has(topic.id)
-    );
-    return relatedTopics.length > 0;
-  });
-  const eligibleRecords = [
-    ...relevantLiveOnlyForGap.filter(record => record.provenance !== 'LIVE_EXTERNAL'),
-    ...relevantLiveOnlyForGap.filter(record => record.provenance === 'LIVE_EXTERNAL')
-  ];
   const uncoveredTopicIds = targetTopics.map(topic => topic.id).filter(id => !covered.has(id));
-  const derivedConcepts = requestedConcepts.length > 0 ? requestedConcepts : targetTopics.flatMap(scopedConcepts);
   for (const concept of derivedConcepts) {
-    const matchedRecord = [...eligibleById.values()].some(record => matchesRequestedQuestionConcept(record.sourceText || '', concept) &&
-      (concept.topicIds.length === 0 || concept.topicIds.some(id => recordTopicAssociations(record).has(id)) ||
-        targetTopics.some(topic => scopedConcepts(topic).some(scoped => scoped.id === concept.id) && metadataAssociatesRecord(record, topic))));
-    if (matchedRecord) coveredConceptIds.add(concept.id);
+    if (eligibleRecords.some(record => requestedConceptSupportForRecord(record, concept) === true)) {
+      coveredConceptIds.add(concept.id);
+    }
   }
   const coveredConcepts = derivedConcepts.filter(concept => coveredConceptIds.has(concept.id)).map(concept => concept.label);
   const uncoveredConcepts = derivedConcepts.filter(concept => !coveredConceptIds.has(concept.id)).map(concept => concept.label);
-  const allCoveredLocally = uncoveredTopicIds.length === 0 && targetTopics.every(topic => localByTopic.has(topic.id));
+  const everyConceptCoveredLocally = derivedConcepts.every(concept => locallyCoveredConceptIds.has(concept.id));
+  const allCoveredLocally = uncoveredTopicIds.length === 0 && targetTopics.every(topic => localByTopic.has(topic.id)) &&
+    everyConceptCoveredLocally;
   let status: EvidenceQualityAssessment['status'];
   if (eligibleRecords.length === 0) status = 'INSUFFICIENT';
   else if (input.missingFacts.length > 0 || uncoveredTopicIds.length > 0 || uncoveredConcepts.length > 0) status = 'LIMITED';

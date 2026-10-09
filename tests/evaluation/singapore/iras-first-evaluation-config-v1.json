@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-first-v1",
+  "targetedOutputPrefix": "iras-first-targeted-v1-live",
+  "finalOutputPrefix": "iras-first-final-v1-live",
+  "targetedCaseIds": [
+    "target-relief-entitlement",
+    "target-relief-amount",
+    "A-paraphrase-2",
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "target-mixed-ifrs-singapore-accounting",
+    "dev-investment-comparison",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "finalCaseIds": [
+    "A-paraphrase-2",
+    "adversarial-C-employee-benefit",
+    "control-general-recognition",
+    "control-general-interaction",
+    "A-paraphrase-3",
+    "dev-conceptual-illustration",
+    "dev-training-entitlement",
+    "dev-mixed-entry-total",
+    "dev-corporate-filing",
+    "dev-investment-comparison",
+    "target-relief-entitlement",
+    "target-relief-amount"
+  ],
+  "coverageStates": {
+    "IRAS": { "state": "RELEASE_REQUIRED", "topics": 107, "records": 71, "providerSupported": true },
+    "CPF": { "state": "PARTIAL", "topics": 15, "records": 7, "providerSupported": true },
+    "MOM": { "state": "PARTIAL", "topics": 26, "records": 10, "providerSupported": true },
+    "ACRA": { "state": "PARTIAL", "topics": 111, "records": 51, "providerSupported": true },
+    "MAS": { "state": "PARTIAL", "topics": 16, "records": 6, "providerSupported": true },
+    "ACCOUNTING_STANDARDS": { "state": "PARTIAL", "topics": 85, "records": 41, "providerSupported": true },
+    "IFRS_FOUNDATION": { "state": "PARTIAL", "aliasOf": "ACCOUNTING_STANDARDS", "independentWorkstream": false, "providerSupported": true },
+    "SSO": { "state": "NOT_YET_COVERED", "providerSupported": false },
+    "UNKNOWN": { "state": "NOT_YET_COVERED", "providerSupported": false }
+  },
+  "adjudications": {
+    "target-mixed-ifrs-singapore-accounting": {
+      "version": "iras-first-v1",
+      "contextualAuthoritiesAnyOf": [[], ["IFRS_FOUNDATION"]],
+      "canonicalWorkstream": "ACCOUNTING_STANDARDS/ACCOUNTING",
+      "rationale": "IFRS 16 is explicitly named, so IFRS Foundation may be contextual while Singapore accounting standards remain the governing route."
+    },
+    "dev-investment-comparison": {
+      "version": "iras-first-v1",
+      "populationAnyOf": ["COMPANY", "UNKNOWN"],
+      "coverageOutcome": "UNSUPPORTED",
+      "rationale": "Compare is the intended operation; no comprehensive SFRS(I) investment-topic coverage is claimed in this phase."
+    }
+  },
+  "unsupportedNonIrasControl": {
+    "id": "unsupported-sfrsi-6-exploration-evaluation",
+    "question": "Explain the general accounting rules for exploration and evaluation of mineral resources under SFRS(I) 6.",
+    "expected": [{
+      "id": "sfrsi-6-mineral-exploration-evaluation",
+      "subject": "general SFRS(I) 6 accounting rules for exploration and evaluation expenditure",
+      "matchAny": [["exploration", "evaluation", "mineral"], ["sfrsi", "6"]],
+      "population": ["COMPANY", "UNKNOWN"],
+      "domain": ["ACCOUNTING"],
+      "governingAuthorities": ["ACCOUNTING_STANDARDS"],
+      "contextualAuthoritiesAnyOf": [[]],
+      "operation": ["EXPLAIN_RULE"]
+    }],
+    "expectedWorkstreamsAnyOf": [["ACCOUNTING_STANDARDS/ACCOUNTING"]],
+    "expectedRequiresUserSpecificFacts": false,
+    "expectedCoverageOutcome": "UNSUPPORTED"
+  }
+}

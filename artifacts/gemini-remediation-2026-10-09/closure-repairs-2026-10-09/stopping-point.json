@@ -1,0 +1,27 @@
+{
+  "dateSingapore": "09/10/2026",
+  "status": "STOPPED_VERIFIED_LIVE_REFRESH_DEFERRED",
+  "lastObservedFiveHourRemainingPercent": 13,
+  "constraint": "Stop before5%remaining; use margin. No automatic resets or credit purchases.",
+  "lastLiveRun": "../live-rerun-isolated-final-2026-10-09",
+  "lastLiveOutcome": "9HTTP200 first attempts,8diagnosticpasses/1foreign-dividend descriptorfailure;0retry/blockednetwork/pacingerrors. Immutable result.",
+  "latestFix": "Bounded RELATED subsidiary descriptor belongs to sole validated parent-company foreign-dividend receipt; primary tax topic/evidence remains required. No separate subsidiary tax/journal/consolidation outcome hidden.",
+  "validation": {
+    "targeted": "PASSED:61available response replays/63records/2NOT_ASSESSED; descriptor boundaries; tsc",
+    "review": "PASSED final subsidiary descriptor review; no remaining material findings",
+    "lint": "PASSED; lint-final.log",
+    "build": "PASSED; build-final.log",
+    "smoke": "PASSED103.30s; smoke-final.log",
+    "full": "PASSED136.75s; full-final.log"
+  },
+  "historicalIntegrity": "52protected files unchanged; historical-integrity-final.json",
+  "sourceReferenceDate": "2026-10-08",
+  "acceptanceProven": false,
+  "resume": [
+    "Check usage first; preserve all existing uncommitted changes.",
+    "Read checkpoint/logs/reviewer result; run only pending validation after source freeze.",
+    "Do not rerun historical consumed live directories, modify old outcomes or count2unavailable cases as passes.",
+    "If sufficient reserve, supervisor may run existing bounded nine-case launcher in a new live-rerun-* directory with fresh usage snapshot. No fresh official-source calls; at most18dispatches.",
+    "Save final results and stop with margin above5%. If provider unavailable, report NOT_ASSESSED honestly; do not relax accounting/source/network guards."
+  ]
+}

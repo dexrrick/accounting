@@ -2,6 +2,7 @@ import type { AccountingEventSequence, AccountingStandard, AccountingScenarioSta
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
+import type { AuthorityWorkstreamsResult } from '../types/authorityEvidence';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
 import { calculateDoubleEntries } from '../engine/accountingEngine';
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
@@ -37,6 +38,10 @@ import {
   projectQuestionUnderstandingDiagnostics,
   reconcileQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
+import { buildAuthorityWorkstreams } from './authorityWorkstreams';
+import { createAuthorityEvidencePresentation, type AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
+import { shouldUseAuthorityEvidenceRuntime } from '../utils/authorityEvidenceRouting';
+import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 
 export interface GeminiResponse {
   messageText: string;
@@ -61,6 +66,7 @@ export interface OutputPreference {
 /** Optional read-only observer used by the live validation harness. */
 export interface AccountingQueryDiagnostics {
   onGroundedContext?: (context: GroundedReasoningContext) => void;
+  onAuthorityWorkstreams?: (result: AuthorityWorkstreamsResult) => void;
 }
 
 /** AI may identify factual events only; strict normalization blocks journals and invented schema. */
@@ -463,17 +469,38 @@ export async function processAccountingQuery(
     ? null
     : currentScenario;
   let amendmentResolution = resolveFactAmendment(userInput, activeScenario);
+  let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
+  let authorityEvidenceMessage: string | undefined;
+  let authorityEvidenceQueryIntent: AccountingScenarioState['queryIntent'];
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
-    if (!amendmentResolution.amendments?.length) return response;
+    if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation) return response;
+    const balancedJournalAvailable = Boolean(response.scenarioState.directGroups?.some(group =>
+      group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
+    ));
+    const clarificationPrompts = [...new Set([
+      ...(response.clarifications || []).map(item => item.prompt),
+      ...(response.scenarioState.missingFields || []).map(item => item.prompt)
+    ].map(prompt => prompt.trim()).filter(Boolean))];
+    const authorityMessage = authorityEvidencePresentation
+      ? `${renderAuthorityEvidenceResponseText(authorityEvidencePresentation, balancedJournalAvailable)}${clarificationPrompts.length ? `\n\n### Clarification Required\n\n${clarificationPrompts.join('\n')}` : ''}`
+      : undefined;
+    const scenarioState = authorityEvidencePresentation ? {
+      ...response.scenarioState,
+      rawQuery: userInput,
+      primaryDomain: 'MULTI_AUTHORITY' as const,
+      queryIntent: authorityEvidenceQueryIntent || response.scenarioState.queryIntent,
+      authorityEvidencePresentation
+    } : response.scenarioState;
     return {
       ...response,
-      scenarioState: {
-        ...response.scenarioState,
+      ...(authorityMessage || authorityEvidenceMessage ? { messageText: authorityMessage || authorityEvidenceMessage } : {}),
+      scenarioState: amendmentResolution.amendments?.length ? {
+        ...scenarioState,
         factAmendments: [
           ...(activeScenario?.factAmendments || []),
           ...amendmentResolution.amendments
         ]
-      }
+      } : scenarioState
     };
   };
 
@@ -601,6 +628,57 @@ export async function processAccountingQuery(
   profiler.recordClassification(performance.now() - classificationStarted);
   profiler.setQuestionUnderstanding(projectQuestionUnderstandingDiagnostics(questionUnderstanding));
   if (questionUnderstanding.mode === 'DETERMINISTIC_FALLBACK' && rawQuestionUnderstanding.mode !== 'DETERMINISTIC_FALLBACK') profiler.recordFallback();
+  const explicitIrasEvidenceRequest = usesIrasEvidencePolicy(classification, userInput);
+  const authorityEvidenceRuntimeEnabled = shouldUseAuthorityEvidenceRuntime({
+    issuePlan: reconciledQuestionUnderstanding.issuePlan,
+    classification,
+    explicitIrasEvidenceRequest,
+    hasImages
+  });
+  if (authorityEvidenceRuntimeEnabled) {
+    authorityEvidenceQueryIntent = classification.intent;
+    const authorityResult = await buildAuthorityWorkstreams(userInput, reconciledQuestionUnderstanding.issuePlan, {
+      questionUnderstanding
+    });
+    diagnostics?.onAuthorityWorkstreams?.(authorityResult);
+    authorityEvidencePresentation = createAuthorityEvidencePresentation(authorityResult);
+    authorityEvidenceMessage = renderAuthorityEvidenceResponseText(
+      authorityEvidencePresentation,
+      classification.intent === 'HYBRID' && Boolean(activeScenario?.directGroups?.some(group => group.isBalanced && group.lines.length > 0))
+    );
+    profiler.setQueryMode('AUTHORITY_WORKSTREAM_EVIDENCE');
+    const materialPlanRequestsAccounting = reconciledQuestionUnderstanding.issuePlan.issues.some(issue =>
+      issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
+      (issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')
+    );
+    const standaloneAuthorityQuestion = !materialPlanRequestsAccounting &&
+      !journalRequested && !outputPreference?.journal && !isShortSemanticFollowUp(userInput);
+    if (standaloneAuthorityQuestion) {
+      activeScenario = null;
+      amendmentResolution = resolveFactAmendment(userInput, null);
+      const currentUserTurn = [...chatHistory].reverse().find(message =>
+        message.sender === 'user' && message.text.trim() === userInput.trim());
+      relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance({
+        messageText: authorityEvidenceMessage,
+        scenarioState: {
+          scenarioType: 'AUTHORITY_ADVISORY',
+          rawQuery: userInput,
+          transactionTitle: 'Whole-question statutory review',
+          functionalCurrency: 'SGD',
+          transactionCurrency: 'SGD',
+          directGroups: [],
+          missingFields: [],
+          isComplete: authorityEvidencePresentation.status !== 'INSUFFICIENT',
+          queryIntent: classification.intent,
+          primaryDomain: 'MULTI_AUTHORITY'
+        }
+      });
+    }
+  }
   const standaloneIrasQuestion = usesIrasEvidencePolicy(classification, userInput) &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
@@ -708,7 +786,7 @@ export async function processAccountingQuery(
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
     profiler.logSummary();
-    return renderStructuredOfflineResponse(deterministicScenario, standard);
+    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
   }
 
   // A recognized but incomplete calculation is a pending conversation, not
@@ -735,7 +813,7 @@ export async function processAccountingQuery(
         whyNeeded: 'No transaction type or posting basis was provided.'
       };
       return {
-        messageText: '### Clarification Required for Double Entry\\n\\n' + clarification.prompt,
+        messageText: '### Clarification Required for Double Entry\n\n' + clarification.prompt,
         scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
         clarifications: [clarification]
       };
@@ -769,6 +847,16 @@ export async function processAccountingQuery(
       deterministicScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
       deterministicScenario.isComplete &&
       /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
+    profiler.recordFirstVisibleResponse();
+    profiler.setTokenCounts(0, 0, 0);
+    profiler.logSummary();
+    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+  }
+
+  // Multi-workstream compliance was independently resolved above. Keep the
+  // deterministic accounting state and do not let a provider add statutory
+  // prose that falls outside the admitted per-issue evidence projection.
+  if (authorityEvidencePresentation) {
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
     profiler.logSummary();

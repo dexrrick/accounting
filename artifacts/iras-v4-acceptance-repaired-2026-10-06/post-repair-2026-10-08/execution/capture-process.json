@@ -1,0 +1,12 @@
+{
+  "profile": "iras-v4-authorized-post-repair-capture-process",
+  "launchedAtUtc": "2026-10-08T14:27:15.1209296Z",
+  "processId": 23464,
+  "launcherSha256": "bdb88348c5acf9d04c5ee42636fe20e4d03ea34a92fd1429b65afe2248a3e6a9",
+  "authorizationSha256": "279bea689627e3b6e72bf7f7c7282cca67cb18a73e244d6dc98af010b7e5b486",
+  "sourceRequestsAuthorized": 15,
+  "geminiCallsAuthorizedForThisProcess": 0,
+  "credentialsReadAllowed": false,
+  "retries": 0,
+  "captureDirectory": "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/official-capture"
+}

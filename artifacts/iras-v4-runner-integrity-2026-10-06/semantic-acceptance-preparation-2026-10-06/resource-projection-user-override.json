@@ -1,0 +1,34 @@
+{
+  "profile": "resource-projection-user-override",
+  "fiveHourCostPercentagePoints": 50,
+  "weeklyCostPercentagePoints": 15,
+  "humanOverride": true,
+  "userInstruction": "please continue\nignore the 88% threshold",
+  "requiredFiveHourReservePercentagePoints": 8,
+  "requiredWeeklyReservePercentagePoints": 4,
+  "checkpointAtRemainingFiveHourPercent": 10,
+  "finishAboveFiveHourPercent": 5,
+  "resultingMinimumRemainingAtReservation": {
+    "fiveHourPercent": 58,
+    "weeklyPercent": 19
+  },
+  "estimateBasis": {
+    "historicalWholeDevelopmentAndCaptureProjection": {
+      "fiveHourPercentagePoints": 80,
+      "weeklyPercentagePoints": 15,
+      "basis": "Rounded upward from an observed 78 / 12 percentage-point account decrease across the prior development and capture cycle."
+    },
+    "observedAllowanceSamplesInThisChat": {
+      "firstPreflightFiveHourRemainingPercent": 94,
+      "latestOriginalPreflightFiveHourRemainingPercent": 87,
+      "firstPreflightWeeklyRemainingPercent": 75,
+      "latestOriginalPreflightWeeklyRemainingPercent": 74,
+      "providerCallsMade": 0,
+      "interpretation": "These shared-account observations include prior preparation and supervision and may include other activity. They are not isolated consumption measurements for this run."
+    },
+    "remainingScope": "One bounded run of at most nine frozen Gemini requests with zero retries, followed by outcome review and commit. The launcher, frozen inputs, namespace, and execution path are already prepared; no recapture or remedial implementation is projected.",
+    "projectedExecutionOnlyCost": "50 five-hour and 15 weekly percentage points, estimated for the remaining execution, outcome review, and commit work.",
+    "measurementStatus": "Uncertain estimate; not measured Gemini-call consumption and not a guarantee of available shared Codex allowance.",
+    "sharedAccountRisk": "Other chats or account activity may consume shared allowance during this work; a fresh actual allowance sample remains required at the launch rendezvous and during execution and review."
+  }
+}

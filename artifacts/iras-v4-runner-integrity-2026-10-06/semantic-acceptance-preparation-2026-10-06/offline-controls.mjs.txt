@@ -1,0 +1,266 @@
+// Focused, synthetic-only controls for launch.mjs.txt. Pure helpers are imported
+// from a data URL; two actual stdin CLI runs use an isolated temporary root.
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+
+const preparationDirectory = path.resolve(process.cwd(),
+  'artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06');
+const launcherText = await readFile(path.join(preparationDirectory, 'launch.mjs.txt'), 'utf8');
+const launcherUrl = `data:text/javascript;base64,${Buffer.from(launcherText, 'utf8').toString('base64')}`;
+const launcher = await import(launcherUrl);
+
+const now = Date.parse('2026-10-06T08:30:00.000Z');
+const observedAt = new Date(now - 60_000).toISOString();
+const credentialSha256 = 'a'.repeat(64);
+const preregistrationSha256 = launcher.FROZEN_INPUT_HASHES[launcher.PREREGISTRATION_PATH];
+const usagePayload = {
+  content: [{ type: 'text', text: JSON.stringify({
+    ordinaryUsageAllowed: true,
+    rateLimitsByLimitId: { codex: {
+      primary: { windowDurationMins: 300, usedPercent: 10, resetsAt: 1_791_276_000 },
+      secondary: { windowDurationMins: 10_080, usedPercent: 20, resetsAt: 1_793_000_000 }
+    } }
+  }) }]
+};
+const usageObservation = {
+  sourceTool: 'mcp__codex_app__get_usage_limits', observedAt, rawPayload: usagePayload
+};
+const quotaEvidence = {
+  source: 'synthetic AI Studio account quota record', observedAt,
+  provider: 'gemini', model: launcher.MODEL, credentialSha256,
+  reportedLimits: { requestsPerMinute: 15, tokensPerMinute: 250_000, requestsPerDay: 500 },
+  currentHeadroom: {
+    confirmedRequestCapacity: 9,
+    confirmedForNineFrozenRequests: true,
+    frozenRequestTokenLimitsSupported: true,
+    preregistrationSha256
+  }
+};
+const projectionDocument = [
+  'Projected cost is 80 five-hour percentage points and 15 weekly percentage points.',
+  'Evidence records a 78 / 12 percentage-point account decrease.',
+  'The remaining reserve is 8% five-hour and 4% weekly.'
+].join('\n');
+const throwCode = code => error => error?.code === code;
+
+assert.deepEqual(launcher.parseCliArguments([]), { mode: 'check' });
+assert.deepEqual(launcher.parseCliArguments(['--execute']), { mode: 'execute' });
+assert.throws(() => launcher.parseCliArguments(['--unknown']), throwCode('INVALID_CLI_ARGUMENTS'));
+assert.throws(() => launcher.parseCliArguments(['--check', '--execute']), throwCode('INVALID_CLI_ARGUMENTS'));
+
+const validProjection = launcher.validateProjectionEvidence(projectionDocument);
+const allowance = launcher.deriveCodexAllowance(usageObservation, validProjection, now);
+assert.deepEqual({
+  source: allowance.source,
+  fiveHourRemainingPercent: allowance.fiveHourRemainingPercent,
+  weeklyRemainingPercent: allowance.weeklyRemainingPercent,
+  projectedFiveHourCostPercentagePoints: allowance.projectedFiveHourCostPercentagePoints,
+  projectedWeeklyCostPercentagePoints: allowance.projectedWeeklyCostPercentagePoints
+}, {
+  source: 'codex', fiveHourRemainingPercent: 90, weeklyRemainingPercent: 80,
+  projectedFiveHourCostPercentagePoints: 80, projectedWeeklyCostPercentagePoints: 15
+});
+assert.deepEqual(launcher.validateReserve(allowance), { fiveHourAfter: 10, weeklyAfter: 65 });
+assert.throws(() => launcher.validateProjectionEvidence('unreviewed estimate'), throwCode('RESERVE_PROJECTION_EVIDENCE_INVALID'));
+assert.throws(() => launcher.validateReserve({ ...allowance, fiveHourRemainingPercent: 87 }),
+  throwCode('PROJECTED_RESERVE_NOT_MET'));
+assert.throws(() => launcher.validateReserve({ ...allowance, weeklyRemainingPercent: Number.NaN }),
+  throwCode('RESERVE_PROJECTION_INVALID'));
+
+assert.throws(() => launcher.deriveCodexAllowance({ ...usageObservation,
+  observedAt: new Date(now - 301_000).toISOString() }, validProjection, now), throwCode('USAGE_LIMITS_STALE'));
+assert.throws(() => launcher.deriveCodexAllowance({ ...usageObservation, sourceTool: 'other-tool' }, validProjection, now),
+  throwCode('USAGE_LIMITS_SOURCE_INVALID'));
+assert.throws(() => launcher.deriveCodexAllowance({ ...usageObservation, rawPayload: { content: [] } }, validProjection, now),
+  throwCode('USAGE_LIMITS_UNREADABLE'));
+assert.throws(() => launcher.deriveCodexAllowance({ ...usageObservation, rawPayload: { content: [{ type: 'text',
+  text: JSON.stringify({ ordinaryUsageAllowed: false, rateLimitsByLimitId: {} }) }] } }, validProjection, now),
+throwCode('USAGE_LIMITS_UNREADABLE'));
+assert.throws(() => launcher.deriveCodexAllowance({ ...usageObservation, rawPayload: { content: [{ type: 'text',
+  text: JSON.stringify({ ordinaryUsageAllowed: true, rateLimitsByLimitId: { codex: {
+    primary: { windowDurationMins: 60, usedPercent: 10 }, secondary: { windowDurationMins: 10_080, usedPercent: 20 }
+  } } }) }] } }, validProjection, now), throwCode('USAGE_LIMITS_WINDOW_INVALID'));
+
+const quotaSummary = launcher.validateProviderQuotaEvidence(quotaEvidence, {
+  now, credentialSha256, preregistrationSha256
+});
+assert.equal(quotaSummary.model, launcher.MODEL);
+assert.throws(() => launcher.validateProviderQuotaEvidence({ ...quotaEvidence,
+  observedAt: new Date(now - 31 * 60_000).toISOString() }, { now, credentialSha256, preregistrationSha256 }),
+throwCode('PROVIDER_QUOTA_STALE'));
+assert.throws(() => launcher.validateProviderQuotaEvidence({ ...quotaEvidence, source: '' },
+  { now, credentialSha256, preregistrationSha256 }), throwCode('PROVIDER_QUOTA_UNKNOWN'));
+assert.throws(() => launcher.validateProviderQuotaEvidence(quotaEvidence,
+  { now, credentialSha256: 'b'.repeat(64), preregistrationSha256 }), throwCode('PROVIDER_QUOTA_CREDENTIAL_MISMATCH'));
+assert.throws(() => launcher.validateProviderQuotaEvidence({ ...quotaEvidence,
+  currentHeadroom: { ...quotaEvidence.currentHeadroom, confirmedRequestCapacity: 8 }
+}, { now, credentialSha256, preregistrationSha256 }), throwCode('PROVIDER_QUOTA_HEADROOM_UNCONFIRMED'));
+
+assert.equal(launcher.assertOutputNamesUnused([]), true);
+assert.throws(() => launcher.assertOutputNamesUnused(['consumed-v4.json']),
+  throwCode('SEMANTIC_NAMESPACE_ALREADY_USED'));
+
+const outputNames = ['consumed-v4.json', 'acceptance-v4.json', 'acceptance-v4.json.tmp', 'runner-v4.partial.jsonl'];
+const absentState = launcher.classifyCanonicalObservations(outputNames.map(name => ({ name, state: 'ABSENT' })));
+const absentAttribution = launcher.attributeCanonicalState(absentState);
+assert.equal(absentAttribution.status, 'OBSERVED_UNCONSUMED');
+assert.equal(absentAttribution.retryPermitted, true);
+const outputHash = '1'.repeat(64);
+const consumedState = launcher.classifyCanonicalObservations(outputNames.map(name => ({
+  name, state: name === 'consumed-v4.json' ? 'PRESENT' : 'ABSENT',
+  sha256: name === 'consumed-v4.json' ? outputHash : null
+})));
+const consumedAttribution = launcher.attributeCanonicalState(consumedState);
+assert.equal(consumedAttribution.consumed, true);
+assert.equal(consumedAttribution.retryPermitted, false);
+assert.equal(consumedAttribution.hashes['consumed-v4.json'], outputHash);
+const unreadableState = launcher.classifyCanonicalObservations(outputNames.map(name => ({
+  name, state: name === 'runner-v4.partial.jsonl' ? 'UNCERTAIN' : 'ABSENT'
+})));
+const unreadableAttribution = launcher.attributeCanonicalState(unreadableState);
+assert.equal(unreadableAttribution.consumed, false);
+assert.equal(unreadableAttribution.retryPermitted, false);
+assert.equal(unreadableAttribution.states['runner-v4.partial.jsonl'], 'UNCERTAIN');
+const mixedState = launcher.classifyCanonicalObservations(outputNames.map(name => ({
+  name,
+  state: name === 'consumed-v4.json' ? 'PRESENT' : name === 'acceptance-v4.json.tmp' ? 'UNCERTAIN' : 'ABSENT',
+  sha256: name === 'consumed-v4.json' ? outputHash : null
+})));
+const mixedAttribution = launcher.attributeCanonicalState(mixedState);
+assert.equal(mixedAttribution.retryPermitted, false);
+assert.equal(mixedAttribution.hashes['consumed-v4.json'], outputHash);
+assert.equal(mixedAttribution.states['acceptance-v4.json.tmp'], 'UNCERTAIN');
+const partialState = launcher.classifyCanonicalObservations(outputNames.map(name => ({
+  name, state: name === 'acceptance-v4.json' ? 'PRESENT' : 'ABSENT',
+  sha256: name === 'acceptance-v4.json' ? outputHash : null
+})));
+const partialAttribution = launcher.attributeCanonicalState(partialState);
+assert.equal(partialAttribution.status, 'OUTPUT_PRESENT_NO_RETRY');
+assert.equal(partialAttribution.consumed, false);
+assert.equal(partialAttribution.retryPermitted, false);
+assert.equal(partialAttribution.hashes['acceptance-v4.json'], outputHash);
+
+const reviewHash = 'c'.repeat(64);
+const reviewedPreparationCommit = 'd'.repeat(40);
+const authorization = {
+  profile: 'iras-v4-semantic-execution-authorization', status: 'AUTHORIZED', humanAuthorized: true,
+  authorizedBy: 'user', authorizedAt: new Date(now - 1_000).toISOString(),
+  launcherSha256: 'b'.repeat(64), independentReviewSha256: reviewHash,
+  reviewedPreparationCommit, baselineCommit: launcher.BASELINE_COMMIT,
+  immutableInputHashes: { ...launcher.FROZEN_INPUT_HASHES },
+  reserveProjectionSha256: 'e'.repeat(64), authorizedGeminiCalls: 9,
+  model: launcher.MODEL, retries: 0
+};
+assert.equal(launcher.validateAuthorizationDocument(authorization, {
+  launcherSha256: authorization.launcherSha256,
+  reserveProjectionSha256: authorization.reserveProjectionSha256,
+  reviewedPreparationCommit, now
+}), true);
+assert.throws(() => launcher.validateAuthorizationDocument({ ...authorization, authorizedGeminiCalls: 8 }, {
+  launcherSha256: authorization.launcherSha256,
+  reserveProjectionSha256: authorization.reserveProjectionSha256,
+  reviewedPreparationCommit, now
+}), throwCode('AUTHORIZATION_INVALID'));
+
+const syntheticContext = {
+  launcherSha256: authorization.launcherSha256,
+  git: { head: reviewedPreparationCommit, branch: 'synthetic-control' },
+  projectionSha256: authorization.reserveProjectionSha256,
+  captureExpiresAt: '2026-10-07T06:26:38.150Z'
+};
+const successAudit = launcher.buildLaunchAudit({
+  status: 'ACCEPTANCE_PASSED', phase: 'AUDIT_ASSEMBLY', runnerInvoked: true,
+  consumed: true, firstFailure: null, context: syntheticContext,
+  authorization, gates: { gateResponseSha256: 'f'.repeat(64), quotaSummary },
+  attribution: consumedAttribution, finishedAt: new Date(now).toISOString()
+});
+assert.equal(successAudit.status, 'ACCEPTANCE_PASSED');
+assert.equal(successAudit.consumed, true);
+assert.equal(successAudit.retryPermitted, false);
+assert.equal(successAudit.runnerOutputSha256['consumed-v4.json'], outputHash);
+assert.equal(successAudit.providerQuotaEvidenceSummary.model, launcher.MODEL);
+assert.equal(successAudit.providerQuotaEvidenceSummary.credentialSha256, undefined);
+const scoredFailureAudit = launcher.buildLaunchAudit({
+  status: 'ACCEPTANCE_FAILED_CONSUMED_NO_RETRY', phase: 'AUDIT_ASSEMBLY', runnerInvoked: true,
+  consumed: true, firstFailure: 'V4_LIVE_PREFLIGHT_NOT_PASSED', context: syntheticContext,
+  authorization, gates: { gateResponseSha256: 'f'.repeat(64), quotaSummary },
+  attribution: consumedAttribution, finishedAt: new Date(now).toISOString()
+});
+assert.equal(scoredFailureAudit.firstFailure, 'V4_LIVE_PREFLIGHT_NOT_PASSED');
+assert.equal(scoredFailureAudit.retryPermitted, false);
+assert.equal(scoredFailureAudit.runnerOutputSha256['consumed-v4.json'], outputHash);
+assert.equal(launcher.safeFailureCode(Object.assign(new Error('V4_LIVE_PREFLIGHT_NOT_PASSED:details'), {
+  code: 'ERR_ASSERTION'
+})), 'V4_LIVE_PREFLIGHT_NOT_PASSED');
+assert.equal(launcher.safeFailureCode(Object.assign(new Error('Expected values differ: sensitive diff'), {
+  code: 'ERR_ASSERTION'
+})), 'ASSERTION_FAILURE');
+
+// Exercise the real stdin CLI against only this test-owned, empty temporary root.
+// The child sees a synthetic key sentinel; the parent never reads its real key.
+const tmpRoot = path.resolve(process.cwd(), '.tmp');
+const testRoot = await mkdtemp(path.join(tmpRoot, 'semantic-launch-controls-'));
+assert.equal(path.dirname(testRoot), tmpRoot);
+const forwardTestRoot = testRoot.replaceAll('\\', '/');
+const exactOnce = (text, needle, replacement) => {
+  assert.equal(text.split(needle).length - 1, 1, `expected exactly one instrumentation point: ${needle}`);
+  return text.replace(needle, replacement);
+};
+let cliSource = launcherText;
+const rootDeclaration = "export const ROOT = 'D:/Accounting';";
+const countsCode = `globalThis.__semanticCounters = { runnerImports: 0, capabilityLoads: 0, credentialReads: 0, launcherWrites: 0, requests: 0 };\nprocess.once('exit', () => process.stderr.write('\\nCONTROL_COUNTS:' + JSON.stringify(globalThis.__semanticCounters) + '\\n'));\nconst originalFetch = globalThis.fetch;\nglobalThis.fetch = (...args) => { globalThis.__semanticCounters.requests++; return originalFetch(...args); };\nexport const ROOT = ${JSON.stringify(forwardTestRoot)};`;
+cliSource = exactOnce(cliSource, rootDeclaration, countsCode);
+cliSource = exactOnce(cliSource,
+  "const runner = await import(pathToFileURL(abs('scripts/iras_v4_capture_replay_runner.mjs')).href);",
+  "globalThis.__semanticCounters.runnerImports++; const runner = await import(pathToFileURL(abs('scripts/iras_v4_capture_replay_runner.mjs')).href);");
+cliSource = exactOnce(cliSource,
+  'const executionCapability = await runner.loadReviewedV4ExecutionCapability({',
+  'globalThis.__semanticCounters.capabilityLoads++; const executionCapability = await runner.loadReviewedV4ExecutionCapability({');
+cliSource = exactOnce(cliSource,
+  'const credential = process.env.GEMINI_API_KEY;',
+  'globalThis.__semanticCounters.credentialReads++; const credential = process.env.GEMINI_API_KEY;');
+cliSource = exactOnce(cliSource,
+  'async function writeExclusive(filePath, document) {',
+  'async function writeExclusive(filePath, document) { globalThis.__semanticCounters.launcherWrites++;');
+
+const childEnv = {};
+for (const name of ['PATH', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP']) {
+  if (typeof process.env[name] === 'string') childEnv[name] = process.env[name];
+}
+childEnv.GEMINI_API_KEY = 'synthetic-control-sentinel-not-a-secret';
+const runCli = args => spawnSync(process.execPath, ['--input-type=module', '-', ...args], {
+  input: cliSource, cwd: testRoot, encoding: 'utf8', env: childEnv, timeout: 15_000
+});
+const readCounts = result => {
+  assert.equal(result.error, undefined, result.error?.message);
+  const marker = 'CONTROL_COUNTS:';
+  const markerIndex = result.stderr.lastIndexOf(marker);
+  assert.notEqual(markerIndex, -1, `child counters missing: ${result.stderr}`);
+  return JSON.parse(result.stderr.slice(markerIndex + marker.length).trim());
+};
+const invalidCli = runCli(['--check', '--execute']);
+assert.equal(invalidCli.status, 1);
+assert.match(invalidCli.stdout, /INVALID_CLI_ARGUMENTS/);
+const invalidCliCounts = readCounts(invalidCli);
+assert.deepEqual(invalidCliCounts, { runnerImports: 0, capabilityLoads: 0, credentialReads: 0, launcherWrites: 0, requests: 0 });
+const missingAuthorization = runCli(['--execute']);
+assert.equal(missingAuthorization.status, 1);
+assert.match(missingAuthorization.stdout, /AUTHORIZATION_MISSING/);
+assert.match(missingAuthorization.stdout, /HOLD_UNCONSUMED/);
+const missingAuthorizationCounts = readCounts(missingAuthorization);
+assert.deepEqual(missingAuthorizationCounts, { runnerImports: 0, capabilityLoads: 0, credentialReads: 0, launcherWrites: 0, requests: 0 });
+assert.equal(existsSync(path.join(testRoot, launcher.AUTHORIZATION_PATH)), false);
+assert.equal(existsSync(path.join(testRoot, launcher.SEMANTIC_NAMESPACE)), false);
+assert.deepEqual(await readdir(testRoot), []);
+await rm(testRoot, { recursive: true, force: false });
+
+console.log(JSON.stringify({
+  status: 'PASS', cliInvocations: 2, launcherWrites: 0, testOwnedDirectoriesCreated: 1, testOwnedFilesCreated: 0,
+  counters: {
+    invalidArguments: invalidCliCounts,
+    missingAuthorization: missingAuthorizationCounts
+  }, canonicalObservationCases: 5, auditAssemblyCases: 2
+}));

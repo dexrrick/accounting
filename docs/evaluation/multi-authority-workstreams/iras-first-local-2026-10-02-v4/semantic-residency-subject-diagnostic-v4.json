@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 4,
+  "profileVersion": "semantic-residency-subject-diagnostic-v4",
+  "diagnosticOnly": true,
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "temperature": 0,
+  "scheduledCallCount": 6,
+  "requestCount": 6,
+  "transportCallCount": 6,
+  "minimumStartGapMs": 15250,
+  "minimumObservedStartGapMs": 17450,
+  "scheduleSha256": "73315b2c6949e8dcb7d0b886fa0d3e18f5d27266b576321191a8d854e7fa1347",
+  "sourceFingerprints": {
+    "semanticInterpretation": "ad9400db0f4debf5c395cbc689849a49168543b0ffcd834e51d79edc51a6f7bd",
+    "transport": "80a7000cda3df7de0659613a9097aef32f32aa0618624c3c5770b90778e5e51c",
+    "issueScoring": "e0d88769b0248f77c358fbb4a2363ab835d0ba8defc71a37988d4f2deafeb63e",
+    "v3Runner": "427fa2930314c8a9428b0b87578a4787d3c8de590644fa5992359bf07e581f5c",
+    "subjectHelper": "26e3424fcdf4fc76b57c5913e1ea6e8bed23411927b2dd524b2c61bd5ed3fc9f",
+    "diagnosticRunner": "5ff291519d36ff046a428173142643d7edee6b9dd1fc1cc2f8e0be08d3df2840"
+  },
+  "fixtureFingerprints": {
+    "v3QuestionConfiguration": "304fa005a233a56161a8a964842d6582e9b21ad19224f2d7863aaafa66778408",
+    "fixedV4Configuration": "3e8a9152fbd5a5f4b4c1af8954f055ea600901ecec19a95c3f116c8e6a189936",
+    "protectedV3ObservationBaseline": "346ff7580ea716a051de54bbede0be7c0689894ef1c87568688992d87fbb5700"
+  },
+  "protectedObservationBaseline": {
+    "baselineSha256": "346ff7580ea716a051de54bbede0be7c0689894ef1c87568688992d87fbb5700",
+    "protectedArtifactCount": 125,
+    "verifiedBefore": true,
+    "verifiedAfter": true
+  },
+  "protectedV3ObservationArtifacts": 5,
+  "observations": [
+    {
+      "questionId": "corporate-residency-original-general",
+      "replicate": 1,
+      "requestStartGapMs": null,
+      "requestCount": 1,
+      "outcome": "VALID_INTERPRETATION",
+      "responseReceived": true,
+      "subjectMatcherPass": false,
+      "subjectDiagnostics": [
+        {
+          "exactMatcherPass": false,
+          "concepts": {
+            "COMPANY": true,
+            "TAX": true,
+            "RESIDENCE": true,
+            "NON_RESIDENT": false,
+            "SINGAPORE": false,
+            "CONTROL_MANAGEMENT": false,
+            "CERTIFICATE_RESIDENCE": false
+          },
+          "conceptBitVectorSha256": "a7ec0fe3d85b027032adeb2c97da4e9df3f8e702006c1491cb13358a1003a264",
+          "reasonCodes": [
+            "NO_EXACT_ANCHOR",
+            "CONCEPT_EQUIVALENT_CANDIDATE"
+          ]
+        }
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": true
+      },
+      "requestDurationMs": 2155.24
+    },
+    {
+      "questionId": "corporate-residency-general-paraphrase",
+      "replicate": 1,
+      "requestStartGapMs": 17450,
+      "requestCount": 1,
+      "outcome": "VALID_INTERPRETATION",
+      "responseReceived": true,
+      "subjectMatcherPass": false,
+      "subjectDiagnostics": [
+        {
+          "exactMatcherPass": false,
+          "concepts": {
+            "COMPANY": true,
+            "TAX": true,
+            "RESIDENCE": true,
+            "NON_RESIDENT": false,
+            "SINGAPORE": false,
+            "CONTROL_MANAGEMENT": false,
+            "CERTIFICATE_RESIDENCE": false
+          },
+          "conceptBitVectorSha256": "a7ec0fe3d85b027032adeb2c97da4e9df3f8e702006c1491cb13358a1003a264",
+          "reasonCodes": [
+            "NO_EXACT_ANCHOR",
+            "CONCEPT_EQUIVALENT_CANDIDATE"
+          ]
+        }
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": true
+      },
+      "requestDurationMs": 2263.86
+    },
+    {
+      "questionId": "corporate-residency-case-applied-control",
+      "replicate": 1,
+      "requestStartGapMs": 17552,
+      "requestCount": 1,
+      "outcome": "VALID_INTERPRETATION",
+      "responseReceived": true,
+      "subjectMatcherPass": false,
+      "subjectDiagnostics": [
+        {
+          "exactMatcherPass": false,
+          "concepts": {
+            "COMPANY": true,
+            "TAX": true,
+            "RESIDENCE": true,
+            "NON_RESIDENT": false,
+            "SINGAPORE": false,
+            "CONTROL_MANAGEMENT": false,
+            "CERTIFICATE_RESIDENCE": false
+          },
+          "conceptBitVectorSha256": "a7ec0fe3d85b027032adeb2c97da4e9df3f8e702006c1491cb13358a1003a264",
+          "reasonCodes": [
+            "NO_EXACT_ANCHOR",
+            "CONCEPT_EQUIVALENT_CANDIDATE"
+          ]
+        }
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": true
+      },
+      "requestDurationMs": 2360.47
+    },
+    {
+      "questionId": "corporate-residency-case-applied-control",
+      "replicate": 2,
+      "requestStartGapMs": 17648,
+      "requestCount": 1,
+      "outcome": "VALID_INTERPRETATION",
+      "responseReceived": true,
+      "subjectMatcherPass": false,
+      "subjectDiagnostics": [
+        {
+          "exactMatcherPass": false,
+          "concepts": {
+            "COMPANY": true,
+            "TAX": true,
+            "RESIDENCE": true,
+            "NON_RESIDENT": false,
+            "SINGAPORE": false,
+            "CONTROL_MANAGEMENT": false,
+            "CERTIFICATE_RESIDENCE": false
+          },
+          "conceptBitVectorSha256": "a7ec0fe3d85b027032adeb2c97da4e9df3f8e702006c1491cb13358a1003a264",
+          "reasonCodes": [
+            "NO_EXACT_ANCHOR",
+            "CONCEPT_EQUIVALENT_CANDIDATE"
+          ]
+        }
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": true
+      },
+      "requestDurationMs": 3094.36
+    },
+    {
+      "questionId": "corporate-residency-general-paraphrase",
+      "replicate": 2,
+      "requestStartGapMs": 18382,
+      "requestCount": 1,
+      "outcome": "VALID_INTERPRETATION",
+      "responseReceived": true,
+      "subjectMatcherPass": false,
+      "subjectDiagnostics": [
+        {
+          "exactMatcherPass": false,
+          "concepts": {
+            "COMPANY": true,
+            "TAX": true,
+            "RESIDENCE": true,
+            "NON_RESIDENT": false,
+            "SINGAPORE": false,
+            "CONTROL_MANAGEMENT": false,
+            "CERTIFICATE_RESIDENCE": false
+          },
+          "conceptBitVectorSha256": "a7ec0fe3d85b027032adeb2c97da4e9df3f8e702006c1491cb13358a1003a264",
+          "reasonCodes": [
+            "NO_EXACT_ANCHOR",
+            "CONCEPT_EQUIVALENT_CANDIDATE"
+          ]
+        }
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": true
+      },
+      "requestDurationMs": 2228.8
+    },
+    {
+      "questionId": "corporate-residency-original-general",
+      "replicate": 2,
+      "requestStartGapMs": 17518,
+      "requestCount": 1,
+      "outcome": "VALID_INTERPRETATION",
+      "responseReceived": true,
+      "subjectMatcherPass": false,
+      "subjectDiagnostics": [
+        {
+          "exactMatcherPass": false,
+          "concepts": {
+            "COMPANY": true,
+            "TAX": true,
+            "RESIDENCE": true,
+            "NON_RESIDENT": false,
+            "SINGAPORE": false,
+            "CONTROL_MANAGEMENT": false,
+            "CERTIFICATE_RESIDENCE": false
+          },
+          "conceptBitVectorSha256": "a7ec0fe3d85b027032adeb2c97da4e9df3f8e702006c1491cb13358a1003a264",
+          "reasonCodes": [
+            "NO_EXACT_ANCHOR",
+            "CONCEPT_EQUIVALENT_CANDIDATE"
+          ]
+        }
+      ],
+      "dimensions": {
+        "root": {
+          "operation": true,
+          "population": true,
+          "domain": true,
+          "authorities": true,
+          "contextualAuthorities": true,
+          "requiresUserSpecificFacts": true
+        },
+        "issues": [
+          {
+            "governingAuthority": true,
+            "contextualAuthority": true,
+            "domain": true,
+            "population": true,
+            "operation": true
+          }
+        ],
+        "allDimensionsMatch": true
+      },
+      "requestDurationMs": 2104.11
+    }
+  ],
+  "startedAt": "2026-10-02T11:37:09.837Z",
+  "completedAt": "2026-10-02T11:38:40.523Z"
+}

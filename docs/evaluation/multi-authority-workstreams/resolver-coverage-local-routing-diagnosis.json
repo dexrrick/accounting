@@ -1,0 +1,1584 @@
+{
+  "schemaVersion": 1,
+  "purpose": "No-API resolver/coverage diagnostic with adjudicated synthetic semantic issues and actual default provider paths using empty local retrieval. Not model accuracy, live semantic metrics, or a knowledge-completeness claim.",
+  "sourceFingerprints": {
+    "src/retrieval/queryTopicResolver.ts": "a72c3bb7215d44cfad54464b63b86d4c39007e2b1f4b1a711562fe8f6342ca9e",
+    "src/standards/coverageRegistry.ts": "4fd85400269cfd464adcf69952f1bb5d833db116070a676c165ca1ee21e6b7d2",
+    "src/services/semanticQuestionUnderstanding.ts": "d9c08bc554d5af99acc3da40883fd2bc15decd8f4a1367dc16d873de7818b0d0",
+    "src/services/authorityWorkstreams.ts": "28d880c3c67e3a5d36cc9d88b9afd05b0a2d0a5ebc28e793f284c9f9910b7f1e",
+    "tests/evaluation/singapore/authority-relief-targeted.json": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb",
+    "tests/evaluation/singapore/semantic-contract-followup.json": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1",
+    "tests/evaluation/singapore/resolver-coverage-diagnosis.mjs": "f9e4f30713e041643335e618b2b43e5e9c8b40b7eacde0614a50107b0f289385"
+  },
+  "summary": {
+    "targetedCases": 8,
+    "fullyMappedTargetedCases": 8,
+    "requestedIssues": 9,
+    "mappedRequestedIssues": 9,
+    "requestedProviderPathsReached": 9,
+    "guardsPassed": true,
+    "broaderCases": 24,
+    "broaderFullyMappedCases": 18,
+    "broaderUnresolvedIssues": 6,
+    "networkAttempts": 0,
+    "modelRequests": 0,
+    "protectedFileCount": 29,
+    "protectedMismatches": []
+  },
+  "targeted": [
+    {
+      "caseId": "control-general-recognition",
+      "question": "What are the general principles for recognizing intangible assets under IFRS?",
+      "queryTopicIds": [
+        "sfrsi_intangibles_cap"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "general principles for recognizing intangible assets under IFRS",
+          "domain": "ACCOUNTING",
+          "population": "UNKNOWN",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_intangibles_cap"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "question": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-reliefs"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "employer CPF contribution obligation/calculation",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "operation": "CALCULATE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        },
+        {
+          "subject": "individual personal tax relief for compulsory CPF contributions",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "CHECK_ELIGIBILITY",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-reliefs"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "target-sfrsi-general-recognition",
+      "question": "What are the general principles for recognizing intangible assets under SFRS(I)?",
+      "queryTopicIds": [
+        "sfrsi_intangibles_cap"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "general principles for recognizing intangible assets under SFRS(I)",
+          "domain": "ACCOUNTING",
+          "population": "UNKNOWN",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_intangibles_cap"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "question": "How do IFRS 16 and Singapore SFRS(I) reporting standards generally require a lessee to recognize a lease liability?",
+      "queryTopicIds": [
+        "sfrsi_leases"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "general recognition of a lease liability under IFRS 16 and Singapore SFRS(I)",
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_leases"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "target-relief-entitlement",
+      "question": "Can I claim personal tax relief on my compulsory CPF contributions?",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-reliefs",
+        "iras-individual-cpf-relief"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "individual entitlement to personal tax relief for compulsory CPF contributions",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "CHECK_ELIGIBILITY",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "target-relief-amount",
+      "question": "How much personal tax relief can I claim for compulsory CPF contributions?",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-reliefs",
+        "iras-individual-cpf-relief"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "numeric amount of individual tax relief for compulsory CPF contributions",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "CALCULATE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "target-cpf-general-control",
+      "question": "Explain the general conditions for employer CPF contributions in Singapore.",
+      "queryTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "general conditions for employer CPF contributions",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "target-mom-general-control",
+      "question": "What are the general work-pass requirements for a foreign employee in Singapore?",
+      "queryTopicIds": [
+        "mom-work-passes-general"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "general work-pass requirements for a foreign employee",
+          "domain": "MOM_EMPLOYMENT",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "mom-work-passes-general"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "MOM/MOM_EMPLOYMENT"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    }
+  ],
+  "broader": [
+    {
+      "caseId": "individual-generic",
+      "family": "IRAS individual",
+      "kind": "generic",
+      "question": "How does individual income tax work in Singapore?",
+      "queryTopicIds": [],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 0,
+      "fullyMapped": false,
+      "requested": [
+        {
+          "subject": "individual income tax rules",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "providerPathsReached": 0,
+      "localRetrieverCalls": 0,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "individual-specific",
+      "family": "IRAS individual",
+      "kind": "specific",
+      "question": "Explain personal tax relief for compulsory CPF contributions.",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-reliefs",
+        "iras-individual-cpf-relief"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "personal tax relief for compulsory CPF contributions",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_INDIVIDUAL_TAX"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "individual-compound",
+      "family": "IRAS individual",
+      "kind": "compound",
+      "question": "Explain personal tax relief for compulsory CPF contributions and employer CPF contribution rates.",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-reliefs",
+        "iras-individual-cpf-relief"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "personal tax relief for compulsory CPF contributions",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ]
+        },
+        {
+          "subject": "employer CPF contribution rates",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_INDIVIDUAL_TAX",
+        "CPF/CPF_PAYROLL"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "corporate-generic",
+      "family": "IRAS corporate",
+      "kind": "generic",
+      "question": "How does corporate income tax work in Singapore?",
+      "queryTopicIds": [],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 0,
+      "fullyMapped": false,
+      "requested": [
+        {
+          "subject": "corporate income tax rules",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "providerPathsReached": 0,
+      "localRetrieverCalls": 0,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "corporate-specific",
+      "family": "IRAS corporate",
+      "kind": "specific",
+      "question": "What is the corporate tax rate in Singapore?",
+      "queryTopicIds": [
+        "iras-cit-tax-rate"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "corporate tax rate",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-cit-tax-rate"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "corporate-compound",
+      "family": "IRAS corporate",
+      "kind": "compound",
+      "question": "Explain corporate tax filing deadlines and ACRA annual returns.",
+      "queryTopicIds": [
+        "acra_annual-returns",
+        "iras-cit-filing-deadlines"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "corporate tax filing deadlines",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-cit-filing-deadlines"
+          ]
+        },
+        {
+          "subject": "ACRA annual returns",
+          "domain": "ACRA_CORPORATE",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACRA"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "acra_annual-returns"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_CORPORATE_TAX",
+        "ACRA/ACRA_CORPORATE"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "gst-generic",
+      "family": "GST",
+      "kind": "generic",
+      "question": "How does GST work in Singapore?",
+      "queryTopicIds": [],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 0,
+      "fullyMapped": false,
+      "requested": [
+        {
+          "subject": "GST rules",
+          "domain": "IRAS_GST",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_GST"
+      ],
+      "providerPathsReached": 0,
+      "localRetrieverCalls": 0,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "gst-specific",
+      "family": "GST",
+      "kind": "specific",
+      "question": "Explain GST registration thresholds.",
+      "queryTopicIds": [
+        "gst_compulsory_registration"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "GST registration thresholds",
+          "domain": "IRAS_GST",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "gst_compulsory_registration"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_GST"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "gst-compound",
+      "family": "GST",
+      "kind": "compound",
+      "question": "Explain GST registration thresholds and corporate tax rates.",
+      "queryTopicIds": [
+        "gst_compulsory_registration",
+        "iras-cit-tax-rate"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "GST registration thresholds",
+          "domain": "IRAS_GST",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "gst_compulsory_registration"
+          ]
+        },
+        {
+          "subject": "corporate tax rates",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-cit-tax-rate"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "IRAS/IRAS_GST",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "cpf-generic",
+      "family": "CPF",
+      "kind": "generic",
+      "question": "What must employers pay into CPF?",
+      "queryTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "employer CPF contributions",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "cpf-specific",
+      "family": "CPF",
+      "kind": "specific",
+      "question": "Explain employer CPF contribution rates by age.",
+      "queryTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "employer CPF contribution rates by age",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "cpf-compound",
+      "family": "CPF",
+      "kind": "compound",
+      "question": "Explain employer CPF contribution rates and general work-pass requirements.",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "mom-work-passes-general"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "employer CPF contribution rates",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        },
+        {
+          "subject": "general work-pass requirements",
+          "domain": "MOM_EMPLOYMENT",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "mom-work-passes-general"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "CPF/CPF_PAYROLL",
+        "MOM/MOM_EMPLOYMENT"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "mom-generic",
+      "family": "MOM",
+      "kind": "generic",
+      "question": "What are the general work-pass requirements for foreign employees in Singapore?",
+      "queryTopicIds": [
+        "mom-work-passes-general"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "general work-pass requirements for foreign employees",
+          "domain": "MOM_EMPLOYMENT",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "mom-work-passes-general"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "MOM/MOM_EMPLOYMENT"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "mom-specific",
+      "family": "MOM",
+      "kind": "specific",
+      "question": "Explain Employment Pass eligibility requirements.",
+      "queryTopicIds": [
+        "mom-work-passes-employment-pass"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "Employment Pass eligibility requirements",
+          "domain": "MOM_EMPLOYMENT",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "mom-work-passes-employment-pass"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "MOM/MOM_EMPLOYMENT"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "mom-compound",
+      "family": "MOM",
+      "kind": "compound",
+      "question": "Explain general work visa requirements and employer CPF contributions.",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "mom-work-passes-general"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "general work visa requirements",
+          "domain": "MOM_EMPLOYMENT",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "MOM"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "mom-work-passes-general"
+          ]
+        },
+        {
+          "subject": "employer CPF contributions",
+          "domain": "CPF_PAYROLL",
+          "population": "EMPLOYER",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "MOM/MOM_EMPLOYMENT",
+        "CPF/CPF_PAYROLL"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "acra-generic",
+      "family": "ACRA",
+      "kind": "generic",
+      "question": "What are the general company compliance requirements in Singapore?",
+      "queryTopicIds": [],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 0,
+      "fullyMapped": false,
+      "requested": [
+        {
+          "subject": "general company compliance requirements",
+          "domain": "ACRA_CORPORATE",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACRA"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACRA/ACRA_CORPORATE"
+      ],
+      "providerPathsReached": 0,
+      "localRetrieverCalls": 0,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "acra-specific",
+      "family": "ACRA",
+      "kind": "specific",
+      "question": "Explain ACRA annual returns.",
+      "queryTopicIds": [
+        "acra_annual-returns"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "ACRA annual returns",
+          "domain": "ACRA_CORPORATE",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACRA"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "acra_annual-returns"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACRA/ACRA_CORPORATE"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "acra-compound",
+      "family": "ACRA",
+      "kind": "compound",
+      "question": "Explain ACRA annual returns and corporate tax filing deadlines.",
+      "queryTopicIds": [
+        "acra_annual-returns",
+        "iras-cit-filing-deadlines"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "ACRA annual returns",
+          "domain": "ACRA_CORPORATE",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACRA"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "acra_annual-returns"
+          ]
+        },
+        {
+          "subject": "corporate tax filing deadlines",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-cit-filing-deadlines"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACRA/ACRA_CORPORATE",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "mas-generic",
+      "family": "MAS",
+      "kind": "generic",
+      "question": "What are the general regulatory requirements for fund managers in Singapore?",
+      "queryTopicIds": [],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 0,
+      "fullyMapped": false,
+      "requested": [
+        {
+          "subject": "general regulatory requirements for fund managers",
+          "domain": "MAS_FUNDS",
+          "population": "FUND",
+          "governingAuthorities": [
+            "MAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "plannedWorkstreams": [
+        "MAS/MAS_FUNDS"
+      ],
+      "providerPathsReached": 0,
+      "localRetrieverCalls": 0,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "mas-specific",
+      "family": "MAS",
+      "kind": "specific",
+      "question": "Explain capital markets services licence requirements for fund management.",
+      "queryTopicIds": [
+        "mas-cms-licence"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "capital markets services licence requirements",
+          "domain": "MAS_FUNDS",
+          "population": "FUND",
+          "governingAuthorities": [
+            "MAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "mas-cms-licence"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "MAS/MAS_FUNDS"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "mas-compound",
+      "family": "MAS",
+      "kind": "compound",
+      "question": "Explain capital markets services licence requirements and corporate tax rates.",
+      "queryTopicIds": [
+        "iras-cit-tax-rate",
+        "mas-cms-licence"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "capital markets services licence requirements",
+          "domain": "MAS_FUNDS",
+          "population": "FUND",
+          "governingAuthorities": [
+            "MAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "mas-cms-licence"
+          ]
+        },
+        {
+          "subject": "corporate tax rates",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-cit-tax-rate"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "MAS/MAS_FUNDS",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "accounting-generic",
+      "family": "Accounting/SFRS(I)",
+      "kind": "generic",
+      "question": "What are the general SFRS(I) accounting requirements?",
+      "queryTopicIds": [],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 0,
+      "fullyMapped": false,
+      "requested": [
+        {
+          "subject": "general SFRS(I) accounting requirements",
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "providerPathsReached": 0,
+      "localRetrieverCalls": 0,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "accounting-specific",
+      "family": "Accounting/SFRS(I)",
+      "kind": "specific",
+      "question": "Explain recognition of intangible assets under SFRS(I).",
+      "queryTopicIds": [
+        "sfrsi_intangibles_cap"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "recognition of intangible assets under SFRS(I)",
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_intangibles_cap"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING"
+      ],
+      "providerPathsReached": 1,
+      "localRetrieverCalls": 1,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    },
+    {
+      "caseId": "accounting-compound",
+      "family": "Accounting/SFRS(I)",
+      "kind": "compound",
+      "question": "Explain IFRS 16 lease accounting and corporate tax deductibility.",
+      "queryTopicIds": [
+        "sfrsi_leases",
+        "iras-cit-deductibility"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 2,
+      "fullyMapped": true,
+      "requested": [
+        {
+          "subject": "IFRS 16 lease accounting",
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_leases"
+          ]
+        },
+        {
+          "subject": "corporate tax deductibility",
+          "domain": "IRAS_INCOME_TAX",
+          "population": "COMPANY",
+          "governingAuthorities": [
+            "IRAS"
+          ],
+          "operation": "EXPLAIN_RULE",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-cit-deductibility"
+          ]
+        }
+      ],
+      "plannedWorkstreams": [
+        "ACCOUNTING_STANDARDS/ACCOUNTING",
+        "IRAS/IRAS_CORPORATE_TAX"
+      ],
+      "providerPathsReached": 2,
+      "localRetrieverCalls": 2,
+      "runtimeEvidenceStatus": "INSUFFICIENT",
+      "guards": {
+        "expectedCanonicalRouting": true,
+        "independentQueryIntersection": true,
+        "subjectIntersection": true,
+        "governorIsolation": true,
+        "operationsPreserved": true,
+        "noExtraWorkstream": true,
+        "residualNotRouted": true,
+        "mappedProviderPathsReached": true,
+        "unsupportedProviderRouteAbsent": true,
+        "emptyEvidenceNotVerified": true
+      }
+    }
+  ]
+}

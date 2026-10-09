@@ -1,0 +1,33 @@
+{
+  "profile": "iras-v4-semantic-continuation-gate-request",
+  "requestId": "0456920f-d87f-49c2-b1d8-aec359e577fb",
+  "requestedAtUtc": "2026-10-08T23:16:37.102Z",
+  "responsePath": "artifacts/iras-v4-acceptance-repaired-2026-10-06/post-repair-2026-10-08/execution/semantic-gate-response-0456920f-d87f-49c2-b1d8-aec359e577fb.json",
+  "launcherSha256": "97e807d1562636cd531eafed2b4cfc06e025b0ad6f6cfc7c38ec84bd52834d7e",
+  "approvalSha256": "ac487157136e28c4f7857f54af43fc47d540c8cb1a8f72e65e777737ca719f7c",
+  "projectionSha256": "d78085b48a085567f87de6792cfe68901faf9acc6490c52745ebd76eb00c066d",
+  "resourceReviewSha256": "af55877062c2036a47037108c512b9ffe51843bc557a8b7b713092f4a51f7e5e",
+  "authorizationSha256": "279bea689627e3b6e72bf7f7c7282cca67cb18a73e244d6dc98af010b7e5b486",
+  "authorizationRequestSha256": "56ed641e0d787a74ee42326b477b5e19a889d82e3b08f093b7794a0771b9149c",
+  "freezeValidationSha256": "e27209aef958ddc8512edb09fe108544da26c9cd76c0aa8c5f52b88ce8666442",
+  "runnerConfigurationSha256": "f7712ede781edb10e6057d17d1d3a373d48b2f6825c7793377ccbcaf85f69852",
+  "preregistrationSha256": "feafc2a67e0cf56da4f71d3d6424b1ef23b0b4344a4e27e39d403eec62451aeb",
+  "activationConfigurationSha256": "9e0f55d7d4e72555f51cf9f280cf5e959b8cadd1245c2e08a8e515f772c1b1fc",
+  "captureResultSha256": "ad6f338ee489ebe203b27bebf8702ad9364394a883a378034f50a5f7d8f9755e",
+  "capturePayloadSha256": "77c07c267c0c94cb6f38ca92bfb6fa9c0fdd9e49fb64e9dcf40f1a3f242e7f19",
+  "evidenceLockSha256": "aa5c88eeb19c3ef891b09fa3c49f25e20620263f2121faf346403f6012fd445b",
+  "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08",
+  "model": "gemini-3.5-flash-lite",
+  "authorizedGeminiCalls": 9,
+  "retries": 0,
+  "liveSourceRetrieval": false,
+  "requiredUsageTool": "mcp__codex_app__get_usage_limits",
+  "requiredUsageWindowsMinutes": [
+    300,
+    10080
+  ],
+  "maximumUsageObservationAgeMs": 300000,
+  "quotaConfirmedByHuman": true,
+  "userInstruction": "i think you can just go ahead with the gemini call"
+}

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-gst-opening-retention-probe-v1",
+  "diagnosticOnly": true,
+  "interpretation": "SYNTHETIC_LONG_PAGE_RETENTION_BOUNDARY_NOT_ACTUAL_PAGE_RANKING_PROOF",
+  "actualV4Capture": {
+    "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+    "status": "VALIDATED",
+    "sourceDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+    "rawResponseCharacterCount": 327814,
+    "cleanedVisibleCharacterCount": 30156,
+    "openingUnitBlockIndex": 7,
+    "openingUnitCharacterCount": 339,
+    "openingUnitCompleteThreeSentenceMatch": true,
+    "openingPresentInFullVisibleText": true,
+    "openingSentencePresenceInFullVisibleText": [
+      true,
+      true,
+      true
+    ],
+    "retainedLiveRecordCharacterCount": 4964,
+    "retainedLiveRecordNormalizedSha256": "293364844c654850d3c360472ef016c2bd55ffec30d3b31678a57c21061af2ca",
+    "openingPresentInRetainedLiveRecord": false,
+    "openingSentencePresenceInRetainedLiveRecord": [
+      false,
+      false,
+      false
+    ],
+    "finalEvidenceStatus": "INSUFFICIENT",
+    "finalVerifiedClaimCount": 0
+  },
+  "fixture": {
+    "savedV1BlockIndex": 7,
+    "savedDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+    "exactOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+    "exactOpeningSentenceCount": 3,
+    "standaloneBulletRetainedInSavedUnit": true,
+    "standaloneBulletRemovedFromSyntheticBody": true,
+    "currentTopicTermCount": 10,
+    "currentTopicTermsSha256": "2f1eb04abf8fb84083f274c6ace18c2bc5f75c5ad01a7fac398ddc40d926b103",
+    "frozenQuerySha256": "01df855036dccf15f7ab5c52aaae3a77907784dd7ae7138dbb77cbf9c537bd42",
+    "proposedFirstSentenceHintSha256": "645b652c25c34ecf890cbcce39c1d92caa10076e401a06452b0b11b6e1e51154"
+  },
+  "syntheticLongPage": {
+    "compositionDisclosure": "Synthetic non-entailing topic-label entries are placed before and after the intact saved three-sentence opening. The first-sentence hint is derived from that saved opening. This ordering and the distractor text are test composition only, not actual V4 adjacency or ranking.",
+    "syntheticDistractorCount": 8,
+    "distractorCharactersEach": 1600,
+    "syntheticPageCharacterCount": 13214,
+    "retainedCharacterCap": 5000,
+    "baselineCurrentTerms": {
+      "retainedCharacterCount": 4978,
+      "retainedTextSha256": "5269c2e246910b7389c894244e4b513cf2e843e3344c969e124f077be0c42d0b",
+      "openingSentencePresence": [
+        false,
+        true,
+        false
+      ],
+      "completeOpeningPresent": false
+    },
+    "proposedTermsPlusFirstSourceFacingHint": {
+      "retainedCharacterCount": 4032,
+      "retainedTextSha256": "0af01c104341b1999a3241bd8bb16756261b01a219bc08e48aa04ab04a07b9e9",
+      "openingSentencePresence": [
+        true,
+        true,
+        true
+      ],
+      "completeOpeningPresent": true
+    }
+  },
+  "limitation": "V4 proves the complete opening was available in the validated full page and its bounded page unit but absent from the retained live record. The whole page is not reconstructed here. The synthetic helper comparison tests one proposed exact hint against a controlled lexical competition; it does not prove the ranking of the discarded actual V4 page."
+}

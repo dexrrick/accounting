@@ -9,7 +9,7 @@ import { querySingaporeStatutes, SINGAPORE_STATUTORY_REPOSITORY } from '../../sr
 import { hasVerifiedSourceUrlProvenance, isVerifiedLegacyStandardUrl } from '../../src/standards/approvedSourceRegistry.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
-import { OfficialSitemapDiscoveryAdapter } from '../../src/retrieval/officialSitemapDiscovery.ts';
+import { isOfficialSourceCandidateMateriallyRelevant, OfficialSitemapDiscoveryAdapter } from '../../src/retrieval/officialSitemapDiscovery.ts';
 import { assembleDeterministicResponse } from '../../src/engine/responseAssembler.ts';
 import { IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistry.ts';
 import { evaluateEvidenceQuality } from '../../src/retrieval/evidenceQualityGate.ts';
@@ -501,6 +501,243 @@ async function run() {
   assert.equal(Object.hasOwn(indexEntry, 'sourceMapIds'), false, 'Query routing does not imply a candidate-specific source-map relationship.');
   assert.ok(!ir21NoMapAdapter.getIndexedCandidates().some(entry => entry.canonicalUrl.startsWith('https://example.com/')),
     'Off-domain sitemap links are discarded before candidate ranking.');
+
+  const irrelevantNcdUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/specific-topics/tax-treatment-of-interest-gains-or-profits-derived-from-negotiable-certificates-of-deposit-by-non-financial-institutions';
+  const irrelevantNcdSitemapUrl = 'https://www.iras.gov.sg/sitemap';
+  const irrelevantNcdSitemapHtml = `<urlset><url><loc>${irrelevantNcdUrl}</loc></url></urlset>`;
+  const irrelevantNcdCalls = [];
+  const irrelevantNcdFetch = async url => {
+    irrelevantNcdCalls.push(url);
+    return url === irrelevantNcdSitemapUrl ? htmlResponse(irrelevantNcdSitemapHtml) : new Response('unexpected page fetch', { status: 500 });
+  };
+  const irrelevantNcdWeb = new ControlledWebRetriever(undefined, new SourceCache());
+  const irrelevantNcdAdapter = new OfficialSitemapDiscoveryAdapter(irrelevantNcdWeb, {
+    timeoutMs: 100, customFetch: irrelevantNcdFetch
+  });
+  const irrelevantNcdCandidates = await irrelevantNcdAdapter.discoverOfficialSourceCandidates({
+    query: "corporate income-tax treatment of director's private holiday expense",
+    authority: 'IRAS',
+    topicId: 'iras-cit-deductibility',
+    topicDomainId: 'IRAS_CORPORATE_TAX',
+    topicTitle: 'Corporate Tax Deductibility',
+    standardOrAct: 'Income Tax Act 1947',
+    approvedHosts: ['www.iras.gov.sg'],
+    preferredHosts: ['www.iras.gov.sg'],
+    sitemapUrls: [irrelevantNcdSitemapUrl],
+    topicHints: ['tax deductibility', 'deductibility', 'tax deductible', 'deductible for tax',
+      'staff welfare expense tax', 'staff welfare', 'entertainment expenses'],
+    expectedTitles: ['Business Expenses'],
+    lexicalDiscovery: true,
+    authorityLevelFallback: false,
+    maxCandidates: 4
+  });
+  assert.deepEqual(irrelevantNcdCandidates, [],
+    'Generic corporate, tax, and treatment metadata cannot make an unrelated interest-gains page a deductibility candidate.');
+  assert.deepEqual(irrelevantNcdCalls, [irrelevantNcdSitemapUrl],
+    'Material topic relevance is required before a sitemap URL is returned for a page fetch.');
+  assert.equal(irrelevantNcdAdapter.getIndexedCandidates().length, 0,
+    'An irrelevant sitemap URL is not admitted to the ranked candidate index.');
+
+  const irrelevantPropertyUrl = 'https://www.iras.gov.sg/taxes/property-tax/property-buyers/buying-private-residential-properties';
+  const irrelevantPropertyCalls = [];
+  const irrelevantPropertyFetch = async url => {
+    irrelevantPropertyCalls.push(url);
+    return url === irrelevantNcdSitemapUrl
+      ? htmlResponse(`<urlset><url><loc>${irrelevantPropertyUrl}</loc></url></urlset>`)
+      : new Response('unexpected page fetch', { status: 500 });
+  };
+  const irrelevantPropertyWeb = new ControlledWebRetriever(undefined, new SourceCache());
+  const irrelevantPropertyAdapter = new OfficialSitemapDiscoveryAdapter(irrelevantPropertyWeb, {
+    timeoutMs: 100, customFetch: irrelevantPropertyFetch
+  });
+  const corporatePropertyCandidateRequest = {
+    query: 'private residential property buyers tax treatment',
+    authority: 'IRAS',
+    topicId: 'iras-cit-deductibility',
+    topicDomainId: 'IRAS_CORPORATE_TAX',
+    topicTitle: 'Corporate Tax Treatment of Residential Property Buyers',
+    standardOrAct: 'Income Tax Act 1947',
+    approvedHosts: ['www.iras.gov.sg'],
+    preferredHosts: ['www.iras.gov.sg'],
+    sitemapUrls: [irrelevantNcdSitemapUrl],
+    topicHints: ['private residential property buyers', 'property tax treatment'],
+    expectedTitles: ['Buying Private Residential Properties'],
+    lexicalDiscovery: true,
+    authorityLevelFallback: false,
+    maxCandidates: 4
+  };
+  const irrelevantPropertyCandidates = await irrelevantPropertyAdapter.discoverOfficialSourceCandidates(corporatePropertyCandidateRequest);
+  assert.deepEqual(irrelevantPropertyCandidates, [],
+    'A corporate-tax topic rejects an otherwise lexically strong candidate whose IRAS route is explicitly property tax.');
+  assert.deepEqual(irrelevantPropertyCalls, [irrelevantNcdSitemapUrl],
+    'The unrelated property page is rejected from URL metadata before it can be fetched.');
+
+  const oneWordFallbackAdapter = new OfficialSitemapDiscoveryAdapter(
+    new ControlledWebRetriever(undefined, new SourceCache()), { timeoutMs: 100, customFetch: irrelevantPropertyFetch }
+  );
+  const oneWordFallbackCandidates = await oneWordFallbackAdapter.discoverOfficialSourceCandidates({
+    query: "director's private holiday expense",
+    authority: 'IRAS',
+    topicId: 'iras-authority-query-concept-private-expense',
+    topicTitle: 'Private Expense Deductibility',
+    standardOrAct: 'Income Tax Act 1947',
+    approvedHosts: ['www.iras.gov.sg'],
+    preferredHosts: ['www.iras.gov.sg'],
+    sitemapUrls: [irrelevantNcdSitemapUrl],
+    topicHints: ['director private holiday expense', 'income tax deductibility'],
+    expectedTitles: [],
+    lexicalDiscovery: true,
+    authorityLevelFallback: true,
+    maxCandidates: 4
+  });
+  assert.deepEqual(oneWordFallbackCandidates, [],
+    'One overlapping word does not satisfy authority-level material relevance even when the route area is unspecified.');
+
+  const propertyTopicAdapter = new OfficialSitemapDiscoveryAdapter(
+    new ControlledWebRetriever(undefined, new SourceCache()), { timeoutMs: 100, customFetch: irrelevantPropertyFetch }
+  );
+  const propertyTopicCandidates = await propertyTopicAdapter.discoverOfficialSourceCandidates({
+    ...corporatePropertyCandidateRequest,
+    query: 'property tax treatment of buying private residential properties',
+    topicId: 'iras-property-tax-annual-value',
+    topicDomainId: 'IRAS_PROPERTY_TAX',
+    topicTitle: 'Property Tax and Annual Value',
+    standardOrAct: 'Property Tax Act',
+    topicHints: ['property tax', 'buying private residential properties'],
+    expectedTitles: []
+  });
+  assert.deepEqual(propertyTopicCandidates, [irrelevantPropertyUrl],
+    'The same explicitly routed IRAS property page remains discoverable for a property-tax topic.');
+
+  const declaredCrossAreaAdapter = new OfficialSitemapDiscoveryAdapter(
+    new ControlledWebRetriever(undefined, new SourceCache()), { timeoutMs: 100, customFetch: irrelevantPropertyFetch }
+  );
+  const declaredCrossAreaCandidates = await declaredCrossAreaAdapter.discoverOfficialSourceCandidates({
+    ...corporatePropertyCandidateRequest,
+    declaredSourceUrls: [irrelevantPropertyUrl]
+  });
+  assert.deepEqual(declaredCrossAreaCandidates, [irrelevantPropertyUrl],
+    'A registry-declared cross-area source retains its explicit routing exception, subject to lexical relevance.');
+  assert.equal(isOfficialSourceCandidateMateriallyRelevant(irrelevantPropertyUrl, {
+    ...corporatePropertyCandidateRequest,
+    declaredSourceUrls: [irrelevantPropertyUrl]
+  }, 'Buying Private Residential Properties'), true,
+  'Caller-side relevance preserves a materially relevant, registry-declared cross-area source.');
+
+  const customNcdDiscoveryCalls = [];
+  const customNcdSearchCalls = [];
+  const customNcdFetchedUrls = [];
+  const customNcdAdapterRequestSnapshots = [];
+  const customNcdPageTitle = 'Tax Treatment of Interest Gains or Profits Derived from Negotiable Certificates of Deposit by Non-Financial Institutions';
+  const customNcdAttackerUrl = 'https://attacker.example/taxes/corporate-income-tax/negotiable-certificates-of-deposit';
+  const mutateCustomNcdAdapterRequest = request => {
+    customNcdAdapterRequestSnapshots.push({
+      topicId: request.topicId,
+      topicDomainId: request.topicDomainId,
+      query: request.query,
+      scopeQuery: request.scopeQuery,
+      topicHints: [...(request.topicHints || [])],
+      expectedTitles: [...(request.expectedTitles || [])],
+      declaredSourceUrls: [...(request.declaredSourceUrls || [])],
+      approvedHosts: [...request.approvedHosts]
+    });
+    request.topicId = 'iras-ncd-interest-gains';
+    request.query = 'corporate tax treatment of interest gains or profits from negotiable certificates of deposit';
+    request.scopeQuery = request.query;
+    request.topicTitle = customNcdPageTitle;
+    request.topicHints = ['interest gains', 'profits', 'negotiable certificates of deposit'];
+    request.expectedTitles = [customNcdPageTitle];
+    request.declaredSourceUrls = [irrelevantNcdUrl];
+    request.approvedHosts.push('attacker.example');
+  };
+  const customNcdDiscoveryAdapter = {
+    discoverOfficialSourceCandidates: async request => {
+      customNcdDiscoveryCalls.push(true);
+      mutateCustomNcdAdapterRequest(request);
+      return [irrelevantNcdUrl, customNcdAttackerUrl];
+    },
+    getCandidateTitle: url => url === irrelevantNcdUrl ? customNcdPageTitle : 'Negotiable Certificates of Deposit',
+    getLastFetchTrace: () => []
+  };
+  const customNcdSearchAdapter = {
+    searchOfficialDomainCandidates: async request => {
+      customNcdSearchCalls.push(true);
+      mutateCustomNcdAdapterRequest(request);
+      return [irrelevantNcdUrl, customNcdAttackerUrl];
+    },
+    getCandidateTitle: url => url === irrelevantNcdUrl ? customNcdPageTitle : 'Negotiable Certificates of Deposit',
+    getLastSearchTrace: () => []
+  };
+  const customNcdFallback = await resolveMappedOfficialSourceFallback(
+    ['iras-cit-deductibility'],
+    "Corporate income-tax treatment of director's private holiday expense",
+    noPointerRetriever,
+    {
+      webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+      discoveryAdapter: customNcdDiscoveryAdapter,
+      officialDomainSearchAdapter: customNcdSearchAdapter,
+      fetchOptions: {
+        useCache: false,
+        customFetch: async url => {
+          customNcdFetchedUrls.push(url);
+          return new Response('unavailable', { status: 503 });
+        }
+      }
+    }
+  );
+  assert.ok(customNcdDiscoveryCalls.length > 0, 'The injected sitemap adapter ran for the unresolved corporate-tax topic.');
+  assert.ok(customNcdSearchCalls.length > 0, 'The injected search adapter ran after sitemap coverage remained unresolved.');
+  assert.equal(customNcdAdapterRequestSnapshots.length, 2);
+  for (const snapshot of customNcdAdapterRequestSnapshots) {
+    assert.equal(snapshot.topicId, 'iras-cit-deductibility');
+    assert.equal(snapshot.topicDomainId, 'IRAS_CORPORATE_TAX');
+    assert.equal(snapshot.query, "Corporate income-tax treatment of director's private holiday expense");
+    assert.equal(snapshot.scopeQuery, snapshot.query);
+    assert.ok(!snapshot.topicHints.some(hint => /negotiable certificates|interest gains/i.test(hint)));
+    assert.ok(!snapshot.expectedTitles.some(title => /negotiable certificates/i.test(title)));
+    assert.ok(!snapshot.declaredSourceUrls.includes(irrelevantNcdUrl));
+    assert.ok(!snapshot.approvedHosts.includes('attacker.example'));
+  }
+  assert.ok(!customNcdFetchedUrls.includes(irrelevantNcdUrl) && !customNcdFetchedUrls.includes(customNcdAttackerUrl),
+    'Caller-owned scope blocks an injected same-area NCD URL and an adapter-added hostname before page fetch.');
+  assert.ok(customNcdFallback.trace.attempts.some(attempt => attempt.candidateUrl === irrelevantNcdUrl &&
+    attempt.discoveryStage === 'SITEMAP_DISCOVERY' && attempt.fetchStatus === 'METADATA_IRRELEVANT'));
+  assert.ok(customNcdFallback.trace.attempts.some(attempt => attempt.candidateUrl === customNcdAttackerUrl &&
+    attempt.discoveryStage === 'SITEMAP_DISCOVERY' && attempt.fetchStatus === 'UNAUTHORIZED_DOMAIN_ACCESS'));
+  assert.ok(customNcdFallback.trace.attempts.some(attempt => attempt.candidateUrl === irrelevantNcdUrl &&
+    attempt.discoveryStage === 'OFFICIAL_DOMAIN_SEARCH' && attempt.fetchStatus === 'METADATA_IRRELEVANT'));
+  assert.ok(customNcdFallback.trace.attempts.some(attempt => attempt.candidateUrl === customNcdAttackerUrl &&
+    attempt.discoveryStage === 'OFFICIAL_DOMAIN_SEARCH' && attempt.fetchStatus === 'UNAUTHORIZED_DOMAIN_ACCESS'));
+
+  let customIr21DiscoveryCalls = 0;
+  const customIr21Adapter = {
+    discoverOfficialSourceCandidates: async () => { customIr21DiscoveryCalls++; return [ir21ReplacementUrl]; },
+    getCandidateTitle: () => 'Tax Clearance for Employees',
+    getLastFetchTrace: () => []
+  };
+  const customIr21SearchAdapter = {
+    searchOfficialDomainCandidates: async () => [],
+    getLastSearchTrace: () => []
+  };
+  const customIr21Fallback = await resolveMappedOfficialSourceFallback(
+    ['iras-employer-ir21'],
+    'When do we need to file IR21?',
+    noPointerRetriever,
+    {
+      webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+      discoveryAdapter: customIr21Adapter,
+      officialDomainSearchAdapter: customIr21SearchAdapter,
+      fetchOptions: {
+        useCache: false,
+        customFetch: async url => url === ir21ReplacementUrl
+          ? htmlResponse(ir21PageHtml)
+          : new Response('not found', { status: 404 })
+      }
+    }
+  );
+  assert.ok(customIr21DiscoveryCalls > 0);
+  assert.equal(customIr21Fallback.trace.path, 'DISCOVERED_SOURCE',
+    'A materially relevant same-area custom discovery candidate retains the existing evidence path.');
 
   const cachedDiscoveryCalls = [];
   const cachedDiscoveryFetch = async url => {

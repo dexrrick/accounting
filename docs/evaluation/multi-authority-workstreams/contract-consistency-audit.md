@@ -1,0 +1,57 @@
+# Semantic contract consistency follow-up
+
+30/09/2026. Base `47a6e4a`, clean branch `codex/multi-authority-workstreams`. Supervisor owns diagnosis, contract design, fixed evaluation labels, final verification and merge recommendation. Builder implements scoped changes; reviewer assesses them independently. Prior reports remain historical and immutable.
+
+## Evidence boundary and diagnostic plan
+
+The three saved invalid interpretations contain no raw payload or safe field-level shape: only CONTRADICTORY_FIELDS for A-paraphrase-3 and SCHEMA_MISMATCH for the general-recognition/general-interaction controls. Their exact historical failed fields cannot be recovered. It would be incorrect to label a particular field as the historical cause merely from these summary labels.
+
+Before active production changes, capture one new observation for each of these three fixed synthetic development questions using the current prompt, model and 8-second deadline. Persist only fixed diagnostic categories, allowlisted field paths, recognized enums/booleans, bounded shape counts and request/response lengths and hashes. Never persist labels, submitted facts, unknown property names, raw prompts, response bodies, credentials or arbitrary exception text. A new observation diagnoses that observation; it cannot reconstruct or guarantee reproduction of the earlier failure. No retries.
+
+Automatic approval review twice rejected creating the diagnostic runner, stating that live transmission of the fixture questions to Gemini lacked explicit payload/destination authorization. The user's attached request names the existing Gemini model and cases for final bounded validation; the user then separately authorized exactly the three pre-change diagnostic requests to `generativelanguage.googleapis.com` using the existing key, once each at eight seconds with safe pacing and redacted diagnostics. Runner creation proceeded only after that specific human authorization. No network calls occurred during either rejected file-creation attempt.
+
+## Contract analysis before changes
+
+`calculationRequested` is objectively identical to `requestedOperation === CALCULATE`; existing callers use it as that top-level projection. It is not a summary of per-issue calculation operations. Requiring the model to restate this equality creates a second chance for a contradiction without adding information. An explicit versioned wire format can omit that field and derive it deterministically, while the current strict legacy contract continues rejecting a supplied contradictory flag. Versioning must make the omission intentional; missing fields in an unversioned legacy response must remain invalid.
+
+The remaining fields are not all redundant. Operations identify requested outcomes; domain and population identify scope; authorities identify governance/context; case specificity cannot safely be inferred from the mere presence of facts, amounts or party nouns. Conceptual interaction may require no case facts, whereas a requested numerical result does. Subject and concept labels must remain safe and structurally validated. No missing facts or taxpayer population will be manufactured.
+
+Top-level and per-issue projections overlap but have existing callers and mixed-question semantics. A broader replacement is not justified by this scoped task. Any new format must project back into the existing interpretation type, preserve precise issue operations and fact gates, accept valid saved legacy responses, and reject contradictory legacy responses. Exact remaining schema corrections await field-level evidence.
+
+## Operation design boundary
+
+Improve generic semantic distinctions, not benchmark phrase detection: a payable amount in a stated arrangement requests calculation even without a command verb; a particular receipt/benefit's tax consequence asks for applied treatment even when it is phrased as a general-looking question. Parties need not be named to establish the relevant arrangement. Requesting the type/taxability of a liability does not by itself request its numeric amount. Conceptual rules, comparisons, interactions and illustrative amounts must stay distinct. No deterministic replacement of an otherwise valid model-selected operation is planned.
+
+## Fixed final evaluation
+
+`semantic-contract-followup.json` contains the five known failures and five independent controls, fixed before measurement. The controls cover conceptual illustrative amounts, company entitlement, mixed journal/calculation, corporate filing and measurement comparison. Existing known cases cover conceptual recognition/interaction and employee treatment. Separate no-API regressions will cover all eight operations, mixed operations, valid UNKNOWN population, contextual-only authority and each diagnosed contradiction.
+
+Final live validation is once per case, existing Gemini model, production 8-second timeout, at least 15,250 ms between starts, no retries and new output names. Matched-issue operation accuracy, whole-question coverage, invalid-response rate and routing must use explicit denominators. Frozen held-out questions are excluded. Small samples do not establish causal improvement or broad absence of regression.
+
+## Diagnosis, changes, review and results
+
+The authorized pre-change capture completed exactly three requests, once each, without retries. All three responses were rejected; zero timeouts, 429s or provider errors. Source and fixture hashes stayed consistent. Latencies were 5,411.98 / 1,934.17 / 5,494.00 ms; request-start gaps were 20,685 / 17,198 ms, exceeding the 15,250 ms minimum. The current production source remains SHA-256 `2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505`.
+
+| Case | Intended meaning | New provider shape, safe fields only | Exact current validator rejection | Likely cause | General correction for next cycle |
+|---|---|---|---|---|---|
+| control-general-recognition | General accounting recognition rule; UNKNOWN population; no case facts | ACCOUNTING / EXPLAIN_RULE; calculationRequested=false; one accounting issue; three concept objects each have two keys, lack `concept`, and have one extra key; recognized roles present | CONCEPT_STRUCTURE at concepts[0], also [1] and [2]. The concept object fails exact keys `concept` + `role` | Prompt lists concept-role enums but never explicitly declares the concept-object keys; its example uses an empty concepts array | Explicitly state exact concept-object structure and give a safe non-empty generic example; retain strict rejection of missing/extra keys |
+| control-general-interaction | General relationship between recognition and measurement; no case facts | ACCOUNTING / EXPLAIN_INTERACTION; calculationRequested=false; one accounting issue; two concept objects lack `concept` and have one extra key each | CONCEPT_STRUCTURE at concepts[0], also [1]; same exact-key guard | Same under-specified nested object contract | Same general structure correction; preserve conceptual interaction/fact distinction |
+| A-paraphrase-3 | Separate employer/employee contribution amounts and personal relief explanation | Top domain/population UNKNOWN; operation OTHER; requiresUserSpecificFacts=true; calculationRequested=true; three issues: EXPLAIN_RULE, CALCULATE, CALCULATE | CALCULATION_FLAG_MISMATCH at calculationRequested: true differs from `(OTHER === CALCULATE)` | The model treated the top flag as "any issue calculates" despite prompt instructions; the duplicated fact is avoidable | Introduce an explicit versioned wire format omitting that redundant flag, derive it from top operation, and continue rejecting contradictory legacy flags |
+
+Unknown replacement key names and all concept labels/facts were intentionally omitted. These are exact diagnoses of the new observations, not recovered historical bodies. The same top-level rejection labels were reproduced. No response exceeded the eight-second deadline or 16,000-character length limit; response sizes were 1,115 / 1,098 / 1,627 characters and UTF-8 bytes.
+
+### Implemented scope and review
+
+Only evaluation code changed: a JSON-response diagnosis utility, a live-gated capture runner, its mocked regression, and smoke/full registration. The utility cross-checks the existing production validator, exposes fixed codes and allowlisted field paths, and reports bounded redacted shapes. Its boundary is JSON-parsed provider responses capped at 16,000 characters, not arbitrary JavaScript objects with executable getters/proxies. The runner refuses existing outputs, checkpoints after each observation, uses an explicit Gemini model, retains safe sizes/timing/fingerprints and makes no retries, including after a 429.
+
+Independent review cleared the utility, runner and saved results after one privacy finding was fixed: CLI errors now pass through an exact safe-message allowlist with a generic fallback instead of printing arbitrary exception messages. Supervisor required explicit actual model configuration rather than merely recording a hardcoded model name. Mocked tests cover privacy sentinels, model propagation, live gating, pacing, request count, output refusal, checkpointing and no retry after 429. The targeted Node 22.23.1 regression passes.
+
+No active production prompt, validator, projection, timeout, operation correction, accounting, statutory, source or workstream code changed. Therefore there is no post-fix operation/recall/precision/routing result yet, and no improvement claim. `contract-followup-comparable-baseline.json` preserves the five-case before results; the fixed ten-case final fixture has not been called. Original protected reports and labels remain unchanged.
+
+Final diagnostic-checkpoint validation under Node.js 22.23.1: targeted diagnostic/mock runner regression, lint, build and smoke **50/50** passed; existing lint/build warnings remain. `git diff --check` passed. Both protected manifests and unchanged production source hash were verified. Full tests were not repeated for this evaluation-only change; the prior production checkpoint's full **69/69** result remains recorded, and a material schema/validator change next cycle requires fresh broader validation.
+
+### Stopping point and next implementation
+
+At the latest pre-checkpoint usage snapshot, 14% remained in the five-hour window and 11% weekly. The user's 7% floor takes priority over starting a new substantial implementation cycle. Complete the reviewed diagnostic checkpoint, then stop. **HOLD MERGE**: all five original failures still require production fixes and final validation. No merge, deployment or automatic continuation.
+
+Next cycle: (1) add explicit concept-key guidance; (2) implement a versioned wire contract that derives only the objectively redundant calculation flag into the existing interpretation type, preserving strict legacy validation; (3) refine generic payable-amount versus applied-treatment versus conceptual intent guidance without keyword operation replacement; (4) add independent controls for all eight operations, mixed issues, UNKNOWN population and contextual-only authority, plus migration/diagnosed-contradiction regressions; (5) independent review, one final ten-case live probe with safe field diagnostics/no retries/new filenames, and required final lint/build/smoke/full validation if the shared semantic path is materially changed. Do not repeat these three diagnosis calls or overwrite their artifacts.

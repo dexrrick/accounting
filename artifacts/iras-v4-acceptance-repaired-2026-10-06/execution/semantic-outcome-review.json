@@ -1,0 +1,23 @@
+{
+  "unusedReplayResponses": 14,
+  "nextRetryUserAuthorization": "please retry",
+  "sourceReplayLookups": 1,
+  "fullAcceptanceProven": false,
+  "hashes": {
+    "consumed-v4.json": "29685e10a456235eef966230af8498f8f335faa8acf33f9629bdcebe509dc641",
+    "runner-v4.partial.jsonl": "69c6216f31803984684306e74889e442a56887dbb6ce8c6f69de3144f87393ca",
+    "acceptance-v4.json": "e718b86ccc0d05f9cd88b70f5798ff286c3c9213869c70b093badfa27a2c19dc"
+  },
+  "disposition": "FAILED_TRANSPORT_WITH_INTEGRITY_PRESERVED",
+  "retries": 0,
+  "providerCause": "UNDETERMINED",
+  "observedAtUtc": "2026-10-07T16:17:03.4290917Z",
+  "failureStage": "SEMANTIC_TRANSPORT",
+  "retainedProviderResponseBytes": 0,
+  "notRunCases": 8,
+  "protectedHashesUnchanged": true,
+  "profile": "iras-v4-authorized-run-outcome-review",
+  "reviewer": "/root/offline_repair_review",
+  "failureCode": "V4_SEMANTIC_DEADLINE_EXCEEDED",
+  "semanticInvocations": 1
+}

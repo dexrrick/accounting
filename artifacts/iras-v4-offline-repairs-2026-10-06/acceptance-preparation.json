@@ -1,0 +1,55 @@
+{
+  "profile": "iras-v4-repaired-acceptance-preparation",
+  "status": "FRESH_BINDINGS_FROZEN_REVIEWED_CAPTURE_AND_AUTHORIZATION_PENDING",
+  "freshNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4",
+  "namespaceMustBeAbsentBeforeReservation": true,
+  "consumptionMarkerCreated": false,
+  "liveAuthorization": "NEW_HUMAN_AUTHORIZATION_REQUIRED",
+  "previousAuthorizationReusable": false,
+  "acceptanceProven": false,
+  "nineCaseContract": "tests/evaluation/singapore/iras-first-targeted-acceptance-v4.json",
+  "contractMustRemainUnchanged": true,
+  "evidenceInventory": {
+    "candidateReference": "artifacts/iras-v4-runner-integrity-2026-10-06/activation-timeout-fix/activation-configuration.json",
+    "candidateInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+    "requestCount": 15,
+    "familyCounts": {
+      "corporate-residency": 2,
+      "foreign-income": 2,
+      "gst": 3,
+      "private-expense": 2,
+      "relief": 2,
+      "withholding-tax": 4
+    },
+    "reviewStatus": "CANDIDATE_REVIEWED: six retained cases used only inventory requests; three unexecuted cases remain unproven",
+    "certificateApplicationPageAutomaticallyAuthorized": false,
+    "missingSourceRequestsRemainFailClosed": true
+  },
+  "existingCapture": {
+    "payload": "artifacts/iras-v4-runner-integrity-2026-10-06/official-capture-2026-10-06/capture-payload.json",
+    "payloadSha256": "7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9",
+    "expiresAtUtc": "2026-10-07T06:26:38.15Z",
+    "expiresAtSgt": "07/10/2026 14:26:38.150 SGT",
+    "originalLockAndCaptureBindingsRemainImmutable": true,
+    "originalLockDoesNotAuthorizeChangedProductionCode": true,
+    "historicalOfflineReplayDoesNotRenewFreshness": true,
+    "newCaptureRequiredForChangedCodeBindings": true,
+    "bindingReason": "validateEvidenceLock requires exact current production, source, schema/prompt, evaluation, runner, activation and preregistration fingerprints; validateCapturePayload independently binds the original payload to those capture inputs. There is no reviewed historical-payload rebinding path.",
+    "bindingImplementation": "scripts/iras_v4_capture_replay_runner.mjs:validateEvidenceLock"
+  },
+  "beforeAnyFutureRun": [
+    "Offline repairs, independent review and required validation complete; preserve the reviewed repair state in a commit",
+    "Review the exact evidence inventory against repaired production fetch requests",
+    "Create new reviewed runner, activation and preregistration bindings for the final code",
+    "After appropriate authorization, recapture the reviewed inventory under the new code bindings; do not relabel the old capture or bypass capability checks",
+    "Expand the capture inventory only for a demonstrated evidence gap or justified source request; check freshness again before semantic execution",
+    "Refresh shared allowance, reserve projection, provider quota evidence and authorization for the new namespace",
+    "Run the full nine-case acceptance only after new human authorization"
+  ],
+  "resourcePolicy": {
+    "checkpointAtRemainingPercent": 10,
+    "finishAboveRemainingPercent": 5
+  },
+  "freshPreparation": "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/supervisor-plan.json",
+  "authorizationRequest": "artifacts/iras-v4-acceptance-repaired-2026-10-06/preparation/authorization-request.json"
+}

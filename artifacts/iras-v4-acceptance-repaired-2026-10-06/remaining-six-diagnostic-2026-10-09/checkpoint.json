@@ -1,0 +1,30 @@
+{
+  "profile": "iras-v4-remaining-six-diagnostic-checkpoint",
+  "status": "ALL_SIX_RECORDED_FIVE_FAILED_ONE_PASSED",
+  "observedAtUtc": "2026-10-08T23:57:34Z",
+  "userInstruction": "let's continue with the remaining 6 and document how many of them fail instead of stopping",
+  "launcherCommit": "e04ee39",
+  "semanticProfile": "DIAGNOSTIC_CONTINUATION",
+  "passed": 1,
+  "failed": 5,
+  "notRun": 0,
+  "actualCalls": 6,
+  "combinedObservedCounts": {
+    "passed": 3,
+    "failed": 6,
+    "notRun": 0
+  },
+  "newSourceRequests": 0,
+  "retries": 0,
+  "providerProbes": 0,
+  "consumption": "CONSUMED_NO_RETRY",
+  "originalEvidenceUnchanged": true,
+  "immutableInputsPassed": true,
+  "fullNineCaseAcceptanceProven": false,
+  "independentOutcomeReview": "NO_MATERIAL_EVIDENCE_DEFECTS",
+  "summaryPath": "artifacts/iras-v4-acceptance-repaired-2026-10-06/remaining-six-diagnostic-2026-10-09/results/summary.json",
+  "summarySha256": "833b14fe798a46309e0355eacaaf3ced07dda964524a1e5967e3cf4bf9e15ee4",
+  "partialJournalSha256": "8d7f7c60fcd84e69dade2ec0af337a623903c1855358b34d93fb3ffbaba0d894",
+  "reportPath": "artifacts/iras-v4-acceptance-repaired-2026-10-06/remaining-six-diagnostic-2026-10-09/results/report.md",
+  "nextStep": "Offline diagnosis using retained responses and blocked URL observations; preserve both consumed runs. No retry was authorized or performed."
+}

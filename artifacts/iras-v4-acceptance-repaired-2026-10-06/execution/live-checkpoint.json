@@ -1,0 +1,35 @@
+{
+  "status": "MANUAL_CONTINUATION_REQUESTED_CAPTURE_RUNNING_GEMINI_HELD",
+  "next": [
+    "Poll capture session and log; never repeat a reserved capture",
+    "Require complete15successfulrows and frozenfresh evidence lock before semantics",
+    "Independent output-hash review and commit captured evidence",
+    "Refresh shared Codex allowance: fixed40/15projection with8/4reserve; no threshold/projection relaxed",
+    "Invoke reviewed semantic launcher only after allowance pass; current human authorization remains valid/unspent"
+  ],
+  "weeklyRemainingPercent": 60,
+  "quotaConfirmedByUser": true,
+  "observedAtUtc": "2026-10-06T15:22:35.8504042Z",
+  "resourceResetAtUnixSeconds": 1791312814,
+  "authorizedGeminiCalls": 9,
+  "fiveHourRemainingPercent": 26,
+  "captureJournal": "artifacts/iras-v4-acceptance-repaired-2026-10-06/official-capture/capture-partial.jsonl",
+  "semanticNamespaceAbsent": true,
+  "captureSessionId": 45656,
+  "captureLog": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/capture-launch-2.log",
+  "profile": "iras-v4-fresh-live-checkpoint",
+  "authorizationRecorded": "artifacts/iras-v4-acceptance-repaired-2026-10-06/execution/authorization.json",
+  "geminiCallsMade": 0,
+  "retainedJournalRows": 2,
+  "consumedHistoricalRunUntouched": true,
+  "userContinuationPreference": "Save checkpoint for manual continuation",
+  "automaticContinuationScheduled": false,
+  "captureMayCompleteInBackground": true,
+  "resumeCommands": {
+    "semantic": "Only after current allowance minus40/15meets8/4reserves: Node22 --env-file=.env.local --import tsx execution/launch.mjs --semantic, with explicit Git env; answer fresh gate-request UUID after expensive verification using current Codex usage tool result",
+    "poll": "write_stdin session_id45656; read execution/capture-launch-2.log and official-capture/capture-result.json",
+    "validation": "Require COMPLETE real payload,15successfulplanrows, fresh24h evidence lock; independently verify raw hashes and current frozen code bindings",
+    "doNotRepeat": "Never run --capture again for this reserved capture directory",
+    "authorization": "Current explicit user nine-call authorization and quota confirmation remain recorded; do not automatically request them again"
+  }
+}

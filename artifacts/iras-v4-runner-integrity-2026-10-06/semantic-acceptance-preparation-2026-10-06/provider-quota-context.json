@@ -1,0 +1,19 @@
+{
+  "source": "direct_user_message_during_preparation",
+  "provider": "gemini",
+  "service": "AI Studio free API",
+  "reportedRequestsPerMinute": 15,
+  "reportedTokensPerMinute": 250000,
+  "reportedRequestsPerDay": 500,
+  "frozenModel": "gemini-3.5-flash-lite",
+  "frozenMinimumRequestStartGapMs": 15250,
+  "maximumFrozenStartsInRollingMinute": 4,
+  "reportedRpmFitsFrozenPacing": true,
+  "currentRemainingDailyRequests": null,
+  "currentRemainingTokenQuota": null,
+  "credentialVerified": false,
+  "credentialSource": ".env.local (confirmed by user during preparation; not read)",
+  "providerProbeMade": false,
+  "authorizationForNineCalls": false,
+  "interpretation": "User-reported tier limits only. Do not substitute daily limit for available headroom or infer configured credential/model quota without fresh confirmation before launch."
+}

@@ -1,0 +1,30 @@
+{
+  "case": "foreign-dividend-receipt-treatment",
+  "fixture": {
+    "transport": "controlled synthetic HTML; no live fetch",
+    "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+    "httpStatus": 200,
+    "bodyBytes": 472,
+    "sha256": "6E273ED1366F4EB06A43EB8A3CA711E801164C95242BC3AA9D07146785AD847A",
+    "expectedIssueEvidenceStatus": "VERIFIED",
+    "expectedApplicationStatus": "UNRESOLVED",
+    "expectedOverallStatus": "CONDITIONAL"
+  },
+  "observed": {
+    "attempt": { "topicId": "iras-foreign-sourced-income", "fetchStatus": "TOPIC_MISMATCH", "pageTitle": "Companies Receiving Foreign Income | IRAS" },
+    "stages": ["LOCAL_VERIFIED:EXHAUSTED", "MAPPED_SOURCE:EXHAUSTED", "SITEMAP_DISCOVERY:EXHAUSTED", "OFFICIAL_DOMAIN_SEARCH:EXHAUSTED", "INSUFFICIENT:EXHAUSTED"],
+    "lifecycle": { "requested": true, "mapped": true, "retrievalAttempted": true, "evidenceFound": false, "admitted": false, "verified": false, "covered": false },
+    "evidenceStatus": "INSUFFICIENT",
+    "claimCount": 0,
+    "sourceIds": [],
+    "gapCodes": ["NO_CANDIDATE_EVIDENCE", "IRAS_SCOPE_NOT_COVERED", "NO_VERIFIED_CLAIM", "ISSUE_CONCEPT_UNCOVERED", "ISSUE_CONCEPT_UNCOVERED"],
+    "uncoveredScopes": ["topic iras-foreign-sourced-income", "concept semantic_corporate_income_tax_treatment_of_foreign_divide"]
+  },
+  "pairedNegative": {
+    "fixtureBodySha256": "DA4AFBD3B22827F749DEAC63C2C9D310ADBE40680CB2A4C7E2BC6DBE026EB7F6",
+    "transportWasInvokedBeforePositiveAssertion": true,
+    "outcomeWasNotCapturedBeforeProcessExit": true
+  },
+  "stopReason": "The positive fixture failed the real topic-matching gate. No expectation was weakened and the other three requested families were not attempted.",
+  "reproduction": "C:\\nvm4w\\nodejs\\node.exe --import ./docs/evaluation/multi-authority-workstreams/iras-routing-ownership-fix-2026-10-04/block-external-network.mjs --import tsx ./tests/regression/test_iras_first_targeted_acceptance_v4.mjs (apply candidate.patch first)"
+}

@@ -1,0 +1,27 @@
+{
+  "profile": "iras-v4-remaining-six-diagnostic-outcome-review",
+  "status": "REVIEW_COMPLETE",
+  "independentReviewer": true,
+  "reviewer": "/root/review_gemini_outcome",
+  "disposition": "NO_MATERIAL_EVIDENCE_DEFECTS",
+  "observedCounts": {
+    "passed": 1,
+    "failed": 5,
+    "notRun": 0,
+    "approvedGeminiFetchRequests": 6
+  },
+  "combinedObservedCounts": {
+    "passed": 3,
+    "failed": 6,
+    "notRun": 0
+  },
+  "confirmed": [
+    "Six ordered journal rows match summary; one semantic invocation and one approved Gemini fetch per case",
+    "Four replay inventory integrity failures, one corporate residency provider timeout; unsupported SFRS(I) 6 passed",
+    "Fresh gate bindings match; consumption CONSUMED_NO_RETRY",
+    "Immutable inputs passed and original evidence hashes recorded unchanged",
+    "Canonical nine-case acceptance unproven"
+  ],
+  "requestEvidenceLimit": "Zero retries, probes and new live-source calls are consistent with reviewed guards and retained artifacts; not independent network telemetry.",
+  "reviewedAtUtc": "2026-10-08T23:57:34Z"
+}

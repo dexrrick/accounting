@@ -1,0 +1,21 @@
+{
+  "profile": "iras-v4-conditional-authorization-independent-review",
+  "reviewedOn": "06/10/2026",
+  "reviewer": "Independent reviewer subagent authorization_review",
+  "disposition": "NO_MATERIAL_FINDINGS_CONDITIONAL_AUTHORIZATION_VALID_LIVE_RUN_HOLD",
+  "filesReviewed": ["semantic-authorization.json", "authorized-hold-checkpoint.json"],
+  "authorizationSha256": "20055769fdf04ddfcfa015b62c2f968256b44104805e2a342762cb7a25578a19",
+  "verified": {
+    "authorizationMatchesNineCallsZeroRetriesAndReviewedCommit": true,
+    "reviewedLauncherProjectionReviewControlsHashesMatch": true,
+    "eightFrozenInputHashesMatch": true,
+    "committedBindingsIntact": true,
+    "holdCorrectAtObserved59PercentFiveHour37PercentWeekly": true,
+    "required88PercentFiveHour19PercentWeeklyUnchanged": true,
+    "checkpointAt10PercentFinishAbove5PercentPreserved": true,
+    "freshnessAndQuotaPrerequisitesPreserved": true,
+    "semanticNamespaceAndGateResponseArtifactsAbsent": true
+  },
+  "reviewActions": {"readOnly": true, "runnerInvoked": false, "credentialsRead": false, "networkRequests": 0, "testsRun": false},
+  "limitations": ["Live execution remains unvalidated and held.", "Node 22 runtime access remains unvalidated after the supervisor's local process-start access denial."]
+}

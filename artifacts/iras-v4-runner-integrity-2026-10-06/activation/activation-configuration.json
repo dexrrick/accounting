@@ -1,0 +1,403 @@
+{
+  "profile": "iras-v4-capture-activation",
+  "status": "FROZEN_ACTIVATION_CONFIGURATION",
+  "frozen": true,
+  "archivalRunnerConfiguration": {
+    "path": "artifacts/iras-v4-runner-integrity-2026-10-06/runner-configuration.json",
+    "sha256": "0d23efe222c4153030e2e91e445911e0d439fd399125144d294ae5c169183008"
+  },
+  "runnerConfigurationPath": "artifacts/iras-v4-runner-integrity-2026-10-06/activation/runner-configuration-current.json",
+  "runnerIntegrityBindingSha256": "7ef241ca9bbd07ac2ab546882498a920d76f33186cf4bea87da8b5594694e0a3",
+  "activationInputsSha256": "1ddfc742f9db9bd13cac03a9d24a91c3a10fa5fbb789785e7c17f2941924c8a6",
+  "preregistrationPath": "artifacts/iras-v4-runner-integrity-2026-10-06/activation/preregistration.json",
+  "preregistrationSha256": "40183d06dd03c220c4866d3f50da7a9146110c818ef8cfbd82d7142592ee4aa8",
+  "captureInventory": [
+    {
+      "family": "corporate-residency",
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "DISCOVERY",
+      "provenance": {
+        "topicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "corporate-residency-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "corporate-residency",
+      "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-corporate-tax-residency"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "corporate-residency-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "foreign-income",
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "DISCOVERY",
+      "provenance": {
+        "topicIds": [
+          "iras-foreign-sourced-income"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "foreign-dividend-receipt-treatment"
+        ]
+      }
+    },
+    {
+      "family": "foreign-income",
+      "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-foreign-sourced-income"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "foreign-dividend-receipt-treatment"
+        ]
+      }
+    },
+    {
+      "family": "gst",
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "DISCOVERY",
+      "provenance": {
+        "topicIds": [
+          "iras-gst-input-tax"
+        ],
+        "sourceRecordIds": [
+          "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "IRAS_GST_INVOICING_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "gst-input-tax-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "gst",
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-gst-input-tax"
+        ],
+        "sourceRecordIds": [
+          "IRAS_GST_INVOICING_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "gst-input-tax-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "gst",
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-gst-input-tax"
+        ],
+        "sourceRecordIds": [
+          "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "gst-input-tax-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "private-expense",
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "DISCOVERY",
+      "provenance": {
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CIT_EXPENSES_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "private-expense-treatment"
+        ]
+      }
+    },
+    {
+      "family": "private-expense",
+      "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-cit-deductibility",
+          "iras-cit-disallowed-expenses"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CIT_EXPENSES_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "private-expense-treatment"
+        ]
+      }
+    },
+    {
+      "family": "relief",
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "DISCOVERY",
+      "provenance": {
+        "topicIds": [
+          "iras-individual-cpf-relief"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "A-paraphrase-2",
+          "target-relief-amount",
+          "target-relief-entitlement"
+        ]
+      }
+    },
+    {
+      "family": "relief",
+      "url": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-individual-cpf-relief"
+        ],
+        "sourceRecordIds": [
+          "IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "A-paraphrase-2",
+          "target-relief-amount",
+          "target-relief-entitlement"
+        ]
+      }
+    },
+    {
+      "family": "withholding-tax",
+      "url": "https://www.iras.gov.sg/sitemap",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "DISCOVERY",
+      "provenance": {
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-interest-royalties"
+        ],
+        "sourceRecordIds": [
+          "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+          "IRAS_WHT_RATES_SOURCE_MAP",
+          "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "ITA_SEC45_WITHHOLDING_TAX"
+        ],
+        "caseIds": [
+          "wht-royalty-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "withholding-tax",
+      "url": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-interest-royalties"
+        ],
+        "sourceRecordIds": [
+          "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "wht-royalty-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "withholding-tax",
+      "url": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-interest-royalties"
+        ],
+        "sourceRecordIds": [
+          "IRAS_WHT_RATES_SOURCE_MAP"
+        ],
+        "caseIds": [
+          "wht-royalty-general-rule"
+        ]
+      }
+    },
+    {
+      "family": "withholding-tax",
+      "url": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "method": "GET",
+      "headers": {
+        "accept": "text/plain, application/json, text/html, */*"
+      },
+      "purpose": "SOURCE",
+      "provenance": {
+        "topicIds": [
+          "iras-withholding-tax",
+          "iras-withholding-tax-interest-royalties"
+        ],
+        "sourceRecordIds": [
+          "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "ITA_SEC45_WITHHOLDING_TAX"
+        ],
+        "caseIds": [
+          "wht-royalty-general-rule"
+        ]
+      }
+    }
+  ],
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "reviewedModules": [
+    {
+      "path": "scripts/iras_v4_capture_transports.mjs",
+      "sha256": "9377511f6ff2301496ea123f07eb73226cf687c5a171291703aa5b9f043e2efa",
+      "exportName": "runV4CapturePlan"
+    },
+    {
+      "path": "scripts/iras_v4_capture_transports.mjs",
+      "sha256": "9377511f6ff2301496ea123f07eb73226cf687c5a171291703aa5b9f043e2efa",
+      "exportName": "sendV4SemanticRequest"
+    },
+    {
+      "path": "scripts/iras_v4_capture_transports.mjs",
+      "sha256": "9377511f6ff2301496ea123f07eb73226cf687c5a171291703aa5b9f043e2efa",
+      "exportName": "fetchV4OfficialSource"
+    },
+    {
+      "path": "scripts/iras_v4_production_acceptance_adapter.mjs",
+      "sha256": "ade1bdce0739dd9ca77eaa2572480bdb0c9e0fd5ed794a138a1dca39dc42a1dd",
+      "exportName": "runV4AcceptanceCase"
+    }
+  ],
+  "capturePolicy": {
+    "transportMode": "frozenContemporaneousCapture",
+    "evidenceMode": "governedProductionEvidence",
+    "maximumRequests": 60,
+    "maximumRequestsPerFamily": 10,
+    "maximumResponseBytes": 2000000,
+    "timeoutMs": 3000,
+    "redirects": "manual",
+    "retries": 0,
+    "allowedHosts": [
+      "iras.gov.sg",
+      "www.iras.gov.sg"
+    ],
+    "allowedRequestHeaders": [
+      "accept",
+      "if-modified-since",
+      "if-none-match"
+    ],
+    "allowedResponseHeaders": [
+      "cache-control",
+      "content-type",
+      "etag",
+      "last-modified",
+      "location"
+    ],
+    "maximumCacheReuses": 60,
+    "maximumReplayLookups": 60,
+    "maximumCaptureAgeHours": 24
+  },
+  "evidenceFamilies": [
+    "relief",
+    "private-expense",
+    "foreign-income",
+    "corporate-residency",
+    "withholding-tax",
+    "gst"
+  ],
+  "caseEvidenceFamily": {
+    "target-relief-entitlement": "relief",
+    "target-relief-amount": "relief",
+    "A-paraphrase-2": "relief",
+    "private-expense-treatment": "private-expense",
+    "foreign-dividend-receipt-treatment": "foreign-income",
+    "corporate-residency-general-rule": "corporate-residency",
+    "wht-royalty-general-rule": "withholding-tax",
+    "gst-input-tax-general-rule": "gst"
+  },
+  "officialCaptureExecutionStatus": "NOT_EXECUTED_BY_ACTIVATION_FREEZE",
+  "activationConfigurationSha256": "6a9a928543685b2088b21cd119bd2e6087dc03e231e6babfac7f63369da0213a"
+}

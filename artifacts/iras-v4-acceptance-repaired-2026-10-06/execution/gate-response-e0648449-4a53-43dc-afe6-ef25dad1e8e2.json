@@ -1,0 +1,32 @@
+{
+  "profile": "iras-v4-fresh-execution-gate-response",
+  "requestId": "e0648449-4a53-43dc-afe6-ef25dad1e8e2",
+  "launcherSha256": "c3a17c5e444a69cbff2450d74efdbaee1748d755b2705819f04bd4b35585d31e",
+  "authorizationSha256": "521e4922f01d13b4811bb858aafe6ddedfd56b401389e7e840370f9cd3892ad9",
+  "authorizationRequestSha256": "aab2a82dc05d53d2a2e5b07c4ecec092085fbbc47ba526b1c8a7166e9be6e0b0",
+  "resourceProjectionSha256": "0bba5ea1d86c492c5ceae26e809914a0d8e531953112f7bbc847c4a6aca4228f",
+  "resourceReviewSha256": "904f0f094a02a2e8bf10fb91e34d2e6f8675cc06844d90e2b26ab46262a47b3a",
+  "freezeValidationSha256": "c381c4728cdd1ae0788576e938114109c6c1314b4738c4c3e16e16dbc7d99ec1",
+  "preregistrationSha256": "0f6e0e99f7751fb230c39d4172adda9ceb777d97303ba38e5e42c4cf3382a265",
+  "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "model": "gemini-3.5-flash-lite",
+  "authorizedGeminiCalls": 9,
+  "retries": 0,
+  "quotaConfirmedByHuman": true,
+  "userInstruction": "yes go ahead and do so\nquota is enough",
+  "quotaConfirmationScope": "Reviewed fixed model, configured project credential and nine-call run; no provider probe or inferred higher capacity",
+  "suppliedAtUtc": "2026-10-07T16:06:26Z",
+  "usageObservation": {
+    "sourceTool": "mcp__codex_app__get_usage_limits",
+    "observedAtUtc": "2026-10-07T16:06:26Z",
+    "toolResult": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"ordinaryUsageAllowed\":true,\"rateLimits\":{\"limitId\":\"codex\",\"limitName\":null,\"normalModelSlug\":null,\"primary\":{\"usedPercent\":9,\"windowDurationMins\":300,\"resetsAt\":1791406009},\"secondary\":{\"usedPercent\":1,\"windowDurationMins\":10080,\"resetsAt\":1791992809},\"credits\":{\"hasCredits\":false,\"unlimited\":false,\"balance\":null},\"individualLimit\":null,\"spendControlReached\":false,\"planType\":\"team\",\"rateLimitReachedType\":null},\"rateLimitsByLimitId\":{\"codex\":{\"limitId\":\"codex\",\"limitName\":null,\"normalModelSlug\":null,\"primary\":{\"usedPercent\":9,\"windowDurationMins\":300,\"resetsAt\":1791406009},\"secondary\":{\"usedPercent\":1,\"windowDurationMins\":10080,\"resetsAt\":1791992809},\"credits\":{\"hasCredits\":false,\"unlimited\":false,\"balance\":null},\"individualLimit\":null,\"spendControlReached\":false,\"planType\":\"team\",\"rateLimitReachedType\":null}},\"rateLimitResetCredits\":{\"availableCount\":1,\"credits\":[{\"id\":\"RateLimitResetCredit_bc7d5ed4afb08191991485ca52c9eb0a\",\"resetType\":\"codexRateLimits\",\"status\":\"available\",\"grantedAt\":1790708782,\"expiresAt\":1793300782,\"title\":\"Full reset (Weekly + 5 hr)\",\"description\":\"Thanks for using Codex! You've been granted one free rate limit reset.\"}]},\"accountId\":\"44d350a1-6fa3-4925-b3f4-e4a358caf35b\",\"rateLimitUpsell\":null}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

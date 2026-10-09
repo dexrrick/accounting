@@ -1,0 +1,340 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-04",
+  "profile": "wht-requested-concept-ownership-api-free-proof",
+  "execution": {
+    "localOnly": true,
+    "networkFetchAttempts": 0,
+    "providerCalls": 0,
+    "mutatedFrozenArtifacts": false,
+    "productionFilesChanged": false
+  },
+  "frozenTargetV3": {
+    "artifact": "iras-first-targeted-acceptance-2026-10-03-v3/acceptance-v3.json",
+    "artifactSha256": "0ba9047b7e203475da4f07685a84531e993e1fdb69fcc0250d3e78f304bf16f0",
+    "caseId": "wht-royalty-general-rule",
+    "semanticInterpretationValid": true,
+    "matchedIssueCount": 1,
+    "mappedTopicIds": [
+      "iras-withholding-tax",
+      "iras-withholding-tax-interest-royalties"
+    ],
+    "counts": {
+      "admittedRecordCount": 2,
+      "verifiedClaimCount": 2,
+      "lifecycleCoveredCount": 0,
+      "issueConceptUncovered": 1,
+      "unroutedMaterialConcept": 1
+    },
+    "issueUncoveredGapSubtypeRecoverable": false,
+    "exactCapturedConceptLabelRecoverable": false,
+    "exactCapturedConceptLabel": null,
+    "limitation": "The frozen artifact retains bounded counts and not the raw semantic subject/concept labels or response text. No historical label is inferred."
+  },
+  "mockRequestedConcepts": [
+    {
+      "id": "base-full-subject",
+      "queryOrthography": "non-resident",
+      "issueSubjectOrthography": "non-resident",
+      "concepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        }
+      ],
+      "issueMappedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "issueEvidenceStatus": "INSUFFICIENT",
+      "issueVerifiedClaimCount": 0,
+      "issueGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "unroutedConceptCount": 0,
+      "unroutedMockLabels": [],
+      "fetchAttempts": 0
+    },
+    {
+      "id": "topicless-primary-qualifier-hyphen-matches-hyphenated-issue",
+      "queryOrthography": "non-resident",
+      "issueSubjectOrthography": "non-resident",
+      "concepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        },
+        {
+          "id": "semantic_non_resident_company",
+          "label": "non-resident company",
+          "topicIds": []
+        }
+      ],
+      "issueMappedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "issueEvidenceStatus": "INSUFFICIENT",
+      "issueVerifiedClaimCount": 0,
+      "issueGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "unroutedConceptCount": 0,
+      "unroutedMockLabels": [],
+      "fetchAttempts": 0
+    },
+    {
+      "id": "topicless-primary-qualifier-unhyphenated-vs-hyphenated-issue",
+      "queryOrthography": "non-resident",
+      "issueSubjectOrthography": "non-resident",
+      "concepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        },
+        {
+          "id": "semantic_nonresident_company",
+          "label": "nonresident company",
+          "topicIds": []
+        }
+      ],
+      "issueMappedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "issueEvidenceStatus": "INSUFFICIENT",
+      "issueVerifiedClaimCount": 0,
+      "issueGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "unroutedConceptCount": 1,
+      "unroutedMockLabels": [
+        "nonresident company"
+      ],
+      "fetchAttempts": 0
+    },
+    {
+      "id": "topicless-context-only-qualifier",
+      "queryOrthography": "non-resident",
+      "issueSubjectOrthography": "non-resident",
+      "concepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        }
+      ],
+      "issueMappedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "issueEvidenceStatus": "INSUFFICIENT",
+      "issueVerifiedClaimCount": 0,
+      "issueGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "unroutedConceptCount": 0,
+      "unroutedMockLabels": [],
+      "fetchAttempts": 0
+    },
+    {
+      "id": "unrelated-primary-material-control",
+      "queryOrthography": "non-resident",
+      "issueSubjectOrthography": "non-resident",
+      "concepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        },
+        {
+          "id": "semantic_deferred_tax_measurement",
+          "label": "deferred tax measurement",
+          "topicIds": []
+        }
+      ],
+      "issueMappedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "issueEvidenceStatus": "INSUFFICIENT",
+      "issueVerifiedClaimCount": 0,
+      "issueGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED",
+        "NO_VERIFIED_CLAIM"
+      ],
+      "unroutedConceptCount": 1,
+      "unroutedMockLabels": [
+        "deferred tax measurement"
+      ],
+      "fetchAttempts": 0
+    },
+    {
+      "id": "unhyphenated-issue-and-concept",
+      "queryOrthography": "nonresident",
+      "issueSubjectOrthography": "nonresident",
+      "concepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a nonresident company",
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        }
+      ],
+      "issueMappedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "issueEvidenceStatus": "INSUFFICIENT",
+      "issueVerifiedClaimCount": 1,
+      "issueGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "unroutedConceptCount": 0,
+      "unroutedMockLabels": [],
+      "fetchAttempts": 0
+    },
+    {
+      "id": "unhyphenated-issue-hyphenated-concept",
+      "queryOrthography": "nonresident",
+      "issueSubjectOrthography": "nonresident",
+      "concepts": [
+        {
+          "id": "semantic_general_singapore_withholding_tax_rules_for_comp",
+          "label": "general Singapore withholding-tax rules for company royalty payments to a nonresident company",
+          "topicIds": [
+            "iras-withholding-tax",
+            "iras-withholding-tax-interest-royalties"
+          ]
+        },
+        {
+          "id": "semantic_non_resident_company",
+          "label": "non-resident company",
+          "topicIds": []
+        }
+      ],
+      "issueMappedTopicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "issueEvidenceStatus": "INSUFFICIENT",
+      "issueVerifiedClaimCount": 1,
+      "issueGapCodes": [
+        "IRAS_SCOPE_NOT_COVERED",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "unroutedConceptCount": 1,
+      "unroutedMockLabels": [
+        "non-resident company"
+      ],
+      "fetchAttempts": 0
+    }
+  ],
+  "localOnlyStaticWhtEvidence": {
+    "candidateIds": [
+      "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+      "ITA_SEC45_WITHHOLDING_TAX"
+    ],
+    "admittedIds": [
+      "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+      "ITA_SEC45_WITHHOLDING_TAX"
+    ],
+    "uncoveredConceptCount": 1,
+    "literalAcceptedClaimCount": 2,
+    "ruleSupport": [
+      {
+        "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+        "literalQuoteAccepted": true,
+        "generalRuleSupport": false
+      },
+      {
+        "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+        "literalQuoteAccepted": true,
+        "generalRuleSupport": false
+      }
+    ],
+    "centralProductionPathVerifiedClaimCount": 0,
+    "sourceTextDiagnosis": [
+      "ITA_SEC45_WITHHOLDING_TAX is about interest, loan charges and indebtedness; it does not state a royalty withholding rule.",
+      "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES says treatment depends on rights/services, service location, residence, treaty position and payment date; it does not directly state the complete requested royalty-to-nonresident withholding obligation.",
+      "The bounded rule gate requires one statement to link royalties, the non-resident payee and an affirmative withholding-tax rule (or an explicit payer/payment/example/payee/obligation chain)."
+    ],
+    "inference": "Literal quotation validity does not establish the complete requested royalty rule. The two local texts do not state the scoped general rule, so the production post-filter and issue coverage correctly stay insufficient."
+  },
+  "completeRuleSufficiencyControl": {
+    "fixture": "saved public IRAS_WHT_OVERVIEW_SOURCE_MAP block 10; same complete-rule assertion exercised by test_iras_public_rule_forms.mjs",
+    "excerptSha256": "1b4f89d70b96b7158d86f57641f11a11bbe9b02e90279e5029618a076da238ea",
+    "blockTruncated": false,
+    "hyphenatedRequestSupport": true,
+    "orthographicVariants": [
+      {
+        "id": "hyphenated-subject-and-concept",
+        "subject": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+        "label": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+        "support": true
+      },
+      {
+        "id": "unhyphenated-subject-and-concept",
+        "subject": "general Singapore withholding-tax rules for company royalty payments to a nonresident company",
+        "label": "general Singapore withholding-tax rules for company royalty payments to a nonresident company",
+        "support": null
+      },
+      {
+        "id": "hyphenated-subject-unhyphenated-concept",
+        "subject": "general Singapore withholding-tax rules for company royalty payments to a non-resident company",
+        "label": "nonresident company",
+        "support": null
+      },
+      {
+        "id": "unhyphenated-subject-hyphenated-concept",
+        "subject": "general Singapore withholding-tax rules for company royalty payments to a nonresident company",
+        "label": "non-resident company",
+        "support": null
+      }
+    ],
+    "sourceQualifierRemovalSupport": false,
+    "v9HistoricalReference": {
+      "profile": "iras-first-live-2026-10-03-v9",
+      "whtVerifiedClaimCount": 2,
+      "usedAsTextReplay": false,
+      "note": "V9 counts are retained observations; this proof does not reconstruct or replay captured V9 quotes."
+    }
+  },
+  "classification": {
+    "exactHistoricalV3UnroutedLabel": "UNRECOVERABLE_FROM_FROZEN_ARTIFACT",
+    "reproducibleEquivalentMockUncoveredConcept": "nonresident company",
+    "demonstratedOwnershipDefect": "The owning helper tokenizes non-resident as [non, resident] but nonresident as [nonresident], so mixed orthographies do not intersect. Matching orthography binds; unrelated primary material stays explicitly unrouted; CONTEXT_ONLY is not requested material.",
+    "proposedOwningLayer": "Normalize nonresident and non-resident to a shared token form in semantic concept ownership and bounded IRAS rule concept matching. Retain the source-text rule gate: it must still require explicit non-resident recipient evidence and the same bounded royalty/payment/withholding relation.",
+    "implementationStatus": "DIAGNOSTIC_ONLY_NO_PRODUCTION_CHANGE"
+  }
+}

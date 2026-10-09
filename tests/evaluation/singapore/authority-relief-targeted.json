@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "suite": "Singapore authority and relief contract targeted controls",
+  "expectedModel": "gemini-3.5-flash-lite",
+  "cases": [
+    {
+      "id": "target-sfrsi-general-recognition",
+      "question": "What are the general principles for recognizing intangible assets under SFRS(I)?",
+      "expectedRequiresUserSpecificFacts": false,
+      "expectedWorkstreamsAnyOf": [["ACCOUNTING_STANDARDS/ACCOUNTING"]],
+      "expected": [
+        {
+          "id": "sfrsi-general-recognition",
+          "subject": "general principles for recognizing intangible assets under SFRS(I)",
+          "matchAny": [["intangible", "recogn"]],
+          "population": ["UNKNOWN", "COMPANY"],
+          "domain": ["ACCOUNTING"],
+          "governingAuthorities": ["ACCOUNTING_STANDARDS"],
+          "contextualAuthoritiesAnyOf": [[]],
+          "operation": ["EXPLAIN_RULE"]
+        }
+      ]
+    },
+    {
+      "id": "target-mixed-ifrs-singapore-accounting",
+      "question": "How do IFRS 16 and Singapore SFRS(I) reporting standards generally require a lessee to recognize a lease liability?",
+      "expectedRequiresUserSpecificFacts": false,
+      "expectedWorkstreamsAnyOf": [["ACCOUNTING_STANDARDS/ACCOUNTING"]],
+      "expected": [
+        {
+          "id": "mixed-standard-recognition",
+          "subject": "general recognition principles for lease liabilities under IFRS and SFRS(I)",
+          "matchAny": [["lease", "liability", "recogn"], ["ifrs", "sfrs"]],
+          "population": ["COMPANY", "UNKNOWN"],
+          "domain": ["ACCOUNTING"],
+          "governingAuthorities": ["ACCOUNTING_STANDARDS"],
+          "contextualAuthoritiesAnyOf": [[]],
+          "operation": ["EXPLAIN_RULE"]
+        }
+      ]
+    },
+    {
+      "id": "target-relief-entitlement",
+      "question": "Can I claim personal tax relief on my compulsory CPF contributions?",
+      "expectedRequiresUserSpecificFacts": true,
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_INDIVIDUAL_TAX"]],
+      "strictOperations": [{ "issueId": "personal-cpf-relief", "operation": "CHECK_ELIGIBILITY" }],
+      "expected": [
+        {
+          "id": "personal-cpf-relief",
+          "subject": "individual entitlement to personal tax relief for compulsory CPF contributions",
+          "matchAny": [["personal", "tax", "relief"], ["cpf", "relief"]],
+          "population": ["INDIVIDUAL", "EMPLOYEE"],
+          "domain": ["IRAS_INCOME_TAX"],
+          "governingAuthorities": ["IRAS"],
+          "contextualAuthoritiesAnyOf": [["CPF"], []],
+          "operation": ["CHECK_ELIGIBILITY"]
+        }
+      ]
+    },
+    {
+      "id": "target-relief-amount",
+      "question": "How much personal tax relief can I claim for compulsory CPF contributions?",
+      "expectedRequiresUserSpecificFacts": true,
+      "expectedWorkstreamsAnyOf": [["IRAS/IRAS_INDIVIDUAL_TAX"]],
+      "strictOperations": [{ "issueId": "personal-cpf-relief-amount", "operation": "CALCULATE" }],
+      "expected": [
+        {
+          "id": "personal-cpf-relief-amount",
+          "subject": "numeric amount of individual tax relief for compulsory CPF contributions",
+          "matchAny": [["personal", "tax", "relief"], ["cpf", "relief"]],
+          "population": ["INDIVIDUAL", "EMPLOYEE"],
+          "domain": ["IRAS_INCOME_TAX"],
+          "governingAuthorities": ["IRAS"],
+          "contextualAuthoritiesAnyOf": [["CPF"], []],
+          "operation": ["CALCULATE"]
+        }
+      ]
+    },
+    {
+      "id": "target-cpf-general-control",
+      "question": "Explain the general conditions for employer CPF contributions in Singapore.",
+      "expectedRequiresUserSpecificFacts": false,
+      "expectedWorkstreamsAnyOf": [["CPF/CPF_PAYROLL"]],
+      "expected": [
+        {
+          "id": "employer-cpf-general-conditions",
+          "subject": "general conditions for employer CPF contributions",
+          "matchAny": [["employer", "cpf", "contributions"]],
+          "population": ["EMPLOYER"],
+          "domain": ["CPF_PAYROLL"],
+          "governingAuthorities": ["CPF"],
+          "contextualAuthoritiesAnyOf": [[]],
+          "operation": ["EXPLAIN_RULE"]
+        }
+      ]
+    },
+    {
+      "id": "target-mom-general-control",
+      "question": "What are the general work-pass requirements for a foreign employee in Singapore?",
+      "expectedRequiresUserSpecificFacts": false,
+      "expectedWorkstreamsAnyOf": [["MOM/MOM_EMPLOYMENT"]],
+      "expected": [
+        {
+          "id": "foreign-employee-work-pass",
+          "subject": "general work-pass requirements for a foreign employee",
+          "matchAny": [["work", "pass"], ["foreign", "employee", "requirements"]],
+          "population": ["EMPLOYER", "EMPLOYEE", "UNKNOWN"],
+          "domain": ["MOM_EMPLOYMENT"],
+          "governingAuthorities": ["MOM"],
+          "contextualAuthoritiesAnyOf": [[]],
+          "operation": ["EXPLAIN_RULE"]
+        }
+      ]
+    }
+  ]
+}

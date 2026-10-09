@@ -1,0 +1,16 @@
+{
+  "freezeHelperSyntax": "PASS",
+  "status": "PASS",
+  "smoke": "PASS_102.05_SECONDS",
+  "observedAtUtc": "2026-10-07T16:26:50.0662657Z",
+  "focusedRunnerRegression": "PASS",
+  "lint": "PASS_WITH_EXISTING_WARNINGS",
+  "build": "PASS_WITH_EXISTING_WARNINGS",
+  "fullSuite": "PREVIOUSLY_PASSED_ACCOUNTING_CODE_UNCHANGED_NOT_REPEATED",
+  "hashes": {
+    "test-smoke.log": "6d6b676423bb3f8280e76b777093041a615c5ce8d37e5eb3d5115ff89698741d",
+    "build.log": "9a5f1420f873993d8cf6d40af855f5d0e9da6550e392b840d8b5c704a070f58e",
+    "lint.log": "c1abdcb25bb3a6ad1a2c762330bbe79ccfd32acedbe0b32de41c4c0b50532573"
+  },
+  "profile": "iras-v4-retry-namespace-supervisor-validation"
+}

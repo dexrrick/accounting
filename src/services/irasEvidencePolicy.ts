@@ -9,6 +9,8 @@ import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import { evaluateIrasApplications } from '../engine/irasApplicationEvaluator';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
+import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { getRequestedQuestionConcepts } from './semanticQuestionUnderstanding';
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
@@ -213,6 +215,87 @@ function isIncidentalSingaporeEmploymentRule(text: string): boolean {
     /travel is incidental to (?:your|his|her) singapore employment/i.test(text);
 }
 
+function requestedRuleConcepts(context: GroundedReasoningContext, query: string) {
+  const requestedLabels = new Set(context.evidenceQuality?.requestedConcepts || []);
+  if (requestedLabels.size === 0) return [];
+  return getRequestedQuestionConcepts(query, context.questionUnderstanding)
+    .filter(concept => requestedLabels.has(concept.label));
+}
+
+function recordHasRequestedTopicAssociation(record: AuthoritativeSourceRecord, topicId: string): boolean {
+  const topic = getCoverageTopicById(topicId);
+  return Boolean(topic && (
+    record.tags?.includes(topicId) ||
+    record.relatedTopicIds?.includes(topicId) ||
+    record.sourceMapTopicIds?.includes(topicId) ||
+    topic.sourceRecordIds.includes(record.id)
+  ));
+}
+
+function companyIssueForRequestedTopic(
+  context: GroundedReasoningContext,
+  topicId: string,
+  concept: ReturnType<typeof getRequestedQuestionConcepts>[number]
+) {
+  const topic = getCoverageTopicById(topicId);
+  const interpretation = context.questionUnderstanding?.interpretation;
+  if (!topic?.authorities.includes('IRAS') || !interpretation || !concept.topicIds.includes(topicId)) return undefined;
+  const expectedSemanticDomain = topic.domainId === 'IRAS_GST' ? 'IRAS_GST'
+    : topic.domainId === 'IRAS_CORPORATE_TAX' ? 'IRAS_INCOME_TAX' : undefined;
+  if (!expectedSemanticDomain) return undefined;
+
+  const issues = interpretation.issues || [];
+  const matchingIssues = issues.filter(issue => issue.population === 'COMPANY' &&
+    issue.domain === expectedSemanticDomain && issue.governingAuthorities.includes('IRAS') &&
+    (issue.mappedTopicIds.includes(topicId) || issues.length === 1));
+  if (matchingIssues.length === 1) return matchingIssues[0];
+  if (issues.length === 0 && interpretation.population === 'COMPANY' &&
+      interpretation.domain === expectedSemanticDomain) {
+    return { subject: interpretation.primarySubject, population: interpretation.population };
+  }
+  return undefined;
+}
+
+function requestedRuleSupportForParagraph(
+  text: string,
+  record: AuthoritativeSourceRecord,
+  topicIds: readonly string[],
+  concepts: ReturnType<typeof getRequestedQuestionConcepts>,
+  context: GroundedReasoningContext
+): { conceptIds: string[]; topicIds: string[] } {
+  const conceptIds = new Set<string>();
+  const supportedTopicIds = new Set<string>();
+  for (const topicId of topicIds) {
+    if (!recordHasRequestedTopicAssociation(record, topicId)) continue;
+    const topic = getCoverageTopicById(topicId);
+    if (!topic || record.authority !== 'IRAS' || !topic.legacyDomains.includes(record.domain)) continue;
+    for (const concept of concepts) {
+      const issue = companyIssueForRequestedTopic(context, topicId, concept);
+      if (!issue) continue;
+      const supportInput = {
+        domainId: topic.domainId,
+        topicIds: [topicId],
+        subject: issue.subject,
+        population: issue.population,
+        concepts: [concept]
+      };
+      const supportedInRecord = supportGeneralIrasRuleConcept({
+        sourceText: record.sourceText,
+        ...supportInput
+      }) === true;
+      const supportedInParagraph = supportGeneralIrasRuleConcept({
+        sourceText: text,
+        ...supportInput
+      }) === true;
+      if (supportedInRecord && supportedInParagraph) {
+        conceptIds.add(concept.id);
+        supportedTopicIds.add(topicId);
+      }
+    }
+  }
+  return { conceptIds: [...conceptIds], topicIds: [...supportedTopicIds] };
+}
+
 function selectEvidenceOnlyQuotes(
   context: GroundedReasoningContext,
   query: string,
@@ -224,9 +307,24 @@ function selectEvidenceOnlyQuotes(
     .filter(term => term.length >= 4 && !FALLBACK_QUOTE_STOPWORDS.has(term)));
   const queryTerms = new Set(normalizedFallbackTerms(query)
     .filter(term => term.length >= 4 && !FALLBACK_QUOTE_STOPWORDS.has(term)));
+  const requestedConcepts = requestedRuleConcepts(context, query);
   const bonusTimingRequested = topicIds.includes('iras-employee-bonus-timing');
   const records = context.evidenceQuality?.eligibleRecords || [];
-  const selected: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number; sourceUrl: string; topicIds: string[] }> = [];
+  const selected: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number; sourceUrl: string; topicIds: string[]; requestedSupportConceptIds: string[]; requestedSupportTopicIds: string[] }> = [];
+  const compareCandidates = (
+    left: typeof selected[number],
+    right: typeof selected[number],
+    topicId?: string
+  ): number => {
+    const leftSupported = topicId
+      ? left.requestedSupportTopicIds.includes(topicId)
+      : left.requestedSupportConceptIds.length > 0;
+    const rightSupported = topicId
+      ? right.requestedSupportTopicIds.includes(topicId)
+      : right.requestedSupportConceptIds.length > 0;
+    return Number(rightSupported) - Number(leftSupported) || right.score - left.score ||
+      left.recordOrder - right.recordOrder || left.paragraphOrder - right.paragraphOrder;
+  };
 
   records.forEach((record, recordOrder) => {
     const liveExtractionCandidate = record.provenance === 'LIVE_EXTERNAL';
@@ -257,7 +355,7 @@ function selectEvidenceOnlyQuotes(
       }
       break;
     }
-    const candidates: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number; sourceUrl: string; topicIds: string[] }> = [];
+    const candidates: typeof selected = [];
     for (let paragraphOrder = 0; paragraphOrder < paragraphs.length;) {
       let attachedEnd = paragraphOrder;
       while (attachedEnd + 1 < paragraphs.length && startsAttachedEvidenceQualification(paragraphs[attachedEnd + 1])) {
@@ -291,8 +389,13 @@ function selectEvidenceOnlyQuotes(
         if (/\badvance\b|\bcontingent\b/i.test(text)) score += 4;
         if (/\b(?:1\s*mar|form ir8a|auto.inclusion scheme|ais)\b/i.test(text)) score += 3;
       }
-      if (score > 0) candidates.push({ text, quote: text, recordId: record.id, kind: 'RULE', score, recordOrder, paragraphOrder,
-        sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [] });
+      const requestedSupport = requestedRuleSupportForParagraph(text, record, topicIds, requestedConcepts, context);
+      if (score > 0 || requestedSupport.conceptIds.length > 0) candidates.push({
+        text, quote: text, recordId: record.id, kind: 'RULE', score, recordOrder, paragraphOrder,
+        sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
+        requestedSupportConceptIds: requestedSupport.conceptIds,
+        requestedSupportTopicIds: requestedSupport.topicIds
+      });
       paragraphOrder = attachedEnd + 1;
     }
     if (topicIds.includes('iras-individual-foreign-tax-credit')) {
@@ -300,7 +403,8 @@ function selectEvidenceOnlyQuotes(
       if (conditionsQuote) {
         candidates.push({ text: conditionsQuote, quote: conditionsQuote, recordId: record.id, kind: 'RULE', score: 100,
           recordOrder, paragraphOrder: sourceBlocks.findIndex(block => block === 'Conditions for claiming FTC'),
-          sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [] });
+          sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
+          requestedSupportConceptIds: [], requestedSupportTopicIds: [] });
       }
     }
     if (topicIds.includes('iras-individual-overseas-employment')) {
@@ -308,13 +412,14 @@ function selectEvidenceOnlyQuotes(
       if (overseasIncomeList) {
         candidates.push({ text: overseasIncomeList, quote: overseasIncomeList, recordId: record.id, kind: 'RULE', score: 100,
           recordOrder, paragraphOrder: sourceBlocks.findIndex(block => /^overseas income is taxable in singapore when:$/i.test(block)),
-          sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [] });
+          sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
+          requestedSupportConceptIds: [], requestedSupportTopicIds: [] });
       }
     }
     const topicLimit = bonusTimingRequested
       ? record.tags.includes('iras-ais-employment-income') ? 3 : 6
       : 5;
-    selected.push(...candidates.sort((a, b) => b.score - a.score || a.paragraphOrder - b.paragraphOrder).slice(0, topicLimit));
+    selected.push(...candidates.sort((a, b) => compareCandidates(a, b)).slice(0, topicLimit));
   });
 
   // Cover each registered concept first with a passage from its own admitted
@@ -331,24 +436,33 @@ function selectEvidenceOnlyQuotes(
     chosen.push(candidate);
     sourceCounts.set(candidate.sourceUrl, (sourceCounts.get(candidate.sourceUrl) || 0) + 1);
   };
+  const topicCandidates: typeof selected = [];
   for (const topicId of topicIds) {
     if (topicId === 'iras-individual-overseas-employment') {
       const passages = selected.filter(item => item.topicIds.includes(topicId));
       const whollyOverseas = passages.filter(item => isWhollyOverseasEmploymentRule(item.text))
-        .sort((a, b) => b.score - a.score || a.recordOrder - b.recordOrder || a.paragraphOrder - b.paragraphOrder)[0];
+        .sort((a, b) => compareCandidates(a, b, topicId))[0];
       const incidental = passages.filter(item => isIncidentalSingaporeEmploymentRule(item.text))
-        .sort((a, b) => b.score - a.score || a.recordOrder - b.recordOrder || a.paragraphOrder - b.paragraphOrder)[0];
-      if (whollyOverseas) addCandidate(whollyOverseas);
-      if (incidental) addCandidate(incidental);
+        .sort((a, b) => compareCandidates(a, b, topicId))[0];
+      if (whollyOverseas) topicCandidates.push(whollyOverseas);
+      if (incidental) topicCandidates.push(incidental);
       continue;
     }
     const candidate = selected
-      .filter(item => item.topicIds.includes(topicId) && fallbackExcerptMatchesTopic(topicId, item.text))
-      .sort((a, b) => b.score - a.score || a.recordOrder - b.recordOrder || a.paragraphOrder - b.paragraphOrder)[0];
-    if (candidate) addCandidate(candidate);
+      .filter(item => item.requestedSupportTopicIds.includes(topicId) ||
+        (item.topicIds.includes(topicId) && fallbackExcerptMatchesTopic(topicId, item.text)))
+      .sort((a, b) => compareCandidates(a, b, topicId))[0];
+    if (candidate) topicCandidates.push(candidate);
   }
+  const supportedTopicCandidates = topicCandidates
+    .filter(candidate => candidate.requestedSupportConceptIds.length > 0)
+    .sort((a, b) => compareCandidates(a, b));
+  const fallbackTopicCandidates = topicCandidates
+    .filter(candidate => candidate.requestedSupportConceptIds.length === 0);
+  for (const candidate of supportedTopicCandidates) addCandidate(candidate);
+  for (const candidate of fallbackTopicCandidates) addCandidate(candidate);
   if (fillRemaining) {
-    const remaining = selected.sort((a, b) => b.score - a.score || a.recordOrder - b.recordOrder || a.paragraphOrder - b.paragraphOrder);
+    const remaining = selected.sort((a, b) => compareCandidates(a, b));
     for (const candidate of remaining) addCandidate(candidate);
   }
   return chosen.sort((a, b) => a.recordOrder - b.recordOrder || a.paragraphOrder - b.paragraphOrder)

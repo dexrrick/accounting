@@ -1,0 +1,33 @@
+{
+  "sourceTool": "mcp__codex_app__get_usage_limits",
+  "observedAtUtc": "2026-10-09T06:24:44.939Z",
+  "toolResult": {
+    "ordinaryUsageAllowed": true,
+    "rateLimitsByLimitId": {
+      "codex": {
+        "limitId": "codex",
+        "limitName": null,
+        "normalModelSlug": null,
+        "primary": {
+          "usedPercent": 71,
+          "windowDurationMins": 300,
+          "resetsAt": 1791538627
+        },
+        "secondary": {
+          "usedPercent": 11,
+          "windowDurationMins": 10080,
+          "resetsAt": 1792125427
+        },
+        "credits": {
+          "hasCredits": false,
+          "unlimited": false,
+          "balance": "0"
+        },
+        "individualLimit": null,
+        "spendControlReached": false,
+        "planType": "plus",
+        "rateLimitReachedType": null
+      }
+    }
+  }
+}

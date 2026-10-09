@@ -1,0 +1,52 @@
+{
+  "date": "06/10/2026",
+  "baselineCommit": "42637dfb552dae45ed3cb72f4f495d6528a14272",
+  "reviewedRunnerCommit": "187cdcda556a69703245197446376c8a7c9d2f2c",
+  "runtime": "Node.js 22.23.2",
+  "focusedRegression": {
+    "result": "PASS",
+    "exitCode": 0,
+    "network": "preserved external-network blocking preload",
+    "logPath": ".tmp/v4-runner-integrity-final.log",
+    "logSha256": "769bcb00c2554bd52c4a3696410187ae5bea465d8ab40d064fbbd9606b6e7713"
+  },
+  "syntax": { "files": 2, "result": "PASS", "exitCode": 0 },
+  "targetedLint": { "files": 2, "result": "PASS", "exitCode": 0, "warnings": 0 },
+  "stagedDiffCheck": "PASS",
+  "independentReview": { "initialFindings": 7, "closedFindings": 7, "finalScope": "bounded runner safeguards before supervisor full binding verification" },
+  "fileHashes": {
+    "scripts/iras_v4_capture_replay_runner.mjs": "87cddbb06816bd22078b657c8460d8402d82bd4245fa347800711dd844217778",
+    "tests/regression/test_iras_v4_capture_replay_runner.mjs": "f7ce5a7d1fea2488a0d24e7f5c64d9fbfd7795ac491bf35f249bcc0927fe0a68"
+  },
+  "actualFreezeAttempt": {
+    "result": "FAIL_CLOSED",
+    "exitCode": 1,
+    "errorCode": "ENAMETOOLONG",
+    "message": "spawn ENAMETOOLONG",
+    "location": "collectCheckoutIntegritySnapshot Git status pathspec vector",
+    "configurationCreated": false,
+    "requiredNextFix": "Bound Git-status command arguments without omitting inventory paths; independently validate the correction before retrying freeze."
+  },
+  "validFrozenConfigLiveHoldProbe": "NOT_RUN: configuration creation failed",
+  "scope": {
+    "productionChanged": false,
+    "existingEvaluatorChanged": false,
+    "contractJsonChanged": false,
+    "testRegistrationChanged": false,
+    "officialCalls": 0,
+    "providerCalls": 0,
+    "liveAcceptanceReservations": 0,
+    "fullPreregistration": "NOT_FROZEN",
+    "runnerConfiguration": "NOT_FROZEN",
+    "liveAcceptance": "HOLD",
+    "pushMergeDeploy": false
+  },
+  "broaderValidation": "Not repeated: isolated MJS runner and unregistered regression, no production or TypeScript edits",
+  "checkpointUsage": {
+    "firstSaveFiveHourRemainingPercent": 12,
+    "closureFiveHourRemainingPercent": 8,
+    "closureWeeklyRemainingPercent": 43,
+    "minimumFiveHourRemainingPercent": 5,
+    "resetCreditsUsed": 0
+  }
+}

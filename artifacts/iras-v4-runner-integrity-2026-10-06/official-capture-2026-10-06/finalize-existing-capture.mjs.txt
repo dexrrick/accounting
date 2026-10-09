@@ -1,0 +1,123 @@
+// Offline replay and evidence-lock finalization for the already acquired payload.
+// Run with Node 22 from D:\Accounting; never invokes semantic acceptance or a provider.
+import assert from 'node:assert/strict'; import { createHash } from 'node:crypto';
+import { access, open, readFile } from 'node:fs/promises'; import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+const ROOT = 'D:/Accounting';
+const GIT = 'C:/Users/Admin/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/git/cmd/git.exe';
+const BASE = 'artifacts/iras-v4-runner-integrity-2026-10-06', CAP = `${BASE}/official-capture-2026-10-06`;
+const FREEZE = `${BASE}/activation-timeout-fix`;
+const FILE = {
+  freeze: `${FREEZE}/freeze-validation.json`, runner: `${FREEZE}/runner-configuration-current.json`, prereg: `${FREEZE}/preregistration.json`,
+  activation: `${FREEZE}/activation-configuration.json`, marker: `${CAP}/capture-reserved.json`, journal: `${CAP}/capture-partial.jsonl`,
+  payload: `${CAP}/capture-payload.json`, audit: `${CAP}/capture-result.json`,
+  lock: `${CAP}/evidence-lock.json`, result: `${CAP}/completion-result.json`, failure: `${CAP}/completion-failure.json`
+};
+const HASH = {
+  freeze: '27f7346b8837c947af7ae3b646ca33b10a1b0e99e08fb8422357d8f5279022bd', runner: '15fbd23e629c5a13538ea380dccfcf260523670a71da026d8357fe6fba8b8806',
+  prereg: '483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3', activation: '5044ad0e2aa14b6440301825d4cd4a7e9a87703b7e93e64a908f7f6ee8f3ca30',
+  marker: '8508ccdaac24bfcec6bbc8369e4d7179ec0b7586bb0614bd41a39283e7aa58bf', journal: '3efaea58fbfd55fe57075930c4a6d33ebe5ed5bcdbecd86b7bda6acda898daa9',
+  payload: '7af5dec0489a6b42d2e7f189deb6636f959133034c03d04c0ff1d3cc2e8242c9',
+  audit: '15bb1aa377dba8e3b12a7c001bd4089dcbba735ce940fec5705dace5885fc8a9'
+};
+const abs = p => path.resolve(ROOT, p), hash = b => createHash('sha256').update(b).digest('hex');
+const raw = p => readFile(abs(p)), doc = b => JSON.parse(b.toString('utf8'));
+async function originals() { for (const [key, expected] of Object.entries(HASH))
+  assert.equal(hash(await raw(FILE[key])), expected, `ORIGINAL_${key.toUpperCase()}_CHANGED`); }
+async function absent(p) {
+  try { await access(abs(p)); } catch (e) { if (e.code === 'ENOENT') return; throw e; }
+  throw new Error(`FINALIZATION_OUTPUT_ALREADY_EXISTS:${p}`);
+}
+async function writeOnce(p, value) {
+  const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`), h = await open(abs(p), 'wx');
+  try { await h.writeFile(bytes); await h.sync(); } finally { await h.close(); } return hash(bytes);
+}
+let phase = 'PREFLIGHT', lockWritten = false;
+try {
+  assert.equal(path.resolve(process.cwd()), path.resolve(ROOT), 'WRONG_WORKING_ROOT');
+  assert.equal(Number(process.versions.node.split('.')[0]), 22, 'NODE_22_REQUIRED');
+  await originals(); await Promise.all([FILE.lock, FILE.result, FILE.failure].map(absent));
+  const freeze = doc(await raw(FILE.freeze));
+  assert.deepEqual({ status: freeze.status, commit: freeze.reviewedCommit, files: freeze.boundFileCount,
+    mismatches: freeze.boundFileMismatches, holdNamespaceAbsent: freeze.holdProbeNamespaceAbsent,
+    official: freeze.officialRequests, provider: freeze.providerRequests, reservations: freeze.liveReservations },
+    { status: 'FROZEN_API_FREE_HOLD', commit: 'a30dd0a5d8a5b405dcab5dad460bf86c8bcf1b96',
+      files: 592, mismatches: 0, holdNamespaceAbsent: true, official: 0, provider: 0, reservations: 0 });
+  assert.deepEqual(Object.fromEntries(freeze.manifests.map(x => [x.path, x.sha256])), {
+    [FILE.runner]: HASH.runner, [FILE.prereg]: HASH.prereg, [FILE.activation]: HASH.activation
+  });
+  const audit = doc(await raw(FILE.audit));
+  assert.deepEqual([audit.status, audit.semanticAcceptance, audit.providerTransportInvoked], ['OFFICIAL_CAPTURE_FAILED_SEMANTIC_ACCEPTANCE_HELD', 'HOLD_NOT_RUN', false]);
+  assert.ok(audit.failure?.code?.startsWith('CAPTURE_PAYLOAD_FILE_DOCUMENT_MISMATCH'));
+  assert.deepEqual([audit.capture.captureStatus, audit.capture.runnerDispatchCount, audit.capture.recordedEntryCount,
+    audit.capture.terminalIntegrityFailure, audit.capture.evidenceLockCreated], ['COMPLETE', 15, 15, null, false]);
+
+  const runner = doc(await raw(FILE.runner)), prereg = doc(await raw(FILE.prereg)); const activation = doc(await raw(FILE.activation)), payload = doc(await raw(FILE.payload));
+  const journal = (await raw(FILE.journal)).toString('utf8').trimEnd().split(/\r?\n/).map(JSON.parse);
+  assert.deepEqual(journal, payload.entries, 'CAPTURE_JOURNAL_PAYLOAD_DIVERGED');
+  assert.deepEqual([payload.captureStatus, payload.synthetic, payload.requestCount, payload.terminalIntegrityFailure], ['COMPLETE', false, 15, null]);
+  assert.ok(payload.entries.every(e => e.status === 200 && e.failure === null && e.actualUrl === e.request.url));
+  const runnerModule = await import(pathToFileURL(abs('scripts/iras_v4_capture_replay_runner.mjs')).href);
+  const capability = await runnerModule.loadReviewedV4ExecutionCapability({ root: ROOT, runnerConfigurationPath: abs(FILE.runner),
+    activationConfigurationPath: abs(FILE.activation), gitExecutable: GIT });
+  assert.equal(runnerModule.validateCapturePayload(payload, {
+    expectedIntegrityBindingSha256: runner.integrityBindingSha256, expectedPreregistrationSha256: HASH.prereg,
+    expectedActivationConfigurationSha256: activation.activationConfigurationSha256,
+    expectedActivationConfigurationFileSha256: HASH.activation, expectedCaptureInventory: activation.captureInventory,
+    syntheticMode: false, requireComplete: true
+  }).entryCount, 15);
+
+  phase = 'OFFLINE_REPLAY_OF_ACTUAL_OFFICIAL_CAPTURE';
+  const replay = runnerModule.createReplayTransport({ payload, integrityLatch: () => {},
+    expectedIntegrityBindingSha256: runner.integrityBindingSha256, expectedPreregistrationSha256: HASH.prereg,
+    executionCapability: capability, activationConfigurationSha256: activation.activationConfigurationSha256,
+    expectedCaptureInventory: activation.captureInventory });
+  const webRetriever = runnerModule.bindProductionControlledRetriever({ transport: replay });
+  const plan = await capability.runV4CapturePlan({ captureInventory: activation.captureInventory,
+    webRetriever, withEvidenceFamily: replay.withEvidenceFamily });
+  replay.assertHealthy(); const expected = activation.captureInventory.filter(x => x.purpose !== 'REDIRECT');
+  assert.equal(expected.length, 15); assert.equal(plan.profile, 'iras-v4-capture-plan');
+  assert.equal(plan.rows.length, 15);
+  for (let i = 0; i < expected.length; i++) {
+    const row = expected[i], actual = plan.rows[i], entry = payload.entries[i];
+    assert.deepEqual({ family: actual.family, purpose: actual.purpose, url: actual.url,
+      sourceRecordIds: actual.sourceRecordIds, topicIds: actual.topicIds }, {
+      family: row.family, purpose: row.purpose, url: row.url,
+      sourceRecordIds: row.provenance.sourceRecordIds, topicIds: row.provenance.topicIds });
+    assert.deepEqual([actual.status, actual.httpStatus], ['SUCCESS', 200]);
+    assert.deepEqual(entry.request, { family: row.family, url: row.url, method: row.method, headers: row.headers });
+    const text = await new Response(Buffer.from(entry.bodyBase64, 'base64')).text();
+    assert.equal(actual.contentBytes, Buffer.byteLength(text, 'utf8'));
+    assert.equal(actual.contentSha256, hash(Buffer.from(text, 'utf8')));
+  }
+  assert.equal(replay.replayLookupCount, 15); assert.equal(replay.unusedResponseCount, 0);
+  assert.ok([...replay.lookupCounts.values()].every(n => n === 1));
+  await originals(); phase = 'EVIDENCE_LOCK';
+  const lock = await runnerModule.writeFrozenEvidenceLock({ outputPath: abs(FILE.lock), payloadPath: abs(FILE.payload),
+    runnerConfigurationPath: abs(FILE.runner), activationConfigurationPath: abs(FILE.activation),
+    preregistrationPath: abs(FILE.prereg), root: ROOT, gitExecutable: GIT });
+  lockWritten = true; await originals();
+  const earliest = Date.parse(lock.lock.earliestAcquisitionAt);
+  const result = { profile: 'iras-v4-official-evidence-finalization-2026-10-06',
+    status: 'OFFICIAL_EVIDENCE_LOCKED_SEMANTIC_ACCEPTANCE_HELD', executionMode: 'OFFLINE_REPLAY_OF_ACTUAL_OFFICIAL_CAPTURE',
+    semanticAcceptance: 'HOLD_NOT_RUN', providerTransportInvoked: false, completedAt: new Date().toISOString(),
+    captureInputs: Object.fromEntries(['marker', 'journal', 'payload', 'audit'].map(k => [k, { path: FILE[k], sha256: HASH[k] }])),
+    priorLauncherAudit: { failureKind: 'LAUNCHER_JSON_REPRESENTATION_MISMATCH', status: audit.status,
+      phase: audit.failure.phase, code: audit.failure.code, path: FILE.audit, sha256: HASH.audit,
+      resolution: 'OFFLINE_STRICT_REPLAY_AND_EXISTING_EVIDENCE_LOCK_GATE' },
+    captureStatus: payload.captureStatus, requestCount: payload.requestCount, familyCounts: payload.familyCounts,
+    earliestAcquisitionAt: lock.lock.earliestAcquisitionAt,
+    evidenceWindowExpiresAt: new Date(earliest + 86400000).toISOString(), windowHours: 24,
+    offlineCapturePlan: plan, evidenceLock: { path: FILE.lock, sha256: lock.sha256,
+      capturePayloadSha256: lock.lock.capturePayloadSha256 } };
+  process.stdout.write(`FINALIZED ${FILE.result} ${await writeOnce(FILE.result, result)}\n`);
+} catch (error) {
+  const failure = { profile: 'iras-v4-official-evidence-finalization-2026-10-06',
+    status: 'OFFICIAL_EVIDENCE_FINALIZATION_FAILED_SEMANTIC_ACCEPTANCE_HELD', phase,
+    semanticAcceptance: 'HOLD_NOT_RUN', providerTransportInvoked: false,
+    failureCode: String(error?.message || error).slice(0, 1000), evidenceLockCreated: lockWritten,
+    preservedInputs: { payloadSha256: HASH.payload, priorCaptureAuditSha256: HASH.audit } };
+  try { process.stderr.write(`FINALIZATION_FAILED ${await writeOnce(FILE.failure, failure)}\n`); }
+  catch (e) { process.stderr.write(`FINALIZATION_FAILURE_AUDIT_NOT_WRITTEN ${String(e?.message || e).slice(0, 300)}\n`); }
+  process.exitCode = 1;
+}

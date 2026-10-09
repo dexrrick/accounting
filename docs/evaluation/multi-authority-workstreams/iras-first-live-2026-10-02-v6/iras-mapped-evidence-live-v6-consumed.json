@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-mapped-evidence-diagnostic-v6",
+  "preregistrationSha256": "ba24448c4d2e487a5c88886dc321cc14d322affb58c8447a1e33c26c018b55dc",
+  "preregistrationFileSha256": "b924f7196ba16bb4647a9b4685be45ba9e1cc4636d4510870d451ce9e50952ab",
+  "reservedAt": "2026-10-02T22:30:35.309Z",
+  "status": "CONSUMED_BEFORE_REQUEST"
+}

@@ -1,0 +1,102 @@
+{
+  "verifiedAt": "2026-10-02T01:29:57.479Z",
+  "sourceFingerprints": {
+    "semanticInterpretation": "5810272a39d2b221b4fea9e51bfc130864eba7096494cccfdd90a4091e1e5494",
+    "transport": "80a7000cda3df7de0659613a9097aef32f32aa0618624c3c5770b90778e5e51c",
+    "classifier": "f58bf13f0a553b9681ae12c771bcd27cbf70611b7ed82aa401af40e34ed03883",
+    "authorityWorkstreams": "28d880c3c67e3a5d36cc9d88b9afd05b0a2d0a5ebc28e793f284c9f9910b7f1e",
+    "responseDiagnostics": "5a57167081b3163e88cff7ad67af97ead3fa78b8637c03940dc6b5a6ad967911",
+    "issueScoring": "e0d88769b0248f77c358fbb4a2363ab835d0ba8defc71a37988d4f2deafeb63e",
+    "queryTopicResolver": "a72c3bb7215d44cfad54464b63b86d4c39007e2b1f4b1a711562fe8f6342ca9e",
+    "coverageRegistry": "221bcc48e088f7f2c0e4dca67b4dd0f96b2a0fe493d85727d26743b369541a25",
+    "semanticContractEvaluationRunner": "8f9b5407cd76557fc72f2ff9ca636567b3538b7d0808c0bf2706f420043b991d",
+    "semanticWireFormatCliRunner": "527ed084e3f0820ddcf243909d87f8a038433f02cb3fb47e77811d07fda89c13"
+  },
+  "fixtureFingerprints": {
+    "semanticContractFollowup": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1",
+    "semanticOperationFollowup": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe",
+    "semanticReliabilityPostGuidance": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6",
+    "comparableBaseline": "a44bfc81373f3baf6505efaf80825c8bbbd26e33c25006d83969e4b70db7c4b1",
+    "authorityReliefTargeted": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb",
+    "protectedWireFormatHashes": "dba02105671fed2e170daf099094b7ee2962331e11b8d67260a6650ade5fe758"
+  },
+  "previousFailedCycleFingerprints": {
+    "post-live-verification.json": "676fff42c4841b2d593712c938aaaeeda30bd3948683a2b70b61678d14cc4a14",
+    "pre-live-fingerprints.json": "89644b169568b12465c5d8526c3c945e23604cfaa6a78ff4fad43060e17472e2",
+    "semantic-wire-format-targeted-live.json": "2b50c9726a302bf86355cb4034739134587b03c3c578ac5075de158bb0d2490c",
+    "semantic-wire-format-targeted-live.md": "a0b9213ea99a7bea02dd5896b4defd38b23a6c48fef65f07fc0ce886f34fa673"
+  },
+  "currentFingerprintsMatch": true,
+  "previousFailedCycleUnchanged": true,
+  "capturedFingerprintsMatch": true,
+  "requestCount": 6,
+  "responsesReceived": 6,
+  "diagnostics": [],
+  "acceptance": {
+    "passed": false,
+    "completedCases": 6,
+    "passedCases": 3,
+    "expectedCases": 6,
+    "failedCases": [
+      "target-mixed-ifrs-singapore-accounting",
+      "target-relief-entitlement",
+      "dev-investment-comparison"
+    ],
+    "canonicalContractScoring": {
+      "issueRecall": {
+        "correct": 7,
+        "total": 7,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 7,
+        "total": 7,
+        "rate": 1
+      },
+      "dimensions": {
+        "governingAuthority": {
+          "correct": 7,
+          "matched": 7,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 6,
+          "matched": 7,
+          "rate": 0.8571
+        },
+        "domain": {
+          "correct": 7,
+          "matched": 7,
+          "rate": 1
+        },
+        "population": {
+          "correct": 6,
+          "matched": 7,
+          "rate": 0.8571
+        },
+        "operation": {
+          "correct": 7,
+          "matched": 7,
+          "rate": 1
+        }
+      },
+      "operationAccuracy": {
+        "correct": 7,
+        "total": 7,
+        "rate": 1
+      },
+      "canonicalWorkstreamRoutingAccuracy": {
+        "correct": 6,
+        "total": 6,
+        "rate": 1
+      }
+    },
+    "invalidResponses": 0,
+    "timeouts": 0,
+    "providerFailures": 0,
+    "zeroInvalidTimeoutProviderFailures": true,
+    "pacingPolicyPassed": true,
+    "fingerprintsStable": true
+  },
+  "minimumObservedStartGapMs": 17104
+}

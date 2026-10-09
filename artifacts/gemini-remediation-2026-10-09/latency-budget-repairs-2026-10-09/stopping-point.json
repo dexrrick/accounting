@@ -1,0 +1,24 @@
+{
+  "dateSingapore": "09/10/2026",
+  "status": "DIAGNOSTIC_VERIFICATION_COMPLETE",
+  "lastObservedFiveHourRemainingPercent": 86,
+  "constraint": "Save stopping point and stop with margin before 5% remaining. No automatic resets or credit purchases.",
+  "latestLiveRun": "../live-rerun-extended-budget-2026-10-09",
+  "latestLiveOutcome": "9 diagnostic passes,9HTTP200firstattempts,0retries/timeouts/blockedconnections/pacingerrors. Responses2.159–2.533s,below8s; extended allowance not exercised.",
+  "timing": "Diagnostic-only EXTENDED20s attempt/45s total/max2 option implemented and records policy. Production semantic8s/defaultretry8s18s and frozen contracts preserved.",
+  "validation": {
+    "review": "PASSED final opt-in design",
+    "focused": "PASSED provider/semantic/launcher/V3V4timeout/TypeScript",
+    "lint": "PASSED lint-extended-final.log",
+    "build": "PASSED build-extended-final.log",
+    "smoke": "PASSED98.76s smoke-extended-final.log",
+    "full": "PASSED162.69s full-extended-final.log",
+    "integrity": "57priorfiles/10codefilesunchanged; live-integrity-final.json",
+    "whitespace": "PASSED git diff --check"
+  },
+  "remaining": "No further work required for scoped remediation/diagnostic review. Fresh-source canonical acceptance and any production timing promotion are separate unperformed work.",
+  "resume": ["Read report.md; do not repeat passing checks unless relevant code changes.", "Preserve consumed historical results; baseline4passes5NOT_ASSESSED and EXTENDED9passes remain separately labeled.", "Production timeout promotion needs representative latency evidence; latest recovery does not establish deadline causation.", "Check usage before new work and stop with margin before5%."],
+  "sourceReferenceDate": "2026-10-08",
+  "acceptanceProven": false,
+  "freshOfficialAvailabilityAssessed": false
+}

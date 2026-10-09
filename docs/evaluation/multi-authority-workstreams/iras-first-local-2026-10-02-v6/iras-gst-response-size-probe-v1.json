@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-gst-response-size-probe-v1",
+  "diagnosticOnly": true,
+  "interpretation": "SYNTHETIC_RESPONSE_SIZE_BOUNDARY_CONTROL_NOT_ACTUAL_V3_CAUSAL_PROOF",
+  "compositionDisclosure": "Both synthetic HTML cases use only the complete three-sentence body of saved V1 GST block 7 in one paragraph; its standalone bullet is removed as disclosed. The oversized case adds only script-element padding. Neither case establishes actual public-page HTML composition, adjacency, or HTML length.",
+  "publicFixture": {
+    "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+    "savedBlockIndex": 7,
+    "savedDocumentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+    "exactOpeningSha256": "646e339b792bd41140ea4aaf6cc46f24f7dc02339ee295ca99e5b849943141e1",
+    "exactOpeningSentenceCount": 3,
+    "standaloneBulletRetainedInSavedUnit": true
+  },
+  "oversizedSyntheticCase": {
+    "rawHtmlCharacterCount": 210557,
+    "rawHtmlSha256": "5b67d95fdafabdd2ebeb6da3181e0d9154698293b4ef85154d2c3f8a0cd09e79",
+    "rawLimitCharacters": 200000,
+    "scriptPaddingCharacterCount": 210000,
+    "directValidatorAccepted": true,
+    "cleanedVisibleTextCharacterCount": 378,
+    "cleanedVisibleTextSha256": "be2d5b49fe24a8473c6dbf20065ff988351a463c9bfc60d2a71fff1f6ba61309",
+    "cleanedVisibleTextBelowRawLimit": true,
+    "boundedSelectorUnitCount": 1,
+    "boundedSelectorExactOpeningUnitCount": 1,
+    "allOpeningUnitsCompleteAndBounded": true,
+    "v3": {
+      "resultCode": "PAGE_CHARACTER_LIMIT",
+      "syntheticMappedGetCount": 1,
+      "consumedMarkerPresentAtFetch": true,
+      "planPresentBeforeCleanup": true,
+      "consumedMarkerPresentBeforeCleanup": true,
+      "reportPresentBeforeCleanup": false
+    }
+  },
+  "smallSyntheticPositiveControl": {
+    "rawHtmlCharacterCount": 499,
+    "rawHtmlSha256": "f846cd7cc7a7844035b7a24e13764bb62c9bd036ac615703c17f00c7fbb7f3c5",
+    "directValidatorAccepted": true,
+    "cleanedVisibleTextCharacterCount": 378,
+    "cleanedVisibleTextSha256": "be2d5b49fe24a8473c6dbf20065ff988351a463c9bfc60d2a71fff1f6ba61309",
+    "boundedSelectorUnitCount": 1,
+    "exactOpeningUnitPresent": true,
+    "v3": {
+      "syntheticMappedGetCount": 1,
+      "consumedMarkerPresentAtFetch": true,
+      "consumedMarkerPresentBeforeCleanup": true,
+      "reportPresentBeforeCleanup": true,
+      "mappedTransportRequestCount": 1,
+      "modelRequestCount": 0,
+      "discoveryRequestCount": 0,
+      "searchRequestCount": 0,
+      "unexpectedSyntheticCallCount": 0,
+      "finalEvidenceStatus": "VERIFIED",
+      "finalClaimCount": 1,
+      "exactOpeningFinalClaimCount": 1
+    }
+  },
+  "controls": {
+    "ambientFetchAttemptCount": 0,
+    "modelRequests": 0,
+    "discoveryRequests": 0,
+    "searchRequests": 0,
+    "unexpectedSyntheticCalls": 0,
+    "temporaryOutputDirectoriesRemoved": true
+  },
+  "limit": "This proves the exported V3 fixed raw-page-size rejection for this synthetic oversized response while validator and complete-unit selection accept its cleaned visible evidence. It does not identify which V3 branch caused the consumed V3 failure or establish the actual source HTML length."
+}

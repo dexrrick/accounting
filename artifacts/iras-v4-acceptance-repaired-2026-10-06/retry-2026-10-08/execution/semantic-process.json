@@ -1,0 +1,12 @@
+{
+  "launchedAtUtc": "2026-10-08T11:20:24.4801456Z",
+  "profile": "iras-v4-authorized-retry-semantic-process",
+  "namespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-retry-2026-10-08",
+  "authorizedGeminiCalls": 9,
+  "retries": 0,
+  "sourceRequestsAllowed": 0,
+  "model": "gemini-3.5-flash-lite",
+  "launcherSha256": "d2d33e13f0dcf4dbc2498985851e1bf4a9441b5ee71be86326f54ef505025d2e",
+  "processId": 31024,
+  "authorizationSha256": "711b44ab06427680c5e485c5d259d182570f418aede46ab289430693e4bc56de"
+}

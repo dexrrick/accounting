@@ -1,0 +1,2659 @@
+{
+  "schemaVersion": 1,
+  "evaluationProfile": "authority-relief-targeted-live",
+  "purpose": "Once-only strict authority and tax-relief evaluation using two frozen historical questions and six fixed independent controls.",
+  "outputPrefix": "authority-relief-targeted-live",
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "minimumStartGapMs": 15250,
+  "pacingPolicy": "Wait the full minimum gap after each completed checkpoint; actual provider-request start gaps are measured monotonically.",
+  "sourceFingerprints": {
+    "semanticInterpretation": "d9c08bc554d5af99acc3da40883fd2bc15decd8f4a1367dc16d873de7818b0d0",
+    "transport": "e1f65b7baa6e8a546a369ce4079445f11daaecd23fea714d92264e8b6bfea265",
+    "classifier": "f58bf13f0a553b9681ae12c771bcd27cbf70611b7ed82aa401af40e34ed03883",
+    "authorityWorkstreams": "28d880c3c67e3a5d36cc9d88b9afd05b0a2d0a5ebc28e793f284c9f9910b7f1e",
+    "responseDiagnostics": "e27f50ac0852084c5f7549876b5a97803faccdca1a38baea91dc7c6bc7e98bac",
+    "issueScoring": "e0d88769b0248f77c358fbb4a2363ab835d0ba8defc71a37988d4f2deafeb63e",
+    "queryTopicResolver": "a72c3bb7215d44cfad54464b63b86d4c39007e2b1f4b1a711562fe8f6342ca9e",
+    "coverageRegistry": "221bcc48e088f7f2c0e4dca67b4dd0f96b2a0fe493d85727d26743b369541a25",
+    "semanticContractEvaluationRunner": "90081a6754bcd39bc9bea7f78a01d08339f3c3dafc6aac73dda61db153bfc53e",
+    "authorityReliefCliRunner": "ea08c99cabec0f4aa45eec59d842dff738d31233759742429e789a9ad54900c0"
+  },
+  "fixtureFingerprints": {
+    "semanticContractFollowup": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1",
+    "semanticOperationFollowup": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe",
+    "semanticReliabilityPostGuidance": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6",
+    "comparableBaseline": "a44bfc81373f3baf6505efaf80825c8bbbd26e33c25006d83969e4b70db7c4b1",
+    "authorityReliefTargeted": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb",
+    "protectedAuditHashes": "b42b76c662b234b3c27760704f7f3dc79ee2c7160f414226186542d6c12fdc46"
+  },
+  "sourceHashesConsistent": true,
+  "fixtureHashesConsistent": true,
+  "startedAt": "2026-10-01T15:39:57.057Z",
+  "requestCount": 8,
+  "minimumObservedStartGapMs": 16861,
+  "cases": [
+    {
+      "caseId": "control-general-recognition",
+      "group": "PRESELECTED_KNOWN_FAILURE",
+      "expectedIssueIds": [
+        "general-recognition"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "capture": {
+        "promptSha256": "36d24d0969c652259f1d8a857d08ff71ead2107b8b9d576d1812d1b032f2bf43",
+        "promptChars": 8690,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": null,
+        "responseReceived": true,
+        "responseChars": 1072,
+        "responseUtf8Bytes": 1072,
+        "latencyMs": 1964.81
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": true,
+        "interpreted": true,
+        "rejectionCode": "NONE",
+        "violationCodes": [],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "IFRS_FOUNDATION"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "ACCOUNTING",
+            "population": "UNKNOWN",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 3,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "CONTEXT_ONLY"
+                }
+              ]
+            },
+            "requestedOperation": "EXPLAIN_RULE",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "UNKNOWN",
+                  "domain": "ACCOUNTING",
+                  "operation": "EXPLAIN_RULE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IFRS_FOUNDATION"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "values": []
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "general-recognition"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "canonicalScoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "general-recognition"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": true,
+        "validInterpretation": true,
+        "issueCoverageCorrect": true,
+        "allDimensionsCorrect": true,
+        "operationsCorrect": true,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "topLevelCalculationFlagCorrect": true,
+        "routingCorrect": true,
+        "guardsCorrect": true,
+        "requestedIssueCoverageCorrect": true,
+        "runtimeTimedOut": false,
+        "singleProviderCallPassed": true,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true,
+          "requestedIssuesMappedAndRetrieved": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "requestedIssueCoverage": {
+          "requestedIssueCount": 1,
+          "mappedIssueCount": 1,
+          "inCanonicalRuntimeCount": 1,
+          "lifecycleMappedCount": 1,
+          "retrievalAttemptedCount": 1,
+          "routingGapCounts": {
+            "NO_COVERAGE_TOPIC": 0,
+            "UNKNOWN_DOMAIN": 0,
+            "UNASSIGNED_QUERY_TOPIC": 0,
+            "CANONICAL_AREA_UNRESOLVED": 0,
+            "ISSUE_UNMAPPED": 0,
+            "NO_GOVERNING_AUTHORITY": 0,
+            "PROVIDER_UNAVAILABLE": 0,
+            "PROVIDER_AUTHORITY_MISMATCH": 0,
+            "PROVIDER_ERROR": 0,
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+            "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+            "NO_CANDIDATE_EVIDENCE": 0,
+            "CANDIDATE_REJECTED": 1,
+            "NO_ADMITTED_EVIDENCE": 1,
+            "NO_VERIFIED_CLAIM": 1,
+            "ISSUE_CONCEPT_UNCOVERED": 1,
+            "IRAS_SCOPE_NOT_COVERED": 0,
+            "OTHER_GAP": 0
+          },
+          "blockingRoutingGapCount": 0,
+          "unclassifiedRoutingGapCount": 0
+        },
+        "runtimeTimedOut": false
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 2001.33
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "group": "PRESELECTED_KNOWN_FAILURE",
+      "expectedIssueIds": [
+        "employer-cpf-contribution",
+        "individual-cpf-tax-relief"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "capture": {
+        "promptSha256": "4253d941c61dbb9052b7dc80a5ea9d5bb4dbdb07e6d645c5c01405f8eaf98720",
+        "promptChars": 8763,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17258,
+        "responseReceived": true,
+        "responseChars": 1539,
+        "responseUtf8Bytes": 1539,
+        "latencyMs": 2025.54
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": true,
+        "interpreted": true,
+        "rejectionCode": "NONE",
+        "violationCodes": [],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "values": [
+                "IRAS",
+                "CPF"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "UNKNOWN",
+            "population": "UNKNOWN",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 3,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                }
+              ]
+            },
+            "requestedOperation": "OTHER",
+            "requiresUserSpecificFacts": true,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "INDIVIDUAL",
+                  "domain": "IRAS_INCOME_TAX",
+                  "operation": "CHECK_ELIGIBILITY",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IRAS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "EMPLOYER",
+                  "domain": "CPF_PAYROLL",
+                  "operation": "CALCULATE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "values": []
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 2,
+        "predictedIssueCount": 2,
+        "matchedIssueCount": 2,
+        "matchedExpectedIssueIds": [
+          "individual-cpf-tax-relief",
+          "employer-cpf-contribution"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 2,
+        "operationMatched": 2,
+        "dimensionsCorrect": {
+          "governingAuthority": 2,
+          "contextualAuthority": 2,
+          "domain": 2,
+          "population": 2,
+          "operation": 2
+        }
+      },
+      "canonicalScoring": {
+        "expectedIssueCount": 2,
+        "predictedIssueCount": 2,
+        "matchedIssueCount": 2,
+        "matchedExpectedIssueIds": [
+          "individual-cpf-tax-relief",
+          "employer-cpf-contribution"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 2,
+        "operationMatched": 2,
+        "dimensionsCorrect": {
+          "governingAuthority": 2,
+          "contextualAuthority": 2,
+          "domain": 2,
+          "population": 2,
+          "operation": 2
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": true,
+        "validInterpretation": true,
+        "issueCoverageCorrect": true,
+        "allDimensionsCorrect": true,
+        "operationsCorrect": true,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "topLevelCalculationFlagCorrect": true,
+        "routingCorrect": true,
+        "guardsCorrect": true,
+        "requestedIssueCoverageCorrect": true,
+        "runtimeTimedOut": false,
+        "singleProviderCallPassed": true,
+        "fingerprintsStable": true,
+        "strictOperationChecks": [
+          {
+            "expectedIssueId": "employer-cpf-contribution",
+            "expectedOperation": "CALCULATE",
+            "actualOperation": "CALCULATE",
+            "matched": true,
+            "passed": true
+          },
+          {
+            "expectedIssueId": "individual-cpf-tax-relief",
+            "expectedOperation": "CHECK_ELIGIBILITY",
+            "actualOperation": "CHECK_ELIGIBILITY",
+            "matched": true,
+            "passed": true
+          }
+        ]
+      },
+      "routing": {
+        "plannedWorkstreamCount": 2,
+        "finalWorkstreamCount": 2,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true,
+          "requestedIssuesMappedAndRetrieved": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 2,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 2,
+          "routedRequiredIssues": 2
+        },
+        "requestedIssueCoverage": {
+          "requestedIssueCount": 2,
+          "mappedIssueCount": 2,
+          "inCanonicalRuntimeCount": 2,
+          "lifecycleMappedCount": 2,
+          "retrievalAttemptedCount": 2,
+          "routingGapCounts": {
+            "NO_COVERAGE_TOPIC": 0,
+            "UNKNOWN_DOMAIN": 0,
+            "UNASSIGNED_QUERY_TOPIC": 0,
+            "CANONICAL_AREA_UNRESOLVED": 0,
+            "ISSUE_UNMAPPED": 0,
+            "NO_GOVERNING_AUTHORITY": 0,
+            "PROVIDER_UNAVAILABLE": 0,
+            "PROVIDER_AUTHORITY_MISMATCH": 0,
+            "PROVIDER_ERROR": 0,
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+            "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+            "NO_CANDIDATE_EVIDENCE": 1,
+            "CANDIDATE_REJECTED": 1,
+            "NO_ADMITTED_EVIDENCE": 1,
+            "NO_VERIFIED_CLAIM": 2,
+            "ISSUE_CONCEPT_UNCOVERED": 3,
+            "IRAS_SCOPE_NOT_COVERED": 1,
+            "OTHER_GAP": 0
+          },
+          "blockingRoutingGapCount": 0,
+          "unclassifiedRoutingGapCount": 0
+        },
+        "runtimeTimedOut": false
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 19341.21
+    },
+    {
+      "caseId": "target-sfrsi-general-recognition",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "sfrsi-general-recognition"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "capture": {
+        "promptSha256": "27ac4ddc1585739854694a4770595da08a8a189a1ac9162abbc5542054198014",
+        "promptChars": 8693,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17348,
+        "responseReceived": true,
+        "responseChars": 1062,
+        "responseUtf8Bytes": 1062,
+        "latencyMs": 1816.87
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": true,
+        "interpreted": true,
+        "rejectionCode": "NONE",
+        "violationCodes": [],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "ACCOUNTING_STANDARDS"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "ACCOUNTING",
+            "population": "COMPANY",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 3,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "CONTEXT_ONLY"
+                }
+              ]
+            },
+            "requestedOperation": "EXPLAIN_RULE",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "COMPANY",
+                  "domain": "ACCOUNTING",
+                  "operation": "EXPLAIN_RULE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "ACCOUNTING_STANDARDS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "values": []
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "sfrsi-general-recognition"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "canonicalScoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "sfrsi-general-recognition"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": true,
+        "validInterpretation": true,
+        "issueCoverageCorrect": true,
+        "allDimensionsCorrect": true,
+        "operationsCorrect": true,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "topLevelCalculationFlagCorrect": true,
+        "routingCorrect": true,
+        "guardsCorrect": true,
+        "requestedIssueCoverageCorrect": true,
+        "runtimeTimedOut": false,
+        "singleProviderCallPassed": true,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true,
+          "requestedIssuesMappedAndRetrieved": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "requestedIssueCoverage": {
+          "requestedIssueCount": 1,
+          "mappedIssueCount": 1,
+          "inCanonicalRuntimeCount": 1,
+          "lifecycleMappedCount": 1,
+          "retrievalAttemptedCount": 1,
+          "routingGapCounts": {
+            "NO_COVERAGE_TOPIC": 0,
+            "UNKNOWN_DOMAIN": 0,
+            "UNASSIGNED_QUERY_TOPIC": 0,
+            "CANONICAL_AREA_UNRESOLVED": 0,
+            "ISSUE_UNMAPPED": 0,
+            "NO_GOVERNING_AUTHORITY": 0,
+            "PROVIDER_UNAVAILABLE": 0,
+            "PROVIDER_AUTHORITY_MISMATCH": 0,
+            "PROVIDER_ERROR": 0,
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+            "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+            "NO_CANDIDATE_EVIDENCE": 0,
+            "CANDIDATE_REJECTED": 1,
+            "NO_ADMITTED_EVIDENCE": 1,
+            "NO_VERIFIED_CLAIM": 1,
+            "ISSUE_CONCEPT_UNCOVERED": 1,
+            "IRAS_SCOPE_NOT_COVERED": 0,
+            "OTHER_GAP": 0
+          },
+          "blockingRoutingGapCount": 0,
+          "unclassifiedRoutingGapCount": 0
+        },
+        "runtimeTimedOut": false
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 36430.22
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "mixed-standard-recognition"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": false,
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "INVALID_RESPONSE",
+        "failureReason": "SCHEMA_MISMATCH"
+      },
+      "capture": {
+        "promptSha256": "80189547d5aa20eb87e7e20775f3c603d19462a9e94fff3a7ec5be9ceba2c7fa",
+        "promptChars": 8728,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17083,
+        "responseReceived": true,
+        "responseChars": 1171,
+        "responseUtf8Bytes": 1171,
+        "latencyMs": 1967.48
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": false,
+        "interpreted": false,
+        "rejectionCode": "UNEXPECTED_KEY",
+        "violationCodes": [
+          "UNEXPECTED_KEY"
+        ],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 14,
+          "extraKeyCount": 1,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "values": [
+                "ACCOUNTING_STANDARDS",
+                "IFRS_FOUNDATION"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "ACCOUNTING",
+            "population": "COMPANY",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 3,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "RELATED"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "RELATED"
+                }
+              ]
+            },
+            "requestedOperation": "EXPLAIN_RULE",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "COMPANY",
+                  "domain": "ACCOUNTING",
+                  "operation": "EXPLAIN_RULE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "ACCOUNTING_STANDARDS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IFRS_FOUNDATION"
+                    ]
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 0,
+        "matchedIssueCount": 0,
+        "matchedExpectedIssueIds": [],
+        "issueRecall": null,
+        "issuePrecision": null,
+        "completeQuestionIssueCoverage": false,
+        "operationCorrect": 0,
+        "operationMatched": 0,
+        "dimensionsCorrect": {
+          "governingAuthority": 0,
+          "contextualAuthority": 0,
+          "domain": 0,
+          "population": 0,
+          "operation": 0
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": false,
+        "validInterpretation": false,
+        "issueCoverageCorrect": false,
+        "allDimensionsCorrect": false,
+        "operationsCorrect": false,
+        "caseSpecificity": {
+          "expected": false
+        },
+        "caseSpecificityCorrect": false,
+        "topLevelCalculationFlagCorrect": false,
+        "routingCorrect": false,
+        "guardsCorrect": false,
+        "requestedIssueCoverageCorrect": false,
+        "runtimeTimedOut": true,
+        "singleProviderCallPassed": false,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 53659.52
+    },
+    {
+      "caseId": "target-relief-entitlement",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "personal-cpf-relief"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "capture": {
+        "promptSha256": "de41774e3c7556ba0ecdce714e5a56242a093879f2ebc8f584f4f1deb7df98bd",
+        "promptChars": 8680,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17222,
+        "responseReceived": true,
+        "responseChars": 1523,
+        "responseUtf8Bytes": 1523,
+        "latencyMs": 1946.99
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": true,
+        "interpreted": true,
+        "rejectionCode": "NONE",
+        "violationCodes": [],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "IRAS"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "CPF"
+              ]
+            },
+            "domain": "IRAS_INCOME_TAX",
+            "population": "INDIVIDUAL",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "RELATED"
+                }
+              ]
+            },
+            "requestedOperation": "CHECK_ELIGIBILITY",
+            "requiresUserSpecificFacts": true,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "INDIVIDUAL",
+                  "domain": "IRAS_INCOME_TAX",
+                  "operation": "CHECK_ELIGIBILITY",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IRAS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "personal-cpf-relief"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "canonicalScoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "personal-cpf-relief"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": true,
+        "validInterpretation": true,
+        "issueCoverageCorrect": true,
+        "allDimensionsCorrect": true,
+        "operationsCorrect": true,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "topLevelCalculationFlagCorrect": true,
+        "routingCorrect": true,
+        "guardsCorrect": true,
+        "requestedIssueCoverageCorrect": true,
+        "runtimeTimedOut": false,
+        "singleProviderCallPassed": true,
+        "fingerprintsStable": true,
+        "strictOperationChecks": [
+          {
+            "expectedIssueId": "personal-cpf-relief",
+            "expectedOperation": "CHECK_ELIGIBILITY",
+            "actualOperation": "CHECK_ELIGIBILITY",
+            "matched": true,
+            "passed": true
+          }
+        ]
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true,
+          "requestedIssuesMappedAndRetrieved": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 1,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 1,
+          "routedRequiredIssues": 1
+        },
+        "requestedIssueCoverage": {
+          "requestedIssueCount": 1,
+          "mappedIssueCount": 1,
+          "inCanonicalRuntimeCount": 1,
+          "lifecycleMappedCount": 1,
+          "retrievalAttemptedCount": 1,
+          "routingGapCounts": {
+            "NO_COVERAGE_TOPIC": 0,
+            "UNKNOWN_DOMAIN": 0,
+            "UNASSIGNED_QUERY_TOPIC": 0,
+            "CANONICAL_AREA_UNRESOLVED": 0,
+            "ISSUE_UNMAPPED": 0,
+            "NO_GOVERNING_AUTHORITY": 0,
+            "PROVIDER_UNAVAILABLE": 0,
+            "PROVIDER_AUTHORITY_MISMATCH": 0,
+            "PROVIDER_ERROR": 0,
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+            "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+            "NO_CANDIDATE_EVIDENCE": 1,
+            "CANDIDATE_REJECTED": 0,
+            "NO_ADMITTED_EVIDENCE": 0,
+            "NO_VERIFIED_CLAIM": 1,
+            "ISSUE_CONCEPT_UNCOVERED": 4,
+            "IRAS_SCOPE_NOT_COVERED": 1,
+            "OTHER_GAP": 0
+          },
+          "blockingRoutingGapCount": 0,
+          "unclassifiedRoutingGapCount": 0
+        },
+        "runtimeTimedOut": false
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 70875.44
+    },
+    {
+      "caseId": "target-relief-amount",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "personal-cpf-relief-amount"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "capture": {
+        "promptSha256": "a89f7c7364feda860a7604ff5f9552b8fcfc6cbf2cb8139c96924c81a017412b",
+        "promptChars": 8687,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 17220,
+        "responseReceived": true,
+        "responseChars": 1064,
+        "responseUtf8Bytes": 1064,
+        "latencyMs": 1641.79
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": true,
+        "interpreted": true,
+        "rejectionCode": "NONE",
+        "violationCodes": [],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "values": [
+                "IRAS",
+                "CPF"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "CPF"
+              ]
+            },
+            "domain": "IRAS_INCOME_TAX",
+            "population": "INDIVIDUAL",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                }
+              ]
+            },
+            "requestedOperation": "CALCULATE",
+            "requiresUserSpecificFacts": true,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "INDIVIDUAL",
+                  "domain": "IRAS_INCOME_TAX",
+                  "operation": "CALCULATE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IRAS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "personal-cpf-relief-amount"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "canonicalScoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "personal-cpf-relief-amount"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": true,
+        "validInterpretation": true,
+        "issueCoverageCorrect": true,
+        "allDimensionsCorrect": true,
+        "operationsCorrect": true,
+        "caseSpecificity": {
+          "expected": true,
+          "actual": true
+        },
+        "caseSpecificityCorrect": true,
+        "topLevelCalculationFlagCorrect": true,
+        "routingCorrect": true,
+        "guardsCorrect": true,
+        "requestedIssueCoverageCorrect": true,
+        "runtimeTimedOut": false,
+        "singleProviderCallPassed": true,
+        "fingerprintsStable": true,
+        "strictOperationChecks": [
+          {
+            "expectedIssueId": "personal-cpf-relief-amount",
+            "expectedOperation": "CALCULATE",
+            "actualOperation": "CALCULATE",
+            "matched": true,
+            "passed": true
+          }
+        ]
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true,
+          "requestedIssuesMappedAndRetrieved": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 0,
+          "UNRESOLVED": 1,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 1,
+          "routedRequiredIssues": 1
+        },
+        "requestedIssueCoverage": {
+          "requestedIssueCount": 1,
+          "mappedIssueCount": 1,
+          "inCanonicalRuntimeCount": 1,
+          "lifecycleMappedCount": 1,
+          "retrievalAttemptedCount": 1,
+          "routingGapCounts": {
+            "NO_COVERAGE_TOPIC": 0,
+            "UNKNOWN_DOMAIN": 0,
+            "UNASSIGNED_QUERY_TOPIC": 0,
+            "CANONICAL_AREA_UNRESOLVED": 0,
+            "ISSUE_UNMAPPED": 0,
+            "NO_GOVERNING_AUTHORITY": 0,
+            "PROVIDER_UNAVAILABLE": 0,
+            "PROVIDER_AUTHORITY_MISMATCH": 0,
+            "PROVIDER_ERROR": 0,
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+            "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+            "NO_CANDIDATE_EVIDENCE": 1,
+            "CANDIDATE_REJECTED": 0,
+            "NO_ADMITTED_EVIDENCE": 0,
+            "NO_VERIFIED_CLAIM": 1,
+            "ISSUE_CONCEPT_UNCOVERED": 4,
+            "IRAS_SCOPE_NOT_COVERED": 1,
+            "OTHER_GAP": 0
+          },
+          "blockingRoutingGapCount": 0,
+          "unclassifiedRoutingGapCount": 0
+        },
+        "runtimeTimedOut": false
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 87783.31
+    },
+    {
+      "caseId": "target-cpf-general-control",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "employer-cpf-general-conditions"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "capture": {
+        "promptSha256": "4385c1f4aba4d34d137b39b06e978274bc80c0f84798e750bf259568ee5f20fd",
+        "promptChars": 8688,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 16907,
+        "responseReceived": true,
+        "responseChars": 962,
+        "responseUtf8Bytes": 962,
+        "latencyMs": 1598.18
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": true,
+        "interpreted": true,
+        "rejectionCode": "NONE",
+        "violationCodes": [],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "CPF"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "CPF_PAYROLL",
+            "population": "EMPLOYER",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "RELATED"
+                }
+              ]
+            },
+            "requestedOperation": "EXPLAIN_RULE",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "EMPLOYER",
+                  "domain": "CPF_PAYROLL",
+                  "operation": "EXPLAIN_RULE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "values": []
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "employer-cpf-general-conditions"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "canonicalScoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "employer-cpf-general-conditions"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": true,
+        "validInterpretation": true,
+        "issueCoverageCorrect": true,
+        "allDimensionsCorrect": true,
+        "operationsCorrect": true,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "topLevelCalculationFlagCorrect": true,
+        "routingCorrect": true,
+        "guardsCorrect": true,
+        "requestedIssueCoverageCorrect": true,
+        "runtimeTimedOut": false,
+        "singleProviderCallPassed": true,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true,
+          "requestedIssuesMappedAndRetrieved": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "requestedIssueCoverage": {
+          "requestedIssueCount": 1,
+          "mappedIssueCount": 1,
+          "inCanonicalRuntimeCount": 1,
+          "lifecycleMappedCount": 1,
+          "retrievalAttemptedCount": 1,
+          "routingGapCounts": {
+            "NO_COVERAGE_TOPIC": 0,
+            "UNKNOWN_DOMAIN": 0,
+            "UNASSIGNED_QUERY_TOPIC": 0,
+            "CANONICAL_AREA_UNRESOLVED": 0,
+            "ISSUE_UNMAPPED": 0,
+            "NO_GOVERNING_AUTHORITY": 0,
+            "PROVIDER_UNAVAILABLE": 0,
+            "PROVIDER_AUTHORITY_MISMATCH": 0,
+            "PROVIDER_ERROR": 0,
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+            "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+            "NO_CANDIDATE_EVIDENCE": 0,
+            "CANDIDATE_REJECTED": 1,
+            "NO_ADMITTED_EVIDENCE": 1,
+            "NO_VERIFIED_CLAIM": 1,
+            "ISSUE_CONCEPT_UNCOVERED": 1,
+            "IRAS_SCOPE_NOT_COVERED": 0,
+            "OTHER_GAP": 0
+          },
+          "blockingRoutingGapCount": 0,
+          "unclassifiedRoutingGapCount": 0
+        },
+        "runtimeTimedOut": false
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 104643.62
+    },
+    {
+      "caseId": "target-mom-general-control",
+      "group": "INDEPENDENT_CONTROL",
+      "expectedIssueIds": [
+        "foreign-employee-work-pass"
+      ],
+      "expectedWorkstreamSetCount": 1,
+      "validInterpretation": true,
+      "production": {
+        "mode": "SEMANTIC_INTERPRETATION"
+      },
+      "capture": {
+        "promptSha256": "7d12efcc10e29e38a1b56403ba12927c854ee64ea9db5c72536369e5f0364ce8",
+        "promptChars": 8693,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "jsonMode": true,
+        "requestCount": 1,
+        "startGapMs": 16861,
+        "responseReceived": true,
+        "responseChars": 941,
+        "responseUtf8Bytes": 941,
+        "latencyMs": 1657.04
+      },
+      "responseDiagnostic": {
+        "validatorAccepted": true,
+        "interpreted": true,
+        "rejectionCode": "NONE",
+        "violationCodes": [],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "schemaVersion": {
+              "present": true,
+              "type": "NUMBER",
+              "valid": true
+            },
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "MOM"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "MOM_EMPLOYMENT",
+            "population": "EMPLOYEE",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "concept": {
+                    "type": "STRING",
+                    "valid": true
+                  },
+                  "role": "RELATED"
+                }
+              ]
+            },
+            "requestedOperation": "EXPLAIN_RULE",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": "DERIVED",
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "EMPLOYEE",
+                  "domain": "MOM_EMPLOYMENT",
+                  "operation": "EXPLAIN_RULE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "MOM"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "values": []
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "scoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "foreign-employee-work-pass"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "canonicalScoring": {
+        "expectedIssueCount": 1,
+        "predictedIssueCount": 1,
+        "matchedIssueCount": 1,
+        "matchedExpectedIssueIds": [
+          "foreign-employee-work-pass"
+        ],
+        "issueRecall": 1,
+        "issuePrecision": 1,
+        "completeQuestionIssueCoverage": true,
+        "operationCorrect": 1,
+        "operationMatched": 1,
+        "dimensionsCorrect": {
+          "governingAuthority": 1,
+          "contextualAuthority": 1,
+          "domain": 1,
+          "population": 1,
+          "operation": 1
+        }
+      },
+      "authorityReliefAcceptance": {
+        "passed": true,
+        "validInterpretation": true,
+        "issueCoverageCorrect": true,
+        "allDimensionsCorrect": true,
+        "operationsCorrect": true,
+        "caseSpecificity": {
+          "expected": false,
+          "actual": false
+        },
+        "caseSpecificityCorrect": true,
+        "topLevelCalculationFlagCorrect": true,
+        "routingCorrect": true,
+        "guardsCorrect": true,
+        "requestedIssueCoverageCorrect": true,
+        "runtimeTimedOut": false,
+        "singleProviderCallPassed": true,
+        "fingerprintsStable": true,
+        "strictOperationChecks": []
+      },
+      "routing": {
+        "plannedWorkstreamCount": 1,
+        "finalWorkstreamCount": 1,
+        "finalWorkstreamSetAccuracy": true,
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "guardChecks": {
+          "operationsPreserved": true,
+          "caseFactsRequired": true,
+          "incompletePlanNotVerified": true,
+          "contextualAuthorityNotRouted": true,
+          "residualHasNoWorkstream": true,
+          "caseSpecificApplicationsUnresolved": true,
+          "requiredApplicationStatusesUnresolved": true,
+          "unresolvedApplicationNotVerified": true,
+          "requestedIssuesMappedAndRetrieved": true
+        },
+        "applicationStatusCounts": {
+          "NOT_REQUIRED": 1,
+          "UNRESOLVED": 0,
+          "UNKNOWN": 0,
+          "requiredPlanIssues": 0,
+          "routedRequiredIssues": 0
+        },
+        "requestedIssueCoverage": {
+          "requestedIssueCount": 1,
+          "mappedIssueCount": 1,
+          "inCanonicalRuntimeCount": 1,
+          "lifecycleMappedCount": 1,
+          "retrievalAttemptedCount": 1,
+          "routingGapCounts": {
+            "NO_COVERAGE_TOPIC": 0,
+            "UNKNOWN_DOMAIN": 0,
+            "UNASSIGNED_QUERY_TOPIC": 0,
+            "CANONICAL_AREA_UNRESOLVED": 0,
+            "ISSUE_UNMAPPED": 0,
+            "NO_GOVERNING_AUTHORITY": 0,
+            "PROVIDER_UNAVAILABLE": 0,
+            "PROVIDER_AUTHORITY_MISMATCH": 0,
+            "PROVIDER_ERROR": 0,
+            "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL": 0,
+            "ISSUE_PLAN_COVERAGE_UNESTABLISHED": 0,
+            "NO_CANDIDATE_EVIDENCE": 0,
+            "CANDIDATE_REJECTED": 1,
+            "NO_ADMITTED_EVIDENCE": 1,
+            "NO_VERIFIED_CLAIM": 1,
+            "ISSUE_CONCEPT_UNCOVERED": 1,
+            "IRAS_SCOPE_NOT_COVERED": 0,
+            "OTHER_GAP": 0
+          },
+          "blockingRoutingGapCount": 0,
+          "unclassifiedRoutingGapCount": 0
+        },
+        "runtimeTimedOut": false
+      },
+      "sourceHashesConsistent": true,
+      "fixtureHashesConsistent": true,
+      "elapsedMs": 121562.89
+    }
+  ],
+  "summaries": [
+    {
+      "group": "PRESELECTED_KNOWN_FAILURE",
+      "cases": 2,
+      "validInterpretations": {
+        "count": 2,
+        "total": 2,
+        "rate": 1
+      },
+      "issueRecallValidInterpretations": {
+        "matched": 3,
+        "expected": 3,
+        "rate": 1
+      },
+      "issueRecallAllCases": {
+        "matched": 3,
+        "expected": 3,
+        "rate": 1
+      },
+      "issuePrecisionValidInterpretations": {
+        "matched": 3,
+        "predicted": 3,
+        "rate": 1
+      },
+      "operationAccuracy": {
+        "correct": 3,
+        "matched": 3,
+        "rate": 1
+      },
+      "completeQuestionCoverage": {
+        "complete": 2,
+        "allCases": 2,
+        "rate": 1
+      },
+      "routingWorkstreamCorrectness": {
+        "correct": 2,
+        "validCases": 2,
+        "allCases": 2,
+        "rateAmongValid": 1,
+        "rateAllCases": 1
+      },
+      "matchedDimensionAccuracy": {
+        "governingAuthority": {
+          "correct": 2,
+          "matched": 3,
+          "rate": 0.6667
+        },
+        "contextualAuthority": {
+          "correct": 3,
+          "matched": 3,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 3,
+          "matched": 3,
+          "rate": 1
+        },
+        "population": {
+          "correct": 3,
+          "matched": 3,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 3,
+          "matched": 3,
+          "rate": 1
+        }
+      },
+      "invalidResponses": {
+        "count": 0,
+        "calls": 2,
+        "rate": 0,
+        "lowConfidence": {
+          "count": 0,
+          "calls": 2,
+          "rate": 0
+        },
+        "timeout": {
+          "count": 0,
+          "calls": 2,
+          "rate": 0
+        },
+        "providerFailure": {
+          "count": 0,
+          "calls": 2,
+          "rate": 0
+        },
+        "rateLimited": {
+          "count": 0,
+          "calls": 2,
+          "rate": 0
+        }
+      },
+      "nonValidOutcomes": {
+        "count": 0,
+        "calls": 2,
+        "rate": 0
+      }
+    },
+    {
+      "group": "INDEPENDENT_CONTROL",
+      "cases": 6,
+      "validInterpretations": {
+        "count": 5,
+        "total": 6,
+        "rate": 0.8333
+      },
+      "issueRecallValidInterpretations": {
+        "matched": 5,
+        "expected": 5,
+        "rate": 1
+      },
+      "issueRecallAllCases": {
+        "matched": 5,
+        "expected": 6,
+        "rate": 0.8333
+      },
+      "issuePrecisionValidInterpretations": {
+        "matched": 5,
+        "predicted": 5,
+        "rate": 1
+      },
+      "operationAccuracy": {
+        "correct": 5,
+        "matched": 5,
+        "rate": 1
+      },
+      "completeQuestionCoverage": {
+        "complete": 5,
+        "allCases": 6,
+        "rate": 0.8333
+      },
+      "routingWorkstreamCorrectness": {
+        "correct": 5,
+        "validCases": 5,
+        "allCases": 6,
+        "rateAmongValid": 1,
+        "rateAllCases": 0.8333
+      },
+      "matchedDimensionAccuracy": {
+        "governingAuthority": {
+          "correct": 5,
+          "matched": 5,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 5,
+          "matched": 5,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 5,
+          "matched": 5,
+          "rate": 1
+        },
+        "population": {
+          "correct": 5,
+          "matched": 5,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 5,
+          "matched": 5,
+          "rate": 1
+        }
+      },
+      "invalidResponses": {
+        "count": 1,
+        "calls": 6,
+        "rate": 0.1667,
+        "lowConfidence": {
+          "count": 0,
+          "calls": 6,
+          "rate": 0
+        },
+        "timeout": {
+          "count": 0,
+          "calls": 6,
+          "rate": 0
+        },
+        "providerFailure": {
+          "count": 0,
+          "calls": 6,
+          "rate": 0
+        },
+        "rateLimited": {
+          "count": 0,
+          "calls": 6,
+          "rate": 0
+        }
+      },
+      "nonValidOutcomes": {
+        "count": 1,
+        "calls": 6,
+        "rate": 0.1667
+      }
+    },
+    {
+      "group": "COMBINED",
+      "cases": 8,
+      "validInterpretations": {
+        "count": 7,
+        "total": 8,
+        "rate": 0.875
+      },
+      "issueRecallValidInterpretations": {
+        "matched": 8,
+        "expected": 8,
+        "rate": 1
+      },
+      "issueRecallAllCases": {
+        "matched": 8,
+        "expected": 9,
+        "rate": 0.8889
+      },
+      "issuePrecisionValidInterpretations": {
+        "matched": 8,
+        "predicted": 8,
+        "rate": 1
+      },
+      "operationAccuracy": {
+        "correct": 8,
+        "matched": 8,
+        "rate": 1
+      },
+      "completeQuestionCoverage": {
+        "complete": 7,
+        "allCases": 8,
+        "rate": 0.875
+      },
+      "routingWorkstreamCorrectness": {
+        "correct": 7,
+        "validCases": 7,
+        "allCases": 8,
+        "rateAmongValid": 1,
+        "rateAllCases": 0.875
+      },
+      "matchedDimensionAccuracy": {
+        "governingAuthority": {
+          "correct": 7,
+          "matched": 8,
+          "rate": 0.875
+        },
+        "contextualAuthority": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "population": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        }
+      },
+      "invalidResponses": {
+        "count": 1,
+        "calls": 8,
+        "rate": 0.125,
+        "lowConfidence": {
+          "count": 0,
+          "calls": 8,
+          "rate": 0
+        },
+        "timeout": {
+          "count": 0,
+          "calls": 8,
+          "rate": 0
+        },
+        "providerFailure": {
+          "count": 0,
+          "calls": 8,
+          "rate": 0
+        },
+        "rateLimited": {
+          "count": 0,
+          "calls": 8,
+          "rate": 0
+        }
+      },
+      "nonValidOutcomes": {
+        "count": 1,
+        "calls": 8,
+        "rate": 0.125
+      }
+    }
+  ],
+  "authorityReliefAcceptance": {
+    "passed": false,
+    "completedCases": 8,
+    "passedCases": 7,
+    "expectedCases": 8,
+    "failedCases": [
+      "target-mixed-ifrs-singapore-accounting"
+    ],
+    "canonicalContractScoring": {
+      "issueRecall": {
+        "correct": 8,
+        "total": 8,
+        "rate": 1
+      },
+      "issuePrecision": {
+        "correct": 8,
+        "total": 8,
+        "rate": 1
+      },
+      "dimensions": {
+        "governingAuthority": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "contextualAuthority": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "domain": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "population": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        },
+        "operation": {
+          "correct": 8,
+          "matched": 8,
+          "rate": 1
+        }
+      },
+      "operationAccuracy": {
+        "correct": 8,
+        "total": 8,
+        "rate": 1
+      },
+      "canonicalWorkstreamRoutingAccuracy": {
+        "correct": 7,
+        "total": 8,
+        "rate": 0.875
+      }
+    },
+    "invalidResponses": 1,
+    "timeouts": 0,
+    "providerFailures": 0,
+    "zeroInvalidTimeoutProviderFailures": false,
+    "pacingPolicyPassed": true,
+    "fingerprintsStable": true
+  },
+  "completedAt": "2026-10-01T15:41:58.622Z"
+}

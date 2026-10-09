@@ -1,0 +1,16 @@
+// Exact read-only probe supplied by the independent reviewer.
+// Archived text: requires the rejected candidate, not current restored production.
+// Node v22.23.2, with block-external-network.mjs then tsx preloads; no provider/retrieval.
+import { classifyQuestion } from './src/classification/questionClassifier.ts';
+import { defaultQueryTopicResolver, getQueryScopeFragments } from './src/retrieval/queryTopicResolver.ts';
+import { reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from './src/services/semanticQuestionUnderstanding.ts';
+const subject = 'CPF relief for employees';
+for (const query of [
+ 'What individual tax relief categories are available, plus explain CPF relief for employees?',
+ 'I need an overview of individual tax relief categories. Can I claim CPF relief for employees?',
+ 'Explain individual tax relief categories, including CPF relief for employees.'
+]) {
+ const raw = { schemaVersion:2, jurisdiction:['Singapore'], authorityCandidates:['IRAS'], contextualAuthorities:[], domain:'IRAS_INCOME_TAX', population:'INDIVIDUAL', primarySubject:subject, concepts:[{concept:subject,role:'PRIMARY'}], requestedOperation:'EXPLAIN_RULE', factsExplicitlyProvided:[], confidence:0.96, issues:[{ subject, population:'INDIVIDUAL', domain:'IRAS_INCOME_TAX', governingAuthorities:['IRAS'], contextualAuthorities:['CPF'], operation:'EXPLAIN_RULE', mappedTopicIds:[], evidenceRequirement:'AUTHORITATIVE_SOURCE', confidence:0.96 }] };
+ const interpretation = validateSemanticQuestionInterpretation(raw, query);
+ console.log(JSON.stringify({query, validated:!!interpretation, scopes:getQueryScopeFragments(query), inventory:defaultQueryTopicResolver.decomposeQuery(query), plan:interpretation ? reconcileQuestionUnderstanding(query,classifyQuestion(query),{mode:'SEMANTIC_INTERPRETATION',interpretation}).issuePlan : null}));
+}

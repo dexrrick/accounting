@@ -1,0 +1,226 @@
+{
+  "suite": "Singapore multi-authority workstreams held-out oracle",
+  "oracleMode": true,
+  "modelUnderstandingMeasured": false,
+  "provenance": "Issue meanings are copied from the A-D oracle contracts in tests/regression/test_material_issue_decomposition.mjs. They are inputs for deterministic reconciliation and retrieval evaluation, not live-model results.",
+  "cases": [
+    {
+      "id": "A-cpf-and-personal-income-tax-relief",
+      "question": "An employee earns SGD 6,000 per month. What CPF contributions must the employer and employee make, and how do the employee's compulsory CPF contributions affect personal income tax relief?",
+      "expectedWorkstreams": [
+        { "authority": "CPF", "domain": "CPF_PAYROLL" },
+        { "authority": "IRAS", "domain": "IRAS_INDIVIDUAL_TAX" }
+      ],
+      "oracleInterpretation": {
+        "jurisdiction": ["Singapore"],
+        "authorityCandidates": ["UNKNOWN"],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "employer CPF contribution obligations",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": ["CPF"],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": ["cpf_contribution_rates"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "employee CPF contribution obligations",
+            "population": "EMPLOYEE",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": ["CPF"],
+            "contextualAuthorities": [],
+            "operation": "CALCULATE",
+            "mappedTopicIds": ["cpf_contribution_rates"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "employee personal income tax relief for compulsory CPF contributions",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthorities": ["CPF"],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": ["iras-individual-cpf-relief"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    },
+    {
+      "id": "B-mom-cpf-and-iras-employer-reporting",
+      "question": "We hired a foreign employee in Singapore. What employment/work-pass requirements apply, whether CPF contributions are required, and what employer tax reporting obligations should we consider?",
+      "expectedWorkstreams": [
+        { "authority": "MOM", "domain": "MOM_EMPLOYMENT" },
+        { "authority": "CPF", "domain": "CPF_PAYROLL" },
+        { "authority": "IRAS", "domain": "IRAS_EMPLOYER_REPORTING" }
+      ],
+      "oracleInterpretation": {
+        "jurisdiction": ["Singapore"],
+        "authorityCandidates": ["UNKNOWN"],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "employment conditions for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": ["MOM"],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": ["mom-employment-act-coverage"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "work-pass requirements for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": ["MOM"],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": ["mom-employment-act-coverage", "unknown-topic-id"],
+            "evidenceRequirement": "UNRESOLVED",
+            "confidence": 0.96
+          },
+          {
+            "subject": "employer CPF contribution obligations for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": ["CPF"],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": ["cpf_contribution_rates"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "employer IR21 tax clearance and AIS employment income reporting obligations for a foreign employee",
+            "population": "EMPLOYER",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthorities": [],
+            "operation": "FILING_REQUIREMENT",
+            "mappedTopicIds": ["iras-employer-ir21", "iras-ais-employment-income"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    },
+    {
+      "id": "C-iras-corporate-and-employee-tax-domains",
+      "question": "Our company pays an employee's housing allowance. Is it deductible to the company and is it taxable to the employee?",
+      "expectedWorkstreams": [
+        { "authority": "IRAS", "domain": "IRAS_CORPORATE_TAX" },
+        { "authority": "IRAS", "domain": "IRAS_EMPLOYMENT_BENEFITS" }
+      ],
+      "oracleInterpretation": {
+        "jurisdiction": ["Singapore"],
+        "authorityCandidates": ["UNKNOWN"],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "company income tax deductibility of housing allowance expense",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": ["iras-cit-deductibility"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          },
+          {
+            "subject": "employee benefits in kind income tax treatment of housing allowance",
+            "population": "EMPLOYEE",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthorities": [],
+            "operation": "DETERMINE_TREATMENT",
+            "mappedTopicIds": ["iras-employment-benefits"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    },
+    {
+      "id": "D-accounting-standards-and-iras-corporate-tax",
+      "question": "How should an expense be recorded under SFRS(I), and is it deductible for Singapore corporate income tax?",
+      "expectedWorkstreams": [
+        { "authority": "ACCOUNTING_STANDARDS", "domain": "ACCOUNTING" },
+        { "authority": "IRAS", "domain": "IRAS_CORPORATE_TAX" }
+      ],
+      "oracleInterpretation": {
+        "jurisdiction": ["Singapore"],
+        "authorityCandidates": ["UNKNOWN"],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "compound Singapore accounting and regulatory question",
+        "concepts": [],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.96,
+        "issues": [
+          {
+            "subject": "SFRS(I) accounting treatment of an expense",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": ["ACCOUNTING_STANDARDS"],
+            "contextualAuthorities": [],
+            "operation": "PREPARE_JOURNAL",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "UNRESOLVED",
+            "confidence": 0.96
+          },
+          {
+            "subject": "corporate income tax deductibility of company expenses",
+            "population": "COMPANY",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": ["IRAS"],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": ["cit_section_14"],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "confidence": 0.96
+          }
+        ]
+      }
+    }
+  ]
+}

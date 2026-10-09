@@ -1,0 +1,51 @@
+{
+  "freshNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-retry-2026-10-08",
+  "requestedActions": [
+    "Fresh bounded 15-request IRAS capture required by renewed code bindings",
+    "One fixed nine-case Gemini attempt; one call per case, no automatic retries"
+  ],
+  "acceptanceProven": false,
+  "captureLimits": {
+    "maximumCaptureAgeHours": 24,
+    "retries": 0,
+    "maximumIncludingPriorCurrentAuthorization": 42,
+    "maximumRequests": 60,
+    "maximumRequestsPerFamily": 10,
+    "approvedRequestIdentities": 15,
+    "unknownRequestsFailClosed": true,
+    "maximumPerFamilyIncludingPriorCurrentAuthorization": 10
+  },
+  "priorAuthorizationReusable": false,
+  "authorizationGranted": true,
+  "captureInventorySha256": "131b62d87bd13dfd53e1613b914179f7d472ad32df37f12ad946977ac0dff5bf",
+  "userInstruction": "please retry",
+  "freezeValidation": {
+    "sha256": "75ce97b8858f0d0c5edc9a49c23af7df5a57bdf031bd83316a80b8b021bdf083",
+    "path": "artifacts/iras-v4-acceptance-repaired-2026-10-06/retry-2026-10-08/preparation-final/freeze-validation.json"
+  },
+  "requiredBeforeExecution": [
+    "Independent frozen binding and launcher review",
+    "Fresh governed code-bound evidence lock",
+    "Fresh MCP allowance meeting reviewed projection/reserves"
+  ],
+  "semanticLimits": {
+    "authorizedCallsRequested": 9,
+    "provider": "gemini",
+    "model": "gemini-3.5-flash-lite",
+    "retries": 0,
+    "liveSourceRetrieval": false,
+    "minimumStartGapMs": 15250,
+    "timeoutMs": 8000,
+    "callsPerCase": 1,
+    "maximumResponseBytes": 65536
+  },
+  "noReservationsMadeDuringPreparation": true,
+  "profile": "iras-v4-new-run-authorization-request",
+  "status": "AUTHORIZED_BY_EXPLICIT_RETRY_INSTRUCTION",
+  "reviewedCommit": "ecf7f586e082e4d17b6be020f85516e608a01c05",
+  "verifiedBindingSha256": {
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/retry-2026-10-08/preparation-final/runner-configuration.json": "e50c7420e3c9a2bdbb4a4d498638643ac119087f7c8725ed8763503f9015c349",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/retry-2026-10-08/preparation-final/preregistration.json": "5e24500b0d4a79e6b49113df2f78d8beecf8f8cb4e59d4f1630d065f6b8093da",
+    "artifacts/iras-v4-acceptance-repaired-2026-10-06/retry-2026-10-08/preparation-final/activation-configuration.json": "53a482b0a428deb722f3a9bf08c7b53bc2646064783a22b1f32ce5a5fc15646d"
+  }
+}

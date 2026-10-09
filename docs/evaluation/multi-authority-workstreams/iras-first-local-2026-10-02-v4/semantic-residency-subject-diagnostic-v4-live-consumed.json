@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 4,
+  "profileVersion": "semantic-residency-subject-diagnostic-v4",
+  "state": "CONSUMED",
+  "preregistrationSha256": "a731c79cc2e38c696282e64dbff73f014174c00699e5bd195fee388fa7ada83a",
+  "scheduleSha256": "73315b2c6949e8dcb7d0b886fa0d3e18f5d27266b576321191a8d854e7fa1347",
+  "configurationSha256": "3e8a9152fbd5a5f4b4c1af8954f055ea600901ecec19a95c3f116c8e6a189936",
+  "acquiredAt": "2026-10-02T11:37:09.836Z"
+}

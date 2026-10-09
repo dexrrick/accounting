@@ -1,0 +1,11 @@
+{
+  "geminiCallsAuthorizedForThisProcess": 0,
+  "retries": 0,
+  "launcherSha256": "d2d33e13f0dcf4dbc2498985851e1bf4a9441b5ee71be86326f54ef505025d2e",
+  "sourceRequestsAuthorized": 15,
+  "credentialsReadAllowed": false,
+  "launchedAtUtc": "2026-10-07T17:02:10.7387847Z",
+  "captureDirectory": "artifacts/iras-v4-acceptance-repaired-2026-10-06/retry-2026-10-08/official-capture",
+  "processId": 11268,
+  "profile": "iras-v4-authorized-retry-capture-process"
+}

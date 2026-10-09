@@ -192,22 +192,15 @@ export class QueryTopicResolver {
 
     const isMultiTopic = matchedTopics.length > 1;
 
-    // Detect if query asked about multiple questions via conjunctions (e.g. "and", "as well as", "plus")
-    const unresolvedTopics: string[] = [];
-    if (qLower.includes(' and ') || qLower.includes(' as well as ') || qLower.includes(' also ')) {
-      const parts = qLower.split(/\band\b|\bas well as\b|\balso\b/);
-      for (const part of parts) {
-        const trimmed = part.trim();
-        if (trimmed.length > 5) {
-          const partMatched = matchedTopics.some((t) =>
-            t.keywords.some((kw) => trimmed.includes(kw))
-          );
-          if (!partMatched) {
-            unresolvedTopics.push(trimmed);
-          }
-        }
-      }
-    }
+    // Request conjunctions are residual boundaries; a payment followed by
+    // recording that payment as an expense is factual context for the ask.
+    const residualFragments = splitResidualFragments(qLower);
+    const unresolvedTopics = residualFragments
+      .filter((fragment) => fragment.length > 5 && !matchedTopics.some(topic =>
+        !(topic.exclusionKeywords ?? []).some(keyword => fragment.includes(keyword.toLowerCase())) &&
+        (topic.keywords.some(keyword => keywordMatches(fragment, keyword)) ||
+          (topic.queryPatterns ?? []).some(pattern => new RegExp(pattern, 'i').test(fragment)))))
+      .filter((fragment, index, fragments) => fragments.indexOf(fragment) === index);
 
     return {
       isMultiTopic,
@@ -224,6 +217,54 @@ export class QueryTopicResolver {
     return !(topic.exclusionKeywords ?? []).some((phrase) => textLower.includes(phrase.toLowerCase())) &&
       topic.keywords.some((kw) => keywordMatches(textLower, kw));
   }
+}
+
+const PRIMARY_REQUEST_START = /(?:^|[.!?;])\s*(?:(?:also|please)\s+)?(?:what|which|how|can|could|should|would|does|do|is|are|must|explain|determine|assess|evaluate|calculate|prepare|identify|list|whether|tell\s+me)\b/i;
+const REQUEST_LANGUAGE = /\b(?:what|which|how|can|could|should|would|does|do|is|are|must|explain|determine|assess|evaluate|calculate|prepare|identify|list|whether|treatment|deductible|eligibility|reporting)\b/i;
+
+function isPaymentRecordingFactJoin(query: string, index: number, separatorLength: number): boolean {
+  const precedingBoundary = Math.max(
+    query.lastIndexOf('.', index), query.lastIndexOf('?', index), query.lastIndexOf(';', index)
+  );
+  const followingBoundaryCandidates = ['.', '?', ';']
+    .map(boundary => query.indexOf(boundary, index + separatorLength))
+    .filter(boundary => boundary >= 0);
+  const followingBoundary = followingBoundaryCandidates.length ? Math.min(...followingBoundaryCandidates) : query.length;
+  const factualPayment = query.slice(precedingBoundary + 1, index);
+  const factualRecording = query.slice(index + separatorLength, followingBoundary);
+
+  return /\bpaid\b/i.test(factualPayment) &&
+    /^\s*recorded\s+it\s+as\b[\s\S]*\bexpense\s*$/i.test(factualRecording) &&
+    !REQUEST_LANGUAGE.test(factualPayment) && !REQUEST_LANGUAGE.test(factualRecording);
+}
+
+function splitResidualFragments(query: string): string[] {
+  const fragments: string[] = [];
+  const conjunction = /\band\b|\bas well as\b|\balso\b/g;
+  let fragmentStart = 0;
+  let hasRequestConjunction = false;
+  for (const match of query.matchAll(conjunction)) {
+    const index = match.index ?? 0;
+    if (match[0] === 'and' && isPaymentRecordingFactJoin(query, index, match[0].length)) continue;
+    fragments.push(query.slice(fragmentStart, index).trim());
+    fragmentStart = index + match[0].length;
+    hasRequestConjunction = true;
+  }
+  if (hasRequestConjunction) fragments.push(query.slice(fragmentStart).trim());
+
+  // Preserve the factual lead-in and first ask for query-pattern matching;
+  // every later punctuation-delimited clause is checked independently.
+  const primaryRequest = PRIMARY_REQUEST_START.exec(query);
+  if (primaryRequest) {
+    const firstTerminator = /[.!?;](?=\s|$)/g;
+    firstTerminator.lastIndex = (primaryRequest.index ?? 0) + primaryRequest[0].length;
+    const requestEnd = firstTerminator.exec(query);
+    if (requestEnd) {
+      const suffix = query.slice(requestEnd.index + 1);
+      fragments.push(...suffix.split(/[.!?;](?=\s|$)/).map(fragment => fragment.trim()).filter(Boolean));
+    }
+  }
+  return fragments;
 }
 
 function keywordMatches(text: string, keyword: string): boolean {

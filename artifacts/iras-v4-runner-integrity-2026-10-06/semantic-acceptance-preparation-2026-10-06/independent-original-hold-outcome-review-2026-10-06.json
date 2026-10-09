@@ -1,0 +1,10 @@
+{
+  "profile": "iras-v4-original-hold-outcome-independent-review",
+  "reviewer": "Independent reviewer subagent authorization_review",
+  "disposition": "NO_MATERIAL_FINDINGS_ORIGINAL_HOLD_CORRECT",
+  "responseDelaySeconds": 62.719,
+  "actualAllowanceRemainingPercent": {"fiveHour": 87, "weekly": 74},
+  "projectedReserveRemainingPercent": {"fiveHour": 7, "weekly": 59},
+  "verified": {"postRequestFreshUsage": true, "fiveRetainedArtifactHashesMatch": true, "eightFrozenInputBindingsPreserved": true, "namespaceEmpty": true, "zeroProviderCallsSupportedBySourceOrdering": true, "noConsumptionMarker": true, "technicalRetryPermissionNotHumanAuthorization": true, "noSecretsFound": true, "originalLauncherAndFrozenArtifactsUnchanged": true},
+  "reviewActions": {"readOnly": true, "credentialsRead": false, "networkRequests": 0, "runnerInvoked": false, "repeatedFrozenValidation": false}
+}

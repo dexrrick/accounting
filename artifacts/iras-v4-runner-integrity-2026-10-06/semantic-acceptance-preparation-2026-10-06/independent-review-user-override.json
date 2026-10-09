@@ -1,0 +1,13 @@
+{
+  "profile": "iras-v4-user-resource-override-independent-review",
+  "reviewer": "Independent reviewer subagent authorization_review",
+  "disposition": "NO_MATERIAL_IMPLEMENTATION_FINDINGS",
+  "launcherSha256": "1ec168bd366c9cc0cbf55c771ac4d1a5112f40641fbfd8539c2462abb90d4990",
+  "controlsSha256": "6abe2d062a2d1839023c4acccfa19104922e49b9ce452204b170b0c87040b25e",
+  "projectionSha256": "f9b603e3e4998755434ebbdf12342c73d9be7198be06bd69585f50d948470d6b",
+  "findings": [],
+  "verified": {"originalFrozenAndFailureSafeguardsPreserved": true, "freshnessAndQuotaChecksPreserved": true, "distinctCommittedArtifactBindings": true, "exactHumanOverrideRequired": true, "projection50And15Validated": true, "reserves8And4Preserved": true, "gate58And19Validated": true, "checkpoint10AndAbove5PolicyPreserved": true, "emptyNamespaceReusePermitted": true, "presentOrUncertainOutputsPreventReuse": true, "boundaryAndMalformedProjectionControlsPresent": true, "retainedAuthorizationAndCLISafetyControlsPresent": true},
+  "estimateLimitation": "50/15 is an uncertain, unmeasured supervisor execution-only estimate. Its sufficiency cannot be independently established from historical observations. It is not a measured nine-call consumption forecast or a guarantee.",
+  "reviewActions": {"readOnly": true, "credentialsRead": false, "networkRequests": 0, "runnerInvoked": false, "fullFrozenValidationRepeated": false},
+  "builderValidationAfterReview": "Final Node22 syntax, focused controls and targeted oxlint with deny-warnings passed on the final reviewed content. No subsequent edits reported."
+}

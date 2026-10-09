@@ -1,0 +1,78 @@
+{
+  "profile": "GEMINI_LIVE_FAILURE_ANALYSIS",
+  "dateSingapore": "09/10/2026",
+  "runDirectory": "artifacts/gemini-remediation-2026-10-09/live-rerun-closure-2026-10-09",
+  "caseCount": 9,
+  "passed": 4,
+  "notAssessed": 5,
+  "assessedSemanticFailures": 0,
+  "dispatchAttempts": 16,
+  "http200": 4,
+  "timeouts": 10,
+  "http503": 2,
+  "scheduledRetries": 7,
+  "blockedNetworkAttempts": 0,
+  "successfulElapsedMs": [
+    6869,
+    7285,
+    7541,
+    7678
+  ],
+  "failures": [
+    {
+      "caseId": "target-relief-amount",
+      "assessmentStatus": "NOT_ASSESSED",
+      "firstFailure": {
+        "stage": "PROVIDER",
+        "outcome": "TIMEOUT",
+        "code": "TRANSPORT_ERROR"
+      },
+      "responseAvailable": false
+    },
+    {
+      "caseId": "foreign-dividend-receipt-treatment",
+      "assessmentStatus": "NOT_ASSESSED",
+      "firstFailure": {
+        "stage": "PROVIDER",
+        "outcome": "HTTP_ERROR",
+        "httpStatus": 503,
+        "code": "TRANSPORT_ERROR"
+      },
+      "responseAvailable": false
+    },
+    {
+      "caseId": "corporate-residency-general-rule",
+      "assessmentStatus": "NOT_ASSESSED",
+      "firstFailure": {
+        "stage": "PROVIDER",
+        "outcome": "TIMEOUT",
+        "code": "TRANSPORT_ERROR"
+      },
+      "responseAvailable": false
+    },
+    {
+      "caseId": "wht-royalty-general-rule",
+      "assessmentStatus": "NOT_ASSESSED",
+      "firstFailure": {
+        "stage": "PROVIDER",
+        "outcome": "TIMEOUT",
+        "code": "TRANSPORT_ERROR"
+      },
+      "responseAvailable": false
+    },
+    {
+      "caseId": "gst-input-tax-general-rule",
+      "assessmentStatus": "NOT_ASSESSED",
+      "firstFailure": {
+        "stage": "PROVIDER",
+        "outcome": "TIMEOUT",
+        "code": "TRANSPORT_ERROR"
+      },
+      "responseAvailable": false
+    }
+  ],
+  "conclusion": "No usable response for5cases:4cases exhaust8s attempt timeout;1case repeats503. All4usable responses pass. Timing hypothesis: successful calls near8s ceiling suggest cap may censor slow valid responses; not proof of provider/network cause.",
+  "acceptanceProven": false,
+  "freshOfficialAvailabilityAssessed": false,
+  "sourceReferenceDate": "2026-10-08"
+}

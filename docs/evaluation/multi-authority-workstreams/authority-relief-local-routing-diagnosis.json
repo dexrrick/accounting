@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Local topic-reconciliation diagnostic using fixed questions and faithful synthetic issue subjects. No provider calls or model inference; not live semantic metrics.",
+  "providerRequestCount": 0,
+  "sourceFingerprints": {
+    "src/services/semanticQuestionUnderstanding.ts": "d9c08bc554d5af99acc3da40883fd2bc15decd8f4a1367dc16d873de7818b0d0",
+    "src/services/authorityWorkstreams.ts": "28d880c3c67e3a5d36cc9d88b9afd05b0a2d0a5ebc28e793f284c9f9910b7f1e",
+    "src/classification/questionClassifier.ts": "f58bf13f0a553b9681ae12c771bcd27cbf70611b7ed82aa401af40e34ed03883",
+    "src/retrieval/queryTopicResolver.ts": "a72c3bb7215d44cfad54464b63b86d4c39007e2b1f4b1a711562fe8f6342ca9e",
+    "tests/evaluation/singapore/authority-relief-targeted.json": "d6d04a76191c5f293bd8058b7b999edfcac48d0b9e673f409a61fd3e396df8fb"
+  },
+  "cases": [
+    {
+      "caseId": "control-general-recognition",
+      "queryTopicIds": [
+        "sfrsi_intangibles_cap"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "requested": [
+        {
+          "domain": "ACCOUNTING",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_intangibles_cap"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "A-paraphrase-2",
+      "queryTopicIds": [
+        "iras-individual-reliefs"
+      ],
+      "requestedIssueCount": 2,
+      "mappedRequestedIssueCount": 1,
+      "requested": [
+        {
+          "domain": "CPF_PAYROLL",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-reliefs"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "target-sfrsi-general-recognition",
+      "queryTopicIds": [
+        "sfrsi_intangibles_cap"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "requested": [
+        {
+          "domain": "ACCOUNTING",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_intangibles_cap"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "target-mixed-ifrs-singapore-accounting",
+      "queryTopicIds": [
+        "sfrsi_leases"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "requested": [
+        {
+          "domain": "ACCOUNTING",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "sfrsi_leases"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "target-relief-entitlement",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-reliefs",
+        "iras-individual-cpf-relief"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "requested": [
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "target-relief-amount",
+      "queryTopicIds": [
+        "cpf_contribution_rates",
+        "iras-individual-reliefs",
+        "iras-individual-cpf-relief"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "requested": [
+        {
+          "domain": "IRAS_INCOME_TAX",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "iras-individual-cpf-relief",
+            "iras-individual-reliefs"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "target-cpf-general-control",
+      "queryTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 1,
+      "requested": [
+        {
+          "domain": "CPF_PAYROLL",
+          "status": "MAPPED",
+          "mappedTopicIds": [
+            "cpf_contribution_rates"
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "target-mom-general-control",
+      "queryTopicIds": [],
+      "requestedIssueCount": 1,
+      "mappedRequestedIssueCount": 0,
+      "requested": [
+        {
+          "domain": "MOM_EMPLOYMENT",
+          "status": "UNRESOLVED",
+          "mappedTopicIds": [],
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ]
+    }
+  ]
+}

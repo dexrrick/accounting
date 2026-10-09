@@ -1,0 +1,1305 @@
+{
+  "schemaVersion": 1,
+  "suite": "Singapore multi-authority workstreams corrected semantic evaluation",
+  "purpose": "Corrected expectations for independent issue decomposition, subject-based aliases, and whole-question routing. Original live fixture and saved reports remain unchanged.",
+  "expectedModel": "gemini-3.5-flash-lite",
+  "runs": {
+    "originalABCD": 3,
+    "paraphrasesAndAdversarial": 1
+  },
+  "expectedWorkstreams": {
+    "A": [
+      "CPF/CPF_PAYROLL",
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "B": [
+      "MOM/MOM_EMPLOYMENT",
+      "CPF/CPF_PAYROLL",
+      "IRAS/IRAS_EMPLOYER_REPORTING"
+    ],
+    "C": [
+      "IRAS/IRAS_CORPORATE_TAX",
+      "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+    ],
+    "D": [
+      "ACCOUNTING_STANDARDS/ACCOUNTING",
+      "IRAS/IRAS_CORPORATE_TAX"
+    ],
+    "adversarial-A": [
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "adversarial-B": [
+      "IRAS/IRAS_CORPORATE_TAX"
+    ],
+    "adversarial-C": [
+      "IRAS/IRAS_EMPLOYMENT_BENEFITS"
+    ],
+    "adversarial-D": [
+      "MOM/MOM_EMPLOYMENT",
+      "IRAS/IRAS_INDIVIDUAL_TAX"
+    ],
+    "adversarial-E": [
+      "CPF/CPF_PAYROLL",
+      "MOM/MOM_EMPLOYMENT",
+      "IRAS/IRAS_EMPLOYER_REPORTING"
+    ],
+    "adversarial-F": [
+      "IRAS/IRAS_CORPORATE_TAX"
+    ],
+    "D-journal": [
+      "ACCOUNTING_STANDARDS/ACCOUNTING",
+      "IRAS/IRAS_CORPORATE_TAX"
+    ]
+  },
+  "issueContracts": {
+    "A": [
+      {
+        "id": "employer-cpf-contribution",
+        "subject": "employer CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employer",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "company",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employer",
+            "provident",
+            "contribut"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employer",
+            "cpf",
+            "position"
+          ],
+          [
+            "employer",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "employee-cpf-contribution",
+        "subject": "employee compulsory CPF contribution obligation/calculation",
+        "matchAny": [
+          [
+            "employee",
+            "cpf",
+            "contribut"
+          ],
+          [
+            "employee",
+            "provident",
+            "contribut"
+          ],
+          [
+            "mandatory",
+            "cpf",
+            "salary"
+          ],
+          [
+            "compulsory",
+            "cpf",
+            "salary"
+          ]
+        ],
+        "rejectAny": [
+          "relief",
+          "deductible",
+          "taxable"
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CALCULATE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "employee",
+            "cpf",
+            "position"
+          ],
+          [
+            "employee",
+            "contribution",
+            "amount"
+          ]
+        ]
+      },
+      {
+        "id": "individual-cpf-tax-relief",
+        "subject": "individual income tax relief for compulsory CPF",
+        "matchAny": [
+          [
+            "income",
+            "tax",
+            "relief"
+          ],
+          [
+            "personal",
+            "tax",
+            "relief"
+          ],
+          [
+            "cpf",
+            "relief"
+          ],
+          [
+            "tax",
+            "claim",
+            "cpf"
+          ]
+        ],
+        "population": [
+          "INDIVIDUAL",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "CPF"
+          ]
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY",
+          "EXPLAIN_INTERACTION",
+          "EXPLAIN_RULE"
+        ]
+      }
+    ],
+    "B": [
+      {
+        "id": "foreign-employment-and-work-pass",
+        "subject": "foreign employee employment and work-pass requirements",
+        "matchAny": [
+          [
+            "work",
+            "pass"
+          ],
+          [
+            "employment",
+            "requirement"
+          ],
+          [
+            "foreign",
+            "worker",
+            "requirement"
+          ],
+          [
+            "employment",
+            "pass"
+          ]
+        ],
+        "population": [
+          "EMPLOYER",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "MOM_EMPLOYMENT"
+        ],
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE",
+          "CHECK_ELIGIBILITY"
+        ],
+        "aliases": [
+          [
+            "foreign",
+            "employment",
+            "authorization"
+          ],
+          [
+            "foreign",
+            "worker",
+            "permit"
+          ],
+          [
+            "employment",
+            "authoriz"
+          ]
+        ]
+      },
+      {
+        "id": "foreign-employee-cpf-applicability",
+        "subject": "CPF contribution applicability for a foreign employee",
+        "matchAny": [
+          [
+            "cpf",
+            "contribut"
+          ],
+          [
+            "provident",
+            "contribut"
+          ]
+        ],
+        "population": [
+          "EMPLOYER",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE"
+        ],
+        "aliases": [
+          [
+            "cpf",
+            "position"
+          ],
+          [
+            "cpf",
+            "applicability"
+          ],
+          [
+            "whether",
+            "contributions",
+            "are",
+            "due"
+          ],
+          [
+            "cpf",
+            "contributed"
+          ],
+          [
+            "cpf",
+            "appl"
+          ]
+        ]
+      },
+      {
+        "id": "employer-tax-reporting",
+        "subject": "employer income-tax reporting obligations",
+        "matchAny": [
+          [
+            "employer",
+            "tax",
+            "report"
+          ],
+          [
+            "income",
+            "tax",
+            "report"
+          ],
+          [
+            "employment",
+            "income",
+            "report"
+          ],
+          [
+            "tax",
+            "filing",
+            "employer"
+          ]
+        ],
+        "population": [
+          "EMPLOYER"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "FILING_REQUIREMENT",
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE"
+        ],
+        "aliases": [
+          [
+            "employment",
+            "income",
+            "reporting",
+            "duties"
+          ],
+          [
+            "employer",
+            "filing",
+            "responsibility"
+          ],
+          [
+            "company",
+            "tax",
+            "report"
+          ],
+          [
+            "employer",
+            "report",
+            "duti"
+          ]
+        ]
+      }
+    ],
+    "C": [
+      {
+        "id": "company-housing-cost-deductibility",
+        "subject": "corporate income-tax deductibility of staff housing cost",
+        "matchAny": [
+          [
+            "company",
+            "deduct"
+          ],
+          [
+            "corporate",
+            "deduct"
+          ],
+          [
+            "business",
+            "deduct"
+          ],
+          [
+            "company",
+            "tax",
+            "housing"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      },
+      {
+        "id": "employee-housing-benefit-tax",
+        "subject": "employee income-tax treatment of housing benefit",
+        "matchAny": [
+          [
+            "employee",
+            "tax",
+            "housing"
+          ],
+          [
+            "employee",
+            "tax",
+            "benefit"
+          ],
+          [
+            "staff",
+            "tax",
+            "accommodat"
+          ],
+          [
+            "employment",
+            "benefit",
+            "tax"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "D": [
+      {
+        "id": "sfrsi-expense-accounting",
+        "subject": "accounting treatment or recording of an expense under SFRS(I)",
+        "matchAny": [
+          [
+            "expense",
+            "account"
+          ],
+          [
+            "expense",
+            "record"
+          ],
+          [
+            "financial",
+            "statement",
+            "expense"
+          ],
+          [
+            "expense",
+            "journal"
+          ],
+          [
+            "sfrs",
+            "expense"
+          ]
+        ],
+        "population": [
+          "COMPANY",
+          "UNKNOWN"
+        ],
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "PREPARE_JOURNAL",
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE"
+        ],
+        "aliases": [
+          [
+            "cost",
+            "recognition"
+          ],
+          [
+            "cost",
+            "accounting",
+            "treatment"
+          ],
+          [
+            "cost",
+            "recognis"
+          ],
+          [
+            "cost",
+            "recogniz"
+          ],
+          [
+            "cost",
+            "financial",
+            "report"
+          ],
+          [
+            "cost",
+            "journal"
+          ],
+          [
+            "sfrsi",
+            "cost",
+            "journal"
+          ]
+        ]
+      },
+      {
+        "id": "company-expense-tax-deductibility",
+        "subject": "corporate income-tax deductibility of company expense",
+        "matchAny": [
+          [
+            "corporate",
+            "tax",
+            "deduct"
+          ],
+          [
+            "company",
+            "tax",
+            "deduct"
+          ],
+          [
+            "expense",
+            "deduct"
+          ],
+          [
+            "business",
+            "expense",
+            "deduct"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "ACCOUNTING_STANDARDS"
+          ],
+          [
+            "IFRS_FOUNDATION"
+          ],
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE"
+        ],
+        "aliases": [
+          [
+            "cost",
+            "deduct"
+          ],
+          [
+            "cost",
+            "claimability"
+          ],
+          [
+            "expense",
+            "claimability"
+          ],
+          [
+            "cost",
+            "deductibility"
+          ]
+        ]
+      }
+    ],
+    "adversarial-A": [
+      {
+        "id": "relief-governing-authority",
+        "subject": "which authority governs personal income tax relief involving CPF",
+        "matchAny": [
+          [
+            "personal",
+            "income",
+            "tax",
+            "relief"
+          ],
+          [
+            "tax",
+            "relief",
+            "cpf"
+          ],
+          [
+            "relief",
+            "govern"
+          ]
+        ],
+        "population": [
+          "INDIVIDUAL"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "CPF"
+          ],
+          []
+        ],
+        "operation": [
+          "EXPLAIN_RULE",
+          "EXPLAIN_INTERACTION",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "adversarial-B": [
+      {
+        "id": "cpf-expense-corporate-deductibility",
+        "subject": "corporate income-tax deductibility of CPF expense",
+        "matchAny": [
+          [
+            "cpf",
+            "expense",
+            "deduct"
+          ],
+          [
+            "cpf",
+            "corporate",
+            "tax"
+          ],
+          [
+            "cpf",
+            "deduct"
+          ],
+          [
+            "contribution",
+            "expense",
+            "deduct"
+          ]
+        ],
+        "rejectAny": [
+          "contribution rate",
+          "calculate contribution"
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "CPF"
+          ],
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "adversarial-C": [
+      {
+        "id": "employee-accommodation-benefit-tax",
+        "subject": "employee tax on accommodation benefit",
+        "matchAny": [
+          [
+            "employee",
+            "tax",
+            "accommodat"
+          ],
+          [
+            "employee",
+            "tax",
+            "benefit"
+          ],
+          [
+            "staff",
+            "tax",
+            "housing"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "adversarial-D": [
+      {
+        "id": "foreign-worker-work-pass",
+        "subject": "work-pass requirements for foreign employee",
+        "matchAny": [
+          [
+            "foreign",
+            "employee",
+            "work",
+            "pass"
+          ],
+          [
+            "work",
+            "pass",
+            "requirement"
+          ]
+        ],
+        "population": [
+          "EMPLOYER",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "MOM_EMPLOYMENT"
+        ],
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE",
+          "CHECK_ELIGIBILITY"
+        ]
+      },
+      {
+        "id": "foreign-worker-salary-income-tax",
+        "subject": "income-tax treatment of foreign employee salary",
+        "matchAny": [
+          [
+            "employee",
+            "salary",
+            "tax"
+          ],
+          [
+            "employment",
+            "income",
+            "tax"
+          ],
+          [
+            "foreign",
+            "worker",
+            "income",
+            "tax"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE",
+          "INDIVIDUAL"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY"
+        ]
+      }
+    ],
+    "adversarial-E": [
+      {
+        "id": "foreign-worker-cpf-contributions",
+        "subject": "CPF contributions for a foreign employee",
+        "matchAny": [
+          [
+            "cpf",
+            "contribut"
+          ],
+          [
+            "provident",
+            "contribut"
+          ]
+        ],
+        "population": [
+          "EMPLOYEE",
+          "EMPLOYER"
+        ],
+        "domain": [
+          "CPF_PAYROLL"
+        ],
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "CHECK_ELIGIBILITY",
+          "EXPLAIN_INTERACTION"
+        ]
+      },
+      {
+        "id": "foreign-worker-work-pass-interaction",
+        "subject": "work-pass requirements for a foreign employee",
+        "matchAny": [
+          [
+            "work",
+            "pass"
+          ],
+          [
+            "employment",
+            "pass"
+          ]
+        ],
+        "population": [
+          "EMPLOYER",
+          "EMPLOYEE"
+        ],
+        "domain": [
+          "MOM_EMPLOYMENT"
+        ],
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_INTERACTION",
+          "EXPLAIN_RULE"
+        ]
+      },
+      {
+        "id": "foreign-worker-income-tax-reporting",
+        "subject": "income-tax reporting for foreign employee",
+        "matchAny": [
+          [
+            "employee",
+            "income",
+            "tax",
+            "report"
+          ],
+          [
+            "employer",
+            "tax",
+            "report"
+          ],
+          [
+            "employment",
+            "income",
+            "report"
+          ]
+        ],
+        "population": [
+          "UNKNOWN"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "FILING_REQUIREMENT",
+          "EXPLAIN_INTERACTION",
+          "DETERMINE_TREATMENT"
+        ]
+      }
+    ],
+    "adversarial-F": [
+      {
+        "id": "employee-benefit-corporate-deductibility",
+        "subject": "corporate tax deductibility of employee benefit",
+        "matchAny": [
+          [
+            "employee",
+            "benefit",
+            "deduct"
+          ],
+          [
+            "corporate",
+            "tax",
+            "deduct"
+          ],
+          [
+            "benefit",
+            "tax",
+            "deduct"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "ACCOUNTING_STANDARDS"
+          ],
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT"
+        ],
+        "aliases": [
+          [
+            "employee",
+            "benefit",
+            "cost",
+            "claimability"
+          ],
+          [
+            "recorded",
+            "benefit",
+            "tax",
+            "deductibility"
+          ],
+          [
+            "benefit",
+            "expense",
+            "corporate",
+            "deduction"
+          ]
+        ]
+      }
+    ],
+    "D-journal": [
+      {
+        "id": "sfrsi-expense-journal",
+        "subject": "accounting treatment or recording of an expense under SFRS(I)",
+        "matchAny": [
+          [
+            "expense",
+            "account"
+          ],
+          [
+            "expense",
+            "record"
+          ],
+          [
+            "financial",
+            "statement",
+            "expense"
+          ],
+          [
+            "expense",
+            "journal"
+          ],
+          [
+            "sfrs",
+            "expense"
+          ]
+        ],
+        "population": [
+          "COMPANY",
+          "UNKNOWN"
+        ],
+        "domain": [
+          "ACCOUNTING"
+        ],
+        "governingAuthorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          []
+        ],
+        "operation": [
+          "PREPARE_JOURNAL"
+        ],
+        "aliases": [
+          [
+            "cost",
+            "recognition"
+          ],
+          [
+            "cost",
+            "accounting",
+            "treatment"
+          ],
+          [
+            "cost",
+            "journal"
+          ],
+          [
+            "sfrsi",
+            "cost",
+            "journal"
+          ]
+        ]
+      },
+      {
+        "id": "company-expense-tax-deductibility",
+        "subject": "corporate income-tax deductibility of company expense",
+        "matchAny": [
+          [
+            "corporate",
+            "tax",
+            "deduct"
+          ],
+          [
+            "company",
+            "tax",
+            "deduct"
+          ],
+          [
+            "expense",
+            "deduct"
+          ],
+          [
+            "business",
+            "expense",
+            "deduct"
+          ]
+        ],
+        "population": [
+          "COMPANY"
+        ],
+        "domain": [
+          "IRAS_INCOME_TAX"
+        ],
+        "governingAuthorities": [
+          "IRAS"
+        ],
+        "contextualAuthoritiesAnyOf": [
+          [
+            "ACCOUNTING_STANDARDS"
+          ],
+          []
+        ],
+        "operation": [
+          "CHECK_ELIGIBILITY",
+          "DETERMINE_TREATMENT",
+          "EXPLAIN_RULE"
+        ],
+        "aliases": [
+          [
+            "cost",
+            "deduct"
+          ],
+          [
+            "cost",
+            "claimability"
+          ],
+          [
+            "expense",
+            "claimability"
+          ],
+          [
+            "cost",
+            "deductibility"
+          ]
+        ]
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "A-original",
+      "contract": "A",
+      "runGroup": "originalABCD",
+      "question": "An employee earns SGD 6,000 per month. What CPF contributions must the employer and employee make, and how do the employee's compulsory CPF contributions affect personal income tax relief?"
+    },
+    {
+      "id": "A-paraphrase-1",
+      "contract": "A",
+      "runGroup": "originalABCD",
+      "question": "How much CPF should the employer and staff member contribute on a monthly salary of SGD 6,000, and how does the employee claim tax relief for mandatory CPF paid?"
+    },
+    {
+      "id": "A-paraphrase-2",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?",
+      "expectedIssueIds": [
+        "employer-cpf-contribution",
+        "individual-cpf-tax-relief"
+      ]
+    },
+    {
+      "id": "A-paraphrase-3",
+      "contract": "A",
+      "runGroup": "originalABCD",
+      "question": "If a worker is paid SGD 6,000 monthly, explain the personal income tax relief linked to mandatory payroll CPF first, then state the employer and employee contribution amounts."
+    },
+    {
+      "id": "A-paraphrase-4",
+      "contract": "A",
+      "runGroup": "expanded",
+      "question": "With a monthly wage of SGD 6,000, what are both sides' CPF payroll contributions, and what tax relief does the worker get for the compulsory deduction?"
+    },
+    {
+      "id": "B-original",
+      "contract": "B",
+      "runGroup": "originalABCD",
+      "question": "We hired a foreign employee in Singapore. What employment/work-pass requirements apply, whether CPF contributions are required, and what employer tax reporting obligations should we consider?"
+    },
+    {
+      "id": "B-paraphrase-1",
+      "contract": "B",
+      "runGroup": "originalABCD",
+      "question": "We plan to bring a foreign staff member to Singapore on an Employment Pass. What must the company report for tax, what work-pass rules apply, and does payroll CPF apply?"
+    },
+    {
+      "id": "B-paraphrase-2",
+      "contract": "B",
+      "runGroup": "expanded",
+      "question": "Before hiring an overseas worker here, what tax filings will we as employer need to consider, are CPF contributions due, and what employment authorization is needed?"
+    },
+    {
+      "id": "B-paraphrase-3",
+      "contract": "B",
+      "runGroup": "expanded",
+      "question": "For foreign staff in Singapore, can you cover employer tax reporting first, then the CPF position and the requirements for employing them?"
+    },
+    {
+      "id": "B-paraphrase-4",
+      "contract": "B",
+      "runGroup": "expanded",
+      "question": "We hired someone from overseas. Explain the work-pass and employment obligations, whether CPF must be contributed, and the employer's reporting duties without assuming which authority handles them."
+    },
+    {
+      "id": "C-original",
+      "contract": "C",
+      "runGroup": "originalABCD",
+      "question": "Our company pays an employee's housing allowance. Is it deductible to the company and is it taxable to the employee?"
+    },
+    {
+      "id": "C-paraphrase-1",
+      "contract": "C",
+      "runGroup": "expanded",
+      "question": "If the business pays for staff accommodation, can it deduct that cost and does the employee pay income tax on the benefit?"
+    },
+    {
+      "id": "C-paraphrase-2",
+      "contract": "C",
+      "runGroup": "expanded",
+      "question": "From the employer's perspective, how is a housing benefit for staff treated for company tax, and is it taxable employment income to the recipient?"
+    },
+    {
+      "id": "C-paraphrase-3",
+      "contract": "C",
+      "runGroup": "expanded",
+      "question": "Is the employee taxed on a housing allowance before considering whether the company may deduct what it paid?"
+    },
+    {
+      "id": "C-paraphrase-4",
+      "contract": "C",
+      "runGroup": "expanded",
+      "question": "Our firm gives an employee a housing benefit. How is it treated for the employee's tax and for the company's deduction?"
+    },
+    {
+      "id": "D-original",
+      "contract": "D",
+      "runGroup": "originalABCD",
+      "question": "How should an expense be recorded under SFRS(I), and is it deductible for Singapore corporate income tax?"
+    },
+    {
+      "id": "D-paraphrase-1",
+      "contract": "D",
+      "runGroup": "originalABCD",
+      "question": "Is a business expense tax deductible in Singapore, and how should the same item appear in the financial statements under SFRS(I)?"
+    },
+    {
+      "id": "D-paraphrase-2",
+      "contract": "D",
+      "runGroup": "expanded",
+      "question": "Please explain the accounting treatment for an expense and whether the company can claim it against corporate taxable income."
+    },
+    {
+      "id": "D-paraphrase-3",
+      "contract": "D-journal",
+      "runGroup": "expanded",
+      "question": "What is the SFRS(I) journal treatment for this cost, and separately can it be deducted for company income-tax purposes?"
+    },
+    {
+      "id": "D-paraphrase-4",
+      "contract": "D",
+      "runGroup": "expanded",
+      "question": "For financial reporting and Singapore company tax, how should a cost be recognised and is it deductible?"
+    },
+    {
+      "id": "adversarial-A-contextual-cpf",
+      "contract": "adversarial-A",
+      "runGroup": "expanded",
+      "question": "Does mentioning CPF in a personal income tax relief question mean CPF Board determines the relief?"
+    },
+    {
+      "id": "adversarial-B-cpf-expense",
+      "contract": "adversarial-B",
+      "runGroup": "expanded",
+      "question": "Our company pays CPF for employees. Is the CPF expense deductible for corporate income tax?"
+    },
+    {
+      "id": "adversarial-C-employee-benefit",
+      "contract": "adversarial-C",
+      "runGroup": "expanded",
+      "question": "The employer provides accommodation to staff. What tax does the employee pay on the benefit?"
+    },
+    {
+      "id": "adversarial-D-workpass-and-salary-tax",
+      "contract": "adversarial-D",
+      "runGroup": "expanded",
+      "question": "A foreign employee needs a work pass and the company needs to know whether his salary is taxable.",
+      "benchmarkNote": "The work-pass clause is background or ambiguous in this wording; the historical expected scope remains unchanged for comparison."
+    },
+    {
+      "id": "adversarial-E-three-authorities",
+      "contract": "adversarial-E",
+      "runGroup": "expanded",
+      "question": "How do CPF contributions, work-pass requirements and employee income-tax reporting interact for a foreign employee?",
+      "expectedWorkstreamsAnyOf": [
+        [
+          "CPF/CPF_PAYROLL",
+          "MOM/MOM_EMPLOYMENT",
+          "IRAS/UNKNOWN"
+        ],
+        [
+          "CPF/CPF_PAYROLL",
+          "MOM/MOM_EMPLOYMENT",
+          "IRAS/IRAS_EMPLOYER_REPORTING"
+        ]
+      ]
+    },
+    {
+      "id": "adversarial-F-accounting-and-tax",
+      "contract": "adversarial-F",
+      "runGroup": "expanded",
+      "question": "A company records an employee benefit under SFRS(I) and wants to know whether it is tax deductible."
+    }
+  ]
+}

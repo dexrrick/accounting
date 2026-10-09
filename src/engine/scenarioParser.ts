@@ -16,7 +16,7 @@ import { isDeferredTaxInquiry, startsNewAccountingScenario } from '../services/c
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
 import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
-import { matchBasicTransaction } from './basicTransactions';
+import { matchBasicTransaction, resolveBasicOwnerDrawingsFollowUp } from './basicTransactions';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -231,6 +231,9 @@ export async function parseAccountingQuery(
   if (currentScenario && startsNewAccountingScenario(query, currentScenario)) {
     return parseAccountingQuery(query, null);
   }
+
+  const basicOwnerDrawingsFollowUp = resolveBasicOwnerDrawingsFollowUp(query, currentScenario);
+  if (basicOwnerDrawingsFollowUp) return basicOwnerDrawingsFollowUp;
 
   if (isDeferredTaxInquiry(query)) {
     return {

@@ -1,0 +1,27 @@
+{
+  "profile": "iras-v4-fresh-execution-gate-request",
+  "requestId": "d86f4022-e4f8-4f14-87a6-05f9b807f724",
+  "requestedAtUtc": "2026-10-08T11:27:26.044Z",
+  "responsePath": "artifacts/iras-v4-acceptance-repaired-2026-10-06/retry-2026-10-08/execution/gate-response-d86f4022-e4f8-4f14-87a6-05f9b807f724.json",
+  "launcherSha256": "d2d33e13f0dcf4dbc2498985851e1bf4a9441b5ee71be86326f54ef505025d2e",
+  "authorizationSha256": "711b44ab06427680c5e485c5d259d182570f418aede46ab289430693e4bc56de",
+  "authorizationRequestSha256": "4ce7ad3a76144ca2330da79a4a40c6bb531b42e80adf1bcbd59267cef09e6224",
+  "resourceProjectionSha256": "0bba5ea1d86c492c5ceae26e809914a0d8e531953112f7bbc847c4a6aca4228f",
+  "resourceReviewSha256": "60e7c9f616a30e6c19542946dbf3a94690b11821c243cb595f5b84df832106b2",
+  "freezeValidationSha256": "75ce97b8858f0d0c5edc9a49c23af7df5a57bdf031bd83316a80b8b021bdf083",
+  "preregistrationSha256": "5e24500b0d4a79e6b49113df2f78d8beecf8f8cb4e59d4f1630d065f6b8093da",
+  "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "semanticNamespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-retry-2026-10-08",
+  "model": "gemini-3.5-flash-lite",
+  "authorizedGeminiCalls": 9,
+  "retries": 0,
+  "requiredUsageTool": "mcp__codex_app__get_usage_limits",
+  "requiredUsageWindowsMinutes": [
+    300,
+    10080
+  ],
+  "maximumUsageObservationAgeMs": 300000,
+  "quotaConfirmedByHuman": true,
+  "userInstruction": "please retry",
+  "quotaConfirmationScope": "Reviewed fixed model, configured project credential and nine-call run; no provider probe or inferred higher capacity"
+}

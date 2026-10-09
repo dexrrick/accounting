@@ -1,0 +1,39 @@
+{
+  "dateSingapore": "09/10/2026",
+  "status": "STOPPED_FOR_USAGE_RESERVE_VALIDATION_PENDING",
+  "lastObservedFiveHourRemainingPercent": 10,
+  "constraint": "Stop before 5% remaining; do not consume reset credits or buy credits.",
+  "liveRun": "../live-rerun-ownership-2026-10-09",
+  "liveOutcome": "9 HTTP200 first attempts, 6 diagnostic passes and 3 downstream failures. No retries/new source requests/blocked network. Historical run is immutable and must not be relabeled.",
+  "newProviderCallsThisTurn": 9,
+  "sourceReferenceDate": "2026-10-08",
+  "repairs": [
+    "Director-benefits descriptor can use explicit question fact when sole mapped company private-expense tax issue omits director from subject, preserving separate-outcome guards.",
+    "Primary topicless input tax concept binds to sole mapped GST company issue and remains an explicit source-coverage requirement.",
+    "Canonical foreign-dividend receipt supports foreign-sourced/overseas wording; final review is tightening explicit foreign origin and preserving receipt wording variants.",
+    "Replay supports three retained nine-response batches, protected hashes/network blocking, new output directory."
+  ],
+  "files": [
+    "src/services/authorityWorkstreams.ts",
+    "src/services/semanticQuestionUnderstanding.ts",
+    "scripts/replay_gemini_downstream_repairs.mjs",
+    "tests/regression/test_gemini_downstream_repair_boundaries.mjs",
+    "tests/regression/test_gemini_downstream_repair_replay.mjs"
+  ],
+  "validation": {
+    "targeted": "PASSED after final refinement: 27 retained replays, boundaries, prompt budget, tsc and diff check",
+    "independentReview": "PASSED final narrow changes; no remaining material findings",
+    "lint": "PASSED; lint.log",
+    "build": "PASSED before final narrow origin refinement; final tsc also passed",
+    "smoke": "FAILED: source/preregistration fingerprint changed during measurement while final source refinement was underway; rerun after code freeze. See smoke.log. Original session 81120 may still be finishing; do not start another run until it ends.",
+    "fullSuite": "NOT_RUN for latest repair; required"
+  },
+  "resume": [
+    "Check usage first and preserve all pre-existing workspace edits.",
+    "Read this checkpoint and logs; finish only pending checks. Do not rerun passing checks without relevant source changes.",
+    "Verify 32 historical files against historical-inputs-before.json; no test may modify saved source captures or consumed live runs.",
+    "After final code and independent review, run required full npm test with approved filesystem permissions; sandbox has temporary-file EPERM problems.",
+    "When sufficient usage remains, fresh Gemini verification must use a new live-rerun-* directory and fresh usage snapshot through existing bounded launcher; at most18 requests, no new official-source requests.",
+    "Do not represent 27 offline passes as fresh live acceptance. Expected passes include safe missing-fact and unsupported-topic outcomes."
+  ]
+}

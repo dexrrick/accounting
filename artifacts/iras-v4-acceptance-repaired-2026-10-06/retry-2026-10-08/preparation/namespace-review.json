@@ -1,0 +1,10 @@
+{
+  "modelTimeoutPolicyUnchanged": true,
+  "protectedHistoricalFiles": 17,
+  "observedAtUtc": "2026-10-07T16:26:50.0084181Z",
+  "reviewer": "/root/offline_repair_review",
+  "exactNamespaceAddition": true,
+  "sourceEnvelope": "42 total / 10 per family within original 60 / 10",
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "profile": "iras-v4-retry-namespace-independent-review"
+}

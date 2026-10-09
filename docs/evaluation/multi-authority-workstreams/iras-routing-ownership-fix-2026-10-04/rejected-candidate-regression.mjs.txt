@@ -1,0 +1,249 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
+import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
+import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
+import {
+  reconcileQuestionUnderstanding,
+  validateSemanticQuestionInterpretation
+} from '../../src/services/semanticQuestionUnderstanding.ts';
+
+const proofPath = new URL('../../docs/evaluation/multi-authority-workstreams/iras-first-targeted-acceptance-2026-10-04-v4/routing-classification-proof.json', import.meta.url);
+const retainedProof = JSON.parse(await readFile(proofPath, 'utf8'));
+const contract = JSON.parse(await readFile(new URL('../evaluation/singapore/iras-first-targeted-acceptance-v4.json', import.meta.url), 'utf8'));
+const v4Case = contract.cases.find(row => row.caseId === retainedProof.caseId);
+assert.ok(v4Case, 'The retained routing proof still points to its immutable V4 raw case.');
+
+function reconcile(query, issues) {
+  const authorities = [...new Set(issues.flatMap(issue => issue.governingAuthorities))];
+  const sameDomain = issues.every(issue => issue.domain === issues[0].domain);
+  const samePopulation = issues.every(issue => issue.population === issues[0].population);
+  const raw = {
+    schemaVersion: 2,
+    jurisdiction: ['Singapore'],
+    authorityCandidates: sameDomain && samePopulation && authorities.length === 1 ? authorities : ['UNKNOWN'],
+    contextualAuthorities: [],
+    domain: sameDomain ? issues[0].domain : 'UNKNOWN',
+    population: samePopulation ? issues[0].population : 'UNKNOWN',
+    primarySubject: issues[0].subject,
+    concepts: [{ concept: issues[0].subject, role: 'PRIMARY' }],
+    requestedOperation: issues[0].operation,
+    factsExplicitlyProvided: [],
+    confidence: 0.96,
+    issues: issues.map(issue => ({
+      contextualAuthorities: [],
+      mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+      confidence: 0.96,
+      ...issue
+    }))
+  };
+  const interpretation = validateSemanticQuestionInterpretation(raw, query);
+  assert.ok(interpretation, `Semantic fixture should validate for: ${query}`);
+  return reconcileQuestionUnderstanding(query, classifyQuestion(query), {
+    mode: 'SEMANTIC_INTERPRETATION',
+    interpretation
+  }).issuePlan;
+}
+
+const iras = (subject, extras = {}) => ({
+  subject,
+  population: 'INDIVIDUAL',
+  domain: 'IRAS_INCOME_TAX',
+  governingAuthorities: ['IRAS'],
+  operation: 'EXPLAIN_RULE',
+  ...extras
+});
+const cpfEmployee = subject => ({
+  subject,
+  population: 'EMPLOYER',
+  domain: 'CPF_PAYROLL',
+  governingAuthorities: ['CPF'],
+  operation: 'CALCULATE'
+});
+const cpfRelief = subject => iras(subject, { operation: 'CHECK_ELIGIBILITY', contextualAuthorities: ['CPF'] });
+const cpfReliefSubject = 'individual personal tax relief for compulsory CPF contributions';
+const umbrellaSubject = 'individual tax relief eligibility';
+const findIssue = (plan, predicate) => plan.issues.find(predicate);
+const hasUnassignedUmbrella = plan => plan.issues.some(issue => issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
+  issue.mappedTopicIds.includes('iras-individual-reliefs'));
+
+// Prospective replay of the four immutable raw mocks, covering both root envelopes.
+assert.deepEqual(retainedProof.rows.map(row => row.rootMode).sort(), ['CPF_FIRST', 'CPF_FIRST', 'UNKNOWN_MIXED', 'UNKNOWN_MIXED']);
+for (const row of retainedProof.rows) {
+  const interpretation = validateSemanticQuestionInterpretation(row.rawMock, v4Case.question);
+  assert.ok(interpretation, `${row.rootMode} retained raw mock validates prospectively.`);
+  const plan = reconcileQuestionUnderstanding(v4Case.question, classifyQuestion(v4Case.question), {
+    mode: 'SEMANTIC_INTERPRETATION', interpretation
+  }).issuePlan;
+  assert.equal(plan.issues.length, 2, `${row.rootMode} / ${row.subject}: only the represented CPF payroll and IRAS relief issues remain.`);
+  assert.equal(plan.coverageEstablished, true);
+  assert.equal(plan.hasUnmappedResidual, false);
+  assert.equal(plan.issues.some(issue => issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC'), false);
+  const payroll = findIssue(plan, issue => issue.domain === 'CPF_PAYROLL');
+  const relief = findIssue(plan, issue => issue.domain === 'IRAS_INCOME_TAX');
+  assert.ok(payroll?.mappedTopicIds.includes('cpf_contribution_rates'));
+  assert.ok(relief?.mappedTopicIds.includes('iras-individual-cpf-relief'));
+  assert.ok(relief?.routingTopicIds?.includes('iras-individual-reliefs'));
+  const recognized = new Set([
+    ...defaultQueryTopicResolver.decomposeQuery(v4Case.question).topics.map(topic => topic.id),
+    ...classifyQuestion(v4Case.question).topicIds
+  ]);
+  const owned = new Set(plan.issues.flatMap(issue => [
+    ...issue.mappedTopicIds,
+    ...(issue.contextualTopicIds || []),
+    ...(issue.routingTopicIds || [])
+  ]));
+  for (const topicId of recognized) assert.ok(owned.has(topicId), `${row.rootMode}: independently recognized ${topicId} is accounted for.`);
+}
+
+const genericQuery = 'What individual personal tax relief is available in Singapore?';
+const genericOnly = reconcile(genericQuery, [iras(umbrellaSubject)]);
+const genericIssue = findIssue(genericOnly, issue => issue.domain === 'IRAS_INCOME_TAX');
+assert.ok(genericIssue?.mappedTopicIds.includes('iras-individual-reliefs'));
+assert.equal(genericIssue?.routingTopicIds, undefined, 'An explicit generic issue maps the umbrella directly, without inferred ownership.');
+assert.equal(genericOnly.coverageEstablished, true);
+
+const separateGenericQuery = 'What personal tax relief applies to compulsory CPF contributions, and what individual tax relief categories are available?';
+const cpfOnly = reconcile(separateGenericQuery, [cpfRelief(cpfReliefSubject)]);
+const cpfOnlyIssue = findIssue(cpfOnly, issue => issue.domain === 'IRAS_INCOME_TAX' && issue.mappedTopicIds.includes('iras-individual-cpf-relief'));
+assert.ok(cpfOnlyIssue);
+assert.equal(cpfOnlyIssue.mappedTopicIds.includes('iras-individual-reliefs'), false,
+  'A canonical CPF subject cannot lexically cover a separate generic umbrella request.');
+assert.equal(cpfOnlyIssue.routingTopicIds, undefined);
+assert.ok(hasUnassignedUmbrella(cpfOnly));
+assert.equal(cpfOnly.coverageEstablished, false);
+
+const representedGeneric = reconcile(separateGenericQuery, [cpfRelief(cpfReliefSubject), iras(umbrellaSubject)]);
+assert.equal(representedGeneric.coverageEstablished, true);
+assert.equal(representedGeneric.hasUnmappedResidual, false);
+assert.equal(findIssue(representedGeneric, issue => issue.subject === cpfReliefSubject)?.mappedTopicIds.includes('iras-individual-reliefs'), false);
+assert.ok(findIssue(representedGeneric, issue => issue.subject === umbrellaSubject)?.mappedTopicIds.includes('iras-individual-reliefs'));
+
+const capQuery = 'What personal tax relief applies to mandatory CPF contributions, and does the overall personal income tax relief cap apply?';
+const cpfAndCap = reconcile(capQuery, [cpfRelief(cpfReliefSubject), iras('overall personal income tax relief cap')]);
+assert.equal(cpfAndCap.coverageEstablished, true,
+  `A specific CPF ask and an overall-cap ask account for the umbrella through declared routes: ${JSON.stringify(cpfAndCap)}`);
+assert.equal(cpfAndCap.hasUnmappedResidual, false);
+assert.equal(hasUnassignedUmbrella(cpfAndCap), false);
+
+const cpfAndSrsQuery = 'What personal relief applies to compulsory CPF contributions, and what SRS contribution relief is available?';
+const cpfAndSrs = reconcile(cpfAndSrsQuery, [cpfRelief(cpfReliefSubject), iras('Supplementary Retirement Scheme relief')]);
+assert.equal(cpfAndSrs.coverageEstablished, true, JSON.stringify(cpfAndSrs));
+assert.ok(cpfAndSrs.issues.some(issue => issue.mappedTopicIds.includes('iras-individual-srs-relief') &&
+  issue.routingTopicIds?.includes('iras-individual-reliefs')));
+
+const cpfAndParentQuery = 'What personal tax relief applies to compulsory CPF contributions, and what Parent Relief can I claim?';
+const cpfAndParent = reconcile(cpfAndParentQuery, [cpfRelief(cpfReliefSubject), iras('Parent Relief')]);
+assert.equal(cpfAndParent.coverageEstablished, true);
+assert.ok(cpfAndParent.issues.some(issue => issue.mappedTopicIds.includes('iras-individual-parent-relief') &&
+  issue.routingTopicIds?.includes('iras-individual-reliefs')));
+
+for (const [query, childSubject, childTopicId] of [
+  [capQuery, 'overall personal income tax relief cap', 'iras-individual-relief-cap'],
+  [cpfAndSrsQuery, 'Supplementary Retirement Scheme relief', 'iras-individual-srs-relief'],
+  [cpfAndParentQuery, 'Parent Relief', 'iras-individual-parent-relief'],
+  ['What personal tax relief applies to compulsory CPF contributions, and what working mother child relief (WMCR) is available?', 'WMCR', 'iras-individual-wmcr'],
+  ['What personal tax relief applies to compulsory CPF contributions, and what Qualifying Child Relief (QCR) is available?', 'Qualifying Child Relief', 'iras-individual-qcr'],
+  ['What personal tax relief applies to compulsory CPF contributions, and what Grandparent Caregiver Relief is available?', 'Grandparent Caregiver Relief', 'iras-individual-grandparent-caregiver-relief']
+]) {
+  const omitted = reconcile(query, [cpfRelief(cpfReliefSubject)]);
+  assert.ok(omitted.issues.some(issue => issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
+    issue.mappedTopicIds.includes(childTopicId)), `${childTopicId} stays residual when the CPF-only plan omits it.`);
+  assert.equal(omitted.coverageEstablished, false);
+
+  const represented = reconcile(query, [cpfRelief(cpfReliefSubject), iras(childSubject)]);
+  assert.equal(represented.coverageEstablished, true, `${childTopicId} is covered when a separate semantic issue represents it.`);
+  assert.equal(represented.hasUnmappedResidual, false);
+  assert.ok(represented.issues.some(issue => issue.subject === childSubject && issue.mappedTopicIds.includes(childTopicId)),
+    `${childTopicId} remains mapped on its own represented issue.`);
+}
+
+for (const [query, subject, childTopicId] of [
+  ['What is the working mother child relief (WMCR) for an individual?', 'WMCR eligibility', 'iras-individual-wmcr'],
+  ['What is Qualifying Child Relief (QCR) for an individual?', 'Qualifying Child Relief eligibility', 'iras-individual-qcr'],
+  ['Can I claim personal tax relief for Grandparent Caregiver Relief?', 'Grandparent Caregiver Relief eligibility', 'iras-individual-grandparent-caregiver-relief']
+]) {
+  const plan = reconcile(query, [iras(subject, { operation: 'CHECK_ELIGIBILITY' })]);
+  const issue = findIssue(plan, candidate => candidate.mappedTopicIds.includes(childTopicId));
+  assert.ok(issue, `${childTopicId} resolves from the raw query.`);
+  assert.ok(issue.routingTopicIds?.includes('iras-individual-reliefs'), `${childTopicId} owns the bounded routing parent.`);
+  assert.equal(plan.coverageEstablished, true);
+}
+
+for (const [query, subject, childTopicId] of [
+  ['What SRS contribution relief can an individual claim? Separately, what general individual tax relief eligibility rules apply?', 'Supplementary Retirement Scheme relief', 'iras-individual-srs-relief'],
+  ['What Parent Relief can an individual claim? Separately, what general individual tax relief eligibility rules apply?', 'Parent Relief', 'iras-individual-parent-relief'],
+  ['What Working Mother’s Child Relief (WMCR) can an individual claim? Separately, what general individual tax relief eligibility rules apply?', "Working Mother's Child Relief", 'iras-individual-wmcr'],
+  ['What Qualifying Child Relief (QCR) can an individual claim? Separately, what general individual tax relief eligibility rules apply?', 'Qualifying Child Relief', 'iras-individual-qcr'],
+  ['What Grandparent Caregiver Relief can an individual claim? Separately, what general individual tax relief eligibility rules apply?', 'Grandparent Caregiver Relief', 'iras-individual-grandparent-caregiver-relief'],
+  ['Does the overall personal income tax relief cap apply? Separately, what general individual tax relief eligibility rules apply?', 'overall personal income tax relief cap', 'iras-individual-relief-cap']
+]) {
+  const plan = reconcile(query, [iras(subject, { operation: 'CHECK_ELIGIBILITY' })]);
+  assert.ok(plan.issues.some(issue => issue.mappedTopicIds.includes(childTopicId)), `${childTopicId} is independently mapped.`);
+  assert.ok(hasUnassignedUmbrella(plan), `${childTopicId} cannot cover a separate generic relief ask.`);
+  assert.equal(plan.coverageEstablished, false);
+}
+
+const caregiverSeparateQuery = 'Can I claim personal tax relief for Grandparent Caregiver Relief, and what individual tax relief categories are available?';
+const caregiverOmitted = reconcile(caregiverSeparateQuery, [iras('Grandparent Caregiver Relief eligibility')]);
+assert.ok(hasUnassignedUmbrella(caregiverOmitted), 'A separately requested caregiver umbrella stays residual when omitted.');
+const caregiverRepresented = reconcile(caregiverSeparateQuery, [iras('Grandparent Caregiver Relief eligibility'), iras(umbrellaSubject)]);
+assert.equal(caregiverRepresented.coverageEstablished, true);
+assert.equal(hasUnassignedUmbrella(caregiverRepresented), false);
+
+const employerAndReliefQuery = 'What CPF contribution must the employer pay, and what personal tax relief can the employee claim for compulsory CPF contributions?';
+const employerOmitted = reconcile(employerAndReliefQuery, [cpfEmployee('employer CPF contribution amount')]);
+assert.ok(hasUnassignedUmbrella(employerOmitted), 'A represented employer issue cannot absorb omitted IRAS topics.');
+assert.equal(employerOmitted.coverageEstablished, false);
+const employerRepresented = reconcile(employerAndReliefQuery, [
+  cpfEmployee('employer CPF contribution amount'),
+  cpfRelief(cpfReliefSubject)
+]);
+assert.equal(employerRepresented.coverageEstablished, true);
+assert.equal(employerRepresented.hasUnmappedResidual, false);
+assert.equal(employerRepresented.issues.length, 2);
+
+const employerOnlyQuery = 'How much must the employer pay into CPF, and can I claim personal tax relief on my compulsory CPF contributions?';
+const employerOnly = reconcile(employerOnlyQuery, [cpfRelief(cpfReliefSubject)]);
+assert.ok(employerOnly.issues.some(issue => issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' &&
+  issue.mappedTopicIds.includes('cpf_contribution_rates')),
+`An IRAS CPF-relief issue cannot absorb a separately requested employer CPF calculation: ${JSON.stringify(employerOnly)}`);
+assert.equal(employerOnly.coverageEstablished, false);
+
+const unsupported = reconcile(`${cpfAndSrsQuery} Also, what is the tax treatment of an invented widget levy?`, [
+  cpfRelief(cpfReliefSubject), iras('Supplementary Retirement Scheme relief')
+]);
+assert.equal(unsupported.coverageEstablished, false);
+assert.equal(unsupported.hasUnmappedResidual, true, 'Unrecognized request fragments remain fail-closed residuals.');
+
+const unrelatedQuery = 'How is individual foreign-sourced employment income taxed, and what individual personal tax relief is available?';
+const unrelated = reconcile(unrelatedQuery, [iras('individual foreign-sourced employment income tax treatment')]);
+const unrelatedIssue = findIssue(unrelated, issue => issue.mappedTopicIds.includes('iras-individual-foreign-employment-income'));
+assert.ok(unrelatedIssue);
+assert.equal(unrelatedIssue.mappedTopicIds.includes('iras-individual-reliefs'), false);
+assert.equal(unrelatedIssue.routingTopicIds, undefined, 'Same IRAS authority alone cannot create parent ownership.');
+assert.ok(hasUnassignedUmbrella(unrelated));
+
+const mixedGenericScopeQuery = 'What personal tax relief applies to compulsory CPF contributions? Separately, how does foreign-sourced employment income affect individual tax relief?';
+const mixedGenericScope = reconcile(mixedGenericScopeQuery, [cpfRelief(cpfReliefSubject)]);
+const mixedGenericCpfIssue = findIssue(mixedGenericScope, issue => issue.mappedTopicIds.includes('iras-individual-cpf-relief'));
+assert.ok(mixedGenericCpfIssue);
+assert.equal(mixedGenericCpfIssue.mappedTopicIds.includes('iras-individual-reliefs'), false);
+assert.equal(mixedGenericCpfIssue.routingTopicIds, undefined,
+  'A generic parent scope mixed with an unrelated same-authority topic cannot inherit ownership from a CPF request in another fragment.');
+assert.ok(hasUnassignedUmbrella(mixedGenericScope));
+
+const noCpf = reconcile(genericQuery, [iras(cpfReliefSubject)]);
+assert.ok(noCpf.issues.some(issue => issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC' && issue.mappedTopicIds.includes('iras-individual-reliefs')),
+  'A semantic CPF hint cannot create a raw CPF topic or own the generic umbrella.');
+
+const localOnlyGenericEvidence = await buildAuthorityWorkstreams(genericQuery, genericOnly, { localOnly: true });
+const localOnlyIssues = localOnlyGenericEvidence.workstreams.flatMap(stream => stream.issues);
+const localOnlyUmbrellaEvidence = localOnlyIssues[0];
+assert.ok(localOnlyUmbrellaEvidence, 'The generic routing topic remains visible in the local-only workstream plan.');
+assert.equal(localOnlyUmbrellaEvidence.evidenceStatus, 'INSUFFICIENT',
+  'Routing-only metadata never grants verified source evidence.');
+assert.equal(localOnlyUmbrellaEvidence.lifecycle.verified, false);
+
+console.log('Routing-only umbrella ownership regressions passed.');

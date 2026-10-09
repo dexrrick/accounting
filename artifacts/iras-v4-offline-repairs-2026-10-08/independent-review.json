@@ -1,0 +1,18 @@
+{
+  "fixes": [
+    "Exact generic income-tax unique mapped-owner assignment with ambiguity/population safeguards",
+    "Material topic and explicit tax-area relevance enforced at default and injected adapter boundaries",
+    "Detached adapter requests preserve caller-owned validation scope",
+    "Legitimate scoped tax-rate discovery and fetched-body rejection controls preserved"
+  ],
+  "retainedResponsesVerified": 4,
+  "reviewer": "/root/offline_repair_review",
+  "legacyRetainedResponseControls": 6,
+  "profile": "iras-v4-post-retry-offline-independent-review",
+  "paragraphSelectionChanged": false,
+  "reviewedAtUtc": "2026-10-08T13:22:58.6458422Z",
+  "protectedInputsVerified": 30,
+  "acceptanceResult": false,
+  "ruleConceptSupportChanged": false,
+  "disposition": "NO_REMAINING_MATERIAL_FINDINGS"
+}

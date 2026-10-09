@@ -1,0 +1,393 @@
+{
+  "baseline": "22f4ae5a4f1173dc89991d602fcf30a5129012ad",
+  "mode": "synthetic-api-free-real-retrieval-renderer-workstream",
+  "referenceDate": "2026-10-02",
+  "fixtureNotice": "Hand-authored passages are synthetic stage probes, not retained IRAS HTML or verbatim IRAS quotations. They are mapped to reviewed local IRAS source-map pointers only for API-free testing.",
+  "ambientNetworkCalls": 0,
+  "modelCalls": 0,
+  "historicalV3PassageAndClaimCounts": "NR; not reconstructed from lost raw HTML",
+  "cases": [
+    {
+      "id": "private-deductibility-general",
+      "topicId": "iras-cit-deductibility",
+      "sourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-cit-deductibility",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "fetchedSyntheticPassageBlockCount": 1,
+      "admittedEvidencePassageBlockCount": 2,
+      "rendererSelectedClaimCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 1,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "NONE"
+    },
+    {
+      "id": "private-disallowed-general",
+      "topicId": "iras-cit-disallowed-expenses",
+      "sourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-cit-disallowed-expenses",
+          "sourceMapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "status": "TOPIC_MISMATCH"
+        }
+      ],
+      "candidateRecordCount": 0,
+      "admittedRecordCount": 0,
+      "fetchedSyntheticPassageBlockCount": 1,
+      "admittedEvidencePassageBlockCount": 0,
+      "rendererSelectedClaimCount": 0,
+      "literalVerifiedClaimCount": 0,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 0,
+      "finalIssueGapCodes": [
+        "NO_CANDIDATE_EVIDENCE",
+        "IRAS_SCOPE_NOT_COVERED",
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "uncoveredTopicIds": [
+        "iras-cit-disallowed-expenses",
+        "iras-authority-query-what-are-the-corporate-income-tax-rules-for-expe"
+      ],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "PAGE_OR_EXCERPT_COMPATIBILITY"
+    },
+    {
+      "id": "foreign-dividend-conditional-rule",
+      "topicId": "iras-foreign-sourced-income",
+      "sourceMapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "sourceMapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "fetchedSyntheticPassageBlockCount": 1,
+      "admittedEvidencePassageBlockCount": 2,
+      "rendererSelectedClaimCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 1,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "NONE"
+    },
+    {
+      "id": "foreign-income-without-dividend-negative",
+      "topicId": "iras-foreign-sourced-income",
+      "sourceMapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-foreign-sourced-income",
+          "sourceMapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "fetchedSyntheticPassageBlockCount": 1,
+      "admittedEvidencePassageBlockCount": 2,
+      "rendererSelectedClaimCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 0,
+      "finalIssueGapCodes": [
+        "NO_VERIFIED_CLAIM",
+        "ISSUE_CONCEPT_UNCOVERED"
+      ],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "ISSUE_SUBJECT_CONCEPT_FILTER"
+    },
+    {
+      "id": "company-residency-natural",
+      "topicId": "iras-corporate-tax-residency",
+      "sourceMapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "sourceMapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "fetchedSyntheticPassageBlockCount": 1,
+      "admittedEvidencePassageBlockCount": 2,
+      "rendererSelectedClaimCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 1,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [
+        "iras-authority-query-how-does-singapore-determine-whether-a-company-i"
+      ],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "REQUESTED_CONCEPT_COVERAGE"
+    },
+    {
+      "id": "company-residency-phrase-matched",
+      "topicId": "iras-corporate-tax-residency",
+      "sourceMapIds": [
+        "IRAS_CIT_RESIDENCY_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 1,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-corporate-tax-residency",
+          "sourceMapId": "IRAS_CIT_RESIDENCY_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "fetchedSyntheticPassageBlockCount": 1,
+      "admittedEvidencePassageBlockCount": 2,
+      "rendererSelectedClaimCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 1,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [
+        "iras-authority-query-how-does-singapore-determine-whether-a-company-i"
+      ],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "REQUESTED_CONCEPT_COVERAGE"
+    },
+    {
+      "id": "wht-royalty-hyphenated-query",
+      "topicId": "iras-withholding-tax-interest-royalties",
+      "sourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 2,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "status": "SUCCESS"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 2,
+      "admittedRecordCount": 2,
+      "fetchedSyntheticPassageBlockCount": 2,
+      "admittedEvidencePassageBlockCount": 4,
+      "rendererSelectedClaimCount": 2,
+      "literalVerifiedClaimCount": 2,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 2,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "NONE"
+    },
+    {
+      "id": "wht-royalty-spaced-query-control",
+      "topicId": "iras-withholding-tax-interest-royalties",
+      "sourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 2,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "status": "SUCCESS"
+        },
+        {
+          "topicId": "iras-withholding-tax-interest-royalties",
+          "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 2,
+      "admittedRecordCount": 2,
+      "fetchedSyntheticPassageBlockCount": 2,
+      "admittedEvidencePassageBlockCount": 4,
+      "rendererSelectedClaimCount": 2,
+      "literalVerifiedClaimCount": 2,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 2,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "NONE"
+    },
+    {
+      "id": "gst-input-tax-natural",
+      "topicId": "iras-gst-input-tax",
+      "sourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 2,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "status": "SUCCESS"
+        },
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 2,
+      "admittedRecordCount": 2,
+      "fetchedSyntheticPassageBlockCount": 2,
+      "admittedEvidencePassageBlockCount": 4,
+      "rendererSelectedClaimCount": 2,
+      "literalVerifiedClaimCount": 2,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 2,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "NONE"
+    },
+    {
+      "id": "gst-input-tax-phrase-matched",
+      "topicId": "iras-gst-input-tax",
+      "sourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "IRAS_GST_INVOICING_SOURCE_MAP"
+      ],
+      "mappedFetchCount": 2,
+      "mappedAttemptStatuses": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "status": "SUCCESS"
+        },
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+          "status": "SUCCESS"
+        }
+      ],
+      "candidateRecordCount": 2,
+      "admittedRecordCount": 2,
+      "fetchedSyntheticPassageBlockCount": 2,
+      "admittedEvidencePassageBlockCount": 4,
+      "rendererSelectedClaimCount": 2,
+      "literalVerifiedClaimCount": 2,
+      "literalRejectedClaimCount": 0,
+      "finalIssueClaimCount": 2,
+      "finalIssueGapCodes": [],
+      "uncoveredTopicIds": [],
+      "uncoveredConceptCount": 0,
+      "uncoveredConceptIds": [],
+      "firstFailingStage": "NONE"
+    }
+  ],
+  "negativeControls": [
+    {
+      "id": "unrelated-iras-page-topic",
+      "candidateRecordCount": 0,
+      "admittedRecordCount": 0,
+      "firstFailingStage": "PAGE_OR_EXCERPT_COMPATIBILITY",
+      "statuses": [
+        "TOPIC_MISMATCH"
+      ]
+    },
+    {
+      "id": "unrelated-sibling-topic",
+      "candidateRecordCount": 0,
+      "admittedRecordCount": 0,
+      "firstFailingStage": "PAGE_OR_EXCERPT_COMPATIBILITY",
+      "statuses": [
+        "TOPIC_MISMATCH"
+      ]
+    },
+    {
+      "id": "wrong-evidence-domain",
+      "admittedRecordCount": 0,
+      "rejectedRecordCount": 1,
+      "firstFailingStage": "EVIDENCE_ADMISSION"
+    },
+    {
+      "id": "official-map-url-without-evidence-text",
+      "admittedRecordCount": 0,
+      "rejectedRecordCount": 1,
+      "firstFailingStage": "EVIDENCE_ADMISSION"
+    }
+  ],
+  "residencySubjectNegativeControls": [
+    {
+      "id": "missing-missing-tax",
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "finalIssueClaimCount": 0,
+      "firstFailingStage": "ISSUE_SUBJECT_CONCEPT_FILTER"
+    },
+    {
+      "id": "missing-missing-company",
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "finalIssueClaimCount": 0,
+      "firstFailingStage": "ISSUE_SUBJECT_CONCEPT_FILTER"
+    },
+    {
+      "id": "missing-missing-residence",
+      "candidateRecordCount": 1,
+      "admittedRecordCount": 1,
+      "literalVerifiedClaimCount": 1,
+      "finalIssueClaimCount": 0,
+      "firstFailingStage": "ISSUE_SUBJECT_CONCEPT_FILTER"
+    }
+  ],
+  "cpfUnchangedControl": {
+    "status": "VERIFIED",
+    "issueEvidenceStatus": "VERIFIED",
+    "finalIssueClaimCount": 1
+  }
+}

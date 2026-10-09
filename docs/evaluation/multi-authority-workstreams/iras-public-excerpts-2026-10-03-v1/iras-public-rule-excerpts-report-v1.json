@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-public-rule-excerpts-v1",
+  "diagnosticOnly": true,
+  "interpretation": "PRESENCE_ONLY_NOT_ENTAILMENT_OR_LIVE_ACCEPTANCE",
+  "maximumActualGets": 10,
+  "actualGetCount": 5,
+  "cacheReuseCount": 0,
+  "transportEvents": [
+    {
+      "mapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "status": "HTTP_200",
+      "host": "www.iras.gov.sg",
+      "contentHash": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+    },
+    {
+      "mapIds": [
+        "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP"
+      ],
+      "status": "HTTP_200",
+      "host": "www.iras.gov.sg",
+      "contentHash": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_OVERVIEW_SOURCE_MAP"
+      ],
+      "status": "HTTP_200",
+      "host": "www.iras.gov.sg",
+      "contentHash": "25c6de0c2fd4d1d02103484329e9d3af77ea55886d512a754d43890fae64dc83"
+    },
+    {
+      "mapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP"
+      ],
+      "status": "HTTP_200",
+      "host": "www.iras.gov.sg",
+      "contentHash": "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b"
+    },
+    {
+      "mapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "status": "HTTP_200",
+      "host": "www.iras.gov.sg",
+      "contentHash": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+    }
+  ],
+  "preregistrationSha256": "9264a9d5955fc01c745be353e59ba7779e96fcefdca5aeb723fea5ab0cd676fc",
+  "results": [
+    {
+      "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+      "status": "VALIDATED",
+      "documentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451",
+      "blockCount": 168,
+      "excerptCount": 5,
+      "truncated": false,
+      "skippedCounts": {
+        "EXCERPT_COUNT_LIMIT": 1
+      },
+      "excerpts": [
+        {
+          "blockIndex": 7,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "•\n\nBusiness expenses are the costs incurred to run your business. Know the types of business expenses that are tax deductible to reduce your company's taxable income, and which are non-deductible. Use the Business Expense Deductibility Checker to check whether certain common business expenses are tax deductible. This will give you greater clarity and confidence when you are preparing your tax computation.",
+          "truncated": false,
+          "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+          "documentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+        },
+        {
+          "blockIndex": 19,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "Generally, deductible business expenses are those 'wholly and exclusively incurred in the production of income'. In other words, they must satisfy all these conditions:\n\n• The expenses are solely incurred in the production of income.\n\n• The expenses must be incurred. It is considered incurred when the legal liability to pay arises, regardless of whether the actual payment has been made.\n\n• The expenses are revenue in nature, and not capital expenses. Revenue expenses are generally costs incurred in the day-to-day operations of a business to generate revenue (such as salaries, rent, and utilities), while capital expenses are investments in the business that are expected to provide long-term benefits (such as acquisition of fixed assets).\n\n• The expenses are not prohibited from deduction under the Income Tax Act 1947.",
+          "truncated": false,
+          "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+          "documentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+        },
+        {
+          "blockIndex": 26,
+          "unitKind": "PARAGRAPH",
+          "text": "Non-deductible business expenses are expenses you or your employees pay for that do not fulfil the conditions above. These include personal expenses (such as travel, or entertainment not fully related to the running of the business) and capital expenses (such as expenses incurred to incorporate a company and the purchase of fixed assets).",
+          "truncated": false,
+          "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+          "documentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+        },
+        {
+          "blockIndex": 115,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "Prepaid expenses (not relating to the relevant basis period)\n\nPrivate and domestic expenses (expenses not incurred for business purpose)",
+          "truncated": false,
+          "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+          "documentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+        },
+        {
+          "blockIndex": 133,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "Secretarial fees\n\nSponsorship (in-kind or in cash as a genuine commercial transaction carried out in the normal course of the sponsor's business, and the expense is not private / capital in nature or otherwise disallowed in the Income Tax Act)",
+          "truncated": false,
+          "mapId": "IRAS_CIT_EXPENSES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+          "documentSha256": "dbb24a33a40706d6909151b2fe23560d5f0b1f96b8d5175797349981752f5451"
+        }
+      ]
+    },
+    {
+      "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+      "status": "VALIDATED",
+      "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625",
+      "blockCount": 95,
+      "excerptCount": 5,
+      "truncated": false,
+      "skippedCounts": {
+        "EXCERPT_COUNT_LIMIT": 29
+      },
+      "excerpts": [
+        {
+          "blockIndex": 13,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "There are tax reliefs available to Singapore tax residents to alleviate the double taxation suffered, such as:\n\n• Exemption or reduction in tax imposed on specified foreign income that is derived in a jurisdiction that has an Avoidance of Double Taxation Agreement with Singapore\n\n• Tax exemption on specified foreign-sourced income such as foreign-sourced dividends, foreign branch profits and foreign-sourced service income under Section 13(8) of the Income Tax Act 1947\n\n• Foreign tax credit for the taxes paid in the foreign jurisdiction against the Singapore tax payable on the same income",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 41,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "The 3 categories of specified foreign-sourced income are:\n\n• Foreign-sourced dividend\n\n• Foreign branch profits\n\n• Foreign-sourced service income",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 54,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "The following documents must be prepared and retained for at least 5 years from the relevant Year of Assessment (YA):\n\n• A declaration by the company that the foreign jurisdiction has exempted the foreign income from tax because of substantive business activities carried out by the company in that jurisdiction\n\n• A copy of the tax incentive certificate/ approval letter issued by the foreign jurisdiction. In the case of a foreign-sourced dividend, a dividend voucher (if available) stating that the dividend is exempt from tax due to tax incentive granted to the dividend-paying company for carrying out substantive business activities in that foreign jurisdiction is sufficient",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 57,
+          "unitKind": "PARAGRAPH",
+          "text": "For Foreign-Sourced Dividends",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        },
+        {
+          "blockIndex": 58,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "For the purpose of this ‘subject to tax’ condition, tax paid or payable on foreign-sourced dividend received in Singapore includes:\n\n• The dividend tax, which is income tax levied on the dividend by the foreign country/ territory of source\n\n• The underlying tax, which is income tax paid or payable by the dividend paying company on the income out of which the dividend is paid",
+          "truncated": false,
+          "mapId": "IRAS_CIT_FOREIGN_INCOME_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income",
+          "documentSha256": "4f7b80b92ab81ce3bc2d84604a5025d289b026bed0b358ee04d7a0dca1e37625"
+        }
+      ]
+    },
+    {
+      "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+      "status": "VALIDATED",
+      "documentSha256": "25c6de0c2fd4d1d02103484329e9d3af77ea55886d512a754d43890fae64dc83",
+      "blockCount": 40,
+      "excerptCount": 3,
+      "truncated": false,
+      "skippedCounts": {},
+      "excerpts": [
+        {
+          "blockIndex": 10,
+          "unitKind": "PARAGRAPH",
+          "text": "A person (known as the payer) who makes payments of a specified nature (e.g. royalty, interest, technical service fee, etc.) to a non-resident company or individual (known as the payee) must withhold a percentage of the payment and pay the amount withheld to IRAS as WHT.",
+          "truncated": false,
+          "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+          "documentSha256": "25c6de0c2fd4d1d02103484329e9d3af77ea55886d512a754d43890fae64dc83"
+        },
+        {
+          "blockIndex": 31,
+          "unitKind": "PARAGRAPH",
+          "text": "As a payer, you must file and pay the WHT to IRAS by the 15th of the second month from the date of payment to the non-resident.",
+          "truncated": false,
+          "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+          "documentSha256": "25c6de0c2fd4d1d02103484329e9d3af77ea55886d512a754d43890fae64dc83"
+        },
+        {
+          "blockIndex": 33,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "WHT applicability guide\n\nUse the guide to determine whether WHT is applicable when you make payment to a non-resident.",
+          "truncated": false,
+          "mapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+          "documentSha256": "25c6de0c2fd4d1d02103484329e9d3af77ea55886d512a754d43890fae64dc83"
+        }
+      ]
+    },
+    {
+      "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+      "status": "VALIDATED",
+      "documentSha256": "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b",
+      "blockCount": 79,
+      "excerptCount": 4,
+      "truncated": false,
+      "skippedCounts": {},
+      "excerpts": [
+        {
+          "blockIndex": 7,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "•\n\nA person must withhold and pay the withheld tax to IRAS when certain types of payment (e.g. interest, royalty, services etc.) are made to a non-resident.",
+          "truncated": false,
+          "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+          "documentSha256": "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b"
+        },
+        {
+          "blockIndex": 10,
+          "unitKind": "PARAGRAPH",
+          "text": "WHT rates for interest, royalty, service and rent of movable properties, etc.",
+          "truncated": false,
+          "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+          "documentSha256": "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b"
+        },
+        {
+          "blockIndex": 58,
+          "unitKind": "PARAGRAPH",
+          "text": "2For royalty payments to an author, a composer or a choreographer, the prevailing tax rate of 24% (22% for income due and payable from 01 Jan 2016 to 31 Dec 2022) shall apply to either net royalties or 10% of the gross royalties up to Year of Assessment (YA) 2026, whichever is lower). As announced in Budget 2024, the current tax concession of taxing only 10% of gross royalties will be withdrawn in phases over 3 years. From YA 2027, there will be a gradual increment of the percentage of gross royalties subject to tax by 30%-points per year (i.e. 40% for YA 2027 and 70% for YA 2028). From YA 2029, 100% of gross royalties less any allowable deductions and capital allowances (i.e. net amount of royalties) will be subject to tax. Learn more about Tax concession for royalty payments and the phased withdrawal of the concession from YA 2027.",
+          "truncated": false,
+          "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+          "documentSha256": "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b"
+        },
+        {
+          "blockIndex": 59,
+          "unitKind": "PARAGRAPH",
+          "text": "3For a non-resident company, WHT is based on the prevailing Corporate Income Tax rate for the year when the services were provided, even if the payment to the non-resident is made in a different year. For example, if the service was provided in Dec 2018 but payment was made in 2019, the prevailing Corporate Income Tax rate is that for 2018 (Year of Assessment 2019).",
+          "truncated": false,
+          "mapId": "IRAS_WHT_RATES_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+          "documentSha256": "87b0000fc501ff039671e733af3dde143c421fe6641c224975645477c5fdfe1b"
+        }
+      ]
+    },
+    {
+      "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+      "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "status": "VALIDATED",
+      "documentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6",
+      "blockCount": 196,
+      "excerptCount": 5,
+      "truncated": false,
+      "skippedCounts": {
+        "EXCERPT_COUNT_LIMIT": 50
+      },
+      "excerpts": [
+        {
+          "blockIndex": 7,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "•\n\nWhen purchasing from GST-registered suppliers or importing goods into Singapore, you may have incurred GST (input tax). You can claim the input tax incurred when you satisfy all of the conditions for making such a claim. You should only claim input tax in the accounting period corresponding to the date of the invoice or import permit.",
+          "truncated": false,
+          "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "documentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+        },
+        {
+          "blockIndex": 10,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "Conditions for claiming input tax\n\nYou can claim input tax incurred on your purchases only if all the following conditions are met:",
+          "truncated": false,
+          "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "documentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+        },
+        {
+          "blockIndex": 17,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "Examples of non-business activities:\n\n• Activities with non-business objects in philanthropic, religious, political, patriotic or public domain\n\n• Free activities provided without commercial reasons\n\n• Activities that are purely private or personal If you have both business and non-business activities, you can only claim input tax attributable to business activities relating to taxable supplies.",
+          "truncated": false,
+          "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "documentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+        },
+        {
+          "blockIndex": 44,
+          "unitKind": "HEADING_WITH_COMPLETE_LIST",
+          "text": "Regulations 26 and 27 of the GST (General) Regulations do not allow you to claim input tax incurred on the following expenses:\n\n• Benefits provided to the family members or relatives of your staff;\n\n• Costs and running expenses incurred on motor cars that are either:\n\n◦ registered under the business' or individual's name, or\n\n◦ hired for business or private use, except where the car is excluded from the definition of a 'motor car' in Regulation 25(1) of the GST (General) Regulations. For more information, please refer to the section on \"Motor Vehicles\" below;",
+          "truncated": false,
+          "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "documentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+        },
+        {
+          "blockIndex": 63,
+          "unitKind": "HEADING_AND_BLOCK",
+          "text": "Item\n\nCan I claim input tax?",
+          "truncated": false,
+          "mapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "documentSha256": "780eec83478e554520eb2c8162768e805fc59d0befba2bd3d862e5e2a4c375c6"
+        }
+      ]
+    }
+  ]
+}

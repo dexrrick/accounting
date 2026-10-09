@@ -1,0 +1,17 @@
+{
+  "profile": "LIVE_VARIANTS_FAILURE_ANALYSIS",
+  "providerRequests": 9,
+  "passed": 8,
+  "failed": 1,
+  "newProviderCallsDuringAnalysis": 0,
+  "newSourceRequestsDuringAnalysis": 0,
+  "sourceReferenceDate": "2026-10-08",
+  "acceptanceProven": false,
+  "failures": [{
+    "caseId": "gst-input-tax-general-rule",
+    "subject": "general conditions for claiming input tax on business purchases",
+    "dimensions": "COMPANY / IRAS_GST / IRAS / EXPLAIN_RULE",
+    "concepts": [{"concept":"input tax","role":"PRIMARY"},{"concept":"business purchases","role":"RELATED"},{"concept":"GST registration","role":"RELATED"}],
+    "finding": "Subject omits GST acronym; independently recognized original-question topic is not claimed. GST registration descriptor becomes material residual. All schema and integrity checks pass; no new source retrieval was attempted for unresolved issue."
+  }]
+}

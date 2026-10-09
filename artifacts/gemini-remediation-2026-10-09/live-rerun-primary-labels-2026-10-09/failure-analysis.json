@@ -1,0 +1,18 @@
+{
+  "profile": "PRIMARY_LABELS_LIVE_FAILURE_ANALYSIS",
+  "providerDispatchAttempts": 12,
+  "passed": 6,
+  "failed": 3,
+  "retainedResponses": 7,
+  "unavailableCases": 2,
+  "blockedConnectionAttempts": 2,
+  "newProviderCallsDuringAnalysis": 0,
+  "newSourceRequestsDuringAnalysis": 0,
+  "sourceReferenceDate": "2026-10-08",
+  "acceptanceProven": false,
+  "failures": [
+    {"caseId":"A-paraphrase-2","assessmentStatus":"NOT_ASSESSED","cause":"HTTP503 followed by retry timeout; no response"},
+    {"caseId":"wht-royalty-general-rule","assessmentStatus":"NOT_ASSESSED","cause":"V4_PACING_GAP_NOT_MET before dispatch; no response"},
+    {"caseId":"gst-input-tax-general-rule","assessmentStatus":"PASSED","cause":"Valid recovered response has general GST input tax claim rules title; business purchases explicit in question/related concept but absent from issue subject"}
+  ]
+}

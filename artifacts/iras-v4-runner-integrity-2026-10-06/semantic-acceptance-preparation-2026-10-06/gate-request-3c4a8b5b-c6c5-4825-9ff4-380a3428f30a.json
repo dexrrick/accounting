@@ -1,0 +1,19 @@
+{
+  "profile": "iras-v4-semantic-gate-request",
+  "requestId": "3c4a8b5b-c6c5-4825-9ff4-380a3428f30a",
+  "launcherSha256": "3c4ae3ce2e8fc995cc88272015d9af6224f0cac2a5967f29ecc52e8aa44411ad",
+  "requestedAt": "2026-10-06T11:08:20.733Z",
+  "responsePath": "artifacts/iras-v4-runner-integrity-2026-10-06/semantic-acceptance-preparation-2026-10-06/gate-response-3c4a8b5b-c6c5-4825-9ff4-380a3428f30a.json",
+  "requiredUsageTool": "mcp__codex_app__get_usage_limits",
+  "usageWindowsMinutes": [
+    300,
+    10080
+  ],
+  "maximumObservationAgeMs": 300000,
+  "projectionSha256": "daa332cb1e7bf11d017611ff8849423a13e871bdf9f89d5dd43e0c2e2b8b3578",
+  "preregistrationSha256": "483844d5c630a136d38c9bc2d21d165506529fa32c768b246b0f8af0e58dbcb3",
+  "model": "gemini-3.5-flash-lite",
+  "quotaMustBindCredentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "confirmedCapacityRequired": 9,
+  "providerRequestsPerMinuteRequired": 4
+}

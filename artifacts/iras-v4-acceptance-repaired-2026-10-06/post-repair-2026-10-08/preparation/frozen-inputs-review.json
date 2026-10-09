@@ -1,0 +1,15 @@
+{
+  "profile": "iras-v4-post-repair-frozen-input-independent-review",
+  "approvalPending": true,
+  "namespaceAbsent": true,
+  "reviewer": "/root/offline_repair_review",
+  "protectedFilesVerified": 36,
+  "reviewedAtUtc": "2026-10-08T13:45:20.5014242Z",
+  "boundFilesVerified": 594,
+  "disposition": "NO_MATERIAL_FINDINGS",
+  "capabilitiesAndPermitsDeferredToActualAuthorizedPreflight": true,
+  "callsMade": 0,
+  "sourceInventoryCount": 15,
+  "freezeValidationSha256": "e27209aef958ddc8512edb09fe108544da26c9cd76c0aa8c5f52b88ce8666442",
+  "promptRows": 9
+}

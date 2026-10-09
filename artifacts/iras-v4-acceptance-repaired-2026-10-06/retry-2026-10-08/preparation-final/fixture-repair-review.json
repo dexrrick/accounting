@@ -1,0 +1,14 @@
+{
+  "protectedInputCount": 21,
+  "fixture": "Isolated second temporary cwd, original cwd restored before cleanup",
+  "launcherSyntax": "PASS",
+  "focusedRunnerRegression": "PASS",
+  "reviewer": "/root/offline_repair_review",
+  "previousLintBuildSmokeStillValid": true,
+  "resolvedFinding": "P2 test assumed real retry namespace absent",
+  "observedAtUtc": "2026-10-07T16:42:16.5446706Z",
+  "disposition": "NO_REMAINING_MATERIAL_FINDINGS",
+  "helperSyntax": "PASS",
+  "pendingPinsFailClosed": true,
+  "profile": "iras-v4-cwd-fixture-repair-independent-review"
+}

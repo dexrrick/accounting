@@ -1,0 +1,39 @@
+{
+  "profile": "iras-v4-remaining-six-diagnostic-gate-request",
+  "requestId": "164f42bb-b914-44a2-a395-530fbd99ca15",
+  "requestedAtUtc": "2026-10-08T23:53:31.242Z",
+  "launcherSha256": "cd624ebc36b2fcaec06d61058239031e937eea9bb18ce842065a21e88781672b",
+  "authorizationSha256": "83cc1ef8b39a80cbf29bf6642cd33d3fa71439d2767d084c4ffae5e9c964c821",
+  "independentReviewSha256": "a5d3ba47e65c5999b768df51847e0b086a8b82d61bf1f807307303c1f44d4324",
+  "credentialSha256": "a044bb56fee200691dece28a781f3e0dfd9da4508f5f8ac5677b738c6bdfe5f8",
+  "semanticProfile": "DIAGNOSTIC_CONTINUATION",
+  "caseIds": [
+    "private-expense-treatment",
+    "foreign-dividend-receipt-treatment",
+    "corporate-residency-general-rule",
+    "wht-royalty-general-rule",
+    "gst-input-tax-general-rule",
+    "unsupported-sfrsi-6-exploration-evaluation"
+  ],
+  "model": "gemini-3.5-flash-lite",
+  "authorizedGeminiCalls": 6,
+  "retries": 0,
+  "providerProbesAuthorized": 0,
+  "liveSourceRetrieval": false,
+  "requiredUsageTool": "mcp__codex_app__get_usage_limits",
+  "requiredUsageWindowsMinutes": [
+    300,
+    10080
+  ],
+  "maximumUsageObservationAgeMs": 300000,
+  "projection": {
+    "fiveHourCostPercentagePoints": 20,
+    "weeklyCostPercentagePoints": 10,
+    "reserveAfterProjectionMinimumFiveHourPercent": 8,
+    "reserveAfterProjectionMinimumWeeklyPercent": 4,
+    "checkpointAtRemainingPercent": 10,
+    "finishAboveRemainingPercent": 5,
+    "observationMaximumAgeMs": 300000
+  },
+  "userInstruction": "let's continue with the remaining 6 and document how many of them fail instead of stopping"
+}

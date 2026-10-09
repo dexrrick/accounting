@@ -1,0 +1,54 @@
+{
+  "noProviderCallsMade": true,
+  "interpreterSha256": "2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505",
+  "observations": [
+    {
+      "caseId": "A-paraphrase-3",
+      "promptChars": 8022,
+      "promptBytes": 8022,
+      "systemChars": 259,
+      "systemBytes": 259,
+      "promptSha256": "bd01cc5fab4dfbd07a3d0771fd02608e773cc3d16550737bedef3340950f92b9",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0,
+      "promptCharDelta": 4
+    },
+    {
+      "caseId": "A-paraphrase-4",
+      "promptChars": 7998,
+      "promptBytes": 7998,
+      "systemChars": 259,
+      "systemBytes": 259,
+      "promptSha256": "ecf37cc34f0f364a7b9bca08b8b08a50bf2d450c3bfe0518d101e4452bb8cbbe",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0,
+      "promptCharDelta": 4
+    },
+    {
+      "caseId": "D-original",
+      "promptChars": 7952,
+      "promptBytes": 7952,
+      "systemChars": 259,
+      "systemBytes": 259,
+      "promptSha256": "b0e3c33458bb6f2c8d703b4aadc00ad468aff7713b3b6917e1b66d804edf289d",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0,
+      "promptCharDelta": 4
+    },
+    {
+      "caseId": "D-paraphrase-1",
+      "promptChars": 7976,
+      "promptBytes": 7976,
+      "systemChars": 259,
+      "systemBytes": 259,
+      "promptSha256": "29e1baaebd23093774f5296f116fc8e9c811facd68529f043696eef2d0010c7e",
+      "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+      "timeoutMs": 8000,
+      "temperature": 0,
+      "promptCharDelta": 4
+    }
+  ]
+}

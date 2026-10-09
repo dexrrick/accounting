@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "profileVersion": "iras-public-gst-selection-v3",
+  "preregistrationSha256": "72e124b3455d88db65acbdd45fc042db9a0617c39f6c57a650526edc28415331",
+  "preregistrationFileSha256": "79957cceaa847489165756718e65a445c9ef155b49bd73fb8b2a603d99cbed36",
+  "reservedAt": "2026-10-03T07:43:08.992Z",
+  "status": "CONSUMED_BEFORE_FIRST_REQUEST"
+}

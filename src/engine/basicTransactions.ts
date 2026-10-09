@@ -85,9 +85,20 @@ function expenseAccounts(query: string): Pair {
 // company's director/shareholder withdrawal to proprietor drawings.
 const personalOwnerWithdrawal = (query: string): boolean =>
   /\b(?:owner|sole proprietor|sole proprietorship)\b/i.test(query) &&
-  /\b(?:personal use|private use|personal expense|drawings|draw|draws|withdrawal|withdraw|withdrew|takes?|took)\b/i.test(query) &&
+  /\b(?:personal use|private use|personal expense|drawings)\b/i.test(query) &&
   /\b(?:business|firm|company)\b/i.test(query) &&
   !/\b(?:contribut(?:e|ion)|invest(?:ed|ment)?|put into|deposit(?:ed)?)\b/i.test(query);
+
+const customerPaymentOutflow = (query: string): boolean =>
+  /\b(?:refund|reimburse|repay|return)\w*\b/i.test(query) ||
+  /\b(?:we|i|(?:(?:our|the)\s+)?(?:business|company))\s+(?:(?:have|has|are|is)\s+)?(?:pay|paid|pays|paying|send|sent|transfer|transferred|remit|remitted|settle|settled|settling)\b/i.test(query) ||
+  /\b(?:paid|sent|transferred|remitted|settled)\b.{0,60}\bby\s+(?:us|(?:(?:the|our)\s+)?(?:business|company))\b/i.test(query) ||
+  /\b(?:pay|paid|pays|paying|send|sent|transfer|transferred|remit|remitted)\b.{0,80}\b(?:to|for)\s+(?:(?:the|a|an|our|my)\s+)?(?:customer|client)\b/i.test(query);
+
+const customerReceiptDirection = (query: string): boolean =>
+  /\b(?:receipt|received|receives|receiving|receive|collect|collected|settled|settles|settling|settlement|settlements)\b/i.test(query) ||
+  /\b(?:(?:the|a|our|my)\s+)?(?:customer|client)\s+(?:(?:has|have|had)\s+)?(?:paid|pays|pay)\b/i.test(query) ||
+  /\b(?:paid|pays|pay)\b.{0,80}\bby\s+(?:the\s+)?(?:customer|client)\b/i.test(query);
 
 const ownerDrawingsTemplate: Template = {
   id: 'SOLE_PROPRIETOR_DRAWINGS', title: 'Owner cash withdrawal for personal use',
@@ -185,8 +196,10 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   // Customer invoice settlements take priority over a generic "bank transfer".
   // A third-party payment is not a transfer between the entity's own accounts.
   const externalParty = /\b(?:customer|client|supplier|vendor|third.party)\b/i.test(query);
+  const customerReceiptAllowed = customerReceiptDirection(query) && !customerPaymentOutflow(query);
   const template = personalOwnerWithdrawal(query) ? ownerDrawingsTemplate :
     templates.find(item => (!externalParty || item.id !== 'BANK_TRANSFER') &&
+      (item.id !== 'CUSTOMER_RECEIPT' || customerReceiptAllowed) &&
       item.patterns.every(pattern => pattern.test(query)));
   if (!template) return undefined;
   const pair = template.accounts(query);
@@ -225,5 +238,45 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
       citations: [], rationalePoints: [rationale], authorityStatus: 'DETERMINISTIC'
     }] : [],
     isComplete, missingFields
+  };
+}
+
+/** Resolve only short, explicit answers to a pending owner-drawings field. */
+export function resolveBasicOwnerDrawingsFollowUp(
+  query: string,
+  currentScenario?: AccountingScenarioState | null
+): AccountingScenarioState | undefined {
+  if (currentScenario?.scenarioType !== 'BASIC_BOOKKEEPING' ||
+      !personalOwnerWithdrawal(currentScenario.rawQuery) ||
+      !currentScenario.missingFields?.some(field => field.fieldKey === 'entityType' || field.fieldKey === 'paymentAccount')) {
+    return undefined;
+  }
+
+  const answer = query.trim().replace(/[.!?]+$/, '').trim();
+  const missingFields = new Set(currentScenario.missingFields.map(field => field.fieldKey));
+  const original = currentScenario.rawQuery;
+  const originalSoleProprietor = /\bsole propriet(?:or|orship)\b/i.test(original);
+  const originalCompany = /\b(?:company|pte\.?\s*ltd\.?|limited)\b/i.test(original);
+  let confirmedFact: string | undefined;
+
+  const entityAnswer = answer.match(/^(?:(?:it|this|the business)\s+is\s+)?(?:a\s+)?(sole proprietorship|sole proprietor|company)$/i)?.[1];
+  if (missingFields.has('entityType') && entityAnswer) {
+    const isSoleProprietor = /sole proprietor/i.test(entityAnswer);
+    if ((isSoleProprietor && originalCompany) || (!isSoleProprietor && originalSoleProprietor)) {
+      return { ...currentScenario, directGroups: [], isComplete: false };
+    }
+    confirmedFact = isSoleProprietor ? 'sole proprietorship' : 'company';
+  } else if (missingFields.has('paymentAccount')) {
+    const cashAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using|in)\s+)?(?:physical\s+)?(?:petty cash|cash on hand|cash)$/i.test(answer);
+    const bankAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using)\s+)?(?:(?:the|our)\s+)?(?:business\s+)?(?:bank(?:\s+account)?|current\s+account|savings\s+account)$/i.test(answer);
+    if (cashAnswer) confirmedFact = 'physical cash';
+    else if (bankAnswer) confirmedFact = 'business bank account';
+  }
+
+  if (!confirmedFact) return undefined;
+  return matchBasicTransaction(`${original} ${confirmedFact}`) ?? {
+    ...currentScenario,
+    directGroups: [],
+    isComplete: false
   };
 }

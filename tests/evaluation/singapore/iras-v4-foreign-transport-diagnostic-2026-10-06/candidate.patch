@@ -1,0 +1,59 @@
+diff --git a/tests/regression/test_iras_first_targeted_acceptance_v4.mjs b/tests/regression/test_iras_first_targeted_acceptance_v4.mjs
+index d34dcb0..7df6e6a 100644
+--- a/tests/regression/test_iras_first_targeted_acceptance_v4.mjs
++++ b/tests/regression/test_iras_first_targeted_acceptance_v4.mjs
+@@ -700,6 +700,12 @@ const reliefHtml = '<html><head><title>Central Provident Fund (CPF) Relief for E
+ const sitemapHtml = `<?xml version="1.0"?><urlset><url><loc>${discoveredUrl}</loc><lastmod>2026-10-04</lastmod></url></urlset>`;
+ const fixtureManifest = [mappedHtml, reliefHtml, sitemapHtml].map(text => ({ synthetic: true, sha256: createHash('sha256').update(text).digest('hex') }));
+ assert.equal(fixtureManifest.every(item => item.synthetic && /^[a-f0-9]{64}$/.test(item.sha256)), true);
++const controlledRuleFixtureBodies = [];
++function syntheticIrasPage(title, ruleText) {
++  const body = `<html><head><title>${title}</title></head><body><!-- SYNTHETIC API-FREE FIXTURE --><main><h1>${title}</h1><p>${ruleText}</p></main></body></html>`;
++  controlledRuleFixtureBodies.push(body);
++  return { body, status: 200 };
++}
+ 
+ async function runControlledIras(query, issuePlan, questionUnderstanding, responseByUrl) {
+   const requests = [];
+@@ -911,4 +917,40 @@ console.log(`V4_DISCOVERY_RUNTIME ${JSON.stringify({ route: discoveredRun.reques
+   issueStatus: reliefEvidence.evidenceStatus, applicationStatus: reliefEvidence.applicationStatus,
+   overallStatus: discoveredRun.result.status, sourceStatus: reliefEvidence.sources[0].sourceStatus })}`);
+ 
+-console.log(`V4 API-free contract, local-only runtime, one-use guards, controlled discovery and evidence-gate checks passed (${fixtureManifest.length} explicitly synthetic fixture hashes).`);
++const foreignIncomeUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/companies-receiving-foreign-income';
++const foreignRow = semanticRows.find(row => row.item.caseId === 'foreign-dividend-receipt-treatment');
++const foreignPositiveFixture = syntheticIrasPage('Companies Receiving Foreign Income | IRAS',
++  'Foreign-sourced dividends are taxable when received in Singapore, unless an applicable statutory exemption applies. A company must satisfy the conditions for that exemption; the rule concerns dividend income received by the company, not a dividend it pays to shareholders.');
++const foreignNegativeFixture = syntheticIrasPage('Companies Receiving Foreign Income | IRAS',
++  'A company’s domestic dividends are recorded as dividend income. This page concerns distributions paid by a Singapore company to shareholders and does not state a tax rule for foreign-sourced dividends received in Singapore.');
++const foreignPositiveRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
++  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation }, { [foreignIncomeUrl]: foreignPositiveFixture });
++const foreignNegativeRun = await runControlledIras(foreignRow.item.question, foreignRow.issuePlan,
++  { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignRow.interpretation }, { [foreignIncomeUrl]: foreignNegativeFixture });
++const foreignPositiveIssue = foreignPositiveRun.result.workstreams.flatMap(stream => stream.issues)[0];
++const foreignNegativeIssue = foreignNegativeRun.result.workstreams.flatMap(stream => stream.issues)[0];
++const foreignPositiveDiagnostic = { requests: foreignPositiveRun.transportObservations, retrievalTrace: foreignPositiveIssue.retrievalTrace,
++  lifecycle: foreignPositiveIssue.lifecycle, admission: foreignPositiveIssue.admission, evidenceQuality: foreignPositiveIssue.evidenceQuality,
++  gaps: foreignPositiveIssue.gaps, evidenceStatus: foreignPositiveIssue.evidenceStatus,
++  claims: foreignPositiveIssue.verifiedClaims?.length, sourceIds: foreignPositiveIssue.sources?.map(source => source.id) };
++assert.ok(foreignPositiveRun.requests.includes(foreignIncomeUrl));
++assert.equal(foreignPositiveIssue.evidenceStatus, 'VERIFIED',
++  `The synthetic received-foreign-dividend rule passes the actual governed evidence path: ${JSON.stringify(foreignPositiveDiagnostic)}`);
++assert.equal(foreignPositiveIssue.applicationStatus, 'UNRESOLVED');
++assert.equal(foreignPositiveRun.result.status, 'CONDITIONAL');
++assert.equal(foreignPositiveRun.result.applicationStatus, 'UNRESOLVED');
++assert.equal(foreignPositiveIssue.sources[0].sourceStatus, 'NEEDS_REVIEW', 'Synthetic transport never upgrades source trust.');
++assert.ok(foreignNegativeRun.requests.includes(foreignIncomeUrl));
++assert.notEqual(foreignNegativeIssue.evidenceStatus, 'VERIFIED', 'Domestic and payer-side wording cannot prove the foreign-dividend receipt rule.');
++assert.equal(foreignNegativeIssue.lifecycle.covered, false);
++assert.equal(foreignNegativeIssue.verifiedClaims.length, 0);
++console.log(`V4_CONTROLLED_FOREIGN_DIVIDEND ${JSON.stringify({ positive: { lifecycle: foreignPositiveIssue.lifecycle,
++  evidenceStatus: foreignPositiveIssue.evidenceStatus, applicationStatus: foreignPositiveIssue.applicationStatus,
++  overall: foreignPositiveRun.result.status }, negative: { lifecycle: foreignNegativeIssue.lifecycle,
++  evidenceStatus: foreignNegativeIssue.evidenceStatus, claims: foreignNegativeIssue.verifiedClaims.length } })}`);
++
++const allFixtureHashes = [...fixtureManifest, ...[...new Set(controlledRuleFixtureBodies)].map(body => ({
++  synthetic: true, sha256: createHash('sha256').update(body).digest('hex')
++}))];
++assert.equal(allFixtureHashes.every(item => item.synthetic && /^[a-f0-9]{64}$/.test(item.sha256)), true);
++console.log(`V4 API-free contract, local-only runtime, one-use guards, controlled discovery and evidence-gate checks passed (${allFixtureHashes.length} explicitly synthetic fixture hashes).`);

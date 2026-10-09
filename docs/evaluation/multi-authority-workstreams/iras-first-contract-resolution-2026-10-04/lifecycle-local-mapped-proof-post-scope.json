@@ -1,0 +1,126 @@
+{
+  "provenance": "API-free semantic V2 mock; production defaultSourceRetriever; synthetic HTML through injected ControlledWebRetriever fetch; no provider/network access",
+  "referenceDate": "2026-10-03",
+  "query": "Is a private expense deductible for corporate income tax?",
+  "issuePlan": {
+    "coverageEstablished": true,
+    "hasUnmappedResidual": false,
+    "issueTopics": [
+      [
+        "iras-cit-deductibility",
+        "iras-cit-disallowed-expenses"
+      ]
+    ]
+  },
+  "reconciledClassification": {
+    "authorities": [
+      "IRAS"
+    ],
+    "topicIds": [
+      "iras-cit-disallowed-expenses",
+      "iras-cit-deductibility"
+    ]
+  },
+  "requestedConcepts": [
+    {
+      "id": "semantic_private_expense",
+      "label": "private expense",
+      "topicIds": []
+    }
+  ],
+  "local": {
+    "candidateIds": [
+      "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+      "ITA_SEC14_GENERAL_DEDUCTION",
+      "ITA_SEC15_1_K_MOTOR_CAR"
+    ],
+    "status": "LIMITED",
+    "eligibleIds": [
+      "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+      "ITA_SEC14_GENERAL_DEDUCTION",
+      "ITA_SEC15_1_K_MOTOR_CAR"
+    ],
+    "coveredTopicIds": [
+      "iras-cit-disallowed-expenses"
+    ],
+    "uncoveredTopicIds": [
+      "iras-cit-deductibility"
+    ],
+    "uncoveredConcepts": []
+  },
+  "fallback": {
+    "requestedSearches": [
+      {
+        "topicId": "iras-cit-deductibility",
+        "topicTitle": "Corporate Tax Deductibility"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-private-expense",
+        "topicTitle": "IRAS CORPORATE TAX — private expense"
+      }
+    ],
+    "fetchedUrls": [
+      "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses"
+    ],
+    "attempts": [
+      {
+        "topicId": "iras-cit-deductibility",
+        "fetchStatus": "SUCCESS",
+        "pageTitle": "Corporate Tax Deductibility | Business Expenses | IRAS"
+      },
+      {
+        "topicId": "iras-cit-deductibility",
+        "fetchStatus": "SUCCESS",
+        "pageTitle": "Corporate Tax Deductibility | Business Expenses | IRAS"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-private-expense",
+        "fetchStatus": "SUCCESS",
+        "pageTitle": "Corporate Tax Deductibility | Business Expenses | IRAS"
+      }
+    ],
+    "stages": [
+      {
+        "stage": "LOCAL_VERIFIED",
+        "status": "EXHAUSTED",
+        "reason": "The stage was exhausted without sufficient admitted evidence."
+      },
+      {
+        "stage": "MAPPED_SOURCE",
+        "status": "EXHAUSTED",
+        "reason": "The stage was exhausted without sufficient admitted evidence."
+      },
+      {
+        "stage": "SITEMAP_DISCOVERY",
+        "status": "EXHAUSTED",
+        "reason": "The stage was exhausted without sufficient admitted evidence."
+      },
+      {
+        "stage": "OFFICIAL_DOMAIN_SEARCH",
+        "status": "EXHAUSTED",
+        "reason": "The stage was exhausted without sufficient admitted evidence."
+      },
+      {
+        "stage": "INSUFFICIENT",
+        "status": "EXHAUSTED",
+        "reason": "The stage was exhausted without sufficient admitted evidence."
+      }
+    ]
+  },
+  "finalIssue": {
+    "evidenceStatus": "INSUFFICIENT",
+    "verifiedClaimQuotes": [
+      {
+        "recordId": "ITA_SEC15_PROHIBITED_DEDUCTIONS",
+        "quote": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list."
+      }
+    ],
+    "gaps": [
+      {
+        "stage": "covered",
+        "code": "ISSUE_CONCEPT_UNCOVERED",
+        "reason": "Verified quotations do not support the requested topic iras-cit-deductibility."
+      }
+    ]
+  }
+}

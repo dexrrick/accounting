@@ -1,0 +1,50 @@
+[
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-audit.md",
+    "sha256": "8381725c43dece643a548a2fc24a33463d3c97fcce1912d1ef04093988c70f44"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-checkpoint.md",
+    "sha256": "b166f233b7a589b4f8cbebf077d865a6e1928f52b7dfe5473312a3fa22dc9749"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/operation-reliability-comparison.json",
+    "sha256": "decd5a57bbc1f03e66f86f789ddb539bebcb7db1e5d57c647cc46512128c8f2a"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-reliability-post-guidance-live.json",
+    "sha256": "a59b3fa4bf8ffd4b784d4cf107f2a5554c12f336be9723e0e41f10ab4b3f2097"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-reliability-post-guidance-live.md",
+    "sha256": "e700604b746a8b1e11d7163e44bab0f0503460e22932fb41822e1173e3de9dec"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-operation-followup-live.json",
+    "sha256": "993afdcd5f45a4b06cdd5edd45295019ca466398ce0e88796b87d54cde1325cb"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-operation-followup-live.md",
+    "sha256": "e77f667b3f51fa05ca799aac7c101d8c76b5ca724862c177e6aa836dddafaaf0"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-timeout-controlled-baseline.json",
+    "sha256": "2808012d32a05041c364f1dec9ad3e11712aedf0fd6900cc1e7dd2764f005958"
+  },
+  {
+    "path": "docs/evaluation/multi-authority-workstreams/semantic-timeout-controlled-baseline.md",
+    "sha256": "25b21a120a63512b7cdd2b521539950ae09f189ff56cad2ac315d453058f1734"
+  },
+  {
+    "path": "tests/evaluation/singapore/semantic-operation-followup.json",
+    "sha256": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe"
+  },
+  {
+    "path": "tests/evaluation/singapore/semantic-reliability-post-guidance.json",
+    "sha256": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6"
+  },
+  {
+    "path": "tests/evaluation/singapore/semantic-contract-followup.json",
+    "sha256": "a7a1354b2a8bbede850636e0d0efa6be752f7dab707eb5d08c95b0e1f1374dc1"
+  }
+]

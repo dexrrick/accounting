@@ -1,0 +1,9 @@
+{
+  "sourceRequestsAllowed": 0,
+  "processId": 33320,
+  "geminiCallsAllowed": 0,
+  "launchedAtUtc": "2026-10-07T16:42:16.8582201Z",
+  "networkBlocked": true,
+  "profile": "iras-v4-offline-retry-freeze-process",
+  "credentialReadAllowed": false
+}

@@ -1,0 +1,560 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Safe baseline diagnostics for three fixed development cases; prompts and raw provider outputs are discarded.",
+  "model": "gemini-3.5-flash-lite",
+  "timeoutMs": 8000,
+  "minimumStartGapMs": 15250,
+  "pacingPolicy": "Wait at least minimumStartGapMs after the prior result checkpoint; request start gaps are therefore no shorter.",
+  "productionSourceSha256": "2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505",
+  "startedAt": "2026-09-30T14:36:47.602Z",
+  "sourceHashConsistent": true,
+  "cases": [
+    {
+      "caseId": "control-general-recognition",
+      "fixtureSha256": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe",
+      "fixtureHashConsistent": true,
+      "productionSourceSha256": "2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505",
+      "productionSourceHashConsistent": true,
+      "startedAt": "2026-09-30T14:36:47.603Z",
+      "completedAt": "2026-09-30T14:36:53.020Z",
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "INVALID_RESPONSE",
+        "failureReason": "SCHEMA_MISMATCH"
+      },
+      "capture": {
+        "promptSha256": "fa1be21a2b598cc418af35effe05f558be6e21ea65505d71dd730e428fb92305",
+        "promptChars": 7924,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "requestCount": 1,
+        "responseReceived": true,
+        "responseChars": 1115,
+        "responseUtf8Bytes": 1115,
+        "latencyMs": 5411.98
+      },
+      "diagnostic": {
+        "validatorAccepted": false,
+        "interpreted": false,
+        "rejectionCode": "CONCEPT_STRUCTURE",
+        "rejectionPath": "concepts[0]",
+        "violations": [
+          {
+            "code": "CONCEPT_STRUCTURE",
+            "path": "concepts[0]"
+          },
+          {
+            "code": "CONCEPT_STRUCTURE",
+            "path": "concepts[1]"
+          },
+          {
+            "code": "CONCEPT_STRUCTURE",
+            "path": "concepts[2]"
+          }
+        ],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "ACCOUNTING_STANDARDS"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "ACCOUNTING",
+            "population": "UNKNOWN",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 3,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 1,
+                  "missingKeyCount": 1,
+                  "concept": {
+                    "type": "OTHER",
+                    "valid": false
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 1,
+                  "missingKeyCount": 1,
+                  "concept": {
+                    "type": "OTHER",
+                    "valid": false
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 1,
+                  "missingKeyCount": 1,
+                  "concept": {
+                    "type": "OTHER",
+                    "valid": false
+                  },
+                  "role": "CONTEXT_ONLY"
+                }
+              ]
+            },
+            "requestedOperation": "EXPLAIN_RULE",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": false,
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "UNKNOWN",
+                  "domain": "ACCOUNTING",
+                  "operation": "EXPLAIN_RULE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "ACCOUNTING_STANDARDS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IFRS_FOUNDATION"
+                    ]
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "caseId": "control-general-interaction",
+      "fixtureSha256": "569c64efeee4a0685998ebeaa5be79e98f89bf2dcc86346e3ea1533c80815bfe",
+      "fixtureHashConsistent": true,
+      "productionSourceSha256": "2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505",
+      "productionSourceHashConsistent": true,
+      "startedAt": "2026-09-30T14:37:08.288Z",
+      "completedAt": "2026-09-30T14:37:10.224Z",
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "INVALID_RESPONSE",
+        "failureReason": "SCHEMA_MISMATCH"
+      },
+      "capture": {
+        "promptSha256": "ca6df2e41c939f1ca1840ea0ddce69d11c07bb2543d1a517548335c2827e8824",
+        "promptChars": 7948,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "requestCount": 1,
+        "responseReceived": true,
+        "responseChars": 1098,
+        "responseUtf8Bytes": 1098,
+        "latencyMs": 1934.17
+      },
+      "diagnostic": {
+        "validatorAccepted": false,
+        "interpreted": false,
+        "rejectionCode": "CONCEPT_STRUCTURE",
+        "rejectionPath": "concepts[0]",
+        "violations": [
+          {
+            "code": "CONCEPT_STRUCTURE",
+            "path": "concepts[0]"
+          },
+          {
+            "code": "CONCEPT_STRUCTURE",
+            "path": "concepts[1]"
+          }
+        ],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "ACCOUNTING_STANDARDS"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "ACCOUNTING",
+            "population": "UNKNOWN",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 2,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 1,
+                  "missingKeyCount": 1,
+                  "concept": {
+                    "type": "OTHER",
+                    "valid": false
+                  },
+                  "role": "PRIMARY"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 2,
+                  "extraKeyCount": 1,
+                  "missingKeyCount": 1,
+                  "concept": {
+                    "type": "OTHER",
+                    "valid": false
+                  },
+                  "role": "PRIMARY"
+                }
+              ]
+            },
+            "requestedOperation": "EXPLAIN_INTERACTION",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": false,
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "itemTypes": [],
+              "itemsValid": []
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "UNKNOWN",
+                  "domain": "ACCOUNTING",
+                  "operation": "EXPLAIN_INTERACTION",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "ACCOUNTING_STANDARDS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IFRS_FOUNDATION"
+                    ]
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "caseId": "A-paraphrase-3",
+      "fixtureSha256": "5fe0dc6d4d72d4f70fe3dab9c4031c4471b19f4f4700dfa7bbefa64f7e41c1a6",
+      "fixtureHashConsistent": true,
+      "productionSourceSha256": "2e8c6cac5e0e5a2bb802823f30cb6c2af35040300c7e93eff519e65467893505",
+      "productionSourceHashConsistent": true,
+      "startedAt": "2026-09-30T14:37:25.486Z",
+      "completedAt": "2026-09-30T14:37:30.982Z",
+      "production": {
+        "mode": "DETERMINISTIC_FALLBACK",
+        "failure": "INVALID_RESPONSE",
+        "failureReason": "CONTRADICTORY_FIELDS"
+      },
+      "capture": {
+        "promptSha256": "bd01cc5fab4dfbd07a3d0771fd02608e773cc3d16550737bedef3340950f92b9",
+        "promptChars": 8022,
+        "systemSha256": "9a1d92f733600f87848aa217625daaf4291300b29d762319b7ad0cc402c404a3",
+        "systemChars": 259,
+        "model": "gemini-3.5-flash-lite",
+        "timeoutMs": 8000,
+        "temperature": 0,
+        "requestCount": 1,
+        "responseReceived": true,
+        "responseChars": 1627,
+        "responseUtf8Bytes": 1627,
+        "latencyMs": 5494
+      },
+      "diagnostic": {
+        "validatorAccepted": false,
+        "interpreted": false,
+        "rejectionCode": "CALCULATION_FLAG_MISMATCH",
+        "rejectionPath": "calculationRequested",
+        "violations": [
+          {
+            "code": "CALCULATION_FLAG_MISMATCH",
+            "path": "calculationRequested"
+          }
+        ],
+        "safeShape": {
+          "rootType": "OBJECT",
+          "keyCount": 13,
+          "extraKeyCount": 0,
+          "missingKeyCount": 0,
+          "fields": {
+            "jurisdiction": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "authorityCandidates": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "values": [
+                "UNKNOWN"
+              ]
+            },
+            "contextualAuthorities": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "values": []
+            },
+            "domain": "UNKNOWN",
+            "population": "UNKNOWN",
+            "primarySubject": {
+              "type": "STRING",
+              "valid": true
+            },
+            "concepts": {
+              "type": "ARRAY",
+              "count": 0,
+              "withinLimit": true,
+              "items": []
+            },
+            "requestedOperation": "OTHER",
+            "requiresUserSpecificFacts": true,
+            "calculationRequested": true,
+            "factsExplicitlyProvided": {
+              "type": "ARRAY",
+              "count": 1,
+              "withinLimit": true,
+              "itemTypes": [
+                "STRING"
+              ],
+              "itemsValid": [
+                true
+              ]
+            },
+            "confidence": "VALID_RANGE",
+            "issues": {
+              "present": true,
+              "type": "ARRAY",
+              "count": 3,
+              "withinLimit": true,
+              "items": [
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "INDIVIDUAL",
+                  "domain": "IRAS_INCOME_TAX",
+                  "operation": "EXPLAIN_RULE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "IRAS"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "EMPLOYER",
+                  "domain": "CPF_PAYROLL",
+                  "operation": "CALCULATE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "values": []
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                },
+                {
+                  "type": "OBJECT",
+                  "keyCount": 9,
+                  "extraKeyCount": 0,
+                  "missingKeyCount": 0,
+                  "population": "EMPLOYEE",
+                  "domain": "CPF_PAYROLL",
+                  "operation": "CALCULATE",
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "governingAuthorities": {
+                    "type": "ARRAY",
+                    "count": 1,
+                    "withinLimit": true,
+                    "values": [
+                      "CPF"
+                    ]
+                  },
+                  "contextualAuthorities": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "values": []
+                  },
+                  "mappedTopicIds": {
+                    "type": "ARRAY",
+                    "count": 0,
+                    "withinLimit": true,
+                    "itemTypes": []
+                  },
+                  "confidence": "VALID_RANGE"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "completedAt": "2026-09-30T14:37:30.984Z"
+}

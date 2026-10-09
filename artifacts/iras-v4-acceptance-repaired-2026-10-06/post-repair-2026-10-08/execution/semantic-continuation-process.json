@@ -1,0 +1,10 @@
+{
+  "profile": "iras-v4-semantic-continuation-process",
+  "processId": 5848,
+  "startedAtUtc": "2026-10-08T16:40:45.9375887Z",
+  "launcherCommit": "05b6179",
+  "sourceRequestsAuthorized": 0,
+  "authorizedGeminiCalls": 9,
+  "retries": 0,
+  "namespace": "artifacts/iras-v4-acceptance-repaired-2026-10-06/semantic-run-v4-post-repair-2026-10-08"
+}
