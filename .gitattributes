@@ -5,9 +5,13 @@
 docs/evaluation/** -text whitespace=cr-at-eol
 artifacts/** -text whitespace=cr-at-eol
 tests/evaluation/** -text whitespace=cr-at-eol
+tests/fixtures/irasResolverCases.mjs -text whitespace=cr-at-eol
 tests/regression/test_iras_multi_authority_evidence_v4.mjs -text whitespace=cr-at-eol
-tests/regression/test_iras_mapped_evidence_diagnostic_v5.mjs -text whitespace=cr-at-eol
-tests/regression/test_iras_mapped_evidence_diagnostic_v8.mjs -text whitespace=cr-at-eol
-tests/regression/test_iras_mapped_evidence_diagnostic_v9.mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_mapped_evidence_diagnostic_v[4-9].mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_public_gst_selection_v[3-4].mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_public_rule_excerpts_v[1-2].mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_source_structure_features_v6.mjs -text whitespace=cr-at-eol
+tests/regression/test_iras_wht_overview_topic_binding.mjs -text whitespace=cr-at-eol
+tests/regression/test_semantic_residency_subject_diagnostic_v4.mjs -text whitespace=cr-at-eol
 # Blank context lines in archived patches contain a meaningful leading space.
 docs/evaluation/**/*.patch whitespace=-blank-at-eol,cr-at-eol
