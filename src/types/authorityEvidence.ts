@@ -10,6 +10,7 @@ import type {
   RequestedQuestionConcept
 } from '../services/semanticQuestionUnderstanding';
 import type { VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
+import type { RequestCompletenessContext } from '../services/requestCompleteness';
 
 export type AuthorityEvidenceStatus = 'VERIFIED' | 'INSUFFICIENT';
 export type AuthorityApplicationStatus = 'NOT_REQUIRED' | 'UNRESOLVED';
@@ -109,6 +110,8 @@ export interface PlannedAuthorityWorkstream {
 export interface AuthorityWorkstreamsResult {
   query: string;
   issuePlan: SemanticIssueReconciliation;
+  /** Independent exact-query representation diagnostics; never changes evidence status. */
+  requestCompletenessContext: RequestCompletenessContext;
   workstreams: AuthorityWorkstreamResult[];
   evidenceStatus: AuthorityEvidenceStatus;
   applicationStatus: AuthorityApplicationStatus;

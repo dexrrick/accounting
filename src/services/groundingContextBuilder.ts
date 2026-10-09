@@ -48,6 +48,12 @@ import {
   type RequestedQuestionConcept,
   type SemanticQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
+import {
+  createRequestCompletenessContext,
+  ensureRequestCompletenessContext,
+  readRequestCompletenessObservation,
+  type RequestCompletenessContext
+} from './requestCompleteness';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
@@ -69,6 +75,8 @@ export interface GroundedReasoningContext {
   currentInformationRequired: boolean;
   semanticUnderstanding?: TransactionUnderstanding;
   questionUnderstanding?: SemanticQuestionUnderstanding;
+  /** Immutable exact-query representation diagnostics, separate from evidence scope. */
+  requestCompletenessContext?: RequestCompletenessContext;
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
 }
 
@@ -236,6 +244,8 @@ export interface MappedFallbackOptions {
   localEvidenceAdequate?: boolean;
   /** Precomputed provider result; it is revalidated before it affects routing. */
   questionUnderstanding?: SemanticQuestionUnderstanding;
+  /** Exact original query context; evidenceScope does not narrow its inventory. */
+  requestCompletenessContext?: RequestCompletenessContext;
   /** Semantic intent terms used only for IRAS discovery/ranking, with original query retained. */
   semanticDiscoveryQuery?: string;
   /** Internal per-issue scope. Omitted callers retain the existing full-query behavior. */
@@ -1832,12 +1842,28 @@ export async function buildGroundedReasoningContext(
   providerOrApiKey?: ProviderSettings | string,
   retrievalOptions: MappedFallbackOptions = {}
 ): Promise<GroundedReasoningContext> {
-  // 1. Interpret question meaning before keyword/topic classification. A
-  // caller may pass its precomputed result to prevent a duplicate provider call.
-  const initialQuestionUnderstanding = retrievalOptions.questionUnderstanding ||
-    await interpretSemanticQuestion(userInput, providerOrApiKey);
+  // 1. Inventory the exact original query before the existing interpretation
+  // call. A supplied context/observation is reused without another call.
+  let requestCompletenessContext = retrievalOptions.requestCompletenessContext;
+  let initialQuestionUnderstanding = retrievalOptions.questionUnderstanding;
+  if (!initialQuestionUnderstanding && requestCompletenessContext) {
+    initialQuestionUnderstanding = readRequestCompletenessObservation(requestCompletenessContext, userInput) as SemanticQuestionUnderstanding | undefined;
+    if (!initialQuestionUnderstanding) initialQuestionUnderstanding = { mode: 'DETERMINISTIC_FALLBACK' };
+  }
+  if (!initialQuestionUnderstanding) {
+    if (requestCompletenessContext) {
+      initialQuestionUnderstanding = { mode: 'DETERMINISTIC_FALLBACK' };
+    } else {
+      requestCompletenessContext = createRequestCompletenessContext(userInput);
+      initialQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+    }
+  }
+  requestCompletenessContext = ensureRequestCompletenessContext(userInput, requestCompletenessContext, initialQuestionUnderstanding);
   const deterministicClassification = classifyQuestion(userInput);
-  const reconciledQuestion = reconcileQuestionUnderstanding(userInput, deterministicClassification, initialQuestionUnderstanding);
+  const reconciledQuestion = reconcileQuestionUnderstanding(
+    userInput, deterministicClassification, initialQuestionUnderstanding, requestCompletenessContext
+  );
+  requestCompletenessContext = reconciledQuestion.requestCompletenessContext;
   const classification = retrievalOptions.evidenceScope
     ? {
       ...reconciledQuestion.classification,
@@ -2055,6 +2081,7 @@ export async function buildGroundedReasoningContext(
     currentInformationRequired: classification.currentInformationRequired,
     semanticUnderstanding,
     questionUnderstanding,
+    requestCompletenessContext,
     evidenceQuality,
     sourceMapFallbackTrace: mappedFallback.trace
   };

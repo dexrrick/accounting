@@ -7,6 +7,7 @@ import { createChatPreview } from '../../src/utils/chatPresentation.ts';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { createRequestCompletenessContext, ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
 
 function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '' }) {
   return {
@@ -97,6 +98,7 @@ const cpfIssue = evidenceIssue(cpfPlan, cpfSource);
 
 const result = {
   query: 'Company housing benefits, employee tax, and CPF obligations',
+  requestCompletenessContext: createRequestCompletenessContext('Company housing benefits, employee tax, and CPF obligations'),
   issuePlan: {
     source: 'SEMANTIC_ISSUES',
     coverageEstablished: true,
@@ -131,8 +133,43 @@ assert.equal(presentation.workstreams[0].sources[0].claims.length, 2, 'distinct 
 assert.deepEqual(presentation.workstreams[0].sources[0].claims[0].issueIds, ['iras-company-issue']);
 assert.equal(presentation.workstreams[0].sources[0].claims[1].supportKind, 'REVIEWED_EDITORIAL_SUMMARY');
 assert.equal(presentation.workstreams[0].sources[0].validFrom, '2026-01-01');
-assert.ok(hasCurrentAuthorityEvidencePresentation(presentation, ' Company housing benefits, employee tax, and CPF obligations  '));
+assert.ok(hasCurrentAuthorityEvidencePresentation(presentation, result.query));
+assert.equal(hasCurrentAuthorityEvidencePresentation(presentation, ` ${result.query} `), false,
+  'diagnostic presentations are bound to the exact raw query');
 assert.equal(hasCurrentAuthorityEvidencePresentation(presentation, 'A different follow-up'), false);
+assert.equal(hasCurrentAuthorityEvidencePresentation({ ...presentation, status: 'VERIFIED' }, result.query), false,
+  'a spread copy cannot inherit presentation authenticity');
+
+const completeCpfQuery = 'How much CPF must the employer contribute?';
+const completeCpfContext = ensureRequestCompletenessContext(completeCpfQuery, undefined, {
+  mode: 'SEMANTIC_INTERPRETATION',
+  interpretation: {
+    schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['CPF'], contextualAuthorities: [],
+    domain: 'CPF_PAYROLL', population: 'EMPLOYER', primarySubject: 'employer CPF contribution amount', concepts: [],
+    requestedOperation: 'CALCULATE', factsExplicitlyProvided: [], confidence: 0.96,
+    issues: [{ subject: 'employer CPF contribution amount', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
+      governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'CALCULATE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
+  }
+});
+assert.equal(completeCpfContext.evaluation.status, 'COMPLETE');
+const completeButInsufficientResult = structuredClone(result);
+completeButInsufficientResult.query = completeCpfQuery;
+completeButInsufficientResult.requestCompletenessContext = completeCpfContext;
+completeButInsufficientResult.status = 'INSUFFICIENT';
+completeButInsufficientResult.evidenceStatus = 'INSUFFICIENT';
+completeButInsufficientResult.workstreams[0].evidenceStatus = 'INSUFFICIENT';
+completeButInsufficientResult.workstreams[0].issues[0].evidenceStatus = 'INSUFFICIENT';
+completeButInsufficientResult.workstreams[0].issues[0].lifecycle.covered = false;
+const completeButInsufficientPresentation = createAuthorityEvidencePresentation(completeButInsufficientResult);
+assert.equal(completeButInsufficientPresentation.requestCompletenessContext.evaluation.status, 'COMPLETE');
+assert.equal(completeButInsufficientPresentation.status, 'INSUFFICIENT',
+  'complete request representation never promotes insufficient evidence');
+const forgedAggregate = createAuthorityEvidencePresentation({
+  ...result, requestCompletenessContext: { ...result.requestCompletenessContext, identity: 'forged' }
+});
+assert.equal(forgedAggregate.requestCompletenessContext, undefined,
+  'aggregate presentation rejects caller-built diagnostic contexts');
 
 const panel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
   citations: [], standard: 'SFRS_I', rawQuery: result.query, authorityEvidencePresentation: presentation
@@ -308,10 +345,14 @@ const semanticA = {
 };
 const originalFetch = globalThis.fetch;
 const fetchHosts = [];
-globalThis.fetch = async input => {
+let semanticInterpretationCalls = 0;
+globalThis.fetch = async (input, init) => {
   const url = new URL(String(input));
   fetchHosts.push(url.hostname);
   if (url.hostname === 'generativelanguage.googleapis.com') {
+    const payload = JSON.parse(init?.body || '{}');
+    const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+    if (prompt.includes('Return a V2 JSON object')) semanticInterpretationCalls++;
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(semanticA) }] } }] }), {
       status: 200, headers: { 'content-type': 'application/json' }
     });
@@ -328,6 +369,10 @@ try {
   globalThis.fetch = originalFetch;
 }
 assert.ok(runtimeA.scenarioState.authorityEvidencePresentation, 'validated semantic multi-issues use the whole-question runtime');
+assert.equal(semanticInterpretationCalls, 1, 'the main authority route performs exactly one semantic interpretation');
+assert.equal(runtimeA.scenarioState.requestCompletenessContext.rawQuery, promptA,
+  'the whole-question response carries diagnostics bound to the exact original query');
+assert.equal(runtimeA.scenarioState.authorityEvidencePresentation.requestCompletenessContext.rawQuery, promptA);
 assert.equal(runtimeA.scenarioState.scenarioType, 'AUTHORITY_ADVISORY', 'classifier payroll inference does not create a journal absent an accounting issue');
 assert.deepEqual(runtimeA.scenarioState.directGroups, [], 'no unsupported payroll journal is generated');
 assert.doesNotMatch(runtimeA.messageText, /double entry journal|calculated CPF amount/i);
@@ -349,6 +394,10 @@ try {
 }
 assert.ok(noProviderMulti.scenarioState.authorityEvidencePresentation, 'no-provider multi-authority requests retain an explicit whole-question projection');
 assert.equal(noProviderMulti.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT', 'uncovered fallback scope and unresolved residual fail closed without a provider');
+assert.equal(noProviderMulti.scenarioState.requestCompletenessContext.rawQuery, promptB,
+  'provider-unavailable fallback remains bound to the original request');
+assert.equal(noProviderMulti.scenarioState.requestCompletenessContext.evaluation.structuralAcceptance, 'REJECTED');
+assert.ok(noProviderMulti.scenarioState.requestCompletenessContext.evaluation.findings.some(item => item.code === 'OBSERVATION_WRAPPER_FAILED'));
 
 globalThis.fetch = async input => {
   const url = new URL(String(input));
@@ -368,5 +417,43 @@ try {
 assert.ok(malformedSemantic.scenarioState.authorityEvidencePresentation, 'malformed semantic output falls back to explicit multi-scope evidence handling');
 assert.notEqual(malformedSemantic.scenarioState.authorityEvidencePresentation.status, 'VERIFIED');
 assert.doesNotMatch(malformedSemantic.messageText, /the case definitely qualifies|is guaranteed to be exempt/i);
+
+const standaloneQuery = 'What individual tax relief categories are available?';
+const standaloneInterpretation = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: [],
+  domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL', primarySubject: 'individual tax relief categories',
+  concepts: [], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
+  issues: [{ subject: 'individual tax relief categories', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
+};
+let standaloneSemanticCalls = 0;
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  if (url.hostname === 'generativelanguage.googleapis.com') {
+    const payload = JSON.parse(init?.body || '{}');
+    const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+    if (prompt.includes('Return a V2 JSON object')) {
+      standaloneSemanticCalls++;
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(standaloneInterpretation) }] } }] }), {
+        status: 200, headers: { 'content-type': 'application/json' }
+      });
+    }
+  }
+  throw new Error(`Blocked network request in standalone IRAS regression: ${url.hostname}`);
+};
+let standaloneIrasResponse;
+try {
+  standaloneIrasResponse = await processAccountingQuery(standaloneQuery, null, 'SFRS_I', 'test-key-1234567890');
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(standaloneSemanticCalls, 1, 'the standalone IRAS route interprets the query once');
+assert.equal(standaloneIrasResponse.scenarioState.requestCompletenessContext.rawQuery, standaloneQuery);
+assert.equal(standaloneIrasResponse.scenarioState.requestCompletenessContext.evaluation.status, 'COMPLETE');
+assert.ok(standaloneIrasResponse.scenarioState.irasEvidencePresentation,
+  'the standalone IRAS renderer attaches query-bound representation diagnostics');
+assert.equal(standaloneIrasResponse.scenarioState.authorityEvidencePresentation, undefined,
+  'a single IRAS route remains on its established response path');
 
 console.log('Authority evidence presentation and routing regressions passed.');

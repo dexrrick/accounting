@@ -41,6 +41,14 @@ const adaptedV4StageAssertion = [
   "assert.equal(foreignNegative?.finalIssueClaimCount, 0, 'The foreign-income-only negative still verifies no requested dividend claim.');",
   "assert.notEqual(foreignNegative?.issueEvidenceStatus, 'VERIFIED', 'The no-dividend control remains fail-closed.');"
 ].join('\n');
+const originalV4CpfAssertions = [
+  "assert.equal(cpfControl.issueEvidenceStatus, 'VERIFIED', 'The CPF relief local-evidence control remains verified.');",
+  "assert.equal(cpfControl.finalIssueClaimCount, 1, 'The CPF relief control retains its verified claim.');"
+].join('\n');
+const adaptedV4CpfAssertions = [
+  "assert.equal(cpfControl.issueEvidenceStatus, 'INSUFFICIENT', 'Unregistered synthetic local CPF evidence remains rejected by current scope policy.');",
+  "assert.equal(cpfControl.finalIssueClaimCount, 0, 'Unregistered synthetic local CPF evidence verifies no claims.');"
+].join('\n');
 
 const v4FixtureSource = path.join(legacyV4Directory, 'local-evidence-fixtures.json');
 const v4FixtureBytes = await readFile(v4FixtureSource);
@@ -48,7 +56,8 @@ await writeFile(path.join(resolutionDirectory, 'local-evidence-fixtures.json'), 
 temporaryPaths.push(path.join(resolutionDirectory, 'local-evidence-fixtures.json'));
 await transformPinnedSibling(v4StageSource, v4StageAdapted,
   '68894d3c93bf9fb30c5f62c041128d0380bd6f5ce2d73a6b30e9fe58efb2d475', [
-    { from: originalV4StageAssertion, to: adaptedV4StageAssertion, label: 'V4 local-stage ownership point' }
+    { from: originalV4StageAssertion, to: adaptedV4StageAssertion, label: 'V4 local-stage ownership point' },
+    { from: originalV4CpfAssertions, to: adaptedV4CpfAssertions, label: 'V4 current local-evidence registry policy' }
   ]);
 
 const v4OuterSource = path.join(regressionDirectory, 'test_iras_multi_authority_evidence_v4.mjs');

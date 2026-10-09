@@ -183,9 +183,9 @@ assert.equal(finalIssue.lifecycle.covered, true);
 assert.deepEqual(discoveryCalls, [], 'The mapped page is sufficient; discovery remains closed.');
 assert.deepEqual(searchCalls, [], 'The mapped page is sufficient; search remains closed.');
 
-// The same frozen request is sufficient when a local source record supports
-// the concept, so it must not make a mapped GET. The changed passage is a
-// test-only synthetic fixture; it is neither registered nor persisted.
+// Matching synthetic text is not enough for scoped local admission. The
+// synthetic record must not suppress the mapped request; the approved map
+// response below is the evidence that can verify this concept.
 const localGeneralRule = {
   ...localRecord,
   id: 'SYNTHETIC_LOCAL_GST_INPUT_TAX_GENERAL_RULE',
@@ -196,11 +196,14 @@ const localGeneralRule = {
 syntheticLocalRecords = [localGeneralRule];
 mappedFetchCalls.length = 0;
 result = await runWorkstream();
-const locallySufficientIssue = result.workstreams.flatMap(workstream => workstream.issues)
+const syntheticLocalRejectedIssue = result.workstreams.flatMap(workstream => workstream.issues)
   .find(issue => issue.issueId === reconciled.issuePlan.issues[0].id);
-assert.ok(locallySufficientIssue);
-assert.equal(mappedFetchCalls.length, 0, 'Locally sufficient topic and concept coverage must avoid mapped fetches.');
-assert.equal(locallySufficientIssue.evidenceStatus, 'VERIFIED');
+assert.ok(syntheticLocalRejectedIssue);
+assert.ok(mappedFetchCalls.length > 0,
+  'Unregistered synthetic local text cannot avoid the mapped evidence attempt.');
+assert.ok(syntheticLocalRejectedIssue.sources.some(record => record.provenance === 'LIVE_EXTERNAL'),
+  'The verified concept is supported by the injected mapped source, not the synthetic local record.');
+assert.equal(syntheticLocalRejectedIssue.evidenceStatus, 'VERIFIED');
 
 // A mapped page that is topically relevant but omits the requested general
 // entitlement must not close the concept gap.

@@ -5,6 +5,10 @@ import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
 import {
+  ensureRequestCompletenessContext,
+  type RequestCompletenessContext
+} from './requestCompleteness';
+import {
   getRoutingChildTopicIdsMentionedInSubject,
   getRoutingParentIdsForChild,
   proveRequestedTopicOwnership
@@ -1155,6 +1159,8 @@ export interface ReconciledQuestionUnderstanding {
   understanding: SemanticQuestionUnderstanding;
   /** Separate workstream plan for future orchestration; it does not replace classification. */
   issuePlan: SemanticIssueReconciliation;
+  /** Exact-query representation diagnostics, separate from evidence and coverage. */
+  requestCompletenessContext: RequestCompletenessContext;
 }
 
 export interface ReconciledSemanticQuestionIssue extends SemanticQuestionIssue {
@@ -1184,7 +1190,7 @@ function reconcileLegacyQuestionUnderstanding(
   query: string,
   classification: QuestionClassificationResult,
   understanding: SemanticQuestionUnderstanding
-): Omit<ReconciledQuestionUnderstanding, 'issuePlan'> {
+): Omit<ReconciledQuestionUnderstanding, 'issuePlan' | 'requestCompletenessContext'> {
   const validatedSemantic = validatedSemanticForQuery(query, understanding);
   const semantic = validatedSemantic ? refineUnknownEmploymentPopulation(query, validatedSemantic) : undefined;
   if (!semantic || semantic.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) {
@@ -1374,7 +1380,8 @@ function independentlyRecognizedTopics(query: string, classification: QuestionCl
 function reconcileSemanticIssuePlan(
   query: string,
   classification: QuestionClassificationResult,
-  understanding: SemanticQuestionUnderstanding
+  understanding: SemanticQuestionUnderstanding,
+  requestCompletenessContext?: RequestCompletenessContext
 ): SemanticIssueReconciliation {
   const semantic = validatedSemanticForQuery(query, understanding);
   const inventory = independentlyRecognizedTopics(query, classification);
@@ -1440,7 +1447,8 @@ function reconcileSemanticIssuePlan(
         query,
         issueMappings,
         inventoryIds,
-        relatedChildSubjectIds
+        relatedChildSubjectIds,
+        requestCompletenessContext?.inventory
       );
       if (ownership.complete) routingTopicIdsByIssue = new Map(ownership.routingTopicIdsByIssue);
       else routingOwnershipFailure = ownership.failure;
@@ -1490,10 +1498,16 @@ function reconcileSemanticIssuePlan(
 export function reconcileQuestionUnderstanding(
   query: string,
   classification: QuestionClassificationResult,
-  understanding: SemanticQuestionUnderstanding
+  understanding: SemanticQuestionUnderstanding,
+  requestCompletenessContext?: RequestCompletenessContext
 ): ReconciledQuestionUnderstanding {
+  const currentRequestCompletenessContext = ensureRequestCompletenessContext(query, requestCompletenessContext, understanding);
   const reconciled = reconcileLegacyQuestionUnderstanding(query, classification, understanding);
-  return { ...reconciled, issuePlan: reconcileSemanticIssuePlan(query, classification, understanding) };
+  return {
+    ...reconciled,
+    issuePlan: reconcileSemanticIssuePlan(query, classification, understanding, currentRequestCompletenessContext),
+    requestCompletenessContext: currentRequestCompletenessContext
+  };
 }
 
 /** Safe allowlisted telemetry projection; user facts and contextual authority mentions are deliberately excluded. */

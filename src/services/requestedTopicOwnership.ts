@@ -1,4 +1,11 @@
 import { getCoverageTopicById, getCoverageTopicsByIds } from '../standards/coverageRegistry';
+import {
+  describeRawRequestSubject,
+  inventoryRawRequest,
+  effectiveRawRequestSubjectFacets,
+  type RawRequestInventory,
+  type RawRequestOutcome
+} from './rawRequestInventory';
 
 export type RequestedScopeOperation = 'EXPLAIN_RULE' | 'CHECK_ELIGIBILITY' | 'CALCULATE';
 
@@ -17,6 +24,7 @@ export interface RequestedScopeAnalysis {
 }
 
 export interface RequestedScopeIssue {
+  subject?: string;
   mappedTopicIds: readonly string[];
   domain: string;
   population: string;
@@ -226,7 +234,64 @@ export function analyzeRequestedTopicScope(query: string): RequestedScopeAnalysi
   };
 }
 
-function issueOwnsAtom(issue: RequestedScopeIssue, atom: RequestedScopeSpan, rawTopicIds: ReadonlySet<string>): boolean {
+function rawTopicIdForOutcome(outcome: RawRequestOutcome): string | undefined {
+  switch (outcome.identity) {
+    case 'CPF_RELIEF': return 'iras-individual-cpf-relief';
+    case 'CPF_CONTRIBUTIONS': return 'cpf_contribution_rates';
+    case 'INDIVIDUAL_RELIEF_CATEGORIES': return RELIEF_PARENT_ID;
+    default: return undefined;
+  }
+}
+
+function rawOutcomeOwnsAtom(
+  query: string,
+  issue: RequestedScopeIssue,
+  atom: RequestedScopeSpan,
+  rawInventory: RawRequestInventory
+): boolean | undefined {
+  // Keep the raw inventory bridge limited to the supported CPF request atoms.
+  // Broader relief/SRS grammar remains governed by analyzeRequestedTopicScope.
+  if (atom.topicId !== 'iras-individual-cpf-relief' && atom.topicId !== 'cpf_contribution_rates') return undefined;
+  const relevant = rawInventory.outcomes.filter(outcome => rawTopicIdForOutcome(outcome) === atom.topicId);
+  const comparableText = (span: { start: number; end: number }) =>
+    query.slice(span.start, span.end).trim().replace(/[?.!]+$/u, '').replace(/\s+/gu, ' ');
+  const atomText = comparableText(atom);
+  const wholeQueryCandidates = relevant.filter(outcome => comparableText(outcome.span) === atomText);
+  let outcome: RawRequestOutcome | undefined;
+  if (wholeQueryCandidates.length === 1) {
+    outcome = wholeQueryCandidates[0];
+  } else {
+    // The pilot inventory may stop at an otherwise supported non-CPF sibling.
+    // Re-inventory only this exact source span; its bounds still come from the
+    // complete query partition above, so the bridge cannot consume extra text.
+    const exactAtomInventory = inventoryRawRequest(atomText);
+    if (exactAtomInventory.fullyConsumed && exactAtomInventory.outcomes.length === 1) {
+      outcome = exactAtomInventory.outcomes[0];
+      if (rawTopicIdForOutcome(outcome) !== atom.topicId) return false;
+    } else {
+      // A CPF topic match from the broader lexical resolver is insufficient
+      // without a supported raw request outcome. This prevents an unknown or
+      // employee-beneficiary descriptor from owning an individual CPF atom.
+      return false;
+    }
+  }
+  if (!outcome || !issue.subject) return false;
+  const descriptor = describeRawRequestSubject(issue.subject);
+  if (!descriptor) return false;
+  const subjectFacets = effectiveRawRequestSubjectFacets(outcome, descriptor, issue.population, issue.operation, rawInventory);
+  if (!subjectFacets) return false;
+  const requestFacets = [...outcome.facets].sort();
+  const effectiveSubjectFacets = [...subjectFacets].sort();
+  return requestFacets.length === effectiveSubjectFacets.length && requestFacets.every((facet, index) => facet === effectiveSubjectFacets[index]);
+}
+
+function issueOwnsAtom(
+  query: string,
+  issue: RequestedScopeIssue,
+  atom: RequestedScopeSpan,
+  rawTopicIds: ReadonlySet<string>,
+  rawInventory: RawRequestInventory
+): boolean {
   const topic = atom.topicId ? getCoverageTopicById(atom.topicId) : undefined;
   if (!topic || !atom.operation || !rawTopicIds.has(topic.id) || !issue.mappedTopicIds.includes(topic.id)) return false;
   if (issue.operation !== atom.operation) return false;
@@ -236,7 +301,8 @@ function issueOwnsAtom(issue: RequestedScopeIssue, atom: RequestedScopeSpan, raw
   const expectedPopulations = atom.topicId === 'cpf_contribution_rates'
     ? ['EMPLOYER'] : atom.topicId === RELIEF_PARENT_ID ? ['INDIVIDUAL'] : ['INDIVIDUAL', 'EMPLOYEE'];
   if (!expectedPopulations.includes(issue.population)) return false;
-  return topic.authorities.some(authority => issue.governingAuthorities.includes(authority));
+  if (!topic.authorities.some(authority => issue.governingAuthorities.includes(authority))) return false;
+  return rawOutcomeOwnsAtom(query, issue, atom, rawInventory) !== false;
 }
 
 /** Proves each parsed request atom against one real, subject-mapped issue and raw inventory. */
@@ -244,17 +310,23 @@ export function proveRequestedTopicOwnership(
   query: string,
   issues: readonly RequestedScopeIssue[],
   rawTopicIds: ReadonlySet<string>,
-  childTopicIds: readonly string[]
+  childTopicIds: readonly string[],
+  rawInventory: RawRequestInventory = inventoryRawRequest(query)
 ): RequestedScopeOwnershipResult {
   const analysis = analyzeRequestedTopicScope(query);
   if (!analysis.complete) {
     return { complete: false, analysis, routingTopicIdsByIssue: new Map(), failure: 'INCOMPLETE_SCOPE_PARTITION' };
   }
 
+  const ownerByAtom = new Map<RequestedScopeSpan, number>();
+  const usedOwners = new Set<number>();
   for (const atom of analysis.requestAtoms) {
-    if (!issues.some(issue => issueOwnsAtom(issue, atom, rawTopicIds))) {
+    const owners = issues.flatMap((issue, index) => issueOwnsAtom(query, issue, atom, rawTopicIds, rawInventory) ? [index] : []);
+    if (owners.length !== 1 || usedOwners.has(owners[0])) {
       return { complete: false, analysis, routingTopicIdsByIssue: new Map(), failure: 'UNOWNED_REQUEST_ATOM' };
     }
+    ownerByAtom.set(atom, owners[0]);
+    usedOwners.add(owners[0]);
   }
 
   const routingTopicIdsByIssue = new Map<number, readonly string[]>();
@@ -262,8 +334,10 @@ export function proveRequestedTopicOwnership(
     if (!rawTopicIds.has(childTopicId)) return { complete: false, analysis, routingTopicIdsByIssue: new Map(), failure: 'UNOWNED_REQUEST_ATOM' };
     const childAtoms = analysis.requestAtoms.filter(atom => atom.topicId === childTopicId);
     if (childAtoms.length === 0) return { complete: false, analysis, routingTopicIdsByIssue: new Map(), failure: 'UNOWNED_REQUEST_ATOM' };
-    const issueIndexes = [...new Set(childAtoms.flatMap(atom => issues.flatMap((issue, index) =>
-      issueOwnsAtom(issue, atom, rawTopicIds) ? [index] : [])))];
+    const issueIndexes = [...new Set(childAtoms.flatMap(atom => {
+      const index = ownerByAtom.get(atom);
+      return index === undefined ? [] : [index];
+    }))];
     if (issueIndexes.length === 0) return { complete: false, analysis, routingTopicIdsByIssue: new Map(), failure: 'UNOWNED_REQUEST_ATOM' };
     const parents = getRoutingParentIdsForChild(childTopicId).filter(parentId => rawTopicIds.has(parentId));
     if (parents.length === 0) continue;

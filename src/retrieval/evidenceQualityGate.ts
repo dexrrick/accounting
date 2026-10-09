@@ -466,7 +466,12 @@ function traceProvesLiveRecord(
   ));
 }
 
-function isVerifiedLiveCandidate(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic, targetDate: string | undefined, trace?: EvidenceQualitySourceMapTrace): boolean {
+function isVerifiedLiveCandidate(
+  record: AuthoritativeSourceRecord,
+  topic: SingaporeCoverageTopic,
+  targetDate: string | undefined,
+  trace?: EvidenceQualitySourceMapTrace
+): boolean {
   return record.provenance === 'LIVE_EXTERNAL' &&
     record.lifecycleState === 'CANDIDATE' && (record.recordRole as string | undefined) === 'DISCOVERED_EVIDENCE' &&
     record.groundingEligible === true && record.sourceType !== 'APPLICATION_RULE' &&
@@ -546,6 +551,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   const covered = new Set<string>();
   const localByTopic = new Set<string>();
   const liveByTopic = new Set<string>();
+  const scopedRequest = Boolean(input.scopedSubject?.trim());
   const irasRequest = hasIrasAssessmentScope(input);
   const requestedConcepts = input.requestedConcepts || targetTopics.flatMap(scopedConcepts);
   const reject = (recordId: string, code: string, reason: string) => rejectedRecords.push({ recordId, code, reason });
@@ -624,10 +630,12 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
         continue;
       }
       const explicitlyBoundLocal = record.provenance === 'LOCAL_STATIC' && topic.sourceRecordIds.includes(record.id);
-      if (explicitlyBoundLocal &&
+      if (record.provenance === 'LOCAL_STATIC' && (scopedRequest || explicitlyBoundLocal) &&
           (!topic.authorities.includes(record.authority) || !topic.legacyDomains.includes(record.domain))) {
         rejectedCode = 'TOPIC_AUTHORITY_DOMAIN_MISMATCH';
-        rejectedReason = 'Explicitly bound local evidence must still match the coverage topic authority and source domain.';
+        rejectedReason = scopedRequest
+          ? 'Issue-scoped local evidence must match the coverage topic authority and source domain.'
+          : 'Explicitly bound local evidence must still match the coverage topic authority and source domain.';
         continue;
       }
       const rateYears = transitionYears.length === 2 ? transitionYears : [Number(relevanceDate.slice(0, 4))];
@@ -656,9 +664,12 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
             : 'Record provenance or lifecycle is not eligible for IRAS evidence.';
         continue;
       }
-      if (explicitlyBoundLocal && !matchesReviewedLocalRegistryRecord(record)) {
+      if (record.provenance === 'LOCAL_STATIC' && (scopedRequest || explicitlyBoundLocal) &&
+          !matchesReviewedLocalRegistryRecord(record)) {
         rejectedCode = 'BOUND_LOCAL_RECORD_MISMATCH';
-        rejectedReason = 'Explicit source-record binding requires the reviewed local registry content and provenance.';
+        rejectedReason = scopedRequest
+          ? 'Issue-scoped local evidence must exactly match a reviewed registry record and provenance.'
+          : 'Explicit source-record binding requires the reviewed local registry content and provenance.';
         continue;
       }
       if (!topicTextMatches) {

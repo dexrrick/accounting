@@ -490,6 +490,36 @@ assert.equal(unboundGenericAssessment.status, 'INSUFFICIENT',
   'A generic local record without the coverage sourceRecordIds binding still needs distinctive text matching.');
 assert.equal(unboundGenericAssessment.rejectedRecords[0].code, 'TOPIC_TEXT_NOT_DISTINCTIVE');
 
+const scopedSection14 = overrides => gate(genericExpenseQuery, [section14Topic], [overrides], {
+  domain: 'IRAS_TAX', scopedSubject: 'generic corporate expense', scopedPopulation: 'COMPANY'
+});
+const scopedCanonicalSection14 = scopedSection14(generalDeduction);
+assert.equal(scopedCanonicalSection14.status, 'LOCAL_SUFFICIENT',
+  'The exact reviewed Section 14 registry record remains available to a matching issue scope.');
+const unregisteredScopedSection14 = scopedSection14({
+  ...generalDeduction, id: 'ITA_SEC14_GENERAL_DEDUCTION_SCOPED_CLONE', tags: [...generalDeduction.tags, section14Topic]
+});
+assert.equal(unregisteredScopedSection14.status, 'INSUFFICIENT',
+  'An issue-scoped local clone with an unregistered ID cannot pass as reviewed evidence.');
+assert.equal(unregisteredScopedSection14.rejectedRecords[0].code, 'BOUND_LOCAL_RECORD_MISMATCH');
+const adulteratedScopedSection14 = scopedSection14({
+  ...generalDeduction, sourceText: 'A substituted Section 14 paragraph about an unrelated matter.'
+});
+assert.equal(adulteratedScopedSection14.status, 'INSUFFICIENT',
+  'An issue-scoped record with altered reviewed content is rejected.');
+assert.equal(adulteratedScopedSection14.rejectedRecords[0].code, 'BOUND_LOCAL_RECORD_MISMATCH');
+for (const overrides of [{ authority: 'ACRA' }, { domain: 'IRAS_GST' }]) {
+  const mismatchedScopedSection14 = scopedSection14({ ...generalDeduction, ...overrides });
+  assert.equal(mismatchedScopedSection14.status, 'INSUFFICIENT',
+    'Issue-scoped evidence must match the reviewed topic authority and source domain.');
+  assert.equal(mismatchedScopedSection14.rejectedRecords[0].code, 'TOPIC_AUTHORITY_DOMAIN_MISMATCH');
+}
+const unscopedLegacySection14 = gate(genericExpenseQuery, [section14Topic], [{
+  ...generalDeduction, id: 'ITA_SEC14_GENERAL_DEDUCTION_LEGACY_CLONE', tags: [...generalDeduction.tags, section14Topic]
+}], { domain: 'IRAS_TAX' });
+assert.equal(unscopedLegacySection14.status, 'LOCAL_SUFFICIENT',
+  'Unscoped legacy evaluation retains its existing association and text-match behavior.');
+
 for (const [id, overrides, expectedCode] of [
   ['ITA_SEC14_BOUND_NEEDS_REVIEW', { sourceStatus: 'NEEDS_REVIEW' }, 'LOCAL_SOURCE_NOT_VERIFIED'],
   ['ITA_SEC14_BOUND_STAGED', { lifecycleState: 'STAGED' }, 'SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE'],
@@ -556,6 +586,18 @@ const successfulTrace = {
 result = gate(mealQuery, [mealTopic], [liveCandidate], { sourceMapFallbackTrace: successfulTrace });
 assert.equal(result.status, 'RETRIEVED_SUFFICIENT', 'Live evidence qualifies only with matched successful URL/topic/content trace.');
 assert.deepEqual(result.eligibleRecords.map(record => record.id), [liveCandidate.id]);
+const wrongDomainLiveCandidate = { ...liveCandidate, id: 'LIVE_MEAL_WRONG_DOMAIN', domain: 'CPF_BOARD', tags: [mealTopic] };
+const wrongDomainLiveTrace = {
+  ...successfulTrace,
+  selectedRecordIds: [wrongDomainLiveCandidate.id],
+  attempts: [{ ...successfulTrace.attempts[0], finalUrl: wrongDomainLiveCandidate.canonicalSourceUrl }]
+};
+const wrongDomainLiveAssessment = gate(mealQuery, [mealTopic], [wrongDomainLiveCandidate], {
+  sourceMapFallbackTrace: wrongDomainLiveTrace
+});
+assert.equal(wrongDomainLiveAssessment.status, 'INSUFFICIENT',
+  'Live evidence remains bound to the topic authority/domain even on the unscoped legacy route.');
+assert.equal(wrongDomainLiveAssessment.rejectedRecords[0]?.code, 'LIVE_RETRIEVAL_TRACE_NOT_VERIFIED');
 
 const individualOverseasTopic = 'iras-individual-overseas-employment';
 const genericEmploymentLive = {
