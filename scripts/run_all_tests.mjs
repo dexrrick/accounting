@@ -79,6 +79,7 @@ const testSuites = [
   { name: 'Latest Nine-response Gemini Downstream Offline Replay', file: 'test_gemini_downstream_repair_replay.mjs', layer: 'evaluation-safety', tier: 'smoke' },
   { name: 'IRAS Scoped Fallback Evidence Reuse', file: 'test_iras_scoped_fallback_reuse.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Feedback Build Metadata', file: 'test_feedback_build_metadata.mjs', layer: 'ux-resilience', tier: 'smoke' },
+  { name: 'iOS Small-Screen Input Focus Zoom', file: 'test_ios_focus_zoom.mjs', layer: 'ux-resilience', tier: 'smoke' },
   { name: 'Official Source Failure Safety', file: 'test_official_source_failure_safety.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Official Source Same-Origin Proxy & Feedback Diagnostics', file: 'test_official_source_proxy.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Phase 7 Coverage Registry', file: 'test_phase7_coverage_registry.mjs', layer: 'coverage-governance', tier: 'full' },
