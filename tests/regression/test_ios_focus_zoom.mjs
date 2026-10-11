@@ -23,6 +23,9 @@ sheet.walkAtRules('media', (atRule) => {
 });
 assert.equal(mobileRule.length, 1, 'Expected one 16px mobile/touch text-control rule');
 const [rule] = mobileRule;
+const fontSize = rule.nodes.find((node) => node.type === 'decl' && node.prop === 'font-size');
+assert.ok(fontSize.important, 'Mobile text-control override must beat Tailwind .text-sm specificity');
+assert.equal(fontSize.value, 'max(16px, 1rem)', 'Respect larger user font settings');
 assert.equal(rule.parent.parent.type, 'root', 'Override must be outside Tailwind layers');
 assert.ok(rule.selectors.some((selector) => selector.startsWith('input:not(')), 'Text input covered');
 assert.ok(rule.selectors.includes('textarea'), 'Textarea covered');

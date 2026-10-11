@@ -145,12 +145,13 @@ html.font-xl .text-\[11px\] { font-size: 0.88rem; }
  * iOS Safari zooms focused form controls with text smaller than 16px.
  * Keep the minimum readable on narrow layouts and touch devices (including
  * landscape iPhones) without disabling the user's own pinch-to-zoom.
- * This rule is after Tailwind's layers to override text-sm utility classes.
+ * Tailwind's class selectors (such as .text-sm) outrank element selectors,
+ * so this declaration must be important to guarantee Safari sees >= 16px.
  */
 @media (max-width: 767px), (hover: none) and (pointer: coarse) {
   input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="hidden"]),
   textarea,
   select {
-    font-size: max(16px, 1rem);
+    font-size: max(16px, 1rem) !important;
   }
 }
