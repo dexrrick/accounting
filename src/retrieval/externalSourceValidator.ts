@@ -56,6 +56,8 @@ export interface ExternalValidationResult {
 }
 
 export interface TopicContentExpectation {
+  /** Isomer government banners may contain an article before the page's main. */
+  preferMainContent?: boolean;
   standardIdentifiers: string[];
   expectedTitles: string[];
   topicTerms: string[];
@@ -134,13 +136,48 @@ function preserveListItemBoundaries(markup: string): string {
   return output;
 }
 
+/** Isomer semantic navigation may use nested divs instead of a nav element. */
+function removeCorporateNavigationMarkup(document: string): string {
+  let output = document;
+  const containers = /<(div|section)\b([^>]*)>/gi;
+  for (const match of [...document.matchAll(containers)].reverse()) {
+    const attributes = match[2];
+    if (!/\b(?:aria-label\s*=\s*["'](?:Breadcrumb|Table of Contents)["']|role\s*=\s*["']navigation["'])/i.test(attributes)) continue;
+    const tag = match[1];
+    const boundaries = new RegExp(`<\\/?${tag}\\b[^>]*>`, 'gi');
+    boundaries.lastIndex = match.index! + match[0].length;
+    let depth = 1;
+    let end = document.length;
+    for (let boundary = boundaries.exec(document); boundary; boundary = boundaries.exec(document)) {
+      depth += boundary[0].startsWith('</') ? -1 : /\/>$/.test(boundary[0]) ? 0 : 1;
+      if (depth === 0) { end = boundaries.lastIndex; break; }
+    }
+    output = output.slice(0, match.index) + ' '.repeat(end - match.index!) + output.slice(end);
+  }
+  // Unlabelled breadcrumbs contain short anchor/span labels (and icons), with
+  // no prose outside them. Do not remove ordered statutory instructions.
+  return output.replace(/<ol\b[^>]*>([\s\S]*?)<\/ol\s*>/gi, (list, contents: string) => {
+    if (/<ol\b/i.test(contents) || !/<a\b/i.test(contents)) return list;
+    const items = [...contents.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/gi)];
+    if (items.length === 0) return list;
+    const labelsOnly = items.every(item => {
+      const text = cleanHtmlText(item[1].replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' '));
+      if (text.split(/\s+/).length > 16 || /\b(?:must|shall|file|submit|prepare|ensure|comply|need to)\b/i.test(text)) return false;
+      const residual = item[1].replace(/<(a|span|svg)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+      return cleanHtmlText(residual).trim().length === 0;
+    });
+    return labelsOnly ? ' ' : list;
+  });
+}
+
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
-function extractVisiblePageText(rawDocument: string): string {
-  const withoutChrome = rawDocument
+function extractVisiblePageText(rawDocument: string, preferMainContent = false): string {
+  const withoutChrome = (preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
     .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
-  const contentMatch = withoutChrome.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)\s*>/i);
+  const contentMatch = (preferMainContent ? withoutChrome.match(/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i) : undefined) ||
+    withoutChrome.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   const visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
   // Keep nested list-item identity after HTML cleanup so evidence-only fallback
@@ -328,7 +365,7 @@ export class ExternalSourceValidator {
 
     const titleMatch = rawDocument.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
-    const substantiveText = extractVisiblePageText(rawDocument);
+    const substantiveText = extractVisiblePageText(rawDocument, expectation.preferMainContent);
     if (!pageTitle || /^(?:home(?:page)?|search(?: results)?|sign in|log in|login|access denied|not found|error)(?:\s*[-|:].*)?$/i.test(pageTitle)) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has a generic, unavailable, or login title', pageTitle, substantiveText };
     }

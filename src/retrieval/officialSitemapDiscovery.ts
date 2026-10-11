@@ -24,7 +24,7 @@ export interface OfficialSourceDiscoveryProviderConfig {
   lexicalDiscovery: boolean;
 }
 
-/** Discovery configuration is provider data; IRAS and CPF use their first-party indexes with bounded discovery. */
+/** Discovery configuration is provider data; indexes identify candidates, never verified evidence. */
 export const OFFICIAL_SOURCE_DISCOVERY_PROVIDERS: Readonly<Record<string, OfficialSourceDiscoveryProviderConfig>> = Object.freeze({
   IRAS: Object.freeze({
     authority: 'IRAS',
@@ -43,6 +43,18 @@ export const OFFICIAL_SOURCE_DISCOVERY_PROVIDERS: Readonly<Record<string, Offici
     sitemapUrls: Object.freeze(['https://www.cpf.gov.sg/employer/sitemap', 'https://www.cpf.gov.sg/member/sitemap']),
     preferredHosts: Object.freeze(['www.cpf.gov.sg', 'cpf.gov.sg']),
     searchSite: 'cpf.gov.sg',
+    searchEndpoint: 'https://html.duckduckgo.com/html/',
+    searchRedirectHost: 'duckduckgo.com',
+    searchRedirectParameter: 'uddg',
+    lexicalDiscovery: true
+  }),
+  ACRA: Object.freeze({
+    authority: 'ACRA',
+    approvedHosts: Object.freeze(['www.acra.gov.sg', 'acra.gov.sg']),
+    // Declared by ACRA's robots.txt and retrieved as an XML urlset.
+    sitemapUrls: Object.freeze(['https://www.acra.gov.sg/sitemap.xml']),
+    preferredHosts: Object.freeze(['www.acra.gov.sg', 'acra.gov.sg']),
+    searchSite: 'acra.gov.sg',
     searchEndpoint: 'https://html.duckduckgo.com/html/',
     searchRedirectHost: 'duckduckgo.com',
     searchRedirectParameter: 'uddg',
@@ -343,7 +355,22 @@ function metadataRelevanceScore(entry: OfficialSourceIndexEntry, request: Offici
 
 function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSourceDiscoveryRequest): number {
   if (!isIrasSourceUrlAreaCompatible(request.topicDomainId, entry.canonicalUrl, request.declaredSourceUrls, request.scopeQuery || request.query)) return 0;
+  if (!isAcraCompanySourceUrlCompatible(request.topicDomainId, entry.canonicalUrl)) return 0;
   return metadataRelevanceScore(entry, request);
+}
+
+/** Company guidance must not borrow another entity type's filing requirements. */
+export function isAcraCompanySourceUrlCompatible(topicDomainId: string | undefined, candidateUrl: string): boolean {
+  if (topicDomainId !== 'ACRA_COMPANIES') return true;
+  try {
+    const url = new URL(candidateUrl);
+    return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
+      ['acra.gov.sg', 'www.acra.gov.sg'].includes(url.hostname.toLowerCase()) &&
+      decodeURIComponent(url.pathname).toLowerCase().startsWith('/manage/companies/') &&
+      !/(?:foreign-company|foreign-companies|variable-capital|(?:^|[/-])vcc(?:[/-]|$)|limited-liability-partnership|limited-partnership|sole-proprietor)/i.test(decodeURIComponent(url.pathname));
+  } catch {
+    return false;
+  }
 }
 
 /**
