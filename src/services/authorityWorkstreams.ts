@@ -34,6 +34,7 @@ import {
 } from '../verification/claimEvidenceVerifier';
 import {
   buildGroundedReasoningContext,
+  resolveMappedOfficialSourceFallback,
   type MappedFallbackOptions,
   type SourceMapFallbackTrace
 } from './groundingContextBuilder';
