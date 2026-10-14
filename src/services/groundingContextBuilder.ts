@@ -950,8 +950,10 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   if (topic.domainId === 'ACCOUNTING_SFRS') return [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS];
   if (topic.domainId.startsWith('IRAS_')) return [...APPROVED_IRAS_DISCOVERY_HOSTS];
-  if (topic.domainId.startsWith('CPF_')) return [...(getOfficialSourceDiscoveryProviderConfig('CPF')?.approvedHosts || [])];
-  return [];
+  // All configured statutory authorities share the same approved-host boundary.
+  // IRAS retains its reviewed SSO legislation host and accounting standards retain IFRS/ASC.
+  const provider = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+  return provider ? [...provider.approvedHosts] : [];
 }
 
 function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
@@ -991,7 +993,7 @@ function hasVerifiedHistoricalStatutoryScope(
   targetIsHistorical: boolean,
   query: string
 ): boolean {
-  if (!topic.domainId.startsWith('IRAS_') && !topic.domainId.startsWith('CPF_')) return true;
+  if (!getOfficialSourceDiscoveryProviderConfig(topic.authorities[0])) return true;
   if (isUndatedHistoricalStatutoryRequest(topic, query)) return false;
   if (!targetIsHistorical || !targetDate) return true;
   return Boolean(pointer?.validFrom && pointer.validTo && targetDate >= pointer.validFrom && targetDate <= pointer.validTo);
@@ -1031,7 +1033,11 @@ function makeLiveCandidateEvidence(
         ? 'ACRA'
         : host === 'cpf.gov.sg' || host === 'www.cpf.gov.sg'
           ? 'Central Provident Fund Board (CPF Board)'
-          : 'Official source';
+          : host === 'mom.gov.sg' || host === 'www.mom.gov.sg'
+            ? 'Ministry of Manpower (MOM)'
+            : host === 'mas.gov.sg' || host === 'www.mas.gov.sg'
+              ? 'Monetary Authority of Singapore (MAS)'
+              : 'Official source';
   const record = {
     id: `LIVE_TOPIC_${topic.id}_${contentHash?.slice(0, 12) || Date.now()}`,
     authority: (pointer?.authority || topic.authorities[0] || 'ACRA') as StatutoryAuthority,
@@ -1067,7 +1073,9 @@ function makeLiveCandidateEvidence(
     lastVerifiedDate: currentDate,
     provenance: 'LIVE_EXTERNAL' as const,
     canonicalSourceUrl: url,
-    sourceAuthority: host === 'sso.agc.gov.sg' ? 'AGC' : topic.domainId.startsWith('IRAS_') ? 'IRAS' : topic.domainId.startsWith('CPF_') ? 'CPF' : 'ACRA',
+    sourceAuthority: host === 'sso.agc.gov.sg' ? 'AGC' : topic.domainId.startsWith('IRAS_') ? 'IRAS' :
+      topic.domainId.startsWith('CPF_') ? 'CPF' : topic.domainId.startsWith('MOM_') ? 'MOM' :
+      topic.domainId.startsWith('MAS_') ? 'MAS' : 'ACRA',
     retrievedAt,
     verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
     extractionStatus: 'PARTIAL' as const,
@@ -1222,12 +1230,16 @@ export async function resolveMappedOfficialSourceFallback(
   ): Promise<AuthoritativeSourceRecord | undefined> => {
     const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
     const cpfDiscovery = topic.domainId.startsWith('CPF_') && !pointer;
-    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery
+    const momDiscovery = topic.domainId.startsWith('MOM_') && !pointer;
+    const masDiscovery = topic.domainId.startsWith('MAS_') && !pointer;
+    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery || momDiscovery || masDiscovery
       ? [topic.title, ...(topic.aliases || []), ...topic.keywords, ...(cpfDiscovery ? CPF_DISCOVERY_TITLE_HINTS[topic.id] || [] : [])]
         .filter(value => normalizeEvidenceText(value).split(' ').filter(Boolean).length >= 2)
       : [];
     const expectation = {
-      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] : [])],
+      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer),
+        ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] :
+          momDiscovery ? ['Ministry of Manpower', 'MOM'] : masDiscovery ? ['Monetary Authority of Singapore', 'MAS'] : [])],
       expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedStatutoryTitles,
         discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
@@ -1361,7 +1373,7 @@ export async function resolveMappedOfficialSourceFallback(
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
-    const historicalStatutoryQuery = (topic.domainId.startsWith('IRAS_') || topic.domainId.startsWith('CPF_')) && Boolean(
+    const historicalStatutoryQuery = Boolean(getOfficialSourceDiscoveryProviderConfig(topic.authorities[0])) && Boolean(
       isUndatedHistoricalStatutoryRequest(topic, query) ||
       targetIsHistorical
     );
