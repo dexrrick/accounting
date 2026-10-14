@@ -54,6 +54,9 @@ import {
 const SUPPORTED_LOCAL_AUTHORITIES = new Set<SemanticAuthority>([
   'ACCOUNTING_STANDARDS', 'ACRA', 'CPF', 'MOM', 'MAS'
 ]);
+// IRAS retains its specialist quality gate. These authorities now share the
+// generic official-page discovery path and bounded evidence admission.
+const SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES = new Set<SemanticAuthority>(['CPF', 'MOM', 'MAS']);
 
 const GENERIC_SUPPORT_WORDS = new Set([
   'about', 'account', 'accounts', 'applicable', 'application', 'authority', 'based', 'business', 'businesses',
@@ -574,11 +577,11 @@ function retrievalAuthority(authority: SemanticAuthority): StatutoryAuthority | 
 }
 
 function issueScope(issue: ReconciledSemanticQuestionIssue, plan: InternalPlan, topicIds: string[], concepts: RequestedQuestionConcept[]): AuthorityEvidenceScope | undefined {
-  if (plan.authority !== 'IRAS') return undefined;
+  if (plan.authority !== 'IRAS' && !SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(plan.authority)) return undefined;
   const sourceDomain = getCoverageTopicsByIds(topicIds)[0]?.domainId;
   if (!sourceDomain) return undefined;
   return {
-    authority: 'IRAS',
+    authority: plan.authority === 'IRAS' ? 'IRAS' : plan.authority as 'CPF' | 'MOM' | 'MAS',
     domain: plan.domain,
     topicIds,
     requestedConcepts: concepts,
@@ -679,6 +682,60 @@ function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRe
         referenceDate
       });
       return { candidates, trace: getDefaultTrace(candidates.length > 0) };
+    }
+  };
+}
+
+
+/**
+ * Apply the same official sitemap -> fetched page -> topic validator fallback to
+ * CPF, MOM and MAS. Only the current request's missing evidence is fetched.
+ * Live candidate records remain CANDIDATE; the per-issue claim gate below must
+ * independently admit them using the exact retrieval trace.
+ */
+function defaultOfficialStatutoryProvider(
+  authority: 'CPF' | 'MOM' | 'MAS',
+  plan: InternalPlan,
+  options: AuthorityWorkstreamOptions,
+  retriever: ISourceRetriever,
+  referenceDate: string
+): AuthorityEvidenceProvider {
+  const localProvider = defaultLocalProvider(authority, retriever, referenceDate);
+  return {
+    authority,
+    async retrieve(request: AuthorityEvidenceRequest): Promise<AuthorityEvidenceProviderResult> {
+      const local = await localProvider.retrieve(request);
+      if (options.localOnly || options.groundingOptions?.localOnly) return local;
+      const topics = getCoverageTopicsByIds(request.retrievalIntent.topicIds);
+      const targetDate = defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate).targetDate;
+      const localAdmission = eligibleLocalRecords(
+        local.candidates, request.issue, authority, topics,
+        request.retrievalIntent.requestedConcepts, targetDate, referenceDate
+      );
+      const localCoverage = localAdmission.admitted.length > 0 && topics.every(topic =>
+        localAdmission.admitted.some(record => topicBoundToRecord(record, topic))
+      ) && request.retrievalIntent.requestedConcepts.every(concept =>
+        localAdmission.admitted.some(record => [concept.label, ...concept.terms]
+          .some(term => term.trim() && textSupportsPhrase(record.sourceText, term)))
+      );
+      if (localCoverage) return local;
+      const scope = issueScope(request.issue, plan,
+        request.retrievalIntent.topicIds, request.retrievalIntent.requestedConcepts);
+      if (!scope) return local;
+      const fetched = await resolveMappedOfficialSourceFallback(
+        request.retrievalIntent.topicIds, request.originalQuery, retriever, {
+          ...options.groundingOptions,
+          referenceDate,
+          evidenceScope: scope,
+          // Injected first-party transports stay under the same shared allowlist.
+          localOnly: false
+        }
+      );
+      return {
+        candidates: [...local.candidates, ...fetched.records],
+        trace: mapSourceMapTrace(fetched.trace),
+        evidenceQualityTrace: fetched.trace
+      };
     }
   };
 }
@@ -858,12 +915,31 @@ function eligibleLocalRecords(
   topics: SingaporeCoverageTopic[],
   concepts: RequestedQuestionConcept[],
   targetDate: string | undefined,
-  referenceDate: string
+  referenceDate: string,
+  officialRetrievalTrace?: SourceMapFallbackTrace
 ): { admitted: AuthoritativeSourceRecord[]; rejectedCount: number } {
   const admitted: AuthoritativeSourceRecord[] = [];
   let rejectedCount = 0;
   for (const record of new Map(records.map(item => [item.id, item])).values()) {
-    if (!matchesReviewedLocalRegistryRecord(record) || record.provenance !== 'LOCAL_STATIC' ||
+    const isReviewedLocal = record.provenance === 'LOCAL_STATIC' && matchesReviewedLocalRegistryRecord(record);
+    // A live record is acceptable only if this very provider call fetched and
+    // validated the exact URL for the same topic. An injected candidate with a
+    // plausible URL, labels or hash but no retrieval trace is insufficient.
+    const matchingFetch = officialRetrievalTrace?.attempts.find(attempt =>
+      attempt.fetchStatus === 'SUCCESS' && attempt.titleMatched && attempt.contentMatched &&
+      attempt.finalUrl === record.officialSourceUrl && topics.some(topic => attempt.topicId === topic.id &&
+        topicBoundToRecord(record, topic))
+    );
+    const isValidatedLive = record.provenance === 'LIVE_EXTERNAL' &&
+      (authority === 'CPF' || authority === 'MOM' || authority === 'MAS') &&
+      record.lifecycleState === 'CANDIDATE' && record.sourceStatus === 'NEEDS_REVIEW' &&
+      record.extractionStatus === 'PARTIAL' && record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED' &&
+      (record.sourceAuthority === authority ||
+        (record.sourceAuthority === 'AGC' && record.officialSourceUrl.startsWith('https://sso.agc.gov.sg/'))) &&
+      officialRetrievalTrace?.selectedRecordIds.includes(record.id) === true &&
+      officialRetrievalTrace?.finalVerifiedUrls.includes(record.officialSourceUrl) === true &&
+      Boolean(matchingFetch);
+    if ((!isReviewedLocal && !isValidatedLive) ||
         record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false ||
         !record.sourceText?.trim() || findRecordEligibilityRejection(record, targetDate, referenceDate)) {
       rejectedCount += 1;
@@ -1081,7 +1157,9 @@ async function evaluateIssue(
   };
   const provider = options.providers?.[plan.authority] || (plan.authority === 'IRAS'
     ? defaultIrasProvider(query, plan, options, retriever, understanding, referenceDate)
-    : SUPPORTED_LOCAL_AUTHORITIES.has(plan.authority) ? defaultLocalProvider(plan.authority, retriever, referenceDate) : undefined);
+    : SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(plan.authority)
+      ? defaultOfficialStatutoryProvider(plan.authority as 'CPF' | 'MOM' | 'MAS', plan, options, retriever, referenceDate)
+      : SUPPORTED_LOCAL_AUTHORITIES.has(plan.authority) ? defaultLocalProvider(plan.authority, retriever, referenceDate) : undefined);
   if (!provider || plan.domain === 'UNKNOWN') {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'retrievalAttempted', 'PROVIDER_UNAVAILABLE',
       'No evidence provider is available for this authority and mapped area.'));
@@ -1151,7 +1229,8 @@ async function evaluateIssue(
     admitted = irasQuality.eligibleRecords;
     localRejectedCount = irasQuality.rejectedRecords.length;
   } else {
-    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, targetDate, referenceDate);
+    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, targetDate, referenceDate,
+      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace));
     admitted = result.admitted;
     localRejectedCount = result.rejectedCount;
   }
