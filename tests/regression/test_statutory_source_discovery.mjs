@@ -7,6 +7,7 @@ import {
 } from '../../src/retrieval/officialSitemapDiscovery.ts';
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { resolveMappedOfficialSourceFallback } from '../../src/services/groundingContextBuilder.ts';
+import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 
 const cases = [
   {
@@ -106,4 +107,48 @@ const result = await adapter.discoverOfficialSourceCandidates({
   standardOrAct: 'Employment Act', topicHints: ['part iv', 'overtime eligibility']
 });
 assert.deepEqual(result, [cases[0].url], 'An unrelated but approved Singapore government host is not an authorised authority source.');
+
+// Verify that MOM and MAS follow the same workstream boundary used by IRAS:
+// exact authority/topic provenance, full source page, and verified quotations.
+for (const sample of cases) {
+  const provider = OFFICIAL_SOURCE_DISCOVERY_PROVIDERS[sample.authority];
+  const customFetch = async url => {
+    if (url === provider.sitemapUrls[0]) return response(`<urlset><url><loc>${sample.url}</loc></url></urlset>`);
+    if (url === sample.url) return response(html(sample.title, sample.paragraph));
+    if (url.endsWith('/robots.txt')) return new Response('not found', { status: 404 });
+    if (url.startsWith('https://html.duckduckgo.com/html/') || url.startsWith('https://r.jina.ai/'))
+      return new Response('not found', { status: 404 });
+    throw Error(`Unexpected workstream fetch ${url}`);
+  };
+  const issue = {
+    id: `official-${sample.authority.toLowerCase()}-issue`,
+    subject: sample.authority === 'MOM' ? 'Part IV overtime eligibility' : 'Capital Markets Services Licence',
+    population: 'COMPANY',
+    domain: sample.authority === 'MOM' ? 'MOM_EMPLOYMENT' : 'MAS_FUND_MANAGEMENT',
+    governingAuthorities: [sample.authority], contextualAuthorities: [],
+    operation: 'EXPLAIN_RULE', mappedTopicIds: [sample.topicId],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.98, status: 'MAPPED'
+  };
+  const offlineRetriever = {
+    retrieveSources: async () => [],
+    getSourceById: () => undefined
+  };
+  const result = await buildAuthorityWorkstreams(sample.query, {
+    source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false, issues: [issue]
+  }, {
+    retriever: offlineRetriever, referenceDate: '2026-10-14',
+    groundingOptions: {
+      webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+      fetchOptions: { customFetch, timeoutMs: 500, useCache: false }
+    }
+  });
+  const stream = result.workstreams.find(item => item.authority === sample.authority);
+  assert.ok(stream, `Expected ${sample.authority} workstream`);
+  assert.ok(stream.issues[0].sources.every(source => source.authority === sample.authority));
+  assert.ok(stream.issues[0].sources.every(source => source.sourceAuthority === sample.authority));
+  assert.ok(stream.issues[0].retrievalTrace.stages.some(stage => stage.stage === 'SITEMAP_DISCOVERY' && stage.status === 'SUFFICIENT'));
+  assert.equal(stream.issues[0].evidenceStatus, 'VERIFIED', JSON.stringify(stream.issues[0]));
+  assert.ok(stream.verifiedClaims.length > 0, 'Verified claim must be backed by the retrieved official page.');
+}
+
 console.log('MOM/MAS official sitemap candidates, source provenance and negative evidence guards: passed.');
