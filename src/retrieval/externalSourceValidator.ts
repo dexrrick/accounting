@@ -313,7 +313,8 @@ export class ExternalSourceValidator {
       lower.includes('application/json') ||
       lower.includes('text/plain') ||
       lower.includes('text/html') ||
-      lower.includes('application/xml')
+      lower.includes('application/xml') ||
+      lower.includes('text/xml')
     );
   }
 
@@ -418,6 +419,10 @@ export class ExternalSourceValidator {
     } else if (authority === 'CPF') {
       if (host !== 'cpf.gov.sg' && host !== 'www.cpf.gov.sg' && host !== 'sso.agc.gov.sg') {
         return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `CPF statutory guidance must point to cpf.gov.sg or sso.agc.gov.sg, found '${host}'` };
+      }
+    } else if (authority === 'MAS') {
+      if (host !== 'mas.gov.sg' && host !== 'www.mas.gov.sg' && host !== 'sso.agc.gov.sg') {
+        return { isValid: false, errorCode: 'CANONICAL_URL_MISMATCH', reason: `MAS statutory guidance must point to mas.gov.sg or sso.agc.gov.sg, found '${host}'` };
       }
     } else if (authority === 'REFERENCE_API') {
       if (host !== 'api.frankfurter.dev') {
