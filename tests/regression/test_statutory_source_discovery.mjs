@@ -8,6 +8,7 @@ import {
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { resolveMappedOfficialSourceFallback } from '../../src/services/groundingContextBuilder.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
+import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 
 const cases = [
   {
@@ -29,6 +30,11 @@ const cases = [
     sourcePublisher: 'Monetary Authority of Singapore (MAS)'
   }
 ];
+assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://www.mas.gov.sg/regulation/guidelines', 'MAS').isValid, true);
+assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://www.mom.gov.sg/employment-practices', 'MAS').isValid, false);
+assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://sso.agc.gov.sg/Act/SFA2001', 'MAS').isValid, true);
+assert.equal(defaultExternalSourceValidator.validateContentType('text/xml; charset=utf-8'), true);
+
 const html = (title, body) => `<html><head><title>${title}</title></head><body><main><h1>${title}</h1><p>${body}</p></main></body></html>`;
 const response = body => new Response(body, { status: 200, headers: { 'content-type': 'text/html' } });
 
