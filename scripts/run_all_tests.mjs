@@ -82,6 +82,7 @@ const testSuites = [
   { name: 'iOS Small-Screen Input Focus Zoom', file: 'test_ios_focus_zoom.mjs', layer: 'ux-resilience', tier: 'smoke' },
   { name: 'Official Source Failure Safety', file: 'test_official_source_failure_safety.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Official Source Same-Origin Proxy & Feedback Diagnostics', file: 'test_official_source_proxy.mjs', layer: 'provider-resilience', tier: 'smoke' },
+  { name: 'Shared Official Document Extraction', file: 'test_official_document_extraction.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Phase 7 Coverage Registry', file: 'test_phase7_coverage_registry.mjs', layer: 'coverage-governance', tier: 'full' },
   { name: 'Singapore Knowledge Routing Benchmark', file: 'test_singapore_knowledge_benchmark.mjs', layer: 'coverage-governance', tier: 'smoke' },
   { name: 'Singapore Knowledge Foundation Registry and Routing', file: 'test_singapore_knowledge_foundation.mjs', layer: 'coverage-governance', tier: 'smoke' },

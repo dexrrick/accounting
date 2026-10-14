@@ -25,10 +25,18 @@ The statutory assistant must use one governed mechanism for official-source disc
 | MAS | Local regulatory rules, no official sitemap provider | First-party sitemap, official HTML validation, bounded live workstream |
 | SSO / AGC | Statutory-law retrieval and exact-provision update adapter | Reuse as cross-authority legislation publisher; broader act navigation remains to be normalised |
 
+### Shared document extraction checkpoint
+
+The shared retrieval branch adds a bounded `extractExternalDocument` candidate API for official HTML, plain-text and PDF documents. It retains the publisher from the final approved host separately from the governing authority, hashes the exact response bytes, records the extracted section/page locator and retrieval/version metadata, and leaves every result `CANDIDATE / NEEDS_REVIEW / LIVE_EXTERNAL` with grounding disabled. `lastVerifiedDate` stays absent until an independent review verifies the candidate. It does not register or activate new material.
+
+HTML evidence requires a unique structural section or element with substantive paragraph/list content or a coherent data table; headings, navigation and link-only blocks are rejected. PDF evidence is parsed from embedded text with a locally bundled pdf.js worker; page count, body size, parser time and extracted text are bounded. Layout-based cell separation is retained when repeated rows align, while ambiguous tables and mixed image-only pages remain partial and ungroundable. Encrypted, malformed, scanned-only or oversized PDFs fail closed. Historical dates are recorded only when an applicability interval is stated in the extracted passage, and a requested date must fall inside that interval.
+
+SSO retrieval uses the repository's Act-to-authority identity mapping, exact registered Act URL, and a requested section locator. Exact numeric subsections reuse the existing SSO parser only behind section/Act guards; a structural fallback handles explicit Act section IDs, including alphanumeric section numbers without a subsection. This is a bounded retrieval path, not full SSO navigation parity. The offline regression covers synthetic HTML, legislation and a generated binary PDF; no broad live accuracy acceptance has been run.
+
 ### Intentional remaining gaps before broad live testing
 
 - Finish ACRA PR #12 integration and end-to-end answer admission.
-- Build consistent HTML + PDF/table extraction. MAS notices, circulars, regulatory forms and historical schedule tables may require document-specific extraction; do not treat a PDF URL or index entry as content.
+- Validate the shared extraction API against reviewed official MAS notices, circulars, forms and historical schedule tables; ambiguous layouts intentionally remain ungroundable until their structure can be retained safely.
 - Unify regulatory-update scheduling and staged change review for MAS with the same contract used by IRAS, CPF, MOM, ACRA and AGC.
 - Establish an end-to-end acceptance dataset for *every* authority covering discovery success, citation correctness, retrieved passage, statutory effective period, topic coverage and wrong-authority isolation.
 - Validate current production Cloudflare source transport separately from deterministic offline tests. Do not merge solely on synthetic fixtures.

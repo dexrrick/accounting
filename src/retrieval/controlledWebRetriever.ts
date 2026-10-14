@@ -1,6 +1,6 @@
 import { defaultExternalSourceValidator, ExternalSourceValidator, type TopicContentExpectation } from './externalSourceValidator';
 import { defaultSourceCache, SourceCache, type CachedSource } from './sourceCache';
-import { computeSha256 } from '../standards/sourceVersioning';
+import { computeSha256, computeSha256Bytes } from '../standards/sourceVersioning';
 import { getDefaultOfficialSourceFetch, type OfficialSourceResponse } from './officialSourceTransport';
 
 export type ControlledFetchStatus =
@@ -27,12 +27,18 @@ export interface ControlledFetchOptions {
   maxRedirects?: number;
   /** Requires fetched title and substantive page content to match the mapped topic. */
   topicValidation?: TopicContentExpectation;
+  /** Fetch bounded raw document bytes instead of the legacy text response. */
+  responseMode?: 'TEXT' | 'DOCUMENT';
+  /** Maximum response payload bytes when responseMode is DOCUMENT. */
+  maxResponseBytes?: number;
 }
 
 export interface ControlledFetchResult {
   status: ControlledFetchStatus;
   httpStatus?: number;
   content?: string;
+  contentBytes?: Uint8Array;
+  contentType?: string;
   contentHash?: string;
   cached?: boolean;
   error?: string;
@@ -48,6 +54,57 @@ export interface ControlledFetchResult {
   discoveredLinks?: Array<{ href: string; text: string }>;
   etag?: string;
   lastModified?: string;
+}
+
+const DEFAULT_MAX_DOCUMENT_RESPONSE_BYTES = 1_500_000;
+const DOCUMENT_CONTENT_TYPES = ['application/pdf', 'text/html', 'application/xhtml+xml', 'text/plain'];
+
+async function readBoundedResponseBytes(
+  response: Response,
+  maximumBytes: number,
+  timeoutMs: number,
+  controller: AbortController
+): Promise<{ bytes?: Uint8Array; status: 'SUCCESS' | 'TOO_LARGE' | 'TIMEOUT' | 'READ_ERROR' }> {
+  if (!response.body) return { bytes: new Uint8Array(), status: 'SUCCESS' };
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const readPromise = (async () => {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > maximumBytes) {
+          void reader.cancel().catch(() => undefined);
+          return { status: 'TOO_LARGE' as const };
+        }
+        chunks.push(value);
+      }
+    } catch {
+      return { status: 'READ_ERROR' as const };
+    }
+    const bytes = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return { bytes, status: 'SUCCESS' as const };
+  })();
+  const timeoutPromise = new Promise<{ status: 'TIMEOUT' }>(resolve => {
+    timeout = setTimeout(() => {
+      controller.abort();
+      void reader.cancel().catch(() => undefined);
+      resolve({ status: 'TIMEOUT' });
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([readPromise, timeoutPromise]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 }
 
 function extractExplicitAnchorLinks(html: string): Array<{ href: string; text: string }> {
@@ -106,8 +163,16 @@ export class ControlledWebRetriever {
       useCache = true,
       ttlMs,
       expectedHash,
-      customFetch
+      customFetch,
+      responseMode = 'TEXT',
+      maxResponseBytes = DEFAULT_MAX_DOCUMENT_RESPONSE_BYTES
     } = options;
+    const documentByteLimit = Math.min(maxResponseBytes, DEFAULT_MAX_DOCUMENT_RESPONSE_BYTES);
+    const documentTimeoutMs = Math.min(timeoutMs, 15_000);
+    if (responseMode === 'DOCUMENT' && (!Number.isFinite(maxResponseBytes) || maxResponseBytes <= 0 ||
+        !Number.isFinite(timeoutMs) || timeoutMs <= 0 || documentByteLimit <= 0)) {
+      return { status: 'INVALID_CONTENT', error: 'Document byte and timeout limits must be finite positive values', retrievedAt: new Date().toISOString(), sourceUrl: url };
+    }
     const fetchTransport = customFetch ?? getDefaultOfficialSourceFetch();
 
     const retrievedAt = new Date().toISOString();
@@ -127,7 +192,7 @@ export class ControlledWebRetriever {
 
     // 2. Check source cache
     let cached: CachedSource | null = null;
-    if (useCache) {
+    if (useCache && responseMode === 'TEXT') {
       cached = this.cache.get(url);
       if (cached && cached.rawContent) {
         // If expectedHash is specified, verify cached content integrity
@@ -181,8 +246,11 @@ export class ControlledWebRetriever {
 
     try {
       const headers: Record<string, string> = {
-        'Accept': 'text/plain, application/json, text/html, */*'
+        'Accept': responseMode === 'DOCUMENT'
+          ? 'application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1'
+          : 'text/plain, application/json, text/html, */*'
       };
+      if (responseMode === 'DOCUMENT') headers['x-official-source-response-mode'] = 'document';
       if (useCache && cached) {
         const condHeaders = this.cache.getConditionalHeaders(url);
         Object.assign(headers, condHeaders);
@@ -324,8 +392,46 @@ export class ControlledWebRetriever {
         }
       }
 
-      const text = await response.text();
-      if (!text || text.trim().length === 0) {
+      const contentType = response.headers?.get('content-type') || undefined;
+      let text: string | undefined;
+      let contentBytes: Uint8Array | undefined;
+      if (responseMode === 'DOCUMENT') {
+        const normalizedContentType = contentType?.split(';', 1)[0]?.trim().toLowerCase();
+        if (!normalizedContentType || !DOCUMENT_CONTENT_TYPES.includes(normalizedContentType)) {
+          return {
+            status: 'INVALID_CONTENT', httpStatus: response.status,
+            error: `Official document must return HTML, plain text, or PDF; received '${contentType || 'unknown content type'}'`,
+            retrievedAt, sourceUrl: responseUrl, finalUrl: responseUrl
+          };
+        }
+        const boundedRead = await readBoundedResponseBytes(response, documentByteLimit, documentTimeoutMs, controller);
+        if (boundedRead.status === 'TIMEOUT') {
+          return { status: 'TIMEOUT', error: `Official document body timed out after ${documentTimeoutMs}ms`, retrievedAt, sourceUrl: responseUrl, finalUrl: responseUrl };
+        }
+        if (boundedRead.status === 'TOO_LARGE') {
+          return {
+            status: 'INVALID_CONTENT', httpStatus: response.status,
+            error: `Official document exceeded the ${documentByteLimit}-byte response limit`,
+            retrievedAt, sourceUrl: responseUrl, finalUrl: responseUrl
+          };
+        }
+        if (boundedRead.status !== 'SUCCESS' || !boundedRead.bytes) {
+          return { status: 'NETWORK_ERROR', httpStatus: response.status, error: 'Official document body could not be read', retrievedAt, sourceUrl: responseUrl, finalUrl: responseUrl };
+        }
+        contentBytes = boundedRead.bytes;
+        if (contentBytes.byteLength === 0) {
+          return { status: 'INVALID_CONTENT', httpStatus: response.status, error: 'Received empty response body', retrievedAt, sourceUrl: responseUrl, finalUrl: responseUrl };
+        }
+        if (normalizedContentType !== 'application/pdf') {
+          try { text = new TextDecoder('utf-8', { fatal: true }).decode(contentBytes); }
+          catch {
+            return { status: 'INVALID_CONTENT', httpStatus: response.status, error: 'Official text document was not valid UTF-8', retrievedAt, sourceUrl: responseUrl, finalUrl: responseUrl };
+          }
+        }
+      } else {
+        text = await response.text();
+      }
+      if (responseMode === 'TEXT' && (!text || text.trim().length === 0)) {
         return {
           status: 'INVALID_CONTENT',
           httpStatus: response.status,
@@ -335,8 +441,7 @@ export class ControlledWebRetriever {
         };
       }
 
-      const contentType = response.headers?.get('content-type') || undefined;
-      if (options.topicValidation) {
+      if (options.topicValidation && text !== undefined) {
         if (!contentType || (!contentType.toLowerCase().includes('text/html') && !contentType.toLowerCase().includes('text/plain'))) {
           return {
             status: 'INVALID_CONTENT',
@@ -365,7 +470,7 @@ export class ControlledWebRetriever {
         }
       }
 
-      const hash = computeSha256(text);
+      const hash = contentBytes ? computeSha256Bytes(contentBytes) : computeSha256(text || '');
 
       // Hash mismatch verification
       if (expectedHash && hash.toLowerCase() !== expectedHash.toLowerCase()) {
@@ -383,7 +488,7 @@ export class ControlledWebRetriever {
       const etag = response.headers?.get('etag') || undefined;
       const lastModified = response.headers?.get('last-modified') || undefined;
       // Store into cache
-      if (useCache) {
+      if (useCache && responseMode === 'TEXT' && text !== undefined) {
         const defaultUrlTtl = responseUrl.includes('frankfurter') ? 3_600_000 : 86_400_000;
         const effectiveTtl = ttlMs ?? defaultUrlTtl;
         const cachedSource: CachedSource = {
@@ -404,17 +509,19 @@ export class ControlledWebRetriever {
         status: 'SUCCESS',
         httpStatus: response.status,
         content: text,
+        contentBytes,
+        contentType,
         contentHash: hash,
         cached: false,
         retrievedAt,
         sourceUrl: responseUrl,
         finalUrl: responseUrl,
-        pageTitle: options.topicValidation ? this.validator.validateTopicContent(text, options.topicValidation).pageTitle : undefined,
-        topicMatched: options.topicValidation ? true : undefined,
-        titleMatched: options.topicValidation ? true : undefined,
-        contentMatched: options.topicValidation ? true : undefined,
-        substantiveText: options.topicValidation ? this.validator.validateTopicContent(text, options.topicValidation).substantiveText : undefined,
-        discoveredLinks: extractExplicitAnchorLinks(text),
+        pageTitle: options.topicValidation && text !== undefined ? this.validator.validateTopicContent(text, options.topicValidation).pageTitle : undefined,
+        topicMatched: options.topicValidation && text !== undefined ? true : undefined,
+        titleMatched: options.topicValidation && text !== undefined ? true : undefined,
+        contentMatched: options.topicValidation && text !== undefined ? true : undefined,
+        substantiveText: options.topicValidation && text !== undefined ? this.validator.validateTopicContent(text, options.topicValidation).substantiveText : undefined,
+        discoveredLinks: text !== undefined ? extractExplicitAnchorLinks(text) : [],
         etag,
         lastModified
       };
@@ -448,6 +555,18 @@ export class ControlledWebRetriever {
         sourceUrl: url
       };
     }
+  }
+
+  /** Explicit bounded byte-preserving document fetch; legacy text fetching stays unchanged. */
+  public async fetchOfficialDocument(
+    url: string,
+    options: Omit<ControlledFetchOptions, 'responseMode' | 'useCache'> = {}
+  ): Promise<ControlledFetchResult> {
+    return await this.fetchOfficialSource(url, {
+      ...options,
+      responseMode: 'DOCUMENT',
+      useCache: false
+    });
   }
 }
 

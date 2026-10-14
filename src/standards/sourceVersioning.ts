@@ -98,7 +98,7 @@ export interface RollbackResult {
  * Correctly computes 64-bit big-endian length padding and bitwise scheduling.
  * Synchronous, zero-dependency, verified against Node.js crypto.createHash across all test vectors.
  */
-function pureSha256(message: string): string {
+function pureSha256(message: string | Uint8Array): string {
   const K = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -110,25 +110,29 @@ function pureSha256(message: string): string {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
   ];
 
-  // UTF-8 encode
-  const bytes: number[] = [];
-  for (let i = 0; i < message.length; i++) {
-    let charCode = message.charCodeAt(i);
-    if (charCode < 0x80) {
-      bytes.push(charCode);
-    } else if (charCode < 0x800) {
-      bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
-    } else if (charCode < 0xd800 || charCode >= 0xe000) {
-      bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f));
-    } else {
-      i++;
-      charCode = 0x10000 + (((charCode & 0x3ff) << 10) | (message.charCodeAt(i) & 0x3ff));
-      bytes.push(
-        0xf0 | (charCode >> 18),
-        0x80 | ((charCode >> 12) & 0x3f),
-        0x80 | ((charCode >> 6) & 0x3f),
-        0x80 | (charCode & 0x3f)
-      );
+  // Preserve the established string encoder exactly; binary source documents
+  // take the byte path so their hash is independent of any text decoding.
+  const bytes: number[] = typeof message === 'string' ? [] : Array.from(message);
+  if (typeof message === 'string') {
+    // UTF-8 encode (existing text behavior, including malformed surrogate handling).
+    for (let i = 0; i < message.length; i++) {
+      let charCode = message.charCodeAt(i);
+      if (charCode < 0x80) {
+        bytes.push(charCode);
+      } else if (charCode < 0x800) {
+        bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
+      } else if (charCode < 0xd800 || charCode >= 0xe000) {
+        bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f));
+      } else {
+        i++;
+        charCode = 0x10000 + (((charCode & 0x3ff) << 10) | (message.charCodeAt(i) & 0x3ff));
+        bytes.push(
+          0xf0 | (charCode >> 18),
+          0x80 | ((charCode >> 12) & 0x3f),
+          0x80 | ((charCode >> 6) & 0x3f),
+          0x80 | (charCode & 0x3f)
+        );
+      }
     }
   }
 
@@ -251,6 +255,11 @@ export function computeSha256(message: string): string {
     // Fall back to pure TypeScript implementation
   }
   return pureSha256(message);
+}
+
+/** Computes SHA-256 over exact source bytes without decoding or normalizing them. */
+export function computeSha256Bytes(bytes: Uint8Array): string {
+  return pureSha256(bytes);
 }
 
 /**

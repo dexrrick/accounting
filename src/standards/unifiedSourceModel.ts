@@ -42,7 +42,7 @@ export interface AuthoritativeSourceRecord {
   // Phase 3 Temporal & Freshness Properties
   validFrom?: string; // ISO YYYY-MM-DD
   validTo?: string; // ISO YYYY-MM-DD (open-ended if active indefinitely)
-  lastVerifiedDate: string; // Date of last statutory audit verification
+  lastVerifiedDate?: string; // Absent on live candidates until an independent review occurs
   reviewAuditCycleDays?: number; // Audit review interval (default 365 days)
   freshnessStatus?: FreshnessStatus; // Explicit freshness status against reference date
   supersededByRecordId?: string;
@@ -98,7 +98,12 @@ export interface SourceLocator {
     startOffset: number;
     endOffset: number;
   };
-  sourceType?: 'HTML' | 'JSON';
+  sourceType?: 'HTML' | 'PDF' | 'TEXT' | 'JSON';
+  mediaType?: string;
+  pageNumber?: number;
+  pageCount?: number;
+  documentHash?: string;
+  tableStructure?: 'PRESERVED' | 'AMBIGUOUS' | 'NONE';
   canonicalLocator?: string;
 }
 

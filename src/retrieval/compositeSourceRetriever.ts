@@ -12,6 +12,11 @@ import {
   type ControlledFetchResult
 } from './controlledWebRetriever';
 import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
+import {
+  extractOfficialDocument,
+  type OfficialDocumentExtractionRequest,
+  type OfficialDocumentExtractionResult
+} from './officialDocumentExtractor';
 
 /**
  * Composite Source Retriever.
@@ -64,6 +69,13 @@ export class CompositeSourceRetriever implements ISourceRetriever {
     options?: ControlledFetchOptions
   ): Promise<ControlledFetchResult> {
     return await this.webRetriever.fetchOfficialSource(url, options);
+  }
+
+  /** Extracts a review candidate without adding it to the approved source registry. */
+  public async extractExternalDocument(
+    request: OfficialDocumentExtractionRequest
+  ): Promise<OfficialDocumentExtractionResult> {
+    return await extractOfficialDocument(request, this.webRetriever);
   }
 
   /**
