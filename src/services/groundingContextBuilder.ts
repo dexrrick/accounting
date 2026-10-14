@@ -984,6 +984,62 @@ function cloneOfficialSourceDiscoveryRequest(request: OfficialSourceDiscoveryReq
 }
 
 const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)[\s-]+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
+const MOM_MAS_HISTORICAL_MODIFIERS = new Set(['old', 'older', 'previous', 'prior', 'preceding', 'former', 'superseded', 'historical', 'historic']);
+const MOM_MAS_NORMATIVE_RULE_TERMS = new Set([
+  'act', 'acts', 'code', 'codes', 'condition', 'conditions', 'criterion', 'criteria', 'ceiling', 'ceilings',
+  'directive', 'directives', 'duty', 'duties', 'eligibility', 'entitlement', 'entitlements', 'guidance',
+  'guideline', 'guidelines', 'law', 'laws', 'legislation', 'limit', 'limits', 'notice', 'notices',
+  'obligation', 'obligations', 'policy', 'policies', 'provision', 'provisions', 'rate', 'rates',
+  'regulation', 'regulations', 'requirement', 'requirements', 'rule', 'rules', 'standard', 'standards',
+  'threshold', 'thresholds', 'version'
+]);
+const MOM_MAS_HISTORICAL_CONNECTORS = new Set([
+  'a', 'an', 'and', 'about', 'for', 'in', 'of', 'on', 'the', 'to', 'under', 'with',
+  'her', 'his', 'its', 'my', 'our', 'their', 'your', 's'
+]);
+const HISTORICAL_PERSON_OR_EMPLOYER_FACTS = new Set([
+  'business', 'businesses', 'company', 'companies', 'employee', 'employees', 'employer', 'employers',
+  'individual', 'individuals', 'job', 'jobs', 'person', 'people', 'staff', 'worker', 'workers'
+]);
+
+function normalizeHistoricalRuleToken(token: string): string {
+  // MOM/MAS topic labels use both UK and US licence spellings, while queries
+  // commonly use the related word “licensing”. Treat those registry terms as
+  // one bounded topic token without broad stemming of unrelated words.
+  return /^(?:licen[cs](?:e|es|ed|ing))$/.test(token) ? 'licens' : token;
+}
+
+function isUndatedHistoricalMomMasRuleRequest(topic: MappedCoverageTopic, query: string): boolean {
+  const authorityLabels = topic.authorities.flatMap(authority => authority === 'MOM'
+    ? ['MOM', 'Ministry of Manpower']
+    : authority === 'MAS' ? ['MAS', 'Monetary Authority of Singapore'] : [authority]);
+  const topicWords = new Set([
+    ...getTopicContentTerms(topic), topic.title, ...authorityLabels
+  ].flatMap(term => normalizeEvidenceText(term).split(/\s+/).filter(Boolean).map(normalizeHistoricalRuleToken)));
+  const queryWords = normalizeEvidenceText(query).split(/\s+/).filter(Boolean);
+
+  for (let modifierIndex = 0; modifierIndex < queryWords.length; modifierIndex += 1) {
+    if (!MOM_MAS_HISTORICAL_MODIFIERS.has(queryWords[modifierIndex])) continue;
+
+    // An adjective describing a person, job, or organization is a factual
+    // descriptor, not a request for a superseded statutory requirement.
+    let firstDescribedWord = modifierIndex + 1;
+    while (firstDescribedWord < queryWords.length && MOM_MAS_HISTORICAL_CONNECTORS.has(queryWords[firstDescribedWord])) {
+      firstDescribedWord += 1;
+    }
+    if (HISTORICAL_PERSON_OR_EMPLOYER_FACTS.has(queryWords[firstDescribedWord])) continue;
+
+    const lastCandidateIndex = Math.min(queryWords.length - 1, modifierIndex + 9);
+    for (let ruleIndex = modifierIndex + 1; ruleIndex <= lastCandidateIndex; ruleIndex += 1) {
+      if (!MOM_MAS_NORMATIVE_RULE_TERMS.has(queryWords[ruleIndex])) continue;
+      const interveningWords = queryWords.slice(modifierIndex + 1, ruleIndex);
+      if (interveningWords.every(word => topicWords.has(normalizeHistoricalRuleToken(word)) || MOM_MAS_HISTORICAL_CONNECTORS.has(word))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 /** Present-day statutory guidance cannot establish a prior period without reviewed validity dates. */
 function hasVerifiedHistoricalStatutoryScope(
@@ -1000,8 +1056,11 @@ function hasVerifiedHistoricalStatutoryScope(
 }
 
 function isUndatedHistoricalStatutoryRequest(topic: MappedCoverageTopic, query: string): boolean {
+  const momOrMasHistoricalRule = (topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')) &&
+    isUndatedHistoricalMomMasRuleRequest(topic, query);
   if (!UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query) &&
-      !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query))) return false;
+      !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query)) &&
+      !momOrMasHistoricalRule) return false;
   // “Prior-year losses” identifies the vintage of a loss balance, not a
   // request for a superseded rule. Current carry-forward guidance may be
   // retrieved, while eligibility still waits on the YA and continuity facts.
@@ -1246,7 +1305,8 @@ export async function resolveMappedOfficialSourceFallback(
       topicTerms: getTopicContentTerms(topic),
       minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
         topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1,
-      allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_')
+      allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_'),
+      requireSubstantiveBody: topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {

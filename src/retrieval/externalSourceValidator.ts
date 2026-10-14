@@ -62,6 +62,8 @@ export interface TopicContentExpectation {
   minimumTopicTermMatches?: number;
   /** Allows strict all-token source wording equivalence for IRAS topic validation only. */
   allowIrasTopicTokenEquivalence?: boolean;
+  /** Requires topic evidence in substantive paragraphs, list items, or table cells, excluding page metadata. */
+  requireSubstantiveBody?: boolean;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -134,15 +136,129 @@ function preserveListItemBoundaries(markup: string): string {
   return output;
 }
 
+const RULE_METADATA_CONTAINER_MARKER = /\b(?:cards?|tiles?|teasers?|quick[-_ ]?links?|related[-_ ]?(?:content|links?)|popular[-_ ]?(?:content|links?)|featured[-_ ]?(?:content|links?)|link[-_ ]?list|page[-_ ]?index)\b/i;
+
+function hasRuleMetadataClassOrId(attributes: string): boolean {
+  return [...attributes.matchAll(/(?:^|\s)(?:class|id)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)]
+    .some(match => RULE_METADATA_CONTAINER_MARKER.test(match[1] || match[2] || match[3] || ''));
+}
+
+/** Remove card and link-list containers without relying on a single non-greedy closing-tag match. */
+function removeRuleMetadataContainers(markup: string): string {
+  const containerTags = /<(\/)?(div|section|ul|ol|li|article)\b([^>]*)>/gi;
+  const stack: Array<{ tagName: string; start: number; excluded: boolean }> = [];
+  const excludedRanges: Array<{ start: number; end: number }> = [];
+
+  for (const match of markup.matchAll(containerTags)) {
+    const tagName = match[2].toLowerCase();
+    const closing = Boolean(match[1]);
+    const start = match.index ?? 0;
+    if (closing) {
+      let openIndex = stack.length - 1;
+      while (openIndex >= 0 && stack[openIndex].tagName !== tagName) openIndex -= 1;
+      if (openIndex < 0) continue;
+      const [opening] = stack.splice(openIndex, 1);
+      if (opening.excluded) excludedRanges.push({ start: opening.start, end: start + match[0].length });
+      continue;
+    }
+
+    const excluded = stack.some(parent => parent.excluded) || hasRuleMetadataClassOrId(match[3]);
+    if (/\/\s*>$/.test(match[0])) {
+      if (excluded) excludedRanges.push({ start, end: start + match[0].length });
+    } else {
+      stack.push({ tagName, start, excluded });
+    }
+  }
+
+  for (const opening of stack) {
+    if (opening.excluded) excludedRanges.push({ start: opening.start, end: markup.length });
+  }
+
+  if (excludedRanges.length === 0) return markup;
+  excludedRanges.sort((left, right) => left.start - right.start);
+  let output = '';
+  let cursor = 0;
+  for (const range of excludedRanges) {
+    if (range.start < cursor) {
+      cursor = Math.max(cursor, range.end);
+      continue;
+    }
+    output += markup.slice(cursor, range.start);
+    cursor = range.end;
+  }
+  return output + markup.slice(cursor);
+}
+
+/** Links that wrap block content act as cards, not inline legal references. */
+function removeBlockWrappingLinks(markup: string): string {
+  return markup.replace(/<a\b[^>]*>([\s\S]*?)<\/a\s*>/gi, (link, inner: string) =>
+    /<(?:h[1-6]|p|div|section|article|ul|ol|li|table|thead|tbody|tfoot|tr|td|th)\b/i.test(inner) ? ' ' : link);
+}
+
+/** A link-only label is metadata; inline links stay when they are part of prose. */
+function removeLinkOnlyRuleBlocks(markup: string): string {
+  return markup.replace(/<(p|li|td|th)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi, (block, _tagName: string, inner: string) => {
+    const visibleText = cleanHtmlText(inner);
+    if (!visibleText) return block;
+    const unlinkedText = cleanHtmlText(inner.replace(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi, ' '));
+    return /[\p{L}\p{N}]/u.test(unlinkedText) ? block : block.replace(inner, '');
+  });
+}
+
+/** Keep text only from rule-bearing paragraphs, list items, and table cells. */
+function extractRuleBearingMarkup(markup: string): string {
+  const tagPattern = /<(\/)?([a-z][\w:-]*)\b[^>]*>/gi;
+  const ruleBlocks = new Set(['p', 'li', 'td', 'th']);
+  const listContainers = new Set(['ul', 'ol']);
+  const tableContainers = new Set(['table', 'thead', 'tbody', 'tfoot', 'tr']);
+  let output = '';
+  let cursor = 0;
+  let ruleBlockDepth = 0;
+  let listContainerDepth = 0;
+  let tableDepth = 0;
+
+  for (const match of markup.matchAll(tagPattern)) {
+    const index = match.index ?? 0;
+    if (ruleBlockDepth > 0) output += markup.slice(cursor, index);
+    const tagName = match[2].toLowerCase();
+    const closing = Boolean(match[1]);
+
+    if (ruleBlocks.has(tagName)) {
+      if (!closing) ruleBlockDepth += 1;
+      if (ruleBlockDepth > 0) output += match[0];
+      if (closing) ruleBlockDepth = Math.max(0, ruleBlockDepth - 1);
+    } else if (listContainers.has(tagName)) {
+      if (!closing) listContainerDepth += 1;
+      if (ruleBlockDepth > 0 || listContainerDepth > 0) output += match[0];
+      if (closing) listContainerDepth = Math.max(0, listContainerDepth - 1);
+    } else if (tableContainers.has(tagName)) {
+      if (tagName === 'table' && !closing) tableDepth += 1;
+      if (ruleBlockDepth > 0 || tableDepth > 0) output += match[0];
+      if (tagName === 'table' && closing) tableDepth = Math.max(0, tableDepth - 1);
+    } else if (ruleBlockDepth > 0) {
+      output += match[0];
+    }
+    cursor = index + match[0].length;
+  }
+  if (ruleBlockDepth > 0) output += markup.slice(cursor);
+  return output;
+}
+
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
-function extractVisiblePageText(rawDocument: string): string {
+function extractVisiblePageText(rawDocument: string, requireSubstantiveBody = false): string {
   const withoutChrome = rawDocument
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
     .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
   const contentMatch = withoutChrome.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
-  const visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
+  let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
+  if (requireSubstantiveBody) {
+    visibleMarkup = visibleMarkup
+      .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ');
+    visibleMarkup = removeLinkOnlyRuleBlocks(removeRuleMetadataContainers(removeBlockWrappingLinks(visibleMarkup)));
+    visibleMarkup = extractRuleBearingMarkup(visibleMarkup);
+  }
   // Keep nested list-item identity after HTML cleanup so evidence-only fallback
   // can exclude a dangling introduction and every child item. Bullet markers
   // are visible list formatting, not added tax-rule text.
@@ -329,7 +445,7 @@ export class ExternalSourceValidator {
 
     const titleMatch = rawDocument.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
-    const substantiveText = extractVisiblePageText(rawDocument);
+    const substantiveText = extractVisiblePageText(rawDocument, expectation.requireSubstantiveBody === true);
     if (!pageTitle || /^(?:home(?:page)?|search(?: results)?|sign in|log in|login|access denied|not found|error)(?:\s*[-|:].*)?$/i.test(pageTitle)) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has a generic, unavailable, or login title', pageTitle, substantiveText };
     }
@@ -355,6 +471,20 @@ export class ExternalSourceValidator {
     }
 
     const terms = [...new Set(expectation.topicTerms.map(normalize).filter(term => term.length > 2))];
+    if (expectation.requireSubstantiveBody === true) {
+      const hasSubstantiveTopicBlock = substantiveText.split(/\n+/).some(block => {
+        const normalizedBlock = normalize(block);
+        const wordCount = normalizedBlock.split(/\s+/).filter(Boolean).length;
+        return normalizedBlock.length >= 55 && wordCount >= 10 && terms.some(term => matchesTopicContentTerm(
+          block,
+          term,
+          expectation.allowIrasTopicTokenEquivalence === true
+        ));
+      });
+      if (!hasSubstantiveTopicBlock) {
+        return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page does not contain a substantive paragraph, list item, or table cell that states the requested topic', pageTitle, substantiveText };
+      }
+    }
     const matchingTerms = terms.filter(term => matchesTopicContentTerm(
       substantiveText,
       term,
