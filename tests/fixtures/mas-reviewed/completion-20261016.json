@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS_WITH_SCOPED_LIMITATIONS",
+  "acceptance": "DEPLOYED_PREVIEW_TRANSPORT_AND_ISOLATED_ENGINEERING_LIFECYCLE",
+  "captureDaySingapore": "2026-10-16",
+  "draftPullRequest": "https://github.com/dexrrick/accounting/pull/20",
+  "reviewedCheckpoint": {
+    "pullRequest": 19,
+    "head": "4c9d91696ffb7df73650becd15975c03cd84fc63",
+    "draft": true,
+    "unchanged": true
+  },
+  "implementation": {
+    "sourceCommit": "cc8d036be251342afdfbbc3a3dd8941c0a603856",
+    "proxyProfileCommit": "4df4e7c0a58895e6ef8a090d27f5e25650a12808",
+    "diagnosticPreviewSelectionCommit": "5372925eb8a9af3be1612d8653dde24d5b42f646",
+    "profile": "Fixed server-owned compatibility User-Agent for validated mas.gov.sg/www.mas.gov.sg only, text and document modes; no client-controlled headers, credentials, Referer or cookies added",
+    "existingGates": "HTTPS/host and redirect validation, time/size limits, content/signature checks, byte hashing, review/approval and shared admission retained"
+  },
+  "deployedPreview": {
+    "origin": "https://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev",
+    "profileBuild": "b10d03f5-8b31-406f-95b3-726dc1e50243",
+    "finalSourceBuild": "09d8c7a3-ab66-44de-8569-3cd243e59f16",
+    "finalSourceBuildOutcome": "success",
+    "uploadCommand": "npx wrangler versions upload",
+    "method": "Isolated Node relay resolving the existing same-origin endpoint/decoder against the real deployed preview",
+    "browserUiOrCorsAcceptance": "NOT_TESTED",
+    "internalRedirectHops": null,
+    "internalRedirectVisibility": "UNKNOWN",
+    "outerEnvelopeAndOfficialBytesSavedSeparately": true
+  },
+  "captures": {
+    "firstProfile": "tests/fixtures/mas-reviewed/profile-preview-20261016/",
+    "lifecycleInitial": "tests/fixtures/mas-reviewed/subsection-preview-20261016/",
+    "lifecycleRecapture": "tests/fixtures/mas-reviewed/subsection-preview-recapture-20261016/",
+    "finalSourcePreview": "tests/fixtures/mas-reviewed/subsection-final-preview-20261016/",
+    "independentChecks": "All four sets: decompressed entity and outer-envelope lengths/SHA-256; envelope-decoded bytes equal captured official bytes. Final-code replay preserves stored text, provision hash and locator; final-preview selected text equals lifecycle fixtures.",
+    "finalHtml": {
+      "httpStatus": 200,
+      "contentType": "text/html; charset=utf-8",
+      "bytes": 266393,
+      "sha256": "6714f347045f6600e1268d72b5db308de6b81297579b43aa7a979d1e5b531e06",
+      "extraction": "EXACT"
+    },
+    "finalPdf": {
+      "httpStatus": 200,
+      "contentType": "application/pdf",
+      "bytes": 208660,
+      "sha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+      "extraction": "EXACT"
+    },
+    "lifecycleHtmlInitialSha256": "227fcbca475fd0334c195f9e17bc0d422ad05ea9acc04b9042c975935f8076a5",
+    "lifecycleHtmlRecaptureSha256": "94dd6cd24936caee0a32da6a32236345a4efd102572c9fb182141b10d01df52b",
+    "oldBrowserMetadataAndHistoricalManifestsChanged": false
+  },
+  "boundedPdf": {
+    "requestFixture": "tests/fixtures/mas-reviewed/subsection-requests-20261016.json",
+    "start": "Substantive Fund Management Activity",
+    "startPage": 3,
+    "endExclusive": "Anti-Money Laundering and Countering the Financing of Terrorism (AML/CFT)",
+    "endPage": 4,
+    "includes": "Paragraphs 9 and 10, page-4 continuation, all three roman clauses and complete structurally linked footnote 7",
+    "excludes": "Next AML/CFT section and unrelated notes 6, 8 and 9",
+    "noteOwner": "4:node-5",
+    "noteContentIds": ["p8R_mc27", "p8R_mc28"],
+    "noteProof": "Source Link/Span/Note structure; every expected note content ID requires visible owned coverage",
+    "rejectedCases": ["missing/duplicate/reversed bounds", "ambiguous/mixed note ownership", "missing/partial linked note", "unresolved raised numeric reference including near-body font sizes", "end heading on actual non-PDF content"],
+    "unchangedGuards": "Start-only selection still rejects the original non-substantive result; numbered prose is not inferred as a heading; whole-document extraction cannot bypass the existing concrete-page admission requirement"
+  },
+  "lifecycle": {
+    "test": "tests/regression/test_mas_subsection_preview_lifecycle.mjs",
+    "result": "PASS",
+    "steps": ["exact-byte extraction", "stage and verify", "explicit approval required before activation", "already-constructed answer retriever sees activation", "complete body and footnote as separate exact quotations", "citations bind active version/document/provision/note-inclusive locator", "wrong authority/domain/hash rejected", "unsupported historical date rejected", "HTML-only snapshot replacement invalidates prior binding", "rollback restores prior binding and preserves PDF", "first-package rollback removes isolated registry rows"],
+    "wholeMultiBlockQuote": "REJECTED_QUOTE_NOT_WHOLE_SENTENCE_OR_PARAGRAPH",
+    "reviewReceipts": "ISOLATED_ENGINEERING_TEST_ONLY",
+    "productionOrLegalApproval": "NOT_ESTABLISHED",
+    "registryRestored": true,
+    "replacementMeaning": "Different genuine HTML byte snapshot with identical selected provision; not a substantive statutory amendment",
+    "pdfReplacement": "NOT_OBTAINED_OR_FABRICATED",
+    "historicalEffectiveInterval": "UNKNOWN_PUBLICATION_AND_LAST_MODIFIED_NOT_EFFECTIVE_DATES"
+  },
+  "validation": {
+    "runtime": "Node.js 22.23.1",
+    "lint": "PASS_WITH_EXISTING_WARNINGS; final test-only assertion also passed targeted lint",
+    "build": "PASS_TYPESCRIPT_VITE_AND_CLOUDFLARE_WORKER_WITH_EXISTING_WARNINGS",
+    "smoke": "112/112 PASS; subsequent negative assertion passed focused regression and final full suite",
+    "full": "132/132 PASS after all source and test changes",
+    "externalFetchGuard": "Inherited by offline suites; diagnostic child regressions use explicit offline fixtures",
+    "independentReview": "Source and two-block lifecycle review cleared; partial-note and near-body reference probes reject; final requested negative assertion checked by supervisor",
+    "diffCheck": "PASS"
+  },
+  "integration": {
+    "main": "75680018b91c707f7ac900963bebb63d7317ca69",
+    "newMainChanges": "Two documentation-only commits affecting AGENTS.md and README.md",
+    "sourceCommitMergeSimulation": "CLEAN_NO_WORKTREE_OR_INDEX_MERGE",
+    "simulatedTree": "78da9a939bd705fe82d905e548d6759714227ce7",
+    "dependencies": ["PR #15", "document extraction 827ddef", "MAS lifecycle 22c8614", "PR #17", "PR #18", "PR #19", "PR #20"],
+    "prTriggeredWorkflowRunsForSourceCommit": 0,
+    "ciReason": "Existing workflow targets main/master PR bases; stacked branch bases do not trigger it",
+    "remainingGate": "Combined integration CI and dependency review before merge/release; production/browser acceptance remains separate",
+    "acraPr12": "DEFERRED_OVERLAPPING_SHARED_VALIDATION_DISCOVERY_AND_TEST_RUNNER"
+  },
+  "production": {
+    "latestDeploymentAfterFinalPreview": "a5987ee3-1142-4319-b1dc-a8eba0193b6e",
+    "version": "865f7a5a-35b8-4438-a7a9-af74aff5df84",
+    "trafficPercent": 100,
+    "unchangedFromBaseline": true,
+    "mergeOrProductionActivationPerformed": false,
+    "monitorScheduleOrAuthorityExpansionEnabled": false
+  }
+}
