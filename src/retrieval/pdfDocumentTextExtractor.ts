@@ -28,7 +28,9 @@ interface PositionedTextItem {
   x: number;
   y: number;
   width: number;
+  height: number;
   contentId?: string;
+  superscriptReference?: boolean;
 }
 
 interface InternalPdfTextLine extends PdfTextLine {
@@ -66,37 +68,42 @@ function groupPositionedTextIntoLines(items: PositionedTextItem[], pageNumber: n
     if (row) row.items.push(item);
     else rows.push({ y: item.y, items: [item] });
   }
-  return rows.map(row => {
-    const rowItems = row.items.sort((left, right) => left.x - right.x);
-    const cells: string[] = [];
-    const cellStarts: number[] = [];
-    const itemCells: PositionedTextItem[][] = [];
-    let current = '';
-    let currentStart = rowItems[0]?.x ?? 0;
-    let previousRight = rowItems[0]?.x ?? 0;
-    let currentItems: PositionedTextItem[] = [];
-    for (const item of rowItems) {
-      const gap = item.x - previousRight;
-      if (current && gap >= 22) {
-        cells.push(current.trim());
-        cellStarts.push(currentStart);
-        itemCells.push(currentItems);
-        current = item.text;
-        currentStart = item.x;
-        currentItems = [item];
-      } else {
-        current += current && !/\s$/.test(current) && !/^\s/.test(item.text) ? ` ${item.text}` : item.text;
-        currentItems.push(item);
-      }
-      previousRight = Math.max(item.x + item.width, item.x);
-    }
-    if (current.trim()) {
+  return rows.map(row => createPositionedLine(row.items, pageNumber, row.y)).filter(line => line.text.length > 0);
+}
+
+function createPositionedLine(items: PositionedTextItem[], pageNumber: number, y: number): InternalPdfTextLine {
+  const rowItems = [...items].sort((left, right) => left.x - right.x);
+  const cells: string[] = [];
+  const cellStarts: number[] = [];
+  const itemCells: PositionedTextItem[][] = [];
+  let current = '';
+  let currentStart = rowItems[0]?.x ?? 0;
+  let previousRight = rowItems[0]?.x ?? 0;
+  let currentItems: PositionedTextItem[] = [];
+  for (const item of rowItems) {
+    const gap = item.x - previousRight;
+    if (current && gap >= 22) {
       cells.push(current.trim());
       cellStarts.push(currentStart);
       itemCells.push(currentItems);
+      current = item.text;
+      currentStart = item.x;
+      currentItems = [item];
+    } else {
+      const closingPunctuation = /^[,.;:!?)}\]]/.test(item.text);
+      current += current && !item.superscriptReference && !closingPunctuation && !/\s$/.test(current) && !/^\s/.test(item.text)
+        ? ` ${item.text}`
+        : item.text;
+      currentItems.push(item);
     }
-    return { text: cells.join(' | '), pageNumber, y: row.y, cells, cellStarts, itemCells };
-  }).filter(line => line.text.length > 0);
+    previousRight = Math.max(item.x + item.width, item.x);
+  }
+  if (current.trim()) {
+    cells.push(current.trim());
+    cellStarts.push(currentStart);
+    itemCells.push(currentItems);
+  }
+  return { text: cells.join(' | '), pageNumber, y, cells, cellStarts, itemCells };
 }
 
 function indexPdfStructureTree(value: unknown): Map<string, PdfStructureBinding> | undefined {
@@ -176,6 +183,20 @@ function itemBelongsToOwner(item: PositionedTextItem, owner: PdfBlockOwner, bind
   return owner.kind === 'P' ? binding.paragraphId === owner.id : binding.listItemId === owner.id;
 }
 
+function targetLineCellIsOwnedBy(
+  line: InternalPdfTextLine,
+  cellIndex: number,
+  owner: PdfBlockOwner,
+  bindings: Map<string, PdfStructureBinding>
+): boolean {
+  if (owner.kind === 'P') return lineIsOwnedBy(line, owner, bindings);
+  const bodyOwner = ownerForCell(line.itemCells[cellIndex], bindings, 'LI', 'LBody');
+  if (bodyOwner?.id !== owner.id) return false;
+  if (line.cells.length === 1) return lineIsOwnedBy(line, owner, bindings, 'LBody');
+  if (line.cells.length !== 2 || cellIndex !== 1) return false;
+  return ownerForCell(line.itemCells[0], bindings, 'LI', 'Lbl')?.id === owner.id;
+}
+
 function lineIsOwnedBy(
   line: InternalPdfTextLine,
   owner: PdfBlockOwner,
@@ -194,11 +215,28 @@ function isStandaloneListMarker(value: string): boolean {
   return /^(?:\d{1,3}[.)]?|\(?[A-Za-z][.)]?\)?|\(?[ivxlcdm]{1,8}[.)]\)?)$/i.test(marker);
 }
 
+function startsWithContinuationMarker(value: string): boolean {
+  const trimmed = value.trim();
+  if (/^\d{1,3}(?:[.)])?\s+\S/.test(trimmed) || /^[A-Za-z](?:[.)])?\s+\S/.test(trimmed)) return true;
+  const romanMarker = /^([ivxlcdm]{2,8})([.)]?)\s+\S/i.exec(trimmed);
+  if (!romanMarker) return false;
+  if (romanMarker[2]) return true;
+  const roman = romanMarker[1].toUpperCase();
+  return /^(?=.+)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})$/.test(roman);
+}
+
+function containsNumericCharacter(value: string): boolean {
+  return /\d/.test(value);
+}
+
 function isUppercaseHeading(value: string): boolean {
   const trimmed = value.trim();
+  if (/[\d$€£¥₹₩₿₺₽¢]/.test(trimmed)) return false;
   const letters = trimmed.match(/[A-Za-z]/g);
-  return trimmed.length >= 8 && (trimmed.match(/\S+/g)?.length || 0) >= 2 &&
-    Boolean(letters?.length) && letters!.every(letter => letter === letter.toUpperCase());
+  const uppercaseAcronymPlural = trimmed.replace(/\b([A-Z]{2,})s\b/g, '$1S');
+  return trimmed.length >= 8 && (trimmed.match(/\S+/g)?.length || 0) >= 1 &&
+    Boolean(letters?.length) && [...uppercaseAcronymPlural.matchAll(/[A-Za-z]/g)]
+      .every(match => match[0] === match[0].toUpperCase());
 }
 
 function fullWidthContinuation(
@@ -215,8 +253,77 @@ function fullWidthContinuation(
     line.cells[0].split(/\s+/).filter(Boolean).length >= 8;
 }
 
-function reflowTaggedParagraphs(lines: InternalPdfTextLine[], bindings: Map<string, PdfStructureBinding> | undefined): void {
-  if (!bindings?.size) return;
+function attachTaggedSuperscriptReferences(
+  lines: InternalPdfTextLine[],
+  bindings: Map<string, PdfStructureBinding> | undefined
+): boolean {
+  if (!bindings?.size) return false;
+  let ambiguousLayout = false;
+  const referenceLines = lines.filter(line => line.cells.length === 1 && /^\d{1,3}$/.test(line.cells[0]) &&
+    line.itemCells[0]?.length === 1
+  );
+  for (const referenceLine of referenceLines) {
+    const reference = referenceLine.itemCells[0][0];
+    const referenceOwner = ownerForCell(referenceLine.itemCells[0], bindings, 'P') ||
+      ownerForCell(referenceLine.itemCells[0], bindings, 'LI', 'LBody');
+    if (!Number.isFinite(reference.height) || reference.height <= 0) continue;
+    const geometricCandidates = lines.flatMap(line => {
+      if (line === referenceLine || line.cells.length > 2 || line.pageNumber !== referenceLine.pageNumber) return [];
+      const targetCellIndex = line.cells.length === 1 ? 0 :
+        line.cells.length === 2 && isStandaloneListMarker(line.cells[0]) ? 1 : -1;
+      if (targetCellIndex < 0) return [];
+      const lineItems = line.itemCells[targetCellIndex];
+      if (!lineItems?.length) return [];
+      const structuredBodyOwner = ownerForCell(lineItems, bindings, 'P') ||
+        ownerForCell(lineItems, bindings, 'LI', 'LBody');
+      if (!structuredBodyOwner) return [];
+      const heights = lineItems.map(item => item.height).filter(height => Number.isFinite(height) && height > 0).sort((a, b) => a - b);
+      if (!heights.length) return [];
+      const baselineHeight = heights[Math.floor(heights.length / 2)];
+      const raisedBy = reference.y - line.y;
+      if (reference.height > baselineHeight * 0.8 || reference.height < baselineHeight * 0.45 || raisedBy <= 2.5 || raisedBy > 5.5) return [];
+
+      const ordered = [...lineItems].sort((left, right) => left.x - right.x);
+      const previous = [...ordered].reverse().find(item => item.x + item.width <= reference.x + 1);
+      const next = ordered.find(item => item.x >= reference.x);
+      if (ordered.some(item => item.x < reference.x + reference.width - 1 && item.x + item.width > reference.x + 1)) return [];
+      if (!previous || reference.x - (previous.x + previous.width) > 8) return [];
+      if (next && next.x - (reference.x + reference.width) > 8) return [];
+      const lineStart = Math.min(...ordered.map(item => item.x));
+      const lineRight = Math.max(...ordered.map(item => item.x + item.width));
+      if (reference.x < lineStart || reference.x > lineRight + 8) return [];
+      return [{ line, targetCellIndex }];
+    });
+    if (geometricCandidates.length !== 1) {
+      if (geometricCandidates.length > 1) ambiguousLayout = true;
+      continue;
+    }
+
+    const { line: target, targetCellIndex } = geometricCandidates[0];
+    if (!referenceOwner || !targetLineCellIsOwnedBy(target, targetCellIndex, referenceOwner, bindings)) {
+      ambiguousLayout = true;
+      continue;
+    }
+    const merged = createPositionedLine([...target.itemCells.flat(), { ...reference, superscriptReference: true }],
+      target.pageNumber, target.y);
+    // A footnote marker must sit inside one prose line; a large visual gap
+    // would make it a separate cell, an orphan, or a table value.
+    if (merged.cells.length !== 1 && !(merged.cells.length === 2 && isStandaloneListMarker(merged.cells[0]))) {
+      ambiguousLayout = true;
+      continue;
+    }
+    target.text = merged.text;
+    target.cells = merged.cells;
+    target.cellStarts = merged.cellStarts;
+    target.itemCells = merged.itemCells;
+    lines.splice(lines.indexOf(referenceLine), 1);
+  }
+  return ambiguousLayout;
+}
+
+function reflowTaggedParagraphs(lines: InternalPdfTextLine[], bindings: Map<string, PdfStructureBinding> | undefined): boolean {
+  if (!bindings?.size) return false;
+  const ambiguousLayout = attachTaggedSuperscriptReferences(lines, bindings);
   const owners = new Map<string, { owner: PdfBlockOwner; lines: Set<InternalPdfTextLine> }>();
   for (const line of lines) {
     for (const item of line.itemCells.flat()) {
@@ -240,7 +347,10 @@ function reflowTaggedParagraphs(lines: InternalPdfTextLine[], bindings: Map<stri
   for (const { owner, lines: blockLineSet } of owners.values()) {
     const blockLines = [...blockLineSet];
     const markerCandidates = blockLines.filter(line => {
-      if (line.cells.length !== 2 || !isStandaloneListMarker(line.cells[0]) || line.cells[1].trim().length < 20) return false;
+      if (line.cells.length !== 2 || !isStandaloneListMarker(line.cells[0])) return false;
+      const letterHeadingCandidate = owner.kind === 'P' && /^[A-Z][.)]?$/.test(line.cells[0].trim()) &&
+        isUppercaseHeading(line.cells[1]);
+      if (line.cells[1].trim().length < 20 && !letterHeadingCandidate) return false;
       const markerStart = line.cellStarts[0];
       const bodyStart = line.cellStarts[1];
       const markerRight = Math.max(...line.itemCells[0].map(item => item.x + item.width));
@@ -258,14 +368,33 @@ function reflowTaggedParagraphs(lines: InternalPdfTextLine[], bindings: Map<stri
     const markerLine = markerCandidates[0];
     const markerStart = markerLine.cellStarts[0];
     const bodyText = markerLine.cells[1];
-    const continuations = blockLines.filter(line => line !== markerLine);
+    const continuations = blockLines.filter(line => line !== markerLine).sort((left, right) => right.y - left.y);
     const letterHeading = owner.kind === 'P' && /^[A-Z][.)]?$/.test(markerLine.cells[0].trim()) &&
-      isUppercaseHeading(bodyText) && blockLines.length === 1;
+      isUppercaseHeading(bodyText) && continuations.length === 0;
     const expectedContinuationStart = markerStart;
-    if (!letterHeading && (!continuations.length || continuations.some(line =>
-      !fullWidthContinuation(line, owner, bindings, expectedContinuationStart) ||
-      /^(?:\d{1,3}|[A-Za-z]|[ivxlcdm]{1,8})(?:[.)])?\s+\S/.test(line.cells[0])
-    ))) continue;
+    if (!letterHeading) {
+      if (!continuations.length) continue;
+      const shortAlignedTail = (line: InternalPdfTextLine): boolean =>
+        line.cells.length === 1 && lineIsOwnedBy(line, owner, bindings, owner.kind === 'LI' ? 'LBody' : undefined) &&
+        Math.abs(line.cellStarts[0] - expectedContinuationStart) <= 12 && /[A-Za-z]{3,}/.test(line.cells[0]) &&
+        !containsNumericCharacter(line.itemCells[0].filter(item => !item.superscriptReference).map(item => item.text).join(' '));
+      const tail = continuations.at(-1)!;
+      const priorLines = continuations.slice(0, -1);
+      let priorBaseline = markerLine.y;
+      const lineFlowIsConsecutive = continuations.every(line => {
+        const gap = priorBaseline - line.y;
+        priorBaseline = line.y;
+        return gap >= 8 && gap <= 24;
+      });
+      const substantiveMarkerBody = markerLine.cells[1].split(/\s+/).filter(Boolean).length >= 8 &&
+        Math.max(...markerLine.itemCells[1].map(item => item.x + item.width)) - markerLine.cellStarts[1] >= 160;
+      const everyPriorLineIsFullWidth = priorLines.every(line => fullWidthContinuation(line, owner, bindings, expectedContinuationStart));
+      const fullWidthTail = fullWidthContinuation(tail, owner, bindings, expectedContinuationStart);
+      const supportedShortTail = !fullWidthTail && shortAlignedTail(tail) &&
+        (priorLines.length > 0 || substantiveMarkerBody);
+      if (!lineFlowIsConsecutive || !everyPriorLineIsFullWidth || (!fullWidthTail && !supportedShortTail)) continue;
+      if (continuations.some(line => startsWithContinuationMarker(line.cells[0]))) continue;
+    }
     if (blockLines.some(line => line !== markerLine && line.cells.length !== 1)) continue;
     const combinedText = `${markerLine.cells[0]} ${bodyText}`.trim();
     markerLine.cells = [combinedText];
@@ -273,6 +402,7 @@ function reflowTaggedParagraphs(lines: InternalPdfTextLine[], bindings: Map<stri
     markerLine.itemCells = [[...markerLine.itemCells[0], ...markerLine.itemCells[1]]];
     markerLine.text = combinedText;
   }
+  return ambiguousLayout;
 }
 
 function assessTableStructure(lines: PdfTextLine[]): { detected: boolean; structure: PdfTextExtraction['tableStructure'] } {
@@ -354,6 +484,7 @@ export async function extractPdfDocumentText(
     const lines: PdfTextLine[] = [];
     const pageTexts: string[] = [];
     let hasEmptyPageText = false;
+    let hasAmbiguousTaggedLayout = false;
     let characters = 0;
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
       const page = await document.getPage(pageNumber);
@@ -401,11 +532,12 @@ export async function extractPdfDocumentText(
         if (![x, y, width].every(Number.isFinite)) {
           throw new PdfDocumentExtractionError('PDF text has incomplete layout coordinates');
         }
-        positioned.push({ text: item.str, x, y, width, contentId: activeContentId });
+        positioned.push({ text: item.str, x, y, width, height: item.height, contentId: activeContentId });
       }
       if (contentIdStack.length) markedContentValid = false;
       const pageLines = groupPositionedTextIntoLines(positioned, pageNumber);
-      reflowTaggedParagraphs(pageLines, markedContentValid ? structureBindings : undefined);
+      hasAmbiguousTaggedLayout = reflowTaggedParagraphs(pageLines, markedContentValid ? structureBindings : undefined) ||
+        hasAmbiguousTaggedLayout;
       const pageText = pageLines.map(line => line.text).join('\n').trim();
       if (!pageText) hasEmptyPageText = true;
       characters += pageText.length;
@@ -421,13 +553,14 @@ export async function extractPdfDocumentText(
       throw new PdfDocumentExtractionError('PDF has no substantive embedded text; scanned or image-only pages are unsupported');
     }
     const table = assessTableStructure(lines);
+    const tableStructure = hasAmbiguousTaggedLayout ? 'AMBIGUOUS' : table.structure;
     return {
       text,
       pageTexts,
       lines,
       pageCount: document.numPages,
       tableDetected: table.detected,
-      tableStructure: table.structure,
+      tableStructure,
       hasEmptyPageText
     };
   })();

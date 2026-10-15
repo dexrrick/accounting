@@ -85,14 +85,24 @@ assert.equal(record.sourcePublisher, 'Monetary Authority of Singapore');
 assert.match(record.documentTitle.toLowerCase(), /governance and management of variable capital companies/);
 assert.ok(record.sourceText.trim().length > 20, 'real circular passage must contain substantive text');
 assert.ok(/\bVCCs?\b|fund management/i.test(record.sourceText), 'selected text must retain substantive circular identity');
+assert.match(record.sourceText, /A PROFILE OF VCCs AND KEY REGULATORY REQUIREMENTS/);
+assert.match(record.sourceText, /The vast majority are offered to only accredited and\/or institutional\s+investors\./,
+  'the short final continuation retains the complete sentence');
+assert.match(record.sourceText, /4 VCCs1 and VCC managers are subject to regulatory requirements/,
+  'the raised paragraph reference remains attached to its same-P prose');
+assert.match(record.sourceText, /one or more\s+CIS in the form of a body corporate2\./,
+  'same-LI references stay in the list body and retain reading order');
+assert.match(record.sourceText, /12 VCCs8 shall ensure compliance against key AML\/CFT requirements/);
+assert.match(record.sourceText, /ML\/TF risk management\./);
+assert.match(record.sourceText, /C CONCLUSION/);
 assert.match(record.sourceText, /2 MAS carried out a thematic review of VCCs and their managers in 2024/);
 assert.match(record.sourceText, /Section 15\(1\) of the Variable Capital Companies Act 2018/,
   'the full-document replay retains the circular footnotes');
 assert.equal(record.documentHash, capture.documentHash);
 assert.equal(record.sourceLocator.pageCount, 5);
-assert.equal(record.sourceLocator.tableStructure, 'AMBIGUOUS');
-assert.equal(record.extractionStatus, 'PARTIAL');
-assert.equal(record.isVerbatimText, false);
+assert.equal(record.sourceLocator.tableStructure, 'NONE');
+assert.equal(record.extractionStatus, 'EXACT', 'the genuine PDF bytes pass full-document structural replay');
+assert.equal(record.isVerbatimText, true);
 assert.equal(record.groundingEligible, false);
 assert.equal(record.effectiveDate, undefined, '26 June 2025 publication date is not an effective date');
 assert.equal(record.validFrom, undefined);
@@ -119,6 +129,7 @@ const admission = verifySharedDocumentAdmission({ ...record, documentAdmissionRe
 });
 assert.equal(admission.required, true);
 assert.equal(admission.admitted, false);
+assert.equal(record.groundingEligible, false, 'an exact lab replay remains an unadmitted review candidate');
 
 class ActualCaptureRetriever extends ControlledWebRetriever {
   fetchedUrls = [];
@@ -154,4 +165,4 @@ assert.equal((await service.activateUpdatePackage('MAS-NONEXISTENT-IID-04-2025')
 assert.deepEqual(service.getStagedPackages(), []);
 assert.deepEqual(versioning.getCandidates(), []);
 
-console.log('PASS | Genuine IID 04/2025 PDF bytes verify, but incomplete HTTP trace and ambiguous partial extraction prevent admission or MAS activation');
+console.log('PASS | Genuine IID 04/2025 PDF bytes pass exact structural replay; incomplete captured HTTP trace still blocks admission and MAS activation');

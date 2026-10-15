@@ -17,7 +17,7 @@ function createPdf({ items, structure }) {
   const stream = items.map(item => {
     const marked = item.mcid === undefined ? '' : `/P <</MCID ${item.mcid}>> BDC\n`;
     const endMarked = item.mcid === undefined ? '' : 'EMC\n';
-    return `${marked}BT /F1 11 Tf 1 0 0 1 ${item.x} ${item.y} Tm (${pdfText(item.text)}) Tj ET\n${endMarked}`;
+    return `${marked}BT /F1 ${item.fontSize ?? 11} Tf 1 0 0 1 ${item.x} ${item.y} Tm (${pdfText(item.text)}) Tj ET\n${endMarked}`;
   }).join('');
   const objects = [
     '<< /Type /Catalog /Pages 2 0 R >>',
@@ -92,6 +92,66 @@ assert.ok(taggedParagraph.lines.some(line => line.text === '1. The manager must 
 assert.ok(taggedParagraph.pageTexts[0].includes('Footnote 1: the term includes a designated fund manager.'),
   'footnote text remains in page order after reflow');
 
+const taggedShortTrailingContinuation = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '1.', mcid: 0 },
+    { x: 108, y: 700, text: 'The manager shall maintain all relevant records in a complete and accessible manner.', mcid: 1 },
+    { x: 72, y: 680, text: 'These records must be available for inspection by the regulator when requested.', mcid: 2 },
+    { x: 72, y: 660, text: 'and retained securely.', mcid: 3 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(2), mcr(3)])])]
+}));
+assert.equal(taggedShortTrailingContinuation.tableStructure, 'NONE');
+assert.ok(taggedShortTrailingContinuation.lines.some(line =>
+  line.text === '1. The manager shall maintain all relevant records in a complete and accessible manner.'
+));
+assert.ok(taggedShortTrailingContinuation.pageTexts[0].includes('and retained securely.'),
+  'a short final continuation remains in the paragraph after earlier full-width prose');
+
+const taggedDidContinuation = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '9', mcid: 0 },
+    { x: 108, y: 700, text: 'The review observed a small number of VCC managers as managing multiple VCCs that', mcid: 1 },
+    { x: 72, y: 680, text: 'did not hold any assets and/or did not have any investors during the review period.', mcid: 2 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(2)])])]
+}));
+assert.equal(taggedDidContinuation.tableStructure, 'NONE');
+assert.ok(taggedDidContinuation.lines.some(line =>
+  line.text === '9 The review observed a small number of VCC managers as managing multiple VCCs that'
+), 'ordinary prose beginning with “did not” is not mistaken for a Roman numeral marker');
+
+const taggedRomanContinuation = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '10.', mcid: 0 },
+    { x: 112, y: 700, text: 'The review describes the duties applying to the manager.', mcid: 1 },
+    { x: 72, y: 680, text: 'iv is relevant to the structure and operation of the manager.', mcid: 2 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(2)])])]
+}));
+assert.equal(taggedRomanContinuation.tableStructure, 'AMBIGUOUS');
+assert.ok(taggedRomanContinuation.lines.some(line => line.cells.length === 2 && line.cells[0] === '10.'),
+  'a valid bare Roman numeral remains guarded as a possible list marker');
+
+const taggedSuperscriptReference = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '1.', mcid: 0 },
+    { x: 108, y: 700, text: 'VCCs', mcid: 1 },
+    { x: 138, y: 704, text: '1', fontSize: 6, mcid: 2 },
+    { x: 147, y: 700, text: 'and their managers shall retain complete records for review.', mcid: 3 },
+    { x: 72, y: 680, text: 'These managers shall maintain complete records for every regulatory requirement.', mcid: 4 },
+    { x: 72, y: 60, text: 'Footnote 1: relevant statutory provisions apply.', mcid: 5 }
+  ],
+  structure: [struct('Document', [
+    struct('P', [mcr(0), mcr(1), mcr(2), mcr(3), mcr(4)]),
+    struct('Note', [struct('P', [mcr(5)])])
+  ])]
+}));
+assert.equal(taggedSuperscriptReference.tableStructure, 'NONE');
+assert.ok(taggedSuperscriptReference.lines.some(line => line.text === '1. VCCs1 and their managers shall retain complete records for review.'));
+assert.ok(taggedSuperscriptReference.pageTexts[0].includes('Footnote 1: relevant statutory provisions apply.'),
+  'attaching an inline reference preserves the separate footnote body');
+
 const taggedLetterHeading = await extractPdfDocumentText(createPdf({
   items: [
     { x: 72, y: 700, text: 'A', mcid: 0 },
@@ -102,6 +162,34 @@ const taggedLetterHeading = await extractPdfDocumentText(createPdf({
 }));
 assert.equal(taggedLetterHeading.tableStructure, 'NONE');
 assert.ok(taggedLetterHeading.lines.some(line => line.text === 'A GOVERNANCE AND MANAGEMENT'));
+
+const taggedAcronymAndSingleWordHeadings = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: 'A', mcid: 0 },
+    { x: 108, y: 700, text: 'PROFILE OF VCCs AND KEY REGULATORY REQUIREMENTS', mcid: 1 },
+    { x: 72, y: 680, text: 'C', mcid: 2 },
+    { x: 108, y: 680, text: 'CONCLUSION', mcid: 3 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1)]), struct('P', [mcr(2), mcr(3)])])]
+}));
+assert.equal(taggedAcronymAndSingleWordHeadings.tableStructure, 'NONE');
+assert.ok(taggedAcronymAndSingleWordHeadings.lines.some(line => line.text === 'A PROFILE OF VCCs AND KEY REGULATORY REQUIREMENTS'));
+assert.ok(taggedAcronymAndSingleWordHeadings.lines.some(line => line.text === 'C CONCLUSION'));
+
+const taggedCurrencyHeading = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: 'A', mcid: 0 },
+    { x: 108, y: 700, text: 'SGD99999', mcid: 1 },
+    { x: 72, y: 650, text: 'This separate paragraph contains unrelated substantive text for context.', mcid: 2 }
+  ],
+  structure: [struct('Document', [
+    struct('P', [mcr(0), mcr(1)]),
+    struct('P', [mcr(2)])
+  ])]
+}));
+assert.equal(taggedCurrencyHeading.tableStructure, 'AMBIGUOUS');
+assert.ok(taggedCurrencyHeading.lines.some(line => line.cells.length === 2 && line.cells[0] === 'A' && line.cells[1] === 'SGD99999'),
+  'digit-bearing content is not accepted as a lettered heading body');
 
 const taggedListItem = await extractPdfDocumentText(createPdf({
   items: [
@@ -116,6 +204,24 @@ const taggedListItem = await extractPdfDocumentText(createPdf({
 }));
 assert.equal(taggedListItem.tableStructure, 'NONE');
 assert.ok(taggedListItem.lines.some(line => line.text === '(i) Each fund manager shall retain the required records.'));
+
+const taggedListSuperscriptReference = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '(a)', mcid: 0 },
+    { x: 125, y: 700, text: 'VCCs', mcid: 1 },
+    { x: 155, y: 704, text: '2', fontSize: 6, mcid: 2 },
+    { x: 164, y: 700, text: 'shall maintain complete records for all relevant matters.', mcid: 3 },
+    { x: 125, y: 680, text: 'Those records must be accessible to the regulator on request.', mcid: 4 }
+  ],
+  structure: [struct('Document', [struct('L', [struct('LI', [
+    struct('Lbl', [mcr(0)]),
+    struct('LBody', [mcr(1), mcr(2), mcr(3), mcr(4)])
+  ])])])]
+}));
+assert.equal(taggedListSuperscriptReference.tableStructure, 'AMBIGUOUS',
+  'the list label and body stay separate when continuation alignment does not prove a full reflow');
+assert.ok(taggedListSuperscriptReference.lines.some(line => line.cells[0] === '(a)' && line.cells[1].startsWith('VCCs2 shall maintain')),
+  'a same-LI raised reference joins its body while preserving the original label/body cells');
 
 const taggedNumericTable = await extractPdfDocumentText(createPdf({
   items: [
@@ -178,6 +284,97 @@ const wideGap = await extractPdfDocumentText(createPdf({
 }));
 assert.equal(wideGap.tableStructure, 'AMBIGUOUS');
 assert.ok(wideGap.lines.some(line => line.cells.length === 2));
+
+const detachedNumericCell = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '1.', mcid: 0 },
+    { x: 108, y: 700, text: 'The manager shall keep all records required for complete compliance.', mcid: 1 },
+    { x: 72, y: 680, text: '999', mcid: 2 },
+    { x: 72, y: 660, text: 'These records remain available for regulatory inspection.', mcid: 3 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(2), mcr(3)])])]
+}));
+assert.equal(detachedNumericCell.tableStructure, 'AMBIGUOUS');
+assert.ok(detachedNumericCell.lines.some(line => line.text === '999'), 'a detached numeric cell remains visible');
+
+const alignedOrphanNumber = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '1.', mcid: 0 },
+    { x: 108, y: 700, text: 'The manager shall keep all records required for complete compliance.', mcid: 1 },
+    { x: 72, y: 680, text: 'These records remain available for regulatory inspection and review.', mcid: 2 },
+    { x: 72, y: 660, text: '999', mcid: 3 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(2), mcr(3)])])]
+}));
+assert.equal(alignedOrphanNumber.tableStructure, 'AMBIGUOUS');
+assert.ok(alignedOrphanNumber.lines.some(line => line.text === '999'),
+  'an aligned numeric-only tail is not absorbed as paragraph prose');
+
+for (const monetaryTail of [
+  'SGD 999', '$999', 'SGD -999', '-999 SGD', 'CHF 999', 'SGD 999 million', '(999) CHF', '999 SGD',
+  'SGD999', '999,999SGD', 'CHF999'
+]) {
+  const alignedMonetaryTail = await extractPdfDocumentText(createPdf({
+    items: [
+      { x: 72, y: 700, text: '1.', mcid: 0 },
+      { x: 108, y: 700, text: 'Total assets before impairment and other deductions remain available.', mcid: 1 },
+      { x: 72, y: 680, text: monetaryTail, mcid: 2 }
+    ],
+    structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(2)])])]
+  }));
+  assert.equal(alignedMonetaryTail.tableStructure, 'AMBIGUOUS',
+    `${monetaryTail} is not absorbed as a short prose continuation`);
+  assert.ok(alignedMonetaryTail.lines.some(line => line.text === monetaryTail),
+    `${monetaryTail} remains visible as an unresolved aligned value`);
+}
+
+const wrongOwnerSuperscript = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '1.', mcid: 0 },
+    { x: 108, y: 700, text: 'VCCs', mcid: 1 },
+    { x: 138, y: 704, text: '1', fontSize: 6, mcid: 2 },
+    { x: 147, y: 700, text: 'and managers retain the necessary records for review.', mcid: 3 },
+    { x: 72, y: 680, text: 'These managers must retain complete records for all regulatory reviews.', mcid: 4 }
+  ],
+  structure: [struct('Document', [
+    struct('P', [mcr(0), mcr(1), mcr(3), mcr(4)]),
+    struct('P', [mcr(2)])
+  ])]
+}));
+assert.equal(wrongOwnerSuperscript.tableStructure, 'AMBIGUOUS');
+assert.ok(wrongOwnerSuperscript.lines.some(line => line.text.startsWith('1. VCCs and managers')),
+  'the same-P full-width continuation proves the paragraph reflow gate succeeds');
+assert.ok(wrongOwnerSuperscript.lines.some(line => line.text === '1' && line.y === 704),
+  'a raised number with a different paragraph owner stays detached');
+
+const unboundSuperscript = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: '1.', mcid: 0 },
+    { x: 108, y: 700, text: 'VCCs', mcid: 1 },
+    { x: 138, y: 704, text: '1', fontSize: 6, mcid: 2 },
+    { x: 147, y: 700, text: 'and managers retain the necessary records for review.', mcid: 3 },
+    { x: 72, y: 680, text: 'These managers must retain complete records for all regulatory reviews.', mcid: 4 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(3), mcr(4)])])]
+}));
+assert.equal(unboundSuperscript.tableStructure, 'AMBIGUOUS',
+  'a plausible raised inline number without a structure owner keeps extraction ambiguous');
+assert.ok(unboundSuperscript.lines.some(line => line.text === '1' && line.y === 704),
+  'an unbound raised number stays visible and detached');
+
+const ambiguousSuperscript = await extractPdfDocumentText(createPdf({
+  items: [
+    { x: 72, y: 700, text: 'VCCs', mcid: 0 },
+    { x: 109, y: 700, text: 'continues in the first substantive regulatory paragraph.', mcid: 1 },
+    { x: 73, y: 697.4, text: 'VCCs', mcid: 2 },
+    { x: 109, y: 697.4, text: 'continues in the second substantive regulatory paragraph.', mcid: 3 },
+    { x: 102.5, y: 702.8, text: '2', fontSize: 6, mcid: 4 }
+  ],
+  structure: [struct('Document', [struct('P', [mcr(0), mcr(1), mcr(2), mcr(3), mcr(4)])])]
+}));
+assert.equal(ambiguousSuperscript.tableStructure, 'AMBIGUOUS');
+assert.ok(ambiguousSuperscript.lines.some(line => line.text === '2' && line.y === 702.8),
+  'a raised number that geometrically fits multiple baselines stays detached');
 
 const tableWithOrphanValue = await extractPdfDocumentText(createPdf({
   items: [
