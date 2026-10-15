@@ -161,6 +161,52 @@ function withoutHash(pkg) {
   return copy;
 }
 
+function createLegacyIrasPackage(service, recordId, packageId, year = 2025) {
+  const html = `<section id="cit-rate-guidance"><h2>Corporate income tax rate</h2><p>IRAS corporate income tax rate guidance describes the applicable rate for companies in ${year}.</p></section>`;
+  const sourceText = cleanHtmlText(html);
+  const record = {
+    id: recordId,
+    authority: 'IRAS',
+    authorityName: 'Inland Revenue Authority of Singapore',
+    sourcePublisher: 'Inland Revenue Authority of Singapore',
+    sourceAuthority: 'IRAS',
+    legalOrStandardInstrument: 'IRAS Corporate Income Tax Guidance',
+    documentTitle: 'Corporate income tax rate',
+    standardOrActCode: 'IRAS-CIT-RATE',
+    paragraphOrSection: 'Corporate income tax rate',
+    sourceText,
+    principleSummary: 'Legacy text candidate',
+    officialSourceUrl: 'https://www.iras.gov.sg/taxes/corporate-income-tax/rate',
+    domain: 'IRAS_TAX',
+    jurisdiction: 'Singapore',
+    tags: ['corporate income tax rate'],
+    sourceStatus: 'NEEDS_REVIEW',
+    sourceType: 'OFFICIAL_GUIDANCE',
+    evidenceTier: 'OFFICIAL_GUIDANCE',
+    isVerbatimText: true,
+    extractionStatus: 'EXACT',
+    sourceLocator: {
+      elementId: 'cit-rate-guidance',
+      sourceNode: 'section#cit-rate-guidance',
+      startOffset: 0,
+      endOffset: html.length,
+      boundary: { startOffset: 0, endOffset: html.length },
+      sourceType: 'HTML'
+    },
+    provenance: 'LIVE_EXTERNAL'
+  };
+  const pkg = {
+    packageId,
+    releaseDate: '2026-10-15',
+    authority: 'IRAS',
+    updates: [record],
+    amendments: [],
+    packageHash: ''
+  };
+  pkg.packageHash = service.computePackageHash(withoutHash(pkg));
+  return { pkg, html };
+}
+
 async function testMasLifecycleAndRollback() {
   assert.equal(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID], undefined);
   assert.equal(UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID], undefined);
@@ -402,6 +448,327 @@ async function stageMasPackage(service, packageId = undefined) {
   return pkg;
 }
 
+async function activateMasFixture(service, retriever, packageId) {
+  const pkg = await stageMasPackage(service, packageId);
+  assert.equal((await service.verifyUpdatePackage(pkg.packageId, rawDocumentsFor(pkg, retriever))).isValid, true);
+  assert.equal(await service.approveUpdatePackage(pkg.packageId, 'reviewer@example.test', 'Reviewed MAS identity fixture'), true);
+  assert.equal((await service.activateUpdatePackage(pkg.packageId)).success, true);
+  return pkg;
+}
+
+async function testLegacyFeedCannotReuseMasManagedIds() {
+  delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+  delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+  {
+    const { retriever, versioning, service } = createFixtureService();
+    const masPackage = await activateMasFixture(service, retriever, 'MAS-LEGACY-COLLISION-ACTIVE');
+    const activeRecord = structuredClone(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID]);
+    const activeVersionId = versioning.getActiveVersionId(HTML_RECORD_ID);
+    const approval = versioning.getLedgerEntry(activeVersionId).metadata.reviewApproval;
+    const candidateCount = versioning.getCandidates().length;
+    const legacy = createLegacyIrasPackage(service, HTML_RECORD_ID, 'IRAS-REUSE-ACTIVE-MAS-ID');
+    const collision = await service.stageUpdatePackage(legacy.pkg);
+    assert.equal(collision.success, false, 'A legacy package cannot stage over an active MAS-managed registry ID');
+    assert.match(collision.error, /MAS-managed record ID/);
+    assert.equal(versioning.getCandidates().length, candidateCount, 'Rejected collision staging makes no candidate mutations');
+    assert.deepEqual(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID], activeRecord);
+    assert.equal(versioning.getActiveVersionId(HTML_RECORD_ID), activeVersionId);
+    assert.deepEqual(versioning.getLedgerEntry(activeVersionId).metadata.reviewApproval, approval,
+      'The active MAS review binding survives a blocked legacy collision');
+    assert.ok(service.getActivePackages().some(pkg => pkg.packageId === masPackage.packageId));
+
+    const flagged = createLegacyIrasPackage(service, 'IRAS_DOCUMENT_ADMISSION_FLAG_FIXTURE', 'IRAS-CARRIES-DOC-ADMISSION-FLAG');
+    flagged.pkg.updates[0].documentAdmissionRequired = true;
+    const flaggedResult = await service.stageUpdatePackage(flagged.pkg);
+    assert.equal(flaggedResult.success, false, 'A non-MAS package cannot introduce a document-admission record');
+    assert.match(flaggedResult.error, /document-admission record/);
+    assert.equal(versioning.getCandidates().length, candidateCount);
+    delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+    delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+  }
+
+  {
+    const { versioning, service } = createFixtureService();
+    const pending = await stageMasPackage(service, 'MAS-LEGACY-COLLISION-PENDING');
+    const candidatesBefore = versioning.getCandidates().length;
+    const legacy = createLegacyIrasPackage(service, HTML_RECORD_ID, 'IRAS-REUSE-PENDING-MAS-ID');
+    const collision = await service.stageUpdatePackage(legacy.pkg);
+    assert.equal(collision.success, false, 'A pending MAS candidate reserves its managed record ID');
+    assert.match(collision.error, /MAS-managed candidate record ID/);
+    assert.equal(versioning.getCandidates().length, candidatesBefore);
+    assert.equal(service.getStagedPackages().some(pkg => pkg.packageId === pending.packageId), true);
+  }
+
+  {
+    const { retriever, versioning, service } = createFixtureService();
+    const masPackage = await activateMasFixture(service, retriever, 'MAS-LEGACY-COLLISION-HISTORICAL');
+    const activeVersionId = versioning.getActiveVersionId(HTML_RECORD_ID);
+    assert.equal((await service.rollbackUpdatePackage(masPackage.packageId)).success, true);
+    assert.equal(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID], undefined);
+    assert.equal(versioning.getActiveVersionId(HTML_RECORD_ID), undefined);
+    const legacy = createLegacyIrasPackage(service, HTML_RECORD_ID, 'IRAS-REUSE-HISTORICAL-MAS-ID');
+    const collision = await service.stageUpdatePackage(legacy.pkg);
+    assert.equal(collision.success, false, 'Rolled-back MAS ledger history continues to reserve its managed ID');
+    assert.match(collision.error, /MAS-managed ledger record ID/);
+    assert.ok(versioning.getLedgerEntry(activeVersionId), 'The append-only MAS ledger entry remains available to guard the ID');
+  }
+
+  {
+    const { retriever, versioning, service } = createFixtureService();
+    const legacy = createLegacyIrasPackage(service, HTML_RECORD_ID, 'IRAS-VERIFY-AFTER-MAS-IDENTITY');
+    assert.equal((await service.stageUpdatePackage(legacy.pkg)).success, true,
+      'Legacy packages may stage before the record ID becomes MAS-managed');
+    const legacyCandidate = versioning.getCandidates().find(candidate => candidate.record.id === HTML_RECORD_ID);
+    assert.ok(legacyCandidate);
+    const masPackage = await activateMasFixture(service, retriever, 'MAS-ACTIVATE-AFTER-LEGACY-STAGE');
+    const activeRecord = structuredClone(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID]);
+    const activeVersionId = versioning.getActiveVersionId(HTML_RECORD_ID);
+    const approval = versioning.getLedgerEntry(activeVersionId).metadata.reviewApproval;
+
+    const direct = await service.verifyUpdatePackage(legacy.pkg.packageId, { [HTML_RECORD_ID]: legacy.html });
+    assert.equal(direct.isValid, false, 'Raw verification rechecks current managed-ID ownership');
+    assert.match(direct.rejectionReason, /MAS-managed record ID/);
+    assert.equal(legacyCandidate.metadata.verificationStatus, 'UNVERIFIED', 'Blocked raw verification leaves the legacy candidate untouched');
+    assert.equal(service.getStagedPackages().some(pkg => pkg.packageId === legacy.pkg.packageId), true);
+    assert.equal(service.getVerifiedPackages().some(pkg => pkg.packageId === legacy.pkg.packageId), false);
+
+    let fetchCount = 0;
+    retriever.fetchOfficialSource = async () => {
+      fetchCount++;
+      throw new Error('The official source must not be fetched for a managed-ID collision');
+    };
+    const fetched = await service.retrieveAndVerifyStagedPackage(legacy.pkg.packageId);
+    assert.equal(fetched.isValid, false);
+    assert.match(fetched.rejectionReason, /MAS-managed record ID/);
+    assert.equal(fetchCount, 0, 'Official-source verification rejects before network retrieval');
+    assert.deepEqual(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID], activeRecord);
+    assert.equal(versioning.getActiveVersionId(HTML_RECORD_ID), activeVersionId);
+    assert.deepEqual(versioning.getLedgerEntry(activeVersionId).metadata.reviewApproval, approval);
+    assert.ok(service.getActivePackages().some(pkg => pkg.packageId === masPackage.packageId));
+    delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+    delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+  }
+
+  {
+    const { retriever, versioning, service } = createFixtureService();
+    const legacy = createLegacyIrasPackage(service, HTML_RECORD_ID, 'IRAS-ACTIVATE-AFTER-MAS-IDENTITY');
+    assert.equal((await service.stageUpdatePackage(legacy.pkg)).success, true);
+    assert.equal((await service.verifyUpdatePackage(legacy.pkg.packageId, { [HTML_RECORD_ID]: legacy.html })).isValid, true);
+    const legacyCandidate = versioning.getCandidates().find(candidate => candidate.record.id === HTML_RECORD_ID);
+    assert.equal(legacyCandidate.metadata.verificationStatus, 'VERIFIED');
+
+    const masPackage = await activateMasFixture(service, retriever, 'MAS-ACTIVATE-AFTER-LEGACY-VERIFIED');
+    const activeRecord = structuredClone(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID]);
+    const activeVersionId = versioning.getActiveVersionId(HTML_RECORD_ID);
+    const approval = versioning.getLedgerEntry(activeVersionId).metadata.reviewApproval;
+    const attempted = await service.activateUpdatePackage(legacy.pkg.packageId);
+    assert.equal(attempted.success, false, 'Activation rechecks the managed-ID guard after legacy verification');
+    assert.match(attempted.error, /MAS-managed record ID/);
+    assert.equal(legacyCandidate.metadata.verificationStatus, 'VERIFIED', 'Blocked activation leaves the verified legacy candidate unchanged');
+    assert.deepEqual(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID], activeRecord);
+    assert.equal(versioning.getActiveVersionId(HTML_RECORD_ID), activeVersionId);
+    assert.deepEqual(versioning.getLedgerEntry(activeVersionId).metadata.reviewApproval, approval,
+      'Blocked activation does not disturb the MAS document approval binding');
+    assert.ok(service.getActivePackages().some(pkg => pkg.packageId === masPackage.packageId));
+    delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+    delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+  }
+}
+
+async function testVersionIdAliasCollisionsAndReservationGuards() {
+  const recordService = createFixtureService().service;
+  const versioning = new SourceVersioningManager();
+  const directCandidate = (recordId, versionId, verificationStatus) => {
+    const record = createLegacyIrasPackage(recordService, recordId, 'IRAS-VERSION-ID-' + recordId).pkg.updates[0];
+    return {
+      record,
+      metadata: {
+        versionId,
+        contentHash: versioning.computeSourceHash(record),
+        canonicalSourceUrl: record.officialSourceUrl,
+        sourceAuthority: 'IRAS',
+        verificationStatus,
+        retrievedAt: '2026-10-16T00:00:00.000Z'
+      }
+    };
+  };
+
+  const pending = directCandidate('DIRECT_PENDING_RECORD', 'GLOBAL_VERSION_ID_PENDING', 'UNVERIFIED');
+  versioning.registerCandidateVersion(pending.record, pending.metadata);
+  const pendingSnapshot = structuredClone(versioning.getCandidates().find(item => item.metadata.versionId === pending.metadata.versionId));
+  const duplicatePending = directCandidate('DIRECT_PENDING_DUPLICATE', pending.metadata.versionId, 'UNVERIFIED');
+  assert.throws(() => versioning.registerCandidateVersion(duplicatePending.record, duplicatePending.metadata), /already reserved/,
+    'Candidate IDs cannot replace an existing pending version');
+  assert.deepEqual(versioning.getCandidates().find(item => item.metadata.versionId === pending.metadata.versionId), pendingSnapshot);
+  assert.equal(versioning.getCandidates().length, 1);
+  assert.equal(versioning.getAllLedgerEntries().length, 0);
+
+  const active = directCandidate('DIRECT_ACTIVE_RECORD', 'GLOBAL_VERSION_ID_ACTIVE', 'VERIFIED');
+  versioning.registerCandidateVersion(active.record, active.metadata);
+  assert.equal(versioning.activateVersion(active.metadata.versionId).success, true);
+  const activeEntry = versioning.getLedgerEntry(active.metadata.versionId);
+  const activePointer = versioning.getActiveVersionId(active.record.id);
+  const duplicateActive = directCandidate('DIRECT_ACTIVE_DUPLICATE', active.metadata.versionId, 'UNVERIFIED');
+  assert.throws(() => versioning.registerCandidateVersion(duplicateActive.record, duplicateActive.metadata), /already reserved/,
+    'Ledger IDs cannot be reused by a new candidate');
+  assert.deepEqual(versioning.getLedgerEntry(active.metadata.versionId), activeEntry);
+  assert.equal(versioning.getActiveVersionId(active.record.id), activePointer);
+
+  const injectedCandidate = {
+    record: { ...duplicateActive.record, versionId: active.metadata.versionId, lifecycleState: 'CANDIDATE' },
+    metadata: { ...duplicateActive.metadata, versionId: active.metadata.versionId, verificationStatus: 'VERIFIED' }
+  };
+  versioning.candidates.set(active.metadata.versionId, injectedCandidate);
+  const duplicateActivation = versioning.activateVersion(active.metadata.versionId);
+  assert.equal(duplicateActivation.success, false, 'Activation cannot overwrite an existing immutable ledger ID');
+  assert.match(duplicateActivation.error, /already exists in the immutable ledger/);
+  assert.deepEqual(versioning.getLedgerEntry(active.metadata.versionId), activeEntry);
+  assert.equal(versioning.getActiveVersionId(active.record.id), activePointer);
+  assert.deepEqual(versioning.getCandidates().find(item => item.metadata.versionId === active.metadata.versionId), injectedCandidate,
+    'Rejected duplicate activation leaves the candidate untouched');
+  versioning.candidates.delete(active.metadata.versionId);
+
+  assert.equal(versioning.rollbackVersion(active.metadata.versionId).success, true);
+  const rolledBackEntry = versioning.getLedgerEntry(active.metadata.versionId);
+  assert.equal(rolledBackEntry.isActive, false);
+  assert.equal(versioning.getActiveVersionId(active.record.id), undefined);
+  const duplicateRolledBack = directCandidate('DIRECT_ROLLED_BACK_DUPLICATE', active.metadata.versionId, 'UNVERIFIED');
+  assert.throws(() => versioning.registerCandidateVersion(duplicateRolledBack.record, duplicateRolledBack.metadata), /already reserved/,
+    'Rollback does not release an append-only ledger ID');
+  assert.deepEqual(versioning.getLedgerEntry(active.metadata.versionId), rolledBackEntry);
+  assert.equal(versioning.getActiveVersionId(active.record.id), undefined);
+
+  async function stageLegacyAlias(service, manager, managedVersionId, label) {
+    assert.ok(managedVersionId.startsWith('MAS-'));
+    const recordId = managedVersionId.slice('MAS-'.length);
+    const legacy = createLegacyIrasPackage(service, recordId, 'MAS');
+    assert.equal('MAS-' + recordId, managedVersionId, 'The legacy package reproduces the exact MAS version-ID alias');
+    assert.equal((await service.stageUpdatePackage(legacy.pkg)).success, true);
+    const candidate = manager.getCandidates().find(item => item.record.id === recordId);
+    assert.ok(candidate);
+    assert.notEqual(candidate.metadata.versionId, managedVersionId, label + ' legacy candidate receives a collision-free version ID');
+    assert.match(candidate.metadata.versionId, /-activation-\d+$/);
+    return { ...legacy, candidate, recordId };
+  }
+
+  delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+  delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+  {
+    const { service, versioning: manager } = createFixtureService();
+    await stageMasPackage(service, 'MAS-VERSION-ALIAS-PENDING');
+    const managedCandidate = manager.getCandidates().find(item => item.record.id === HTML_RECORD_ID);
+    const managedVersionId = managedCandidate.metadata.versionId;
+    const before = structuredClone(managedCandidate);
+    await stageLegacyAlias(service, manager, managedVersionId, 'Pending alias');
+    assert.deepEqual(manager.getCandidates().find(item => item.metadata.versionId === managedVersionId), before,
+      'A pending MAS candidate remains unchanged when its string-split ID is staged as legacy');
+  }
+
+  delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+  delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+  {
+    const { retriever, service, versioning: manager } = createFixtureService();
+    await activateMasFixture(service, retriever, 'MAS-VERSION-ALIAS-ACTIVE');
+    const managedVersionId = manager.getActiveVersionId(HTML_RECORD_ID);
+    const before = manager.getLedgerEntry(managedVersionId);
+    const approval = before.metadata.reviewApproval;
+    const activeRecord = structuredClone(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID]);
+    const legacy = await stageLegacyAlias(service, manager, managedVersionId, 'Active alias');
+    assert.equal((await service.verifyUpdatePackage(legacy.pkg.packageId, { [legacy.recordId]: legacy.html })).isValid, true);
+    assert.equal((await service.activateUpdatePackage(legacy.pkg.packageId)).success, true,
+      'The unrelated legacy source remains activatable after collision-free allocation');
+    assert.deepEqual(manager.getLedgerEntry(managedVersionId), before);
+    assert.equal(manager.getActiveVersionId(HTML_RECORD_ID), managedVersionId);
+    assert.deepEqual(manager.getLedgerEntry(managedVersionId).metadata.reviewApproval, approval);
+    assert.deepEqual(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID], activeRecord);
+    delete UNIFIED_SOURCE_REGISTRY[legacy.recordId];
+  }
+
+  delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+  delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+  {
+    const { retriever, service, versioning: manager } = createFixtureService();
+    const masPackage = await activateMasFixture(service, retriever, 'MAS-VERSION-ALIAS-ROLLED-BACK');
+    const managedVersionId = manager.getActiveVersionId(HTML_RECORD_ID);
+    assert.equal((await service.rollbackUpdatePackage(masPackage.packageId)).success, true);
+    const rolledBackEntry = manager.getLedgerEntry(managedVersionId);
+    assert.equal(manager.getActiveVersionId(HTML_RECORD_ID), undefined);
+    const legacy = await stageLegacyAlias(service, manager, managedVersionId, 'Rolled-back alias');
+    assert.equal((await service.verifyUpdatePackage(legacy.pkg.packageId, { [legacy.recordId]: legacy.html })).isValid, true);
+    assert.equal((await service.activateUpdatePackage(legacy.pkg.packageId)).success, true);
+    assert.deepEqual(manager.getLedgerEntry(managedVersionId), rolledBackEntry,
+      'Reusing the old package/record string cannot overwrite rolled-back MAS ledger history');
+    assert.equal(manager.getActiveVersionId(HTML_RECORD_ID), undefined);
+    assert.ok(manager.getActiveVersionId(legacy.recordId));
+    delete UNIFIED_SOURCE_REGISTRY[legacy.recordId];
+  }
+  delete UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID];
+  delete UNIFIED_SOURCE_REGISTRY[PDF_RECORD_ID];
+}
+async function testLegacyPackageRollbackRestoresExactRegistrySnapshot() {
+  const versioning = new SourceVersioningManager();
+  const service = new LiveRegulatoryFeedService(versioning, undefined, new FixtureRetriever(), []);
+  const firstId = 'IRAS_FIRST_ACTIVATION_ROLLBACK_FIXTURE';
+  const stackedId = 'IRAS_STACKED_ROLLBACK_FIXTURE';
+
+  const first = createLegacyIrasPackage(service, firstId, 'IRAS-FIRST-ACTIVATION-ROLLBACK');
+  assert.equal((await service.stageUpdatePackage(first.pkg)).success, true);
+  assert.equal((await service.verifyUpdatePackage(first.pkg.packageId, { [firstId]: first.html })).isValid, true);
+  assert.equal((await service.activateUpdatePackage(first.pkg.packageId)).success, true);
+  const firstVersionId = versioning.getActiveVersionId(firstId);
+  assert.ok(UNIFIED_SOURCE_REGISTRY[firstId]);
+  assert.equal((await service.rollbackUpdatePackage(first.pkg.packageId)).success, true);
+  assert.equal(UNIFIED_SOURCE_REGISTRY[firstId], undefined, 'Rollback of a first legacy activation removes its newly created registry row');
+  assert.equal(versioning.getActiveVersionId(firstId), undefined, 'Rollback of a first legacy activation clears its active pointer');
+  assert.equal(versioning.getLedgerEntry(firstVersionId).isActive, false, 'Rollback preserves the append-only ledger entry as inactive history');
+
+  const baseline = createLegacyIrasPackage(service, stackedId, 'IRAS-STACKED-BASELINE').pkg.updates[0];
+  baseline.provenance = 'LOCAL_STATIC';
+  baseline.sourceStatus = 'VERIFIED';
+  baseline.lifecycleState = 'ACTIVE';
+  baseline.version = 'baseline-fixture';
+  UNIFIED_SOURCE_REGISTRY[stackedId] = structuredClone(baseline);
+  const originalBaseline = structuredClone(UNIFIED_SOURCE_REGISTRY[stackedId]);
+
+  const predecessor = createLegacyIrasPackage(service, stackedId, 'IRAS-STACKED-PREDECESSOR', 2025);
+  assert.equal((await service.stageUpdatePackage(predecessor.pkg)).success, true,
+    'Legacy IRAS activation over an un-managed registered baseline remains supported');
+  assert.equal((await service.verifyUpdatePackage(predecessor.pkg.packageId, { [stackedId]: predecessor.html })).isValid, true);
+  assert.equal((await service.activateUpdatePackage(predecessor.pkg.packageId)).success, true);
+  const predecessorVersionId = versioning.getActiveVersionId(stackedId);
+  const predecessorRegistryRow = structuredClone(UNIFIED_SOURCE_REGISTRY[stackedId]);
+
+  const newest = createLegacyIrasPackage(service, stackedId, 'IRAS-STACKED-NEWEST', 2026);
+  assert.equal((await service.stageUpdatePackage(newest.pkg)).success, true);
+  assert.equal((await service.verifyUpdatePackage(newest.pkg.packageId, { [stackedId]: newest.html })).isValid, true);
+  assert.equal((await service.activateUpdatePackage(newest.pkg.packageId)).success, true);
+  const newestVersionId = versioning.getActiveVersionId(stackedId);
+  const newestRegistryRow = structuredClone(UNIFIED_SOURCE_REGISTRY[stackedId]);
+
+  const olderRollback = await service.rollbackUpdatePackage(predecessor.pkg.packageId);
+  assert.equal(olderRollback.success, false, 'An older legacy package cannot roll back while the newer version is active');
+  assert.equal(olderRollback.rolledBackRecordsCount, 0);
+  assert.deepEqual(UNIFIED_SOURCE_REGISTRY[stackedId], newestRegistryRow, 'Rejected older rollback leaves the registry untouched');
+  assert.equal(versioning.getActiveVersionId(stackedId), newestVersionId, 'Rejected older rollback leaves the active pointer untouched');
+  assert.equal(versioning.getLedgerEntry(newestVersionId).isActive, true);
+  assert.equal(versioning.getLedgerEntry(predecessorVersionId).isActive, false);
+
+  assert.equal((await service.rollbackUpdatePackage(newest.pkg.packageId)).success, true);
+  assert.deepEqual(UNIFIED_SOURCE_REGISTRY[stackedId], predecessorRegistryRow,
+    'Newest legacy rollback restores the exact registry row it replaced');
+  assert.equal(versioning.getActiveVersionId(stackedId), predecessorVersionId);
+  assert.equal((await service.rollbackUpdatePackage(predecessor.pkg.packageId)).success, true);
+  assert.deepEqual(UNIFIED_SOURCE_REGISTRY[stackedId], originalBaseline,
+    'Final legacy rollback restores the exact pre-package baseline registry row');
+  assert.equal(versioning.getActiveVersionId(stackedId), undefined);
+  assert.ok(versioning.getAllLedgerEntries().length >= 3, 'Legacy rollback keeps the append-only activation history');
+  assert.equal(versioning.getLedgerEntry(newestVersionId).isActive, false);
+  assert.equal(versioning.getLedgerEntry(predecessorVersionId).isActive, false);
+
+  delete UNIFIED_SOURCE_REGISTRY[firstId];
+  delete UNIFIED_SOURCE_REGISTRY[stackedId];
+}
+
 async function testMasCandidateMutationAndActiveRestageGuards() {
   const mutations = [
     candidate => { candidate.record.sourceText = 'mutated after approval'; },
@@ -567,7 +934,10 @@ async function main() {
   await testMasCandidateMutationAndActiveRestageGuards();
   await testMasAsyncVerificationInvalidation();
   await testMasClassificationCannotBeRelabeled();
-  for (const id of [HTML_RECORD_ID, PDF_RECORD_ID, 'IRAS_LIFECYCLE_COMPATIBILITY_FIXTURE']) delete UNIFIED_SOURCE_REGISTRY[id];
+  await testLegacyFeedCannotReuseMasManagedIds();
+  await testLegacyPackageRollbackRestoresExactRegistrySnapshot();
+  await testVersionIdAliasCollisionsAndReservationGuards();
+  for (const id of [HTML_RECORD_ID, PDF_RECORD_ID, 'IRAS_LIFECYCLE_COMPATIBILITY_FIXTURE', 'IRAS_FIRST_ACTIVATION_ROLLBACK_FIXTURE', 'IRAS_STACKED_ROLLBACK_FIXTURE']) delete UNIFIED_SOURCE_REGISTRY[id];
   console.log('PASS | MAS document lifecycle: byte-backed HTML/PDF verification, review approval, history, rollback, and IRAS isolation');
 }
 

@@ -171,6 +171,18 @@ function containsMasAuthorityIdentity(pkg: RegulatoryUpdatePackage): boolean {
   return pkg.updates.some(record => record.authority === 'MAS' || record.sourceAuthority === 'MAS' || isMasHost(record.officialSourceUrl));
 }
 
+function hasMasManagedRecordIdentity(
+  record?: AuthoritativeSourceRecord,
+  metadata?: SourceVersionMetadata
+): boolean {
+  return Boolean(record && (
+    record.authority === 'MAS' || record.sourceAuthority === 'MAS' || record.documentAdmissionRequired === true
+  ) || metadata && (
+    metadata.sourceAuthority === 'MAS' || metadata.governingAuthority === 'MAS' ||
+    metadata.documentAdmissionRequired === true || metadata.documentAdmissionPackageId
+  ));
+}
+
 function stableJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (value && typeof value === 'object') {
@@ -266,6 +278,27 @@ export class LiveRegulatoryFeedService {
       if (stableJson(actualMetadata) !== stableJson(expectedMetadata)) return false;
     }
     return true;
+  }
+
+  private nonMasManagedIdentityConflict(pkg: RegulatoryUpdatePackage): string | undefined {
+    if (pkg.authority === 'MAS') return undefined;
+    for (const record of pkg.updates) {
+      if (record.documentAdmissionRequired === true) {
+        return `Non-MAS packages cannot contain document-admission record '${record.id}'`;
+      }
+      if (hasMasManagedRecordIdentity(UNIFIED_SOURCE_REGISTRY[record.id])) {
+        return `Non-MAS packages cannot reuse MAS-managed record ID '${record.id}'`;
+      }
+      if (this.versioningManager.getCandidates().some(candidate => candidate.record.id === record.id &&
+          hasMasManagedRecordIdentity(candidate.record, candidate.metadata))) {
+        return `Non-MAS packages cannot reuse MAS-managed candidate record ID '${record.id}'`;
+      }
+      if (this.versioningManager.getAllLedgerEntries().some(entry => entry.recordId === record.id &&
+          hasMasManagedRecordIdentity(entry.recordSnapshot, entry.metadata))) {
+        return `Non-MAS packages cannot reuse MAS-managed ledger record ID '${record.id}'`;
+      }
+    }
+    return undefined;
   }
 
   constructor(
@@ -480,6 +513,10 @@ export class LiveRegulatoryFeedService {
     if (stagedPackage.authority !== 'MAS' && containsMasAuthorityIdentity(stagedPackage)) {
       return { success: false, packageId: stagedPackage.packageId, stagedRecordsCount: 0, error: 'Non-MAS packages cannot contain MAS-governed records or MAS-published source URLs' };
     }
+    const managedIdentityConflict = this.nonMasManagedIdentityConflict(stagedPackage);
+    if (managedIdentityConflict) {
+      return { success: false, packageId: stagedPackage.packageId, stagedRecordsCount: 0, error: managedIdentityConflict };
+    }
     this.bumpPackageGeneration(stagedPackage.packageId);
     if (stagedPackage.authority === 'MAS') {
       this.packageApprovals.delete(stagedPackage.packageId);
@@ -505,13 +542,12 @@ export class LiveRegulatoryFeedService {
     // Register each update as an UNVERIFIED candidate in the versioning manager
     for (const rec of stagedPackage.updates) {
       const baseVersionId = `${stagedPackage.packageId}-${rec.id}`;
+      const ledgerIds = new Set(this.versioningManager.getAllLedgerEntries().map(entry => entry.versionId));
+      const candidateIds = new Set(this.versioningManager.getCandidates().map(entry => entry.metadata.versionId));
       let versionId = baseVersionId;
-      if (stagedPackage.authority === 'MAS') {
-        const ledgerIds = new Set(this.versioningManager.getAllLedgerEntries().map(entry => entry.versionId));
-        const candidateIds = new Set(this.versioningManager.getCandidates().map(entry => entry.metadata.versionId));
-        let suffix = 2;
-        while (ledgerIds.has(versionId) || candidateIds.has(versionId)) versionId = `${baseVersionId}-activation-${suffix++}`;
-      }
+      let suffix = 2;
+      while (ledgerIds.has(versionId) || candidateIds.has(versionId)) versionId = `${baseVersionId}-activation-${suffix++}`;
+      candidateIds.add(versionId);
       versionIds.set(rec.id, versionId);
       const contentHash = stagedPackage.authority === 'MAS'
         ? (rec.provisionHash || rec.contentHash || this.versioningManager.computeSourceHash(rec))
@@ -600,9 +636,9 @@ export class LiveRegulatoryFeedService {
     packageId: string,
     rawDocuments: PackageVerificationDocuments
   ): Promise<PackageVerificationResult> {
-    const generation = this.bumpPackageGeneration(packageId);
     const pkg = this.stagedPackages.get(packageId);
     if (!pkg) {
+      this.bumpPackageGeneration(packageId);
       return {
         isValid: false,
         packageId,
@@ -610,6 +646,16 @@ export class LiveRegulatoryFeedService {
         rejectionReason: `Staged package '${packageId}' not found`
       };
     }
+    const managedIdentityConflict = this.nonMasManagedIdentityConflict(pkg);
+    if (managedIdentityConflict) {
+      return {
+        isValid: false,
+        packageId,
+        verifiedRecordsCount: 0,
+        rejectionReason: managedIdentityConflict
+      };
+    }
+    const generation = this.bumpPackageGeneration(packageId);
     const versionIds = new Map(this.packageVersionIds.get(packageId) || []);
     const isCurrent = (): boolean => this.packageOperationIsCurrent(packageId, pkg, generation, versionIds);
     const reject = (reason: string, failedRecordId?: string): PackageVerificationResult =>
@@ -801,6 +847,16 @@ export class LiveRegulatoryFeedService {
       };
     }
 
+    const managedIdentityConflict = this.nonMasManagedIdentityConflict(pkg);
+    if (managedIdentityConflict) {
+      return {
+        isValid: false,
+        packageId,
+        verifiedRecordsCount: 0,
+        rejectionReason: managedIdentityConflict
+      };
+    }
+
     const generation = this.bumpPackageGeneration(packageId);
     const versionIds = new Map(this.packageVersionIds.get(packageId) || []);
     const isCurrent = (): boolean => this.packageOperationIsCurrent(packageId, pkg, generation, versionIds);
@@ -923,6 +979,16 @@ export class LiveRegulatoryFeedService {
         packageId,
         activatedRecordsCount: 0,
         error: `Package '${packageId}' must be verified before activation`
+      };
+    }
+
+    const managedIdentityConflict = this.nonMasManagedIdentityConflict(pkg);
+    if (managedIdentityConflict) {
+      return {
+        success: false,
+        packageId,
+        activatedRecordsCount: 0,
+        error: managedIdentityConflict
       };
     }
 
@@ -1058,7 +1124,7 @@ export class LiveRegulatoryFeedService {
     }
 
     this.activePackages.set(packageId, pkg);
-    if (pkg.authority === 'MAS') this.packageRegistrySnapshots.set(packageId, packageRegistrySnapshot);
+    this.packageRegistrySnapshots.set(packageId, packageRegistrySnapshot);
     this.stagedPackages.delete(packageId);
     this.verifiedPackages.delete(packageId);
     this.packageApprovals.delete(packageId);
@@ -1091,15 +1157,30 @@ export class LiveRegulatoryFeedService {
     }
 
     const packageVersionIds = this.packageVersionIds.get(packageId);
-    if (pkg.authority === 'MAS' && pkg.updates.some(record => {
+    const registrySnapshot = this.packageRegistrySnapshots.get(packageId);
+    if (!registrySnapshot || pkg.updates.some(record => !Object.hasOwn(registrySnapshot, record.id))) {
+      return {
+        success: false,
+        packageId,
+        rolledBackRecordsCount: 0,
+        error: 'Complete pre-activation registry snapshot is required to roll back this package'
+      };
+    }
+    if (pkg.updates.some(record => {
       const versionId = packageVersionIds?.get(record.id);
-      return !versionId || this.versioningManager.getActiveVersionId(record.id) !== versionId;
+      const ledgerEntry = versionId ? this.versioningManager.getLedgerEntry(versionId) : undefined;
+      const predecessorId = ledgerEntry?.metadata.supersedesVersionId;
+      return !versionId || !ledgerEntry || !ledgerEntry.isActive ||
+        this.versioningManager.getActiveVersionId(record.id) !== versionId ||
+        Boolean(predecessorId && !this.versioningManager.getLedgerEntry(predecessorId));
     })) {
       return {
         success: false,
         packageId,
         rolledBackRecordsCount: 0,
-        error: 'An older MAS package cannot be rolled back while a newer version is active'
+        error: pkg.authority === 'MAS'
+          ? 'An older MAS package cannot be rolled back while a newer version is active'
+          : 'An older package cannot be rolled back while a newer version is active'
       };
     }
 
@@ -1108,15 +1189,9 @@ export class LiveRegulatoryFeedService {
       const versionId = packageVersionIds?.get(rec.id) || `${pkg.packageId}-${rec.id}`;
       const rollResult = this.versioningManager.rollbackVersion(versionId);
       if (rollResult.success) {
-        if (pkg.authority === 'MAS') {
-          const previousRecord = this.packageRegistrySnapshots.get(packageId)?.[rec.id];
-          if (previousRecord) UNIFIED_SOURCE_REGISTRY[rec.id] = recordClone(previousRecord);
-          else delete UNIFIED_SOURCE_REGISTRY[rec.id];
-        } else {
-          // Restore prior snapshot in active registry
-          const predecessorEntry = this.versioningManager.getLedgerEntry(rollResult.restoredVersionId);
-          if (predecessorEntry) UNIFIED_SOURCE_REGISTRY[rec.id] = recordClone(predecessorEntry.recordSnapshot);
-        }
+        const previousRecord = registrySnapshot[rec.id];
+        if (previousRecord) UNIFIED_SOURCE_REGISTRY[rec.id] = recordClone(previousRecord);
+        else delete UNIFIED_SOURCE_REGISTRY[rec.id];
         rolledBackCount++;
       }
     }

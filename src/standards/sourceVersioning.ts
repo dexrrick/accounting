@@ -343,6 +343,10 @@ export class SourceVersioningManager {
     record: AuthoritativeSourceRecord,
     metadata: SourceVersionMetadata
   ): SourceVersionMetadata {
+    if (this.candidates.has(metadata.versionId) || this.ledger.has(metadata.versionId)) {
+      throw new Error("Version ID '" + metadata.versionId + "' is already reserved by a candidate or ledger entry");
+    }
+
     const computedHash = this.computeSourceHash(record);
     const finalizedMetadata: SourceVersionMetadata = {
       ...metadata,
@@ -467,6 +471,15 @@ export class SourceVersioningManager {
     const candidate = this.candidates.get(versionId);
     if (!candidate) {
       return { success: false, versionId, activatedRecordId: '', error: `Candidate version '${versionId}' not found` };
+    }
+
+    if (this.ledger.has(versionId)) {
+      return {
+        success: false,
+        versionId,
+        activatedRecordId: candidate.record.id,
+        error: "Version '" + versionId + "' already exists in the immutable ledger"
+      };
     }
 
     if (candidate.metadata.verificationStatus !== 'VERIFIED') {
