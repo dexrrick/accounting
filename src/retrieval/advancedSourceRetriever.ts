@@ -1,4 +1,5 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
 import {
   type ISourceRetriever,
   type SourceRetrievalQuery
@@ -114,9 +115,10 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
 
   public findSourcesByStandardOrAct(
     standardOrActCode: string,
-    paragraphOrSection?: string
+    paragraphOrSection?: string,
+    admissionOptions: SharedDocumentAdmissionOptions = {}
   ): AuthoritativeSourceRecord[] {
-    return this.compositeRetriever.findSourcesByStandardOrAct(standardOrActCode, paragraphOrSection);
+    return this.compositeRetriever.findSourcesByStandardOrAct(standardOrActCode, paragraphOrSection, admissionOptions);
   }
 
   /**

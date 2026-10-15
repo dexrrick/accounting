@@ -25,6 +25,7 @@ import { computeMasRegulatoryPackageHash, type MasDocumentRetrievalMetadata } fr
 import type { OfficialDocumentExtractionRequest } from './officialDocumentExtractor';
 import { extractOfficialDocumentFromRetrieved } from './officialDocumentExtractor';
 import type { ControlledFetchResult } from './controlledWebRetriever';
+import { getSingaporeDateString } from '../utils/dateUtils';
 
 export interface AmendmentSummary {
   recordId: string;
@@ -197,7 +198,7 @@ export class LiveRegulatoryFeedService {
   private activePackages: Map<string, RegulatoryUpdatePackage> = new Map();
   // Rejected packages: packageId -> reason
   private rejectedPackages: Map<string, string> = new Map();
-  private packageApprovals: Map<string, { packageHash: string; reviewer: string; reason: string }> = new Map();
+  private packageApprovals: Map<string, { packageHash: string; reviewer: string; reason: string; approvedAt: string }> = new Map();
   private packageVersionIds: Map<string, Map<string, string>> = new Map();
   private packageCandidateSnapshots = new Map<string, Map<string, { record: AuthoritativeSourceRecord; metadata: SourceVersionMetadata }>>();
   private packageRegistrySnapshots: Map<string, Record<string, AuthoritativeSourceRecord | null>> = new Map();
@@ -549,7 +550,19 @@ export class LiveRegulatoryFeedService {
         sourceLocator: rec.sourceLocator
       };
 
-      this.versioningManager.registerCandidateVersion(rec, metadata);
+      const requiresDocumentAdmission = stagedPackage.authority === 'MAS' && Boolean(stagedPackage.extractionRequests?.[rec.id]);
+      const candidateRecord = requiresDocumentAdmission ? { ...rec, documentAdmissionRequired: true as const } : rec;
+      if (requiresDocumentAdmission) {
+        Object.assign(metadata, {
+          documentAdmissionRequired: true as const,
+          documentAdmissionPackageId: stagedPackage.packageId,
+          documentAdmissionPackageHash: stagedPackage.packageHash,
+          governingAuthority: rec.authority,
+          domain: rec.domain
+        });
+      }
+
+      this.versioningManager.registerCandidateVersion(candidateRecord, metadata);
       if (stagedPackage.authority === 'MAS') {
         const candidate = this.versioningManager.getCandidates().find(item => item.metadata.versionId === versionId);
         if (!candidate) return { success: false, packageId: stagedPackage.packageId, stagedRecordsCount: 0, error: `MAS candidate '${versionId}' was not registered` };
@@ -885,7 +898,12 @@ export class LiveRegulatoryFeedService {
       this.verifiedPackages.delete(packageId);
       return false;
     }
-    this.packageApprovals.set(packageId, { packageHash: currentHash, reviewer: reviewer.trim(), reason: reason.trim() });
+    this.packageApprovals.set(packageId, {
+      packageHash: currentHash,
+      reviewer: reviewer.trim(),
+      reason: reason.trim(),
+      approvedAt: new Date().toISOString()
+    });
     this.recordAuditEvent(packageId, 'APPROVED', reviewer.trim(), reason.trim());
     return true;
   }
@@ -966,6 +984,16 @@ export class LiveRegulatoryFeedService {
 
     for (const rec of pkg.updates) {
       const versionId = this.packageVersionIds.get(pkg.packageId)?.get(rec.id) || `${pkg.packageId}-${rec.id}`;
+      if (pkg.authority === 'MAS' && (!masApproval || !this.versioningManager.recordDocumentReviewApproval(versionId, {
+        packageId: pkg.packageId,
+        packageHash: masApproval.packageHash,
+        reviewer: masApproval.reviewer,
+        reason: masApproval.reason,
+        approvedAt: masApproval.approvedAt
+      }))) {
+        activationError = `Failed to bind explicit document review approval to record '${rec.id}'`;
+        break;
+      }
       const actResult = this.versioningManager.activateVersion(versionId);
       if (!actResult.success) {
         activationError = `Failed to activate record '${rec.id}': ${actResult.error}`;
@@ -983,7 +1011,17 @@ export class LiveRegulatoryFeedService {
         sourceStatus: 'VERIFIED',
         sourceType: rec.sourceType,
         evidenceTier: rec.evidenceTier,
-        ...(pkg.authority === 'MAS' ? { lifecycleState: 'ACTIVE' as const, groundingEligible: false } : {})
+        ...(pkg.authority === 'MAS' ? {
+          lifecycleState: 'ACTIVE' as const,
+          documentAdmissionRequired: true as const,
+          groundingEligible: true,
+          lastVerifiedDate: masApproval ? getSingaporeDateString(new Date(masApproval.approvedAt)) : undefined,
+          verificationMethod: 'OFFICIAL_STATUTORY_PACKAGE_VERIFICATION',
+          urlVerificationStatus: 'VERIFIED' as const,
+          urlVerifiedDate: masApproval ? getSingaporeDateString(new Date(masApproval.approvedAt)) : undefined,
+          urlVerificationMethod: 'OFFICIAL_STATUTORY_PACKAGE_VERIFICATION',
+          urlVerificationEvidence: `Document URL and byte-bound package verified before reviewer approval (${versionId})`
+        } : {})
       };
 
       UNIFIED_SOURCE_REGISTRY[rec.id] = activeRecord;
