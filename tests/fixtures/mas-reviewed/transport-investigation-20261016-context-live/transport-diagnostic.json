@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "mode": "browser-context",
+  "status": "BLOCKED",
+  "previewOrigin": null,
+  "documents": [
+    {
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+      "requestedUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "requestContext": "browser-like-headers-no-session",
+      "originResponses": [
+        {
+          "request": {
+            "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "method": "GET",
+            "context": "browser-like-headers-no-session",
+            "credentialsPolicy": "omit",
+            "headers": {
+              "accept": "application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1",
+              "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+              "referer": "https://www.mas.gov.sg/",
+              "x-official-source-response-mode": "document"
+            }
+          },
+          "response": {
+            "status": 200,
+            "statusText": "OK",
+            "responseUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "contentType": "text/html; charset=utf-8",
+            "location": null,
+            "headers": {
+              "content-type": "text/html; charset=utf-8",
+              "cache-control": "private,no-cache",
+              "date": "Thu, 15 Oct 2026 22:34:49 GMT"
+            },
+            "bodyBytesObserved": 265375,
+            "bodyLengthComplete": true,
+            "bodySha256": "f4dd7ec6de460037ba87acdae577f3a7ca269462937fea90ea3ddacf03cc533a",
+            "bodyHashScope": "complete-entity"
+          }
+        }
+      ],
+      "proxyExchanges": [],
+      "redirectsObserved": 0,
+      "redirectTrace": {
+        "visibility": "manual-response-trace",
+        "internalRedirectHops": null,
+        "responseUrlChangedWithoutRedirect": false,
+        "finalResponseUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "note": "Manual redirect responses are recorded; a changed response.url without a 3xx is reported separately."
+      },
+      "retrieval": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "contentType": "text/html; charset=utf-8",
+        "error": null
+      },
+      "capture": {
+        "bodyFile": "01-MAS_FUND_MANAGEMENT_LICENSING_RECHECK.body.gz",
+        "bodyBytes": 265375,
+        "bodySha256": "f4dd7ec6de460037ba87acdae577f3a7ca269462937fea90ea3ddacf03cc533a",
+        "extractionStatus": "REJECTED"
+      }
+    },
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "requestedUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+      "requestContext": "browser-like-headers-no-session",
+      "originResponses": [
+        {
+          "request": {
+            "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+            "method": "GET",
+            "context": "browser-like-headers-no-session",
+            "credentialsPolicy": "omit",
+            "headers": {
+              "accept": "application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1",
+              "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+              "referer": "https://www.mas.gov.sg/",
+              "x-official-source-response-mode": "document"
+            }
+          },
+          "response": {
+            "status": 200,
+            "statusText": "OK",
+            "responseUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+            "contentType": "application/pdf",
+            "location": null,
+            "headers": {
+              "content-type": "application/pdf",
+              "last-modified": "Thu, 26 Jun 2025 09:14:46 GMT",
+              "cache-control": "private, max-age=604800,no-cache",
+              "date": "Thu, 15 Oct 2026 22:34:49 GMT"
+            },
+            "bodyBytesObserved": 208660,
+            "bodyLengthComplete": true,
+            "bodySha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+            "bodyHashScope": "complete-entity"
+          }
+        }
+      ],
+      "proxyExchanges": [],
+      "redirectsObserved": 0,
+      "redirectTrace": {
+        "visibility": "manual-response-trace",
+        "internalRedirectHops": null,
+        "responseUrlChangedWithoutRedirect": false,
+        "finalResponseUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "note": "Manual redirect responses are recorded; a changed response.url without a 3xx is reported separately."
+      },
+      "retrieval": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "application/pdf",
+        "error": null
+      },
+      "capture": {
+        "bodyFile": "02-MAS_IID_04_2025_RECHECK.body.gz",
+        "bodyBytes": 208660,
+        "bodySha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "extractionStatus": "REJECTED"
+      }
+    }
+  ]
+}

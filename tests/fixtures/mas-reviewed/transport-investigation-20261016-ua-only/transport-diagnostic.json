@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "mode": "direct",
+  "status": "BLOCKED",
+  "previewOrigin": null,
+  "documents": [
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "requestedUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+      "requestContext": "node-direct",
+      "originResponses": [
+        {
+          "request": {
+            "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+            "method": "GET",
+            "context": "node-direct",
+            "credentialsPolicy": "omit",
+            "headers": {
+              "accept": "application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1",
+              "x-official-source-response-mode": "document"
+            }
+          },
+          "response": {
+            "status": 200,
+            "statusText": "OK",
+            "responseUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+            "contentType": "application/pdf",
+            "location": null,
+            "headers": {
+              "content-type": "application/pdf",
+              "last-modified": "Thu, 26 Jun 2025 09:14:46 GMT",
+              "cache-control": "private, max-age=604800,no-cache",
+              "date": "Thu, 15 Oct 2026 22:35:38 GMT"
+            },
+            "bodyBytesObserved": 208660,
+            "bodyLengthComplete": true,
+            "bodySha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+            "bodyHashScope": "complete-entity"
+          }
+        }
+      ],
+      "proxyExchanges": [],
+      "redirectsObserved": 0,
+      "redirectTrace": {
+        "visibility": "manual-response-trace",
+        "internalRedirectHops": null,
+        "responseUrlChangedWithoutRedirect": false,
+        "finalResponseUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "note": "Manual redirect responses are recorded; a changed response.url without a 3xx is reported separately."
+      },
+      "retrieval": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "application/pdf",
+        "error": null
+      },
+      "capture": {
+        "bodyFile": "01-MAS_IID_04_2025_RECHECK.body.gz",
+        "bodyBytes": 208660,
+        "bodySha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "extractionStatus": "REJECTED"
+      }
+    }
+  ]
+}

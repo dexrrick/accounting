@@ -250,7 +250,8 @@ function extractVisiblePageText(rawDocument: string, requireSubstantiveBody = fa
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
     .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
-  const contentMatch = withoutChrome.match(/<(?:main|article)\b[^>]*>([\s\S]*?)<\/(?:main|article)\s*>/i);
+  const contentMatch = withoutChrome.match(/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i) ||
+    withoutChrome.match(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
   if (requireSubstantiveBody) {
