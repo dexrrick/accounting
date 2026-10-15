@@ -22,7 +22,6 @@ const request = {
   standardOrActCode: 'MAS-IID-04-2025',
   legalOrStandardInstrument: 'MAS Circular IID 04/2025',
   documentKind: 'PDF',
-  sectionHeading: 'Substantive Fund Management Activity',
   expectedTopic: {
     standardIdentifiers: ['IID 04/2025'],
     expectedTitles: ['GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES'],
@@ -86,6 +85,9 @@ assert.equal(record.sourcePublisher, 'Monetary Authority of Singapore');
 assert.match(record.documentTitle.toLowerCase(), /governance and management of variable capital companies/);
 assert.ok(record.sourceText.trim().length > 20, 'real circular passage must contain substantive text');
 assert.ok(/\bVCCs?\b|fund management/i.test(record.sourceText), 'selected text must retain substantive circular identity');
+assert.match(record.sourceText, /2 MAS carried out a thematic review of VCCs and their managers in 2024/);
+assert.match(record.sourceText, /Section 15\(1\) of the Variable Capital Companies Act 2018/,
+  'the full-document replay retains the circular footnotes');
 assert.equal(record.documentHash, capture.documentHash);
 assert.equal(record.sourceLocator.pageCount, 5);
 assert.equal(record.sourceLocator.tableStructure, 'AMBIGUOUS');
@@ -118,18 +120,18 @@ const admission = verifySharedDocumentAdmission({ ...record, documentAdmissionRe
 assert.equal(admission.required, true);
 assert.equal(admission.admitted, false);
 
-class StructuralReplayRetriever extends ControlledWebRetriever {
+class ActualCaptureRetriever extends ControlledWebRetriever {
   fetchedUrls = [];
 
   async fetchOfficialDocument(url) {
     this.fetchedUrls.push(url);
     assert.equal(url, REQUEST_URL);
-    return structuredClone(structuralReplayEnvelope);
+    return structuredClone(actualCaptureEnvelope);
   }
 }
 
 const registryBefore = structuredClone(UNIFIED_SOURCE_REGISTRY);
-const retriever = new StructuralReplayRetriever();
+const retriever = new ActualCaptureRetriever();
 const adapter = new MASDocumentUpdateAdapter([{
   recordId: RECORD_ID,
   extractionRequest: request,
@@ -139,7 +141,7 @@ const service = new LiveRegulatoryFeedService(versioning, undefined, retriever, 
 const updateCheck = await service.checkForUpdates();
 assert.deepEqual(retriever.fetchedUrls, [REQUEST_URL]);
 assert.equal(updateCheck.hasUpdates, false);
-assert.deepEqual(updateCheck.packages, [], 'PARTIAL ambiguous extraction cannot become an update package');
+assert.deepEqual(updateCheck.packages, [], 'the actual capture has no HTTP status, MIME type, or verified final URL');
 assert.deepEqual(service.getStagedPackages(), []);
 assert.deepEqual(service.getVerifiedPackages(), []);
 assert.deepEqual(service.getActivePackages(), []);

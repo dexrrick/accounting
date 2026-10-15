@@ -28,13 +28,37 @@ interface PositionedTextItem {
   x: number;
   y: number;
   width: number;
+  contentId?: string;
+}
+
+interface InternalPdfTextLine extends PdfTextLine {
+  itemCells: PositionedTextItem[][];
+}
+
+interface PdfStructureNode {
+  type?: string;
+  role?: string;
+  id?: string;
+  children?: PdfStructureNode[];
+}
+
+interface PdfStructureBinding {
+  paragraphId?: string;
+  listItemId?: string;
+  listRegion?: 'Lbl' | 'LBody';
+  inTable: boolean;
+}
+
+interface PdfBlockOwner {
+  kind: 'P' | 'LI';
+  id: string;
 }
 
 const DEFAULT_MAX_PAGES = 150;
 const DEFAULT_MAX_TEXT_CHARACTERS = 1_000_000;
 const PDF_TIMEOUT_MS = 15_000;
 
-function groupPositionedTextIntoLines(items: PositionedTextItem[], pageNumber: number): PdfTextLine[] {
+function groupPositionedTextIntoLines(items: PositionedTextItem[], pageNumber: number): InternalPdfTextLine[] {
   const sorted = [...items].sort((left, right) => right.y - left.y || left.x - right.x);
   const rows: Array<{ y: number; items: PositionedTextItem[] }> = [];
   for (const item of sorted) {
@@ -46,27 +70,209 @@ function groupPositionedTextIntoLines(items: PositionedTextItem[], pageNumber: n
     const rowItems = row.items.sort((left, right) => left.x - right.x);
     const cells: string[] = [];
     const cellStarts: number[] = [];
+    const itemCells: PositionedTextItem[][] = [];
     let current = '';
     let currentStart = rowItems[0]?.x ?? 0;
     let previousRight = rowItems[0]?.x ?? 0;
+    let currentItems: PositionedTextItem[] = [];
     for (const item of rowItems) {
       const gap = item.x - previousRight;
       if (current && gap >= 22) {
         cells.push(current.trim());
         cellStarts.push(currentStart);
+        itemCells.push(currentItems);
         current = item.text;
         currentStart = item.x;
+        currentItems = [item];
       } else {
         current += current && !/\s$/.test(current) && !/^\s/.test(item.text) ? ` ${item.text}` : item.text;
+        currentItems.push(item);
       }
       previousRight = Math.max(item.x + item.width, item.x);
     }
     if (current.trim()) {
       cells.push(current.trim());
       cellStarts.push(currentStart);
+      itemCells.push(currentItems);
     }
-    return { text: cells.join(' | '), pageNumber, y: row.y, cells, cellStarts };
+    return { text: cells.join(' | '), pageNumber, y: row.y, cells, cellStarts, itemCells };
   }).filter(line => line.text.length > 0);
+}
+
+function indexPdfStructureTree(value: unknown): Map<string, PdfStructureBinding> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const bindings = new Map<string, PdfStructureBinding>();
+  let nextNodeId = 0;
+  let malformed = false;
+  const tableRoles = new Set(['Table', 'TR', 'TD', 'TH']);
+
+  const visit = (rawNode: unknown, path: Array<{ role: string; id: string }>): void => {
+    if (!rawNode || typeof rawNode !== 'object' || Array.isArray(rawNode)) {
+      malformed = true;
+      return;
+    }
+    const node = rawNode as PdfStructureNode;
+    if ((node.role !== undefined && typeof node.role !== 'string') ||
+        (node.type !== undefined && typeof node.type !== 'string') ||
+        (node.id !== undefined && typeof node.id !== 'string') ||
+        (node.children !== undefined && !Array.isArray(node.children))) {
+      malformed = true;
+      return;
+    }
+    const nodePath = node.role ? [...path, { role: node.role, id: `node-${nextNodeId++}` }] : path;
+    if (node.type === 'content') {
+      if (!node.id || bindings.has(node.id) || (node.children && node.children.length > 0)) {
+        malformed = true;
+        return;
+      }
+      const paragraph = [...nodePath].reverse().find(entry => entry.role === 'P');
+      const listItem = [...nodePath].reverse().find(entry => entry.role === 'LI');
+      const listItemIndex = listItem ? nodePath.lastIndexOf(listItem) : -1;
+      const listRegion = listItemIndex >= 0
+        ? [...nodePath.slice(listItemIndex + 1)].reverse().find(entry => entry.role === 'Lbl' || entry.role === 'LBody')?.role as 'Lbl' | 'LBody' | undefined
+        : undefined;
+      bindings.set(node.id, {
+        paragraphId: paragraph?.id,
+        listItemId: listItem?.id,
+        listRegion,
+        inTable: nodePath.some(entry => tableRoles.has(entry.role))
+      });
+    } else if (node.type !== undefined && node.type !== 'annotation') {
+      malformed = true;
+      return;
+    }
+    for (const child of node.children || []) visit(child, nodePath);
+  };
+
+  visit(value, []);
+  return malformed ? undefined : bindings;
+}
+
+function ownerForCell(
+  cellItems: PositionedTextItem[] | undefined,
+  bindings: Map<string, PdfStructureBinding>,
+  kind: 'P' | 'LI',
+  requiredListRegion?: 'Lbl' | 'LBody'
+): PdfBlockOwner | undefined {
+  if (!cellItems?.length) return undefined;
+  let ownerId: string | undefined;
+  for (const item of cellItems) {
+    if (!item.contentId || !Number.isFinite(item.x) || !Number.isFinite(item.width) || item.width < 0) return undefined;
+    const binding = bindings.get(item.contentId);
+    if (!binding || binding.inTable) return undefined;
+    if (kind === 'P' && binding.listItemId) return undefined;
+    const candidateId = kind === 'P' ? binding.paragraphId : binding.listItemId;
+    if (!candidateId || (kind === 'LI' && binding.listRegion !== requiredListRegion)) return undefined;
+    if (ownerId !== undefined && ownerId !== candidateId) return undefined;
+    ownerId = candidateId;
+  }
+  return ownerId ? { kind, id: ownerId } : undefined;
+}
+
+function itemBelongsToOwner(item: PositionedTextItem, owner: PdfBlockOwner, bindings: Map<string, PdfStructureBinding>): boolean {
+  if (!item.contentId) return false;
+  const binding = bindings.get(item.contentId);
+  if (!binding || binding.inTable) return false;
+  return owner.kind === 'P' ? binding.paragraphId === owner.id : binding.listItemId === owner.id;
+}
+
+function lineIsOwnedBy(
+  line: InternalPdfTextLine,
+  owner: PdfBlockOwner,
+  bindings: Map<string, PdfStructureBinding>,
+  listRegion?: 'Lbl' | 'LBody'
+): boolean {
+  const items = line.itemCells.flat();
+  return items.length > 0 && items.every(item => {
+    if (!itemBelongsToOwner(item, owner, bindings)) return false;
+    return owner.kind !== 'LI' || bindings.get(item.contentId!)?.listRegion === listRegion;
+  });
+}
+
+function isStandaloneListMarker(value: string): boolean {
+  const marker = value.trim();
+  return /^(?:\d{1,3}[.)]?|\(?[A-Za-z][.)]?\)?|\(?[ivxlcdm]{1,8}[.)]\)?)$/i.test(marker);
+}
+
+function isUppercaseHeading(value: string): boolean {
+  const trimmed = value.trim();
+  const letters = trimmed.match(/[A-Za-z]/g);
+  return trimmed.length >= 8 && (trimmed.match(/\S+/g)?.length || 0) >= 2 &&
+    Boolean(letters?.length) && letters!.every(letter => letter === letter.toUpperCase());
+}
+
+function fullWidthContinuation(
+  line: InternalPdfTextLine,
+  owner: PdfBlockOwner,
+  bindings: Map<string, PdfStructureBinding>,
+  expectedStart: number
+): boolean {
+  if (line.cells.length !== 1 || !lineIsOwnedBy(line, owner, bindings, owner.kind === 'LI' ? 'LBody' : undefined)) return false;
+  const items = line.itemCells[0];
+  const start = Math.min(...items.map(item => item.x));
+  const right = Math.max(...items.map(item => item.x + item.width));
+  return Math.abs(start - expectedStart) <= 12 && right - start >= 160 &&
+    line.cells[0].split(/\s+/).filter(Boolean).length >= 8;
+}
+
+function reflowTaggedParagraphs(lines: InternalPdfTextLine[], bindings: Map<string, PdfStructureBinding> | undefined): void {
+  if (!bindings?.size) return;
+  const owners = new Map<string, { owner: PdfBlockOwner; lines: Set<InternalPdfTextLine> }>();
+  for (const line of lines) {
+    for (const item of line.itemCells.flat()) {
+      if (!item.contentId) continue;
+      const binding = bindings.get(item.contentId);
+      if (binding?.paragraphId) {
+        const key = `P:${binding.paragraphId}`;
+        const entry = owners.get(key) || { owner: { kind: 'P' as const, id: binding.paragraphId }, lines: new Set<InternalPdfTextLine>() };
+        entry.lines.add(line);
+        owners.set(key, entry);
+      }
+      if (binding?.listItemId) {
+        const key = `LI:${binding.listItemId}`;
+        const entry = owners.get(key) || { owner: { kind: 'LI' as const, id: binding.listItemId }, lines: new Set<InternalPdfTextLine>() };
+        entry.lines.add(line);
+        owners.set(key, entry);
+      }
+    }
+  }
+
+  for (const { owner, lines: blockLineSet } of owners.values()) {
+    const blockLines = [...blockLineSet];
+    const markerCandidates = blockLines.filter(line => {
+      if (line.cells.length !== 2 || !isStandaloneListMarker(line.cells[0]) || line.cells[1].trim().length < 20) return false;
+      const markerStart = line.cellStarts[0];
+      const bodyStart = line.cellStarts[1];
+      const markerRight = Math.max(...line.itemCells[0].map(item => item.x + item.width));
+      const gutter = bodyStart - markerRight;
+      if (!Number.isFinite(markerStart) || !Number.isFinite(bodyStart) || !Number.isFinite(gutter) ||
+          gutter < 0 || gutter > 48 || bodyStart - markerStart > 48) return false;
+      const paragraphMarker = ownerForCell(line.itemCells[0], bindings, 'P');
+      const paragraphBody = ownerForCell(line.itemCells[1], bindings, 'P');
+      if (owner.kind === 'P' && paragraphMarker?.id === owner.id && paragraphBody?.id === owner.id) return true;
+      const listLabel = ownerForCell(line.itemCells[0], bindings, 'LI', 'Lbl');
+      const listBody = ownerForCell(line.itemCells[1], bindings, 'LI', 'LBody');
+      return owner.kind === 'LI' && listLabel?.id === owner.id && listBody?.id === owner.id;
+    });
+    if (markerCandidates.length !== 1) continue;
+    const markerLine = markerCandidates[0];
+    const markerStart = markerLine.cellStarts[0];
+    const bodyText = markerLine.cells[1];
+    const continuations = blockLines.filter(line => line !== markerLine);
+    const letterHeading = owner.kind === 'P' && /^[A-Z][.)]?$/.test(markerLine.cells[0].trim()) &&
+      isUppercaseHeading(bodyText) && blockLines.length === 1;
+    const expectedContinuationStart = markerStart;
+    if (!letterHeading && (!continuations.length || continuations.some(line =>
+      !fullWidthContinuation(line, owner, bindings, expectedContinuationStart) ||
+      /^(?:\d{1,3}|[A-Za-z]|[ivxlcdm]{1,8})(?:[.)])?\s+\S/.test(line.cells[0])
+    ))) continue;
+    if (blockLines.some(line => line !== markerLine && line.cells.length !== 1)) continue;
+    const combinedText = `${markerLine.cells[0]} ${bodyText}`.trim();
+    markerLine.cells = [combinedText];
+    markerLine.cellStarts = [markerStart];
+    markerLine.itemCells = [[...markerLine.itemCells[0], ...markerLine.itemCells[1]]];
+    markerLine.text = combinedText;
+  }
 }
 
 function assessTableStructure(lines: PdfTextLine[]): { detected: boolean; structure: PdfTextExtraction['tableStructure'] } {
@@ -151,9 +357,43 @@ export async function extractPdfDocumentText(
     let characters = 0;
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
       const page = await document.getPage(pageNumber);
-      const content = await page.getTextContent({ includeMarkedContent: false });
+      const content = await page.getTextContent({ includeMarkedContent: true });
+      let structureBindings: Map<string, PdfStructureBinding> | undefined;
+      try {
+        structureBindings = indexPdfStructureTree(await page.getStructTree());
+      } catch {
+        // Structure is optional evidence for reflow. If it is unavailable or
+        // malformed, retain the original visual layout and ambiguity result.
+      }
       const positioned: PositionedTextItem[] = [];
+      const contentIdStack: Array<string | undefined> = [];
+      const seenContentIds = new Set<string>();
+      let markedContentValid = true;
+      let activeContentId: string | undefined;
       for (const item of content.items) {
+        if ('type' in item) {
+          if (item.type === 'beginMarkedContent' || item.type === 'beginMarkedContentProps') {
+            contentIdStack.push(activeContentId);
+            if (item.type === 'beginMarkedContentProps' && (!('id' in item) ||
+                (item.id !== null && typeof item.id !== 'string'))) {
+              markedContentValid = false;
+            }
+            const contentId = 'id' in item && typeof item.id === 'string' ? item.id : undefined;
+            if (contentId && seenContentIds.has(contentId)) markedContentValid = false;
+            if (contentId) seenContentIds.add(contentId);
+            activeContentId = contentId;
+          } else if (item.type === 'endMarkedContent') {
+            if (!contentIdStack.length) {
+              markedContentValid = false;
+              activeContentId = undefined;
+            } else {
+              activeContentId = contentIdStack.pop();
+            }
+          } else {
+            markedContentValid = false;
+          }
+          continue;
+        }
         if (!('str' in item) || typeof item.str !== 'string' || !item.str.trim()) continue;
         const x = item.transform[4];
         const y = item.transform[5];
@@ -161,16 +401,18 @@ export async function extractPdfDocumentText(
         if (![x, y, width].every(Number.isFinite)) {
           throw new PdfDocumentExtractionError('PDF text has incomplete layout coordinates');
         }
-        positioned.push({ text: item.str, x, y, width });
+        positioned.push({ text: item.str, x, y, width, contentId: activeContentId });
       }
+      if (contentIdStack.length) markedContentValid = false;
       const pageLines = groupPositionedTextIntoLines(positioned, pageNumber);
+      reflowTaggedParagraphs(pageLines, markedContentValid ? structureBindings : undefined);
       const pageText = pageLines.map(line => line.text).join('\n').trim();
       if (!pageText) hasEmptyPageText = true;
       characters += pageText.length;
       if (characters > characterLimit) {
         throw new PdfDocumentExtractionError('PDF extracted text exceeded the supported character limit');
       }
-      lines.push(...pageLines);
+      lines.push(...pageLines.map(({ itemCells: _itemCells, ...line }) => line));
       pageTexts.push(pageText);
       page.cleanup();
     }

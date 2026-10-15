@@ -83,6 +83,8 @@ const testSuites = [
   { name: 'Official Source Failure Safety', file: 'test_official_source_failure_safety.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Official Source Same-Origin Proxy & Feedback Diagnostics', file: 'test_official_source_proxy.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Shared Official Document Extraction', file: 'test_official_document_extraction.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Controlled Official Document Capture', file: 'test_official_document_capture.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Tagged PDF Paragraph Geometry', file: 'test_pdf_tagged_paragraphs.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'MAS Byte-backed Regulatory Update Lifecycle', file: 'test_mas_regulatory_lifecycle.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Reviewed MAS Source Response Captures', file: 'test_reviewed_mas_documents.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Targeted MAS Exact-byte Acceptance Recheck', file: 'test_mas_targeted_acceptance.mjs', layer: 'regulatory-updates', tier: 'smoke' },

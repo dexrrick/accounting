@@ -746,6 +746,7 @@ export async function extractOfficialDocument(
     }
     const selected = selectPdfText(pdf, request);
     if (!selected) return reject('SECTION_BOUNDARY_UNVERIFIED', 'Requested PDF section was absent, duplicated, or lacked a verifiable end boundary');
+    if (selected.substantive === false) return reject('PDF_SECTION_NOT_SUBSTANTIVE', 'The selected PDF boundary contains only a heading or non-substantive content');
     sourceText = selected.text;
     locator = selected.locator;
     textForIdentity = pdf.pageTexts.join('\n');
