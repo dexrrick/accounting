@@ -1,29 +1,28 @@
 # 📊 IFRS & SFRS(I) Accounting Double-Entry Assistant
 
-An enterprise-grade, statutory-compliant dual-framework accounting application that translates complex natural language business transactions into balanced, audit-ready double-entry journal entries with paragraph citations from the **Accounting Standards Council (ASC) Singapore** and the **International Accounting Standards Board (IASB)**.
+An accounting assistant for **IFRS** and **Singapore SFRS(I)** scenarios. It interprets natural-language transactions, constructs and checks double-entry journal suggestions, and retrieves relevant accounting standards and Singapore statutory guidance. Coverage, evidence quality, and applicability depend on the question and available authoritative sources; outputs require professional review before use in financial reporting or regulatory filings.
 
 ---
 
 ## 🌟 Key Highlights
 
-* **Dual Framework Compliance**: Fully compliant with **Singapore Financial Reporting Standards (International) [SFRS(I)]** and **International Financial Reporting Standards [IFRS]**.
-* **Universal Dynamic Engine**: Extracts transaction facts (cost, trade discounts, loan principal, unexpired interest, GST, ROU assets, lease liabilities, spot rates) into standardized badges without requiring rigid scenario templates.
+* **Dual-Framework Support**: Models scenarios under **Singapore Financial Reporting Standards (International) [SFRS(I)]** and **International Financial Reporting Standards [IFRS]**, subject to scenario coverage and source verification.
+* **Scenario Interpretation**: Extracts relevant transaction facts (such as costs, discounts, financing, GST, leases, and FX rates), with deterministic accounting logic and AI-assisted interpretation where appropriate.
 * **Live Foreign Exchange Integration**: Fetches real-time spot exchange rates directly from the **European Central Bank (ECB)** via the **Frankfurter API**.
-* **Strict Double-Entry Equilibrium**: Automated mathematical verification ensures $\sum \text{Debits} == \sum \text{Credits}$ before rendering any ledger entries.
+* **Double-Entry Checks**: Validates debit/credit balance for generated journals. Balanced totals alone do not establish that the accounting treatment is correct.
 * **Singapore Localization**:
   * Date sequence strictly formatted as **`DD/MM/YYYY`** (e.g. `13/11/2026`, `01/04/2026`).
   * Singapore 9% GST tax treatment (IRAS input tax claimability and output tax on asset disposals/trade-ins).
   * Functional currency defaults to **SGD**.
-* **AI Model Selection**:
-  * **Gemini 3.5 Flash Lite** (Default - 500 requests/day quota).
-  * **Gemini 3.1 Flash Lite** (500 requests/day).
-  * **Gemini 3.8 Flash** (High-capacity reasoning - 20 requests/day).
+* **AI Provider Options**: Google Gemini, Azure OpenAI, OpenAI, and offline mode are represented in provider settings. Available models and usage limits depend on provider configuration and account entitlements; no fixed daily quotas are guaranteed by this repository.
 * **Accessibility & Ergonomics**: Default enlarged typography (17px base) with interactive font size adjustment controls (`A-`, `A`, `A+`) in the navigation bar.
 * **Screenshot attachments & Gemini vision**: Paste, drag/drop, or select up to five PNG, JPEG, or WEBP screenshots per message. Images are validated (10 MB each), downscaled in browser memory to a 2400 px maximum side, and are not persisted to localStorage. Gemini first extracts visible evidence and then applies the established accounting/source workflow; extracted evidence is displayed separately from the accounting conclusion. Feedback includes only attachment count and MIME types, never image content.
 
 ---
 
 ## 🏛️ Supported Statutory Accounting Scenarios
+
+The following are example scenario types represented in the application, not a guarantee of complete standards coverage or validated treatment for every fact pattern. Confirm the latest applicable authority guidance before relying on an answer.
 
 | Transaction Type | Standards Applied | Statutory Citation | Treatment Highlights |
 | :--- | :--- | :--- | :--- |
@@ -43,7 +42,7 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
 * **Styling**: [Tailwind CSS](https://tailwindcss.com/) (Modern Dark Enterprise Palette)
 * **Icons**: [Lucide React](https://lucide.dev/)
 * **Spot FX Rates**: [Frankfurter API](https://www.frankfurter.app/) (European Central Bank Reference)
-* **AI Cognitive Engine**: [Google Gemini API](https://ai.google.dev/) (Flash Lite & Flash Models)
+* **AI Integrations**: [Google Gemini API](https://ai.google.dev/), [OpenAI API](https://platform.openai.com/docs/), and Azure OpenAI; deterministic and offline paths are also present.
 
 ---
 
@@ -86,6 +85,18 @@ An enterprise-grade, statutory-compliant dual-framework accounting application t
    ```bash
    npm test
    ```
+
+### Development workflow
+
+The canonical Codex and contributor instructions are in [`AGENTS.md`](AGENTS.md). Keep this README focused on what the application does and how to run it; avoid duplicating detailed agent procedures here.
+
+- **Deliver working behaviour first.** Define the requested outcome and a few real-world examples; passing CI alone is not proof that accounting or statutory answers are correct.
+- **Keep scope small.** Reuse existing engines, statutory registries, retrieval, and verification paths. Avoid unrelated refactors, speculative abstractions, and unnecessary dependencies.
+- **Plan and review proportionately.** Make straightforward changes directly; use brief plans and independent reviews for work whose complexity or risk warrants them.
+- **Test according to impact.** Start with affected tests and `npm run test:smoke`; for substantive accounting changes use `npm run lint` and `npm run build`, and reserve `npm test` for broad or high-risk changes. Run live integration tests only when relevant.
+- **Respect ongoing work.** Do not redo completed CI fixes or investigations without a new failure, and avoid changing unrelated branches or PR workstreams.
+
+Statutory coverage and official-source discovery continue to evolve across IRAS, ACRA, CPF, MOM and MAS. Discovery of an official page is not, by itself, verified support for every claim or historical period. Review source evidence and representative questions before claiming production accuracy.
 
 ### Feedback delivery
 
