@@ -85,6 +85,7 @@ const testSuites = [
   { name: 'Shared Official Document Extraction', file: 'test_official_document_extraction.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'MAS Byte-backed Regulatory Update Lifecycle', file: 'test_mas_regulatory_lifecycle.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Reviewed MAS Source Response Captures', file: 'test_reviewed_mas_documents.mjs', layer: 'regulatory-updates', tier: 'smoke' },
+  { name: 'Targeted MAS Exact-byte Acceptance Recheck', file: 'test_mas_targeted_acceptance.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Shared Approved Document Admission & Citations', file: 'test_shared_document_admission.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Phase 7 Coverage Registry', file: 'test_phase7_coverage_registry.mjs', layer: 'coverage-governance', tier: 'full' },
   { name: 'Singapore Knowledge Routing Benchmark', file: 'test_singapore_knowledge_benchmark.mjs', layer: 'coverage-governance', tier: 'smoke' },

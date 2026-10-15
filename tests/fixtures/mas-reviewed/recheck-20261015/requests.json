@@ -1,0 +1,85 @@
+{
+  "reviewedOn": "2026-10-15",
+  "purpose": "Targeted rejection replay of four direct MAS document endpoint responses",
+  "requestStatus": "REJECTION_REPLAY_HYPOTHESES_ONLY",
+  "positiveLocatorsValidated": false,
+  "documents": [
+    {
+      "captureFile": "fund-management-licensing.maintenance.html.gz",
+      "title": "Fund Management Licensing",
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentKind": "HTML",
+        "sectionHeading": "What are the admission criteria and applicable requirements?",
+        "expectedTopic": {
+          "standardIdentifiers": ["Securities and Futures Act"],
+          "expectedTitles": ["Fund Management Licensing"],
+          "topicTerms": ["fund management", "licence"]
+        }
+      }
+    },
+    {
+      "captureFile": "iid-04-2025.maintenance.html.gz",
+      "title": "IID 04/2025 Governance and Management of Variable Capital Companies (VCCs)",
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "expectedTopic": {
+          "standardIdentifiers": ["IID 04/2025"],
+          "expectedTitles": ["GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"],
+          "topicTerms": ["VCC", "fund management"]
+        }
+      }
+    },
+    {
+      "captureFile": "cmi-02-2023.maintenance.html.gz",
+      "title": "CMI 02/2023 Observations from Inspections of Licensed Venture Capital Fund Managers",
+      "recordId": "MAS_CMI_02_2023_RECHECK",
+      "requestBasis": "Provisional title and section expectation; no exact circular content was available to validate a positive locator.",
+      "request": {
+        "url": "https://www.mas.gov.sg/regulation/circulars/cmi-02-2023-observations-from-inspections-of-licensed-venture-capital-fund-managers",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-CMI-02-2023",
+        "legalOrStandardInstrument": "MAS Circular CMI 02/2023",
+        "documentKind": "HTML",
+        "sectionHeading": "Observations from Inspections of Licensed Venture Capital Fund Managers",
+        "expectedTopic": {
+          "standardIdentifiers": ["CMI 02/2023"],
+          "expectedTitles": ["Observations from Inspections of Licensed Venture Capital Fund Managers"],
+          "topicTerms": ["venture capital fund managers", "inspections"]
+        }
+      }
+    },
+    {
+      "captureFile": "sfa-04-g05-jan2025.maintenance.html.gz",
+      "title": "Guidelines on Licensing and Conduct of Business for Fund Management Companies",
+      "recordId": "MAS_SFA_04_G05_JAN2025_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidelines/cmg/guideline-sfa-04-g05-on-licensing-registration-and-conduct-of-business-for-fund-managers/sfa--guidelines-on-licensing-and-conduct-of-business-for-fmcs-10jan2025.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "SFA 04-G05",
+        "legalOrStandardInstrument": "Guidelines on Licensing and Conduct of Business for Fund Management Companies",
+        "documentKind": "PDF",
+        "sectionHeading": "1 Purpose",
+        "expectedTopic": {
+          "standardIdentifiers": ["SFA 04-G05"],
+          "expectedTitles": ["Guidelines on Licensing and Conduct of Business for Fund Management Companies"],
+          "topicTerms": ["fund managers", "licensing", "conduct of business"]
+        }
+      }
+    }
+  ]
+}
