@@ -32,21 +32,33 @@ For narrow tasks, remain narrow.
 
 ---
 
+## Delivery-first execution
+
+- Define the concrete user-facing behaviour and a few representative acceptance cases before implementation. Deliver the smallest working end-to-end change, not merely a passing test.
+- For straightforward changes, implement directly without a formal plan. For complex or cross-cutting work, make a short plan limited to essential steps; do not expand scope or redesign architecture without a demonstrated need.
+- Do not add speculative abstractions, fallback chains, defensive layers, documentation, or test infrastructure unrelated to the requested outcome.
+- Do not introduce placeholder responses, hard-coded test-specific behaviour, suppressed checks, or cosmetic fixes that make CI green without correcting the underlying behaviour.
+- Verify affected real-world scenarios and relevant regressions proportionately. A green CI result alone does not establish accounting or statutory correctness; preserve necessary source, security, and accounting guardrails.
+- Respect active branches and PR work. Do not redo completed CI repairs, investigations, or validations unless a new change or reproducible failure warrants it.
+- Keep handoff concise: actual behaviour delivered, files changed, checks performed, and limitations. Stop when the requested work is complete.
+
+---
 
 ## Subagent workflow
 
-For substantial coding or repository tasks:
+Use subagents when a task's complexity, risk, or independent workstreams justify their overhead. For straightforward or documentation-only work, make the edit directly without mandatory delegation or independent review.
+
+For tasks that warrant subagents:
 
 1. Act as the supervisor in the main session.
-2. Inspect the repository and relevant project instructions before changing code.
-3. Understand the requirement and form a concrete implementation plan first.
+2. Inspect only relevant files and project instructions before changing code.
+3. Make a brief implementation plan when needed; avoid prolonged planning for clear requirements.
 4. Keep architecture, ambiguous requirements, difficult debugging, integration decisions, and final verification with the supervisor.
-5. Delegate clearly scoped implementation work to the `builder` custom agent.
-6. After implementation, delegate an independent review to the `reviewer` custom agent.
-7. Review the builder and reviewer outputs yourself before declaring completion.
-8. If review finds straightforward issues, delegate the fixes back to `builder`.
-9. If review finds an architectural or ambiguous issue, resolve it in the supervisor session before further implementation.
-10. Run the repository's appropriate targeted tests, type checks, linters, or validation before declaring the task complete.
+5. Delegate clearly scoped implementation work to the `builder` custom agent when doing so is useful.
+6. Delegate independent review to the `reviewer` custom agent for nontrivial or high-risk changes where it adds meaningful assurance.
+7. Review delegated outputs yourself before declaring completion.
+8. If review finds straightforward issues, assign targeted fixes to `builder`; resolve architectural ambiguity before further implementation.
+9. Run the appropriate targeted tests, type checks, linters, or validation for the actual change, following the Tests section.
 
 ### Delegation rules
 
