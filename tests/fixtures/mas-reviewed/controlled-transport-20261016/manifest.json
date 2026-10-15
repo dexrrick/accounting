@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "status": "BLOCKED",
+  "documents": [
+    {
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentKind": "HTML",
+        "sectionHeading": "What are the admission criteria and applicable requirements?",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "Securities and Futures Act"
+          ],
+          "expectedTitles": [
+            "Fund Management Licensing"
+          ],
+          "topicTerms": [
+            "fund management",
+            "licence"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "contentType": "text/html",
+        "retrievedAt": "2026-10-15T21:37:42.316Z",
+        "contentHash": "a7c1e212491dec13d913ad230f1d06275116ccb5fbbb372318140816be9a1d0e",
+        "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+        "lastModified": null,
+        "error": null
+      },
+      "bodyFile": "01-MAS_FUND_MANAGEMENT_LICENSING_RECHECK.body.gz",
+      "bodyBytes": 854826,
+      "integrity": {
+        "computedSha256": "a7c1e212491dec13d913ad230f1d06275116ccb5fbbb372318140816be9a1d0e",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "REJECTED",
+        "code": "HTML_SECTION_UNVERIFIED",
+        "reason": "Requested HTML section was absent, duplicated, or lacked an exact structural boundary"
+      },
+      "candidateRecord": null
+    },
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "IID 04/2025"
+          ],
+          "expectedTitles": [
+            "GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"
+          ],
+          "topicTerms": [
+            "VCC",
+            "fund management"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "text/html",
+        "retrievedAt": "2026-10-15T21:37:42.920Z",
+        "contentHash": "3eb1f9c8a865761839f18f6d16c73cfe1c226bb89039ddf3ce4ce652dd548dfa",
+        "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+        "lastModified": null,
+        "error": null
+      },
+      "bodyFile": "02-MAS_IID_04_2025_RECHECK.body.gz",
+      "bodyBytes": 853815,
+      "integrity": {
+        "computedSha256": "3eb1f9c8a865761839f18f6d16c73cfe1c226bb89039ddf3ce4ce652dd548dfa",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "REJECTED",
+        "code": "DOCUMENT_KIND_MISMATCH",
+        "reason": "Expected PDF, received HTML"
+      },
+      "candidateRecord": null
+    }
+  ]
+}

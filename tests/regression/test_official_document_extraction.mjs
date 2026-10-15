@@ -259,6 +259,31 @@ async function main() {
   assert.equal(tableOnlyResult.record.extractionStatus, 'EXACT');
   assert.doesNotMatch(tableOnlyResult.record.sourceText, /Central Provident Fund Act 1953/);
 
+  const headingOnlyPdf = createTwoPagePdf({
+    title: 'CPF Employer Contributions Schedule',
+    identityLine: 'Central Provident Fund Act 1953 governs employer contributions.',
+    bodyLines: [
+      'This document states the employer contributions payable for eligible employees.',
+      'The schedule below shows contribution rates by employee age band.'
+    ],
+    pageTwoHeading: 'Employer contributions by age band',
+    tableHeaders: ['', ''],
+    tableRows: []
+  });
+  const pdfHeadingOnlyRetriever = new ControlledWebRetriever();
+  const headingOnlyPdfResult = await extractOfficialDocument({
+    ...cpfPdfRequest,
+    sectionHeading: 'Employer contributions by age band'
+  }, {
+    fetchOfficialDocument: (url, options) => pdfHeadingOnlyRetriever.fetchOfficialDocument(url, {
+      ...options,
+      timeoutMs: 1_000,
+      customFetch: async () => new Response(headingOnlyPdf, { status: 200, headers: { 'content-type': 'application/pdf' } })
+    })
+  });
+  assert.equal(headingOnlyPdfResult.status, 'REJECTED');
+  assert.equal(headingOnlyPdfResult.code, 'PDF_SECTION_NOT_SUBSTANTIVE');
+
   const syntheticMasPdf = createTwoPagePdf({
     title: 'Synthetic MAS Notice M-TEST-001: Regulatory Reporting',
     identityLine: 'Monetary Authority of Singapore Synthetic Notice M-TEST-001.',
