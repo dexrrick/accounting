@@ -46,6 +46,24 @@ function selectedHeaders(headers, names) {
   return selected;
 }
 
+function validatePreviewOrigin(value) {
+  const originOnly = typeof value === 'string' && /^https:\/\/[^/?#]+\/?$/i.test(value);
+  if (!originOnly) throw new Error('previewOrigin must be an HTTPS origin without a path, query, or fragment');
+  let parsed;
+  try { parsed = new URL(value); }
+  catch { throw new Error('previewOrigin must be a valid HTTPS origin'); }
+  const hostname = parsed.hostname.toLowerCase();
+  const allowedHostname = hostname === 'accounting.dexrrick-goh.workers.dev' ||
+    hostname.endsWith('-accounting.dexrrick-goh.workers.dev');
+  const authority = value.match(/^https:\/\/([^/?#]+)/i)?.[1]?.toLowerCase();
+  const allowedAuthority = authority === hostname || authority === `${hostname}:443`;
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port !== '' ||
+      parsed.pathname !== '/' || parsed.search || parsed.hash || !allowedHostname || !allowedAuthority) {
+    throw new Error('previewOrigin must be an HTTPS default-port origin on the controlled accounting worker hostname');
+  }
+  return parsed.origin;
+}
+
 export async function fingerprintResponseBody(response, limit = MAX_BODY_FINGERPRINT_BYTES, { timeoutMs = 3_000, signal } = {}) {
   if (!response.body) {
     const empty = new Uint8Array();
@@ -347,21 +365,22 @@ const official = {
 process.stdout.write(JSON.stringify({ outer: outer ?? null, official }));
 `;
 
-function childEnvironment(url, testOuterResponseJson) {
+function childEnvironment(url, previewOrigin, testOuterResponseJson) {
   const env = {
     PATH: process.env.PATH,
     SystemRoot: process.env.SystemRoot,
     WINDIR: process.env.WINDIR,
     TEMP: process.env.TEMP,
     TMP: process.env.TMP,
-    MAS_DIAGNOSTIC_PREVIEW_ORIGIN: MAS_PREVIEW_ORIGIN,
+    MAS_DIAGNOSTIC_PREVIEW_ORIGIN: previewOrigin,
     MAS_DIAGNOSTIC_OFFICIAL_URL: url,
     ...(testOuterResponseJson ? { MAS_DIAGNOSTIC_TEST_OUTER_RESPONSE: testOuterResponseJson } : {})
   };
   return Object.fromEntries(Object.entries(env).filter(([, value]) => value !== undefined));
 }
 
-export async function runPreviewDecoder(url, { timeoutMs = 20_000, signal, testOuterResponse } = {}) {
+export async function runPreviewDecoder(url, { timeoutMs = 20_000, signal, testOuterResponse, previewOrigin = MAS_PREVIEW_ORIGIN } = {}) {
+  const selectedPreviewOrigin = validatePreviewOrigin(previewOrigin);
   let testOuterResponseJson;
   if (testOuterResponse !== undefined) {
     if (!testOuterResponse || !Number.isInteger(testOuterResponse.status) || testOuterResponse.status < 200 || testOuterResponse.status > 599 ||
@@ -378,7 +397,7 @@ export async function runPreviewDecoder(url, { timeoutMs = 20_000, signal, testO
   return await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', PREVIEW_CHILD_CODE], {
       cwd: process.cwd(),
-      env: childEnvironment(url, testOuterResponseJson),
+      env: childEnvironment(url, selectedPreviewOrigin, testOuterResponseJson),
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -477,9 +496,14 @@ export async function diagnoseMasTransport({
   mode = 'direct',
   documents: suppliedDocuments,
   directFetch = globalThis.fetch?.bind(globalThis),
-  previewRequest = runPreviewDecoder
+  previewRequest = runPreviewDecoder,
+  previewOrigin
 }) {
   validateMode(mode);
+  if (previewOrigin !== undefined && mode !== 'deployed-preview') {
+    throw new Error('previewOrigin can only be supplied when mode is deployed-preview');
+  }
+  const selectedPreviewOrigin = validatePreviewOrigin(previewOrigin === undefined ? MAS_PREVIEW_ORIGIN : previewOrigin);
   const requestManifest = suppliedDocuments
     ? { documents: suppliedDocuments }
     : JSON.parse(await readFile(DEFAULT_REQUESTS, 'utf8'));
@@ -507,7 +531,7 @@ export async function diagnoseMasTransport({
         ? async (requestedUrl, init = {}) => {
             const request = requestTrace(requestedUrl, init, 'official-document-request-through-same-origin-decoder');
             try {
-              const exchange = await previewRequest(requestedUrl, init);
+              const exchange = await previewRequest(requestedUrl, { ...init, previewOrigin: selectedPreviewOrigin });
               const officialResponse = exchange.trace.official.response;
               if (officialResponse && exchange.upstreamBytes?.byteLength && !(officialResponse.status >= 200 && officialResponse.status < 300)) {
                 officialResponse.bodyFile = `${safeDocumentPrefix(currentTrace.recordId)}-${currentTrace.proxyExchanges.length + 1}.upstream.body.gz`;
@@ -572,7 +596,7 @@ export async function diagnoseMasTransport({
     schemaVersion: 1,
     mode,
     status: capture.status,
-    previewOrigin: mode === 'deployed-preview' ? MAS_PREVIEW_ORIGIN : null,
+    previewOrigin: mode === 'deployed-preview' ? selectedPreviewOrigin : null,
     documents: [...traces.values()].map(trace => {
       const captured = captureById.get(trace.recordId);
       const exchanges = trace.proxyExchanges;
@@ -634,6 +658,8 @@ function parseArguments(args) {
   let outputDirectory;
   let mode = 'direct';
   let modeProvided = false;
+  let previewOrigin;
+  let previewOriginProvided = false;
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (arg === '--output' && !outputDirectory && args[index + 1]) outputDirectory = args[++index];
@@ -641,17 +667,25 @@ function parseArguments(args) {
       mode = args[++index];
       modeProvided = true;
     }
+    else if (arg === '--preview-origin' && !previewOriginProvided && args[index + 1]) {
+      previewOrigin = args[++index];
+      previewOriginProvided = true;
+    }
     else throw new Error(`Invalid arguments near '${arg}'`);
   }
-  if (!outputDirectory) throw new Error('Usage: node --import tsx scripts/diagnose_mas_transport.mjs --output <new-directory> [--mode direct|browser-context|user-agent-only|referrer-only|deployed-preview]');
+  if (!outputDirectory) throw new Error('Usage: node --import tsx scripts/diagnose_mas_transport.mjs --output <new-directory> [--mode direct|browser-context|user-agent-only|referrer-only|deployed-preview] [--preview-origin <controlled-worker-origin>]');
   validateMode(mode);
-  return { outputDirectory, mode };
+  if (previewOriginProvided && mode !== 'deployed-preview') {
+    throw new Error('--preview-origin can only be used with --mode deployed-preview');
+  }
+  if (previewOriginProvided) previewOrigin = validatePreviewOrigin(previewOrigin);
+  return { outputDirectory, mode, ...(previewOriginProvided ? { previewOrigin } : {}) };
 }
 
 export async function main(args = process.argv.slice(2)) {
   try {
-    const { outputDirectory, mode } = parseArguments(args);
-    const { diagnostic } = await diagnoseMasTransport({ outputDirectory, mode });
+    const { outputDirectory, mode, previewOrigin } = parseArguments(args);
+    const { diagnostic } = await diagnoseMasTransport({ outputDirectory, mode, previewOrigin });
     const summary = {
       status: diagnostic.status,
       mode,

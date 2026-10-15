@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { diagnoseMasTransport, fingerprintResponseBody, MAS_PREVIEW_ORIGIN, runPreviewDecoder } from '../../scripts/diagnose_mas_transport.mjs';
+import { diagnoseMasTransport, fingerprintResponseBody, main, MAS_PREVIEW_ORIGIN, runPreviewDecoder } from '../../scripts/diagnose_mas_transport.mjs';
 
 const html = `<!doctype html><html><head><title>Synthetic Note</title></head><body><main>
   <h1>Synthetic Note</h1>
@@ -32,6 +32,8 @@ function makeDocument(url = 'https://www.mas.gov.sg/synthetic/diagnostic') {
     }
   };
 }
+
+const selectedPreviewOrigin = 'https://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev';
 
 function htmlResponse(url, body = html, status = 200) {
   const response = new Response(body, { status, headers: { 'content-type': 'text/html; charset=utf-8' } });
@@ -164,17 +166,76 @@ await withTemporaryDirectory(async root => {
 });
 
 await withTemporaryDirectory(async root => {
+  const invalidOrigins = [
+    'http://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev',
+    'https://operator@codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev',
+    'https://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev:444',
+    'https://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev/path',
+    'https://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev/?query=1',
+    'https://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev/#fragment',
+    'https://www.mas.gov.sg',
+    'https://accounting.dexrrick-goh.workers.dev.evil.example',
+    'https://codex-mas-transport-investigation-accounting.dexrrick-goh.workers.dev.evil.example'
+  ];
+  let previewCalls = 0;
+  for (const [index, previewOrigin] of invalidOrigins.entries()) {
+    await assert.rejects(diagnoseMasTransport({
+      outputDirectory: path.join(root, `invalid-${index}`),
+      mode: 'deployed-preview',
+      previewOrigin,
+      documents: [makeDocument()],
+      previewRequest: async () => { previewCalls++; throw new Error('must not reach preview request'); }
+    }), /previewOrigin/);
+  }
+  assert.equal(previewCalls, 0, 'invalid origins are rejected before preview requests');
+  assert.deepEqual(await readdir(root), [], 'invalid origins are rejected before output directories or files are created');
+
+  await assert.rejects(diagnoseMasTransport({
+    outputDirectory: path.join(root, 'wrong-mode'),
+    mode: 'direct',
+    previewOrigin: selectedPreviewOrigin,
+    documents: [makeDocument()],
+    directFetch: async () => { throw new Error('must not reach direct fetch'); }
+  }), /only be supplied when mode is deployed-preview/);
+  assert.deepEqual(await readdir(root), [], 'preview origins are rejected for non-deployed modes before output mutations');
+
+  const originalExitCode = process.exitCode;
+  const originalStderrWrite = process.stderr.write;
+  let cliError = '';
+  process.exitCode = 0;
+  process.stderr.write = chunk => { cliError += String(chunk); return true; };
+  try {
+    assert.equal(await main([
+      '--output', path.join(root, 'cli-wrong-mode'), '--mode', 'direct', '--preview-origin', selectedPreviewOrigin
+    ]), null, 'CLI rejects --preview-origin outside deployed-preview mode');
+    assert.equal(process.exitCode, 1);
+    assert.equal(await main([
+      '--output', path.join(root, 'cli-invalid-origin'), '--mode', 'deployed-preview', '--preview-origin', invalidOrigins[0]
+    ]), null, 'CLI rejects an unapproved preview origin');
+    assert.equal(process.exitCode, 1);
+  } finally {
+    process.stderr.write = originalStderrWrite;
+    process.exitCode = originalExitCode;
+  }
+  assert.match(cliError, /--preview-origin can only be used with --mode deployed-preview/);
+  assert.match(cliError, /previewOrigin must be/);
+  assert.deepEqual(await readdir(root), [], 'invalid CLI option combinations are rejected before output mutations');
+});
+
+await withTemporaryDirectory(async root => {
   const document = makeDocument();
   const outerBytes = Buffer.from('{"maintenance":"preview transport unavailable"}');
   const upstreamBytes = Buffer.from('upstream returned maintenance html');
   const { diagnostic, capture } = await diagnoseMasTransport({
     outputDirectory: path.join(root, 'deployed-preview'),
     mode: 'deployed-preview',
+    previewOrigin: selectedPreviewOrigin,
     documents: [document],
     previewRequest: async (url, init) => {
       assert.equal(url, document.request.url);
       assert.equal(init.method, 'GET');
-      const outerUrl = `${MAS_PREVIEW_ORIGIN}/api/official-source`;
+      assert.equal(init.previewOrigin, selectedPreviewOrigin, 'injected preview requests receive the selected origin');
+      const outerUrl = `${init.previewOrigin}/api/official-source`;
       return {
         response: htmlResponse(url, upstreamBytes.toString('utf8'), 503),
         outerBytes,
@@ -198,8 +259,9 @@ await withTemporaryDirectory(async root => {
     }
   });
   const trace = diagnostic.documents[0];
+  assert.equal(diagnostic.previewOrigin, selectedPreviewOrigin);
   assert.equal(trace.proxyExchanges.length, 1);
-  assert.equal(trace.proxyExchanges[0].outer.request.url, `${MAS_PREVIEW_ORIGIN}/api/official-source`);
+  assert.equal(trace.proxyExchanges[0].outer.request.url, `${selectedPreviewOrigin}/api/official-source`);
   assert.equal(trace.proxyExchanges[0].outer.response.status, 200, 'outer preview HTTP status is separate');
   assert.equal(trace.proxyExchanges[0].decodedOfficialResponse.response.status, 503, 'decoded upstream status is retained');
   assert.deepEqual(trace.proxyExchanges[0].internalRedirectChain, { visibility: 'UNKNOWN', hops: null });
@@ -237,6 +299,8 @@ await withTemporaryDirectory(async root => {
     })
   });
   const exchange = diagnostic.documents[0].proxyExchanges[0];
+  assert.equal(diagnostic.previewOrigin, MAS_PREVIEW_ORIGIN, 'omitting the option preserves the historical PR19 preview origin');
+  assert.equal(exchange.outer.request.url, `${MAS_PREVIEW_ORIGIN}/api/official-source`);
   assert.equal(exchange.outer.response.status, 200);
   assert.equal(exchange.decodedOfficialResponse.transportFailure, null);
   assert.equal(exchange.decodedOfficialResponse.response.status, 503);
@@ -252,9 +316,11 @@ await withTemporaryDirectory(async root => {
   const { diagnostic, capture } = await diagnoseMasTransport({
     outputDirectory: path.join(root, 'actual-decoder-maintenance-html'),
     mode: 'deployed-preview',
+    previewOrigin: selectedPreviewOrigin,
     documents: [document],
     previewRequest: (url, init) => runPreviewDecoder(url, {
       signal: init.signal,
+      previewOrigin: init.previewOrigin,
       testOuterResponse: {
         status: 200,
         headers: { 'content-type': 'text/html; charset=utf-8' },
@@ -263,6 +329,9 @@ await withTemporaryDirectory(async root => {
     })
   });
   const exchange = diagnostic.documents[0].proxyExchanges[0];
+  assert.equal(diagnostic.previewOrigin, selectedPreviewOrigin);
+  assert.equal(exchange.outer.request.url, `${selectedPreviewOrigin}/api/official-source`,
+    'the isolated child decoder records the selected origin and guards its fixed endpoint against it');
   assert.equal(exchange.outer.response.status, 200);
   assert.equal(exchange.outer.response.contentType, 'text/html; charset=utf-8');
   assert.equal(exchange.decodedOfficialResponse.transportFailure, 'NETWORK_ERROR');
