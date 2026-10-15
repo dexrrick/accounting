@@ -86,6 +86,8 @@ const testSuites = [
   { name: 'Controlled Official Document Capture', file: 'test_official_document_capture.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'MAS Transport Investigation Diagnostic', file: 'test_mas_transport_diagnostic.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Tagged PDF Paragraph Geometry', file: 'test_pdf_tagged_paragraphs.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Explicitly Bounded PDF Subsections and Linked Notes', file: 'test_pdf_bounded_subsections.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'MAS Bounded Subsection Preview Lifecycle', file: 'test_mas_subsection_preview_lifecycle.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'MAS Byte-backed Regulatory Update Lifecycle', file: 'test_mas_regulatory_lifecycle.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Reviewed MAS Source Response Captures', file: 'test_reviewed_mas_documents.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Targeted MAS Exact-byte Acceptance Recheck', file: 'test_mas_targeted_acceptance.mjs', layer: 'regulatory-updates', tier: 'smoke' },

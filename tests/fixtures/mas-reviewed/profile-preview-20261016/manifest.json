@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "status": "BLOCKED",
+  "documents": [
+    {
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentKind": "HTML",
+        "sectionHeading": "What are the admission criteria and applicable requirements?",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "Securities and Futures Act"
+          ],
+          "expectedTitles": [
+            "Fund Management Licensing"
+          ],
+          "topicTerms": [
+            "fund management",
+            "licence"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "contentType": "text/html; charset=utf-8",
+        "retrievedAt": "2026-10-15T23:10:01.026Z",
+        "contentHash": "879d78e03b3176b7bc12d3f2c611de9ca91bfee06ca2b8b0904fc569e7a59643",
+        "etag": null,
+        "lastModified": null,
+        "error": null
+      },
+      "bodyFile": "01-MAS_FUND_MANAGEMENT_LICENSING_RECHECK.body.gz",
+      "bodyBytes": 265375,
+      "integrity": {
+        "computedSha256": "879d78e03b3176b7bc12d3f2c611de9ca91bfee06ca2b8b0904fc569e7a59643",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "SUCCESS",
+        "extractionStatus": "EXACT",
+        "isVerbatimText": true
+      },
+      "candidateRecord": {
+        "id": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore",
+        "sourcePublisher": "Monetary Authority of Singapore",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentTitle": "Fund Management Licensing",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "paragraphOrSection": "What are the admission criteria and applicable requirements?",
+        "sourceText": "What are the admission criteria and applicable requirements?\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\nCredibility and substantiveness of the business model and plan, and the associated risks;\n\nEffectiveness of risk management and compliance controls;\n\nFund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\nFitness and propriety of the applicant, its shareholders and directors; and\n\nAbility to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\nManage assets for related corporations or related family members;\n\nManage a pool of immovable assets for accredited and institutional investors; or\n\nManage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+        "principleSummary": "",
+        "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "fund management",
+          "licence"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": true,
+        "lifecycleState": "CANDIDATE",
+        "version": "sha256:879d78e03b3176b7bc12d3f2c611de9ca91bfee06ca2b8b0904fc569e7a59643:547c248f2ff1ee241346d724af8ce33333d73fc478611a10e88b154c68ca7b0f",
+        "documentHash": "879d78e03b3176b7bc12d3f2c611de9ca91bfee06ca2b8b0904fc569e7a59643",
+        "provisionHash": "547c248f2ff1ee241346d724af8ce33333d73fc478611a10e88b154c68ca7b0f",
+        "contentHash": "547c248f2ff1ee241346d724af8ce33333d73fc478611a10e88b154c68ca7b0f",
+        "extractionStatus": "EXACT",
+        "sourceLocator": {
+          "heading": "What are the admission criteria and applicable requirements?",
+          "startOffset": 239519,
+          "endOffset": 243944,
+          "boundary": {
+            "startOffset": 239519,
+            "endOffset": 243944
+          },
+          "sourceNode": "h2",
+          "tableStructure": "NONE",
+          "sourceType": "HTML",
+          "documentHash": "879d78e03b3176b7bc12d3f2c611de9ca91bfee06ca2b8b0904fc569e7a59643",
+          "mediaType": "text/html; charset=utf-8"
+        },
+        "provenance": "LIVE_EXTERNAL",
+        "recordRole": "EVIDENCE",
+        "groundingEligible": false,
+        "sourceAuthority": "MAS",
+        "retrievedAt": "2026-10-15T23:10:01.026Z",
+        "relatedTopicIds": [],
+        "verificationMethod": "OFFICIAL_DOCUMENT_BODY_EXTRACTION_CANDIDATE"
+      }
+    },
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "IID 04/2025"
+          ],
+          "expectedTitles": [
+            "GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"
+          ],
+          "topicTerms": [
+            "VCC",
+            "fund management"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "application/pdf",
+        "retrievedAt": "2026-10-15T23:10:02.654Z",
+        "contentHash": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "etag": null,
+        "lastModified": "Thu, 26 Jun 2025 09:14:46 GMT",
+        "error": null
+      },
+      "bodyFile": "02-MAS_IID_04_2025_RECHECK.body.gz",
+      "bodyBytes": 208660,
+      "integrity": {
+        "computedSha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "REJECTED",
+        "code": "PDF_SECTION_NOT_SUBSTANTIVE",
+        "reason": "The selected PDF boundary contains only a heading or non-substantive content"
+      },
+      "candidateRecord": null
+    }
+  ]
+}

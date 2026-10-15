@@ -37,6 +37,8 @@ export interface OfficialDocumentExtractionRequest {
   documentKind?: 'AUTO' | 'HTML' | 'TEXT' | 'PDF' | 'SSO_LEGISLATION';
   relevantSection?: string;
   sectionHeading?: string;
+  /** Explicit end-exclusive PDF heading required for a bounded subsection extraction. */
+  sectionEndHeading?: string;
   elementId?: string;
   legislation?: OfficialDocumentLegislationExpectation;
   /** A historical claim is accepted only when a bounded source-text interval contains this ISO date. */
@@ -135,6 +137,13 @@ function normalizeText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
 }
 
+function hasControlCharacters(value: string): boolean {
+  return [...value].some(character => {
+    const code = character.charCodeAt(0);
+    return code < 32 || code === 127;
+  });
+}
+
 function matchesAnyText(text: string, candidates: string[]): boolean {
   const normalizedText = normalizeText(text);
   return candidates.some(candidate => {
@@ -162,6 +171,22 @@ function validateRequest(request: OfficialDocumentExtractionRequest): string | u
     return 'Topic term match threshold is outside the supplied topic-term set';
   }
   if (request.elementId && !/^[\w:.-]{1,128}$/.test(request.elementId)) return 'The requested HTML element identifier is invalid';
+  if (request.sectionEndHeading !== undefined) {
+    const endHeading = request.sectionEndHeading;
+    const startHeading = request.sectionHeading || request.relevantSection;
+    if (typeof endHeading !== 'string' || !endHeading.trim() || endHeading.trim().length > 256 || hasControlCharacters(endHeading)) {
+      return 'The PDF end heading must be a non-empty string of at most 256 printable characters';
+    }
+    if (typeof startHeading !== 'string' || !startHeading.trim() || startHeading.trim().length > 256 || hasControlCharacters(startHeading)) {
+      return 'An explicit PDF end heading requires a valid start sectionHeading or relevantSection';
+    }
+    if (request.documentKind !== 'PDF' && request.documentKind !== 'AUTO') {
+      return 'An explicit end heading is supported only for PDF or AUTO requests';
+    }
+    if (normalizeText(startHeading) === normalizeText(endHeading)) {
+      return 'The explicit PDF start and end headings must differ';
+    }
+  }
   if (request.legislation && request.documentKind && request.documentKind !== 'SSO_LEGISLATION') {
     return 'An SSO Act expectation cannot be combined with a non-legislation document kind';
   }
@@ -467,6 +492,75 @@ function selectPdfText(pdf: PdfTextExtraction, request: OfficialDocumentExtracti
       exactBoundary: !pdf.hasEmptyPageText && pdf.tableStructure !== 'AMBIGUOUS'
     };
   }
+  if (request.sectionEndHeading !== undefined) {
+    if (pdf.hasEmptyPageText || pdf.tableStructure === 'AMBIGUOUS') return undefined;
+    const normalizedStart = normalizeText(requestedHeading);
+    const normalizedEnd = normalizeText(request.sectionEndHeading);
+    if (!normalizedStart || !normalizedEnd || normalizedStart === normalizedEnd) return undefined;
+    const startMatches = pdf.lines.filter(line => normalizeText(line.text) === normalizedStart);
+    const endMatches = pdf.lines.filter(line => normalizeText(line.text) === normalizedEnd);
+    if (startMatches.length !== 1 || endMatches.length !== 1 ||
+        startMatches[0].cells.length !== 1 || endMatches[0].cells.length !== 1 ||
+        startMatches[0].noteOwnerId || endMatches[0].noteOwnerId ||
+        startMatches[0].noteAssociationAmbiguous || endMatches[0].noteAssociationAmbiguous) return undefined;
+    const headingLine = startMatches[0];
+    const endHeadingLine = endMatches[0];
+    const headingIndex = pdf.lines.indexOf(headingLine);
+    const endHeadingIndex = pdf.lines.indexOf(endHeadingLine);
+    if (endHeadingIndex <= headingIndex) return undefined;
+
+    const boundedLines = pdf.lines.slice(headingIndex, endHeadingIndex);
+    const bodyLines = boundedLines.filter(line => !line.noteOwnerId);
+    if (boundedLines.some(line => line.noteAssociationAmbiguous || line.unresolvedNumericReference)) return undefined;
+
+    const referencedNoteIds = new Set<string>();
+    const expectedContentIdsByNote = new Map<string, Set<string>>();
+    for (const line of bodyLines) {
+      for (const noteId of line.referencedNoteIds || []) referencedNoteIds.add(noteId);
+      for (const note of line.referencedNotes || []) {
+        const expectedContentIds = expectedContentIdsByNote.get(note.noteOwnerId) || new Set<string>();
+        for (const contentId of note.contentIds) expectedContentIds.add(contentId);
+        expectedContentIdsByNote.set(note.noteOwnerId, expectedContentIds);
+      }
+    }
+    const noteLines = pdf.lines.filter(line => line.noteOwnerId && referencedNoteIds.has(line.noteOwnerId));
+    for (const noteId of referencedNoteIds) {
+      const ownerLines = noteLines.filter(line => line.noteOwnerId === noteId);
+      const expectedContentIds = expectedContentIdsByNote.get(noteId);
+      if (ownerLines.length === 0 || !expectedContentIds?.size ||
+          ownerLines.some(line => line.noteAssociationAmbiguous || !line.noteContentIds?.length)) return undefined;
+      const extractedContentIds = new Set(ownerLines.flatMap(line => line.noteContentIds || []));
+      if ([...expectedContentIds].some(contentId => !extractedContentIds.has(contentId))) return undefined;
+    }
+    if (noteLines.some(line => line.unresolvedNumericReference || line.referencedNoteIds?.length)) return undefined;
+
+    const bodyText = bodyLines.map(line => line.text).join('\n').trim();
+    const attachedNoteText = noteLines.map(line => line.text).join('\n').trim();
+    const text = [bodyText, attachedNoteText].filter(Boolean).join('\n\n');
+    const attachedNotesLocator = [...referencedNoteIds].map(noteId => {
+      const ownedLines = noteLines.filter(line => line.noteOwnerId === noteId);
+      const pages = [...new Set(ownedLines.map(line => line.pageNumber))].sort((left, right) => left - right);
+      const contentIds = [...new Set(ownedLines.flatMap(line => line.noteContentIds || []))];
+      return `note ${noteId} page${pages.length === 1 ? '' : 's'} ${pages.join(',')} [${contentIds.join(',')}]`;
+    });
+    const canonicalLocator = `PDF page ${headingLine.pageNumber} “${headingLine.text}” to exclusive page ${endHeadingLine.pageNumber} “${endHeadingLine.text}”` +
+      (attachedNotesLocator.length ? `; attached ${attachedNotesLocator.join('; ')}` : '');
+    return text ? {
+      text,
+      locator: {
+        sourceType: 'PDF',
+        heading: headingLine.text,
+        pageNumber: headingLine.pageNumber,
+        pageCount: pdf.pageCount,
+        tableStructure: pdf.tableStructure,
+        canonicalLocator
+      },
+      exactBoundary: true,
+      heading: headingLine.text,
+      pageNumber: headingLine.pageNumber,
+      substantive: bodyLines.slice(1).some(line => line.cells.some(cell => cell.trim().length > 0))
+    } : undefined;
+  }
   const normalizedHeading = normalizeText(requestedHeading);
   const matches = pdf.lines.filter(line => normalizeText(line.text) === normalizedHeading);
   if (matches.length !== 1 || matches[0].cells.length !== 1) return undefined;
@@ -727,6 +821,9 @@ export async function extractOfficialDocument(
   const detectedKind = looksLikePdf ? 'PDF' : responseType?.toLowerCase().includes('text/plain') ? 'TEXT' : 'HTML';
   if (request.documentKind && request.documentKind !== 'AUTO' && request.documentKind !== 'SSO_LEGISLATION' && request.documentKind !== detectedKind) {
     return reject('DOCUMENT_KIND_MISMATCH', `Expected ${request.documentKind}, received ${detectedKind}`);
+  }
+  if (request.sectionEndHeading !== undefined && detectedKind !== 'PDF') {
+    return reject('PDF_END_HEADING_UNSUPPORTED', 'An explicit end heading can only bound an actual PDF document');
   }
 
   let sourceText = '';

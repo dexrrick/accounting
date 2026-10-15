@@ -18,6 +18,17 @@ function nonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function hasControlCharacters(value) {
+  return [...value].some(character => {
+    const code = character.charCodeAt(0);
+    return code < 32 || code === 127;
+  });
+}
+
+function normalizeHeading(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+}
+
 function validateStringArray(value, label) {
   if (!Array.isArray(value) || value.length === 0 || !value.every(nonEmptyString)) {
     throw new Error(`${label} must be a non-empty array of non-empty strings`);
@@ -50,9 +61,24 @@ function validateDocumentRequest(request, label) {
   if (request.documentKind !== undefined && !DOCUMENT_KINDS.has(request.documentKind)) {
     throw new Error(`${label}.request.documentKind is unsupported`);
   }
-  for (const field of ['relevantSection', 'sectionHeading', 'elementId']) {
+  for (const field of ['relevantSection', 'sectionHeading', 'sectionEndHeading', 'elementId']) {
     if (request[field] !== undefined && typeof request[field] !== 'string') {
       throw new Error(`${label}.request.${field} must be a string when supplied`);
+    }
+  }
+  if (request.sectionEndHeading !== undefined) {
+    if (!nonEmptyString(request.sectionEndHeading) || request.sectionEndHeading.trim().length > 256 || hasControlCharacters(request.sectionEndHeading)) {
+      throw new Error(`${label}.request.sectionEndHeading must be a non-empty string of at most 256 printable characters`);
+    }
+    const startHeading = request.sectionHeading || request.relevantSection;
+    if (!nonEmptyString(startHeading) || startHeading.trim().length > 256 || hasControlCharacters(startHeading)) {
+      throw new Error(`${label}.request.sectionEndHeading requires a valid sectionHeading or relevantSection`);
+    }
+    if (normalizeHeading(startHeading) === normalizeHeading(request.sectionEndHeading)) {
+      throw new Error(`${label}.request.sectionHeading and sectionEndHeading must differ`);
+    }
+    if (request.documentKind !== 'PDF' && request.documentKind !== 'AUTO') {
+      throw new Error(`${label}.request.sectionEndHeading is supported only for PDF or AUTO requests`);
     }
   }
   if (request.timeoutMs !== undefined && (!Number.isFinite(request.timeoutMs) || request.timeoutMs <= 0)) {
