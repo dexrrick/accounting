@@ -12,6 +12,7 @@ import {
 } from './sourceAdapters';
 import {
   ControlledWebRetriever,
+  type ControlledFetchResult,
   defaultControlledWebRetriever
 } from './controlledWebRetriever';
 import {
@@ -124,6 +125,7 @@ const MONTH_NUMBER: Record<string, string> = {
   july: '07', august: '08', september: '09', october: '10', november: '11', december: '12'
 };
 const DATE_PATTERN = String.raw`(?:\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})`;
+const MAX_OFFICIAL_DOCUMENT_BYTES = 1_500_000;
 
 function reject(code: string, reason: string): OfficialDocumentExtractionResult {
   return { status: 'REJECTED', code, reason };
@@ -168,6 +170,9 @@ function validateRequest(request: OfficialDocumentExtractionRequest): string | u
   }
   if (request.asOfDate && (!/^\d{4}-\d{2}-\d{2}$/.test(request.asOfDate) || !parseSourceDate(request.asOfDate))) {
     return 'Historical applicability dates must use a valid ISO YYYY-MM-DD date';
+  }
+  if (request.maxResponseBytes !== undefined && (!Number.isInteger(request.maxResponseBytes) || request.maxResponseBytes <= 0 || request.maxResponseBytes > MAX_OFFICIAL_DOCUMENT_BYTES)) {
+    return 'Maximum document response size must be a positive integer within the official-source byte limit';
   }
   return undefined;
 }
@@ -646,7 +651,8 @@ function buildRecord(
 /** Fetches, validates and extracts a bounded official document into an unadmitted review candidate. */
 export async function extractOfficialDocument(
   request: OfficialDocumentExtractionRequest,
-  retriever: ControlledWebRetriever = defaultControlledWebRetriever
+  retriever: ControlledWebRetriever = defaultControlledWebRetriever,
+  retrievedDocument?: ControlledFetchResult
 ): Promise<OfficialDocumentExtractionResult> {
   const invalidRequest = validateRequest(request);
   if (invalidRequest) return reject('INVALID_REQUEST', invalidRequest);
@@ -672,12 +678,29 @@ export async function extractOfficialDocument(
     }
   }
 
-  const fetched = await retriever.fetchOfficialDocument(request.url, {
+  const fetched = retrievedDocument || await retriever.fetchOfficialDocument(request.url, {
     timeoutMs: request.timeoutMs,
     maxResponseBytes: request.maxResponseBytes
   });
   if (fetched.status !== 'SUCCESS' || !fetched.contentBytes) {
     return reject(`FETCH_${fetched.status}`, fetched.error || 'Official document retrieval failed');
+  }
+  const requestedUrl = normalizedRequestUrl(request.url);
+  const sourceUrl = normalizedRequestUrl(fetched.sourceUrl);
+  if (!requestedUrl || !sourceUrl) return reject('SOURCE_URL_MISMATCH', 'Fetched source URL does not correspond to the requested official URL');
+  for (const [label, url] of [['requested', request.url], ['source', fetched.sourceUrl], ['final', fetched.finalUrl || fetched.sourceUrl]] as const) {
+    const security = defaultExternalSourceValidator.validateUrlSecurity(url);
+    if (!security.isValid) return reject('URL_SECURITY_REJECTED', `The ${label} document URL failed security validation: ${security.reason || 'invalid URL'}`);
+  }
+  if (!Number.isInteger(fetched.httpStatus) || (fetched.httpStatus || 0) < 200 || (fetched.httpStatus || 0) >= 300) {
+    return reject('HTTP_STATUS_REJECTED', 'Retrieved document does not have a successful HTTP status');
+  }
+  const responseMime = fetched.contentType?.split(';', 1)[0]?.trim().toLowerCase();
+  if (!responseMime || !['application/pdf', 'text/html', 'application/xhtml+xml', 'text/plain'].includes(responseMime)) {
+    return reject('UNSUPPORTED_CONTENT_TYPE', 'Retrieved document has an unsupported or missing content type');
+  }
+  if (fetched.contentBytes.byteLength === 0 || fetched.contentBytes.byteLength > (request.maxResponseBytes ?? MAX_OFFICIAL_DOCUMENT_BYTES)) {
+    return reject('INVALID_DOCUMENT_SIZE', 'Retrieved document bytes are empty or exceed the configured response limit');
   }
   const finalUrl = fetched.finalUrl || fetched.sourceUrl;
   let parsedFinalUrl: URL;
@@ -690,6 +713,7 @@ export async function extractOfficialDocument(
       parsedFinalUrl.pathname.toLowerCase() !== `/act/${request.legislation?.actCode}`.toLowerCase())) {
     return reject('ACT_URL_MISMATCH', 'The final SSO URL must retain the exact requested Act code and path');
   }
+  if (requestedUrl !== sourceUrl) return reject('SOURCE_URL_MISMATCH', 'Fetched source URL does not correspond to the requested official URL');
   const publisher = resolvePublisher(finalUrl, request.authority);
   if (!publisher) return reject('PUBLISHER_MISMATCH', 'Final source host is not a recognized publisher for the requested authority');
   const bytes = fetched.contentBytes;
@@ -815,4 +839,20 @@ export async function extractOfficialDocument(
     request.topicIds || []
   );
   return { status: 'SUCCESS', record };
+}
+
+function normalizedRequestUrl(value: string): string | undefined {
+  try {
+    const url = new URL(value);
+    url.hash = '';
+    return url.toString();
+  } catch { return undefined; }
+}
+
+/** Extracts a previously retrieved bounded document without repeating network I/O. */
+export async function extractOfficialDocumentFromRetrieved(
+  request: OfficialDocumentExtractionRequest,
+  retrievedDocument: ControlledFetchResult
+): Promise<OfficialDocumentExtractionResult> {
+  return extractOfficialDocument(request, defaultControlledWebRetriever, retrievedDocument);
 }

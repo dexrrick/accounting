@@ -33,11 +33,19 @@ HTML evidence requires a unique structural section or element with substantive p
 
 SSO retrieval uses the repository's Act-to-authority identity mapping, exact registered Act URL, and a requested section locator. Exact numeric subsections reuse the existing SSO parser only behind section/Act guards; a structural fallback handles explicit Act section IDs, including alphanumeric section numbers without a subsection. This is a bounded retrieval path, not full SSO navigation parity. The offline regression covers synthetic HTML, legislation and a generated binary PDF; no broad live accuracy acceptance has been run.
 
+### MAS regulatory lifecycle slice (15 October 2026)
+
+`MASDocumentUpdateAdapter` accepts an explicit list of monitored MAS document/provision definitions with stable record IDs and shared `OfficialDocumentExtractionRequest` expectations. Register it explicitly with `LiveRegulatoryFeedService.registerAdapter`; no production document catalog, additional sitemap implementation, or automatic MAS schedule is enabled. Existing discovery candidates can supply a document URL only after a monitor's identity, topic and structural extraction expectations have been supplied. Index metadata never becomes document evidence.
+
+The adapter retrieves actual bounded HTML/PDF bytes and stages content-addressed update packages. Verification replays the shared extractor against the exact raw bytes, MIME type, final URL and bound request, preserving document/provision hashes, locators, applicability dates, publisher and retrieval metadata. Only exact, unambiguous extracts can proceed. Explicit `approveUpdatePackage(packageId, reviewer, reason)` approval follows verification and precedes MAS activation; recording a review note alone does not approve a package. Activated MAS records retain `groundingEligible: false` until the shared answer-admission and citation work is complete.
+
+Version history and rollback are exercised with offline HTML and generated binary PDF fixtures, including first activation and predecessor restoration. These fixtures establish lifecycle behavior, not live MAS accuracy or authority functional parity. Review and activation state remain in memory under the existing lifecycle architecture. Production monitor configuration, review UI, persistence, shared answer admission, verified citations and coordinated authority acceptance remain follow-up work.
+
 ### Intentional remaining gaps before broad live testing
 
 - Finish ACRA PR #12 integration and end-to-end answer admission.
 - Validate the shared extraction API against reviewed official MAS notices, circulars, forms and historical schedule tables; ambiguous layouts intentionally remain ungroundable until their structure can be retained safely.
-- Unify regulatory-update scheduling and staged change review for MAS with the same contract used by IRAS, CPF, MOM, ACRA and AGC.
+- Complete production MAS monitor registration and review integration before considering automatic regulatory-update scheduling. The opt-in content lifecycle above does not enable background MAS checks.
 - Establish an end-to-end acceptance dataset for *every* authority covering discovery success, citation correctness, retrieved passage, statutory effective period, topic coverage and wrong-authority isolation.
 - Validate current production Cloudflare source transport separately from deterministic offline tests. Do not merge solely on synthetic fixtures.
 - Retain the open IRAS fresh-official-source production acceptance gate (Issue #9).

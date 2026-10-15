@@ -514,12 +514,24 @@ export class SourceVersioningManager {
     }
 
     const predecessorVersionId = targetEntry.metadata.supersedesVersionId;
-    if (!predecessorVersionId) {
+    if (this.activeVersionPointers.get(targetEntry.recordId) !== versionId) {
       return {
         success: false,
         rolledBackVersionId: versionId,
         restoredVersionId: '',
-        error: `Version '${versionId}' has no recorded predecessor to roll back to`
+        error: `Version '${versionId}' is not the active version for record '${targetEntry.recordId}'`
+      };
+    }
+
+    // A first activation can be rolled back by clearing its active pointer. The
+    // ledger entry remains as an immutable historical record of that activation.
+    if (!predecessorVersionId) {
+      targetEntry.isActive = false;
+      this.activeVersionPointers.delete(targetEntry.recordId);
+      return {
+        success: true,
+        rolledBackVersionId: versionId,
+        restoredVersionId: ''
       };
     }
 
