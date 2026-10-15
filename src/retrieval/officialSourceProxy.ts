@@ -8,6 +8,7 @@ const MAX_RESPONSE_BYTES = 2_000_000;
 const MAX_DOCUMENT_BYTES = 1_500_000;
 const UPSTREAM_TIMEOUT_MS = 8_000;
 const SAFE_RESPONSE_HEADERS = ['content-type', 'etag', 'last-modified', 'location', 'cache-control'] as const;
+const MAS_COMPATIBILITY_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 export interface OfficialSourceProxyLimits {
   requestBytes?: number;
@@ -195,6 +196,10 @@ export async function handleOfficialSourceProxyRequest(
           ? 'application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1'
           : 'text/html, text/plain, application/xhtml+xml, application/xml;q=0.9, */*;q=0.1'
       };
+      const hostname = new URL(officialUrl).hostname.toLowerCase();
+      if (hostname === 'mas.gov.sg' || hostname === 'www.mas.gov.sg') {
+        upstreamHeaders['user-agent'] = MAS_COMPATIBILITY_USER_AGENT;
+      }
       if (typeof requestPayload.ifNoneMatch === 'string') upstreamHeaders['if-none-match'] = requestPayload.ifNoneMatch;
       if (typeof requestPayload.ifModifiedSince === 'string') upstreamHeaders['if-modified-since'] = requestPayload.ifModifiedSince;
       const upstream = await fetcher(officialUrl, {
