@@ -1,0 +1,26 @@
+{
+  "file": "iid-04-2025.pdf.gz",
+  "bytes": 208660,
+  "documentHash": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+  "signature": "%PDF-1.7",
+  "capturedAt": "2026-10-15T14:45:39.525Z",
+  "downloadFileWrittenAt": "2026-10-15T14:40:24.369Z",
+  "requestedUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+  "discoveryUrl": "https://www.mas.gov.sg/regulation/circulars/iid-04-2025-governance-and-management-of-variable-capital-companies",
+  "browserDownloadMethod": "Codex in-app browser; documented link.downloadMedia on the visible official View Document PDF link",
+  "downloadZoneIdentifier": {
+    "ZoneId": 3,
+    "ReferrerUrl": "https://www.mas.gov.sg/regulation/circulars/iid-04-2025-governance-and-management-of-variable-capital-companies",
+    "HostUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf"
+  },
+  "httpStatus": null,
+  "contentType": null,
+  "finalUrl": null,
+  "transportTraceComplete": false,
+  "limitations": [
+    "The browser download tool returned original binary PDF bytes but did not expose raw HTTP status, Content-Type headers, or a verified redirect chain/final URL. Zone.Identifier preserves the official download/referrer URLs, not an HTTP response trace.",
+    "No reconstructed DOM, cached web-reader text, print-to-PDF conversion, edited PDF bytes or fabricated effective dates were substituted.",
+    "Direct Python HTTPS retrieval of MAS routes still returned Maintenance HTML; this capture does not prove the production controlled transport can fetch the PDF.",
+    "The unchanged shared extractor classifies this genuine PDF as PARTIAL with AMBIGUOUS table structure. No source record is approved, activated or admitted."
+  ]
+}
