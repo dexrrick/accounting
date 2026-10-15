@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "status": "BLOCKED",
+  "documents": [
+    {
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentKind": "HTML",
+        "sectionHeading": "What are the admission criteria and applicable requirements?",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "Securities and Futures Act"
+          ],
+          "expectedTitles": [
+            "Fund Management Licensing"
+          ],
+          "topicTerms": [
+            "fund management",
+            "licence"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "NETWORK_ERROR",
+        "httpStatus": null,
+        "sourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "finalUrl": null,
+        "contentType": null,
+        "retrievedAt": "2026-10-15T22:34:23.671Z",
+        "contentHash": null,
+        "etag": null,
+        "lastModified": null,
+        "error": "Network error: fetch failed"
+      },
+      "fetchError": "Network error: fetch failed",
+      "bodyFile": null,
+      "bodyBytes": null,
+      "integrity": {
+        "computedSha256": null,
+        "observedHashMatchesBytes": null
+      },
+      "extraction": {
+        "status": "REJECTED",
+        "code": "FETCH_NETWORK_ERROR",
+        "reason": "Network error: fetch failed"
+      },
+      "candidateRecord": null
+    },
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "IID 04/2025"
+          ],
+          "expectedTitles": [
+            "GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"
+          ],
+          "topicTerms": [
+            "VCC",
+            "fund management"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "NETWORK_ERROR",
+        "httpStatus": null,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": null,
+        "contentType": null,
+        "retrievedAt": "2026-10-15T22:34:23.733Z",
+        "contentHash": null,
+        "etag": null,
+        "lastModified": null,
+        "error": "Network error: fetch failed"
+      },
+      "fetchError": "Network error: fetch failed",
+      "bodyFile": null,
+      "bodyBytes": null,
+      "integrity": {
+        "computedSha256": null,
+        "observedHashMatchesBytes": null
+      },
+      "extraction": {
+        "status": "REJECTED",
+        "code": "FETCH_NETWORK_ERROR",
+        "reason": "Network error: fetch failed"
+      },
+      "candidateRecord": null
+    }
+  ]
+}

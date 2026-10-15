@@ -76,6 +76,49 @@ assert.deepEqual(observedUpstreamHeaders, {
   accept: 'text/html, text/plain, application/xhtml+xml, application/xml;q=0.9, */*;q=0.1'
 });
 
+const masCompatibilityUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+for (const hostname of ['www.mas.gov.sg', 'mas.gov.sg']) {
+  for (const responseMode of ['text', 'document']) {
+    const url = `https://${hostname}/regulations-and-guidance/${responseMode}`;
+    let masUpstreamHeaders;
+    const masResponse = await handleOfficialSourceProxyRequest(endpointRequest(url, {
+      headers: {
+        cookie: 'private-cookie',
+        authorization: 'private-token',
+        referer: 'https://attacker.example/',
+        'user-agent': 'Client supplied agent'
+      },
+      payload: { url, ...(responseMode === 'document' ? { responseMode } : {}) }
+    }), async (_input, init) => {
+      masUpstreamHeaders = new Headers(init.headers);
+      return new Response(responseMode === 'document' ? new Uint8Array([37, 80, 68, 70]) : html, {
+        headers: { 'content-type': responseMode === 'document' ? 'application/pdf' : 'text/html' }
+      });
+    });
+    assert.equal(masResponse.status, 200, `${hostname} ${responseMode} request succeeds`);
+    assert.equal(masUpstreamHeaders.get('user-agent'), masCompatibilityUserAgent,
+      `${hostname} ${responseMode} request receives the fixed MAS compatibility profile`);
+    assert.equal(masUpstreamHeaders.has('cookie'), false, 'client cookies are not forwarded');
+    assert.equal(masUpstreamHeaders.has('authorization'), false, 'client authorization is not forwarded');
+    assert.equal(masUpstreamHeaders.has('referer'), false, 'client referrer is not forwarded');
+    assert.equal(masUpstreamHeaders.get('accept'), responseMode === 'document'
+      ? 'application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1'
+      : 'text/html, text/plain, application/xhtml+xml, application/xml;q=0.9, */*;q=0.1');
+  }
+}
+
+assert.equal((await handleOfficialSourceProxyRequest(endpointRequest(irasUrl, {
+  payload: { url: irasUrl, headers: { 'user-agent': 'forbidden' } }
+}))).status, 400, 'client payload cannot provide arbitrary upstream headers');
+
+let masSpoofFetched = false;
+const masSpoofUrl = 'https://www.mas.gov.sg.evil.example/page';
+assert.equal((await handleOfficialSourceProxyRequest(endpointRequest(masSpoofUrl), async () => {
+  masSpoofFetched = true;
+  return new Response('unexpected');
+})).status, 400, 'MAS profile does not accept a spoofed MAS subdomain');
+assert.equal(masSpoofFetched, false, 'spoofed MAS subdomain is rejected before fetch');
+
 const rejectedRedirect = await handleOfficialSourceProxyRequest(endpointRequest(irasUrl), async () => new Response(null, {
   status: 302,
   headers: { location: 'https://evil.example/steal' }
@@ -87,6 +130,21 @@ const acceptedRedirect = await handleOfficialSourceProxyRequest(endpointRequest(
 }));
 const acceptedRedirectEnvelope = await decodeEnvelope(acceptedRedirect);
 assert.equal(acceptedRedirectEnvelope.headers.location, 'https://www.iras.gov.sg/basics-of-individual-income-tax/income-received-from-overseas');
+
+const masRedirect = await handleOfficialSourceProxyRequest(endpointRequest('https://www.mas.gov.sg/redirect-start'), async (_input, init) => {
+  assert.equal(new Headers(init.headers).get('user-agent'), masCompatibilityUserAgent,
+    'MAS profile applies to the validated first redirect hop');
+  return new Response(null, { status: 302, headers: { location: irasUrl } });
+});
+assert.equal((await decodeEnvelope(masRedirect)).headers.location, irasUrl,
+  'redirect from MAS to another approved authority remains validated and explicit');
+let redirectedAuthorityHeaders;
+await handleOfficialSourceProxyRequest(endpointRequest(irasUrl), async (_input, init) => {
+  redirectedAuthorityHeaders = new Headers(init.headers);
+  return new Response(html);
+});
+assert.equal(redirectedAuthorityHeaders.has('user-agent'), false,
+  'a redirected request to another approved authority uses its own profile');
 
 const notModified = await handleOfficialSourceProxyRequest(endpointRequest(irasUrl), async () => new Response(null, {
   status: 304,

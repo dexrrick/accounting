@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "singaporeReviewDate": "2026-10-16",
+  "purpose": "Focused transport investigation; engineering acceptance only, no production source approval",
+  "checkpoint": {
+    "pullRequest": "https://github.com/dexrrick/accounting/pull/19",
+    "head": "4c9d91696ffb7df73650becd15975c03cd84fc63",
+    "draftPreserved": true,
+    "localInvestigationBranch": "codex/mas-transport-investigation"
+  },
+  "captureRoot": "tests/fixtures/mas-reviewed/",
+  "observations": [
+    {
+      "directory": "transport-investigation-20261016-direct",
+      "method": "Initial sandboxed Node 24 invocation",
+      "outcome": "NETWORK_ERROR for both requests; no observed HTTP response or bytes. This is a local environment failure, not evidence of a MAS HTTP response."
+    },
+    {
+      "directory": "transport-investigation-20261016-direct-live",
+      "method": "Node 22.23.1 outside the network sandbox, controlled direct transport, default request headers",
+      "outcome": "Both requests returned HTTP 200 text/html with Maintenance title; no 3xx observed."
+    },
+    {
+      "directory": "transport-investigation-20261016-context-live",
+      "method": "Same controlled direct transport with fixed browser-style User-Agent and https://www.mas.gov.sg/ Referer; no credentials or cookies",
+      "outcome": "HTTP 200 substantive HTML and application/pdf with observed original final URLs and no 3xx responses. HTML 265375 bytes; PDF 208660 bytes. Original extraction outcomes in manifest are pre-fix observations, not the later acceptance result."
+    },
+    {
+      "directory": "transport-investigation-20261016-ua-only",
+      "method": "One PDF request; browser-style User-Agent alone, no Referer, through controlled customFetch",
+      "outcome": "HTTP 200 application/pdf, 208660 bytes, SHA-256 305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17. The mode label is direct because the header profile was supplied as an explicit customFetch; request headers in the trace record the actual profile."
+    },
+    {
+      "directory": "transport-investigation-20261016-referrer-only",
+      "method": "One PDF request; MAS Referer alone with default user-agent",
+      "outcome": "HTTP 200 text/html Maintenance. The actual request headers, rather than the generic direct mode label, identify this probe."
+    },
+    {
+      "directory": "transport-investigation-20261016-identified-agent",
+      "method": "Both URLs, User-Agent AccountingOfficialSourceRetriever/1.0",
+      "outcome": "HTTP 200 text/html Maintenance for both URLs."
+    },
+    {
+      "directory": "transport-investigation-20261016-genuine-recapture",
+      "method": "Existing captureOfficialDocuments and ControlledWebRetriever customFetch with the same fixed browser-style User-Agent alone",
+      "outcome": "Both genuine documents obtained again. HTML document hash differs; PDF hash is identical. This supplies a real HTML snapshot replacement, not evidence of a substantive statutory amendment. No separate per-hop diagnostic was collected on this recapture."
+    },
+    {
+      "directory": "transport-investigation-20261016-preview-live",
+      "method": "Node relay through existing same-origin decoder against the unchanged PR19 commit preview ea199869-accounting.dexrrick-goh.workers.dev",
+      "outcome": "Outer HTTP 200 JSON envelopes contain upstream HTTP 200 text/html Maintenance for both URLs. Internal upstream redirect hops are unknown. This initial diagnostic preceded header-filter review fixes; original outer envelope bytes are preserved and no absence of a filtered header should be inferred from its diagnostic. It is not browser UI/CORS or current production acceptance."
+    },
+    {
+      "directory": "transport-investigation-20261016-preview-reviewed",
+      "method": "The same fixed deployed preview and existing response decoder after the diagnostic header/provenance fixes",
+      "outcome": "Both outer HTTP 200 JSON responses expose upstream HTTP 200 text/html Maintenance. Upstream redirect chain remains unknown; no packages or production activations are performed. This confirms the deployed blocker independently of the initial diagnostic."
+    }
+  ],
+  "browserComparison": {
+    "landingPage": "https://www.mas.gov.sg/regulation/circulars/iid-04-2025-governance-and-management-of-variable-capital-companies",
+    "method": "Visible official View Document link via documented browser download API",
+    "returnedFileBytes": 208660,
+    "sha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+    "matchesReviewedBrowserPdf": true,
+    "httpStatus": null,
+    "contentType": null,
+    "verifiedFinalUrl": null,
+    "redirectChain": null,
+    "limitation": "The browser returned a file without response headers or a network trace. This does not prove an uncached network response. New controlled HTTP captures have their own metadata; none is transferred into this browser capture or the original 15 October manifest."
+  },
+  "conclusion": {
+    "observedDiscriminator": "The browser-style User-Agent was sufficient for the PDF in this bounded comparison; Referer alone and the application-identified User-Agent were not. This is consistent with user-agent-dependent upstream handling; the precise CDN/server mechanism is unverified.",
+    "supportedOperatorPath": "Explicit customFetch/header profile inside the existing ControlledWebRetriever, using captureOfficialDocuments or the opt-in diagnostic CLI. Every host, HTTPS, redirect, MIME/signature, topic, hash and admission check still applies. The compatibility header grants no source trust.",
+    "productionDependency": "The unchanged deployed official-source endpoint still yields maintenance content. A reviewed server-side request-profile decision and successful deployed/browser transport acceptance are required before production integration. The public proxy does not accept arbitrary client-supplied upstream headers; that restriction remains intact.",
+    "entityBytes": "Stored gzip files wrap the exact HTTP entity bytes exposed by fetch, independently hashed after decompression. They are not captures of TLS packets or on-the-wire content encoding.",
+    "historicalApplicability": "No source-supported historical effective interval has been established. Publication and Last-Modified dates are not effective dates.",
+    "originalPdfSubsection": "The original requested Substantive Fund Management Activity extraction remains PDF_SECTION_NOT_SUBSTANTIVE because the following numbered paragraph is treated as a boundary. Whole-document extraction is EXACT but lacks the unique page locator required by the unchanged feed/admission gates. A separately declared paragraph 9 selection supplies the genuine page-3 passage for isolated lifecycle acceptance; it does not establish either original-subsection or whole-document lifecycle acceptance."
+  },
+  "acceptanceReport": "tests/fixtures/mas-reviewed/transport-investigation-20261016-acceptance.json",
+  "validation": {
+    "runtime": "Node 22.23.1",
+    "focusedDiagnostic": "PASS",
+    "focusedGenuineLifecycle": "PASS",
+    "smoke": { "passed": 110, "failed": 0, "durationSeconds": 121.10 },
+    "fullOffline": { "passed": 130, "failed": 0, "durationSeconds": 130.48 },
+    "lint": "PASS_WITH_EXISTING_WARNINGS",
+    "typeScriptAndProductionBuild": "PASS_WITH_EXISTING_WARNINGS",
+    "diffCheck": "PASS",
+    "captureBytesAndHashes": "INDEPENDENTLY_VERIFIED",
+    "independentReview": "NO_REMAINING_MATERIAL_FINDINGS_ON_FINAL_DIAGNOSTIC_AND_ACCEPTANCE_DELTAS",
+    "offlinePolicy": "Smoke/full processes inherited an external-fetch guard. Diagnostic child-decoder tests used explicit offline fixture responses.",
+    "remoteMutation": "NONE_PR19_CHECKPOINT_PRESERVED"
+  },
+  "integrationAssessment": {
+    "decision": "RETAIN_DRAFT_CHECKPOINTS_NO_MERGE",
+    "orderedDependencies": [
+      "PR15 statutory-authorities-catchup at 99fc7e0",
+      "Shared document extraction commit 827ddef",
+      "MAS regulatory lifecycle commit 22c8614",
+      "PR17 shared-document-admission at 771697e",
+      "PR18 mas-targeted-acceptance at 3f2d2f3",
+      "PR19 mas-controlled-acceptance at 4c9d916",
+      "Local mas-transport-investigation working changes"
+    ],
+    "ci": "PR19 has no pull-request workflow run. Current workflow targets only main/master PR bases, while PR17-19 use stacked branch bases. Local verification is not a substitute for combined CI at the eventual integration boundary.",
+    "separateAcraWork": "PR12 remains separate; its validator, sitemap discovery and test runner changes overlap the stack and need later reconciliation. No ACRA integration or wider authority work was performed.",
+    "releaseGaps": [
+      "Reviewed server-side MAS request profile and successful deployed/browser transport acceptance",
+      "Original named PDF subsection extraction",
+      "Whole-document PDF activation lacks a unique page locator under existing admission rules",
+      "Source-supported historical periods and a genuine revised PDF version",
+      "Production review/activation persistence, monitoring and scheduling remain later work"
+    ]
+  }
+}

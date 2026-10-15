@@ -4,6 +4,18 @@ export interface PdfTextLine {
   y: number;
   cells: string[];
   cellStarts: number[];
+  /** Stable structure-tree owner for text belonging to a PDF Note element. */
+  noteOwnerId?: string;
+  /** Tagged content identifiers for this line when it is owned by a PDF Note. */
+  noteContentIds?: string[];
+  /** Note owners linked to tagged reference text on this line. */
+  referencedNoteIds?: string[];
+  /** Exact tagged content identifiers expected for each linked note owner. */
+  referencedNotes?: Array<{ noteOwnerId: string; contentIds: string[] }>;
+  /** True when the source tags do not prove one unambiguous note association. */
+  noteAssociationAmbiguous?: boolean;
+  /** True when a raised numeric marker cannot be bound to one tagged source note. */
+  unresolvedNumericReference?: boolean;
 }
 
 export interface PdfTextExtraction {
@@ -48,6 +60,11 @@ interface PdfStructureBinding {
   paragraphId?: string;
   listItemId?: string;
   listRegion?: 'Lbl' | 'LBody';
+  noteOwnerId?: string;
+  referencedNoteIds?: string[];
+  referencedNotes?: Array<{ noteOwnerId: string; contentIds: string[] }>;
+  noteReferenceExpected?: boolean;
+  noteAssociationAmbiguous?: boolean;
   inTable: boolean;
 }
 
@@ -106,12 +123,34 @@ function createPositionedLine(items: PositionedTextItem[], pageNumber: number, y
   return { text: cells.join(' | '), pageNumber, y, cells, cellStarts, itemCells };
 }
 
-function indexPdfStructureTree(value: unknown): Map<string, PdfStructureBinding> | undefined {
+function indexPdfStructureTree(value: unknown, pageNumber: number): Map<string, PdfStructureBinding> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const bindings = new Map<string, PdfStructureBinding>();
+  const roleIds = new WeakMap<object, string>();
+  const linkReferences = new Map<string, {
+    noteContentIds: Map<string, Set<string>>;
+    expected: boolean;
+    ambiguous: boolean;
+  }>();
   let nextNodeId = 0;
   let malformed = false;
   const tableRoles = new Set(['Table', 'TR', 'TD', 'TH']);
+
+  const roleIdentity = (node: PdfStructureNode): { role: string; id: string } => {
+    let id = roleIds.get(node);
+    if (!id) {
+      id = `${pageNumber}:node-${nextNodeId++}`;
+      roleIds.set(node, id);
+    }
+    return { role: node.role || '', id };
+  };
+
+  const contentIdsUnder = (rawNode: unknown): string[] => {
+    if (!rawNode || typeof rawNode !== 'object' || Array.isArray(rawNode)) return [];
+    const node = rawNode as PdfStructureNode;
+    const ids = node.type === 'content' && typeof node.id === 'string' ? [node.id] : [];
+    return [...ids, ...(Array.isArray(node.children) ? node.children.flatMap(contentIdsUnder) : [])];
+  };
 
   const visit = (rawNode: unknown, path: Array<{ role: string; id: string }>): void => {
     if (!rawNode || typeof rawNode !== 'object' || Array.isArray(rawNode)) {
@@ -126,7 +165,37 @@ function indexPdfStructureTree(value: unknown): Map<string, PdfStructureBinding>
       malformed = true;
       return;
     }
-    const nodePath = node.role ? [...path, { role: node.role, id: `node-${nextNodeId++}` }] : path;
+    const nodePath = node.role ? [...path, roleIdentity(node)] : path;
+    if (node.role === 'Link') {
+      const spanIds = (node.children || []).filter(child =>
+        child && typeof child === 'object' && !Array.isArray(child) && (child as PdfStructureNode).role === 'Span'
+      ).flatMap(contentIdsUnder);
+      const noteChildren = (node.children || []).filter(child =>
+        child && typeof child === 'object' && !Array.isArray(child) && (child as PdfStructureNode).role === 'Note'
+      ) as PdfStructureNode[];
+      const notes = noteChildren.map(child => ({
+        noteOwnerId: roleIdentity(child).id,
+        contentIds: [...new Set(contentIdsUnder(child))]
+      }));
+      if (noteChildren.length > 0) {
+        if (spanIds.length === 0) malformed = true;
+        const noteHasContent = notes.length === 1 && notes[0].contentIds.length > 0;
+        for (const contentId of spanIds) {
+          const association = linkReferences.get(contentId) || {
+            noteContentIds: new Map<string, Set<string>>(), expected: false, ambiguous: false
+          };
+          association.expected = true;
+          if (!noteHasContent || association.noteContentIds.size > 0) association.ambiguous = true;
+          for (const note of notes) {
+            const expectedIds = association.noteContentIds.get(note.noteOwnerId) || new Set<string>();
+            for (const id of note.contentIds) expectedIds.add(id);
+            association.noteContentIds.set(note.noteOwnerId, expectedIds);
+          }
+          if (notes.length !== 1) association.ambiguous = true;
+          linkReferences.set(contentId, association);
+        }
+      }
+    }
     if (node.type === 'content') {
       if (!node.id || bindings.has(node.id) || (node.children && node.children.length > 0)) {
         malformed = true;
@@ -138,10 +207,19 @@ function indexPdfStructureTree(value: unknown): Map<string, PdfStructureBinding>
       const listRegion = listItemIndex >= 0
         ? [...nodePath.slice(listItemIndex + 1)].reverse().find(entry => entry.role === 'Lbl' || entry.role === 'LBody')?.role as 'Lbl' | 'LBody' | undefined
         : undefined;
+      const association = linkReferences.get(node.id);
       bindings.set(node.id, {
         paragraphId: paragraph?.id,
         listItemId: listItem?.id,
         listRegion,
+        noteOwnerId: [...nodePath].reverse().find(entry => entry.role === 'Note')?.id,
+        referencedNoteIds: association ? [...association.noteContentIds.keys()] : undefined,
+        referencedNotes: association ? [...association.noteContentIds].map(([noteOwnerId, contentIds]) => ({
+          noteOwnerId,
+          contentIds: [...contentIds]
+        })) : undefined,
+        noteReferenceExpected: association?.expected,
+        noteAssociationAmbiguous: association?.ambiguous,
         inTable: nodePath.some(entry => tableRoles.has(entry.role))
       });
     } else if (node.type !== undefined && node.type !== 'annotation') {
@@ -153,6 +231,77 @@ function indexPdfStructureTree(value: unknown): Map<string, PdfStructureBinding>
 
   visit(value, []);
   return malformed ? undefined : bindings;
+}
+
+function attachPdfLineNoteMetadata(line: InternalPdfTextLine, bindings: Map<string, PdfStructureBinding> | undefined): void {
+  if (!bindings?.size) return;
+  const items = line.itemCells.flat();
+  const itemBindings = items.map(item => item.contentId ? bindings.get(item.contentId) : undefined);
+  const ownedItems = itemBindings.flatMap((binding, index) => binding?.noteOwnerId ? [{ binding, item: items[index] }] : []);
+  const noteOwners = new Set(ownedItems.map(({ binding }) => binding.noteOwnerId!));
+  if (ownedItems.length > 0) {
+    line.noteContentIds = [...new Set(ownedItems.flatMap(({ item }) => item.contentId ? [item.contentId] : []))];
+    if (ownedItems.length === items.length && noteOwners.size === 1) line.noteOwnerId = [...noteOwners][0];
+    else line.noteAssociationAmbiguous = true;
+  }
+
+  const referencedNoteIds = new Set<string>();
+  const referencedNotes = new Map<string, Set<string>>();
+  for (const binding of itemBindings) {
+    if (!binding) continue;
+    for (const noteId of binding.referencedNoteIds || []) referencedNoteIds.add(noteId);
+    for (const note of binding.referencedNotes || []) {
+      const contentIds = referencedNotes.get(note.noteOwnerId) || new Set<string>();
+      for (const contentId of note.contentIds) contentIds.add(contentId);
+      referencedNotes.set(note.noteOwnerId, contentIds);
+    }
+    if (binding.noteAssociationAmbiguous) line.noteAssociationAmbiguous = true;
+    if (binding.noteReferenceExpected && binding.referencedNotes?.length !== 1) line.unresolvedNumericReference = true;
+  }
+  if (referencedNoteIds.size > 0) line.referencedNoteIds = [...referencedNoteIds];
+  if (referencedNotes.size > 0) {
+    line.referencedNotes = [...referencedNotes].map(([noteOwnerId, contentIds]) => ({
+      noteOwnerId,
+      contentIds: [...contentIds]
+    }));
+  }
+  if (items.some((item, index) => item.superscriptReference &&
+      itemBindings[index]?.referencedNotes?.length !== 1)) {
+    line.unresolvedNumericReference = true;
+  }
+}
+
+function markUnresolvedRaisedNumericReferences(lines: InternalPdfTextLine[]): void {
+  for (const line of lines) {
+    if (line.noteOwnerId || line.cells.length !== 1 || !/^\d{1,3}$/.test(line.cells[0]) || line.itemCells[0]?.length !== 1) continue;
+    if (line.referencedNoteIds?.length === 1 && !line.noteAssociationAmbiguous) continue;
+    const reference = line.itemCells[0][0];
+    if (!Number.isFinite(reference.height) || reference.height <= 0) continue;
+    const geometricallyRaisedBesideText = lines.some(target => {
+      if (target === line || target.pageNumber !== line.pageNumber || target.cells.length > 2) return false;
+      const targetCellIndex = target.cells.length === 1 ? 0 : 1;
+      const targetItems = target.itemCells[targetCellIndex];
+      if (!targetItems?.length || !/[A-Za-z]{3,}/.test(target.cells[targetCellIndex])) return false;
+      const heights = targetItems.map(item => item.height).filter(height => Number.isFinite(height) && height > 0).sort((a, b) => a - b);
+      if (!heights.length) return false;
+      const baselineHeight = heights[Math.floor(heights.length / 2)];
+      const raisedBy = reference.y - target.y;
+      // This is a conservative unknown-reference detector, not the successful
+      // tagged-reference reflow rule. Near-body-sized numerals can still be
+      // visibly raised; leave the stricter reflow tolerance unchanged above.
+      if (reference.height > baselineHeight * 1.05 || reference.height < baselineHeight * 0.45 || raisedBy <= 2.5 || raisedBy > 5.5) return false;
+      const ordered = [...targetItems].sort((left, right) => left.x - right.x);
+      const previous = [...ordered].reverse().find(item => item.x + item.width <= reference.x + 1);
+      const next = ordered.find(item => item.x >= reference.x);
+      if (ordered.some(item => item.x < reference.x + reference.width - 1 && item.x + item.width > reference.x + 1)) return false;
+      if (!previous || reference.x - (previous.x + previous.width) > 8) return false;
+      if (next && next.x - (reference.x + reference.width) > 8) return false;
+      const lineStart = Math.min(...ordered.map(item => item.x));
+      const lineRight = Math.max(...ordered.map(item => item.x + item.width));
+      return reference.x >= lineStart && reference.x <= lineRight + 8;
+    });
+    if (geometricallyRaisedBesideText) line.unresolvedNumericReference = true;
+  }
 }
 
 function ownerForCell(
@@ -490,16 +639,21 @@ export async function extractPdfDocumentText(
       const page = await document.getPage(pageNumber);
       const content = await page.getTextContent({ includeMarkedContent: true });
       let structureBindings: Map<string, PdfStructureBinding> | undefined;
+      let structureTreeAvailable = false;
+      let markedContentValid = true;
       try {
-        structureBindings = indexPdfStructureTree(await page.getStructTree());
+        const structureTree = await page.getStructTree();
+        structureTreeAvailable = Boolean(structureTree);
+        structureBindings = indexPdfStructureTree(structureTree, pageNumber);
+        if (structureTreeAvailable && !structureBindings) hasAmbiguousTaggedLayout = true;
       } catch {
         // Structure is optional evidence for reflow. If it is unavailable or
         // malformed, retain the original visual layout and ambiguity result.
+        hasAmbiguousTaggedLayout = true;
       }
       const positioned: PositionedTextItem[] = [];
       const contentIdStack: Array<string | undefined> = [];
       const seenContentIds = new Set<string>();
-      let markedContentValid = true;
       let activeContentId: string | undefined;
       for (const item of content.items) {
         if ('type' in item) {
@@ -536,8 +690,11 @@ export async function extractPdfDocumentText(
       }
       if (contentIdStack.length) markedContentValid = false;
       const pageLines = groupPositionedTextIntoLines(positioned, pageNumber);
+      if (structureTreeAvailable && !markedContentValid) hasAmbiguousTaggedLayout = true;
       hasAmbiguousTaggedLayout = reflowTaggedParagraphs(pageLines, markedContentValid ? structureBindings : undefined) ||
         hasAmbiguousTaggedLayout;
+      for (const line of pageLines) attachPdfLineNoteMetadata(line, markedContentValid ? structureBindings : undefined);
+      markUnresolvedRaisedNumericReferences(pageLines);
       const pageText = pageLines.map(line => line.text).join('\n').trim();
       if (!pageText) hasEmptyPageText = true;
       characters += pageText.length;
