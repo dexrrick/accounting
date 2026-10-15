@@ -1,0 +1,62 @@
+[
+  {
+    "file": "fund-management-licensing.maintenance.html.gz",
+    "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+    "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+    "httpStatus": 200,
+    "contentType": "text/html",
+    "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+    "lastModified": null,
+    "retrievedAt": "2026-10-15T14:16:28.293Z",
+    "documentHash": "dac4b1e47aaef1974873723604b9caeb7d3dcbfa4f3f9ba613077ff9bb40f969",
+    "bytes": 853817,
+    "responseTitle": "Maintenance",
+    "responseClassification": "MAS_MAINTENANCE_HTML_NOT_SOURCE_DOCUMENT",
+    "transport": "Python urllib HTTPS direct fetch; no web-reader substitution"
+  },
+  {
+    "file": "iid-04-2025.maintenance.html.gz",
+    "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+    "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+    "httpStatus": 200,
+    "contentType": "text/html",
+    "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+    "lastModified": null,
+    "retrievedAt": "2026-10-15T14:16:28.527Z",
+    "documentHash": "f917d1be13f8fb3f507931946885c21309f6fabe85b19cd82235200f49b2ecbb",
+    "bytes": 853817,
+    "responseTitle": "Maintenance",
+    "responseClassification": "MAS_MAINTENANCE_HTML_NOT_SOURCE_DOCUMENT",
+    "transport": "Python urllib HTTPS direct fetch; no web-reader substitution"
+  },
+  {
+    "file": "cmi-02-2023.maintenance.html.gz",
+    "url": "https://www.mas.gov.sg/regulation/circulars/cmi-02-2023-observations-from-inspections-of-licensed-venture-capital-fund-managers",
+    "finalUrl": "https://www.mas.gov.sg/regulation/circulars/cmi-02-2023-observations-from-inspections-of-licensed-venture-capital-fund-managers",
+    "httpStatus": 200,
+    "contentType": "text/html",
+    "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+    "lastModified": null,
+    "retrievedAt": "2026-10-15T14:16:28.728Z",
+    "documentHash": "874920d02ed5a4f2d7a285f780e22ac09344c92bc9022c003ad7b08d7ef43306",
+    "bytes": 853817,
+    "responseTitle": "Maintenance",
+    "responseClassification": "MAS_MAINTENANCE_HTML_NOT_SOURCE_DOCUMENT",
+    "transport": "Python urllib HTTPS direct fetch; no web-reader substitution"
+  },
+  {
+    "file": "sfa-04-g05-jan2025.maintenance.html.gz",
+    "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidelines/cmg/guideline-sfa-04-g05-on-licensing-registration-and-conduct-of-business-for-fund-managers/sfa--guidelines-on-licensing-and-conduct-of-business-for-fmcs-10jan2025.pdf",
+    "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidelines/cmg/guideline-sfa-04-g05-on-licensing-registration-and-conduct-of-business-for-fund-managers/sfa--guidelines-on-licensing-and-conduct-of-business-for-fmcs-10jan2025.pdf",
+    "httpStatus": 200,
+    "contentType": "text/html",
+    "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+    "lastModified": null,
+    "retrievedAt": "2026-10-15T14:16:28.927Z",
+    "documentHash": "85bdf1a74f614b4ac85004926bbff60e40f54faec3599ec3c8a860054970cc6b",
+    "bytes": 853817,
+    "responseTitle": "Maintenance",
+    "responseClassification": "MAS_MAINTENANCE_HTML_NOT_SOURCE_DOCUMENT",
+    "transport": "Python urllib HTTPS direct fetch; no web-reader substitution"
+  }
+]
