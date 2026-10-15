@@ -35,10 +35,43 @@ export interface SourceVersionMetadata {
   provisionHash?: string; // Canonical integrity hash: SHA-256 of extracted normalized provision
   extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED';
   sourceLocator?: SourceLocator;
+  /** Marks byte-backed extracted records that require shared document admission. */
+  documentAdmissionRequired?: true;
+  documentAdmissionPackageId?: string;
+  documentAdmissionPackageHash?: string;
+  governingAuthority?: AuthoritativeSourceRecord['authority'];
+  domain?: AuthoritativeSourceRecord['domain'];
+  reviewApproval?: SourceVersionReviewApproval;
   // Source-native legislation identity
   legislationCode?: string;
   revisionDate?: string;
   amendmentInstrument?: string;
+}
+
+export interface SourceVersionReviewApproval {
+  packageId: string;
+  packageHash: string;
+  reviewer: string;
+  reason: string;
+  approvedAt: string;
+}
+
+function isValidIsoTimestamp(value: string): boolean {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value;
+}
+
+function isValidDocumentReviewApproval(metadata: SourceVersionMetadata): boolean {
+  const approval = metadata.reviewApproval;
+  return Boolean(metadata.documentAdmissionRequired === true && approval &&
+    typeof approval.packageId === 'string' && typeof approval.packageHash === 'string' &&
+    typeof metadata.documentAdmissionPackageHash === 'string' &&
+    typeof approval.reviewer === 'string' && typeof approval.reason === 'string' &&
+    typeof approval.approvedAt === 'string' &&
+    approval.packageId === metadata.documentAdmissionPackageId &&
+    approval.packageHash.toLowerCase() === metadata.documentAdmissionPackageHash?.toLowerCase() &&
+    /^[a-f\d]{64}$/i.test(approval.packageHash) && approval.reviewer.trim() && approval.reason.trim() &&
+    isValidIsoTimestamp(approval.approvedAt));
 }
 
 /**
@@ -98,7 +131,7 @@ export interface RollbackResult {
  * Correctly computes 64-bit big-endian length padding and bitwise scheduling.
  * Synchronous, zero-dependency, verified against Node.js crypto.createHash across all test vectors.
  */
-function pureSha256(message: string): string {
+function pureSha256(message: string | Uint8Array): string {
   const K = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -110,25 +143,29 @@ function pureSha256(message: string): string {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
   ];
 
-  // UTF-8 encode
-  const bytes: number[] = [];
-  for (let i = 0; i < message.length; i++) {
-    let charCode = message.charCodeAt(i);
-    if (charCode < 0x80) {
-      bytes.push(charCode);
-    } else if (charCode < 0x800) {
-      bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
-    } else if (charCode < 0xd800 || charCode >= 0xe000) {
-      bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f));
-    } else {
-      i++;
-      charCode = 0x10000 + (((charCode & 0x3ff) << 10) | (message.charCodeAt(i) & 0x3ff));
-      bytes.push(
-        0xf0 | (charCode >> 18),
-        0x80 | ((charCode >> 12) & 0x3f),
-        0x80 | ((charCode >> 6) & 0x3f),
-        0x80 | (charCode & 0x3f)
-      );
+  // Preserve the established string encoder exactly; binary source documents
+  // take the byte path so their hash is independent of any text decoding.
+  const bytes: number[] = typeof message === 'string' ? [] : Array.from(message);
+  if (typeof message === 'string') {
+    // UTF-8 encode (existing text behavior, including malformed surrogate handling).
+    for (let i = 0; i < message.length; i++) {
+      let charCode = message.charCodeAt(i);
+      if (charCode < 0x80) {
+        bytes.push(charCode);
+      } else if (charCode < 0x800) {
+        bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
+      } else if (charCode < 0xd800 || charCode >= 0xe000) {
+        bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f));
+      } else {
+        i++;
+        charCode = 0x10000 + (((charCode & 0x3ff) << 10) | (message.charCodeAt(i) & 0x3ff));
+        bytes.push(
+          0xf0 | (charCode >> 18),
+          0x80 | ((charCode >> 12) & 0x3f),
+          0x80 | ((charCode >> 6) & 0x3f),
+          0x80 | (charCode & 0x3f)
+        );
+      }
     }
   }
 
@@ -251,6 +288,11 @@ export function computeSha256(message: string): string {
     // Fall back to pure TypeScript implementation
   }
   return pureSha256(message);
+}
+
+/** Computes SHA-256 over exact source bytes without decoding or normalizing them. */
+export function computeSha256Bytes(bytes: Uint8Array): string {
+  return pureSha256(bytes);
 }
 
 /**
@@ -436,6 +478,15 @@ export class SourceVersioningManager {
       };
     }
 
+    if (candidate.metadata.documentAdmissionRequired && !isValidDocumentReviewApproval(candidate.metadata)) {
+      return {
+        success: false,
+        versionId,
+        activatedRecordId: candidate.record.id,
+        error: `Cannot activate document version '${versionId}' without its current explicit review approval`
+      };
+    }
+
     const recordId = candidate.record.id;
     const currentActiveVersionId = this.activeVersionPointers.get(recordId);
 
@@ -462,8 +513,8 @@ export class SourceVersioningManager {
     const ledgerEntry: VersionLedgerEntry = {
       versionId,
       recordId,
-      metadata: { ...candidate.metadata },
-      recordSnapshot: { ...candidate.record },
+      metadata: structuredClone(candidate.metadata),
+      recordSnapshot: structuredClone(candidate.record),
       recordedAt: new Date().toISOString(),
       isActive: true
     };
@@ -477,6 +528,23 @@ export class SourceVersioningManager {
       versionId,
       activatedRecordId: recordId
     };
+  }
+
+  /** Stores the approval receipt against the verified document candidate before activation. */
+  public recordDocumentReviewApproval(versionId: string, approval: SourceVersionReviewApproval): boolean {
+    const candidate = this.candidates.get(versionId);
+    if (!approval || typeof approval.packageId !== 'string' || typeof approval.packageHash !== 'string' ||
+        typeof approval.reviewer !== 'string' || typeof approval.reason !== 'string' ||
+        typeof approval.approvedAt !== 'string' || !candidate || candidate.metadata.documentAdmissionRequired !== true ||
+        candidate.metadata.verificationStatus !== 'VERIFIED' ||
+        !candidate.metadata.documentAdmissionPackageId ||
+        candidate.metadata.documentAdmissionPackageId !== approval.packageId ||
+        candidate.metadata.documentAdmissionPackageHash?.toLowerCase() !== approval.packageHash.toLowerCase() ||
+        !approval.reviewer.trim() || !approval.reason.trim() || !/^[a-f\d]{64}$/i.test(approval.packageHash) ||
+        !isValidIsoTimestamp(approval.approvedAt)) return false;
+
+    candidate.metadata.reviewApproval = structuredClone(approval);
+    return true;
   }
 
   /**
@@ -505,12 +573,24 @@ export class SourceVersioningManager {
     }
 
     const predecessorVersionId = targetEntry.metadata.supersedesVersionId;
-    if (!predecessorVersionId) {
+    if (this.activeVersionPointers.get(targetEntry.recordId) !== versionId) {
       return {
         success: false,
         rolledBackVersionId: versionId,
         restoredVersionId: '',
-        error: `Version '${versionId}' has no recorded predecessor to roll back to`
+        error: `Version '${versionId}' is not the active version for record '${targetEntry.recordId}'`
+      };
+    }
+
+    // A first activation can be rolled back by clearing its active pointer. The
+    // ledger entry remains as an immutable historical record of that activation.
+    if (!predecessorVersionId) {
+      targetEntry.isActive = false;
+      this.activeVersionPointers.delete(targetEntry.recordId);
+      return {
+        success: true,
+        rolledBackVersionId: versionId,
+        restoredVersionId: ''
       };
     }
 
@@ -542,7 +622,8 @@ export class SourceVersioningManager {
    * Retrieves an immutable snapshot of an entry from the ledger.
    */
   public getLedgerEntry(versionId: string): VersionLedgerEntry | undefined {
-    return this.ledger.get(versionId);
+    const entry = this.ledger.get(versionId);
+    return entry ? structuredClone(entry) : undefined;
   }
 
   /**
@@ -556,7 +637,7 @@ export class SourceVersioningManager {
    * Gets all entries in the ledger for audit review.
    */
   public getAllLedgerEntries(): VersionLedgerEntry[] {
-    return Array.from(this.ledger.values());
+    return Array.from(this.ledger.values(), entry => structuredClone(entry));
   }
 
   /**

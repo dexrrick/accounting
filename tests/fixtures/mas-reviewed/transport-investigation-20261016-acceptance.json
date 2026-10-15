@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS_WITH_SCOPED_LIMITATIONS",
+  "acceptance": "ISOLATED_ENGINEERING_ACCEPTANCE_ONLY",
+  "productionOrLegalApproval": "NOT_ESTABLISHED",
+  "captureDaySingapore": "2026-10-16",
+  "transport": {
+    "originalContextCapture": "tests/fixtures/mas-reviewed/transport-investigation-20261016-context-live/transport-diagnostic.json",
+    "originalContextObservedHttpStatus": 200,
+    "originalContextBodiesComplete": true,
+    "originalContextRedirectsObserved": 0,
+    "originalContextFinalUrlsMatchRequests": true,
+    "recaptureMetadata": "tests/fixtures/mas-reviewed/transport-investigation-20261016-genuine-recapture/manifest.json",
+    "recaptureHttpStatus": 200,
+    "recaptureFinalUrlMatchesRequest": true,
+    "liveRequestsPerformedByAcceptanceTest": false,
+    "httpResponseFieldsInReplay": "Captured status, requested/source/final URL, content type, retrieval timestamp, exact body bytes and available Last-Modified metadata are replayed from the capture manifests. No ETag is invented."
+  },
+  "documents": [
+    {
+      "authority": "MAS",
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+      "kind": "HTML",
+      "requestedUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "originalBytes": 265375,
+      "originalSha256": "f4dd7ec6de460037ba87acdae577f3a7ca269462937fea90ea3ddacf03cc533a",
+      "replacementBytes": 265375,
+      "replacementSha256": "196d9f900acf4dee3d0f976c008441d048739188e7ae5024947bd11cad99d379",
+      "extraction": "PASS_MAIN_BODY_PREFERRED_OVER_EARLIER_ARTICLE",
+      "identity": "The full captured page defines Securities and Futures Act 2001 (SFA); the selected criteria passage uses the page-defined SFA abbreviation. No alias was added to the topic map.",
+      "lifecycle": "PASS_STAGE_VERIFY_REVIEW_APPROVAL_ACTIVATE_RETRIEVE_QUOTE_CITATION_REPLACE_AND_ROLLBACK",
+      "replacementInterpretation": "Same-page environmental byte snapshot; selected provision text and provision hash are unchanged. This is not treated as a substantive statutory amendment."
+    },
+    {
+      "authority": "MAS",
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "kind": "PDF",
+      "requestedUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+      "bytes": 208660,
+      "sha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+      "headingOnlySelection": "REJECTED_PDF_SECTION_NOT_SUBSTANTIVE",
+      "wholeDocumentSelection": "PASS_EXACT",
+      "wholeDocumentStageAttempt": "BLOCKED_NO_UNIQUE_PAGE_LOCATOR",
+      "lifecycleSelection": "EXACT_PARAGRAPH_9_RELEVANT_SECTION_WITH_PAGE_LOCATOR",
+      "lifecycle": "PASS_STAGE_VERIFY_REVIEW_APPROVAL_ACTIVATE_RETRIEVE_FULL_PARAGRAPH_QUOTE_AND_CITATION_BINDING",
+      "effectiveDate": "UNVERIFIED",
+      "historicalDateRequest": "REJECTED_HISTORICAL_DATE_UNVERIFIED"
+    }
+  ],
+  "lifecycleChecks": {
+    "noActivationBeforeVerification": true,
+    "noActivationBeforeExplicitTestReviewerReceipt": true,
+    "answerRetrieverConstructedBeforeActivation": true,
+    "answerRetrievalOnCapturedSingaporeDay": true,
+    "exactQuotationAndCitationBindings": true,
+    "wrongAuthorityRejected": true,
+    "wrongDomainRejected": true,
+    "alteredDocumentHashRejected": true,
+    "supersededVersionCitationRejected": true,
+    "replacementRollbackRestoresPreviousBinding": true,
+    "firstActivationRollbackRemovesIsolatedRows": true,
+    "wholeDocumentPdfAdmissionBlockedForMissingUniquePageLocator": true,
+    "wholeParagraphPdfAdmissionUsesExplicitPageLocator": true,
+    "unchangedPdfRemainsActiveDuringHtmlReplacement": true
+  },
+  "limitations": [
+    "The current HTML page and IID 04/2025 PDF do not establish a historical effective date; the PDF Last-Modified value is not treated as one.",
+    "The requested PDF heading-only boundary remains rejected. Whole-document extraction succeeds; the positive PDF lifecycle selects the exact substantive paragraph 9 boundary.",
+    "The whole-document PDF extraction has no single pageNumber and cannot be staged; the positive PDF lifecycle uses the exact captured paragraph 9 boundary with its real page locator.",
+    "The supplied replacement is a second capture of the same page, with unchanged selected provision text. No statutory amendment or legal human approval is inferred.",
+    "All activation and reviewer receipts occur in an isolated in-memory test registry and do not enable a production MAS feed.",
+    "This acceptance does not establish broader ACRA, CPF, MOM, production-monitoring, scheduling, or live-answer acceptance."
+  ]
+}

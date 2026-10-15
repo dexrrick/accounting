@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "status": "BLOCKED",
+  "documents": [
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "IID 04/2025"
+          ],
+          "expectedTitles": [
+            "GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"
+          ],
+          "topicTerms": [
+            "VCC",
+            "fund management"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "text/html",
+        "retrievedAt": "2026-10-15T22:35:39.465Z",
+        "contentHash": "d7674846b8ccd7b30077c689bc2ea554211d55a78c425291f29fc5fd8e5a5c53",
+        "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+        "lastModified": null,
+        "error": null
+      },
+      "bodyFile": "01-MAS_IID_04_2025_RECHECK.body.gz",
+      "bodyBytes": 853815,
+      "integrity": {
+        "computedSha256": "d7674846b8ccd7b30077c689bc2ea554211d55a78c425291f29fc5fd8e5a5c53",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "REJECTED",
+        "code": "DOCUMENT_KIND_MISMATCH",
+        "reason": "Expected PDF, received HTML"
+      },
+      "candidateRecord": null
+    }
+  ]
+}

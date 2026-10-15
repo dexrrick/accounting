@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "status": "EXTRACTION_READY",
+  "documents": [
+    {
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentKind": "HTML",
+        "sectionHeading": "What are the admission criteria and applicable requirements?",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "Securities and Futures Act"
+          ],
+          "expectedTitles": [
+            "Fund Management Licensing"
+          ],
+          "topicTerms": [
+            "fund management",
+            "licence"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "contentType": "text/html; charset=utf-8",
+        "retrievedAt": "2026-10-15T23:16:39.004Z",
+        "contentHash": "227fcbca475fd0334c195f9e17bc0d422ad05ea9acc04b9042c975935f8076a5",
+        "etag": null,
+        "lastModified": null,
+        "error": null
+      },
+      "bodyFile": "01-MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK.body.gz",
+      "bodyBytes": 265375,
+      "integrity": {
+        "computedSha256": "227fcbca475fd0334c195f9e17bc0d422ad05ea9acc04b9042c975935f8076a5",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "SUCCESS",
+        "extractionStatus": "EXACT",
+        "isVerbatimText": true
+      },
+      "candidateRecord": {
+        "id": "MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore",
+        "sourcePublisher": "Monetary Authority of Singapore",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentTitle": "Fund Management Licensing",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "paragraphOrSection": "What are the admission criteria and applicable requirements?",
+        "sourceText": "What are the admission criteria and applicable requirements?\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\nCredibility and substantiveness of the business model and plan, and the associated risks;\n\nEffectiveness of risk management and compliance controls;\n\nFund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\nFitness and propriety of the applicant, its shareholders and directors; and\n\nAbility to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\nManage assets for related corporations or related family members;\n\nManage a pool of immovable assets for accredited and institutional investors; or\n\nManage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+        "principleSummary": "",
+        "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "fund management",
+          "licence"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": true,
+        "lifecycleState": "CANDIDATE",
+        "version": "sha256:227fcbca475fd0334c195f9e17bc0d422ad05ea9acc04b9042c975935f8076a5:547c248f2ff1ee241346d724af8ce33333d73fc478611a10e88b154c68ca7b0f",
+        "documentHash": "227fcbca475fd0334c195f9e17bc0d422ad05ea9acc04b9042c975935f8076a5",
+        "provisionHash": "547c248f2ff1ee241346d724af8ce33333d73fc478611a10e88b154c68ca7b0f",
+        "contentHash": "547c248f2ff1ee241346d724af8ce33333d73fc478611a10e88b154c68ca7b0f",
+        "extractionStatus": "EXACT",
+        "sourceLocator": {
+          "heading": "What are the admission criteria and applicable requirements?",
+          "startOffset": 239519,
+          "endOffset": 243944,
+          "boundary": {
+            "startOffset": 239519,
+            "endOffset": 243944
+          },
+          "sourceNode": "h2",
+          "tableStructure": "NONE",
+          "sourceType": "HTML",
+          "documentHash": "227fcbca475fd0334c195f9e17bc0d422ad05ea9acc04b9042c975935f8076a5",
+          "mediaType": "text/html; charset=utf-8"
+        },
+        "provenance": "LIVE_EXTERNAL",
+        "recordRole": "EVIDENCE",
+        "groundingEligible": false,
+        "sourceAuthority": "MAS",
+        "retrievedAt": "2026-10-15T23:16:39.004Z",
+        "relatedTopicIds": [],
+        "verificationMethod": "OFFICIAL_DOCUMENT_BODY_EXTRACTION_CANDIDATE"
+      }
+    },
+    {
+      "recordId": "MAS_IID_04_2025_SUBSECTION_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "sectionEndHeading": "Anti-Money Laundering and Countering the Financing of Terrorism (AML/CFT)",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "IID 04/2025"
+          ],
+          "expectedTitles": [
+            "GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"
+          ],
+          "topicTerms": [
+            "VCC",
+            "fund management"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "application/pdf",
+        "retrievedAt": "2026-10-15T23:16:40.179Z",
+        "contentHash": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "etag": null,
+        "lastModified": "Thu, 26 Jun 2025 09:14:46 GMT",
+        "error": null
+      },
+      "bodyFile": "02-MAS_IID_04_2025_SUBSECTION_RECHECK.body.gz",
+      "bodyBytes": 208660,
+      "integrity": {
+        "computedSha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "SUCCESS",
+        "extractionStatus": "EXACT",
+        "isVerbatimText": true
+      },
+      "candidateRecord": {
+        "id": "MAS_IID_04_2025_SUBSECTION_RECHECK",
+        "authority": "MAS",
+        "authorityName": "Monetary Authority of Singapore",
+        "sourcePublisher": "Monetary Authority of Singapore",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentTitle": "GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES (VCCs)",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "paragraphOrSection": "Substantive Fund Management Activity",
+        "sourceText": "Substantive Fund Management Activity\n9 The review observed a small number of VCC managers as managing multiple VCCs that\ndid not hold any assets and/or did not have any investors. This was despite the VCCs having\nbeen incorporated for more than a year. VCC managers should periodically assess and wind\ndown VCCs that hold no assets and/or have no investors.\n10 Another potential area of concern relates to instances where VCC managers do not\ncarry out substantive fund management activity. This refers to cases where VCCs hold illiquid\nassets on behalf of a single investor or a few connected investors, and where these assets\nwere previously owned by the investors. MAS is of the view that VCC managers who merely\nhelp transfer investors’ existing investments or assets into the VCC without providing\ninvestment inputs would not be considered as carrying out substantive fund management\nactivity. VCC managers are reminded that a VCC is to be used as a collective investment\nscheme, and VCC managers are expected to have a substantive role in the management of\nthe VCCs. The VCC manager should be actively involved in all aspects of investment and risk\nmanagement of the VCC, including portfolio construction, investment due diligence and\nanalysis. VCC managers should not7:\n(i) provide a conduit for customers to structure investments or assets in the form\nof fund units, without providing any substantive input or influence over the\nmerits or suitability of the investment or assets, or assuming responsibility for\ntheir investment performance;\n(ii) set up VCCs that merely serve as a conduit for the offer of funds managed by\nother fund managers; or\n(iii) purely engage in marketing of the VCCs.\n\n7\nParagraph 3.3 of Guidelines on Licensing and Conduct of Business for Fund Management Companies",
+        "principleSummary": "",
+        "officialSourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "canonicalSourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "domain": "MAS_FUNDS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "VCC",
+          "fund management"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": true,
+        "lifecycleState": "CANDIDATE",
+        "version": "sha256:305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17:ee8adfcff6fa4401ee1dd2ed9190840cd26b2e5e7a2f4814ac22a943b7832212",
+        "documentHash": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "provisionHash": "ee8adfcff6fa4401ee1dd2ed9190840cd26b2e5e7a2f4814ac22a943b7832212",
+        "contentHash": "ee8adfcff6fa4401ee1dd2ed9190840cd26b2e5e7a2f4814ac22a943b7832212",
+        "extractionStatus": "EXACT",
+        "sourceLocator": {
+          "sourceType": "PDF",
+          "heading": "Substantive Fund Management Activity",
+          "pageNumber": 3,
+          "pageCount": 5,
+          "tableStructure": "NONE",
+          "canonicalLocator": "PDF page 3 “Substantive Fund Management Activity” to exclusive page 4 “Anti-Money Laundering and Countering the Financing of Terrorism (AML/CFT)”; attached note 4:node-5 page 4 [p8R_mc27,p8R_mc28]",
+          "documentHash": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+          "mediaType": "application/pdf"
+        },
+        "provenance": "LIVE_EXTERNAL",
+        "recordRole": "EVIDENCE",
+        "groundingEligible": false,
+        "sourceAuthority": "MAS",
+        "retrievedAt": "2026-10-15T23:16:40.179Z",
+        "relatedTopicIds": [],
+        "verificationMethod": "OFFICIAL_DOCUMENT_BODY_EXTRACTION_CANDIDATE"
+      }
+    }
+  ]
+}

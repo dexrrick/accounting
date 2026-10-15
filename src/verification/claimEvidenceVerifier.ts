@@ -1,6 +1,10 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
+import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
+import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
+import type { VerifiedDocumentBinding } from '../standards/unifiedSourceModel';
+import type { QueryDomain, StatutoryAuthority } from '../types/accounting';
 
 export type VerifiedEvidenceClaim = {
   text: string;
@@ -9,6 +13,7 @@ export type VerifiedEvidenceClaim = {
   /** Present only when the record has independent, exact URL verification. */
   canonicalUrl?: string;
   supportKind: 'EXACT_SOURCE_QUOTE' | 'REVIEWED_EDITORIAL_SUMMARY';
+  sourceBinding?: VerifiedDocumentBinding;
 };
 
 export type RejectedEvidenceClaim = {
@@ -24,6 +29,10 @@ export type EvidenceClaimsVerificationResult = {
 export interface VerifyEvidenceClaimsOptions {
   missingFacts: string[];
   targetDate?: string;
+  referenceDate?: string;
+  expectedAuthority?: StatutoryAuthority;
+  expectedDomain?: QueryDomain;
+  versioningManager?: SourceVersioningManager;
 }
 
 const APPLICATION_SOURCE_TYPES = new Set(['APPLICATION_RULE']);
@@ -152,10 +161,28 @@ function findDateRejection(
   return undefined;
 }
 
-export function findRecordEligibilityRejection(record: AuthoritativeSourceRecord, targetDate?: string, referenceDate: string = SourceFreshnessManager.DEFAULT_REFERENCE_DATE): string | undefined {
+export function findRecordEligibilityRejection(
+  record: AuthoritativeSourceRecord,
+  targetDate?: string,
+  referenceDate?: string,
+  versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
+  expectedAuthority?: StatutoryAuthority,
+  expectedDomain?: QueryDomain
+): string | undefined {
   if (APPLICATION_SOURCE_TYPES.has(record.sourceType) || record.evidenceTier === 'APPLICATION_RULE') {
     return 'APPLICATION_SOURCE_NOT_ALLOWED';
   }
+
+  const documentAdmission = verifySharedDocumentAdmission(record, versioningManager, {
+    targetDate,
+    referenceDate,
+    expectedAuthority,
+    expectedDomain
+  });
+  if (documentAdmission.required) return documentAdmission.admitted ? undefined : documentAdmission.reason;
+
+  const legacyReferenceDate = referenceDate || SourceFreshnessManager.DEFAULT_REFERENCE_DATE;
+
   if (record.lifecycleState === 'REJECTED' || record.lifecycleState === 'STAGED' ||
       record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false) {
     return 'SOURCE_RECORD_NOT_GROUNDING_ELIGIBLE';
@@ -166,7 +193,7 @@ export function findRecordEligibilityRejection(record: AuthoritativeSourceRecord
     if (record.lifecycleState !== 'ACTIVE') return 'LOCAL_SOURCE_NOT_ACTIVE';
     if (record.verificationMethod !== 'STATUTORY_LEGISLATION_AUDIT' &&
         record.verificationMethod !== 'CURATED_EDITORIAL_REVIEW') return 'LOCAL_SOURCE_REVIEW_PROVENANCE_MISSING';
-    if (defaultSourceFreshnessManager.evaluateSourceFreshness(record, referenceDate) === 'AUDIT_OVERDUE') {
+    if (defaultSourceFreshnessManager.evaluateSourceFreshness(record, legacyReferenceDate) === 'AUDIT_OVERDUE') {
       return 'LOCAL_SOURCE_REVIEW_AUDIT_OVERDUE';
     }
   } else if (record.provenance === 'LIVE_EXTERNAL') {
@@ -289,6 +316,7 @@ export function verifyEvidenceClaims(
   const accepted: VerifiedEvidenceClaim[] = [];
   const rejected: RejectedEvidenceClaim[] = [];
   const targetDate = options?.targetDate;
+  const versioningManager = options?.versioningManager || defaultSourceVersioningManager;
 
   if (!Array.isArray(claims)) {
     return { accepted, rejected: [reject('', 'CLAIMS_NOT_ARRAY')] };
@@ -335,7 +363,14 @@ export function verifyEvidenceClaims(
       continue;
     }
     const record = matchingRecords[0];
-    const eligibilityRejection = findRecordEligibilityRejection(record, targetDate);
+    const eligibilityRejection = findRecordEligibilityRejection(
+      record,
+      targetDate,
+      options?.referenceDate,
+      versioningManager,
+      options?.expectedAuthority,
+      options?.expectedDomain
+    );
     if (eligibilityRejection) {
       rejected.push(reject(text, eligibilityRejection));
       continue;
@@ -369,6 +404,12 @@ export function verifyEvidenceClaims(
       continue;
     }
 
+    const sharedAdmission = verifySharedDocumentAdmission(record, versioningManager, {
+      targetDate,
+      referenceDate: options?.referenceDate,
+      expectedAuthority: options?.expectedAuthority,
+      expectedDomain: options?.expectedDomain
+    });
     accepted.push({
       text,
       recordId: record.id,
@@ -376,7 +417,8 @@ export function verifyEvidenceClaims(
       ...(canonicalUrl ? { canonicalUrl } : {}),
       supportKind: record.provenance === 'LOCAL_STATIC' &&
         (record.sourceType === 'CURATED_SUMMARY' || record.isVerbatimText === false)
-        ? 'REVIEWED_EDITORIAL_SUMMARY' : 'EXACT_SOURCE_QUOTE'
+        ? 'REVIEWED_EDITORIAL_SUMMARY' : 'EXACT_SOURCE_QUOTE',
+      ...(sharedAdmission.required && sharedAdmission.admitted ? { sourceBinding: sharedAdmission.binding } : {})
     });
   }
 

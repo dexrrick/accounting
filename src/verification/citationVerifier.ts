@@ -3,6 +3,11 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import { defaultSourceRetriever, isAnswerGroundingEligibleSource, type ISourceRetriever } from '../retrieval/sourceRetriever';
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
+import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
+import { sameVerifiedDocumentBinding, verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
+import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
+import type { VerifiedDocumentBinding } from '../standards/unifiedSourceModel';
+import { getSingaporeDateString } from '../utils/dateUtils';
 
 export type CitationVerificationStatus =
   | 'VERIFIED_PRIMARY_SOURCE'
@@ -21,6 +26,7 @@ export interface CitationVerificationResult {
   isStructurallyValid: boolean;
   isAuthoritativePrimarySource: boolean;
   matchedRecord?: AuthoritativeSourceRecord;
+  sourceBinding?: VerifiedDocumentBinding;
   reason: string;
   /**
    * IMPORTANT LIMITATION:
@@ -33,13 +39,18 @@ export interface CitationVerificationResult {
 export class CitationVerifier {
   private retriever: ISourceRetriever;
   private referenceDate: string;
+  private explicitReferenceDate?: string;
+  private versioningManager: SourceVersioningManager;
 
   constructor(
     retriever: ISourceRetriever = defaultSourceRetriever,
-    referenceDate: string = SourceFreshnessManager.DEFAULT_REFERENCE_DATE
+    referenceDate?: string,
+    versioningManager?: SourceVersioningManager
   ) {
     this.retriever = retriever;
-    this.referenceDate = referenceDate;
+    this.referenceDate = referenceDate || SourceFreshnessManager.DEFAULT_REFERENCE_DATE;
+    this.explicitReferenceDate = referenceDate;
+    this.versioningManager = versioningManager || retriever.getVersioningManager?.() || defaultSourceVersioningManager;
   }
 
   private normalizeSection(text: string): string {
@@ -78,7 +89,8 @@ export class CitationVerifier {
 
   private isQualifiedLiveEvidence(record: AuthoritativeSourceRecord): boolean {
     const metadata = record as unknown as { recordRole?: string; groundingEligible?: boolean; urlVerificationStatus?: string };
-    return metadata.recordRole === 'DISCOVERED_EVIDENCE' &&
+    return !verifySharedDocumentAdmission(record, this.versioningManager).required &&
+      metadata.recordRole === 'DISCOVERED_EVIDENCE' &&
       metadata.groundingEligible === true &&
       metadata.urlVerificationStatus === 'VERIFIED' &&
       hasVerifiedSourceUrlProvenance(record) &&
@@ -99,6 +111,18 @@ export class CitationVerifier {
     expectedAuthority?: StatutoryAuthority,
     retrievedEvidenceScope?: AuthoritativeSourceRecord[]
   ): CitationVerificationResult {
+    if (citation.sourceBinding) {
+      return {
+        citation,
+        status: 'UNVERIFIED',
+        isValid: false,
+        isStructurallyValid: false,
+        isAuthoritativePrimarySource: false,
+        matchedRecord: record,
+        reason: 'A live candidate citation cannot carry an approved-document version binding.',
+        structuralVerificationOnly: true
+      };
+    }
     const authorityMatches = !citation.authority || citation.authority === record.authority ||
       ((citation.authority === 'ASC' || citation.authority === 'ACRA') && record.authority === 'ACRA');
     const expectedMatches = !expectedAuthority || expectedAuthority === record.authority ||
@@ -152,7 +176,8 @@ export class CitationVerifier {
   public verifyCitation(
     citation: StandardCitation,
     expectedAuthority?: StatutoryAuthority,
-    retrievedEvidenceScope?: AuthoritativeSourceRecord[]
+    retrievedEvidenceScope?: AuthoritativeSourceRecord[],
+    admissionOptions: SharedDocumentAdmissionOptions = {}
   ): CitationVerificationResult {
     const rawStd = citation.standard || '';
     const rawPara = citation.paragraph || '';
@@ -171,7 +196,13 @@ export class CitationVerifier {
     }
 
     // 1. Check if source standard or statute exists in verified repository
-    const matchedRecords = this.retriever.findSourcesByStandardOrAct(rawStd).filter(isAnswerGroundingEligibleSource);
+    const lookupOptions: SharedDocumentAdmissionOptions = {
+      ...admissionOptions,
+      referenceDate: admissionOptions.referenceDate || this.explicitReferenceDate || getSingaporeDateString(),
+      expectedAuthority: admissionOptions.expectedAuthority || expectedAuthority
+    };
+    const matchedRecords = this.retriever.findSourcesByStandardOrAct(rawStd, undefined, lookupOptions)
+      .filter(record => isAnswerGroundingEligibleSource(record, this.versioningManager, lookupOptions));
     const liveCandidates = (retrievedEvidenceScope || []).filter(record => this.isQualifiedLiveEvidence(record));
     const liveSectionMatch = liveCandidates.find(record => {
       const code = record.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
@@ -249,11 +280,49 @@ export class CitationVerifier {
       if (bestScore > 0) {
         matchedRecord = bestCandidate;
       } else {
-        const activeRecord = sectionCandidates.find((r) => r.sourceStatus === 'VERIFIED' && (!r.validTo || r.validTo >= this.referenceDate));
+        const selectionDate = admissionOptions.targetDate || lookupOptions.referenceDate || this.referenceDate;
+        const activeRecord = sectionCandidates.find((r) => r.sourceStatus === 'VERIFIED' && (!r.validTo || r.validTo >= selectionDate));
         if (activeRecord) {
           matchedRecord = activeRecord;
         }
       }
+    }
+
+    let sourceBinding: VerifiedDocumentBinding | undefined;
+    const documentAdmission = verifySharedDocumentAdmission(matchedRecord, this.versioningManager, lookupOptions);
+    if (!documentAdmission.required && citation.sourceBinding) {
+      return {
+        citation,
+        status: 'UNVERIFIED',
+        isValid: false,
+        isStructurallyValid: false,
+        isAuthoritativePrimarySource: false,
+        matchedRecord,
+        reason: 'A document binding was supplied for a source version that has not passed shared document admission.',
+        structuralVerificationOnly: true
+      };
+    }
+    if (documentAdmission.required) {
+      const exactScopeRecords = (retrievedEvidenceScope || []).filter(record => record.id === matchedRecord.id);
+      const scopedRecord = exactScopeRecords.length === 1 ? exactScopeRecords[0] : undefined;
+      const scopedAdmission = scopedRecord && verifySharedDocumentAdmission(scopedRecord, this.versioningManager, lookupOptions);
+      if (!scopedRecord || !scopedAdmission?.required || !scopedAdmission.admitted ||
+          !sameVerifiedDocumentBinding(documentAdmission.admitted ? documentAdmission.binding : undefined,
+            scopedAdmission.admitted ? scopedAdmission.binding : undefined) ||
+          (citation.sourceBinding !== undefined &&
+            !sameVerifiedDocumentBinding(citation.sourceBinding, scopedAdmission.admitted ? scopedAdmission.binding : undefined))) {
+        return {
+          citation,
+          status: 'UNVERIFIED',
+          isValid: false,
+          isStructurallyValid: false,
+          isAuthoritativePrimarySource: false,
+          matchedRecord,
+          reason: 'Document citation must bind to the exact active, approved version retrieved in this answer context.',
+          structuralVerificationOnly: true
+        };
+      }
+      sourceBinding = scopedAdmission.binding;
     }
 
     // 3. Authority alignment check (with ASC/ACRA merger compatibility)
@@ -427,12 +496,13 @@ export class CitationVerifier {
     }
 
     return {
-      citation,
+      citation: sourceBinding ? { ...citation, sourceBinding } : citation,
       status,
       isValid: true,
       isStructurallyValid: true,
       isAuthoritativePrimarySource: isVerifiedPrimary,
       matchedRecord,
+      ...(sourceBinding ? { sourceBinding } : {}),
       reason,
       structuralVerificationOnly: true
     };
@@ -444,14 +514,15 @@ export class CitationVerifier {
   public verifyCitationBatch(
     citations: StandardCitation[],
     expectedAuthority?: StatutoryAuthority,
-    retrievedEvidenceScope?: AuthoritativeSourceRecord[]
+    retrievedEvidenceScope?: AuthoritativeSourceRecord[],
+    admissionOptions: SharedDocumentAdmissionOptions = {}
   ): {
     results: CitationVerificationResult[];
     allValid: boolean;
     validCitations: StandardCitation[];
     rejectedCitations: CitationVerificationResult[];
   } {
-    const results = citations.map((c) => this.verifyCitation(c, expectedAuthority, retrievedEvidenceScope));
+    const results = citations.map((c) => this.verifyCitation(c, expectedAuthority, retrievedEvidenceScope, admissionOptions));
     const allValid = results.every((r) => r.isValid);
     const validCitations = results.filter((r) => r.isValid).map((r) => r.citation);
     const rejectedCitations = results.filter((r) => !r.isValid);

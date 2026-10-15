@@ -950,8 +950,10 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   if (topic.domainId === 'ACCOUNTING_SFRS') return [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS];
   if (topic.domainId.startsWith('IRAS_')) return [...APPROVED_IRAS_DISCOVERY_HOSTS];
-  if (topic.domainId.startsWith('CPF_')) return [...(getOfficialSourceDiscoveryProviderConfig('CPF')?.approvedHosts || [])];
-  return [];
+  // All configured statutory authorities share the same approved-host boundary.
+  // IRAS retains its reviewed SSO legislation host and accounting standards retain IFRS/ASC.
+  const provider = getOfficialSourceDiscoveryProviderConfig(topic.authorities[0]);
+  return provider ? [...provider.approvedHosts] : [];
 }
 
 function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
@@ -982,6 +984,62 @@ function cloneOfficialSourceDiscoveryRequest(request: OfficialSourceDiscoveryReq
 }
 
 const UNRESOLVED_RELATIVE_HISTORICAL_PERIOD = /\b(?:last|previous|prior|preceding)[\s-]+(?:(?:calendar|financial|basis|tax|assessment)\s+)*(?:year|ya|period)\b|\b(?:year|ya|period)\s+before\s+last\b|\b(?:one|two|three|\d+)\s+years?\s+ago\b|\b(?:old(?:er)?|previous|former|superseded)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\b(?:historical|historic)\s+(?:(?:corporate|income|withholding|wht|tax|gst)\s+){0,3}rates?\b|\bprior to (?:the )?(?:(?:ya|year of assessment)\s*)?20\d{2}\b/i;
+const MOM_MAS_HISTORICAL_MODIFIERS = new Set(['old', 'older', 'previous', 'prior', 'preceding', 'former', 'superseded', 'historical', 'historic']);
+const MOM_MAS_NORMATIVE_RULE_TERMS = new Set([
+  'act', 'acts', 'code', 'codes', 'condition', 'conditions', 'criterion', 'criteria', 'ceiling', 'ceilings',
+  'directive', 'directives', 'duty', 'duties', 'eligibility', 'entitlement', 'entitlements', 'guidance',
+  'guideline', 'guidelines', 'law', 'laws', 'legislation', 'limit', 'limits', 'notice', 'notices',
+  'obligation', 'obligations', 'policy', 'policies', 'provision', 'provisions', 'rate', 'rates',
+  'regulation', 'regulations', 'requirement', 'requirements', 'rule', 'rules', 'standard', 'standards',
+  'threshold', 'thresholds', 'version'
+]);
+const MOM_MAS_HISTORICAL_CONNECTORS = new Set([
+  'a', 'an', 'and', 'about', 'for', 'in', 'of', 'on', 'the', 'to', 'under', 'with',
+  'her', 'his', 'its', 'my', 'our', 'their', 'your', 's'
+]);
+const HISTORICAL_PERSON_OR_EMPLOYER_FACTS = new Set([
+  'business', 'businesses', 'company', 'companies', 'employee', 'employees', 'employer', 'employers',
+  'individual', 'individuals', 'job', 'jobs', 'person', 'people', 'staff', 'worker', 'workers'
+]);
+
+function normalizeHistoricalRuleToken(token: string): string {
+  // MOM/MAS topic labels use both UK and US licence spellings, while queries
+  // commonly use the related word “licensing”. Treat those registry terms as
+  // one bounded topic token without broad stemming of unrelated words.
+  return /^(?:licen[cs](?:e|es|ed|ing))$/.test(token) ? 'licens' : token;
+}
+
+function isUndatedHistoricalMomMasRuleRequest(topic: MappedCoverageTopic, query: string): boolean {
+  const authorityLabels = topic.authorities.flatMap(authority => authority === 'MOM'
+    ? ['MOM', 'Ministry of Manpower']
+    : authority === 'MAS' ? ['MAS', 'Monetary Authority of Singapore'] : [authority]);
+  const topicWords = new Set([
+    ...getTopicContentTerms(topic), topic.title, ...authorityLabels
+  ].flatMap(term => normalizeEvidenceText(term).split(/\s+/).filter(Boolean).map(normalizeHistoricalRuleToken)));
+  const queryWords = normalizeEvidenceText(query).split(/\s+/).filter(Boolean);
+
+  for (let modifierIndex = 0; modifierIndex < queryWords.length; modifierIndex += 1) {
+    if (!MOM_MAS_HISTORICAL_MODIFIERS.has(queryWords[modifierIndex])) continue;
+
+    // An adjective describing a person, job, or organization is a factual
+    // descriptor, not a request for a superseded statutory requirement.
+    let firstDescribedWord = modifierIndex + 1;
+    while (firstDescribedWord < queryWords.length && MOM_MAS_HISTORICAL_CONNECTORS.has(queryWords[firstDescribedWord])) {
+      firstDescribedWord += 1;
+    }
+    if (HISTORICAL_PERSON_OR_EMPLOYER_FACTS.has(queryWords[firstDescribedWord])) continue;
+
+    const lastCandidateIndex = Math.min(queryWords.length - 1, modifierIndex + 9);
+    for (let ruleIndex = modifierIndex + 1; ruleIndex <= lastCandidateIndex; ruleIndex += 1) {
+      if (!MOM_MAS_NORMATIVE_RULE_TERMS.has(queryWords[ruleIndex])) continue;
+      const interveningWords = queryWords.slice(modifierIndex + 1, ruleIndex);
+      if (interveningWords.every(word => topicWords.has(normalizeHistoricalRuleToken(word)) || MOM_MAS_HISTORICAL_CONNECTORS.has(word))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 /** Present-day statutory guidance cannot establish a prior period without reviewed validity dates. */
 function hasVerifiedHistoricalStatutoryScope(
@@ -991,15 +1049,18 @@ function hasVerifiedHistoricalStatutoryScope(
   targetIsHistorical: boolean,
   query: string
 ): boolean {
-  if (!topic.domainId.startsWith('IRAS_') && !topic.domainId.startsWith('CPF_')) return true;
+  if (!getOfficialSourceDiscoveryProviderConfig(topic.authorities[0])) return true;
   if (isUndatedHistoricalStatutoryRequest(topic, query)) return false;
   if (!targetIsHistorical || !targetDate) return true;
   return Boolean(pointer?.validFrom && pointer.validTo && targetDate >= pointer.validFrom && targetDate <= pointer.validTo);
 }
 
 function isUndatedHistoricalStatutoryRequest(topic: MappedCoverageTopic, query: string): boolean {
+  const momOrMasHistoricalRule = (topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')) &&
+    isUndatedHistoricalMomMasRuleRequest(topic, query);
   if (!UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query) &&
-      !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query))) return false;
+      !(topic.domainId.startsWith('CPF_') && /\b(?:historical|historic|old|previous|former|superseded)\s+(?:cpf\s+)?(?:contribution\s+|wage\s+)?(?:rates?|ceilings?|rules?)\b/i.test(query)) &&
+      !momOrMasHistoricalRule) return false;
   // “Prior-year losses” identifies the vintage of a loss balance, not a
   // request for a superseded rule. Current carry-forward guidance may be
   // retrieved, while eligibility still waits on the YA and continuity facts.
@@ -1031,7 +1092,11 @@ function makeLiveCandidateEvidence(
         ? 'ACRA'
         : host === 'cpf.gov.sg' || host === 'www.cpf.gov.sg'
           ? 'Central Provident Fund Board (CPF Board)'
-          : 'Official source';
+          : host === 'mom.gov.sg' || host === 'www.mom.gov.sg'
+            ? 'Ministry of Manpower (MOM)'
+            : host === 'mas.gov.sg' || host === 'www.mas.gov.sg'
+              ? 'Monetary Authority of Singapore (MAS)'
+              : 'Official source';
   const record = {
     id: `LIVE_TOPIC_${topic.id}_${contentHash?.slice(0, 12) || Date.now()}`,
     authority: (pointer?.authority || topic.authorities[0] || 'ACRA') as StatutoryAuthority,
@@ -1067,7 +1132,9 @@ function makeLiveCandidateEvidence(
     lastVerifiedDate: currentDate,
     provenance: 'LIVE_EXTERNAL' as const,
     canonicalSourceUrl: url,
-    sourceAuthority: host === 'sso.agc.gov.sg' ? 'AGC' : topic.domainId.startsWith('IRAS_') ? 'IRAS' : topic.domainId.startsWith('CPF_') ? 'CPF' : 'ACRA',
+    sourceAuthority: host === 'sso.agc.gov.sg' ? 'AGC' : topic.domainId.startsWith('IRAS_') ? 'IRAS' :
+      topic.domainId.startsWith('CPF_') ? 'CPF' : topic.domainId.startsWith('MOM_') ? 'MOM' :
+      topic.domainId.startsWith('MAS_') ? 'MAS' : 'ACRA',
     retrievedAt,
     verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
     extractionStatus: 'PARTIAL' as const,
@@ -1222,19 +1289,24 @@ export async function resolveMappedOfficialSourceFallback(
   ): Promise<AuthoritativeSourceRecord | undefined> => {
     const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
     const cpfDiscovery = topic.domainId.startsWith('CPF_') && !pointer;
-    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery
+    const momDiscovery = topic.domainId.startsWith('MOM_') && !pointer;
+    const masDiscovery = topic.domainId.startsWith('MAS_') && !pointer;
+    const focusedStatutoryTitles = irasDiscovery || cpfDiscovery || momDiscovery || masDiscovery
       ? [topic.title, ...(topic.aliases || []), ...topic.keywords, ...(cpfDiscovery ? CPF_DISCOVERY_TITLE_HINTS[topic.id] || [] : [])]
         .filter(value => normalizeEvidenceText(value).split(' ').filter(Boolean).length >= 2)
       : [];
     const expectation = {
-      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] : [])],
+      standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer),
+        ...(irasDiscovery ? ['IRAS', 'Singapore Statutes Online'] : cpfDiscovery ? ['CPF', 'Central Provident Fund'] :
+          momDiscovery ? ['Ministry of Manpower', 'MOM'] : masDiscovery ? ['Monetary Authority of Singapore', 'MAS'] : [])],
       expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedStatutoryTitles,
         discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
       topicTerms: getTopicContentTerms(topic),
       minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
         topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1,
-      allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_')
+      allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_'),
+      requireSubstantiveBody: topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
@@ -1361,7 +1433,7 @@ export async function resolveMappedOfficialSourceFallback(
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
-    const historicalStatutoryQuery = (topic.domainId.startsWith('IRAS_') || topic.domainId.startsWith('CPF_')) && Boolean(
+    const historicalStatutoryQuery = Boolean(getOfficialSourceDiscoveryProviderConfig(topic.authorities[0])) && Boolean(
       isUndatedHistoricalStatutoryRequest(topic, query) ||
       targetIsHistorical
     );
@@ -2528,7 +2600,8 @@ export function postProcessAIResponse(
           isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
           isStructurallyValid: verification.isStructurallyValid,
           verificationReason: verification.reason,
-          structuralVerificationOnly: true
+          structuralVerificationOnly: true,
+          ...(verification.sourceBinding ? { sourceBinding: verification.sourceBinding } : {})
         }];
       });
 

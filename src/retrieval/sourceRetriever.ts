@@ -4,6 +4,9 @@ import {
   UNIFIED_SOURCE_REGISTRY,
   getAllAuthoritativeSources
 } from '../standards/unifiedSourceModel';
+import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
+import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
+import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { evaluateEvidenceQuality, isIrasEvidenceRequest, matchesRequestedQuestionConcept } from './evidenceQualityGate';
@@ -42,13 +45,23 @@ export interface GroundingEvidence {
 export interface ISourceRetriever {
   retrieveSources(query: SourceRetrievalQuery): Promise<AuthoritativeSourceRecord[]>;
   getSourceById(id: string): AuthoritativeSourceRecord | undefined;
-  findSourcesByStandardOrAct(standardOrActCode: string, paragraphOrSection?: string): AuthoritativeSourceRecord[];
+  findSourcesByStandardOrAct(
+    standardOrActCode: string,
+    paragraphOrSection?: string,
+    admissionOptions?: SharedDocumentAdmissionOptions
+  ): AuthoritativeSourceRecord[];
+  getVersioningManager?(): SourceVersioningManager;
 }
 
 /** Source-map pointers route queries but are never answer evidence. */
-export function isAnswerGroundingEligibleSource(record: AuthoritativeSourceRecord): boolean {
+export function isAnswerGroundingEligibleSource(
+  record: AuthoritativeSourceRecord,
+  versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
+  admissionOptions: SharedDocumentAdmissionOptions = {}
+): boolean {
   const metadata = record as AuthoritativeSourceRecord & { recordRole?: string; groundingEligible?: boolean };
-  return metadata.recordRole !== 'SOURCE_MAP_POINTER' &&
+  const documentAdmission = verifySharedDocumentAdmission(record, versioningManager, admissionOptions);
+  return documentAdmission.admitted && metadata.recordRole !== 'SOURCE_MAP_POINTER' &&
     metadata.groundingEligible !== false &&
     record.lifecycleState !== 'CANDIDATE' &&
     record.lifecycleState !== 'STAGED' &&
@@ -62,16 +75,36 @@ export function isAnswerGroundingEligibleSource(record: AuthoritativeSourceRecor
  */
 export class InMemorySourceRetriever implements ISourceRetriever {
   private sources: AuthoritativeSourceRecord[];
+  private readonly registryBacked: boolean;
+  private readonly versioningManager: SourceVersioningManager;
 
-  constructor(customSources?: AuthoritativeSourceRecord[]) {
+  constructor(customSources?: AuthoritativeSourceRecord[], versioningManager: SourceVersioningManager = defaultSourceVersioningManager) {
+    this.registryBacked = customSources === undefined;
     this.sources = customSources || getAllAuthoritativeSources();
+    this.versioningManager = versioningManager;
+  }
+
+  private getCurrentSources(): AuthoritativeSourceRecord[] {
+    if (this.registryBacked) return getAllAuthoritativeSources();
+    const byId = new Map(this.sources.map(record => [record.id, record]));
+    for (const record of Object.values(UNIFIED_SOURCE_REGISTRY)) {
+      if (byId.has(record.id)) byId.set(record.id, record);
+    }
+    return [...byId.values()];
+  }
+
+  public getVersioningManager(): SourceVersioningManager {
+    return this.versioningManager;
   }
 
   /**
    * Retrieves sources by unique record ID
    */
   public getSourceById(id: string): AuthoritativeSourceRecord | undefined {
-    return UNIFIED_SOURCE_REGISTRY[id] || this.sources.find((s) => s.id === id);
+    const record = UNIFIED_SOURCE_REGISTRY[id] || this.getCurrentSources().find((s) => s.id === id);
+    if (!record) return undefined;
+    const admission = verifySharedDocumentAdmission(record, this.versioningManager);
+    return admission.admitted ? record : undefined;
   }
 
   /**
@@ -80,7 +113,8 @@ export class InMemorySourceRetriever implements ISourceRetriever {
    */
   public findSourcesByStandardOrAct(
     standardOrActCode: string,
-    paragraphOrSection?: string
+    paragraphOrSection?: string,
+    admissionOptions: SharedDocumentAdmissionOptions = {}
   ): AuthoritativeSourceRecord[] {
     const codeClean = standardOrActCode
       .toLowerCase()
@@ -93,8 +127,8 @@ export class InMemorySourceRetriever implements ISourceRetriever {
           .replace(/[§\s\-_(),.&]/g, '')
       : null;
 
-    return this.sources.filter((s) => {
-      if (!isAnswerGroundingEligibleSource(s)) return false;
+    return this.getCurrentSources().filter((s) => {
+      if (!isAnswerGroundingEligibleSource(s, this.versioningManager, admissionOptions)) return false;
       const sCodeClean = s.standardOrActCode.toLowerCase().replace(/[\s\-_()]/g, '');
       const sTitleClean = s.documentTitle.toLowerCase().replace(/[\s\-_()]/g, '');
       const sInstClean = (s.legalOrStandardInstrument || '').toLowerCase().replace(/[\s\-_()]/g, '');
@@ -156,9 +190,25 @@ export class InMemorySourceRetriever implements ISourceRetriever {
     const hasAuthorityHint = Boolean(authorities && authorities.length > 0);
     const hasDomainHint = Boolean(domain && domain !== 'GENERAL');
 
-    for (const record of this.sources) {
-      if (!isAnswerGroundingEligibleSource(record)) continue;
+    for (const record of this.getCurrentSources()) {
+      if (!isAnswerGroundingEligibleSource(record, this.versioningManager, {
+        targetDate: effectiveTargetDate,
+        referenceDate: retrievalQuery.referenceDate,
+        expectedAuthority: authorities?.length === 1 ? authorities[0] : undefined,
+        expectedDomain: domain
+      })) continue;
       if (renovationBasisPeriodUnclear && record.id.startsWith('ITA_SEC14N_RENOVATION_REFURBISHMENT')) continue;
+      const managedDocument = verifySharedDocumentAdmission(record, this.versioningManager);
+      if (managedDocument.required && !verifySharedDocumentAdmission(record, this.versioningManager, {
+        targetDate: effectiveTargetDate,
+        referenceDate: retrievalQuery.referenceDate,
+        expectedAuthority: authorities?.length === 1 ? authorities[0] : undefined,
+        expectedDomain: domain
+      }).admitted) continue;
+      if (managedDocument.required && (
+        (authorities && authorities.length > 0 && !authorities.includes(record.authority)) ||
+        (domain && domain !== 'GENERAL' && record.domain !== domain)
+      )) continue;
       // When both hints are explicit, treat them as joint eligibility
       // constraints. A source from a different domain must not remain eligible
       // merely because it shares an authority (for example, ACRA corporate law

@@ -135,7 +135,7 @@ export interface AuthorityEvidenceProviderResult {
   candidates: AuthoritativeSourceRecord[];
   /** Optional IRAS retrieval/admission trace; metadata fields never establish coverage. */
   trace?: AuthorityRetrievalTrace;
-  /** Raw retrieval trace passed only to the existing IRAS evidence quality gate. */
+  /** Raw current-request retrieval trace: IRAS quality gate or strict non-IRAS live admission. */
   evidenceQualityTrace?: {
     path?: string;
     sourceMapIds?: string[];
@@ -162,9 +162,9 @@ export interface AuthorityEvidenceProvider {
   retrieve(request: AuthorityEvidenceRequest): Promise<AuthorityEvidenceProviderResult>;
 }
 
-/** Internal IRAS scope passed into the established grounding pipeline. */
+/** Internal per-authority issue scope passed into the shared official-source grounding pipeline. */
 export interface AuthorityEvidenceScope {
-  authority: 'IRAS';
+  authority: 'IRAS' | 'CPF' | 'MOM' | 'MAS';
   domain: AuthorityWorkstreamDomain;
   topicIds: string[];
   requestedConcepts: RequestedQuestionConcept[];
