@@ -13,8 +13,10 @@ import {
   type ControlledFetchResult
 } from './controlledWebRetriever';
 import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
+import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
+import { defaultTargetDateResolver } from './targetDateResolver';
 import {
   extractOfficialDocument,
   type OfficialDocumentExtractionRequest,
@@ -111,8 +113,14 @@ export class CompositeSourceRetriever implements ISourceRetriever {
    * Preserves Phase 3 temporal scoring and candidate-isolation invariants.
    */
   public async retrieveSources(retrievalQuery: SourceRetrievalQuery): Promise<AuthoritativeSourceRecord[]> {
+    const referenceDate = retrievalQuery.referenceDate ?? SourceFreshnessManager.DEFAULT_REFERENCE_DATE;
+    const targetDate = retrievalQuery.targetDate
+      ? retrievalQuery.targetDate
+      : defaultTargetDateResolver.resolveTargetDate(retrievalQuery.query, referenceDate).targetDate;
+    const normalizedQuery: SourceRetrievalQuery = { ...retrievalQuery, targetDate, referenceDate };
+
     // 1. If live check requested, trigger proactive update discovery (non-blocking, non-throwing)
-    if (retrievalQuery.enableLiveCheck) {
+    if (normalizedQuery.enableLiveCheck) {
       try {
         await this.feedService.checkForUpdates(this.webRetriever);
       } catch {
@@ -121,16 +129,16 @@ export class CompositeSourceRetriever implements ISourceRetriever {
     }
 
     // 2. Retrieve from local active registry (contains all approved static and activated live-patch sources)
-    const records = await this.localRetriever.retrieveSources(retrievalQuery);
+    const records = await this.localRetriever.retrieveSources(normalizedQuery);
 
     // 3. Safeguard: Ensure no unapproved candidate records or superseded versions are returned
     const approvedRecords = records.filter((r) => {
       // If record has versionId, check that it is activated in the versioning manager ledger
       const documentAdmission = verifySharedDocumentAdmission(r, this.versioningManager, {
-        targetDate: retrievalQuery.targetDate,
-        referenceDate: retrievalQuery.referenceDate,
-        expectedAuthority: retrievalQuery.authorities?.length === 1 ? retrievalQuery.authorities[0] : undefined,
-        expectedDomain: retrievalQuery.domain
+        targetDate: normalizedQuery.targetDate,
+        referenceDate: normalizedQuery.referenceDate,
+        expectedAuthority: normalizedQuery.authorities?.length === 1 ? normalizedQuery.authorities[0] : undefined,
+        expectedDomain: normalizedQuery.domain
       });
       if (!documentAdmission.admitted) return false;
       if (r.versionId) {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
 import { LiveRegulatoryFeedService } from '../../src/retrieval/liveRegulatoryFeed.ts';
 import { MASDocumentUpdateAdapter } from '../../src/retrieval/masDocumentUpdateAdapter.ts';
+import { CompositeSourceRetriever } from '../../src/retrieval/compositeSourceRetriever.ts';
 import { InMemorySourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { computeProvisionHash, computeSha256Bytes, SourceVersioningManager } from '../../src/standards/sourceVersioning.ts';
@@ -392,6 +393,63 @@ try {
 } finally {
   delete UNIFIED_SOURCE_REGISTRY[RECORD_ID];
 }
+
+const CAPTURE_ONLY_DAY = '2024-10-15';
+const FOLLOWING_REFERENCE_DAY = '2024-10-16';
+const CAPTURE_ONLY_ID = 'MAS_COMPOSITE_CAPTURE_DAY_TEST';
+const captureOnly = createApprovedManagedRecord({
+  id: CAPTURE_ONLY_ID,
+  title: 'MAS Notice on Capture-Day Date Resolution',
+  code: 'MAS-NOTICE-CAPTURE-DAY',
+  paragraph: 'Section 1 Capture-day date resolution',
+  sourceText: 'MAS Notice on Capture-Day Date Resolution requires licensed fund managers to retain documented valuation controls.',
+  retrievedAt: `${CAPTURE_ONLY_DAY}T01:00:00.000Z`,
+  approvedAt: `${CAPTURE_ONLY_DAY}T02:00:00.000Z`
+});
+const captureOnlyLocal = new InMemorySourceRetriever([captureOnly.record], captureOnly.versioningManager);
+const captureOnlyComposite = new CompositeSourceRetriever(
+  captureOnlyLocal, undefined, undefined, captureOnly.versioningManager
+);
+const captureDayQuery = (query, extra = {}) => ({
+  query,
+  authorities: ['MAS'],
+  domain: 'MAS_FUNDS',
+  referenceDate: FOLLOWING_REFERENCE_DAY,
+  ...extra
+});
+const retrievedIds = async (sourceRetriever, query) =>
+  (await sourceRetriever.retrieveSources(query)).map(record => record.id);
+
+const parsedCaptureDayQuery = captureDayQuery(
+  'MAS-NOTICE-CAPTURE-DAY licensed fund managers as at 15/10/2024 valuation controls'
+);
+assert.deepEqual(await retrievedIds(captureOnlyLocal, parsedCaptureDayQuery), [CAPTURE_ONLY_ID]);
+assert.deepEqual(await retrievedIds(captureOnlyComposite, parsedCaptureDayQuery), [CAPTURE_ONLY_ID],
+  'Composite retrieval uses the same DD/MM/YYYY date parsed by the local retriever');
+
+const explicitOverridesQueryDate = captureDayQuery(
+  'MAS-NOTICE-CAPTURE-DAY licensed fund managers as at 14/10/2024 valuation controls',
+  { targetDate: CAPTURE_ONLY_DAY }
+);
+assert.deepEqual(await retrievedIds(captureOnlyLocal, explicitOverridesQueryDate), [CAPTURE_ONLY_ID]);
+assert.deepEqual(await retrievedIds(captureOnlyComposite, explicitOverridesQueryDate), [CAPTURE_ONLY_ID],
+  'An explicit target date takes precedence over a conflicting date in the query text');
+
+for (const unsupportedDay of ['14/10/2024', '16/10/2024']) {
+  const unsupportedQuery = captureDayQuery(
+    `MAS-NOTICE-CAPTURE-DAY licensed fund managers as at ${unsupportedDay} valuation controls`
+  );
+  assert.deepEqual(await retrievedIds(captureOnlyLocal, unsupportedQuery), [],
+    `The capture-only document is unavailable for ${unsupportedDay}`);
+  assert.deepEqual(await retrievedIds(captureOnlyComposite, unsupportedQuery), [],
+    `Composite retrieval preserves capture-day-only admission for ${unsupportedDay}`);
+}
+
+const undatedCaptureQuery = captureDayQuery('MAS-NOTICE-CAPTURE-DAY licensed fund managers valuation controls');
+assert.deepEqual(await retrievedIds(captureOnlyLocal, undatedCaptureQuery), [],
+  'An undated query remains guarded by the following reference day');
+assert.deepEqual(await retrievedIds(captureOnlyComposite, undatedCaptureQuery), [],
+  'Composite retrieval does not turn an undated request into capture-day evidence');
 
 const historicalSourceText = 'MAS Notice 790 applied to licensed fund managers from 1 January 2024 to 31 December 2024.';
 const historical = createApprovedManagedRecord({
