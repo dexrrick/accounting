@@ -79,6 +79,8 @@ export interface AuthoritativeSourceRecord {
   retrievedAt?: string;
   verificationMethod?: string;
   versionId?: string;
+  /** Extracted source records remain ineligible unless the shared admission gate approves their active version. */
+  documentAdmissionRequired?: true;
   legislationCode?: string;
   amendmentInstrument?: string;
   fxObservation?: any;
@@ -105,6 +107,15 @@ export interface SourceLocator {
   documentHash?: string;
   tableStructure?: 'PRESERVED' | 'AMBIGUOUS' | 'NONE';
   canonicalLocator?: string;
+}
+
+/** Provenance receipt binding a verified quotation or citation to one admitted document version. */
+export interface VerifiedDocumentBinding {
+  recordId: string;
+  versionId: string;
+  documentHash: string;
+  provisionHash: string;
+  sourceLocator: SourceLocator;
 }
 
 /**

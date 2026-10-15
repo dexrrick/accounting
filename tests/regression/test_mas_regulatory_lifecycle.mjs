@@ -212,7 +212,7 @@ async function testMasLifecycleAndRollback() {
   for (const id of [HTML_RECORD_ID, PDF_RECORD_ID]) {
     const active = UNIFIED_SOURCE_REGISTRY[id];
     assert.equal(active.lifecycleState, 'ACTIVE');
-    assert.equal(active.groundingEligible, false);
+    assert.equal(active.groundingEligible, true, 'Only explicitly approved and activated documents become eligible for shared admission');
     assert.equal(active.provenance, 'LIVE_PATCH');
     assert.ok(versioning.getActiveVersionId(id).startsWith(`${template.packageId}-${id}`));
     const ledgerEntry = versioning.getAllLedgerEntries().find(entry => entry.recordId === id && entry.isActive);

@@ -2600,7 +2600,8 @@ export function postProcessAIResponse(
           isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
           isStructurallyValid: verification.isStructurallyValid,
           verificationReason: verification.reason,
-          structuralVerificationOnly: true
+          structuralVerificationOnly: true,
+          ...(verification.sourceBinding ? { sourceBinding: verification.sourceBinding } : {})
         }];
       });
 

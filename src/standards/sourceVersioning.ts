@@ -35,10 +35,43 @@ export interface SourceVersionMetadata {
   provisionHash?: string; // Canonical integrity hash: SHA-256 of extracted normalized provision
   extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED';
   sourceLocator?: SourceLocator;
+  /** Marks byte-backed extracted records that require shared document admission. */
+  documentAdmissionRequired?: true;
+  documentAdmissionPackageId?: string;
+  documentAdmissionPackageHash?: string;
+  governingAuthority?: AuthoritativeSourceRecord['authority'];
+  domain?: AuthoritativeSourceRecord['domain'];
+  reviewApproval?: SourceVersionReviewApproval;
   // Source-native legislation identity
   legislationCode?: string;
   revisionDate?: string;
   amendmentInstrument?: string;
+}
+
+export interface SourceVersionReviewApproval {
+  packageId: string;
+  packageHash: string;
+  reviewer: string;
+  reason: string;
+  approvedAt: string;
+}
+
+function isValidIsoTimestamp(value: string): boolean {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value;
+}
+
+function isValidDocumentReviewApproval(metadata: SourceVersionMetadata): boolean {
+  const approval = metadata.reviewApproval;
+  return Boolean(metadata.documentAdmissionRequired === true && approval &&
+    typeof approval.packageId === 'string' && typeof approval.packageHash === 'string' &&
+    typeof metadata.documentAdmissionPackageHash === 'string' &&
+    typeof approval.reviewer === 'string' && typeof approval.reason === 'string' &&
+    typeof approval.approvedAt === 'string' &&
+    approval.packageId === metadata.documentAdmissionPackageId &&
+    approval.packageHash.toLowerCase() === metadata.documentAdmissionPackageHash?.toLowerCase() &&
+    /^[a-f\d]{64}$/i.test(approval.packageHash) && approval.reviewer.trim() && approval.reason.trim() &&
+    isValidIsoTimestamp(approval.approvedAt));
 }
 
 /**
@@ -445,6 +478,15 @@ export class SourceVersioningManager {
       };
     }
 
+    if (candidate.metadata.documentAdmissionRequired && !isValidDocumentReviewApproval(candidate.metadata)) {
+      return {
+        success: false,
+        versionId,
+        activatedRecordId: candidate.record.id,
+        error: `Cannot activate document version '${versionId}' without its current explicit review approval`
+      };
+    }
+
     const recordId = candidate.record.id;
     const currentActiveVersionId = this.activeVersionPointers.get(recordId);
 
@@ -471,8 +513,8 @@ export class SourceVersioningManager {
     const ledgerEntry: VersionLedgerEntry = {
       versionId,
       recordId,
-      metadata: { ...candidate.metadata },
-      recordSnapshot: { ...candidate.record },
+      metadata: structuredClone(candidate.metadata),
+      recordSnapshot: structuredClone(candidate.record),
       recordedAt: new Date().toISOString(),
       isActive: true
     };
@@ -486,6 +528,23 @@ export class SourceVersioningManager {
       versionId,
       activatedRecordId: recordId
     };
+  }
+
+  /** Stores the approval receipt against the verified document candidate before activation. */
+  public recordDocumentReviewApproval(versionId: string, approval: SourceVersionReviewApproval): boolean {
+    const candidate = this.candidates.get(versionId);
+    if (!approval || typeof approval.packageId !== 'string' || typeof approval.packageHash !== 'string' ||
+        typeof approval.reviewer !== 'string' || typeof approval.reason !== 'string' ||
+        typeof approval.approvedAt !== 'string' || !candidate || candidate.metadata.documentAdmissionRequired !== true ||
+        candidate.metadata.verificationStatus !== 'VERIFIED' ||
+        !candidate.metadata.documentAdmissionPackageId ||
+        candidate.metadata.documentAdmissionPackageId !== approval.packageId ||
+        candidate.metadata.documentAdmissionPackageHash?.toLowerCase() !== approval.packageHash.toLowerCase() ||
+        !approval.reviewer.trim() || !approval.reason.trim() || !/^[a-f\d]{64}$/i.test(approval.packageHash) ||
+        !isValidIsoTimestamp(approval.approvedAt)) return false;
+
+    candidate.metadata.reviewApproval = structuredClone(approval);
+    return true;
   }
 
   /**
@@ -563,7 +622,8 @@ export class SourceVersioningManager {
    * Retrieves an immutable snapshot of an entry from the ledger.
    */
   public getLedgerEntry(versionId: string): VersionLedgerEntry | undefined {
-    return this.ledger.get(versionId);
+    const entry = this.ledger.get(versionId);
+    return entry ? structuredClone(entry) : undefined;
   }
 
   /**
@@ -577,7 +637,7 @@ export class SourceVersioningManager {
    * Gets all entries in the ledger for audit review.
    */
   public getAllLedgerEntries(): VersionLedgerEntry[] {
-    return Array.from(this.ledger.values());
+    return Array.from(this.ledger.values(), entry => structuredClone(entry));
   }
 
   /**
