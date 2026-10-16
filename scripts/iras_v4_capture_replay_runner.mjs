@@ -42,6 +42,7 @@ export const ACTIVATION_PROFILE = 'iras-v4-capture-activation';
 export const ACTIVATION_CONFIGURATION_STATUS = 'FROZEN_ACTIVATION_CONFIGURATION';
 export const BASELINE_COMMIT = '42637dfb552dae45ed3cb72f4f495d6528a14272';
 export const EXPECTED_BRANCH = 'codex/multi-authority-workstreams';
+export const FRESH_ACCEPTANCE_EXPECTED_BRANCH = 'codex/acra-official-source-discovery';
 export const EXECUTION_NODE_MAJOR = 22;
 export const CAPTURE_POLICY = Object.freeze({
   transportMode: 'frozenContemporaneousCapture',
@@ -106,19 +107,27 @@ const MAX_RETAINED_CASE_RESULT_BYTES = 256_000;
 const TRACKED_DIRS = Object.freeze(['src', 'tests/evaluation/singapore', 'tests/regression', 'scripts']);
 const ARTIFACT_NAMESPACE = 'artifacts/iras-v4-runner-integrity-2026-10-06/';
 const FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/iras-v4-acceptance-repaired-2026-10-06/';
+const CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-acceptance-2026-10-16/';
+export const CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE =
+  CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
 const RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE =
   FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4-retry-2026-10-08';
 const POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE =
   FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4-post-repair-2026-10-08';
 const APPROVED_ARTIFACT_NAMESPACES = Object.freeze([
   ARTIFACT_NAMESPACE,
-  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE
+  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE,
+  CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE
 ]);
+const EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE = Object.freeze({
+  [ARTIFACT_NAMESPACE + 'semantic-run-v4']: EXPECTED_BRANCH,
+  [FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4']: EXPECTED_BRANCH,
+  [RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE]: EXPECTED_BRANCH,
+  [POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE]: EXPECTED_BRANCH,
+  [CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH
+});
 const APPROVED_SEMANTIC_NAMESPACES = Object.freeze([
-  ARTIFACT_NAMESPACE + 'semantic-run-v4',
-  FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4',
-  RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE,
-  POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE
+  ...Object.keys(EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE)
 ]);
 let ambientNetworkBlockInProgress = false;
 const explicitTransportNetworkContext = new AsyncLocalStorage();
@@ -270,6 +279,13 @@ export function assertReviewedSemanticNamespace(semanticNamespace) {
   assert.ok(APPROVED_SEMANTIC_NAMESPACES.includes(semanticNamespace),
     'V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID');
   return semanticNamespace;
+}
+
+export function expectedBranchForSemanticNamespace(semanticNamespace) {
+  assertReviewedSemanticNamespace(semanticNamespace);
+  assert.ok(Object.hasOwn(EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE, semanticNamespace),
+    'V4_SEMANTIC_NAMESPACE_BRANCH_CONFIGURATION_INVALID');
+  return EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE[semanticNamespace];
 }
 
 function assertNode22() {
@@ -530,7 +546,7 @@ function runnerConfigurationBody(snapshot, designProjectionValue, node, semantic
     status: RUNNER_CONFIGURATION_STATUS,
     baselineCommit: snapshot.baselineCommit,
     reviewedCommit: snapshot.reviewedCommit,
-    branch: EXPECTED_BRANCH,
+    branch: expectedBranchForSemanticNamespace(semanticNamespace),
     createdWithNode: node.nodeVersion,
     createdWithExecPath: node.execPath,
     executionNodeMajor: EXECUTION_NODE_MAJOR,
@@ -580,7 +596,7 @@ export async function collectReviewedRunnerBinding({
     reviewedCommit: reviewedCommit || (await runGit(gitExecutable, rootAbsolute, ['rev-parse', 'HEAD'])).stdout.trim(),
     paths: files,
     directories: TRACKED_DIRS,
-    expectedBranch: syntheticFixture ? undefined : EXPECTED_BRANCH
+    expectedBranch: syntheticFixture ? undefined : expectedBranchForSemanticNamespace(frozenSemanticNamespace)
   });
   const body = runnerConfigurationBody(snapshot, designProjection(design), node, frozenSemanticNamespace);
   return {

@@ -11,6 +11,9 @@ import { fileURLToPath } from 'node:url';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import {
   BASELINE_COMMIT,
+  CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE,
+  EXPECTED_BRANCH,
+  FRESH_ACCEPTANCE_EXPECTED_BRANCH,
   ACTIVATION_PROFILE,
   CASE_EVIDENCE_FAMILY,
   EVIDENCE_FAMILIES,
@@ -26,6 +29,7 @@ import {
   captureInventoryDigest,
   collectTrackedExecutablePaths,
   collectCheckoutIntegritySnapshot,
+  expectedBranchForSemanticNamespace,
   createCaptureTransport,
   createReplayTransport,
   runBoundedCapture,
@@ -352,6 +356,39 @@ async function testCheckoutBindings() {
     assert.equal(initial.fileRows.length, 3);
     assert.ok(initial.fileRows.every(row => row.gitBlob === row.reviewedBlob));
 
+    const freshBranch = expectedBranchForSemanticNamespace(CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE);
+    const historicalBranch = expectedBranchForSemanticNamespace(ARTIFACT_ROOT + '/semantic-run-v4');
+    assert.equal(freshBranch, FRESH_ACCEPTANCE_EXPECTED_BRANCH);
+    assert.equal(historicalBranch, EXPECTED_BRANCH);
+    await assert.rejects(collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: freshBranch
+    }), /V4_BRANCH_MISMATCH/, 'a checkout on the fixture branch cannot satisfy the new frozen branch');
+
+    git(root, ['checkout', '-b', freshBranch]);
+    const freshBranchSnapshot = await collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: freshBranch
+    });
+    assert.equal(freshBranchSnapshot.branch, freshBranch);
+    await assert.rejects(collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: historicalBranch
+    }), /V4_BRANCH_MISMATCH/, 'the historical branch binding cannot run on the new branch');
+
+    git(root, ['checkout', '-b', historicalBranch]);
+    const historicalBranchSnapshot = await collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: historicalBranch
+    });
+    assert.equal(historicalBranchSnapshot.branch, historicalBranch,
+      'historical branch bindings remain unchanged');
+    await assert.rejects(collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: freshBranch
+    }), /V4_BRANCH_MISMATCH/);
+    git(root, ['checkout', 'fixture']);
+
     await assert.rejects(
       collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline,
         reviewedCommit: baseline, paths: ['src/' + 'x'.repeat(20_000) + '.ts'], directories: [] }),
@@ -576,6 +613,7 @@ async function testReviewedSemanticNamespaces() {
   const freshNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4';
   const retryNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-retry-2026-10-08';
   const postRepairNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-post-repair-2026-10-08';
+  const canonicalNamespace = CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE;
   const root = await temporaryDirectory('iras-v4-semantic-namespace-');
   try {
     assert.equal(assertReviewedSemanticNamespace(legacyNamespace), legacyNamespace,
@@ -586,6 +624,14 @@ async function testReviewedSemanticNamespaces() {
       'the exact retry namespace is accepted');
     assert.equal(assertReviewedSemanticNamespace(postRepairNamespace), postRepairNamespace,
       'the exact post-repair namespace is accepted');
+    assert.equal(assertReviewedSemanticNamespace(canonicalNamespace), canonicalNamespace,
+      'the new canonical namespace is explicitly accepted');
+    assert.equal(expectedBranchForSemanticNamespace(legacyNamespace), EXPECTED_BRANCH);
+    assert.equal(expectedBranchForSemanticNamespace(freshNamespace), EXPECTED_BRANCH);
+    assert.equal(expectedBranchForSemanticNamespace(canonicalNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH);
+    assert.throws(() => expectedBranchForSemanticNamespace('artifacts/unreviewed/semantic-run-v4'),
+      /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/,
+      'an unknown namespace cannot select an arbitrary branch');
     assert.throws(() => assertReviewedSemanticNamespace(undefined),
       /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/, 'a malformed binding cannot inherit the legacy default');
     for (const unauthorized of [
@@ -595,6 +641,9 @@ async function testReviewedSemanticNamespaces() {
       retryNamespace + '-extra',
       postRepairNamespace + '/nested',
       postRepairNamespace + '-extra',
+      canonicalNamespace + '/nested',
+      canonicalNamespace + '-extra',
+      'artifacts/canonical-acceptance-2026-10-16/other-semantic-run-v4',
       FRESH_ACCEPTANCE_ROOT + '/../' + postRepairNamespace.split('/').at(-1),
       freshNamespace.toUpperCase()
     ]) {
@@ -615,10 +664,12 @@ async function testReviewedSemanticNamespaces() {
     const freshBinding = makeBinding(freshNamespace);
     const retryBinding = makeBinding(retryNamespace);
     const postRepairBinding = makeBinding(postRepairNamespace);
+    const canonicalBinding = makeBinding(canonicalNamespace);
     const legacyPath = path.join(root, ...legacyNamespace.split('/'));
     const freshPath = path.join(root, ...freshNamespace.split('/'));
     const retryPath = path.join(root, ...retryNamespace.split('/'));
     const postRepairPath = path.join(root, ...postRepairNamespace.split('/'));
+    const canonicalPath = path.join(root, ...canonicalNamespace.split('/'));
     assert.notEqual(path.resolve(root), path.resolve('.'), 'fixture root must differ from the process working directory');
     assert.equal(assertRunnerConfigurationBodyMatches(legacyBinding, legacyBinding), true,
       'the consumed legacy binding remains valid');
@@ -630,6 +681,8 @@ async function testReviewedSemanticNamespaces() {
     assert.equal(assertRunnerConfigurationBodyMatches(retryBinding, retryBinding), true);
     assert.equal(assertRunnerConfigurationBodyMatches(postRepairBinding, postRepairBinding), true,
       'the exact post-repair namespace is included in the integrity binding');
+    assert.equal(assertRunnerConfigurationBodyMatches(canonicalBinding, canonicalBinding), true,
+      'the exact canonical namespace is included in the integrity binding');
     assert.equal(assertCanonicalNamespace(legacyPath, legacyBinding, root), legacyPath);
     assert.equal(assertCanonicalNamespace(freshPath, freshBinding, root), freshPath,
       'the frozen fresh binding selects its exact acceptance slot');
@@ -637,6 +690,8 @@ async function testReviewedSemanticNamespaces() {
       'the retry binding selects only its exact new slot');
     assert.equal(assertCanonicalNamespace(postRepairPath, postRepairBinding, root), postRepairPath,
       'the post-repair binding selects only its exact new slot');
+    assert.equal(assertCanonicalNamespace(canonicalPath, canonicalBinding, root), canonicalPath,
+      'the canonical binding selects only its exact new slot');
     assert.throws(() => assertCanonicalNamespace(freshPath, retryBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
     assert.throws(() => assertCanonicalNamespace(retryNamespace, retryBinding, root),
@@ -645,6 +700,8 @@ async function testReviewedSemanticNamespaces() {
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
       'a root-relative namespace string resolves against cwd, matching downstream filesystem operations');
     assert.throws(() => assertCanonicalNamespace(legacyPath, freshBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
+    assert.throws(() => assertCanonicalNamespace(canonicalPath, legacyBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
     assert.throws(() => assertRunnerConfigurationBodyMatches(freshBinding, legacyBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
@@ -664,6 +721,8 @@ async function testReviewedSemanticNamespaces() {
       path.join(root, retryNamespace, 'runner-config.json'));
     assert.equal(assertInArtifactNamespace(path.join(root, postRepairNamespace, 'runner-config.json'), root),
       path.join(root, postRepairNamespace, 'runner-config.json'));
+    assert.equal(assertInArtifactNamespace(path.join(root, canonicalNamespace, 'runner-config.json'), root),
+      path.join(root, canonicalNamespace, 'runner-config.json'));
     assert.throws(() => assertInArtifactNamespace(path.join(root, 'artifacts/unreviewed/output.json'), root),
       /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/);
     assert.throws(() => assertInArtifactNamespace(
