@@ -280,6 +280,113 @@ function extractRuleBearingMarkup(markup: string): string {
   return output;
 }
 
+interface MarkupElementContext {
+  tagName: string;
+  blockLinkCardStarts: number[];
+}
+
+/**
+ * Find a page-index link collection: at least three sibling links, each wrapping
+ * both a heading and a summary paragraph. A cluster like this is navigation,
+ * even when its cards sit inside an otherwise ordinary main element.
+ */
+function findBlockLinkCollectionStart(markup: string): number | undefined {
+  const tagPattern = /<(\/)?([a-z][\w:-]*)\b[^>]*>/gi;
+  const collectionContainers = new Set(['div', 'section', 'article', 'ul', 'ol']);
+  const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+  const stack: MarkupElementContext[] = [];
+  const elements: MarkupElementContext[] = [];
+  const links: Array<{ parent: MarkupElementContext | undefined; start: number; contentStart: number }> = [];
+
+  for (const match of markup.matchAll(tagPattern)) {
+    const tagName = match[2].toLowerCase();
+    const closing = Boolean(match[1]);
+    const index = match.index ?? 0;
+
+    if (tagName === 'a') {
+      if (closing) {
+        const link = links.pop();
+        if (link?.parent && collectionContainers.has(link.parent.tagName)) {
+          const inner = markup.slice(link.contentStart, index);
+          if (/<h[2-6]\b/i.test(inner) && /<p\b/i.test(inner)) link.parent.blockLinkCardStarts.push(link.start);
+        }
+      } else {
+        links.push({ parent: stack[stack.length - 1], start: index, contentStart: index + match[0].length });
+      }
+    }
+
+    if (closing) {
+      let openIndex = stack.length - 1;
+      while (openIndex >= 0 && stack[openIndex].tagName !== tagName) openIndex -= 1;
+      if (openIndex >= 0) stack.splice(openIndex);
+    } else if (!voidTags.has(tagName) && !/\/\s*>$/.test(match[0])) {
+      const element: MarkupElementContext = { tagName, blockLinkCardStarts: [] };
+      elements.push(element);
+      stack.push(element);
+    }
+  }
+
+  const collectionStarts = elements
+    .filter(element => collectionContainers.has(element.tagName) && element.blockLinkCardStarts.length >= 3)
+    .flatMap(element => element.blockLinkCardStarts);
+  return collectionStarts.length > 0 ? Math.min(...collectionStarts) : undefined;
+}
+
+function normalizeVisibleText(value: string): string {
+  return cleanHtmlText(value).toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function getPageDescriptionMetadata(rawDocument: string): string[] {
+  const descriptions = new Set<string>();
+  for (const match of rawDocument.matchAll(/<meta\b([^>]*)>/gi)) {
+    const attributes = match[1];
+    const name = attributes.match(/(?:^|\s)name\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const property = attributes.match(/(?:^|\s)property\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const kind = (name?.[1] ?? name?.[2] ?? name?.[3] ?? property?.[1] ?? property?.[2] ?? property?.[3] ?? '').toLowerCase();
+    if (!['description', 'og:description', 'twitter:description'].includes(kind)) continue;
+    const content = attributes.match(/(?:^|\s)content\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const value = content?.[1] ?? content?.[2] ?? content?.[3];
+    const normalized = value ? normalizeVisibleText(value) : '';
+    if (normalized) descriptions.add(normalized);
+  }
+  return [...descriptions];
+}
+
+/**
+ * Remove a duplicated page-description lead only for an index-style main:
+ * the title-styled lead immediately follows the h1, a later sibling collection
+ * contains heading-and-summary cards, and no rule-bearing article content
+ * remains after those cards are removed. Related cards cannot hide article prose.
+ */
+function removeNavigationalSummaryLead(markup: string, rawDocument: string): string {
+  const descriptions = getPageDescriptionMetadata(rawDocument);
+  if (descriptions.length === 0) return markup;
+
+  const collectionStart = findBlockLinkCollectionStart(markup);
+  if (collectionStart === undefined) return markup;
+
+  const heading = /<h1\b[^>]*>[\s\S]*?<\/h1\s*>/i.exec(markup);
+  if (!heading) return markup;
+  const headingEnd = (heading.index ?? 0) + heading[0].length;
+
+  const firstLead = /<p\b[^>]*>[\s\S]*?<\/p\s*>/i.exec(markup.slice(headingEnd, collectionStart));
+  if (!firstLead) return markup;
+  const leadText = firstLead[0].replace(/^<p\b[^>]*>|<\/p\s*>$/gi, ' ');
+  if (/<a\b/i.test(leadText) || !descriptions.includes(normalizeVisibleText(leadText))) return markup;
+  const leadAttributes = /^<p\b([^>]*)>/i.exec(firstLead[0])?.[1] || '';
+  const leadClass = leadAttributes.match(/(?:^|\s)class\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  if (!/\bprose-title(?:-[\w-]+)?\b/i.test(leadClass?.[1] ?? leadClass?.[2] ?? leadClass?.[3] ?? '')) return markup;
+
+  const leadStart = headingEnd + (firstLead.index ?? 0);
+  if (cleanHtmlText(markup.slice(headingEnd, leadStart)).trim()) return markup;
+
+  const withoutLead = `${markup.slice(0, leadStart)}${' '.repeat(firstLead[0].length)}${markup.slice(leadStart + firstLead[0].length)}`;
+  const remainingRuleMarkup = removeLinkOnlyRuleBlocks(removeRuleMetadataContainers(removeBlockWrappingLinks(withoutLead)))
+    .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ');
+  if (cleanHtmlText(extractRuleBearingMarkup(remainingRuleMarkup)).trim()) return markup;
+  return withoutLead;
+}
+
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
 function extractVisiblePageText(
   rawDocument: string,
@@ -295,6 +402,7 @@ function extractVisiblePageText(
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
   if (options.requireSubstantiveBody) {
+    visibleMarkup = removeNavigationalSummaryLead(visibleMarkup, rawDocument);
     visibleMarkup = visibleMarkup
       .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ');
     visibleMarkup = removeLinkOnlyRuleBlocks(removeRuleMetadataContainers(removeBlockWrappingLinks(visibleMarkup)));

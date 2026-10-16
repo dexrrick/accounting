@@ -23,6 +23,98 @@ assert.equal(defaultExternalSourceValidator.validateTopicContent(navigationOnly,
 assert.equal(defaultExternalSourceValidator.validateTopicContent(navigationOnly,
   { ...bannerExpectation, preferMainContent: true }).isValid, false,
   'ACRA-specific extraction removes Isomer breadcrumb/navigation markup before checking the main body.');
+
+// Minimized from D:/Accounting/artifacts/canonical-acceptance-2026-10-17/captures/acra-index-gap-38f97e8/upstream.bin
+// (SHA-256 0ef964686101c8ac10cdf80b6e9a46b18d76c72a1e945a0957e5d2ddbba41325): the captured main has an h1,
+// a hero paragraph identical to its page description, then a grid of linked heading/summary cards.
+const indexDescription = 'Check AR compliance requirements for local companies. This includes deadlines and extensions, penalties, and steps to file annual returns.';
+const capturedIndexHtml = `<html><head>
+  <title>Filing annual returns (ARs) for companies | Accounting and Corporate Regulatory Authority</title>
+  <meta name="description" content="${indexDescription}">
+  <meta property="og:description" content="${indexDescription}">
+</head><body><main id="main-content">
+  <div><h1>Filing annual returns (ARs) for companies</h1><div><p class="prose-title-lg-regular mt-5">${indexDescription}</p></div></div>
+  <div class="grid grid-cols-1 md:grid-cols-2">
+    <a href="/deadline-requirements/"><div><h2>Deadline &amp; requirements for annual returns</h2><p>All companies in Singapore must file annual returns with ACRA on time.</p></div></a>
+    <a href="/steps-to-file/"><div><h2>Steps to file an annual return</h2><p>Learn how to file your company's annual return through Bizfile.</p></div></a>
+    <a href="/applying-for-an-extension-of-time/"><div><h2>Applying for an extension of time</h2><p>Apply for an extension to file an annual return.</p></div></a>
+    <a href="/penalties-enforcement/"><div><h2>Penalties &amp; enforcement action</h2><p>Companies may face fines for late annual returns.</p></div></a>
+    <a href="/filing-reminders/"><div><h2>Filing reminders and notifications</h2><p>ACRA provides annual return deadline reminders.</p></div></a>
+  </div>
+</main></body></html>`;
+const indexValidation = defaultExternalSourceValidator.validateTopicContent(capturedIndexHtml, {
+  ...bannerExpectation,
+  expectedTitles: ['filing annual returns'],
+  topicTerms: ['annual returns'],
+  preferMainContent: true,
+  requireSubstantiveBody: true
+});
+assert.equal(indexValidation.isValid, false,
+  'A page-description hero followed by a navigational card collection is not annual-return rule evidence.');
+assert.equal(indexValidation.substantiveText?.includes(indexDescription), false,
+  'The duplicated hero summary and block-wrapped card summaries are excluded from substantive evidence.');
+
+const repeatedDescriptionRule = 'All Singapore companies must file an annual return with ACRA each year, even when dormant, and submit annual returns by the applicable deadline.';
+const standaloneRuleValidation = defaultExternalSourceValidator.validateTopicContent(`<html><head>
+  <title>Annual returns | Accounting and Corporate Regulatory Authority</title>
+  <meta name="description" content="${repeatedDescriptionRule}">
+</head><body><main><h1>Annual returns</h1><p>${repeatedDescriptionRule}</p></main></body></html>`, {
+  ...bannerExpectation,
+  requireSubstantiveBody: true
+});
+assert.equal(standaloneRuleValidation.isValid, true,
+  'A genuine rule paragraph remains eligible when it repeats metadata and is not part of a navigational card collection.');
+
+const standaloneRuleWithRelatedCards = defaultExternalSourceValidator.validateTopicContent(`<html><head>
+  <title>Annual returns | Accounting and Corporate Regulatory Authority</title>
+  <meta name="description" content="${repeatedDescriptionRule}">
+</head><body><main>
+  <div><h1>Annual returns</h1><p>${repeatedDescriptionRule}</p></div>
+  <section class="related-content"><a href="/one/"><div><h2>Other annual return guidance</h2><p>Read the related filing guidance.</p></div></a>
+    <a href="/two/"><div><h2>Company filing details</h2><p>Review related company filing information.</p></div></a>
+    <a href="/three/"><div><h2>Annual filing overview</h2><p>See the related annual filing overview.</p></div></a></section>
+</main></body></html>`, {
+  ...bannerExpectation,
+  requireSubstantiveBody: true
+});
+assert.equal(standaloneRuleWithRelatedCards.isValid, true,
+  'A genuine rule paragraph remains eligible when related cards live in a separate container.');
+assert.ok(standaloneRuleWithRelatedCards.substantiveText?.includes(repeatedDescriptionRule));
+
+const articleLead = 'All Singapore companies must file an annual return with ACRA each year, even when dormant, and submit annual returns by the applicable deadline.';
+const articleWithRelatedCards = defaultExternalSourceValidator.validateTopicContent(`<html><head>
+  <title>Annual returns | Accounting and Corporate Regulatory Authority</title>
+  <meta name="description" content="${articleLead}">
+</head><body><main>
+  <div><h1>Annual returns</h1><p class="prose-title-lg-regular">${articleLead}</p></div>
+  <section><p>Companies must file an annual return by the due date that applies to their financial year end.</p></section>
+  <section class="related-content"><a href="/one/"><div><h2>Other annual return guidance</h2><p>Read the related filing guidance.</p></div></a>
+    <a href="/two/"><div><h2>Company filing details</h2><p>Review related company filing information.</p></div></a>
+    <a href="/three/"><div><h2>Annual filing overview</h2><p>See the related annual filing overview.</p></div></a></section>
+</main></body></html>`, {
+  ...bannerExpectation,
+  requireSubstantiveBody: true
+});
+assert.equal(articleWithRelatedCards.isValid, true,
+  'An article lead remains eligible when real article body appears before a separate related-card collection.');
+assert.ok(articleWithRelatedCards.substantiveText?.includes(articleLead));
+assert.ok(articleWithRelatedCards.substantiveText?.includes('Companies must file an annual return by the due date'));
+
+const retainedAnnualArticle = pages.find(page => page.name === 'annual');
+const retainedAnnualValidation = defaultExternalSourceValidator.validateTopicContent(retainedAnnualArticle.html, {
+  ...bannerExpectation,
+  preferMainContent: true,
+  requireSubstantiveBody: true
+});
+assert.equal(retainedAnnualValidation.isValid, true,
+  'The retained annual-return deep article remains valid under strict substantive-body extraction.');
+assert.ok(retainedAnnualValidation.substantiveText?.includes('enforcement action'),
+  'Inline legal references remain in genuine article prose.');
+assert.ok(retainedAnnualValidation.substantiveText?.includes('Company name and registration number'),
+  'Substantive annual-return list items remain eligible evidence.');
+assert.ok(retainedAnnualValidation.substantiveText?.includes('Annual return filing with ACRA'),
+  'Substantive annual-return table cells remain eligible evidence.');
+
 const provider = OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.ACRA;
 assert.deepEqual(provider.approvedHosts, ['www.acra.gov.sg', 'acra.gov.sg']);
 assert.deepEqual(provider.sitemapUrls, ['https://www.acra.gov.sg/sitemap.xml']);

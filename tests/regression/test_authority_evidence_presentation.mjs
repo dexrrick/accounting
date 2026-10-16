@@ -8,6 +8,8 @@ import { ComplianceRationale } from '../../src/components/ComplianceRationale.ts
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { createRequestCompletenessContext, ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
+import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 
 function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '', domain = authority === 'IRAS' ? 'IRAS_TAX' : 'CPF_PAYROLL' }) {
   return {
@@ -603,6 +605,75 @@ assert.equal(noProviderMulti.scenarioState.requestCompletenessContext.rawQuery, 
   'provider-unavailable fallback remains bound to the original request');
 assert.equal(noProviderMulti.scenarioState.requestCompletenessContext.evaluation.structuralAcceptance, 'REJECTED');
 assert.ok(noProviderMulti.scenarioState.requestCompletenessContext.evaluation.findings.some(item => item.code === 'OBSERVATION_WRAPPER_FAILED'));
+
+const acraDeadlineQuery = 'For a Singapore private company with a 31 December financial year end, when must it file its annual return?';
+const acraDeadlineTopics = defaultQueryTopicResolver.decomposeQuery(acraDeadlineQuery).topics.map(topic => topic.id);
+assert.ok(acraDeadlineTopics.includes('acra_annual-returns'),
+  'the company deadline phrasing resolves to the governed annual-returns topic');
+for (const query of [
+  'When must a private company file its annual return?',
+  'When must local companies file their annual returns?',
+  'When must a Singapore company file the annual returns?'
+]) {
+  assert.ok(defaultQueryTopicResolver.decomposeQuery(query).topics.some(topic => topic.id === 'acra_annual-returns'),
+    `the annual-return deadline pattern covers the realistic company phrasing: ${query}`);
+}
+const vccAnnualReturnQuery = 'For a Singapore variable capital company, when must it file its annual return?';
+const vccAnnualReturnTopics = defaultQueryTopicResolver.decomposeQuery(vccAnnualReturnQuery).topics.map(topic => topic.id);
+assert.ok(vccAnnualReturnTopics.includes('acra_vcc'), 'an explicit VCC question retains VCC scope');
+assert.ok(!vccAnnualReturnTopics.includes('acra_annual-returns'),
+  'the company annual-returns topic does not bleed into an explicit VCC-only question');
+const separatedCompanyAndVccQuery = 'A private company is dormant; for a VCC when must it file its annual return?';
+const separatedCompanyAndVccTopics = defaultQueryTopicResolver.decomposeQuery(separatedCompanyAndVccQuery).topics.map(topic => topic.id);
+assert.ok(separatedCompanyAndVccTopics.includes('acra_vcc'), 'the VCC question after a clause boundary retains VCC scope');
+assert.ok(!separatedCompanyAndVccTopics.includes('acra_annual-returns'),
+  'a company mentioned in a separate clause cannot qualify the VCC annual-return question');
+for (const query of [
+  'A private company is dormant, and for a VCC when must it file its annual return?',
+  'For a Singapore company structured as a VCC, when must it file its annual return?'
+]) {
+  const topicIds = defaultQueryTopicResolver.decomposeQuery(query).topics.map(topic => topic.id);
+  assert.ok(topicIds.includes('acra_vcc'), `the VCC route remains available for: ${query}`);
+  assert.ok(!topicIds.includes('acra_annual-returns'),
+    `a VCC referent cannot inherit a company qualifier from the same phrase: ${query}`);
+}
+const mixedAcraAnnualReturnQuery = 'For a Singapore VCC and private company, when must each file its annual return?';
+const mixedAcraAnnualReturnTopics = defaultQueryTopicResolver.decomposeQuery(mixedAcraAnnualReturnQuery).topics.map(topic => topic.id);
+assert.ok(mixedAcraAnnualReturnTopics.includes('acra_vcc') && mixedAcraAnnualReturnTopics.includes('acra_annual-returns'),
+  'mixed VCC/company questions retain both distinct filing scopes');
+const companyThenVccQuery = 'For a private company, when must it file its annual return? Separately, for a VCC, when must it file its annual return?';
+const companyThenVccTopics = defaultQueryTopicResolver.decomposeQuery(companyThenVccQuery).topics.map(topic => topic.id);
+assert.ok(companyThenVccTopics.includes('acra_vcc') && companyThenVccTopics.includes('acra_annual-returns'),
+  'an explicit company filing clause remains eligible when a separate VCC reference follows it');
+const journalAnnualReturnQuery = 'We paid the annual return filing fee. What journal entry records this payment?';
+assert.equal(classifyQuestion(journalAnnualReturnQuery).journalEntryRequired, true,
+  'a genuine filing-fee journal request remains on the accounting route');
+
+const acraDeadlineFetch = globalThis.fetch;
+globalThis.fetch = async input => {
+  throw new Error(`Blocked network request in offline ACRA deadline regression: ${String(input)}`);
+};
+let acraDeadlineResponse;
+try {
+  acraDeadlineResponse = await processAccountingQuery(acraDeadlineQuery, null, 'SFRS_I');
+} finally {
+  globalThis.fetch = acraDeadlineFetch;
+}
+const acraDeadlinePresentation = acraDeadlineResponse.scenarioState.authorityEvidencePresentation;
+assert.ok(acraDeadlinePresentation, 'the standalone company deadline request uses authority evidence presentation');
+assert.equal(acraDeadlinePresentation.status, 'INSUFFICIENT',
+  'without a provider or successful source retrieval the deadline remains explicitly unverified');
+assert.equal(acraDeadlinePresentation.query, acraDeadlineQuery, 'the evidence projection retains the exact original query');
+assert.equal(acraDeadlineResponse.scenarioState.rawQuery, acraDeadlineQuery, 'the standalone response retains the original scope');
+assert.equal(acraDeadlineResponse.scenarioState.requestCompletenessContext.rawQuery, acraDeadlineQuery);
+assert.equal(acraDeadlineResponse.scenarioState.isComplete, false, 'missing evidence cannot produce a complete statutory answer');
+assert.deepEqual(acraDeadlineResponse.scenarioState.directGroups, [], 'a statutory deadline question does not create a journal');
+assert.ok(acraDeadlinePresentation.workstreams.some(stream => stream.authority === 'ACRA' && stream.domain === 'ACRA_CORPORATE' &&
+  stream.issues.length > 0), 'the preserved issue remains in ACRA corporate scope');
+assert.doesNotMatch(acraDeadlineResponse.messageText, /variable capital company|\bVCC\b/i,
+  'the company deadline answer does not inherit unrelated VCC editorial material');
+assert.doesNotMatch(acraDeadlineResponse.messageText, /\b(?:within|no later than)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:days?|weeks?|months?)\b|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\b/i,
+  'the offline response does not invent a filing deadline');
 
 globalThis.fetch = async input => {
   const url = new URL(String(input));
