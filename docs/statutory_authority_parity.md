@@ -121,6 +121,21 @@ Final validation on Node 22.23.1: 112/112 smoke suites passed; the subsequent te
 
 The stack remains PR #15, extraction `827ddef`, MAS lifecycle `22c8614`, PR #17, PR #18, PR #19 and PR #20. A non-mutating merge simulation of `cc8d036` with current `main` (`7568001`, two newer documentation-only commits) found no conflicts. The stacked PR bases still do not trigger the existing main/master-only GitHub PR workflow, so combined integration CI and dependency review remain release gates. ACRA PR #12 overlaps shared validation/discovery/test-runner files and remains deferred. No merge, production source activation, production traffic change, authority expansion or schedule was performed. The final evidence and validation summary is `tests/fixtures/mas-reviewed/completion-20261016.json`.
 
+### Combined integration review and browser boundary (16 October 2026)
+
+Draft PR #21 (`codex/mas-stack-integration`, base `main`) assembles the dependency stack on `7568001`, including PR #20 at `8cea281`. PR #19 remains unchanged at `4c9d916`, and PR #20 remains its separate draft checkpoint. The initial combined merge `2da3233` passed the existing main-based CI with all 132 suites. Subsequent review identified four integration defects, now addressed on the integration branch:
+
+- Composite retrieval now shares the target date resolved from the original question with local retrieval and final document admission. An explicitly supplied date still takes precedence, and unknown historical applicability remains rejected.
+- Non-MAS packages cannot overwrite record IDs reserved by managed registry rows, candidates or ledger history. Staging, both verification paths and activation check this ownership without changing the legitimate baseline retrieval exception.
+- Every authority's package retains an exact nullable pre-activation registry snapshot. Rollback preflights ownership of all affected active versions, restores the prior rows or removes first-activation rows, and rejects rollback of an older package while a newer version is active.
+- Version IDs are reserved across all candidates and ledger history, including rolled-back entries. Every authority uses collision-free allocation; registration and activation independently prevent reuse of a reserved ledger key. The package/record string-split alias can no longer replace a managed entry or erase its approval receipt.
+
+Independent review cleared all four findings. The final reservation review replayed the original pending/active/rolled-back alias cases and confirmed that an unrelated legacy source remains activatable without changing the managed candidate, ledger entry, approval or pointer. The resumed adjacent Phase 4 retrieval and shared-document admission regressions, lint and TypeScript/Vite/Cloudflare worker build passed on Node 22.23.1. Current-head smoke and complete CI results are recorded in PR #21; they must not be inferred from the earlier initial-merge run. The saved stopping point in `mas-integration-stopping-point-20261016.md` is historical context, not the latest validation status.
+
+The user configured Gemini directly in the PR #20 preview's settings. A real browser question about MAS fund-management admission criteria then returned a response, but the UI still displayed **Evidence Incomplete — Review Required** and did not demonstrate the approved-document citation/version binding exercised by the isolated captured-source lifecycle tests. This is partial browser acceptance. Missing provider configuration is no longer the blocker; verified live-answer admission remains open. Credentials were not read, copied or stored in repository files, and no production registry approval was created to make the browser check pass.
+
+The integration remains draft pending its current-head checks and the remaining release decision. Positive governed MAS browser answer acceptance must be established before broader authority expansion, production monitoring or scheduling. ACRA PR #12 remains deferred. No merge into `main`, production activation or production traffic change was performed.
+
 ### Intentional remaining gaps before broad live testing
 
 - Finish ACRA PR #12 integration and end-to-end answer admission.

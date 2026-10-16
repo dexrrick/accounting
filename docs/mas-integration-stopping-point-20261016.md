@@ -1,6 +1,6 @@
 # MAS integration stopping point — 16 October 2026
 
-Status: intentionally stopped at the user's request. Do not treat the integration as release-ready.
+Status: historical checkpoint, saved at the user's request in `de5455e` and resumed on 16 October 2026. See the “Combined integration review and browser boundary” continuation in `statutory_authority_parity.md` and PR #21 for current validation and release gates. The observations below describe the original stopping point.
 
 ## Workspaces and branches
 
