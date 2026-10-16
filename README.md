@@ -98,6 +98,21 @@ The canonical Codex and contributor instructions are in [`AGENTS.md`](AGENTS.md)
 
 Statutory coverage and official-source discovery continue to evolve across IRAS, ACRA, CPF, MOM and MAS. Discovery of an official page is not, by itself, verified support for every claim or historical period. Review source evidence and representative questions before claiming production accuracy.
 
+### Hosted Gemini access (testing)
+
+The Cloudflare Worker can call Gemini without exposing Google's API key in the browser.
+The existing personal Gemini-key mode and other AI providers remain available.
+
+1. Configure encrypted Cloudflare Worker secrets `GEMINI_API_KEY` and **`GEMINI_PROXY_TOKEN`** (a distinct random access token of at least 20 characters; do not reuse the Gemini key). Keep both outside the repository. The Worker rejects requests if either secret or its rate limiter is unavailable.
+2. Deploy this branch's Cloudflare Worker build and ensure `/api/gemini/*` routes to the Worker. The `GEMINI_RATE_LIMITER` binding enforces an approximate per-client-IP 30 requests/minute in each Cloudflare location. Rate limiting is not a replacement for authentication.
+3. In the app's provider Settings, select **Gemini**, enable **Use hosted Gemini**, and enter the separate proxy access token once in a trusted browser. The token is stored in browser localStorage (a bearer credential); the Google API key is never stored there. Do not distribute the proxy token to public users.
+4. For Codex-assisted direct provider checks, add `GEMINI_API_KEY_TEST` as a GitHub Actions secret. Run the **Gemini Live Test** workflow manually from Actions after it becomes available on the default branch. This check uses the test key but does not call the deployed website.
+5. To test the **deployed** Worker instead, additionally configure `GEMINI_PROXY_TOKEN_TEST` in GitHub Actions Secrets with the same value as the Cloudflare `GEMINI_PROXY_TOKEN`. Run the manually dispatched workflow with **hosted_site** enabled. No live calls run for ordinary pushes or pull requests.
+
+Local proxy access-control checks: `npm run test:gemini-proxy`. The test uses mocked upstream responses and requires no secrets.
+
+**Before enabling public access:** Replace the shared testing token with per-user identity verification (such as Cloudflare Access or your application's authentication), user-based quotas, monitoring and abuse controls. Sharing one proxy token is suitable only for a private testing audience; exposing the route without authentication would allow unauthorized Gemini quota consumption.
+
 ### Feedback delivery
 
 The footer's **Send feedback** form compiles the user's description, the last 12 chat messages, a safe scenario summary, browser/app details, the latest request telemetry, and build metadata (`app.version`, `app.gitCommit`, and `app.buildTime`). It deliberately excludes API keys and environment variables. The dialog shows the short build version for quick reference.

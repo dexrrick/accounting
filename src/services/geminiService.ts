@@ -10,6 +10,7 @@ import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
 import { toSafeProviderError } from './aiTransport';
+import { fetchGemini } from './geminiProxyTransport';
 import {
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
@@ -72,7 +73,7 @@ export interface AccountingQueryDiagnostics {
 
 /** AI may identify factual events only; strict normalization blocks journals and invented schema. */
 export async function extractEventSequenceWithGemini(text: string, apiKey: string, modelName: string): Promise<AccountingEventSequence | undefined> {
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+  const response = await fetchGemini(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, apiKey, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
     body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `Extract chronological accounting EVENT FACTS from the text below. Do not calculate, recommend accounts, create journal entries, infer omitted facts, or cite standards. Return JSON only: {"events":[{"id":"event-1","date":"DD Mon YYYY","type":"purchase|purchase_return|supplier_settlement|purchase_discount|sale|sales_return|customer_settlement|credit_note|lease_commencement|lease_payment|lease_modification|sale_and_leaseback|depreciation|correction|reversal|reclassification|asset_disposal|foreign_currency_purchase|treasury_share_reissue|sale_with_right_of_return|fx_remeasurement|fvoci_equity_acquisition|fvtpl_portfolio_valuation|fvoci_equity_valuation|investment_distribution|other","description":"verbatim concise fact","currency":"SGD","amount":number,"quantity":number,"unitPrice":number,"tax":{"rate":number},"relatesTo":["event-1"],"confidence":0.0}]}. Omit unavailable numeric fields.\n\n${text}` }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
   });
@@ -217,7 +218,7 @@ export async function extractImageEvidenceWithGemini(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, {
+    const response = await fetchGemini(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
@@ -1734,7 +1735,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   try {
     // Attempt streaming with Server-Sent Events (?alt=sse) to measure genuine Time to First Visible Response (TTFVR)
     const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
-    const streamRes = await fetch(streamUrl, {
+    const streamRes = await fetchGemini(streamUrl, apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(requestBody),
@@ -1787,7 +1788,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     // Fallback to standard generateContent if streaming is unavailable
     try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
-      const res = await fetch(url, {
+      const res = await fetchGemini(url, apiKey, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify(requestBody),

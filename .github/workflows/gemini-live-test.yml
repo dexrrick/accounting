@@ -1,0 +1,54 @@
+name: Gemini Live Test
+
+on:
+  pull_request:
+    paths:
+      - 'src/worker/geminiProxy.ts'
+      - 'src/services/geminiProxyTransport.ts'
+      - 'tests/integration/test_gemini_proxy.mjs'
+      - '.github/workflows/gemini-live-test.yml'
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Gemini model to test
+        type: string
+        default: gemini-3.5-flash-lite
+        required: true
+      hosted_site:
+        description: Test Cloudflare hosted site rather than direct provider
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  proxy-security-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run test:gemini-proxy
+
+  live-gemini-test:
+    if: github.event_name == 'workflow_dispatch'
+    needs: proxy-security-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run explicitly requested Gemini test
+        env:
+          GEMINI_API_KEY_TEST: ${{ secrets.GEMINI_API_KEY_TEST }}
+          GEMINI_PROXY_TOKEN_TEST: ${{ secrets.GEMINI_PROXY_TOKEN_TEST }}
+          GEMINI_TEST_MODEL: ${{ inputs.model }}
+          GEMINI_TEST_HOSTED_SITE: ${{ inputs.hosted_site }}
+        run: node scripts/test_gemini_live.mjs
