@@ -83,8 +83,9 @@ export async function handleGeminiProxyRequest(request: Request, env: GeminiProx
 
   const body = await boundedBody(request);
   if (!body) return reply('Request body too large or empty.', 413);
+  const decodedBody = new TextDecoder().decode(body);
   try {
-    JSON.parse(new TextDecoder().decode(body));
+    JSON.parse(decodedBody);
   } catch {
     return reply('Invalid JSON request.', 400);
   }
@@ -100,7 +101,7 @@ export async function handleGeminiProxyRequest(request: Request, env: GeminiProx
         'content-type': 'application/json',
         'x-goog-api-key': env.GEMINI_API_KEY
       },
-      body
+      body: decodedBody
     });
     if (!result.ok) return reply(`Gemini API returned HTTP ${result.status}.`, result.status);
     return new Response(result.body, {
