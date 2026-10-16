@@ -12,6 +12,9 @@ import {
 import { assembleDeterministicResponse } from '../../src/engine/responseAssembler.ts';
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () => { throw new Error('EXTERNAL_FETCH_BLOCKED_BY_TEST'); };
+
 console.log('=== RUNNING SIDE QUEST 1.1: ARCHITECTURAL & GROUNDED VERIFICATION TESTS ===\n');
 
 async function runSideQuestTests() {
@@ -198,5 +201,7 @@ async function runSideQuestTests() {
 
 runSideQuestTests().catch(err => {
   console.error('Test failure:', err);
-  process.exit(1);
+  process.exitCode = 1;
+}).finally(() => {
+  globalThis.fetch = originalFetch;
 });

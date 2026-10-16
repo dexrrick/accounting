@@ -4,6 +4,9 @@ import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
 import { sanitizeStatutoryLinks, buildSsoUrl } from '../../src/utils/statutoryLinkResolver.ts';
 
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () => { throw new Error('EXTERNAL_FETCH_BLOCKED_BY_TEST'); };
+
 async function runTests() {
   console.log('=== STARTING SINGAPORE STATUTORY ENGINE VERIFICATION ===\n');
 
@@ -200,5 +203,7 @@ async function runTests() {
 
 runTests().catch(err => {
   console.error('Test execution failed:', err);
-  process.exit(1);
+  process.exitCode = 1;
+}).finally(() => {
+  globalThis.fetch = originalFetch;
 });
