@@ -1,8 +1,11 @@
 import type { AccountingStandard, StandardCitation, StatutoryAdvisoryInfo, QueryDomain, ExplicitAssumption, IrasEvidencePresentation, IrasPresentationPassage, IrasPresentationSourceGroup } from '../types/accounting';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShieldCheck, ExternalLink, Scale, FileText, Calendar, AlertTriangle, Building, Landmark, Info } from 'lucide-react';
 import { getAuthorityBadgeInfo, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
+import { defaultSourceRetriever } from '../retrieval/sourceRetriever';
+import { sameVerifiedDocumentBinding } from '../standards/sharedDocumentAdmission';
+import { SOURCE_REGISTRY_CHANGE_EVENT } from '../retrieval/sourceRegistryEvents';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import type { OfficialAnswerLink } from '../utils/chatPresentation';
 import { hasCurrentIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
@@ -85,6 +88,14 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
   rawQuery,
   queryIntent
 }) => {
+  const [registryRevision, setRegistryRevision] = useState(0);
+  useEffect(() => {
+    const refreshCitationStatus = () => setRegistryRevision(value => value + 1);
+    window.addEventListener(SOURCE_REGISTRY_CHANGE_EVENT, refreshCitationStatus);
+    return () => window.removeEventListener(SOURCE_REGISTRY_CHANGE_EVENT, refreshCitationStatus);
+  }, []);
+  void registryRevision;
+
   const currentAuthorityPresentation = hasCurrentAuthorityEvidencePresentation(authorityEvidencePresentation, rawQuery)
     ? authorityEvidencePresentation : undefined;
   if (currentAuthorityPresentation) {
@@ -435,6 +446,16 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                 });
                 return uniqueCitations.map((cite, cIdx) => {
                   const badge = getAuthorityBadgeInfo(cite.authority);
+                  const boundRecord = cite.sourceBinding
+                    ? defaultSourceRetriever.getSourceById(cite.sourceBinding.recordId)
+                    : undefined;
+                  const citationVerification = defaultCitationVerifier.verifyCitation(
+                    cite,
+                    cite.authority,
+                    boundRecord ? [boundRecord] : undefined
+                  );
+                  const currentBinding = Boolean(cite.sourceBinding && citationVerification.isValid &&
+                    sameVerifiedDocumentBinding(cite.sourceBinding, citationVerification.sourceBinding));
                   return (
                     <div
                       key={cIdx}
@@ -537,6 +558,23 @@ export const ComplianceRationale: React.FC<ComplianceRationaleProps> = ({
                     <p className="text-slate-600 dark:text-workspace-muted text-[11px] leading-relaxed italic bg-workspace-panel p-2.5 rounded-lg border border-workspace-border dark:border-workspace-border">
                       "{cite.text}"
                     </p>
+                    {cite.sourceBinding && (
+                      <details className="rounded-lg border border-workspace-border bg-workspace-panel p-2.5">
+                        <summary className="cursor-pointer text-[10px] font-semibold text-slate-700 dark:text-workspace-secondary">
+                          {currentBinding ? 'Current verified document binding' : 'Historical document binding · no longer current'}
+                          {' · '}{citationVerification.status}
+                        </summary>
+                        <div className="mt-2 space-y-1 text-[9px] text-slate-600 dark:text-workspace-muted">
+                          <p>Record: <span className="font-mono">{cite.sourceBinding.recordId}</span></p>
+                          <p>Bound version: <span className="font-mono break-all">{cite.sourceBinding.versionId}</span></p>
+                          <p>Document SHA-256: <span className="font-mono break-all">{cite.sourceBinding.documentHash}</span></p>
+                          <p>Provision SHA-256: <span className="font-mono break-all">{cite.sourceBinding.provisionHash}</span></p>
+                          <p>Bound locator:</p>
+                          <pre className="max-h-24 overflow-auto whitespace-pre-wrap break-words rounded bg-workspace-raised p-2 text-[9px]">{JSON.stringify(cite.sourceBinding.sourceLocator, null, 2)}</pre>
+                          {!currentBinding && <p className="leading-relaxed">This citation preserves the document version used to produce the answer. It is not evidence that the version is currently active.</p>}
+                        </div>
+                      </details>
+                    )}
                   </div>
                 );
               });

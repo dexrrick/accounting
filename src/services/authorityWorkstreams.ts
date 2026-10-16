@@ -18,6 +18,8 @@ import type {
 } from '../types/authorityEvidence';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
+import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
+import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
 import type { ISourceRetriever } from '../retrieval/sourceRetriever';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
@@ -58,6 +60,10 @@ const SUPPORTED_LOCAL_AUTHORITIES = new Set<SemanticAuthority>([
 // IRAS retains its specialist quality gate. These authorities now share the
 // generic official-page discovery path and bounded evidence admission.
 const SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES = new Set<SemanticAuthority>(['CPF', 'MOM', 'MAS']);
+const MANAGED_MAS_DOCUMENT_RECORD_IDS = new Set([
+  'MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK',
+  'MAS_IID_04_2025_SUBSECTION_RECHECK'
+]);
 
 const GENERIC_SUPPORT_WORDS = new Set([
   'about', 'account', 'accounts', 'applicable', 'application', 'authority', 'based', 'business', 'businesses',
@@ -687,6 +693,10 @@ function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRe
   };
 }
 
+function versioningManagerFor(retriever: ISourceRetriever): SourceVersioningManager {
+  return retriever.getVersioningManager?.() || defaultSourceVersioningManager;
+}
+
 
 /**
  * Apply the same official sitemap -> fetched page -> topic validator fallback to
@@ -709,9 +719,10 @@ function defaultOfficialStatutoryProvider(
       if (options.localOnly || options.groundingOptions?.localOnly) return local;
       const topics = getCoverageTopicsByIds(request.retrievalIntent.topicIds);
       const targetDate = defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate).targetDate;
+      const versioningManager = versioningManagerFor(retriever);
       const localAdmission = eligibleLocalRecords(
         local.candidates, request.issue, authority, topics,
-        request.retrievalIntent.requestedConcepts, targetDate, referenceDate
+        request.retrievalIntent.requestedConcepts, targetDate, referenceDate, undefined, versioningManager
       );
       const localCoverage = localAdmission.admitted.length > 0 && topics.every(topic =>
         localAdmission.admitted.some(record => topicBoundToRecord(record, topic))
@@ -917,7 +928,8 @@ function eligibleLocalRecords(
   concepts: RequestedQuestionConcept[],
   targetDate: string | undefined,
   referenceDate: string,
-  officialRetrievalTrace?: SourceMapFallbackTrace
+  officialRetrievalTrace?: SourceMapFallbackTrace,
+  versioningManager: SourceVersioningManager = defaultSourceVersioningManager
 ): { admitted: AuthoritativeSourceRecord[]; rejectedCount: number } {
   const admitted: AuthoritativeSourceRecord[] = [];
   let rejectedCount = 0;
@@ -940,9 +952,25 @@ function eligibleLocalRecords(
       officialRetrievalTrace?.selectedRecordIds.includes(record.id) === true &&
       officialRetrievalTrace?.finalVerifiedUrls.includes(record.officialSourceUrl) === true &&
       Boolean(matchingFetch);
-    if ((!isReviewedLocal && !isValidatedLive) ||
+    const exactManagedTopic = authority === 'MAS' && record.provenance === 'LIVE_PATCH' &&
+      MANAGED_MAS_DOCUMENT_RECORD_IDS.has(record.id)
+      ? topics.find(topic => topicBoundToRecord(record, topic) &&
+        recordMatchesGovernorAndDomain(record, authority, topic))
+      : undefined;
+    const managedAdmission = exactManagedTopic
+      ? verifySharedDocumentAdmission(record, versioningManager, {
+        targetDate,
+        referenceDate,
+        expectedAuthority: 'MAS',
+        expectedDomain: exactManagedTopic.legacyDomains[0]
+      })
+      : undefined;
+    const isApprovedManagedDocument = Boolean(managedAdmission?.required && managedAdmission.admitted);
+    if ((!isReviewedLocal && !isValidatedLive && !isApprovedManagedDocument) ||
         record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false ||
-        !record.sourceText?.trim() || findRecordEligibilityRejection(record, targetDate, referenceDate)) {
+        !record.sourceText?.trim() || findRecordEligibilityRejection(record, targetDate, referenceDate,
+          versioningManager, authority === 'MAS' ? 'MAS' : undefined,
+          exactManagedTopic?.legacyDomains[0])) {
       rejectedCount += 1;
       continue;
     }
@@ -1230,8 +1258,9 @@ async function evaluateIssue(
     admitted = irasQuality.eligibleRecords;
     localRejectedCount = irasQuality.rejectedRecords.length;
   } else {
+    const versioningManager = versioningManagerFor(retriever);
     const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, targetDate, referenceDate,
-      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace));
+      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace), versioningManager);
     admitted = result.admitted;
     localRejectedCount = result.rejectedCount;
   }
@@ -1246,7 +1275,10 @@ async function evaluateIssue(
     ...(claim.canonicalUrl ? { citationUrl: claim.canonicalUrl } : {})
   })) || ruleClaimsForRecords(admitted);
   const verification = verifyEvidenceClaims(suggestedClaims, admitted, {
-    missingFacts: [], targetDate
+    missingFacts: [], targetDate, referenceDate,
+    expectedAuthority: plan.authority === 'MAS' ? 'MAS' : undefined,
+    expectedDomain: plan.authority === 'MAS' && plan.domain === 'MAS_FUNDS' ? 'MAS_FUNDS' : undefined,
+    versioningManager: versioningManagerFor(retriever)
   });
   const acceptedClaims = plan.authority === 'IRAS'
     ? bindAcceptedIrasQuotesToSiblingPageRecords(verification.accepted, admitted, targetDate)

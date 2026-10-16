@@ -1,16 +1,25 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { computeSha256 } from '../standards/sourceVersioning';
+import { computeSha256, computeSha256Bytes } from '../standards/sourceVersioning';
 import type { IOfficialSourceAdapter } from './sourceAdapters';
 import type { ControlledFetchResult, ControlledWebRetriever } from './controlledWebRetriever';
 import type { OfficialDocumentExtractionRequest } from './officialDocumentExtractor';
 import { extractOfficialDocumentFromRetrieved } from './officialDocumentExtractor';
 import type { AmendmentSummary, RegulatoryUpdatePackage } from './liveRegulatoryFeed';
+import {
+  createMasLicensingComparisonPolicy,
+  MAS_LICENSING_COMPARISON_PROFILE_VERSION,
+  MAS_LICENSING_HTML_URL,
+  MAS_LICENSING_RECORD_ID,
+  type MasLicensingComparisonPolicy
+} from '../standards/masLicensingComparisonPolicy';
 
 export interface MonitoredMasDocument {
   /** Stable registry identity retained across content revisions. */
   recordId: string;
   extractionRequest: OfficialDocumentExtractionRequest;
   amendmentTitle?: string;
+  /** Explicitly enables the reviewed, versioned dynamic-field policy for one exact document. */
+  comparisonProfile?: typeof MAS_LICENSING_COMPARISON_PROFILE_VERSION;
 }
 
 export interface MasDocumentRetrievalMetadata {
@@ -22,6 +31,25 @@ export interface MasDocumentRetrievalMetadata {
   retrievedAt: string;
   etag?: string;
   lastModified?: string;
+  comparisonPolicy?: MasLicensingComparisonPolicy;
+}
+
+export interface MasDocumentDiscoveryDiagnostic {
+  recordId: string;
+  requestUrl: string;
+  fetchStatus: string;
+  httpStatus?: number;
+  retrievedAt?: string;
+  extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED' | 'REJECTED';
+  extractionReason?: string;
+  changed?: boolean;
+  record?: AuthoritativeSourceRecord;
+  metadata?: MasDocumentRetrievalMetadata;
+}
+
+export interface MasDocumentDiscoveryResult {
+  updatePackage: RegulatoryUpdatePackage | null;
+  documents: MasDocumentDiscoveryDiagnostic[];
 }
 
 function stableStringify(value: unknown): string {
@@ -31,6 +59,10 @@ function stableStringify(value: unknown): string {
     return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${stableStringify(child)}`).join(',')}}`;
   }
   return JSON.stringify(value) ?? 'null';
+}
+
+function normalizedRelatedTopicIds(record: Pick<AuthoritativeSourceRecord, 'relatedTopicIds'>): string[] {
+  return [...new Set(record.relatedTopicIds || [])].sort();
 }
 
 /** Hashes all MAS request, provenance, applicability, locator, and record content. */
@@ -55,6 +87,7 @@ function sameApplicableContent(left: AuthoritativeSourceRecord | undefined, righ
     left.sourcePublisher === right.sourcePublisher && left.standardOrActCode === right.standardOrActCode &&
     left.paragraphOrSection === right.paragraphOrSection && left.domain === right.domain &&
     left.officialSourceUrl === right.officialSourceUrl && left.canonicalSourceUrl === right.canonicalSourceUrl &&
+    stableStringify(normalizedRelatedTopicIds(left)) === stableStringify(normalizedRelatedTopicIds(right)) &&
     stableStringify(left.sourceLocator) === stableStringify(right.sourceLocator));
 }
 
@@ -94,6 +127,11 @@ export class MASDocumentUpdateAdapter implements IOfficialSourceAdapter {
       if (item.extractionRequest.authority !== 'MAS' || item.extractionRequest.domain !== 'MAS_FUNDS') {
         throw new Error(`MAS document '${item.recordId}' must be MAS governed and use the MAS_FUNDS domain`);
       }
+      if (item.comparisonProfile && (item.comparisonProfile !== MAS_LICENSING_COMPARISON_PROFILE_VERSION ||
+          item.recordId !== MAS_LICENSING_RECORD_ID || item.extractionRequest.url !== MAS_LICENSING_HTML_URL ||
+          item.extractionRequest.documentKind !== 'HTML')) {
+        throw new Error('The MAS licensing comparison profile is restricted to its exact reviewed HTML record and URL');
+      }
       return Object.freeze({
         ...item,
         extractionRequest: Object.freeze(structuredClone(item.extractionRequest))
@@ -105,12 +143,20 @@ export class MASDocumentUpdateAdapter implements IOfficialSourceAdapter {
     retriever: ControlledWebRetriever,
     currentSources: AuthoritativeSourceRecord[] = []
   ): Promise<RegulatoryUpdatePackage | null> {
-    if (this.monitoredDocuments.length === 0) return null;
+    return (await this.checkForUpdatesWithDiagnostics(retriever, currentSources)).updatePackage;
+  }
+
+  public async checkForUpdatesWithDiagnostics(
+    retriever: ControlledWebRetriever,
+    currentSources: AuthoritativeSourceRecord[] = []
+  ): Promise<MasDocumentDiscoveryResult> {
+    if (this.monitoredDocuments.length === 0) return { updatePackage: null, documents: [] };
 
     const changedRecords: AuthoritativeSourceRecord[] = [];
     const extractionRequests: NonNullable<RegulatoryUpdatePackage['extractionRequests']> = {};
     const documentMetadata: NonNullable<RegulatoryUpdatePackage['documentMetadata']> = {};
     const amendments: AmendmentSummary[] = [];
+    const diagnostics: MasDocumentDiscoveryDiagnostic[] = [];
 
     for (const monitored of this.monitoredDocuments) {
       const request = structuredClone(monitored.extractionRequest);
@@ -118,30 +164,104 @@ export class MASDocumentUpdateAdapter implements IOfficialSourceAdapter {
         timeoutMs: request.timeoutMs,
         maxResponseBytes: request.maxResponseBytes
       });
-      if (fetched.status !== 'SUCCESS' || !fetched.contentBytes || !fetched.contentType || !fetched.finalUrl || !fetched.httpStatus) return null;
+      if (fetched.status !== 'SUCCESS' || !fetched.contentBytes || !fetched.contentType || !fetched.finalUrl || !fetched.httpStatus) {
+        diagnostics.push({
+          recordId: monitored.recordId,
+          requestUrl: request.url,
+          fetchStatus: fetched.status,
+          httpStatus: fetched.httpStatus,
+          retrievedAt: fetched.retrievedAt,
+          extractionStatus: 'FAILED',
+          extractionReason: fetched.error || 'Official document fetch did not return a complete response'
+        });
+        return { updatePackage: null, documents: diagnostics };
+      }
 
       const extracted = await extractOfficialDocumentFromRetrieved(request, fetched);
-      if (extracted.status !== 'SUCCESS' || extracted.record.extractionStatus !== 'EXACT' || !extracted.record.isVerbatimText) return null;
+      if (extracted.status !== 'SUCCESS' || extracted.record.extractionStatus !== 'EXACT' || !extracted.record.isVerbatimText) {
+        diagnostics.push({
+          recordId: monitored.recordId,
+          requestUrl: request.url,
+          fetchStatus: fetched.status,
+          httpStatus: fetched.httpStatus,
+          retrievedAt: fetched.retrievedAt,
+          extractionStatus: extracted.status === 'REJECTED' ? 'REJECTED' : extracted.record.extractionStatus,
+          extractionReason: extracted.status === 'REJECTED'
+            ? `${extracted.code}: ${extracted.reason}`
+            : 'The extracted document was not exact verbatim text'
+        });
+        return { updatePackage: null, documents: diagnostics };
+      }
       const record = { ...extracted.record, id: monitored.recordId, groundingEligible: false };
       const existing = currentSources.find(candidate => candidate.id === monitored.recordId);
-      if (existing && (existing.authority !== 'MAS' || existing.sourceAuthority && existing.sourceAuthority !== 'MAS')) return null;
-      if (sameApplicableContent(existing, record)) continue;
+      if (existing && (existing.authority !== 'MAS' || existing.sourceAuthority && existing.sourceAuthority !== 'MAS')) {
+        diagnostics.push({
+          recordId: monitored.recordId,
+          requestUrl: request.url,
+          fetchStatus: fetched.status,
+          httpStatus: fetched.httpStatus,
+          retrievedAt: fetched.retrievedAt,
+          extractionStatus: 'REJECTED',
+          extractionReason: 'The stable MAS record id is currently owned by another authority'
+        });
+        return { updatePackage: null, documents: diagnostics };
+      }
+      const metadata = retrievalMetadata(request, fetched);
+      if (monitored.comparisonProfile) {
+        const policy = request.authority === 'MAS' && request.domain === 'MAS_FUNDS' &&
+          request.documentKind === 'HTML' && request.url === MAS_LICENSING_HTML_URL &&
+          record.id === MAS_LICENSING_RECORD_ID && record.sourceLocator?.sourceType === 'HTML' &&
+          fetched.sourceUrl === MAS_LICENSING_HTML_URL && fetched.finalUrl === MAS_LICENSING_HTML_URL &&
+          fetched.contentType?.toLowerCase().startsWith('text/html')
+          ? createMasLicensingComparisonPolicy(fetched.contentBytes, record.documentHash || '', computeSha256Bytes)
+          : undefined;
+        if (!policy) {
+          diagnostics.push({
+            recordId: monitored.recordId,
+            requestUrl: request.url,
+            fetchStatus: fetched.status,
+            httpStatus: fetched.httpStatus,
+            retrievedAt: fetched.retrievedAt,
+            extractionStatus: 'REJECTED',
+            extractionReason: 'The opted-in MAS licensing page failed its exact dynamic-field profile or raw-byte binding check'
+          });
+          return { updatePackage: null, documents: diagnostics };
+        }
+        metadata.comparisonPolicy = policy;
+      }
+      const changed = !sameApplicableContent(existing, record);
+      diagnostics.push({
+        recordId: monitored.recordId,
+        requestUrl: request.url,
+        fetchStatus: fetched.status,
+        httpStatus: fetched.httpStatus,
+        retrievedAt: fetched.retrievedAt,
+        extractionStatus: record.extractionStatus,
+        changed,
+        record,
+        metadata
+      });
+      if (!changed) continue;
 
       changedRecords.push(record);
       extractionRequests[record.id] = request;
-      documentMetadata[record.id] = retrievalMetadata(request, fetched);
+      documentMetadata[record.id] = metadata;
       amendments.push(amendmentFor(record, existing, monitored.amendmentTitle || record.documentTitle));
     }
 
-    if (changedRecords.length === 0) return null;
-    const identityHash = computeSha256(stableStringify(changedRecords.map(record => ({
-      id: record.id,
-      documentHash: record.documentHash,
-      provisionHash: record.provisionHash,
-      effectiveDate: record.effectiveDate,
-      validFrom: record.validFrom,
-      validTo: record.validTo
-    }))));
+    if (changedRecords.length === 0) return { updatePackage: null, documents: diagnostics };
+    const identityHash = computeSha256(stableStringify(changedRecords.map(record => {
+      const relatedTopicIds = normalizedRelatedTopicIds(record);
+      return {
+        id: record.id,
+        documentHash: record.documentHash,
+        provisionHash: record.provisionHash,
+        effectiveDate: record.effectiveDate,
+        validFrom: record.validFrom,
+        validTo: record.validTo,
+        ...(relatedTopicIds.length > 0 ? { relatedTopicIds } : {})
+      };
+    })));
     const pkgWithoutHash: Omit<RegulatoryUpdatePackage, 'packageHash'> = {
       packageId: `MAS-${identityHash}`,
       releaseDate: 'undated',
@@ -151,7 +271,10 @@ export class MASDocumentUpdateAdapter implements IOfficialSourceAdapter {
       extractionRequests,
       documentMetadata
     };
-    return { ...pkgWithoutHash, packageHash: computeMasRegulatoryPackageHash(pkgWithoutHash) };
+    return {
+      updatePackage: { ...pkgWithoutHash, packageHash: computeMasRegulatoryPackageHash(pkgWithoutHash) },
+      documents: diagnostics
+    };
   }
 }
 

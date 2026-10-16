@@ -23,6 +23,7 @@ import type { ProviderSettings, AIProviderType } from '../types/provider';
 import { defaultLiveRegulatoryFeedService, type LiveSyncState, type RegulatoryUpdatePackage } from '../retrieval/liveRegulatoryFeed';
 import { defaultSourceVersioningManager } from '../standards/sourceVersioning';
 import { getAllAuthoritativeSources } from '../standards/unifiedSourceModel';
+import { ManualMasReviewPanel } from './ManualMasReviewPanel';
 
 export type AppFontSize = 'normal' | 'large' | 'xl';
 
@@ -52,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [updateMessage, setUpdateMessage] = useState<string>('');
   const [updatePackages, setUpdatePackages] = useState<RegulatoryUpdatePackage[]>([]);
   const [updateAction, setUpdateAction] = useState<string | null>(null);
+  const [registryRevision, setRegistryRevision] = useState(0);
   const [activeTab, setActiveTab] = useState<AIProviderType>(providerSettings.activeProvider);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -116,6 +118,12 @@ export const Header: React.FC<HeaderProps> = ({
   const reviewDueCount = sources.filter(s => s.freshnessStatus === 'AUDIT_OVERDUE' || s.sourceStatus === 'NEEDS_REVIEW').length;
   const stagedCount = defaultLiveRegulatoryFeedService.getStagedPackages().length;
   const rejectedCount = Object.keys(defaultLiveRegulatoryFeedService.getRejectedPackages()).length;
+  void registryRevision;
+
+  const handleManualRegistryChange = () => {
+    setRegistryRevision(value => value + 1);
+    setLiveSyncState(defaultLiveRegulatoryFeedService.getSyncState());
+  };
 
   const getRegulatoryStatusBadge = () => {
     switch (liveSyncState) {
@@ -993,6 +1001,8 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 )}
               </div>
+
+              <ManualMasReviewPanel onWorkflowChange={handleManualRegistryChange} />
 
               {/* Official Sources Allowlist Manifest */}
               <div className="space-y-2">

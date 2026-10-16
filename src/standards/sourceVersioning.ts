@@ -1,4 +1,12 @@
 import type { AuthoritativeSourceRecord, SourceLocator } from './unifiedSourceModel';
+import {
+  compareMasLicensingHtml,
+  decodeMasDocumentBytes,
+  MAS_LICENSING_COMPARISON_PROFILE_VERSION,
+  MAS_LICENSING_HTML_URL,
+  MAS_LICENSING_MAX_DOCUMENT_BYTES,
+  MAS_LICENSING_RECORD_ID
+} from './masLicensingComparisonPolicy';
 
 export interface SourceVersionMetadata {
   versionId: string;
@@ -39,6 +47,10 @@ export interface SourceVersionMetadata {
   documentAdmissionRequired?: true;
   documentAdmissionPackageId?: string;
   documentAdmissionPackageHash?: string;
+  documentAdmissionComparisonRecordId?: string;
+  documentAdmissionComparisonProfileVersion?: string;
+  documentAdmissionComparisonHash?: string;
+  documentAdmissionComparisonContentType?: string;
   governingAuthority?: AuthoritativeSourceRecord['authority'];
   domain?: AuthoritativeSourceRecord['domain'];
   reviewApproval?: SourceVersionReviewApproval;
@@ -54,11 +66,100 @@ export interface SourceVersionReviewApproval {
   reviewer: string;
   reason: string;
   approvedAt: string;
+  comparisonEvidence?: SourceDocumentComparisonEvidence;
+  comparisonEvidenceHash?: string;
+}
+
+/** Full raw-artifact receipt for a versioned source-comparison policy. */
+export interface SourceDocumentComparisonEvidence {
+  packageId: string;
+  packageHash: string;
+  recordId: string;
+  sourceUrl: string;
+  finalUrl: string;
+  contentType: string;
+  httpStatus: number;
+  profileVersion: string;
+  baselineDocumentHash: string;
+  verificationDocumentHash: string;
+  comparisonHash: string;
+  retrievedAt: string;
+  originalBodyBase64: string;
+  verificationBodyBase64: string;
+  evidenceHash: string;
 }
 
 function isValidIsoTimestamp(value: string): boolean {
   return typeof value === 'string' && Number.isFinite(Date.parse(value)) &&
     new Date(value).toISOString() === value;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableJson(child)}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+export function computeSourceDocumentComparisonEvidenceHash(evidence: Omit<SourceDocumentComparisonEvidence, 'evidenceHash'> | SourceDocumentComparisonEvidence): string {
+  const payload = { ...evidence } as Partial<SourceDocumentComparisonEvidence>;
+  delete payload.evidenceHash;
+  return computeSha256(stableJson(payload));
+}
+
+function hasValidComparisonEvidence(
+  evidence: SourceDocumentComparisonEvidence | undefined,
+  approval: SourceVersionReviewApproval,
+  metadata: SourceVersionMetadata
+): boolean {
+  const profileVersion = metadata.documentAdmissionComparisonProfileVersion;
+  if (!profileVersion) return !evidence && !approval.comparisonEvidenceHash &&
+    !metadata.documentAdmissionComparisonRecordId && !metadata.documentAdmissionComparisonHash &&
+    !metadata.documentAdmissionComparisonContentType;
+  if (!evidence || !metadata.documentAdmissionComparisonRecordId || !metadata.documentAdmissionComparisonHash ||
+      typeof profileVersion !== 'string' || typeof metadata.documentAdmissionComparisonRecordId !== 'string' ||
+      typeof metadata.documentAdmissionComparisonHash !== 'string' || typeof metadata.documentAdmissionComparisonContentType !== 'string' ||
+      typeof approval.comparisonEvidenceHash !== 'string' ||
+      typeof evidence !== 'object' || typeof evidence.packageId !== 'string' || typeof evidence.packageHash !== 'string' ||
+      typeof evidence.recordId !== 'string' || typeof evidence.sourceUrl !== 'string' || typeof evidence.finalUrl !== 'string' ||
+      typeof evidence.contentType !== 'string' || typeof evidence.httpStatus !== 'number' ||
+      typeof evidence.profileVersion !== 'string' || typeof evidence.baselineDocumentHash !== 'string' ||
+      typeof evidence.verificationDocumentHash !== 'string' || typeof evidence.comparisonHash !== 'string' ||
+      typeof evidence.retrievedAt !== 'string' || typeof evidence.originalBodyBase64 !== 'string' ||
+      typeof evidence.verificationBodyBase64 !== 'string' || typeof evidence.evidenceHash !== 'string' ||
+      typeof metadata.documentHash !== 'string' || typeof metadata.documentAdmissionPackageId !== 'string' ||
+      typeof metadata.documentAdmissionPackageHash !== 'string' ||
+      profileVersion !== MAS_LICENSING_COMPARISON_PROFILE_VERSION || evidence.profileVersion !== profileVersion ||
+      evidence.recordId !== MAS_LICENSING_RECORD_ID || evidence.recordId !== metadata.documentAdmissionComparisonRecordId ||
+      evidence.packageId !== approval.packageId || evidence.packageHash.toLowerCase() !== approval.packageHash.toLowerCase() ||
+      approval.comparisonEvidenceHash?.toLowerCase() !== evidence.evidenceHash.toLowerCase() ||
+      evidence.sourceUrl !== MAS_LICENSING_HTML_URL || evidence.finalUrl !== MAS_LICENSING_HTML_URL ||
+      metadata.sourceUrl !== MAS_LICENSING_HTML_URL || metadata.canonicalSourceUrl !== MAS_LICENSING_HTML_URL ||
+      metadata.sourceAuthority !== 'MAS' || metadata.governingAuthority !== 'MAS' || metadata.domain !== 'MAS_FUNDS' ||
+      !/^text\/html(?:\s*;|$)/i.test(evidence.contentType) || evidence.contentType !== metadata.documentAdmissionComparisonContentType ||
+      evidence.httpStatus !== metadata.httpStatus ||
+      !Number.isInteger(evidence.httpStatus) || evidence.httpStatus < 200 || evidence.httpStatus >= 300 ||
+      evidence.baselineDocumentHash.toLowerCase() !== (metadata.documentHash || '').toLowerCase() ||
+      evidence.comparisonHash.toLowerCase() !== metadata.documentAdmissionComparisonHash.toLowerCase() ||
+      !/^[a-f\d]{64}$/i.test(evidence.packageHash) || !/^[a-f\d]{64}$/i.test(evidence.baselineDocumentHash) ||
+      !/^[a-f\d]{64}$/i.test(evidence.verificationDocumentHash) || !/^[a-f\d]{64}$/i.test(evidence.comparisonHash) ||
+      !/^[a-f\d]{64}$/i.test(evidence.evidenceHash) || !evidence.sourceUrl || !evidence.finalUrl ||
+      !evidence.contentType || !Number.isInteger(evidence.httpStatus) || evidence.httpStatus < 200 || evidence.httpStatus >= 300 ||
+      !isValidIsoTimestamp(evidence.retrievedAt) || evidence.retrievedAt !== evidence.retrievedAt.trim()) return false;
+  const baselineBytes = decodeMasDocumentBytes(evidence.originalBodyBase64);
+  const verificationBytes = decodeMasDocumentBytes(evidence.verificationBodyBase64);
+  if (!baselineBytes || !verificationBytes || baselineBytes.byteLength > MAS_LICENSING_MAX_DOCUMENT_BYTES ||
+      verificationBytes.byteLength > MAS_LICENSING_MAX_DOCUMENT_BYTES ||
+      computeSha256Bytes(baselineBytes).toLowerCase() !== evidence.baselineDocumentHash.toLowerCase() ||
+      computeSha256Bytes(verificationBytes).toLowerCase() !== evidence.verificationDocumentHash.toLowerCase()) return false;
+  const comparison = compareMasLicensingHtml(baselineBytes, verificationBytes, computeSha256Bytes);
+  if (!comparison.isValid || comparison.profileVersion !== evidence.profileVersion ||
+      comparison.baselineDocumentHash?.toLowerCase() !== evidence.baselineDocumentHash.toLowerCase() ||
+      comparison.verificationDocumentHash?.toLowerCase() !== evidence.verificationDocumentHash.toLowerCase() ||
+      comparison.comparisonHash?.toLowerCase() !== evidence.comparisonHash.toLowerCase()) return false;
+  return computeSourceDocumentComparisonEvidenceHash(evidence).toLowerCase() === evidence.evidenceHash.toLowerCase();
 }
 
 function isValidDocumentReviewApproval(metadata: SourceVersionMetadata): boolean {
@@ -69,9 +170,90 @@ function isValidDocumentReviewApproval(metadata: SourceVersionMetadata): boolean
     typeof approval.reviewer === 'string' && typeof approval.reason === 'string' &&
     typeof approval.approvedAt === 'string' &&
     approval.packageId === metadata.documentAdmissionPackageId &&
-    approval.packageHash.toLowerCase() === metadata.documentAdmissionPackageHash?.toLowerCase() &&
+    typeof metadata.documentAdmissionPackageHash === 'string' &&
+    approval.packageHash.toLowerCase() === metadata.documentAdmissionPackageHash.toLowerCase() &&
     /^[a-f\d]{64}$/i.test(approval.packageHash) && approval.reviewer.trim() && approval.reason.trim() &&
-    isValidIsoTimestamp(approval.approvedAt));
+    isValidIsoTimestamp(approval.approvedAt) && hasValidComparisonEvidence(approval.comparisonEvidence, approval, metadata));
+}
+
+function hasComparisonAdmissionFields(metadata: SourceVersionMetadata): boolean {
+  return metadata.documentAdmissionComparisonRecordId !== undefined ||
+    metadata.documentAdmissionComparisonProfileVersion !== undefined ||
+    metadata.documentAdmissionComparisonHash !== undefined ||
+    metadata.documentAdmissionComparisonContentType !== undefined;
+}
+
+interface CandidateComparisonBinding {
+  recordSnapshot: AuthoritativeSourceRecord;
+  documentAdmissionRequired: SourceVersionMetadata['documentAdmissionRequired'];
+  documentAdmissionPackageId: SourceVersionMetadata['documentAdmissionPackageId'];
+  documentAdmissionPackageHash: SourceVersionMetadata['documentAdmissionPackageHash'];
+  documentAdmissionComparisonRecordId: SourceVersionMetadata['documentAdmissionComparisonRecordId'];
+  documentAdmissionComparisonProfileVersion: SourceVersionMetadata['documentAdmissionComparisonProfileVersion'];
+  documentAdmissionComparisonHash: SourceVersionMetadata['documentAdmissionComparisonHash'];
+  documentAdmissionComparisonContentType: SourceVersionMetadata['documentAdmissionComparisonContentType'];
+  sourceUrl: SourceVersionMetadata['sourceUrl'];
+  canonicalSourceUrl: SourceVersionMetadata['canonicalSourceUrl'];
+  sourceAuthority: SourceVersionMetadata['sourceAuthority'];
+  governingAuthority: SourceVersionMetadata['governingAuthority'];
+  domain: SourceVersionMetadata['domain'];
+  documentHash: SourceVersionMetadata['documentHash'];
+  httpStatus: SourceVersionMetadata['httpStatus'];
+  provisionHash: SourceVersionMetadata['provisionHash'];
+  recordId: string;
+  recordAuthority: AuthoritativeSourceRecord['authority'];
+  recordSourceAuthority: AuthoritativeSourceRecord['sourceAuthority'];
+  recordDomain: AuthoritativeSourceRecord['domain'];
+  officialSourceUrl: AuthoritativeSourceRecord['officialSourceUrl'];
+  recordDocumentHash: AuthoritativeSourceRecord['documentHash'];
+  locatorDocumentHash: NonNullable<AuthoritativeSourceRecord['sourceLocator']>['documentHash'];
+  sourceType: NonNullable<AuthoritativeSourceRecord['sourceLocator']>['sourceType'];
+  extractionStatus: AuthoritativeSourceRecord['extractionStatus'];
+  isVerbatimText: AuthoritativeSourceRecord['isVerbatimText'];
+  recordProvisionHash: AuthoritativeSourceRecord['provisionHash'];
+}
+
+function candidateMatchesComparisonIdentity(
+  candidate: { record: AuthoritativeSourceRecord; metadata: SourceVersionMetadata },
+  binding?: CandidateComparisonBinding
+): boolean {
+  const record = candidate.record;
+  const metadata = candidate.metadata;
+  if (!binding) return !hasComparisonAdmissionFields(metadata);
+  if (stableJson(record) !== stableJson(binding.recordSnapshot)) return false;
+  if (metadata.documentAdmissionRequired !== binding.documentAdmissionRequired ||
+      metadata.documentAdmissionPackageId !== binding.documentAdmissionPackageId ||
+      metadata.documentAdmissionPackageHash !== binding.documentAdmissionPackageHash ||
+      metadata.documentAdmissionComparisonRecordId !== binding.documentAdmissionComparisonRecordId ||
+      metadata.documentAdmissionComparisonProfileVersion !== binding.documentAdmissionComparisonProfileVersion ||
+      metadata.documentAdmissionComparisonHash !== binding.documentAdmissionComparisonHash ||
+      metadata.documentAdmissionComparisonContentType !== binding.documentAdmissionComparisonContentType ||
+      metadata.sourceUrl !== binding.sourceUrl || metadata.canonicalSourceUrl !== binding.canonicalSourceUrl ||
+      metadata.sourceAuthority !== binding.sourceAuthority || metadata.governingAuthority !== binding.governingAuthority ||
+      metadata.domain !== binding.domain || metadata.documentHash !== binding.documentHash ||
+      metadata.httpStatus !== binding.httpStatus || metadata.provisionHash !== binding.provisionHash ||
+      record.id !== binding.recordId || record.authority !== binding.recordAuthority ||
+      record.sourceAuthority !== binding.recordSourceAuthority || record.domain !== binding.recordDomain ||
+      record.officialSourceUrl !== binding.officialSourceUrl || record.documentHash !== binding.recordDocumentHash ||
+      record.sourceLocator?.documentHash !== binding.locatorDocumentHash ||
+      record.sourceLocator?.sourceType !== binding.sourceType || record.extractionStatus !== binding.extractionStatus ||
+      record.isVerbatimText !== binding.isVerbatimText || record.provisionHash !== binding.recordProvisionHash) return false;
+  if (metadata.documentAdmissionRequired !== true ||
+      metadata.documentAdmissionComparisonProfileVersion !== MAS_LICENSING_COMPARISON_PROFILE_VERSION) return false;
+  return record.id === metadata.documentAdmissionComparisonRecordId &&
+    record.authority === 'MAS' && record.sourceAuthority === 'MAS' && record.domain === 'MAS_FUNDS' &&
+    record.officialSourceUrl === MAS_LICENSING_HTML_URL && metadata.sourceUrl === MAS_LICENSING_HTML_URL &&
+    metadata.canonicalSourceUrl === MAS_LICENSING_HTML_URL && metadata.sourceAuthority === 'MAS' &&
+    metadata.governingAuthority === 'MAS' && metadata.domain === 'MAS_FUNDS' &&
+    record.sourceLocator?.sourceType === 'HTML' && typeof record.documentHash === 'string' &&
+    typeof metadata.documentHash === 'string' && typeof record.sourceLocator?.documentHash === 'string' &&
+    record.documentHash.toLowerCase() === metadata.documentHash.toLowerCase() &&
+    record.sourceLocator.documentHash.toLowerCase() === metadata.documentHash.toLowerCase() &&
+    record.extractionStatus === 'EXACT' && record.isVerbatimText === true &&
+    typeof record.provisionHash === 'string' && typeof metadata.provisionHash === 'string' &&
+    record.provisionHash.toLowerCase() === metadata.provisionHash.toLowerCase() &&
+    typeof record.standardOrActCode === 'string' && typeof record.paragraphOrSection === 'string' && typeof record.sourceText === 'string' &&
+    record.provisionHash === computeProvisionHash(record.standardOrActCode, record.paragraphOrSection, record.sourceText);
 }
 
 /**
@@ -316,6 +498,8 @@ export class SourceVersioningManager {
   private ledger: Map<string, VersionLedgerEntry> = new Map();
   // Candidate versions waiting for validation/verification: versionId -> SourceVersionMetadata
   private candidates: Map<string, { record: AuthoritativeSourceRecord; metadata: SourceVersionMetadata }> = new Map();
+  // Pins policy admission fields at registration so mutable candidate views cannot downgrade them.
+  private candidateComparisonBindings: Map<string, CandidateComparisonBinding> = new Map();
   // Active pointer: recordId -> versionId
   private activeVersionPointers: Map<string, string> = new Map();
 
@@ -355,10 +539,39 @@ export class SourceVersioningManager {
       retrievedAt: metadata.retrievedAt || new Date().toISOString()
     };
 
-    this.candidates.set(metadata.versionId, {
-      record: { ...record, contentHash: computedHash, versionId: metadata.versionId, lifecycleState: 'CANDIDATE' },
-      metadata: finalizedMetadata
-    });
+    const finalizedRecord = { ...record, contentHash: computedHash, versionId: metadata.versionId, lifecycleState: 'CANDIDATE' as const };
+    this.candidates.set(metadata.versionId, { record: finalizedRecord, metadata: finalizedMetadata });
+    if (hasComparisonAdmissionFields(finalizedMetadata)) {
+      this.candidateComparisonBindings.set(metadata.versionId, {
+        recordSnapshot: structuredClone(finalizedRecord),
+        documentAdmissionRequired: finalizedMetadata.documentAdmissionRequired,
+        documentAdmissionPackageId: finalizedMetadata.documentAdmissionPackageId,
+        documentAdmissionPackageHash: finalizedMetadata.documentAdmissionPackageHash,
+        documentAdmissionComparisonRecordId: finalizedMetadata.documentAdmissionComparisonRecordId,
+        documentAdmissionComparisonProfileVersion: finalizedMetadata.documentAdmissionComparisonProfileVersion,
+        documentAdmissionComparisonHash: finalizedMetadata.documentAdmissionComparisonHash,
+        documentAdmissionComparisonContentType: finalizedMetadata.documentAdmissionComparisonContentType,
+        sourceUrl: finalizedMetadata.sourceUrl,
+        canonicalSourceUrl: finalizedMetadata.canonicalSourceUrl,
+        sourceAuthority: finalizedMetadata.sourceAuthority,
+        governingAuthority: finalizedMetadata.governingAuthority,
+        domain: finalizedMetadata.domain,
+        documentHash: finalizedMetadata.documentHash,
+        httpStatus: finalizedMetadata.httpStatus,
+        provisionHash: finalizedMetadata.provisionHash,
+        recordId: finalizedRecord.id,
+        recordAuthority: finalizedRecord.authority,
+        recordSourceAuthority: finalizedRecord.sourceAuthority,
+        recordDomain: finalizedRecord.domain,
+        officialSourceUrl: finalizedRecord.officialSourceUrl,
+        recordDocumentHash: finalizedRecord.documentHash,
+        locatorDocumentHash: finalizedRecord.sourceLocator?.documentHash,
+        sourceType: finalizedRecord.sourceLocator?.sourceType,
+        extractionStatus: finalizedRecord.extractionStatus,
+        isVerbatimText: finalizedRecord.isVerbatimText,
+        recordProvisionHash: finalizedRecord.provisionHash
+      });
+    }
 
     return finalizedMetadata;
   }
@@ -491,7 +704,9 @@ export class SourceVersioningManager {
       };
     }
 
-    if (candidate.metadata.documentAdmissionRequired && !isValidDocumentReviewApproval(candidate.metadata)) {
+    const comparisonBinding = this.candidateComparisonBindings.get(versionId);
+    if ((comparisonBinding || candidate.metadata.documentAdmissionRequired) &&
+        (!isValidDocumentReviewApproval(candidate.metadata) || !candidateMatchesComparisonIdentity(candidate, comparisonBinding))) {
       return {
         success: false,
         versionId,
@@ -535,6 +750,7 @@ export class SourceVersioningManager {
     this.ledger.set(versionId, ledgerEntry);
     this.activeVersionPointers.set(recordId, versionId);
     this.candidates.delete(versionId);
+    this.candidateComparisonBindings.delete(versionId);
 
     return {
       success: true,
@@ -553,8 +769,10 @@ export class SourceVersioningManager {
         !candidate.metadata.documentAdmissionPackageId ||
         candidate.metadata.documentAdmissionPackageId !== approval.packageId ||
         candidate.metadata.documentAdmissionPackageHash?.toLowerCase() !== approval.packageHash.toLowerCase() ||
+        !candidateMatchesComparisonIdentity(candidate, this.candidateComparisonBindings.get(versionId)) ||
         !approval.reviewer.trim() || !approval.reason.trim() || !/^[a-f\d]{64}$/i.test(approval.packageHash) ||
-        !isValidIsoTimestamp(approval.approvedAt)) return false;
+        !isValidIsoTimestamp(approval.approvedAt) ||
+        !isValidDocumentReviewApproval({ ...candidate.metadata, reviewApproval: approval })) return false;
 
     candidate.metadata.reviewApproval = structuredClone(approval);
     return true;
@@ -676,6 +894,7 @@ export class SourceVersioningManager {
   public reset(): void {
     this.ledger.clear();
     this.candidates.clear();
+    this.candidateComparisonBindings.clear();
     this.activeVersionPointers.clear();
   }
 }

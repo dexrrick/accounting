@@ -198,7 +198,11 @@ export class TargetDateResolver {
     }
 
     // 7. Standalone historical years: "what was the 2023 gst rate" or "2024 cpf ceiling"
-    const standaloneYearMatch = q.match(/\b(202[0-5])\b/);
+    // IID 04/2025 is an instrument identifier, not by itself a requested historical date.
+    // Earlier explicit date steps still inspect the original text; only the standalone-year
+    // fallback ignores this exact known identifier.
+    const standaloneYearQuery = q.replace(/\b(?:(?:MAS\s+Circular\s+)?IID\s+04\s*\/\s*2025|MAS-IID-04-2025)\b/gi, ' ');
+    const standaloneYearMatch = standaloneYearQuery.match(/\b(202[0-5])\b/);
     if (standaloneYearMatch) {
       const year = standaloneYearMatch[1];
       const iso = `${year}-06-30`;

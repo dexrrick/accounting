@@ -7,6 +7,8 @@ import {
   computeSha256,
   computeSha256Bytes,
   computeProvisionHash,
+  computeSourceDocumentComparisonEvidenceHash,
+  type SourceDocumentComparisonEvidence,
   type SourceVersionMetadata,
   type VersionChange
 } from '../standards/sourceVersioning';
@@ -26,6 +28,14 @@ import type { OfficialDocumentExtractionRequest } from './officialDocumentExtrac
 import { extractOfficialDocumentFromRetrieved } from './officialDocumentExtractor';
 import type { ControlledFetchResult } from './controlledWebRetriever';
 import { getSingaporeDateString } from '../utils/dateUtils';
+import {
+  compareMasLicensingHtml,
+  decodeMasDocumentBytes,
+  encodeMasDocumentBytes,
+  MAS_LICENSING_COMPARISON_PROFILE_VERSION,
+  MAS_LICENSING_HTML_URL,
+  MAS_LICENSING_RECORD_ID
+} from '../standards/masLicensingComparisonPolicy';
 
 export interface AmendmentSummary {
   recordId: string;
@@ -113,6 +123,27 @@ export interface RegulatoryReviewAuditEvent {
   occurredAt: string;
   actor: string;
   reason?: string;
+  packageHash?: string;
+}
+
+export interface RegulatoryPackageApprovalReceipt {
+  packageId: string;
+  packageHash: string;
+  reviewer: string;
+  reason: string;
+  approvedAt: string;
+  comparisonEvidenceHash?: string;
+}
+
+export interface MasPackageComparisonReceipt {
+  recordId: string;
+  profileVersion: string;
+  status: 'AWAITING_VERIFICATION' | 'VERIFIED';
+  baselineDocumentHash: string;
+  verificationDocumentHash?: string;
+  comparisonHash: string;
+  evidenceHash?: string;
+  retrievedAt?: string;
 }
 
 /**
@@ -210,7 +241,8 @@ export class LiveRegulatoryFeedService {
   private activePackages: Map<string, RegulatoryUpdatePackage> = new Map();
   // Rejected packages: packageId -> reason
   private rejectedPackages: Map<string, string> = new Map();
-  private packageApprovals: Map<string, { packageHash: string; reviewer: string; reason: string; approvedAt: string }> = new Map();
+  private packageApprovals: Map<string, { packageHash: string; reviewer: string; reason: string; approvedAt: string; comparisonEvidenceHash?: string }> = new Map();
+  private packageComparisonEvidence = new Map<string, Map<string, SourceDocumentComparisonEvidence>>();
   private packageVersionIds: Map<string, Map<string, string>> = new Map();
   private packageCandidateSnapshots = new Map<string, Map<string, { record: AuthoritativeSourceRecord; metadata: SourceVersionMetadata }>>();
   private packageRegistrySnapshots: Map<string, Record<string, AuthoritativeSourceRecord | null>> = new Map();
@@ -324,8 +356,14 @@ export class LiveRegulatoryFeedService {
     this.adapters.push(adapter);
   }
 
-  private recordAuditEvent(packageId: string, action: RegulatoryReviewAuditEvent['action'], actor: string, reason?: string): void {
-    this.reviewAuditEvents.push({ packageId, action, actor, reason, occurredAt: new Date().toISOString() });
+  private recordAuditEvent(
+    packageId: string,
+    action: RegulatoryReviewAuditEvent['action'],
+    actor: string,
+    reason?: string,
+    packageHash?: string
+  ): void {
+    this.reviewAuditEvents.push({ packageId, action, actor, reason, packageHash, occurredAt: new Date().toISOString() });
   }
 
   /** Records an accountable human review decision without changing package state. */
@@ -334,6 +372,104 @@ export class LiveRegulatoryFeedService {
     if (!exists || !reviewer.trim() || !reason.trim()) return false;
     this.recordAuditEvent(packageId, 'REVIEW_RECORDED', reviewer.trim(), reason.trim());
     return true;
+  }
+
+  private validateMasLicensingPolicyRecord(
+    pkg: RegulatoryUpdatePackage,
+    record: AuthoritativeSourceRecord,
+    request: OfficialDocumentExtractionRequest,
+    source: MasDocumentRetrievalMetadata
+  ): string | undefined {
+    const policy = source.comparisonPolicy;
+    if (!policy) return undefined;
+    if (pkg.authority !== 'MAS' || record.id !== MAS_LICENSING_RECORD_ID || request.url !== MAS_LICENSING_HTML_URL ||
+        request.authority !== 'MAS' || request.domain !== 'MAS_FUNDS' || request.documentKind !== 'HTML' ||
+        record.authority !== 'MAS' || record.sourceAuthority !== 'MAS' || record.domain !== 'MAS_FUNDS' ||
+        record.officialSourceUrl !== MAS_LICENSING_HTML_URL || record.sourceLocator?.sourceType !== 'HTML' ||
+        source.requestUrl !== MAS_LICENSING_HTML_URL || source.sourceUrl !== MAS_LICENSING_HTML_URL ||
+        source.finalUrl !== MAS_LICENSING_HTML_URL || !source.contentType.toLowerCase().startsWith('text/html') ||
+        policy.profileVersion !== MAS_LICENSING_COMPARISON_PROFILE_VERSION || !/^[a-f\d]{64}$/i.test(policy.comparisonHash)) {
+      return `MAS dynamic-field comparison policy is not permitted for record '${record.id}' or its exact official HTML URL`;
+    }
+    const originalBytes = decodeMasDocumentBytes(policy.originalBodyBase64);
+    if (!originalBytes || computeSha256Bytes(originalBytes).toLowerCase() !== (record.documentHash || '').toLowerCase()) {
+      return `MAS licensing comparison baseline for '${record.id}' is malformed or does not match the staged raw document hash`;
+    }
+    const baselineComparison = compareMasLicensingHtml(originalBytes, originalBytes, computeSha256Bytes);
+    if (!baselineComparison.isValid || baselineComparison.comparisonHash?.toLowerCase() !== policy.comparisonHash.toLowerCase()) {
+      return `MAS licensing comparison baseline for '${record.id}' does not match its versioned dynamic-field profile`;
+    }
+    return undefined;
+  }
+
+  private currentPackageComparisonEvidence(
+    pkg: RegulatoryUpdatePackage,
+    supplied?: Map<string, SourceDocumentComparisonEvidence>
+  ): Map<string, SourceDocumentComparisonEvidence> | undefined {
+    const expected = pkg.updates.filter(record => Boolean(pkg.documentMetadata?.[record.id]?.comparisonPolicy));
+    if (expected.length === 0) return supplied && supplied.size > 0 ? undefined : new Map();
+    if (!supplied || supplied.size !== expected.length) return undefined;
+    const valid = new Map<string, SourceDocumentComparisonEvidence>();
+    for (const record of expected) {
+      const source = pkg.documentMetadata?.[record.id];
+      const policy = source?.comparisonPolicy;
+      const request = pkg.extractionRequests?.[record.id];
+      const evidence = supplied.get(record.id);
+      if (!source || !policy || !request || !evidence ||
+          this.validateMasLicensingPolicyRecord(pkg, record, request, source) ||
+          evidence.packageId !== pkg.packageId || evidence.packageHash.toLowerCase() !== pkg.packageHash.toLowerCase() ||
+          evidence.recordId !== record.id || evidence.profileVersion !== policy.profileVersion ||
+          evidence.sourceUrl !== source.sourceUrl || evidence.finalUrl !== source.finalUrl ||
+          evidence.contentType !== source.contentType || evidence.httpStatus !== source.httpStatus ||
+          evidence.originalBodyBase64 !== policy.originalBodyBase64 ||
+          evidence.baselineDocumentHash.toLowerCase() !== (record.documentHash || '').toLowerCase() ||
+          evidence.comparisonHash.toLowerCase() !== policy.comparisonHash.toLowerCase() ||
+          !/^[a-f\d]{64}$/i.test(evidence.verificationDocumentHash) || !/^[a-f\d]{64}$/i.test(evidence.evidenceHash) ||
+          !Number.isFinite(Date.parse(evidence.retrievedAt)) || new Date(evidence.retrievedAt).toISOString() !== evidence.retrievedAt) return undefined;
+      const baselineBytes = decodeMasDocumentBytes(evidence.originalBodyBase64);
+      const verificationBytes = decodeMasDocumentBytes(evidence.verificationBodyBase64);
+      if (!baselineBytes || !verificationBytes ||
+          computeSha256Bytes(verificationBytes).toLowerCase() !== evidence.verificationDocumentHash.toLowerCase()) return undefined;
+      const comparison = compareMasLicensingHtml(baselineBytes, verificationBytes, computeSha256Bytes);
+      if (!comparison.isValid || comparison.comparisonHash?.toLowerCase() !== evidence.comparisonHash.toLowerCase() ||
+          comparison.baselineDocumentHash?.toLowerCase() !== evidence.baselineDocumentHash.toLowerCase() ||
+          comparison.verificationDocumentHash?.toLowerCase() !== evidence.verificationDocumentHash.toLowerCase() ||
+          computeSourceDocumentComparisonEvidenceHash(evidence).toLowerCase() !== evidence.evidenceHash.toLowerCase()) return undefined;
+      valid.set(record.id, structuredClone(evidence));
+    }
+    return valid;
+  }
+
+  private packageComparisonEvidenceHash(evidence: Map<string, SourceDocumentComparisonEvidence>): string | undefined {
+    if (evidence.size === 0) return undefined;
+    return computeSha256(stableJson([...evidence.values()].map(item => ({ recordId: item.recordId, evidenceHash: item.evidenceHash }))
+      .sort((left, right) => left.recordId.localeCompare(right.recordId))));
+  }
+
+  /** Returns hashes and policy metadata only; raw security-token values are never exposed to the UI. */
+  public getPackageComparisonReceipt(packageId: string): MasPackageComparisonReceipt[] {
+    const pkg = this.stagedPackages.get(packageId) || this.verifiedPackages.get(packageId) || this.activePackages.get(packageId);
+    if (!pkg) return [];
+    const metadata = pkg.documentMetadata || {};
+    const evidence = this.currentPackageComparisonEvidence(pkg, this.packageComparisonEvidence.get(packageId));
+    return pkg.updates.flatMap(record => {
+      const source = metadata[record.id];
+      const policy = source?.comparisonPolicy;
+      if (!policy) return [];
+      const item = evidence?.get(record.id);
+      return [{
+        recordId: record.id,
+        profileVersion: policy.profileVersion,
+        status: item ? 'VERIFIED' as const : 'AWAITING_VERIFICATION' as const,
+        baselineDocumentHash: record.documentHash || '',
+        ...(item ? {
+          verificationDocumentHash: item.verificationDocumentHash,
+          comparisonHash: item.comparisonHash,
+          evidenceHash: item.evidenceHash,
+          retrievedAt: item.retrievedAt
+        } : { comparisonHash: policy.comparisonHash })
+      }];
+    });
   }
 
   public getAdapters(): IOfficialSourceAdapter[] {
@@ -378,6 +514,8 @@ export class LiveRegulatoryFeedService {
             record.sourceLocator.pageNumber < 1 || record.sourceLocator.pageNumber > record.sourceLocator.pageCount))) {
         return `MAS record '${record.id}' is incomplete, ambiguous, or inconsistent with its bound extraction request and provenance`;
       }
+      const comparisonPolicyError = this.validateMasLicensingPolicyRecord(pkg, record, request, source);
+      if (comparisonPolicyError) return comparisonPolicyError;
     }
     const expectedHash = this.computePackageHash({
       packageId: pkg.packageId,
@@ -397,6 +535,7 @@ export class LiveRegulatoryFeedService {
     this.rejectedPackages.set(packageId, reason);
     this.verifiedPackages.delete(packageId);
     this.packageApprovals.delete(packageId);
+    this.packageComparisonEvidence.delete(packageId);
     const pkg = this.stagedPackages.get(packageId);
     if (pkg?.authority === 'MAS') {
       const ids = this.packageVersionIds.get(packageId);
@@ -414,6 +553,27 @@ export class LiveRegulatoryFeedService {
     const right = structuredClone(extracted) as AuthoritativeSourceRecord & { retrievedAt?: string };
     delete left.retrievedAt;
     delete right.retrievedAt;
+    return stableJson(left) === stableJson(right);
+  }
+
+  private masRecordMatchesDynamicComparison(candidate: AuthoritativeSourceRecord, extracted: AuthoritativeSourceRecord): boolean {
+    if (typeof candidate.documentHash !== 'string' || typeof extracted.documentHash !== 'string' ||
+        typeof candidate.provisionHash !== 'string' || candidate.provisionHash !== extracted.provisionHash ||
+        candidate.version !== `sha256:${candidate.documentHash}:${candidate.provisionHash}` ||
+        extracted.version !== `sha256:${extracted.documentHash}:${extracted.provisionHash}`) return false;
+    const left = structuredClone(candidate) as AuthoritativeSourceRecord & { retrievedAt?: string };
+    const right = structuredClone(extracted) as AuthoritativeSourceRecord & { retrievedAt?: string };
+    delete left.retrievedAt;
+    delete right.retrievedAt;
+    delete left.documentHash;
+    delete right.documentHash;
+    // The extractor derives this identifier from the full document hash plus
+    // the unchanged provision hash; verify that derivation above, then compare
+    // the underlying extracted records exactly.
+    delete left.version;
+    delete right.version;
+    if (left.sourceLocator) delete left.sourceLocator.documentHash;
+    if (right.sourceLocator) delete right.sourceLocator.documentHash;
     return stableJson(left) === stableJson(right);
   }
 
@@ -520,6 +680,7 @@ export class LiveRegulatoryFeedService {
     this.bumpPackageGeneration(stagedPackage.packageId);
     if (stagedPackage.authority === 'MAS') {
       this.packageApprovals.delete(stagedPackage.packageId);
+      this.packageComparisonEvidence.delete(stagedPackage.packageId);
       this.verifiedPackages.delete(stagedPackage.packageId);
       this.stagedPackages.delete(stagedPackage.packageId);
       const previousVersionIds = this.packageVersionIds.get(stagedPackage.packageId);
@@ -587,6 +748,9 @@ export class LiveRegulatoryFeedService {
       };
 
       const requiresDocumentAdmission = stagedPackage.authority === 'MAS' && Boolean(stagedPackage.extractionRequests?.[rec.id]);
+      const comparisonPolicy = stagedPackage.authority === 'MAS'
+        ? stagedPackage.documentMetadata?.[rec.id]?.comparisonPolicy
+        : undefined;
       const candidateRecord = requiresDocumentAdmission ? { ...rec, documentAdmissionRequired: true as const } : rec;
       if (requiresDocumentAdmission) {
         Object.assign(metadata, {
@@ -594,7 +758,13 @@ export class LiveRegulatoryFeedService {
           documentAdmissionPackageId: stagedPackage.packageId,
           documentAdmissionPackageHash: stagedPackage.packageHash,
           governingAuthority: rec.authority,
-          domain: rec.domain
+          domain: rec.domain,
+          ...(comparisonPolicy ? {
+            documentAdmissionComparisonRecordId: rec.id,
+            documentAdmissionComparisonProfileVersion: comparisonPolicy.profileVersion,
+            documentAdmissionComparisonHash: comparisonPolicy.comparisonHash,
+            documentAdmissionComparisonContentType: masRetrieval!.contentType
+          } : {})
         });
       }
 
@@ -662,6 +832,7 @@ export class LiveRegulatoryFeedService {
       isCurrent() ? this.rejectPackageVerification(packageId, reason, failedRecordId) : this.staleVerificationResult(packageId);
     this.packageApprovals.delete(packageId);
     this.verifiedPackages.delete(packageId);
+    this.packageComparisonEvidence.delete(packageId);
 
     if (pkg.authority === 'MAS') {
       if (!this.masCandidatesMatchStageSnapshot(packageId, pkg)) {
@@ -705,6 +876,7 @@ export class LiveRegulatoryFeedService {
     }
 
     // 2. Validate every record atomically
+    const verificationComparisonEvidence = new Map<string, SourceDocumentComparisonEvidence>();
     for (let i = 0; i < pkg.updates.length; i++) {
       const rec = pkg.updates[i];
       let rawDoc: string | undefined;
@@ -718,7 +890,8 @@ export class LiveRegulatoryFeedService {
         }
         masDocument = supplied;
         const actualDocumentHash = computeSha256Bytes(masDocument.contentBytes);
-        if (actualDocumentHash.toLowerCase() !== (rec.documentHash || '').toLowerCase() ||
+        const comparisonPolicy = metadata.comparisonPolicy;
+        if ((!comparisonPolicy && actualDocumentHash.toLowerCase() !== (rec.documentHash || '').toLowerCase()) ||
             normalizedUrl(masDocument.sourceUrl) !== normalizedUrl(request.url) ||
             normalizedUrl(masDocument.finalUrl) !== normalizedUrl(metadata.finalUrl) ||
             normalizedUrl(masDocument.finalUrl) !== normalizedUrl(rec.officialSourceUrl) ||
@@ -736,13 +909,61 @@ export class LiveRegulatoryFeedService {
           etag: masDocument.etag,
           lastModified: masDocument.lastModified
         };
+        let comparison: ReturnType<typeof compareMasLicensingHtml> | undefined;
+        if (comparisonPolicy) {
+          const baselineBytes = decodeMasDocumentBytes(comparisonPolicy.originalBodyBase64);
+          comparison = baselineBytes && compareMasLicensingHtml(baselineBytes, masDocument.contentBytes, computeSha256Bytes);
+          if (!baselineBytes || !comparison?.isValid ||
+              comparison.profileVersion !== comparisonPolicy.profileVersion ||
+              comparison.comparisonHash?.toLowerCase() !== comparisonPolicy.comparisonHash.toLowerCase() ||
+              comparison.baselineDocumentHash?.toLowerCase() !== (rec.documentHash || '').toLowerCase()) {
+            return reject(`Atomic validation failure on record '${rec.id}': ${comparison?.reason || 'MAS licensing dynamic-field comparison rejected the document'}`, rec.id);
+          }
+          const baselineReplay: ControlledFetchResult = {
+            ...replay,
+            contentBytes: baselineBytes,
+            retrievedAt: metadata.retrievedAt
+          };
+          const baselineExtraction = await extractOfficialDocumentFromRetrieved(request, baselineReplay);
+          if (!isCurrent()) return this.staleVerificationResult(packageId);
+          if (baselineExtraction.status !== 'SUCCESS' ||
+              !this.masRecordMatchesExtraction(rec, { ...baselineExtraction.record, id: rec.id })) {
+            return reject(`Atomic validation failure on record '${rec.id}': Original staged raw bytes do not replay the package-bound record`, rec.id);
+          }
+        }
         const extracted = await extractOfficialDocumentFromRetrieved(request, replay);
         if (!isCurrent()) return this.staleVerificationResult(packageId);
         if (extracted.status !== 'SUCCESS') {
           return reject(`Atomic validation failure on record '${rec.id}': Shared extraction replay rejected the document (${extracted.code}: ${extracted.reason})`, rec.id);
         }
         const replayedRecord = { ...extracted.record, id: rec.id };
-        if (!this.masRecordMatchesExtraction(rec, replayedRecord)) {
+        if (comparisonPolicy) {
+          if (!masDocument.retrievedAt) return reject(`Atomic validation failure on record '${rec.id}': The comparison receipt requires an official retrieval timestamp`, rec.id);
+          if (!comparison?.isValid || !comparison.baselineDocumentHash || !comparison.verificationDocumentHash || !comparison.comparisonHash ||
+              !this.masRecordMatchesDynamicComparison(rec, replayedRecord)) {
+            return reject(`Atomic validation failure on record '${rec.id}': The exact provision, dates, locator, or extraction differs outside the reviewed raw dynamic values`, rec.id);
+          }
+          const evidence: Omit<SourceDocumentComparisonEvidence, 'evidenceHash'> = {
+            packageId: pkg.packageId,
+            packageHash: pkg.packageHash,
+            recordId: rec.id,
+            sourceUrl: masDocument.sourceUrl,
+            finalUrl: masDocument.finalUrl,
+            contentType: masDocument.contentType,
+            httpStatus: masDocument.httpStatus,
+            profileVersion: comparisonPolicy.profileVersion,
+            baselineDocumentHash: comparison.baselineDocumentHash,
+            verificationDocumentHash: comparison.verificationDocumentHash,
+            comparisonHash: comparison.comparisonHash,
+            retrievedAt: masDocument.retrievedAt,
+            originalBodyBase64: comparisonPolicy.originalBodyBase64,
+            verificationBodyBase64: encodeMasDocumentBytes(masDocument.contentBytes)
+          };
+          verificationComparisonEvidence.set(rec.id, {
+            ...evidence,
+            evidenceHash: computeSourceDocumentComparisonEvidenceHash(evidence)
+          });
+        } else if (!this.masRecordMatchesExtraction(rec, replayedRecord)) {
           return reject(`Atomic validation failure on record '${rec.id}': Re-extracted body, authority, date, hash, or locator differs from the staged record`, rec.id);
         }
         if (rec.sourceLocator?.sourceType === 'HTML' || rec.sourceLocator?.sourceType === 'TEXT') {
@@ -807,6 +1028,8 @@ export class LiveRegulatoryFeedService {
     if (pkg.authority === 'MAS' && !this.masCandidatesMatchStageSnapshot(packageId, pkg)) {
       return reject('MAS candidate records or metadata changed during verification');
     }
+    const validComparisonEvidence = this.currentPackageComparisonEvidence(pkg, verificationComparisonEvidence);
+    if (!validComparisonEvidence) return reject('MAS licensing verification comparison receipt failed its package, raw-artifact, profile, or hash binding');
     for (const rec of pkg.updates) {
       const versionId = versionIds.get(rec.id) || `${pkg.packageId}-${rec.id}`;
       const candidateEntry = this.versioningManager.getCandidates().find((c) => c.metadata.versionId === versionId);
@@ -820,6 +1043,7 @@ export class LiveRegulatoryFeedService {
       }
     }
 
+    if (validComparisonEvidence.size > 0) this.packageComparisonEvidence.set(packageId, validComparisonEvidence);
     this.verifiedPackages.set(packageId, pkg);
     this.lastVerificationDate = new Date().toISOString();
     this.recordAuditEvent(packageId, 'VERIFIED', 'system', 'All records passed atomic source, provenance, and boundary checks');
@@ -864,6 +1088,7 @@ export class LiveRegulatoryFeedService {
       isCurrent() ? this.rejectPackageVerification(packageId, reason, failedRecordId) : this.staleVerificationResult(packageId);
     this.packageApprovals.delete(packageId);
     this.verifiedPackages.delete(packageId);
+    this.packageComparisonEvidence.delete(packageId);
 
     if (pkg.authority === 'MAS') {
       if (!this.masCandidatesMatchStageSnapshot(packageId, pkg)) {
@@ -883,7 +1108,7 @@ export class LiveRegulatoryFeedService {
         const result = await this.webRetriever.fetchOfficialDocument(request.url, {
           timeoutMs: 5000,
           maxResponseBytes: request.maxResponseBytes,
-          expectedHash: rec.documentHash
+          expectedHash: pkg.documentMetadata?.[rec.id]?.comparisonPolicy ? undefined : rec.documentHash
         });
         if (!isCurrent()) return this.staleVerificationResult(packageId);
         if (result.status !== 'SUCCESS' || !result.contentBytes || !result.contentType || !result.finalUrl || !result.httpStatus) {
@@ -931,6 +1156,7 @@ export class LiveRegulatoryFeedService {
     this.stagedPackages.delete(packageId);
     this.verifiedPackages.delete(packageId);
     this.packageApprovals.delete(packageId);
+    this.packageComparisonEvidence.delete(packageId);
     for (const versionId of this.packageVersionIds.get(packageId)?.values() || []) {
       const candidate = this.versioningManager.getCandidates().find(item => item.metadata.versionId === versionId);
       if (candidate) candidate.metadata.verificationStatus = 'REJECTED';
@@ -946,22 +1172,43 @@ export class LiveRegulatoryFeedService {
   public approveUpdatePackage(packageId: string, reviewer: string, reason: string): boolean {
     const pkg = this.verifiedPackages.get(packageId);
     if (!pkg || pkg.authority !== 'MAS' || !reviewer.trim() || !reason.trim()) return false;
+    const comparisonEvidence = this.currentPackageComparisonEvidence(pkg, this.packageComparisonEvidence.get(packageId));
+    if (!comparisonEvidence) return false;
+    const comparisonEvidenceHash = this.packageComparisonEvidenceHash(comparisonEvidence);
     const packageWithoutHash = { ...pkg } as RegulatoryUpdatePackage;
     delete (packageWithoutHash as Partial<RegulatoryUpdatePackage>).packageHash;
     const currentHash = this.computePackageHash(packageWithoutHash);
     if (currentHash.toLowerCase() !== pkg.packageHash.toLowerCase()) {
       this.packageApprovals.delete(packageId);
       this.verifiedPackages.delete(packageId);
+      this.packageComparisonEvidence.delete(packageId);
       return false;
     }
     this.packageApprovals.set(packageId, {
       packageHash: currentHash,
       reviewer: reviewer.trim(),
       reason: reason.trim(),
-      approvedAt: new Date().toISOString()
+      approvedAt: new Date().toISOString(),
+      ...(comparisonEvidenceHash ? { comparisonEvidenceHash } : {})
     });
-    this.recordAuditEvent(packageId, 'APPROVED', reviewer.trim(), reason.trim());
+    this.recordAuditEvent(packageId, 'APPROVED', reviewer.trim(), reason.trim(), currentHash);
     return true;
+  }
+
+  /** Returns an approval only while it remains bound to the current verified package and candidate snapshot. */
+  public getPackageApprovalReceipt(packageId: string): RegulatoryPackageApprovalReceipt | undefined {
+    const pkg = this.verifiedPackages.get(packageId);
+    const approval = this.packageApprovals.get(packageId);
+    if (!pkg || pkg.authority !== 'MAS' || !approval || !this.masCandidatesMatchStageSnapshot(packageId, pkg, true)) return undefined;
+    const comparisonEvidence = this.currentPackageComparisonEvidence(pkg, this.packageComparisonEvidence.get(packageId));
+    if (!comparisonEvidence || this.packageComparisonEvidenceHash(comparisonEvidence) !== approval.comparisonEvidenceHash) return undefined;
+
+    const packageWithoutHash = { ...pkg } as RegulatoryUpdatePackage;
+    delete (packageWithoutHash as Partial<RegulatoryUpdatePackage>).packageHash;
+    const currentHash = this.computePackageHash(packageWithoutHash);
+    if (approval.packageHash !== currentHash || pkg.packageHash !== currentHash) return undefined;
+
+    return { packageId, ...approval };
   }
 
   /**
@@ -1013,10 +1260,13 @@ export class LiveRegulatoryFeedService {
 
     const masApproval = pkg.authority === 'MAS' ? this.packageApprovals.get(packageId) : undefined;
     if (pkg.authority === 'MAS') {
+      const comparisonEvidence = this.currentPackageComparisonEvidence(pkg, this.packageComparisonEvidence.get(packageId));
+      const comparisonEvidenceHash = comparisonEvidence && this.packageComparisonEvidenceHash(comparisonEvidence);
       const packageWithoutHash = { ...pkg } as RegulatoryUpdatePackage;
       delete (packageWithoutHash as Partial<RegulatoryUpdatePackage>).packageHash;
       const currentHash = this.computePackageHash(packageWithoutHash);
-      if (!masApproval || masApproval.packageHash !== currentHash || pkg.packageHash !== currentHash) {
+      if (!comparisonEvidence || !masApproval || masApproval.packageHash !== currentHash || pkg.packageHash !== currentHash ||
+          masApproval.comparisonEvidenceHash !== comparisonEvidenceHash) {
         return {
           success: false,
           packageId,
@@ -1055,7 +1305,11 @@ export class LiveRegulatoryFeedService {
         packageHash: masApproval.packageHash,
         reviewer: masApproval.reviewer,
         reason: masApproval.reason,
-        approvedAt: masApproval.approvedAt
+        approvedAt: masApproval.approvedAt,
+        ...(this.packageComparisonEvidence.get(pkg.packageId)?.has(rec.id) ? {
+          comparisonEvidence: structuredClone(this.packageComparisonEvidence.get(pkg.packageId)!.get(rec.id)!),
+          comparisonEvidenceHash: this.packageComparisonEvidence.get(pkg.packageId)!.get(rec.id)!.evidenceHash
+        } : {})
       }))) {
         activationError = `Failed to bind explicit document review approval to record '${rec.id}'`;
         break;
@@ -1112,6 +1366,7 @@ export class LiveRegulatoryFeedService {
       this.rejectedPackages.set(packageId, `Atomic activation failure: ${activationError}`);
       if (pkg.authority === 'MAS') {
         this.packageApprovals.delete(packageId);
+        this.packageComparisonEvidence.delete(packageId);
         this.verifiedPackages.delete(packageId);
       }
 
@@ -1198,6 +1453,7 @@ export class LiveRegulatoryFeedService {
 
     this.activePackages.delete(packageId);
     this.packageRegistrySnapshots.delete(packageId);
+    this.packageComparisonEvidence.delete(packageId);
     this.recordAuditEvent(packageId, 'ROLLED_BACK', 'system', 'Active package rolled back to predecessor versions');
     return {
       success: true,
@@ -1257,6 +1513,7 @@ export class LiveRegulatoryFeedService {
     this.activePackages.clear();
     this.rejectedPackages.clear();
     this.packageApprovals.clear();
+    this.packageComparisonEvidence.clear();
     this.packageVersionIds.clear();
     this.packageCandidateSnapshots.clear();
     this.packageRegistrySnapshots.clear();
