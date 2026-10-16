@@ -1337,7 +1337,8 @@ export async function resolveMappedOfficialSourceFallback(
       minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
         topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1,
       allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_'),
-      requireSubstantiveBody: topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')
+      requireSubstantiveBody: topic.domainId.startsWith('CPF_') || topic.domainId === 'ACRA_COMPANIES' ||
+        topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {

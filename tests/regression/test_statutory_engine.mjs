@@ -1,6 +1,7 @@
 import assert from 'assert';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
 import { sanitizeStatutoryLinks, buildSsoUrl } from '../../src/utils/statutoryLinkResolver.ts';
 
 async function runTests() {
@@ -8,16 +9,29 @@ async function runTests() {
 
   // TEST 1: ACRA Small Company Audit Exemption Query
   console.log('Test 1: ACRA Small Company Audit Exemption Query');
+  const acraAuditRule = SINGAPORE_STATUTORY_REPOSITORY.ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION;
+  assert.ok(acraAuditRule, 'The curated ACRA audit-exemption record must remain available for review');
+  assert.strictEqual(acraAuditRule.sourceStatus, undefined, 'The ACRA record is not marked as verified source material');
+  assert.strictEqual(acraAuditRule.verbatimStatuteText, undefined, 'The ACRA record contains no verified verbatim statutory passage');
+  assert.strictEqual(acraAuditRule.evidenceTier, undefined, 'The ACRA record has no admitted evidence tier');
   const acraRes = await processAccountingQuery(
     'What are the ACRA requirements for small company audit exemption?',
     null,
     'SFRS_I'
   );
   assert(acraRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be classified as STATUTORY_ADVISORY');
-  assert(acraRes.messageText.includes('Section 205C'), 'Must cite Section 205C');
-  assert(acraRes.messageText.includes('10,000,000') || acraRes.messageText.includes('10M'), 'Must mention 10M threshold');
+  const acraPresentation = acraRes.scenarioState.authorityEvidencePresentation;
+  assert.ok(acraPresentation, 'ACRA statutory response must carry a query-bound authority evidence presentation');
+  assert.strictEqual(acraPresentation.query, 'What are the ACRA requirements for small company audit exemption?');
+  assert.strictEqual(acraPresentation.status, 'INSUFFICIENT', 'The unverified record cannot establish the ACRA requirements offline');
+  assert.strictEqual(acraPresentation.evidenceStatus, 'INSUFFICIENT');
+  assert.ok(acraPresentation.gaps.length > 0, 'The whole-question evidence gap must be visible');
+  assert.doesNotMatch(acraRes.messageText, /Section 205C|10,000,000|10M/i,
+    'Unadmitted ACRA section and threshold details must not be asserted without evidence');
   assert(!acraRes.messageText.includes('sso.agc.gov.sg/Act/CoA1967'), 'An unverified statutory URL must not be emitted as a link');
-  console.log('✓ ACRA Audit Exemption verified successfully.\n');
+  assert.deepStrictEqual(acraPresentation.workstreams.flatMap(workstream => workstream.sources), [],
+    'No source may be presented for the ACRA query without admitted evidence');
+  console.log('✓ ACRA audit-exemption query correctly reports insufficient evidence without unsupported rule details.\n');
 
   // TEST 2: CPF 2026 Wage Ceilings Query
   console.log('Test 2: CPF 2026 Wage Ceilings Query');
@@ -155,9 +169,17 @@ async function runTests() {
     'SFRS_I'
   );
   assert(momRes.scenarioState.queryIntent === 'STATUTORY_ADVISORY', 'Must be STATUTORY_ADVISORY');
-  assert(momRes.messageText.includes('Employment Act 1968'), 'Must cite Employment Act 1968');
-  assert(momRes.messageText.includes('14 days') || momRes.messageText.includes('89'), 'Must cite Section 89 or 14 days sick leave');
-  console.log('✓ MOM Statutory Leave query verified.\n');
+  const momPresentation = momRes.scenarioState.authorityEvidencePresentation;
+  assert.ok(momPresentation, 'MOM statutory response must carry a query-bound authority evidence presentation');
+  assert.strictEqual(momPresentation.query, 'What are MOM statutory annual leave and outpatient sick leave entitlements, and overtime calculation rules?');
+  assert.strictEqual(momPresentation.status, 'INSUFFICIENT', 'Offline MOM sources cannot establish the requested entitlements');
+  assert.strictEqual(momPresentation.evidenceStatus, 'INSUFFICIENT');
+  assert.ok(momPresentation.gaps.length > 0, 'Unresolved MOM evidence gaps must remain visible');
+  assert.deepStrictEqual(momPresentation.workstreams.flatMap(workstream => workstream.sources), [],
+    'Offline unverified MOM material must not be presented as an admitted source');
+  assert.doesNotMatch(momRes.messageText, /Employment Act 1968|14 days|Section 89/i,
+    'Unadmitted MOM provisions and leave amounts must not be asserted');
+  console.log('✓ MOM statutory leave query correctly reports insufficient evidence offline.\n');
 
   // TEST 10: CPF Tiered Rates by Age & $8,000 Ceiling
   console.log('Test 10: CPF Tiered Contribution Rates by Age');

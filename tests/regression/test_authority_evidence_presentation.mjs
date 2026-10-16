@@ -9,7 +9,7 @@ import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { createRequestCompletenessContext, ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
 
-function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '' }) {
+function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '', domain = authority === 'IRAS' ? 'IRAS_TAX' : 'CPF_PAYROLL' }) {
   return {
     id,
     authority,
@@ -24,7 +24,7 @@ function source({ id, authority, title, validFrom = '2026-01-01', validTo, offic
     effectiveDate: validFrom,
     revisionDate: validFrom,
     officialSourceUrl,
-    domain: authority === 'IRAS' ? 'IRAS_TAX' : 'CPF_BOARD',
+    domain,
     jurisdiction: 'Singapore',
     tags: [],
     sourceStatus: 'VERIFIED',
@@ -38,6 +38,20 @@ function source({ id, authority, title, validFrom = '2026-01-01', validTo, offic
     lifecycleState: 'ACTIVE',
     recordRole: 'EVIDENCE',
     groundingEligible: true
+  };
+}
+
+function fetchedLikeLiveSource({ id, authority, title, url, domain, urlVerificationStatus = 'VERIFIED', canonicalSourceUrl = url }) {
+  return {
+    ...source({ id, authority, title, officialSourceUrl: url, domain }),
+    sourceStatus: 'NEEDS_REVIEW',
+    provenance: 'LIVE_EXTERNAL',
+    lifecycleState: 'CANDIDATE',
+    recordRole: 'DISCOVERED_EVIDENCE',
+    groundingEligible: true,
+    urlVerificationStatus,
+    canonicalSourceUrl,
+    verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED'
   };
 }
 
@@ -180,6 +194,105 @@ assert.match(panel, /Reviewed local summary/);
 assert.match(panel, /01\/01\/2026/);
 assert.match(panel, /Supports: Company tax deduction/);
 
+// These fetched-like fixtures exercise the real projection and panel link gate.
+// They validate presentation behavior only; they are not production acceptance evidence.
+for (const authority of ['ACRA', 'CPF', 'MOM', 'MAS']) {
+  const officialUrl = {
+    ACRA: 'https://www.acra.gov.sg/',
+    CPF: 'https://www.cpf.gov.sg/',
+    MOM: 'https://www.mom.gov.sg/',
+    MAS: 'https://www.mas.gov.sg/'
+  }[authority];
+  const authorityDomain = {
+    ACRA: 'ACRA_CORPORATE', CPF: 'CPF_PAYROLL', MOM: 'MOM_EMPLOYMENT', MAS: 'MAS_FUNDS'
+  }[authority];
+  const liveEvidence = fetchedLikeLiveSource({
+    id: `${authority.toLowerCase()}-live-candidate`, authority,
+    title: `${authority} fetched-like candidate`, url: officialUrl,
+    domain: { ACRA: 'ACRA_CORP', CPF: 'CPF_BOARD', MOM: 'MOM_EMPLOYMENT', MAS: 'MAS_FUNDS' }[authority]
+  });
+  const livePlan = plannedIssue({
+    id: `${authority.toLowerCase()}-live-issue`, authority, domain: authorityDomain,
+    subject: `${authority} live evidence topic`, population: 'COMPANY'
+  });
+  const liveIssue = evidenceIssue(livePlan, liveEvidence);
+  const liveQuery = `What does ${authority} require?`;
+  const liveAuthorityResult = {
+    query: liveQuery,
+    requestCompletenessContext: createRequestCompletenessContext(liveQuery),
+    issuePlan: { source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false, issues: [livePlan] },
+    workstreams: [{
+      id: `${authority}:${authorityDomain}`, authority, domain: authorityDomain,
+      sourceSections: [], populations: ['COMPANY'],
+      issues: [liveIssue], evidenceStatus: 'VERIFIED', applicationStatus: 'NOT_REQUIRED',
+      verifiedClaims: liveIssue.verifiedClaims, sources: [liveEvidence], gaps: []
+    }],
+    evidenceStatus: 'VERIFIED', applicationStatus: 'NOT_REQUIRED', status: 'VERIFIED', gaps: []
+  };
+  const liveResult = createAuthorityEvidencePresentation(liveAuthorityResult);
+  const livePanel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: liveResult
+  }));
+  assert.match(livePanel, new RegExp(officialUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    `${authority} verified live URL is shown exactly`);
+  assert.match(livePanel, /All requested evidence verified/);
+
+  const conditionalIssue = { ...liveIssue, applicationStatus: 'UNRESOLVED', applicationReason: 'The relevant application facts are unresolved.' };
+  const conditionalPresentation = createAuthorityEvidencePresentation({
+    ...liveAuthorityResult,
+    status: 'CONDITIONAL', applicationStatus: 'UNRESOLVED',
+    workstreams: [{ ...liveAuthorityResult.workstreams[0], applicationStatus: 'UNRESOLVED', issues: [conditionalIssue] }]
+  });
+  const conditionalPanel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: conditionalPresentation
+  }));
+  assert.equal(conditionalPresentation.status, 'CONDITIONAL');
+  assert.match(conditionalPanel, /Evidence verified; application unresolved/);
+
+  const unresolvedGap = plannedIssue({
+    id: `${authority.toLowerCase()}-unresolved-residual`, authority: 'UNKNOWN', domain: 'UNKNOWN',
+    subject: `${authority} unresolved requested issue`, status: 'UNRESOLVED', mappedTopicIds: []
+  });
+  const insufficientPresentation = createAuthorityEvidencePresentation({
+    ...liveAuthorityResult,
+    status: 'INSUFFICIENT', evidenceStatus: 'INSUFFICIENT',
+    issuePlan: { ...liveAuthorityResult.issuePlan, coverageEstablished: false, hasUnmappedResidual: true,
+      issues: [livePlan, unresolvedGap] },
+    gaps: [{ subject: unresolvedGap.subject, reason: 'The requested scope could not be mapped to reviewed coverage.' }]
+  });
+  const insufficientPanel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: insufficientPresentation
+  }));
+  assert.equal(insufficientPresentation.status, 'INSUFFICIENT');
+  assert.match(insufficientPanel, /Evidence incomplete/);
+  assert.match(insufficientPanel, /Whole-question gaps/);
+  assert.match(insufficientPanel, new RegExp(`${authority} unresolved requested issue`));
+
+  const mutatedEvidence = { ...liveEvidence, officialSourceUrl: `${officialUrl}mutated` };
+  const mutatedPresentation = createAuthorityEvidencePresentation({
+    ...liveAuthorityResult,
+    workstreams: [{ ...liveAuthorityResult.workstreams[0], issues: [evidenceIssue(livePlan, mutatedEvidence)],
+      verifiedClaims: evidenceIssue(livePlan, mutatedEvidence).verifiedClaims, sources: [mutatedEvidence] }]
+  });
+  const mutatedPanel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: mutatedPresentation
+  }));
+  assert.doesNotMatch(mutatedPanel, new RegExp(`${officialUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}mutated`),
+    `${authority} mutated URL does not appear as a trusted link`);
+
+  const unverifiedEvidence = { ...liveEvidence, urlVerificationStatus: 'CANDIDATE' };
+  const unverifiedPresentation = createAuthorityEvidencePresentation({
+    ...liveAuthorityResult,
+    workstreams: [{ ...liveAuthorityResult.workstreams[0], issues: [evidenceIssue(livePlan, unverifiedEvidence)],
+      verifiedClaims: evidenceIssue(livePlan, unverifiedEvidence).verifiedClaims, sources: [unverifiedEvidence] }]
+  });
+  const unverifiedPanel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: unverifiedPresentation
+  }));
+  assert.doesNotMatch(unverifiedPanel, new RegExp(officialUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+    `${authority} unverified URL marker prevents the link from being shown`);
+}
+
 const insufficientResult = structuredClone(result);
 insufficientResult.status = 'CONDITIONAL';
 insufficientResult.evidenceStatus = 'INSUFFICIENT';
@@ -258,6 +371,98 @@ function classification(overrides = {}) {
 const semanticIssues = (issues, overrides = {}) => ({
   source: 'SEMANTIC_ISSUES', issues, coverageEstablished: true, hasUnmappedResidual: false, ...overrides
 });
+const standaloneStatutoryCases = [
+  { authority: 'ACRA', domain: 'ACRA_CORPORATE', sourceSection: 'ACRA_COMPANIES', topicId: 'acra_record_retention' },
+  { authority: 'CPF', domain: 'CPF_PAYROLL', sourceSection: 'CPF_CONTRIBUTIONS', topicId: 'cpf_contribution_rates' },
+  { authority: 'MOM', domain: 'MOM_EMPLOYMENT', sourceSection: 'MOM_EMPLOYMENT', topicId: 'mom-employment-act-coverage' },
+  { authority: 'MAS', domain: 'MAS_FUNDS', sourceSection: 'MAS_FUND_MANAGEMENT', topicId: 'mas-cms-licence' }
+];
+for (const item of standaloneStatutoryCases) {
+  const issue = plannedIssue({
+    id: `standalone-${item.authority.toLowerCase()}`, authority: item.authority, domain: item.domain,
+    subject: `${item.authority} statutory requirements`, mappedTopicIds: [item.topicId]
+  });
+  const routeClassification = classification({
+    authorities: [item.authority], domains: [item.sourceSection], intent: 'STATUTORY_ADVISORY',
+    regulatoryAnalysisRequired: true, accountingAnalysisRequired: false, journalEntryRequired: false
+  });
+  assert.equal(shouldUseAuthorityEvidenceRuntime({
+    issuePlan: semanticIssues([issue]), classification: routeClassification,
+    explicitIrasEvidenceRequest: false, hasImages: false
+  }), true, `mapped, classifier-confirmed ${item.authority} advisory uses the evidence runtime`);
+}
+
+const standaloneCpfPlan = plannedIssue({
+  id: 'standalone-cpf', authority: 'CPF', domain: 'CPF_PAYROLL', subject: 'Employer CPF contribution',
+  population: 'EMPLOYER', mappedTopicIds: ['cpf_contribution_rates']
+});
+const standaloneCpfClassification = classification({
+  authorities: ['CPF'], domains: ['CPF_CONTRIBUTIONS'], intent: 'STATUTORY_ADVISORY',
+  regulatoryAnalysisRequired: true, accountingAnalysisRequired: false, journalEntryRequired: false
+});
+const standaloneRoute = (plan = semanticIssues([standaloneCpfPlan]), routeClass = standaloneCpfClassification, extra = {}) =>
+  shouldUseAuthorityEvidenceRuntime({ issuePlan: plan, classification: routeClass,
+    explicitIrasEvidenceRequest: false, hasImages: false, ...extra });
+assert.equal(standaloneRoute(semanticIssues([standaloneCpfPlan]), classification({
+  authorities: ['MOM'], domains: ['CPF_CONTRIBUTIONS']
+})), false, 'a mapped topic cannot overcome a mismatched classifier authority');
+assert.equal(standaloneRoute(semanticIssues([standaloneCpfPlan]), classification({
+  authorities: ['CPF'], domains: ['MOM_EMPLOYMENT']
+})), false, 'a matching authority cannot overcome a mismatched classifier domain');
+const contextualOnlyCpf = plannedIssue({
+  id: 'contextual-only-cpf', authority: 'UNKNOWN', domain: 'CPF_PAYROLL', subject: 'CPF contextual reference',
+  mappedTopicIds: ['cpf_contribution_rates']
+});
+contextualOnlyCpf.contextualAuthorities = ['CPF'];
+assert.equal(standaloneRoute(semanticIssues([contextualOnlyCpf])), false,
+  'contextual CPF metadata does not create a governed workstream');
+const unknownOnlyIssue = plannedIssue({
+  id: 'standalone-unknown', authority: 'UNKNOWN', domain: 'UNKNOWN', subject: 'Unknown authority issue', status: 'UNRESOLVED', mappedTopicIds: []
+});
+assert.equal(standaloneRoute(semanticIssues([unknownOnlyIssue]), classification({ authorities: ['CPF'], domains: ['CPF_CONTRIBUTIONS'] })), false,
+  'an unknown issue alone cannot be routed from classifier metadata');
+assert.equal(standaloneRoute(semanticIssues([plannedIssue({
+  id: 'iras-standalone', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: 'Individual income tax', mappedTopicIds: ['iras-individual-tax-relief']
+})]), classification({ authorities: ['IRAS'], domains: ['IRAS_INDIVIDUAL_TAX'] })), false,
+  'standalone IRAS remains on its specialist route');
+assert.equal(standaloneRoute(semanticIssues([plannedIssue({
+  id: 'asc-accounting', authority: 'ACCOUNTING_STANDARDS', domain: 'ACCOUNTING', subject: 'SFRS(I) accounting treatment', mappedTopicIds: ['sfrsi_leases']
+})]), classification({ authorities: ['ASC'], domains: ['ACCOUNTING_SFRS'], accountingAnalysisRequired: true })), false,
+  'accounting standards stay outside the non-IRAS statutory advisory route');
+assert.equal(standaloneRoute(semanticIssues([plannedIssue({
+  id: 'acra-routed-accounting', authority: 'ACRA', domain: 'ACCOUNTING', subject: 'SFRS(I) accounting treatment', mappedTopicIds: ['sfrsi_leases']
+})]), classification({
+  authorities: ['ACRA'], domains: ['ACCOUNTING_SFRS'], intent: 'STATUTORY_ADVISORY',
+  regulatoryAnalysisRequired: true, accountingAnalysisRequired: false
+})), false, 'ACRA routing metadata for an accounting standard cannot enter the statutory advisory path');
+assert.equal(standaloneRoute(semanticIssues([standaloneCpfPlan]), standaloneCpfClassification, { hasImages: true }), false,
+  'image requests remain on the extraction path');
+assert.equal(standaloneRoute(semanticIssues([standaloneCpfPlan]), classification({
+  authorities: ['CPF'], domains: ['CPF_CONTRIBUTIONS'], intent: 'TRANSACTION', journalEntryRequired: true
+})), false, 'ordinary payroll journal requests stay on the accounting path');
+assert.equal(standaloneRoute(semanticIssues([standaloneCpfPlan]), classification({
+  authorities: ['CPF'], domains: ['CPF_CONTRIBUTIONS'], intent: 'HYBRID'
+})), false, 'hybrid statutory/accounting requests stay on the established path');
+assert.equal(standaloneRoute(semanticIssues([standaloneCpfPlan]), classification({
+  authorities: ['CPF'], domains: ['CPF_CONTRIBUTIONS'], regulatoryAnalysisRequired: false
+})), false, 'a mapped scope without a regulatory analysis request stays on the established path');
+const focusedMasPlan = plannedIssue({
+  id: 'focused-mas', authority: 'MAS', domain: 'MAS_FUNDS', subject: 'MAS licensing admission criteria',
+  mappedTopicIds: ['mas-fund-management-licensing-admission-criteria', 'mas-vcc-substantive-fund-management-activity']
+});
+assert.equal(shouldUseAuthorityEvidenceRuntime({
+  issuePlan: semanticIssues([focusedMasPlan]),
+  classification: classification({ authorities: ['MAS'], domains: ['MAS_FUND_MANAGEMENT'] }),
+  explicitIrasEvidenceRequest: false, hasImages: false
+}), true, 'the existing focused two-document MAS route remains enabled');
+const unresolvedCpfResidual = plannedIssue({
+  id: 'standalone-unknown-residual', authority: 'UNKNOWN', domain: 'UNKNOWN', subject: 'Unmapped material CPF issue', status: 'UNRESOLVED', mappedTopicIds: []
+});
+assert.equal(shouldUseAuthorityEvidenceRuntime({
+  issuePlan: semanticIssues([standaloneCpfPlan, unresolvedCpfResidual]),
+  classification: standaloneCpfClassification,
+  explicitIrasEvidenceRequest: false, hasImages: false
+}), true, 'a mapped statutory issue still uses the whole-question runtime when an unresolved residual exists');
 const cIssue = plannedIssue({ id: 'company-deduction', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: 'Company deduction', population: 'COMPANY', status: 'UNRESOLVED', mappedTopicIds: [] });
 const dIssue = plannedIssue({ id: 'employee-benefit', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: 'Employee benefit tax', population: 'EMPLOYEE', status: 'UNRESOLVED', mappedTopicIds: [] });
 assert.equal(shouldUseAuthorityEvidenceRuntime({
@@ -313,7 +518,7 @@ assert.equal(shouldUseAuthorityEvidenceRuntime({
 assert.equal(shouldUseAuthorityEvidenceRuntime({
   issuePlan: knownCpfWithResidual, classification: cpfStatutoryClassification,
   explicitIrasEvidenceRequest: false, hasImages: false
-}), false, 'a pure non-IRAS statutory question does not enter the residual tax fallback');
+}), true, 'a mapped CPF advisory keeps its unresolved whole-question residual visible');
 
 const contextualCpfPlan = {
   source: 'TAXONOMY_FALLBACK', coverageEstablished: true, hasUnmappedResidual: false,

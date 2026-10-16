@@ -59,7 +59,12 @@ const SUPPORTED_LOCAL_AUTHORITIES = new Set<SemanticAuthority>([
 ]);
 // IRAS retains its specialist quality gate. These authorities now share the
 // generic official-page discovery path and bounded evidence admission.
-const SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES = new Set<SemanticAuthority>(['CPF', 'MOM', 'MAS']);
+const SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES = new Set(['ACRA', 'CPF', 'MOM', 'MAS'] as const);
+type OfficialDiscoveryAuthority = typeof SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES extends Set<infer Authority> ? Authority : never;
+
+function isOfficialDiscoveryAuthority(authority: SemanticAuthority): authority is OfficialDiscoveryAuthority {
+  return SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(authority as OfficialDiscoveryAuthority);
+}
 const MANAGED_MAS_DOCUMENT_RECORD_IDS = new Set([
   'MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK',
   'MAS_IID_04_2025_SUBSECTION_RECHECK'
@@ -584,11 +589,13 @@ function retrievalAuthority(authority: SemanticAuthority): StatutoryAuthority | 
 }
 
 function issueScope(issue: ReconciledSemanticQuestionIssue, plan: InternalPlan, topicIds: string[], concepts: RequestedQuestionConcept[]): AuthorityEvidenceScope | undefined {
-  if (plan.authority !== 'IRAS' && !SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(plan.authority)) return undefined;
+  const authority = plan.authority === 'IRAS' ? 'IRAS'
+    : isOfficialDiscoveryAuthority(plan.authority) ? plan.authority : undefined;
+  if (!authority) return undefined;
   const sourceDomain = getCoverageTopicsByIds(topicIds)[0]?.domainId;
   if (!sourceDomain) return undefined;
   return {
-    authority: plan.authority === 'IRAS' ? 'IRAS' : plan.authority as 'CPF' | 'MOM' | 'MAS',
+    authority,
     domain: plan.domain,
     topicIds,
     requestedConcepts: concepts,
@@ -700,12 +707,12 @@ function versioningManagerFor(retriever: ISourceRetriever): SourceVersioningMana
 
 /**
  * Apply the same official sitemap -> fetched page -> topic validator fallback to
- * CPF, MOM and MAS. Only the current request's missing evidence is fetched.
+ * ACRA, CPF, MOM and MAS. Only the current request's missing evidence is fetched.
  * Live candidate records remain CANDIDATE; the per-issue claim gate below must
  * independently admit them using the exact retrieval trace.
  */
 function defaultOfficialStatutoryProvider(
-  authority: 'CPF' | 'MOM' | 'MAS',
+  authority: OfficialDiscoveryAuthority,
   plan: InternalPlan,
   options: AuthorityWorkstreamOptions,
   retriever: ISourceRetriever,
@@ -944,7 +951,7 @@ function eligibleLocalRecords(
         topicBoundToRecord(record, topic))
     );
     const isValidatedLive = record.provenance === 'LIVE_EXTERNAL' &&
-      (authority === 'CPF' || authority === 'MOM' || authority === 'MAS') &&
+      isOfficialDiscoveryAuthority(authority) &&
       record.lifecycleState === 'CANDIDATE' && record.sourceStatus === 'NEEDS_REVIEW' &&
       record.extractionStatus === 'PARTIAL' && record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED' &&
       (record.sourceAuthority === authority ||
@@ -1186,8 +1193,8 @@ async function evaluateIssue(
   };
   const provider = options.providers?.[plan.authority] || (plan.authority === 'IRAS'
     ? defaultIrasProvider(query, plan, options, retriever, understanding, referenceDate)
-    : SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(plan.authority)
-      ? defaultOfficialStatutoryProvider(plan.authority as 'CPF' | 'MOM' | 'MAS', plan, options, retriever, referenceDate)
+    : isOfficialDiscoveryAuthority(plan.authority)
+      ? defaultOfficialStatutoryProvider(plan.authority, plan, options, retriever, referenceDate)
       : SUPPORTED_LOCAL_AUTHORITIES.has(plan.authority) ? defaultLocalProvider(plan.authority, retriever, referenceDate) : undefined);
   if (!provider || plan.domain === 'UNKNOWN') {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'retrievalAttempted', 'PROVIDER_UNAVAILABLE',
