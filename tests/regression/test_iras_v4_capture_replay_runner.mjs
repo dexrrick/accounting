@@ -14,6 +14,7 @@ import {
   CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE,
   EXPECTED_BRANCH,
   FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+  ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE,
   ACTIVATION_PROFILE,
   CASE_EVIDENCE_FAMILY,
   EVIDENCE_FAMILIES,
@@ -614,6 +615,7 @@ async function testReviewedSemanticNamespaces() {
   const retryNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-retry-2026-10-08';
   const postRepairNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-post-repair-2026-10-08';
   const canonicalNamespace = CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE;
+  const freshAlignmentNamespace = ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE;
   const root = await temporaryDirectory('iras-v4-semantic-namespace-');
   try {
     assert.equal(assertReviewedSemanticNamespace(legacyNamespace), legacyNamespace,
@@ -625,10 +627,16 @@ async function testReviewedSemanticNamespaces() {
     assert.equal(assertReviewedSemanticNamespace(postRepairNamespace), postRepairNamespace,
       'the exact post-repair namespace is accepted');
     assert.equal(assertReviewedSemanticNamespace(canonicalNamespace), canonicalNamespace,
-      'the new canonical namespace is explicitly accepted');
+      'the prior canonical namespace remains explicitly accepted');
+    assert.equal(assertReviewedSemanticNamespace(freshAlignmentNamespace), freshAlignmentNamespace,
+      'the fresh alignment namespace is explicitly accepted');
     assert.equal(expectedBranchForSemanticNamespace(legacyNamespace), EXPECTED_BRANCH);
     assert.equal(expectedBranchForSemanticNamespace(freshNamespace), EXPECTED_BRANCH);
     assert.equal(expectedBranchForSemanticNamespace(canonicalNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH);
+    assert.equal(expectedBranchForSemanticNamespace(freshAlignmentNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+      'fresh alignment acceptance is bound to the ACRA branch');
+    assert.notEqual(freshAlignmentNamespace, canonicalNamespace,
+      'fresh alignment acceptance uses its own immutable namespace');
     assert.throws(() => expectedBranchForSemanticNamespace('artifacts/unreviewed/semantic-run-v4'),
       /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/,
       'an unknown namespace cannot select an arbitrary branch');
@@ -643,7 +651,11 @@ async function testReviewedSemanticNamespaces() {
       postRepairNamespace + '-extra',
       canonicalNamespace + '/nested',
       canonicalNamespace + '-extra',
+      freshAlignmentNamespace + '/nested',
+      freshAlignmentNamespace + '-extra',
+      'artifacts/canonical-acceptance-2026-10-17/semantic-run-v4-sibling',
       'artifacts/canonical-acceptance-2026-10-16/other-semantic-run-v4',
+      'artifacts/canonical-acceptance-2026-10-17/../canonical-acceptance-2026-10-16/semantic-run-v4',
       FRESH_ACCEPTANCE_ROOT + '/../' + postRepairNamespace.split('/').at(-1),
       freshNamespace.toUpperCase()
     ]) {
@@ -665,11 +677,13 @@ async function testReviewedSemanticNamespaces() {
     const retryBinding = makeBinding(retryNamespace);
     const postRepairBinding = makeBinding(postRepairNamespace);
     const canonicalBinding = makeBinding(canonicalNamespace);
+    const freshAlignmentBinding = makeBinding(freshAlignmentNamespace);
     const legacyPath = path.join(root, ...legacyNamespace.split('/'));
     const freshPath = path.join(root, ...freshNamespace.split('/'));
     const retryPath = path.join(root, ...retryNamespace.split('/'));
     const postRepairPath = path.join(root, ...postRepairNamespace.split('/'));
     const canonicalPath = path.join(root, ...canonicalNamespace.split('/'));
+    const freshAlignmentPath = path.join(root, ...freshAlignmentNamespace.split('/'));
     assert.notEqual(path.resolve(root), path.resolve('.'), 'fixture root must differ from the process working directory');
     assert.equal(assertRunnerConfigurationBodyMatches(legacyBinding, legacyBinding), true,
       'the consumed legacy binding remains valid');
@@ -682,7 +696,9 @@ async function testReviewedSemanticNamespaces() {
     assert.equal(assertRunnerConfigurationBodyMatches(postRepairBinding, postRepairBinding), true,
       'the exact post-repair namespace is included in the integrity binding');
     assert.equal(assertRunnerConfigurationBodyMatches(canonicalBinding, canonicalBinding), true,
-      'the exact canonical namespace is included in the integrity binding');
+      'the prior canonical namespace remains included in the integrity binding');
+    assert.equal(assertRunnerConfigurationBodyMatches(freshAlignmentBinding, freshAlignmentBinding), true,
+      'the exact fresh alignment namespace is included in the integrity binding');
     assert.equal(assertCanonicalNamespace(legacyPath, legacyBinding, root), legacyPath);
     assert.equal(assertCanonicalNamespace(freshPath, freshBinding, root), freshPath,
       'the frozen fresh binding selects its exact acceptance slot');
@@ -691,7 +707,9 @@ async function testReviewedSemanticNamespaces() {
     assert.equal(assertCanonicalNamespace(postRepairPath, postRepairBinding, root), postRepairPath,
       'the post-repair binding selects only its exact new slot');
     assert.equal(assertCanonicalNamespace(canonicalPath, canonicalBinding, root), canonicalPath,
-      'the canonical binding selects only its exact new slot');
+      'the prior canonical binding selects only its exact slot');
+    assert.equal(assertCanonicalNamespace(freshAlignmentPath, freshAlignmentBinding, root), freshAlignmentPath,
+      'the fresh alignment binding selects only its exact slot');
     assert.throws(() => assertCanonicalNamespace(freshPath, retryBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
     assert.throws(() => assertCanonicalNamespace(retryNamespace, retryBinding, root),
@@ -703,6 +721,12 @@ async function testReviewedSemanticNamespaces() {
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
     assert.throws(() => assertCanonicalNamespace(canonicalPath, legacyBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
+    assert.throws(() => assertCanonicalNamespace(freshAlignmentPath, canonicalBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the prior canonical binding cannot select the fresh alignment slot');
+    assert.throws(() => assertCanonicalNamespace(canonicalPath, freshAlignmentBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the fresh alignment binding cannot select the prior canonical slot');
     assert.throws(() => assertRunnerConfigurationBodyMatches(freshBinding, legacyBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
     assert.throws(() => assertRunnerConfigurationBodyMatches(retryBinding, freshBinding),
@@ -723,6 +747,11 @@ async function testReviewedSemanticNamespaces() {
       path.join(root, postRepairNamespace, 'runner-config.json'));
     assert.equal(assertInArtifactNamespace(path.join(root, canonicalNamespace, 'runner-config.json'), root),
       path.join(root, canonicalNamespace, 'runner-config.json'));
+    assert.equal(assertInArtifactNamespace(path.join(root, freshAlignmentNamespace, 'runner-config.json'), root),
+      path.join(root, freshAlignmentNamespace, 'runner-config.json'));
+    assert.throws(() => assertInArtifactNamespace(
+      path.join(root, 'artifacts/canonical-acceptance-2026-10-17-sibling/output.json'), root),
+    /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/);
     assert.throws(() => assertInArtifactNamespace(path.join(root, 'artifacts/unreviewed/output.json'), root),
       /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/);
     assert.throws(() => assertInArtifactNamespace(
