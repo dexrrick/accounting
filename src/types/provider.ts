@@ -59,7 +59,7 @@ export function loadProviderSettings(): ProviderSettings {
           apiVersion: parsed.azure?.apiVersion || '2024-08-01-preview'
         },
         gemini: {
-          apiKey: parsed.gemini?.apiKey || localStorage.getItem('gemini_api_key') || '',
+          apiKey: parsed.gemini?.apiKey ?? localStorage.getItem('gemini_api_key') ?? '',
           model: parsed.gemini?.model || localStorage.getItem('gemini_model') || 'gemini-3.5-flash-lite'
         },
         openai: {
@@ -90,11 +90,13 @@ export function loadProviderSettings(): ProviderSettings {
 export function saveProviderSettings(settings: ProviderSettings): void {
   try {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-    // Keep backwards compatibility for legacy keys
-    if (settings.gemini.apiKey) {
+    // Keep legacy personal keys, but never put a hosted access token in the old API-key slot.
+    if (settings.gemini.apiKey && !settings.gemini.apiKey.startsWith('proxy:')) {
       localStorage.setItem('gemini_api_key', settings.gemini.apiKey);
-      localStorage.setItem('gemini_model', settings.gemini.model);
+    } else {
+      localStorage.removeItem('gemini_api_key');
     }
+    localStorage.setItem('gemini_model', settings.gemini.model);
   } catch (e) {
     console.warn('Failed to save provider settings to localStorage:', e);
   }

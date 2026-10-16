@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "status": "BLOCKED",
+  "documents": [
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "expectedTopic": {
+          "standardIdentifiers": [
+            "IID 04/2025"
+          ],
+          "expectedTitles": [
+            "GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"
+          ],
+          "topicTerms": [
+            "VCC",
+            "fund management"
+          ]
+        }
+      },
+      "fetch": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "application/pdf",
+        "retrievedAt": "2026-10-15T22:35:38.555Z",
+        "contentHash": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "etag": null,
+        "lastModified": "Thu, 26 Jun 2025 09:14:46 GMT",
+        "error": null
+      },
+      "bodyFile": "01-MAS_IID_04_2025_RECHECK.body.gz",
+      "bodyBytes": 208660,
+      "integrity": {
+        "computedSha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+        "observedHashMatchesBytes": true
+      },
+      "extraction": {
+        "status": "REJECTED",
+        "code": "PDF_SECTION_NOT_SUBSTANTIVE",
+        "reason": "The selected PDF boundary contains only a heading or non-substantive content"
+      },
+      "candidateRecord": null
+    }
+  ]
+}

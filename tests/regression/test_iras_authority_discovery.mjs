@@ -48,7 +48,7 @@ const customFetch = async (url, init = {}) => {
 const webRetriever = new ControlledWebRetriever(undefined, new SourceCache());
 const sitemapAdapter = new OfficialSitemapDiscoveryAdapter(webRetriever, { customFetch, timeoutMs: 500 });
 const searchAdapter = new OfficialDomainSearchAdapter(webRetriever, { customFetch, timeoutMs: 500 });
-assert.deepEqual(Object.keys(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS), ['IRAS', 'CPF', 'ACRA'], 'Configured authority discovery remains explicit and bounded.');
+assert.deepEqual(Object.keys(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS), ['IRAS', 'CPF', 'ACRA', 'MOM', 'MAS'], 'IRAS, CPF, ACRA, MOM and MAS discovery providers coexist in deterministic order.');
 assert.deepEqual(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.IRAS.approvedHosts, ['www.iras.gov.sg', 'iras.gov.sg']);
 assert.equal(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.IRAS.searchSite, 'iras.gov.sg');
 assert.deepEqual(OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.IRAS.sitemapUrls, ['https://www.iras.gov.sg/sitemap']);

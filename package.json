@@ -16,10 +16,12 @@
     "test:all": "npm run preflight && node scripts/run_all_tests.mjs --tier=full",
     "test:smoke": "npm run preflight && node scripts/run_all_tests.mjs --tier=smoke",
     "test:integration": "tsx tests/integration/test_real_source_integration.mjs",
-    "test:official-source-live": "tsx scripts/validate_official_source_browser_path.mjs"
+    "test:official-source-live": "tsx scripts/validate_official_source_browser_path.mjs",
+    "test:gemini-proxy": "tsx tests/integration/test_gemini_proxy.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.41.0",
+    "pdfjs-dist": "6.4.299",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

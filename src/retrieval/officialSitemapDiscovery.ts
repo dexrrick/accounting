@@ -59,6 +59,30 @@ export const OFFICIAL_SOURCE_DISCOVERY_PROVIDERS: Readonly<Record<string, Offici
     searchRedirectHost: 'duckduckgo.com',
     searchRedirectParameter: 'uddg',
     lexicalDiscovery: true
+  }),
+  // These official XML indexes are declared in the corresponding agency robots.txt.
+  // Discovery returns URL candidates only; fetched page evidence is verified separately.
+  MOM: Object.freeze({
+    authority: 'MOM',
+    approvedHosts: Object.freeze(['www.mom.gov.sg', 'mom.gov.sg']),
+    sitemapUrls: Object.freeze(['https://www.mom.gov.sg/sitemap.xml']),
+    preferredHosts: Object.freeze(['www.mom.gov.sg', 'mom.gov.sg']),
+    searchSite: 'mom.gov.sg',
+    searchEndpoint: 'https://html.duckduckgo.com/html/',
+    searchRedirectHost: 'duckduckgo.com',
+    searchRedirectParameter: 'uddg',
+    lexicalDiscovery: true
+  }),
+  MAS: Object.freeze({
+    authority: 'MAS',
+    approvedHosts: Object.freeze(['www.mas.gov.sg', 'mas.gov.sg']),
+    sitemapUrls: Object.freeze(['https://www.mas.gov.sg/sitemap.xml']),
+    preferredHosts: Object.freeze(['www.mas.gov.sg', 'mas.gov.sg']),
+    searchSite: 'mas.gov.sg',
+    searchEndpoint: 'https://html.duckduckgo.com/html/',
+    searchRedirectHost: 'duckduckgo.com',
+    searchRedirectParameter: 'uddg',
+    lexicalDiscovery: true
   })
 });
 
@@ -200,6 +224,8 @@ function inferAuthority(host: string): string {
   if (host === 'ifrs.org' || host === 'www.ifrs.org') return 'IFRS Foundation';
   if (host === 'sso.agc.gov.sg') return 'AGC';
   if (host === 'acra.gov.sg' || host === 'www.acra.gov.sg' || host === 'asc.acra.gov.sg') return 'ACRA';
+  if (host === 'mom.gov.sg' || host === 'www.mom.gov.sg') return 'MOM';
+  if (host === 'mas.gov.sg' || host === 'www.mas.gov.sg') return 'MAS';
   return 'OFFICIAL';
 }
 

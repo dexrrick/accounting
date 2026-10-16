@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "mode": "direct",
+  "status": "BLOCKED",
+  "previewOrigin": null,
+  "documents": [
+    {
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_RECHECK",
+      "requestedUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "requestContext": "node-direct",
+      "originResponses": [
+        {
+          "request": {
+            "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "method": "GET",
+            "context": "node-direct",
+            "credentialsPolicy": "omit",
+            "headers": {
+              "accept": "application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1",
+              "x-official-source-response-mode": "document"
+            }
+          },
+          "response": {
+            "status": 200,
+            "statusText": "OK",
+            "responseUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "contentType": "text/html",
+            "location": null,
+            "headers": {
+              "content-type": "text/html",
+              "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+              "cache-control": "max-age=0, no-cache, no-store",
+              "date": "Thu, 15 Oct 2026 22:34:38 GMT",
+              "server": "AkamaiNetStorage"
+            },
+            "bodyBytesObserved": 853816,
+            "bodyLengthComplete": true,
+            "bodySha256": "a6f23f63ab49a6c9394f7f82676a5761e219e64607768123b736170a88d1daeb",
+            "bodyHashScope": "complete-entity"
+          }
+        }
+      ],
+      "proxyExchanges": [],
+      "redirectsObserved": 0,
+      "redirectTrace": {
+        "visibility": "manual-response-trace",
+        "internalRedirectHops": null,
+        "responseUrlChangedWithoutRedirect": false,
+        "finalResponseUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "note": "Manual redirect responses are recorded; a changed response.url without a 3xx is reported separately."
+      },
+      "retrieval": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "contentType": "text/html",
+        "error": null
+      },
+      "capture": {
+        "bodyFile": "01-MAS_FUND_MANAGEMENT_LICENSING_RECHECK.body.gz",
+        "bodyBytes": 853816,
+        "bodySha256": "a6f23f63ab49a6c9394f7f82676a5761e219e64607768123b736170a88d1daeb",
+        "extractionStatus": "REJECTED"
+      }
+    },
+    {
+      "recordId": "MAS_IID_04_2025_RECHECK",
+      "requestedUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+      "requestContext": "node-direct",
+      "originResponses": [
+        {
+          "request": {
+            "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+            "method": "GET",
+            "context": "node-direct",
+            "credentialsPolicy": "omit",
+            "headers": {
+              "accept": "application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1",
+              "x-official-source-response-mode": "document"
+            }
+          },
+          "response": {
+            "status": 200,
+            "statusText": "OK",
+            "responseUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+            "contentType": "text/html",
+            "location": null,
+            "headers": {
+              "content-type": "text/html",
+              "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+              "cache-control": "max-age=0, no-cache, no-store",
+              "date": "Thu, 15 Oct 2026 22:34:38 GMT",
+              "server": "AkamaiNetStorage"
+            },
+            "bodyBytesObserved": 853816,
+            "bodyLengthComplete": true,
+            "bodySha256": "36bf6655760ba946a52e88f1c5a879e021792546f83a92d40abbf5b08a68911e",
+            "bodyHashScope": "complete-entity"
+          }
+        }
+      ],
+      "proxyExchanges": [],
+      "redirectsObserved": 0,
+      "redirectTrace": {
+        "visibility": "manual-response-trace",
+        "internalRedirectHops": null,
+        "responseUrlChangedWithoutRedirect": false,
+        "finalResponseUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "note": "Manual redirect responses are recorded; a changed response.url without a 3xx is reported separately."
+      },
+      "retrieval": {
+        "status": "SUCCESS",
+        "httpStatus": 200,
+        "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "contentType": "text/html",
+        "error": null
+      },
+      "capture": {
+        "bodyFile": "02-MAS_IID_04_2025_RECHECK.body.gz",
+        "bodyBytes": 853816,
+        "bodySha256": "36bf6655760ba946a52e88f1c5a879e021792546f83a92d40abbf5b08a68911e",
+        "extractionStatus": "REJECTED"
+      }
+    }
+  ]
+}

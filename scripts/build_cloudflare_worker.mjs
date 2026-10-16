@@ -26,7 +26,7 @@ await mkdir(outputDirectory, { recursive: true });
 await writeFile(path.join(outputDirectory, '_worker.js'), workerBundle.code, 'utf8');
 await writeFile(path.join(outputDirectory, '_routes.json'), JSON.stringify({
   version: 1,
-  include: ['/api/official-source'],
+  include: ['/api/official-source', '/api/gemini/*'],
   exclude: []
 }, null, 2) + '\n', 'utf8');
 await writeFile(path.join(outputDirectory, '.assetsignore'), '/_worker.js\n/_routes.json\n/.assetsignore\n', 'utf8');

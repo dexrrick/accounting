@@ -5,6 +5,7 @@ import { getCoverageTopicById, getCoverageTopicsByIds, type SingaporeCoverageTop
 import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultTargetDateResolver } from './targetDateResolver';
 import { findRecordEligibilityRejection } from '../verification/claimEvidenceVerifier';
+import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 import { supportGeneralIrasRuleConcept } from './irasRuleConceptSupport';
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
@@ -421,7 +422,7 @@ function isIrasEvidenceRecord(record: AuthoritativeSourceRecord): boolean {
 }
 
 function isUntouchedRecordEligible(record: AuthoritativeSourceRecord): boolean {
-  return record.recordRole !== 'SOURCE_MAP_POINTER' && record.groundingEligible !== false &&
+  return verifySharedDocumentAdmission(record).admitted && record.recordRole !== 'SOURCE_MAP_POINTER' && record.groundingEligible !== false &&
     record.lifecycleState !== 'CANDIDATE' && record.lifecycleState !== 'STAGED' && record.lifecycleState !== 'REJECTED' &&
     record.sourceType !== 'APPLICATION_RULE' && record.evidenceTier !== 'APPLICATION_RULE';
 }
@@ -620,7 +621,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     let accepted = false;
     let rejectedCode = 'TOPIC_ASSOCIATION_NOT_FOUND';
     let rejectedReason = 'No registry topic association with distinctive matching source text.';
-    const eligibilityRejection = findRecordEligibilityRejection(record, targetDate, referenceDate);
+    const eligibilityRejection = findRecordEligibilityRejection(record, targetDate, input.referenceDate);
     for (const topic of targetTopics) {
       const associated = metadataAssociatesRecord(record, topic);
       if (!associated) continue;
@@ -646,7 +647,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
         ? transitionYears.map(year => `${year}-06-30`).find(date => isWithinTargetPeriod(record, date))
         : undefined;
       const transitionEligibilityRejection = transitionTargetDate
-        ? findRecordEligibilityRejection(record, transitionTargetDate, referenceDate)
+        ? findRecordEligibilityRejection(record, transitionTargetDate, input.referenceDate)
         : undefined;
       const local = record.provenance === 'LOCAL_STATIC' && !eligibilityRejection ||
         Boolean(record.provenance === 'LOCAL_STATIC' && transitionTargetDate && !transitionEligibilityRejection);

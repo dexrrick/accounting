@@ -1,0 +1,31 @@
+{
+  "reviewedOn": "2026-10-15",
+  "reviewer": "Codex supervisor source inspection; not production statutory approval",
+  "scope": "Two targeted official MAS documents; no broad live accuracy testing",
+  "documents": [
+    {
+      "title": "Fund Management Licensing",
+      "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "reviewedPassage": "A non-refundable application fee is payable in order for the application to be submitted.",
+      "passageSource": "Cached official-page web-reader representation; not raw HTTP document bytes",
+      "expectedIdentity": "MAS fund-management licensing guidance",
+      "captureOutcome": "Direct official HTTP fetch returned Maintenance HTML with status 200",
+      "acceptance": "REJECT; no positive byte-backed admission result"
+    },
+    {
+      "title": "IID 04/2025 Governance and Management of Variable Capital Companies (VCCs)",
+      "landingPage": "https://www.mas.gov.sg/regulation/circulars/iid-04-2025-governance-and-management-of-variable-capital-companies",
+      "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+      "reviewedPassage": "VCC managers should periodically assess and wind down VCCs that hold no assets and/or have no investors.",
+      "passageSource": "Cached official five-page PDF web-reader representation, page 3; not raw HTTP document bytes",
+      "expectedIdentity": "MAS circular IID 04/2025, dated 26 June 2025",
+      "captureOutcome": "Direct official PDF fetch returned Maintenance HTML with status 200 and text/html MIME type",
+      "acceptance": "REJECT; no positive byte-backed admission result"
+    }
+  ],
+  "limitations": [
+    "Raw document content was unavailable from the official transport during capture. Cached reader text cannot supply an exact document hash or extraction boundary.",
+    "The regression replays actual failed source responses and checks rejection. It does not establish positive real-document admission, current legal applicability, or authority parity.",
+    "A document publication or revision date is not assumed to be its effective date."
+  ]
+}

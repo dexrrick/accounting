@@ -8,6 +8,7 @@
  */
 
 import type { ProviderSettings } from '../types/provider';
+import { fetchGemini } from './geminiProxyTransport';
 
 export const MAX_STRUCTURED_LLM_INPUT_CHARS = 100_000;
 const MAX_GEMINI_ERROR_BODY_BYTES = 8_192;
@@ -504,7 +505,7 @@ async function callGeminiDirect(
     };
   }
 
-  const res = await fetch(url, {
+  const res = await fetchGemini(url, apiKey, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

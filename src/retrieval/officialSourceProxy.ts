@@ -3,8 +3,12 @@ import { ALLOWED_REGULATORY_HOSTNAMES, defaultExternalSourceValidator } from './
 export const OFFICIAL_SOURCE_PROXY_PATH = '/api/official-source';
 const MAX_REQUEST_BYTES = 8_192;
 const MAX_RESPONSE_BYTES = 2_000_000;
+// A base64 envelope adds roughly 4/3 overhead; keep it below the browser's
+// bounded 2.2 MB envelope reader while preserving the existing text limit.
+const MAX_DOCUMENT_BYTES = 1_500_000;
 const UPSTREAM_TIMEOUT_MS = 8_000;
 const SAFE_RESPONSE_HEADERS = ['content-type', 'etag', 'last-modified', 'location', 'cache-control'] as const;
+const MAS_COMPATIBILITY_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
 export interface OfficialSourceProxyLimits {
   requestBytes?: number;
@@ -76,8 +80,8 @@ async function readBoundedBody(request: Request, limit: number, timeoutMs: numbe
   }
 }
 
-async function readBoundedUpstreamBody(response: Response, limit: number): Promise<string | undefined> {
-  if (!response.body) return '';
+async function readBoundedUpstreamBody(response: Response, limit: number): Promise<Uint8Array | undefined> {
+  if (!response.body) return new Uint8Array();
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let bytes = 0;
@@ -97,7 +101,16 @@ async function readBoundedUpstreamBody(response: Response, limit: number): Promi
     combined.set(chunk, offset);
     offset += chunk.byteLength;
   }
-  return new TextDecoder().decode(combined);
+  return combined;
+}
+
+function encodeBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
 }
 
 function validateOfficialUrl(rawUrl: string): boolean {
@@ -124,6 +137,9 @@ export async function handleOfficialSourceProxyRequest(
   const responseLimit = limits.responseBytes ?? MAX_RESPONSE_BYTES;
   const timeoutMs = limits.timeoutMs ?? UPSTREAM_TIMEOUT_MS;
   const requestTimeoutMs = limits.requestTimeoutMs ?? 3_000;
+  if (!Number.isFinite(responseLimit) || responseLimit <= 0 || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return new Response('Invalid proxy limits', { status: 500 });
+  }
   const requestUrl = new URL(request.url);
   if (requestUrl.pathname !== OFFICIAL_SOURCE_PROXY_PATH) return new Response('Not found', { status: 404 });
   if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { allow: 'POST' } });
@@ -145,13 +161,17 @@ export async function handleOfficialSourceProxyRequest(
   if (bodyResult.kind === 'READ_ERROR') return new Response('Invalid request', { status: 400 });
   let payload: unknown;
   try { payload = JSON.parse(bodyResult.text); } catch { return new Response('Invalid request', { status: 400 }); }
-  const allowedPayloadKeys = new Set(['url', 'ifNoneMatch', 'ifModifiedSince']);
+  const allowedPayloadKeys = new Set(['url', 'ifNoneMatch', 'ifModifiedSince', 'responseMode']);
   if (!payload || typeof payload !== 'object' || Array.isArray(payload) ||
       Object.keys(payload).some(key => !allowedPayloadKeys.has(key)) ||
       !Object.prototype.hasOwnProperty.call(payload, 'url') || typeof (payload as { url?: unknown }).url !== 'string') {
     return new Response('Invalid request', { status: 400 });
   }
-  const requestPayload = payload as { url: string; ifNoneMatch?: unknown; ifModifiedSince?: unknown };
+  const requestPayload = payload as { url: string; ifNoneMatch?: unknown; ifModifiedSince?: unknown; responseMode?: unknown };
+  if (requestPayload.responseMode !== undefined && requestPayload.responseMode !== 'document') {
+    return new Response('Invalid request', { status: 400 });
+  }
+  const documentMode = requestPayload.responseMode === 'document';
   const validateConditionalValue = (value: unknown): value is string =>
     typeof value === 'string' && value.length <= 2_000 && !/[\u0000-\u001f\u007f]/.test(value);
   if ((requestPayload.ifNoneMatch !== undefined && !validateConditionalValue(requestPayload.ifNoneMatch)) ||
@@ -172,8 +192,14 @@ export async function handleOfficialSourceProxyRequest(
   const upstreamWork = (async (): Promise<Response> => {
     try {
       const upstreamHeaders: Record<string, string> = {
-        accept: 'text/html, text/plain, application/xhtml+xml, application/xml;q=0.9, */*;q=0.1'
+        accept: documentMode
+          ? 'application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1'
+          : 'text/html, text/plain, application/xhtml+xml, application/xml;q=0.9, */*;q=0.1'
       };
+      const hostname = new URL(officialUrl).hostname.toLowerCase();
+      if (hostname === 'mas.gov.sg' || hostname === 'www.mas.gov.sg') {
+        upstreamHeaders['user-agent'] = MAS_COMPATIBILITY_USER_AGENT;
+      }
       if (typeof requestPayload.ifNoneMatch === 'string') upstreamHeaders['if-none-match'] = requestPayload.ifNoneMatch;
       if (typeof requestPayload.ifModifiedSince === 'string') upstreamHeaders['if-modified-since'] = requestPayload.ifModifiedSince;
       const upstream = await fetcher(officialUrl, {
@@ -195,7 +221,7 @@ export async function handleOfficialSourceProxyRequest(
           upstreamStatus: upstream.status,
           upstreamStatusText: upstream.statusText.replace(/[\r\n\u0000-\u001f]/g, ' ').slice(0, 200),
           headers: { location: targetUrl },
-          body: ''
+          ...(documentMode ? { bodyBase64: '' } : { body: '' })
         });
       }
 
@@ -204,7 +230,10 @@ export async function handleOfficialSourceProxyRequest(
         const finalUrlValidation = defaultExternalSourceValidator.validateRedirect(officialUrl, finalUrl);
         if (!finalUrlValidation.isValid || !validateOfficialUrl(finalUrl)) return transportFailure('REDIRECT_REJECTED');
       }
-      const responseBody = await readBoundedUpstreamBody(upstream, responseLimit);
+      const responseBody = await readBoundedUpstreamBody(
+        upstream,
+        documentMode ? Math.min(responseLimit, MAX_DOCUMENT_BYTES) : responseLimit
+      );
       if (responseBody === undefined) return transportFailure('NETWORK_ERROR');
       const headers: Record<string, string> = {};
       for (const name of SAFE_RESPONSE_HEADERS) {
@@ -216,7 +245,9 @@ export async function handleOfficialSourceProxyRequest(
         upstreamStatus: upstream.status,
         upstreamStatusText: upstream.statusText.replace(/[\r\n\u0000-\u001f]/g, ' ').slice(0, 200),
         headers,
-        body: responseBody
+        ...(documentMode
+          ? { bodyBase64: encodeBase64(responseBody) }
+          : { body: new TextDecoder().decode(responseBody) })
       });
     } catch {
       return transportFailure(controller.signal.aborted ? 'TIMEOUT' : 'NETWORK_ERROR');

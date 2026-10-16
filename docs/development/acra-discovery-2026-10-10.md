@@ -1,5 +1,15 @@
 # CPF integration and ACRA discovery — 10 October 2026
 
+## Integration update — 16 October 2026
+
+PR #21 was merged into `main` at `a00cb88983bb1d4b077dde26c51a1433c96c5a09` following the user's explicit merge instruction. PR #12 incorporates that main revision through a merge, preserving its original ACRA commits and the integrated MAS/source lifecycle history. The five conflicts were resolved in the test runner, external source validator, official sitemap discovery, grounding context builder and authority discovery regression.
+
+The combined provider set is IRAS, CPF, ACRA, MOM and MAS. ACRA company discovery retains exact official hosts, company-only URL scope, substantive page/navigation cleanup, historical-period guards and bounded discovery. Accounting standards retain ASC/IFRS routes, and VCC topics do not borrow the company provider. The ACRA cleanup option is separate from MOM/MAS substantive-body filtering; metadata-only cards and unsupported historical evidence remain rejected. Discovery still cannot promote live ACRA candidates into approved governed evidence. No source approval, scheduling or provider credential behavior changed.
+
+Builder implementation and independent reviewer validation found no remaining material integration issue. Focused ACRA (all six retained captures), CPF, MOM/MAS statutory discovery and IRAS authority regressions passed offline, along with TypeScript, lint and build. Final validation passed **113/113 smoke suites** in 132.33 seconds and **133/133 full suites** in 138.83 seconds, with the external fetch guard enabled. The original ACRA capture fixture is unchanged. No conflicted paths or whitespace errors remain. Logs are retained locally under `D:/Accounting/.tmp/acra-pr12-integration/`.
+
+**The integration-conflict repair does not satisfy or remove the canonical acceptance hold.** Issue #9 remains open for fresh official-source retrieval through the supported production path, canonical accounting/evidence acceptance and representative latency. Retained capture replays and offline regression results do not establish those outcomes. PR #12 remains unmerged, and no production deployment or live model run is included in this repair. The remainder of this report records the original 10 October observations.
+
 CPF safeguards are merged. ACRA discovery is implemented and independently approved for pull-request review. **ACRA merge and production deployment remain on HOLD pending canonical acceptance.**
 
 ## Commits and branch

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "documents": [
+    {
+      "recordId": "MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-FUND-MANAGEMENT-LICENSING",
+        "legalOrStandardInstrument": "MAS Fund Management Licensing Guidance",
+        "documentKind": "HTML",
+        "sectionHeading": "What are the admission criteria and applicable requirements?",
+        "expectedTopic": {
+          "standardIdentifiers": ["Securities and Futures Act"],
+          "expectedTitles": ["Fund Management Licensing"],
+          "topicTerms": ["fund management", "licence"]
+        }
+      }
+    },
+    {
+      "recordId": "MAS_IID_04_2025_SUBSECTION_RECHECK",
+      "request": {
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "standardOrActCode": "MAS-IID-04-2025",
+        "legalOrStandardInstrument": "MAS Circular IID 04/2025",
+        "documentKind": "PDF",
+        "sectionHeading": "Substantive Fund Management Activity",
+        "sectionEndHeading": "Anti-Money Laundering and Countering the Financing of Terrorism (AML/CFT)",
+        "expectedTopic": {
+          "standardIdentifiers": ["IID 04/2025"],
+          "expectedTitles": ["GOVERNANCE AND MANAGEMENT OF VARIABLE CAPITAL COMPANIES"],
+          "topicTerms": ["VCC", "fund management"]
+        }
+      }
+    }
+  ]
+}

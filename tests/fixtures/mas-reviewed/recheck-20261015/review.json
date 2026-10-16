@@ -1,0 +1,80 @@
+{
+  "reviewedOn": "2026-10-15",
+  "reviewer": "Targeted exact-byte endpoint recheck; not production statutory approval",
+  "scope": "Four explicitly requested MAS document URLs, replayed from direct HTTPS response bytes",
+  "result": "All four endpoints returned HTTP 200 Maintenance HTML. The two existing URLs have different response hashes from the earlier capture, but neither changed response yields a source record or update package.",
+  "positiveRealSourceAcceptance": "BLOCKED",
+  "documents": [
+    {
+      "captureFile": "fund-management-licensing.maintenance.html.gz",
+      "expectedDocument": "Fund Management Licensing",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "responseTitle": "Maintenance",
+      "outcome": "REJECTED: maintenance response is not the expected MAS guidance"
+    },
+    {
+      "captureFile": "iid-04-2025.maintenance.html.gz",
+      "expectedDocument": "IID 04/2025 Governance and Management of Variable Capital Companies (VCCs)",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "responseTitle": "Maintenance",
+      "outcome": "REJECTED: maintenance HTML is not the expected PDF and has no PDF signature"
+    },
+    {
+      "captureFile": "cmi-02-2023.maintenance.html.gz",
+      "expectedDocument": "CMI 02/2023 Observations from Inspections of Licensed Venture Capital Fund Managers",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "responseTitle": "Maintenance",
+      "outcome": "REJECTED: maintenance response is not the expected MAS circular"
+    },
+    {
+      "captureFile": "sfa-04-g05-jan2025.maintenance.html.gz",
+      "expectedDocument": "Guidelines on Licensing and Conduct of Business for Fund Management Companies [SFA 04-G05]",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "responseTitle": "Maintenance",
+      "outcome": "REJECTED: maintenance HTML is not the expected PDF and has no PDF signature",
+      "officialLandingPageUrl": "https://www.mas.gov.sg/regulation/guidelines/guideline-sfa-04-g05-on-licensing-registration-and-conduct-of-business-for-fund-managers",
+      "currentness": "The official landing page amendment notes identify the 13 January 2025 previous version at the 10 January 2025 filename as [Cancelled]. This archived guideline must never be treated as current; the filename date does not establish a revision or effective date."
+    }
+  ],
+  "blockedCases": [
+    {
+      "case": "Positive real-source HTML/PDF extraction and admission",
+      "status": "BLOCKED",
+      "reason": "No genuine document bytes were returned by the four endpoints."
+    },
+    {
+      "case": "Effective-date verification",
+      "status": "BLOCKED",
+      "reason": "No source passage was retrieved. Publication or revision dates are not evidence of an effective date."
+    },
+    {
+      "case": "Historical applicability and unknown-history rejection",
+      "status": "BLOCKED",
+      "reason": "No bounded applicability interval or prior-version history was retrieved; historical applicability and fail-closed rejection for unknown history are untested against real MAS content."
+    },
+    {
+      "case": "Real-source quotation and citation correctness",
+      "status": "BLOCKED",
+      "reason": "No source passage, exact quotation boundary, or document locator was available to verify."
+    },
+    {
+      "case": "Real-source replacement, approval, activation, and rollback",
+      "status": "BLOCKED",
+      "reason": "The endpoints produced no update package. Synthetic lifecycle fixtures do not establish real-source replacement, approval, activation, rollback, or retrieval-for-answer binding to a replaced version."
+    },
+    {
+      "case": "Real-content authority/domain isolation",
+      "status": "BLOCKED",
+      "reason": "No genuine source content was retrieved to test MAS authority attribution, MAS_FUNDS topic binding, or isolation from other authorities and domains."
+    },
+    {
+      "case": "Currentness of the archived SFA 04/G05 guideline",
+      "status": "BLOCKED",
+      "reason": "The official MAS landing page marks the archived guideline cancelled; it must never count as current. The maintenance response cannot support any current-document claim."
+    }
+  ]
+}

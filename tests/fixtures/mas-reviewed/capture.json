@@ -1,0 +1,28 @@
+[
+  {
+    "file": "fund-management-licensing.maintenance.html.gz",
+    "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+    "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+    "httpStatus": 200,
+    "contentType": "text/html",
+    "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+    "lastModified": null,
+    "retrievedAt": "2026-10-15T13:33:58.393Z",
+    "documentHash": "2ae621c6bd3e26d9663993b54548119e7f07b1cdc4ef94250a4df4e0ca1c5efa",
+    "bytes": 853817,
+    "responseClassification": "MAS_MAINTENANCE_HTML_NOT_SOURCE_DOCUMENT"
+  },
+  {
+    "file": "iid-04-2025.maintenance.html.gz",
+    "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+    "finalUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+    "httpStatus": 200,
+    "contentType": "text/html",
+    "etag": "\"014b48f412c123e0407fa11f967f4485:1711115865.092604\"",
+    "lastModified": null,
+    "retrievedAt": "2026-10-15T13:33:58.485Z",
+    "documentHash": "97c5b1e31855ffc5c16819e057bdc71fc24bf5b582a85a84746a5ffc26ba606c",
+    "bytes": 853817,
+    "responseClassification": "MAS_MAINTENANCE_HTML_NOT_SOURCE_DOCUMENT"
+  }
+]

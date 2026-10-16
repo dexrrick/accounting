@@ -99,7 +99,8 @@ try {
     evidenceScope,
     authorityLevelDiscovery: true
   });
-  assert.equal(searchQueries.length, 0, 'Sufficient mapped evidence does not reach official-domain search.');
+  assert.equal(searchQueries.some(request => request.authority === 'IRAS'), false,
+    'Sufficient mapped IRAS evidence does not reach IRAS official-domain search.');
   assert.ok(result.records.some(record => record.tags.includes('iras-individual-cpf-relief')),
     'The mapped CPF relief page is reused as an eligible record.');
   assert.equal(fetchRequests.some(url => /\/srs-contributions-and-tax-relief(?:\?|$)/i.test(url)), false,

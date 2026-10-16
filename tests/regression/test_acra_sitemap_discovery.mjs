@@ -13,11 +13,16 @@ import { defaultExternalSourceValidator } from '../../src/retrieval/externalSour
 const pages = JSON.parse(await readFile(new URL('../fixtures/acra-company-guidance-2026-10-10.json', import.meta.url), 'utf8'));
 const bannerExpectation = { standardIdentifiers: ['Accounting and Corporate Regulatory Authority'],
   expectedTitles: ['annual returns'], topicTerms: ['annual return'] };
-assert.equal(defaultExternalSourceValidator.validateTopicContent(pages.find(page => page.name === 'annual').html, bannerExpectation).isValid, false,
-  'Generic extraction behavior remains unchanged when a preceding banner article exists.');
-assert.equal(defaultExternalSourceValidator.validateTopicContent(pages.find(page => page.name === 'annual').html,
-  { ...bannerExpectation, preferMainContent: true }).isValid, true,
-  'Corporate ACRA extraction opts into the substantive main instead of the government banner.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(pages.find(page => page.name === 'annual').html, bannerExpectation).isValid, true,
+  'The main article is selected before an unrelated banner article that appears earlier in the document.');
+const navigationOnly = `<html><head><title>Annual returns | Accounting and Corporate Regulatory Authority</title></head><body><main>
+  <div aria-label="Breadcrumb" role="navigation"><p>All Singapore companies must submit an annual return each year and provide the required financial statements to the Accounting and Corporate Regulatory Authority.</p></div>
+</main></body></html>`;
+assert.equal(defaultExternalSourceValidator.validateTopicContent(navigationOnly, bannerExpectation).isValid, true,
+  'The generic validator retains existing behavior for page content without an ACRA-specific extraction option.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(navigationOnly,
+  { ...bannerExpectation, preferMainContent: true }).isValid, false,
+  'ACRA-specific extraction removes Isomer breadcrumb/navigation markup before checking the main body.');
 const provider = OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.ACRA;
 assert.deepEqual(provider.approvedHosts, ['www.acra.gov.sg', 'acra.gov.sg']);
 assert.deepEqual(provider.sitemapUrls, ['https://www.acra.gov.sg/sitemap.xml']);
@@ -176,6 +181,20 @@ await resolveMappedOfficialSourceFallback(['sfrsi_intangibles_cap'], 'Explain SF
 assert.ok(accountingRequest.approvedHosts.includes('asc.acra.gov.sg'));
 assert.ok(accountingRequest.approvedHosts.includes('www.ifrs.org'));
 assert.equal(accountingRequest.sitemapUrls, undefined);
+
+const vccDiscoveryRequests = [];
+const vccFallback = await resolveMappedOfficialSourceFallback(['acra_vcc'], 'Explain Variable Capital Company requirements.', {
+  async retrieveSources() { return []; },
+  getSourceById() { return undefined; }
+}, {
+  referenceDate: '2026-10-10',
+  webRetriever: { async fetchOfficialSource(url) { return { status: 'NOT_FOUND', finalUrl: url }; } },
+  discoveryAdapter: { async discoverOfficialSourceCandidates(request) { vccDiscoveryRequests.push(request); return []; } },
+  officialDomainSearchAdapter: { async searchOfficialDomainCandidates(request) { vccDiscoveryRequests.push(request); return []; } }
+});
+assert.equal(vccFallback.records.length, 0);
+assert.equal(vccDiscoveryRequests.length, 0,
+  'ACRA VCC topics do not enter the company-guidance sitemap or restricted-search route.');
 
 const candidate = positives[0].records[0];
 const governed = await buildAuthorityWorkstreams(cases[0][2], {
