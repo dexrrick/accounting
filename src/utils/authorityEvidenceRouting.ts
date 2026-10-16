@@ -29,6 +29,17 @@ function scopesAgreeWithClassification(issuePlan: SemanticIssueReconciliation, c
   );
 }
 
+const FOCUSED_MAS_DOCUMENT_TOPICS = new Set([
+  'mas-fund-management-licensing-admission-criteria',
+  'mas-vcc-substantive-fund-management-activity'
+]);
+
+function hasFocusedMasDocumentIssue(issuePlan: SemanticIssueReconciliation): boolean {
+  return issuePlan.issues.some(issue => issue.status === 'MAPPED' && issue.domain === 'MAS_FUNDS' &&
+    issue.governingAuthorities.includes('MAS') &&
+    issue.mappedTopicIds.some(topicId => FOCUSED_MAS_DOCUMENT_TOPICS.has(topicId)));
+}
+
 /** Guards the additive runtime so classifier fallback metadata alone cannot reroute ordinary journals. */
 export function shouldUseAuthorityEvidenceRuntime(input: {
   issuePlan: SemanticIssueReconciliation;
@@ -38,6 +49,18 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
 }): boolean {
   const { issuePlan, classification } = input;
   if (input.hasImages) return false;
+
+  // These two manually reviewed document topics use the usual per-issue
+  // evidence pipeline even when a question contains only one MAS workstream.
+  // Let the existing workstream runtime surface other topic gaps beside these
+  // scoped citations. It retains an insufficient result when the whole query
+  // is not covered, while avoiding an unbound legacy answer for the mapped part.
+  if (hasFocusedMasDocumentIssue(issuePlan) &&
+      classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&
+      !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
+      classification.authorities.includes('MAS') && classification.domains.includes('MAS_FUND_MANAGEMENT')) {
+    return true;
+  }
 
   // Validated semantic issue decomposition is the strongest signal that the
   // user requested independently governed material questions. Keep the

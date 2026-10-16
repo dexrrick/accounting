@@ -2,6 +2,7 @@ import { ALLOWED_REGULATORY_HOSTNAMES, defaultExternalSourceValidator } from './
 
 const OFFICIAL_SOURCE_ENDPOINT = '/api/official-source';
 const MAX_BROWSER_ENVELOPE_BYTES = 2_200_000;
+const MAX_DOCUMENT_BYTES = 1_500_000;
 
 export type OfficialSourceTransportFailure = 'NETWORK_ERROR' | 'TIMEOUT' | 'REDIRECT_REJECTED';
 
@@ -16,6 +17,7 @@ interface OfficialSourceEnvelope {
   upstreamStatusText?: unknown;
   headers?: unknown;
   body?: unknown;
+  bodyBase64?: unknown;
   transportFailure?: unknown;
 }
 
@@ -45,6 +47,7 @@ export async function fetchOfficialSourceSameOrigin(url: string, init: RequestIn
   if (outerSignal?.aborted) controller.abort();
 
   const requestHeaders = new Headers(init.headers);
+  const documentMode = requestHeaders.get('x-official-source-response-mode') === 'document';
   const conditionalFields: Record<string, string> = {};
   for (const [headerName, payloadName] of [
     ['if-none-match', 'ifNoneMatch'],
@@ -61,7 +64,7 @@ export async function fetchOfficialSourceSameOrigin(url: string, init: RequestIn
       redirect: 'error',
       cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, ...conditionalFields }),
+      body: JSON.stringify({ url, ...conditionalFields, ...(documentMode ? { responseMode: 'document' } : {}) }),
       signal: controller.signal
     });
 
@@ -101,10 +104,13 @@ export async function fetchOfficialSourceSameOrigin(url: string, init: RequestIn
     if (envelope.transportFailure === 'TIMEOUT' || envelope.transportFailure === 'NETWORK_ERROR' || envelope.transportFailure === 'REDIRECT_REJECTED') {
       return failureResponse(url, envelope.transportFailure);
     }
+    const envelopeBodyValid = documentMode
+      ? typeof envelope.bodyBase64 === 'string' && envelope.bodyBase64.length <= Math.ceil(MAX_DOCUMENT_BYTES / 3) * 4
+      : typeof envelope.body === 'string';
     if (!response.ok || typeof envelope.officialUrl !== 'string' ||
         typeof envelope.upstreamStatus !== 'number' || !Number.isInteger(envelope.upstreamStatus) ||
         envelope.upstreamStatus < 200 || envelope.upstreamStatus > 599 ||
-        typeof envelope.upstreamStatusText !== 'string' || typeof envelope.body !== 'string' ||
+        typeof envelope.upstreamStatusText !== 'string' || !envelopeBodyValid ||
         !envelope.headers || typeof envelope.headers !== 'object' || Array.isArray(envelope.headers) ||
         !isApprovedEnvelopeUrl(url, envelope.officialUrl)) {
       return failureResponse(url, outerSignal?.aborted ? 'TIMEOUT' : 'NETWORK_ERROR');
@@ -117,7 +123,21 @@ export async function fetchOfficialSourceSameOrigin(url: string, init: RequestIn
     }
     const statusText = envelope.upstreamStatusText.replace(/[\r\n\u0000-\u001f]/g, ' ').slice(0, 200);
     const hasNullBody = envelope.upstreamStatus === 204 || envelope.upstreamStatus === 205 || envelope.upstreamStatus === 304;
-    const officialResponse = new Response(hasNullBody ? null : envelope.body, {
+    let body: BodyInit | null = hasNullBody ? null : envelope.body as string;
+    if (documentMode && !hasNullBody) {
+      const encoded = envelope.bodyBase64 as string;
+      if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded)) {
+        return failureResponse(url, 'NETWORK_ERROR');
+      }
+      let binary: string;
+      try { binary = atob(encoded); }
+      catch { return failureResponse(url, 'NETWORK_ERROR'); }
+      if (binary.length > MAX_DOCUMENT_BYTES || btoa(binary) !== encoded) return failureResponse(url, 'NETWORK_ERROR');
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+      body = bytes;
+    }
+    const officialResponse = new Response(body, {
       status: envelope.upstreamStatus,
       statusText,
       headers

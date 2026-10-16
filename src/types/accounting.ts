@@ -53,6 +53,8 @@ export interface StandardCitation {
   verificationReason?: string;
   /** Confirms structural verification validates existence and URLs only, not semantic claim validity */
   structuralVerificationOnly?: boolean;
+  /** Present when a shared document has been admitted and bound to its active version. */
+  sourceBinding?: import('../standards/unifiedSourceModel').VerifiedDocumentBinding;
 }
 
 export type JournalAuthorityStatus = 'DETERMINISTIC' | 'AI_PROPOSED' | 'CONDITIONAL';

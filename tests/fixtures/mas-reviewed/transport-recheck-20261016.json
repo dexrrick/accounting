@@ -1,0 +1,23 @@
+{
+  "reviewedOnSingaporeDate": "2026-10-16",
+  "purpose": "Transport observation only; no statutory approval or positive MAS acceptance",
+  "requests": "controlled-capture-requests.json",
+  "captures": [
+    {
+      "manifest": "controlled-transport-20261016/manifest.json",
+      "transport": "Node 22.23.1 default ControlledWebRetriever direct HTTPS"
+    },
+    {
+      "manifest": "deployed-transport-20261016/manifest.json",
+      "transport": "Existing fetchOfficialSourceSameOrigin adapter against the deployed PR 19 commit preview",
+      "previewOrigin": "https://ea199869-accounting.dexrrick-goh.workers.dev",
+      "previewCommit": "49c48ea794b00ed0086fbd1241667bf27848f3c2",
+      "method": "In an isolated Node process, set window to an empty object so the existing default transport selects its browser adapter; resolve only /api/official-source against this fixed preview origin using native fetch. Refuse any other outer fetch. Reuse captureOfficialDocuments with the unchanged two-document request list.",
+      "limitations": "This exercises the deployed document endpoint and existing envelope decoder. It is not a real browser UI/CORS test, does not establish current production deployment acceptance, and does not add missing browser-download metadata."
+    }
+  ],
+  "observedOutcome": "Both requests on both paths returned HTTP 200 text/html bodies titled Maintenance. HTML selection failed with HTML_SECTION_UNVERIFIED and the PDF request failed with DOCUMENT_KIND_MISMATCH. All four manifest candidateRecord values are null; each manifest remains BLOCKED.",
+  "remainingBlocker": "Substantive MAS HTML/PDF responses with complete controlled transport metadata are still unavailable. Exact extraction improvements using previously saved genuine bytes cannot establish transport acceptance or authorize source admission.",
+  "historicalCapturePolicy": "Preserve the 15 October browser-download capture and its unknown HTTP fields unchanged. Do not combine headers from these maintenance responses with the earlier genuine PDF bytes.",
+  "positiveMASAcceptance": "BLOCKED"
+}

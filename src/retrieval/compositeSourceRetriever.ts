@@ -2,7 +2,8 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import {
   type ISourceRetriever,
   type SourceRetrievalQuery,
-  InMemorySourceRetriever
+  InMemorySourceRetriever,
+  isAnswerGroundingEligibleSource
 } from './sourceRetriever';
 import { defaultLiveRegulatoryFeedService, LiveRegulatoryFeedService } from './liveRegulatoryFeed';
 import {
@@ -12,6 +13,15 @@ import {
   type ControlledFetchResult
 } from './controlledWebRetriever';
 import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
+import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
+import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
+import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
+import { defaultTargetDateResolver } from './targetDateResolver';
+import {
+  extractOfficialDocument,
+  type OfficialDocumentExtractionRequest,
+  type OfficialDocumentExtractionResult
+} from './officialDocumentExtractor';
 
 /**
  * Composite Source Retriever.
@@ -32,12 +42,12 @@ export class CompositeSourceRetriever implements ISourceRetriever {
   private versioningManager: SourceVersioningManager;
 
   constructor(
-    localRetriever: InMemorySourceRetriever = new InMemorySourceRetriever(),
+    localRetriever: InMemorySourceRetriever | undefined = undefined,
     feedService: LiveRegulatoryFeedService = defaultLiveRegulatoryFeedService,
     webRetriever: ControlledWebRetriever = defaultControlledWebRetriever,
     versioningManager: SourceVersioningManager = defaultSourceVersioningManager
   ) {
-    this.localRetriever = localRetriever;
+    this.localRetriever = localRetriever || new InMemorySourceRetriever(undefined, versioningManager);
     this.feedService = feedService;
     this.webRetriever = webRetriever;
     this.versioningManager = versioningManager;
@@ -66,6 +76,13 @@ export class CompositeSourceRetriever implements ISourceRetriever {
     return await this.webRetriever.fetchOfficialSource(url, options);
   }
 
+  /** Extracts a review candidate without adding it to the approved source registry. */
+  public async extractExternalDocument(
+    request: OfficialDocumentExtractionRequest
+  ): Promise<OfficialDocumentExtractionResult> {
+    return await extractOfficialDocument(request, this.webRetriever);
+  }
+
   /**
    * Retrieves sources by unique ID
    */
@@ -82,9 +99,11 @@ export class CompositeSourceRetriever implements ISourceRetriever {
    */
   public findSourcesByStandardOrAct(
     standardOrActCode: string,
-    paragraphOrSection?: string
+    paragraphOrSection?: string,
+    admissionOptions: SharedDocumentAdmissionOptions = {}
   ): AuthoritativeSourceRecord[] {
-    return this.localRetriever.findSourcesByStandardOrAct(standardOrActCode, paragraphOrSection);
+    return this.localRetriever.findSourcesByStandardOrAct(standardOrActCode, paragraphOrSection, admissionOptions)
+      .filter(record => isAnswerGroundingEligibleSource(record, this.versioningManager, admissionOptions));
   }
 
   /**
@@ -94,8 +113,14 @@ export class CompositeSourceRetriever implements ISourceRetriever {
    * Preserves Phase 3 temporal scoring and candidate-isolation invariants.
    */
   public async retrieveSources(retrievalQuery: SourceRetrievalQuery): Promise<AuthoritativeSourceRecord[]> {
+    const referenceDate = retrievalQuery.referenceDate ?? SourceFreshnessManager.DEFAULT_REFERENCE_DATE;
+    const targetDate = retrievalQuery.targetDate
+      ? retrievalQuery.targetDate
+      : defaultTargetDateResolver.resolveTargetDate(retrievalQuery.query, referenceDate).targetDate;
+    const normalizedQuery: SourceRetrievalQuery = { ...retrievalQuery, targetDate, referenceDate };
+
     // 1. If live check requested, trigger proactive update discovery (non-blocking, non-throwing)
-    if (retrievalQuery.enableLiveCheck) {
+    if (normalizedQuery.enableLiveCheck) {
       try {
         await this.feedService.checkForUpdates(this.webRetriever);
       } catch {
@@ -104,17 +129,21 @@ export class CompositeSourceRetriever implements ISourceRetriever {
     }
 
     // 2. Retrieve from local active registry (contains all approved static and activated live-patch sources)
-    const records = await this.localRetriever.retrieveSources(retrievalQuery);
+    const records = await this.localRetriever.retrieveSources(normalizedQuery);
 
     // 3. Safeguard: Ensure no unapproved candidate records or superseded versions are returned
     const approvedRecords = records.filter((r) => {
       // If record has versionId, check that it is activated in the versioning manager ledger
+      const documentAdmission = verifySharedDocumentAdmission(r, this.versioningManager, {
+        targetDate: normalizedQuery.targetDate,
+        referenceDate: normalizedQuery.referenceDate,
+        expectedAuthority: normalizedQuery.authorities?.length === 1 ? normalizedQuery.authorities[0] : undefined,
+        expectedDomain: normalizedQuery.domain
+      });
+      if (!documentAdmission.admitted) return false;
       if (r.versionId) {
         const activeVersionId = this.versioningManager.getActiveVersionId(r.id);
-        if (activeVersionId && activeVersionId !== r.versionId) {
-          // Record has been superseded by a newer activated version
-          return false;
-        }
+        if (activeVersionId && activeVersionId !== r.versionId) return false;
       }
       return r.sourceStatus === 'VERIFIED' || r.sourceStatus === 'HISTORICAL' || r.sourceStatus === 'NEEDS_REVIEW';
     });

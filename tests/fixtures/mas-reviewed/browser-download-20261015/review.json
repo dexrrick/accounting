@@ -1,0 +1,50 @@
+{
+  "reviewedOn": "2026-10-15",
+  "reviewer": "Targeted genuine-byte replay; not production statutory approval",
+  "sourceDocument": "IID 04/2025 Governance and Management of Variable Capital Companies (VCCs)",
+  "discoveryUrl": "https://www.mas.gov.sg/regulation/circulars/iid-04-2025-governance-and-management-of-variable-capital-companies",
+  "documentUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/circulars/cmi/iid-04-2025-governance-and-management-of-vcc/iid-04-2025-governance-and-management-of-variable-capital-companies-vccs.pdf",
+  "captureMethod": "Codex in-app browser documented downloadMedia call on the visible official View Document PDF link",
+  "captureFacts": {
+    "rawPdfBytes": 208660,
+    "sha256": "305c50130aa341d7f2033118a825ee90d8cc3bd7475ed52a909bb604060aea17",
+    "signature": "%PDF-1.7",
+    "downloadZoneIdentifierPreservesOfficialHostAndReferrer": true,
+    "httpStatus": null,
+    "contentType": null,
+    "finalUrl": null,
+    "transportTraceComplete": false
+  },
+  "realTransportOutcome": "BLOCKED: available browser download evidence does not contain HTTP status, response MIME, or a verified redirect/final URL. Do not invent these values from the download filename or Zone.Identifier.",
+  "structuralReplayEnvelope": "TEST_ONLY_NOT_CAPTURED_HTTP_HEADERS",
+  "structuralReplayOutcome": "The shared extractor recognizes the genuine five-page MAS circular and exact document hash, but returns PARTIAL because its current layout heuristic classifies the paragraph/table layout as AMBIGUOUS. This is an extraction-boundary limitation, not a judgment that the circular's legal content is ambiguous. The candidate remains grounding-ineligible and is not admitted.",
+  "wrongAuthorityOrDomainReplay": "REJECTED: the same genuine bytes do not produce a record under an ACRA authority mapping or a non-MAS domain mapping.",
+  "actualPositivePdfAdmission": "BLOCKED",
+  "blockedCases": [
+    {
+      "case": "Positive exact real-source PDF extraction and admission",
+      "status": "BLOCKED",
+      "reason": "The genuine document bytes are available, but the extraction remains PARTIAL and the captured transport trace lacks HTTP status, MIME headers, and verified final URL."
+    },
+    {
+      "case": "Real-source citations and quotation correctness",
+      "status": "BLOCKED",
+      "reason": "No exact source locator passed the structural gate and no version was admitted for citation binding."
+    },
+    {
+      "case": "Current and historical applicability, including unknown-history behavior in production",
+      "status": "BLOCKED",
+      "reason": "A targeted as-of replay rejects the publication date as an unsupported historical interval, but real-source applicability acceptance requires exact, admitted content. Publication date 26 June 2025 is not treated as an effective date."
+    },
+    {
+      "case": "Real-source replacement, activation, retrieval-for-answer binding, and rollback",
+      "status": "BLOCKED",
+      "reason": "The PARTIAL record creates no update package or managed version; synthetic lifecycle fixtures do not prove these real-source behaviors."
+    },
+    {
+      "case": "Production controlled transport can retrieve this official PDF",
+      "status": "BLOCKED",
+      "reason": "Direct HTTPS retrieval still returned Maintenance HTML. The browser download supplied PDF bytes without an HTTP response trace."
+    }
+  ]
+}

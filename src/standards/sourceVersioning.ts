@@ -1,4 +1,12 @@
 import type { AuthoritativeSourceRecord, SourceLocator } from './unifiedSourceModel';
+import {
+  compareMasLicensingHtml,
+  decodeMasDocumentBytes,
+  MAS_LICENSING_COMPARISON_PROFILE_VERSION,
+  MAS_LICENSING_HTML_URL,
+  MAS_LICENSING_MAX_DOCUMENT_BYTES,
+  MAS_LICENSING_RECORD_ID
+} from './masLicensingComparisonPolicy';
 
 export interface SourceVersionMetadata {
   versionId: string;
@@ -35,10 +43,217 @@ export interface SourceVersionMetadata {
   provisionHash?: string; // Canonical integrity hash: SHA-256 of extracted normalized provision
   extractionStatus?: 'EXACT' | 'PARTIAL' | 'FAILED';
   sourceLocator?: SourceLocator;
+  /** Marks byte-backed extracted records that require shared document admission. */
+  documentAdmissionRequired?: true;
+  documentAdmissionPackageId?: string;
+  documentAdmissionPackageHash?: string;
+  documentAdmissionComparisonRecordId?: string;
+  documentAdmissionComparisonProfileVersion?: string;
+  documentAdmissionComparisonHash?: string;
+  documentAdmissionComparisonContentType?: string;
+  governingAuthority?: AuthoritativeSourceRecord['authority'];
+  domain?: AuthoritativeSourceRecord['domain'];
+  reviewApproval?: SourceVersionReviewApproval;
   // Source-native legislation identity
   legislationCode?: string;
   revisionDate?: string;
   amendmentInstrument?: string;
+}
+
+export interface SourceVersionReviewApproval {
+  packageId: string;
+  packageHash: string;
+  reviewer: string;
+  reason: string;
+  approvedAt: string;
+  comparisonEvidence?: SourceDocumentComparisonEvidence;
+  comparisonEvidenceHash?: string;
+}
+
+/** Full raw-artifact receipt for a versioned source-comparison policy. */
+export interface SourceDocumentComparisonEvidence {
+  packageId: string;
+  packageHash: string;
+  recordId: string;
+  sourceUrl: string;
+  finalUrl: string;
+  contentType: string;
+  httpStatus: number;
+  profileVersion: string;
+  baselineDocumentHash: string;
+  verificationDocumentHash: string;
+  comparisonHash: string;
+  retrievedAt: string;
+  originalBodyBase64: string;
+  verificationBodyBase64: string;
+  evidenceHash: string;
+}
+
+function isValidIsoTimestamp(value: string): boolean {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value)) &&
+    new Date(value).toISOString() === value;
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, child]) => `${JSON.stringify(key)}:${stableJson(child)}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+export function computeSourceDocumentComparisonEvidenceHash(evidence: Omit<SourceDocumentComparisonEvidence, 'evidenceHash'> | SourceDocumentComparisonEvidence): string {
+  const payload = { ...evidence } as Partial<SourceDocumentComparisonEvidence>;
+  delete payload.evidenceHash;
+  return computeSha256(stableJson(payload));
+}
+
+function hasValidComparisonEvidence(
+  evidence: SourceDocumentComparisonEvidence | undefined,
+  approval: SourceVersionReviewApproval,
+  metadata: SourceVersionMetadata
+): boolean {
+  const profileVersion = metadata.documentAdmissionComparisonProfileVersion;
+  if (!profileVersion) return !evidence && !approval.comparisonEvidenceHash &&
+    !metadata.documentAdmissionComparisonRecordId && !metadata.documentAdmissionComparisonHash &&
+    !metadata.documentAdmissionComparisonContentType;
+  if (!evidence || !metadata.documentAdmissionComparisonRecordId || !metadata.documentAdmissionComparisonHash ||
+      typeof profileVersion !== 'string' || typeof metadata.documentAdmissionComparisonRecordId !== 'string' ||
+      typeof metadata.documentAdmissionComparisonHash !== 'string' || typeof metadata.documentAdmissionComparisonContentType !== 'string' ||
+      typeof approval.comparisonEvidenceHash !== 'string' ||
+      typeof evidence !== 'object' || typeof evidence.packageId !== 'string' || typeof evidence.packageHash !== 'string' ||
+      typeof evidence.recordId !== 'string' || typeof evidence.sourceUrl !== 'string' || typeof evidence.finalUrl !== 'string' ||
+      typeof evidence.contentType !== 'string' || typeof evidence.httpStatus !== 'number' ||
+      typeof evidence.profileVersion !== 'string' || typeof evidence.baselineDocumentHash !== 'string' ||
+      typeof evidence.verificationDocumentHash !== 'string' || typeof evidence.comparisonHash !== 'string' ||
+      typeof evidence.retrievedAt !== 'string' || typeof evidence.originalBodyBase64 !== 'string' ||
+      typeof evidence.verificationBodyBase64 !== 'string' || typeof evidence.evidenceHash !== 'string' ||
+      typeof metadata.documentHash !== 'string' || typeof metadata.documentAdmissionPackageId !== 'string' ||
+      typeof metadata.documentAdmissionPackageHash !== 'string' ||
+      profileVersion !== MAS_LICENSING_COMPARISON_PROFILE_VERSION || evidence.profileVersion !== profileVersion ||
+      evidence.recordId !== MAS_LICENSING_RECORD_ID || evidence.recordId !== metadata.documentAdmissionComparisonRecordId ||
+      evidence.packageId !== approval.packageId || evidence.packageHash.toLowerCase() !== approval.packageHash.toLowerCase() ||
+      approval.comparisonEvidenceHash?.toLowerCase() !== evidence.evidenceHash.toLowerCase() ||
+      evidence.sourceUrl !== MAS_LICENSING_HTML_URL || evidence.finalUrl !== MAS_LICENSING_HTML_URL ||
+      metadata.sourceUrl !== MAS_LICENSING_HTML_URL || metadata.canonicalSourceUrl !== MAS_LICENSING_HTML_URL ||
+      metadata.sourceAuthority !== 'MAS' || metadata.governingAuthority !== 'MAS' || metadata.domain !== 'MAS_FUNDS' ||
+      !/^text\/html(?:\s*;|$)/i.test(evidence.contentType) || evidence.contentType !== metadata.documentAdmissionComparisonContentType ||
+      evidence.httpStatus !== metadata.httpStatus ||
+      !Number.isInteger(evidence.httpStatus) || evidence.httpStatus < 200 || evidence.httpStatus >= 300 ||
+      evidence.baselineDocumentHash.toLowerCase() !== (metadata.documentHash || '').toLowerCase() ||
+      evidence.comparisonHash.toLowerCase() !== metadata.documentAdmissionComparisonHash.toLowerCase() ||
+      !/^[a-f\d]{64}$/i.test(evidence.packageHash) || !/^[a-f\d]{64}$/i.test(evidence.baselineDocumentHash) ||
+      !/^[a-f\d]{64}$/i.test(evidence.verificationDocumentHash) || !/^[a-f\d]{64}$/i.test(evidence.comparisonHash) ||
+      !/^[a-f\d]{64}$/i.test(evidence.evidenceHash) || !evidence.sourceUrl || !evidence.finalUrl ||
+      !evidence.contentType || !Number.isInteger(evidence.httpStatus) || evidence.httpStatus < 200 || evidence.httpStatus >= 300 ||
+      !isValidIsoTimestamp(evidence.retrievedAt) || evidence.retrievedAt !== evidence.retrievedAt.trim()) return false;
+  const baselineBytes = decodeMasDocumentBytes(evidence.originalBodyBase64);
+  const verificationBytes = decodeMasDocumentBytes(evidence.verificationBodyBase64);
+  if (!baselineBytes || !verificationBytes || baselineBytes.byteLength > MAS_LICENSING_MAX_DOCUMENT_BYTES ||
+      verificationBytes.byteLength > MAS_LICENSING_MAX_DOCUMENT_BYTES ||
+      computeSha256Bytes(baselineBytes).toLowerCase() !== evidence.baselineDocumentHash.toLowerCase() ||
+      computeSha256Bytes(verificationBytes).toLowerCase() !== evidence.verificationDocumentHash.toLowerCase()) return false;
+  const comparison = compareMasLicensingHtml(baselineBytes, verificationBytes, computeSha256Bytes);
+  if (!comparison.isValid || comparison.profileVersion !== evidence.profileVersion ||
+      comparison.baselineDocumentHash?.toLowerCase() !== evidence.baselineDocumentHash.toLowerCase() ||
+      comparison.verificationDocumentHash?.toLowerCase() !== evidence.verificationDocumentHash.toLowerCase() ||
+      comparison.comparisonHash?.toLowerCase() !== evidence.comparisonHash.toLowerCase()) return false;
+  return computeSourceDocumentComparisonEvidenceHash(evidence).toLowerCase() === evidence.evidenceHash.toLowerCase();
+}
+
+function isValidDocumentReviewApproval(metadata: SourceVersionMetadata): boolean {
+  const approval = metadata.reviewApproval;
+  return Boolean(metadata.documentAdmissionRequired === true && approval &&
+    typeof approval.packageId === 'string' && typeof approval.packageHash === 'string' &&
+    typeof metadata.documentAdmissionPackageHash === 'string' &&
+    typeof approval.reviewer === 'string' && typeof approval.reason === 'string' &&
+    typeof approval.approvedAt === 'string' &&
+    approval.packageId === metadata.documentAdmissionPackageId &&
+    typeof metadata.documentAdmissionPackageHash === 'string' &&
+    approval.packageHash.toLowerCase() === metadata.documentAdmissionPackageHash.toLowerCase() &&
+    /^[a-f\d]{64}$/i.test(approval.packageHash) && approval.reviewer.trim() && approval.reason.trim() &&
+    isValidIsoTimestamp(approval.approvedAt) && hasValidComparisonEvidence(approval.comparisonEvidence, approval, metadata));
+}
+
+function hasComparisonAdmissionFields(metadata: SourceVersionMetadata): boolean {
+  return metadata.documentAdmissionComparisonRecordId !== undefined ||
+    metadata.documentAdmissionComparisonProfileVersion !== undefined ||
+    metadata.documentAdmissionComparisonHash !== undefined ||
+    metadata.documentAdmissionComparisonContentType !== undefined;
+}
+
+interface CandidateComparisonBinding {
+  recordSnapshot: AuthoritativeSourceRecord;
+  documentAdmissionRequired: SourceVersionMetadata['documentAdmissionRequired'];
+  documentAdmissionPackageId: SourceVersionMetadata['documentAdmissionPackageId'];
+  documentAdmissionPackageHash: SourceVersionMetadata['documentAdmissionPackageHash'];
+  documentAdmissionComparisonRecordId: SourceVersionMetadata['documentAdmissionComparisonRecordId'];
+  documentAdmissionComparisonProfileVersion: SourceVersionMetadata['documentAdmissionComparisonProfileVersion'];
+  documentAdmissionComparisonHash: SourceVersionMetadata['documentAdmissionComparisonHash'];
+  documentAdmissionComparisonContentType: SourceVersionMetadata['documentAdmissionComparisonContentType'];
+  sourceUrl: SourceVersionMetadata['sourceUrl'];
+  canonicalSourceUrl: SourceVersionMetadata['canonicalSourceUrl'];
+  sourceAuthority: SourceVersionMetadata['sourceAuthority'];
+  governingAuthority: SourceVersionMetadata['governingAuthority'];
+  domain: SourceVersionMetadata['domain'];
+  documentHash: SourceVersionMetadata['documentHash'];
+  httpStatus: SourceVersionMetadata['httpStatus'];
+  provisionHash: SourceVersionMetadata['provisionHash'];
+  recordId: string;
+  recordAuthority: AuthoritativeSourceRecord['authority'];
+  recordSourceAuthority: AuthoritativeSourceRecord['sourceAuthority'];
+  recordDomain: AuthoritativeSourceRecord['domain'];
+  officialSourceUrl: AuthoritativeSourceRecord['officialSourceUrl'];
+  recordDocumentHash: AuthoritativeSourceRecord['documentHash'];
+  locatorDocumentHash: NonNullable<AuthoritativeSourceRecord['sourceLocator']>['documentHash'];
+  sourceType: NonNullable<AuthoritativeSourceRecord['sourceLocator']>['sourceType'];
+  extractionStatus: AuthoritativeSourceRecord['extractionStatus'];
+  isVerbatimText: AuthoritativeSourceRecord['isVerbatimText'];
+  recordProvisionHash: AuthoritativeSourceRecord['provisionHash'];
+}
+
+function candidateMatchesComparisonIdentity(
+  candidate: { record: AuthoritativeSourceRecord; metadata: SourceVersionMetadata },
+  binding?: CandidateComparisonBinding
+): boolean {
+  const record = candidate.record;
+  const metadata = candidate.metadata;
+  if (!binding) return !hasComparisonAdmissionFields(metadata);
+  if (stableJson(record) !== stableJson(binding.recordSnapshot)) return false;
+  if (metadata.documentAdmissionRequired !== binding.documentAdmissionRequired ||
+      metadata.documentAdmissionPackageId !== binding.documentAdmissionPackageId ||
+      metadata.documentAdmissionPackageHash !== binding.documentAdmissionPackageHash ||
+      metadata.documentAdmissionComparisonRecordId !== binding.documentAdmissionComparisonRecordId ||
+      metadata.documentAdmissionComparisonProfileVersion !== binding.documentAdmissionComparisonProfileVersion ||
+      metadata.documentAdmissionComparisonHash !== binding.documentAdmissionComparisonHash ||
+      metadata.documentAdmissionComparisonContentType !== binding.documentAdmissionComparisonContentType ||
+      metadata.sourceUrl !== binding.sourceUrl || metadata.canonicalSourceUrl !== binding.canonicalSourceUrl ||
+      metadata.sourceAuthority !== binding.sourceAuthority || metadata.governingAuthority !== binding.governingAuthority ||
+      metadata.domain !== binding.domain || metadata.documentHash !== binding.documentHash ||
+      metadata.httpStatus !== binding.httpStatus || metadata.provisionHash !== binding.provisionHash ||
+      record.id !== binding.recordId || record.authority !== binding.recordAuthority ||
+      record.sourceAuthority !== binding.recordSourceAuthority || record.domain !== binding.recordDomain ||
+      record.officialSourceUrl !== binding.officialSourceUrl || record.documentHash !== binding.recordDocumentHash ||
+      record.sourceLocator?.documentHash !== binding.locatorDocumentHash ||
+      record.sourceLocator?.sourceType !== binding.sourceType || record.extractionStatus !== binding.extractionStatus ||
+      record.isVerbatimText !== binding.isVerbatimText || record.provisionHash !== binding.recordProvisionHash) return false;
+  if (metadata.documentAdmissionRequired !== true ||
+      metadata.documentAdmissionComparisonProfileVersion !== MAS_LICENSING_COMPARISON_PROFILE_VERSION) return false;
+  return record.id === metadata.documentAdmissionComparisonRecordId &&
+    record.authority === 'MAS' && record.sourceAuthority === 'MAS' && record.domain === 'MAS_FUNDS' &&
+    record.officialSourceUrl === MAS_LICENSING_HTML_URL && metadata.sourceUrl === MAS_LICENSING_HTML_URL &&
+    metadata.canonicalSourceUrl === MAS_LICENSING_HTML_URL && metadata.sourceAuthority === 'MAS' &&
+    metadata.governingAuthority === 'MAS' && metadata.domain === 'MAS_FUNDS' &&
+    record.sourceLocator?.sourceType === 'HTML' && typeof record.documentHash === 'string' &&
+    typeof metadata.documentHash === 'string' && typeof record.sourceLocator?.documentHash === 'string' &&
+    record.documentHash.toLowerCase() === metadata.documentHash.toLowerCase() &&
+    record.sourceLocator.documentHash.toLowerCase() === metadata.documentHash.toLowerCase() &&
+    record.extractionStatus === 'EXACT' && record.isVerbatimText === true &&
+    typeof record.provisionHash === 'string' && typeof metadata.provisionHash === 'string' &&
+    record.provisionHash.toLowerCase() === metadata.provisionHash.toLowerCase() &&
+    typeof record.standardOrActCode === 'string' && typeof record.paragraphOrSection === 'string' && typeof record.sourceText === 'string' &&
+    record.provisionHash === computeProvisionHash(record.standardOrActCode, record.paragraphOrSection, record.sourceText);
 }
 
 /**
@@ -98,7 +313,7 @@ export interface RollbackResult {
  * Correctly computes 64-bit big-endian length padding and bitwise scheduling.
  * Synchronous, zero-dependency, verified against Node.js crypto.createHash across all test vectors.
  */
-function pureSha256(message: string): string {
+function pureSha256(message: string | Uint8Array): string {
   const K = [
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -110,25 +325,29 @@ function pureSha256(message: string): string {
     0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
   ];
 
-  // UTF-8 encode
-  const bytes: number[] = [];
-  for (let i = 0; i < message.length; i++) {
-    let charCode = message.charCodeAt(i);
-    if (charCode < 0x80) {
-      bytes.push(charCode);
-    } else if (charCode < 0x800) {
-      bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
-    } else if (charCode < 0xd800 || charCode >= 0xe000) {
-      bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f));
-    } else {
-      i++;
-      charCode = 0x10000 + (((charCode & 0x3ff) << 10) | (message.charCodeAt(i) & 0x3ff));
-      bytes.push(
-        0xf0 | (charCode >> 18),
-        0x80 | ((charCode >> 12) & 0x3f),
-        0x80 | ((charCode >> 6) & 0x3f),
-        0x80 | (charCode & 0x3f)
-      );
+  // Preserve the established string encoder exactly; binary source documents
+  // take the byte path so their hash is independent of any text decoding.
+  const bytes: number[] = typeof message === 'string' ? [] : Array.from(message);
+  if (typeof message === 'string') {
+    // UTF-8 encode (existing text behavior, including malformed surrogate handling).
+    for (let i = 0; i < message.length; i++) {
+      let charCode = message.charCodeAt(i);
+      if (charCode < 0x80) {
+        bytes.push(charCode);
+      } else if (charCode < 0x800) {
+        bytes.push(0xc0 | (charCode >> 6), 0x80 | (charCode & 0x3f));
+      } else if (charCode < 0xd800 || charCode >= 0xe000) {
+        bytes.push(0xe0 | (charCode >> 12), 0x80 | ((charCode >> 6) & 0x3f), 0x80 | (charCode & 0x3f));
+      } else {
+        i++;
+        charCode = 0x10000 + (((charCode & 0x3ff) << 10) | (message.charCodeAt(i) & 0x3ff));
+        bytes.push(
+          0xf0 | (charCode >> 18),
+          0x80 | ((charCode >> 12) & 0x3f),
+          0x80 | ((charCode >> 6) & 0x3f),
+          0x80 | (charCode & 0x3f)
+        );
+      }
     }
   }
 
@@ -253,6 +472,11 @@ export function computeSha256(message: string): string {
   return pureSha256(message);
 }
 
+/** Computes SHA-256 over exact source bytes without decoding or normalizing them. */
+export function computeSha256Bytes(bytes: Uint8Array): string {
+  return pureSha256(bytes);
+}
+
 /**
  * Immutable Version Ledger Entry
  */
@@ -274,6 +498,8 @@ export class SourceVersioningManager {
   private ledger: Map<string, VersionLedgerEntry> = new Map();
   // Candidate versions waiting for validation/verification: versionId -> SourceVersionMetadata
   private candidates: Map<string, { record: AuthoritativeSourceRecord; metadata: SourceVersionMetadata }> = new Map();
+  // Pins policy admission fields at registration so mutable candidate views cannot downgrade them.
+  private candidateComparisonBindings: Map<string, CandidateComparisonBinding> = new Map();
   // Active pointer: recordId -> versionId
   private activeVersionPointers: Map<string, string> = new Map();
 
@@ -301,6 +527,10 @@ export class SourceVersioningManager {
     record: AuthoritativeSourceRecord,
     metadata: SourceVersionMetadata
   ): SourceVersionMetadata {
+    if (this.candidates.has(metadata.versionId) || this.ledger.has(metadata.versionId)) {
+      throw new Error("Version ID '" + metadata.versionId + "' is already reserved by a candidate or ledger entry");
+    }
+
     const computedHash = this.computeSourceHash(record);
     const finalizedMetadata: SourceVersionMetadata = {
       ...metadata,
@@ -309,10 +539,39 @@ export class SourceVersioningManager {
       retrievedAt: metadata.retrievedAt || new Date().toISOString()
     };
 
-    this.candidates.set(metadata.versionId, {
-      record: { ...record, contentHash: computedHash, versionId: metadata.versionId, lifecycleState: 'CANDIDATE' },
-      metadata: finalizedMetadata
-    });
+    const finalizedRecord = { ...record, contentHash: computedHash, versionId: metadata.versionId, lifecycleState: 'CANDIDATE' as const };
+    this.candidates.set(metadata.versionId, { record: finalizedRecord, metadata: finalizedMetadata });
+    if (hasComparisonAdmissionFields(finalizedMetadata)) {
+      this.candidateComparisonBindings.set(metadata.versionId, {
+        recordSnapshot: structuredClone(finalizedRecord),
+        documentAdmissionRequired: finalizedMetadata.documentAdmissionRequired,
+        documentAdmissionPackageId: finalizedMetadata.documentAdmissionPackageId,
+        documentAdmissionPackageHash: finalizedMetadata.documentAdmissionPackageHash,
+        documentAdmissionComparisonRecordId: finalizedMetadata.documentAdmissionComparisonRecordId,
+        documentAdmissionComparisonProfileVersion: finalizedMetadata.documentAdmissionComparisonProfileVersion,
+        documentAdmissionComparisonHash: finalizedMetadata.documentAdmissionComparisonHash,
+        documentAdmissionComparisonContentType: finalizedMetadata.documentAdmissionComparisonContentType,
+        sourceUrl: finalizedMetadata.sourceUrl,
+        canonicalSourceUrl: finalizedMetadata.canonicalSourceUrl,
+        sourceAuthority: finalizedMetadata.sourceAuthority,
+        governingAuthority: finalizedMetadata.governingAuthority,
+        domain: finalizedMetadata.domain,
+        documentHash: finalizedMetadata.documentHash,
+        httpStatus: finalizedMetadata.httpStatus,
+        provisionHash: finalizedMetadata.provisionHash,
+        recordId: finalizedRecord.id,
+        recordAuthority: finalizedRecord.authority,
+        recordSourceAuthority: finalizedRecord.sourceAuthority,
+        recordDomain: finalizedRecord.domain,
+        officialSourceUrl: finalizedRecord.officialSourceUrl,
+        recordDocumentHash: finalizedRecord.documentHash,
+        locatorDocumentHash: finalizedRecord.sourceLocator?.documentHash,
+        sourceType: finalizedRecord.sourceLocator?.sourceType,
+        extractionStatus: finalizedRecord.extractionStatus,
+        isVerbatimText: finalizedRecord.isVerbatimText,
+        recordProvisionHash: finalizedRecord.provisionHash
+      });
+    }
 
     return finalizedMetadata;
   }
@@ -427,12 +686,32 @@ export class SourceVersioningManager {
       return { success: false, versionId, activatedRecordId: '', error: `Candidate version '${versionId}' not found` };
     }
 
+    if (this.ledger.has(versionId)) {
+      return {
+        success: false,
+        versionId,
+        activatedRecordId: candidate.record.id,
+        error: "Version '" + versionId + "' already exists in the immutable ledger"
+      };
+    }
+
     if (candidate.metadata.verificationStatus !== 'VERIFIED') {
       return {
         success: false,
         versionId,
         activatedRecordId: candidate.record.id,
         error: `Cannot activate version '${versionId}' with status '${candidate.metadata.verificationStatus}' (Must be VERIFIED)`
+      };
+    }
+
+    const comparisonBinding = this.candidateComparisonBindings.get(versionId);
+    if ((comparisonBinding || candidate.metadata.documentAdmissionRequired) &&
+        (!isValidDocumentReviewApproval(candidate.metadata) || !candidateMatchesComparisonIdentity(candidate, comparisonBinding))) {
+      return {
+        success: false,
+        versionId,
+        activatedRecordId: candidate.record.id,
+        error: `Cannot activate document version '${versionId}' without its current explicit review approval`
       };
     }
 
@@ -462,8 +741,8 @@ export class SourceVersioningManager {
     const ledgerEntry: VersionLedgerEntry = {
       versionId,
       recordId,
-      metadata: { ...candidate.metadata },
-      recordSnapshot: { ...candidate.record },
+      metadata: structuredClone(candidate.metadata),
+      recordSnapshot: structuredClone(candidate.record),
       recordedAt: new Date().toISOString(),
       isActive: true
     };
@@ -471,12 +750,32 @@ export class SourceVersioningManager {
     this.ledger.set(versionId, ledgerEntry);
     this.activeVersionPointers.set(recordId, versionId);
     this.candidates.delete(versionId);
+    this.candidateComparisonBindings.delete(versionId);
 
     return {
       success: true,
       versionId,
       activatedRecordId: recordId
     };
+  }
+
+  /** Stores the approval receipt against the verified document candidate before activation. */
+  public recordDocumentReviewApproval(versionId: string, approval: SourceVersionReviewApproval): boolean {
+    const candidate = this.candidates.get(versionId);
+    if (!approval || typeof approval.packageId !== 'string' || typeof approval.packageHash !== 'string' ||
+        typeof approval.reviewer !== 'string' || typeof approval.reason !== 'string' ||
+        typeof approval.approvedAt !== 'string' || !candidate || candidate.metadata.documentAdmissionRequired !== true ||
+        candidate.metadata.verificationStatus !== 'VERIFIED' ||
+        !candidate.metadata.documentAdmissionPackageId ||
+        candidate.metadata.documentAdmissionPackageId !== approval.packageId ||
+        candidate.metadata.documentAdmissionPackageHash?.toLowerCase() !== approval.packageHash.toLowerCase() ||
+        !candidateMatchesComparisonIdentity(candidate, this.candidateComparisonBindings.get(versionId)) ||
+        !approval.reviewer.trim() || !approval.reason.trim() || !/^[a-f\d]{64}$/i.test(approval.packageHash) ||
+        !isValidIsoTimestamp(approval.approvedAt) ||
+        !isValidDocumentReviewApproval({ ...candidate.metadata, reviewApproval: approval })) return false;
+
+    candidate.metadata.reviewApproval = structuredClone(approval);
+    return true;
   }
 
   /**
@@ -505,12 +804,24 @@ export class SourceVersioningManager {
     }
 
     const predecessorVersionId = targetEntry.metadata.supersedesVersionId;
-    if (!predecessorVersionId) {
+    if (this.activeVersionPointers.get(targetEntry.recordId) !== versionId) {
       return {
         success: false,
         rolledBackVersionId: versionId,
         restoredVersionId: '',
-        error: `Version '${versionId}' has no recorded predecessor to roll back to`
+        error: `Version '${versionId}' is not the active version for record '${targetEntry.recordId}'`
+      };
+    }
+
+    // A first activation can be rolled back by clearing its active pointer. The
+    // ledger entry remains as an immutable historical record of that activation.
+    if (!predecessorVersionId) {
+      targetEntry.isActive = false;
+      this.activeVersionPointers.delete(targetEntry.recordId);
+      return {
+        success: true,
+        rolledBackVersionId: versionId,
+        restoredVersionId: ''
       };
     }
 
@@ -542,7 +853,8 @@ export class SourceVersioningManager {
    * Retrieves an immutable snapshot of an entry from the ledger.
    */
   public getLedgerEntry(versionId: string): VersionLedgerEntry | undefined {
-    return this.ledger.get(versionId);
+    const entry = this.ledger.get(versionId);
+    return entry ? structuredClone(entry) : undefined;
   }
 
   /**
@@ -556,7 +868,7 @@ export class SourceVersioningManager {
    * Gets all entries in the ledger for audit review.
    */
   public getAllLedgerEntries(): VersionLedgerEntry[] {
-    return Array.from(this.ledger.values());
+    return Array.from(this.ledger.values(), entry => structuredClone(entry));
   }
 
   /**
@@ -582,6 +894,7 @@ export class SourceVersioningManager {
   public reset(): void {
     this.ledger.clear();
     this.candidates.clear();
+    this.candidateComparisonBindings.clear();
     this.activeVersionPointers.clear();
   }
 }

@@ -654,6 +654,8 @@ const topicSpecs: TopicSpec[] = [
   { id: 'cpf-cash-top-up-tax-relief', title: 'CPF Cash Top-ups and Related Tax Relief Routing', domainId: 'CPF_CONTRIBUTIONS', priority: 'P2', authorities: ['CPF', 'IRAS'], keywords: ['cpf cash top-up', 'cpf cash top up', 'cash top-up to cpf', 'cash top up to cpf'] },
 
   // MAS fund management, family office, reporting and AML/CFT.
+  { id: 'mas-fund-management-licensing-admission-criteria', title: 'MAS Fund Management Licensing Admission Criteria', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', status: 'MISSING', keywords: ['fund management licensing admission criteria', 'fund management licence admission criteria', 'what are admission criteria and applicable requirements', 'LFMC VCFM admission criteria'] },
+  { id: 'mas-vcc-substantive-fund-management-activity', title: 'VCC Managers and Substantive Fund Management Activity', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', status: 'MISSING', keywords: ['VCC manager substantive fund management activity', 'substantive fund management activity for VCC managers', 'VCC manager substantive role in investment and risk management'] },
   { id: 'mas-cms-licence', title: 'Capital Markets Services Licence', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', keywords: ['cms licence', 'capital markets services licence', 'capital markets services license'] },
   { id: 'mas-lfmc', title: 'Licensed Fund Management Company', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P1', keywords: ['lfmc', 'licensed fund management company', 'fund management licence'] },
   { id: 'mas-vcfm', title: 'Venture Capital Fund Manager', domainId: 'MAS_FUND_MANAGEMENT', priority: 'P2', keywords: ['vcfm', 'venture capital fund manager', 'venture capital fund management'] },

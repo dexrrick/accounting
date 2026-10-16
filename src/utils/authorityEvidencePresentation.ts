@@ -2,7 +2,7 @@ import type { AuthorityWorkstreamResult, AuthorityWorkstreamsResult, AuthorityOv
 import type { AuthorityEvidenceStatus, AuthorityApplicationStatus } from '../types/authorityEvidence';
 import type { SemanticAuthority } from '../services/semanticQuestionUnderstanding';
 import type { VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
-import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import type { AuthoritativeSourceRecord, VerifiedDocumentBinding } from '../standards/unifiedSourceModel';
 import {
   isCurrentRequestCompletenessContext,
   type RequestCompletenessContext
@@ -12,6 +12,7 @@ import { getSafeOfficialUrl } from './statutoryLinkResolver';
 export interface AuthorityPresentedClaim {
   text: string;
   supportKind: VerifiedEvidenceClaim['supportKind'];
+  sourceBinding?: VerifiedDocumentBinding;
   issueIds: string[];
   provenance: AuthoritativeSourceRecord['provenance'];
   validFrom?: string;
@@ -221,12 +222,14 @@ function buildWorkstream(stream: AuthorityWorkstreamResult): AuthorityPresentedW
       // Display the verifier's whole admitted source span for exact quotes.
       // Editorial summaries are explicitly labeled and never presented as quotations.
       const text = verifiedClaim.supportKind === 'EXACT_SOURCE_QUOTE' ? verifiedClaim.quote : verifiedClaim.text;
-      const identity = `${key}\n${verifiedClaim.supportKind}\n${text}`;
+      const bindingIdentity = verifiedClaim.sourceBinding ? JSON.stringify(verifiedClaim.sourceBinding) : '';
+      const identity = `${key}\n${verifiedClaim.supportKind}\n${text}\n${bindingIdentity}`;
       let presented = issueClaims.get(identity);
       if (!presented) {
         presented = {
           text,
           supportKind: verifiedClaim.supportKind,
+          ...(verifiedClaim.sourceBinding ? { sourceBinding: structuredClone(verifiedClaim.sourceBinding) } : {}),
           issueIds: [],
           provenance: source.provenance,
           ...(source.validFrom ? { validFrom: source.validFrom } : {}),
@@ -236,14 +239,17 @@ function buildWorkstream(stream: AuthorityWorkstreamResult): AuthorityPresentedW
       }
       if (!presented.issueIds.includes(issue.issueId)) presented.issueIds.push(issue.issueId);
       if (!claims.some(candidate => candidate.text === text && candidate.supportKind === verifiedClaim.supportKind &&
-        candidate.provenance === source.provenance && candidate.validFrom === source.validFrom && candidate.validTo === source.validTo)) claims.push(presented);
-      const sourceClaim = sourceGroup.claims.find(candidate => candidate.text === text && candidate.supportKind === verifiedClaim.supportKind);
+        candidate.provenance === source.provenance && candidate.validFrom === source.validFrom && candidate.validTo === source.validTo &&
+        JSON.stringify(candidate.sourceBinding || null) === JSON.stringify(verifiedClaim.sourceBinding || null))) claims.push(presented);
+      const sourceClaim = sourceGroup.claims.find(candidate => candidate.text === text && candidate.supportKind === verifiedClaim.supportKind &&
+        JSON.stringify(candidate.sourceBinding || null) === JSON.stringify(verifiedClaim.sourceBinding || null));
       if (sourceClaim) {
         if (!sourceClaim.issueIds.includes(issue.issueId)) sourceClaim.issueIds.push(issue.issueId);
       } else {
         sourceGroup.claims.push({
           text,
           supportKind: verifiedClaim.supportKind,
+          ...(verifiedClaim.sourceBinding ? { sourceBinding: structuredClone(verifiedClaim.sourceBinding) } : {}),
           issueIds: [issue.issueId],
           provenance: source.provenance,
           ...(source.validFrom ? { validFrom: source.validFrom } : {}),
