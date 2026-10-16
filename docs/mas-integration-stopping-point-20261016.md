@@ -1,5 +1,33 @@
 # MAS integration stopping point — 16 October 2026
 
+## Latest restart checkpoint
+
+The user requested another stopping point to restart ChatGPT. Stop work here; no automatic continuation or future wakeup was scheduled. The older observations below are historical.
+
+- Worktree: `C:/Users/Admin/.codex/worktrees/mas-stack-integration/Accounting`.
+- Branch: `codex/mas-stack-integration`; source/documentation tip `055c7efa178524afe2d2ea3692a4a2539267996e` is pushed to draft PR #21: https://github.com/dexrrick/accounting/pull/21 . This latest restart-note commit is local only.
+- Main remains `75680018b91c707f7ac900963bebb63d7317ca69`; a fresh fetch confirmed it is an ancestor of the integration branch.
+- PR #19 is unchanged and draft at `4c9d91696ffb7df73650becd15975c03cd84fc63`; PR #20 is unchanged and draft at `8cea28165c036cc7f06fbc197413580c449fb0a4`.
+- All four integration findings are now independently cleared, including the final version-ID alias/ledger-overwrite fix. The read-only reviewer reproduced pending, active and rolled-back alias cases, found no material issues and changed no files.
+- Final current-code local checks passed on Node 22.23.1: all 112 smoke suites; adjacent Phase 4 retrieval (56 checks) and shared-document admission regressions; lint and TypeScript/Vite/Cloudflare worker build. Existing warnings remain. Offline runs used the existing fetch guard.
+- Latest full CI for pushed `055c7ef`: run `38843838213`, job `116789722687`, https://github.com/dexrrick/accounting/actions/runs/38843838213 . Last observed: lint and build succeeded; complete regression suite was running. Its final result has NOT been confirmed. Do not substitute the earlier initial-merge success.
+- Cloudflare verification was interrupted by app authentication trouble. The first read requested authentication; retry returned `UNAUTHORIZED` / requires reauthentication. No Cloudflare write was attempted. Fresh production deployment/traffic and preview-build status remain unverified on this continuation. Reconnect the Cloudflare app before retrying those read-only checks; restarting ChatGPT alone may not reconnect it.
+- No merge to main, manual production deployment/activation, source approval, monitor registration, authority expansion or schedule was performed.
+- PR #21's description still needs updating: it records the old missing-provider condition and pending review. Current provider/browser facts are below and in the new integration section of `docs/statutory_authority_parity.md`.
+
+Resume steps:
+
+1. Read this latest section, confirm a clean worktree and current refs. Do not redo the cleared source/PDF/transport reviews or passing local checks unless relevant code changes or a new failure warrants it.
+2. Inspect CI run `38843838213` for `055c7ef`; if failed, inspect only the failed job/step and delegate a focused fix. If passed, record its complete-suite result and link in PR #21. This is the remaining broad validation gate.
+3. After reconnecting Cloudflare, read the latest accounting production deployment and the non-production integration build. Prior production baseline: deployment `a5987ee3-1142-4319-b1dc-a8eba0193b6e`, version `865f7a5a-35b8-4438-a7a9-af74aff5df84` at 100%. Account `0c07eba7cff6c7a8e3c9356cf0fcc503`, worker `accounting`, build tag `80a4da2ff88d4272970259201875427c`. Do not deploy or move production traffic.
+4. Update PR #21 with the four cleared fixes, final 112-suite smoke/lint/build and confirmed current-head CI result; keep it draft pending remaining release gates. No source change is currently required.
+5. Keep the browser acceptance limitation explicit. The user already configured Gemini directly in the PR #20 preview and its UI showed Connected. The question returned a response but retained Evidence Incomplete — Review Required; approved-document citation/version binding was not demonstrated. Missing credentials are no longer the blocker; never read or copy credentials.
+6. A bounded code trace confirmed the default feed service does not register the MAS document adapter, and `Header.tsx` exposes stage/verify/activate but no explicit MAS approval action. This is the concrete next browser-integration gap; do not bypass approval or enable production monitoring to manufacture acceptance. Broader ACRA/CPF/MOM work and scheduling stay deferred.
+
+Latest local logs: `D:/Accounting/.tmp/mas-transport-investigation/resume-{adjacent,lint,build,smoke}.log`. Runtime, offline guard and prior checkpoint details remain below. The browser tab may need to be reacquired after restart; no fresh browser test is needed merely to repeat the known conditional result.
+
+## Original stopping-point observations
+
 Status: historical checkpoint, saved at the user's request in `de5455e` and resumed on 16 October 2026. See the “Combined integration review and browser boundary” continuation in `statutory_authority_parity.md` and PR #21 for current validation and release gates. The observations below describe the original stopping point.
 
 ## Workspaces and branches
