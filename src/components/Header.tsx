@@ -61,7 +61,11 @@ export const Header: React.FC<HeaderProps> = ({
   const [azureKey, setAzureKey] = useState(providerSettings.azure.apiKey);
   const [azureVersion, setAzureVersion] = useState(providerSettings.azure.apiVersion);
 
-  const [geminiKey, setGeminiKey] = useState(providerSettings.gemini.apiKey);
+  const [geminiKey, setGeminiKey] = useState(providerSettings.gemini.apiKey.startsWith('proxy:') ? '' : providerSettings.gemini.apiKey);
+  const [geminiHosted, setGeminiHosted] = useState(providerSettings.gemini.apiKey.startsWith('proxy:'));
+  const [geminiProxyToken, setGeminiProxyToken] = useState(
+    providerSettings.gemini.apiKey.startsWith('proxy:') ? providerSettings.gemini.apiKey.slice('proxy:'.length) : ''
+  );
   const [geminiModel, setGeminiModel] = useState(providerSettings.gemini.model);
 
   const [openaiKey, setOpenaiKey] = useState(providerSettings.openai.apiKey);
@@ -247,7 +251,9 @@ export const Header: React.FC<HeaderProps> = ({
     setAzureKey(providerSettings.azure.apiKey);
     setAzureVersion(providerSettings.azure.apiVersion);
 
-    setGeminiKey(providerSettings.gemini.apiKey);
+    setGeminiKey(providerSettings.gemini.apiKey.startsWith('proxy:') ? '' : providerSettings.gemini.apiKey);
+    setGeminiHosted(providerSettings.gemini.apiKey.startsWith('proxy:'));
+    setGeminiProxyToken(providerSettings.gemini.apiKey.startsWith('proxy:') ? providerSettings.gemini.apiKey.slice('proxy:'.length) : '');
     setGeminiModel(providerSettings.gemini.model);
 
     setOpenaiKey(providerSettings.openai.apiKey);
@@ -266,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
         apiVersion: azureVersion.trim() || '2024-08-01-preview'
       },
       gemini: {
-        apiKey: geminiKey.trim(),
+        apiKey: geminiHosted ? (geminiProxyToken.trim() ? `proxy:${geminiProxyToken.trim()}` : '') : geminiKey.trim(),
         model: geminiModel
       },
       openai: {
@@ -297,7 +303,7 @@ export const Header: React.FC<HeaderProps> = ({
     if (active === 'gemini') {
       const hasKey = !!providerSettings.gemini.apiKey;
       return {
-        label: providerSettings.gemini.model.replace('gemini-', 'Gemini '),
+        label: providerSettings.gemini.model.replace('gemini-', 'Gemini ') + (providerSettings.gemini.apiKey.startsWith('proxy:') ? ' (Hosted)' : ''),
         connected: hasKey,
         icon: <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
       };
@@ -654,6 +660,28 @@ export const Header: React.FC<HeaderProps> = ({
               {/* GOOGLE GEMINI TAB */}
               {activeTab === 'gemini' && (
                 <div className="space-y-3.5 animate-in fade-in duration-150">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-workspace-secondary">
+                    <input type="checkbox" checked={geminiHosted} onChange={(e) => setGeminiHosted(e.target.checked)} />
+                    Use hosted Gemini (Cloudflare secret)
+                  </label>
+                  {geminiHosted ? (
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-workspace-secondary mb-1">
+                        Hosted Gemini access token
+                      </label>
+                      <input
+                        type="password"
+                        value={geminiProxyToken}
+                        onChange={(e) => setGeminiProxyToken(e.target.value)}
+                        placeholder="Enter your separately configured proxy access token"
+                        autoComplete="off"
+                        className="w-full px-3 py-2 text-xs bg-workspace-raised dark:bg-workspace-input border border-slate-300 dark:border-workspace-border rounded-lg text-slate-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-workspace-accent"
+                      />
+                      <p className="text-[11px] text-workspace-muted dark:text-workspace-muted mt-1">
+                        Enter the separate GEMINI_PROXY_TOKEN configured as a Cloudflare Worker secret. The Google API key stays on the server. This access token is saved in this browser; use only on trusted devices.
+                      </p>
+                    </div>
+                  ) : (
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-workspace-secondary mb-1">
                       Google Gemini API Key
@@ -669,6 +697,7 @@ export const Header: React.FC<HeaderProps> = ({
                       Obtain from Google AI Studio. Stored in browser <code className="font-mono">localStorage</code>; same-origin scripts can access it, so do not use production master keys on shared workstations.
                     </p>
                   </div>
+                  )}
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-workspace-secondary mb-1 flex items-center gap-1.5">
