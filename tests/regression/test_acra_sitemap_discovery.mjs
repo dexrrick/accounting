@@ -1,17 +1,39 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { gunzipSync } from 'node:zlib';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import { OfficialSitemapDiscoveryAdapter, OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officialSitemapDiscovery.ts';
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
-import { resolveMappedOfficialSourceFallback } from '../../src/services/groundingContextBuilder.ts';
+import { resolveMappedOfficialSourceFallback, selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
+import {
+  getAcraAnnualReturnDeadlineTablePassage,
+  supportsAcraAnnualReturnDeadlineEvidence,
+  supportsAcraAnnualReturnDeadlineTable
+} from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 
 // Captured article text/markup, omitting presentation attributes while retaining
 // semantic roles and aria labels. SHA256 identifies each full original capture.
 const pages = JSON.parse(await readFile(new URL('../fixtures/acra-company-guidance-2026-10-10.json', import.meta.url), 'utf8'));
+const deadlineCaptureProvenance = JSON.parse(await readFile(
+  new URL('../fixtures/acra-annual-return-deadline-2026-10-17.provenance.json', import.meta.url), 'utf8'
+));
+const deadlineCaptureBytes = gunzipSync(await readFile(
+  new URL('../fixtures/acra-annual-return-deadline-2026-10-17.html.gz', import.meta.url)
+));
+assert.equal(deadlineCaptureBytes.length, deadlineCaptureProvenance.upstreamBytes,
+  'The test-only retained evidence matches its captured upstream byte length.');
+assert.equal(createHash('sha256').update(deadlineCaptureBytes).digest('hex'), deadlineCaptureProvenance.upstreamSha256,
+  'The test-only retained evidence matches its captured upstream SHA-256.');
+assert.equal(deadlineCaptureProvenance.kind, 'SAVED_OFFICIAL_SOURCE_TRANSPORT_CAPTURE');
+assert.equal(deadlineCaptureProvenance.httpStatus, 200);
+assert.equal(deadlineCaptureProvenance.contentType, 'text/html');
+assert.equal(deadlineCaptureProvenance.officialUrl,
+  'https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/');
+const capturedDeadlineHtml = deadlineCaptureBytes.toString('utf8');
 const bannerExpectation = { standardIdentifiers: ['Accounting and Corporate Regulatory Authority'],
   expectedTitles: ['annual returns'], topicTerms: ['annual return'] };
 assert.equal(defaultExternalSourceValidator.validateTopicContent(pages.find(page => page.name === 'annual').html, bannerExpectation).isValid, true,
@@ -183,13 +205,19 @@ const discoveryByUrl = new Map([
   [reminderPageUrl, { html: remindersHtml, title: reminderPageTitle }],
   [annualReturnsPage.url, { html: annualReturnsPage.html, title: 'Deadline & requirements for annual returns | Accounting and Corporate Regulatory Authority' }]
 ]);
+assert.equal(annualReturnsPage.url, deadlineCaptureProvenance.officialUrl,
+  'The retained official capture is replayed only for its recorded canonical ACRA page.');
+const capturedDeadlineTitle = /<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(capturedDeadlineHtml)?.[1]
+  .replace(/&amp;/gi, '&').trim();
+assert.ok(capturedDeadlineTitle, 'The retained official capture includes its page title.');
+discoveryByUrl.set(deadlineCaptureProvenance.officialUrl, { html: capturedDeadlineHtml, title: capturedDeadlineTitle });
 const queryForDeadline = 'Under current ACRA rules, how many months after financial year end must a non-listed Singapore company without an overseas branch register file its annual return? Cite the official rule.';
-async function runDiscoveredPages(candidateUrls) {
-  return run('annual', 'acra_annual-returns', queryForDeadline, 'sitemap', { options: {
+async function runDiscoveredPages(candidateUrls, query = queryForDeadline, pagesByUrl = discoveryByUrl) {
+  return run('annual', 'acra_annual-returns', query, 'sitemap', { options: {
     discoveryAdapter: { async discoverOfficialSourceCandidates() { return candidateUrls; } },
     officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; } },
     webRetriever: { async fetchOfficialSource(url) {
-      const page = discoveryByUrl.get(url);
+      const page = pagesByUrl.get(url);
       if (!page) return { status: 'NOT_FOUND', finalUrl: url };
       return { status: 'SUCCESS', content: page.html, finalUrl: url, topicMatched: true,
         titleMatched: true, contentMatched: true, pageTitle: page.title,
@@ -212,9 +240,10 @@ const deadlineIssue = { id: 'acra-filing-deadline', subject: 'annual return fili
   population: 'COMPANY', domain: 'ACRA_CORPORATE', governingAuthorities: ['ACRA'], contextualAuthorities: [],
   operation: 'EXPLAIN_RULE', mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE',
   confidence: 0.98, status: 'MAPPED' };
-async function assessDiscoveredPages(result) {
-  const governedResult = await buildAuthorityWorkstreams(queryForDeadline, {
-    source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false, issues: [deadlineIssue]
+async function assessDiscoveredPages(result, query = queryForDeadline, issue = deadlineIssue) {
+  const issues = Array.isArray(issue) ? issue : [issue];
+  const governedResult = await buildAuthorityWorkstreams(query, {
+    source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false, issues
   }, {
     referenceDate: '2026-10-17', providers: { ACRA: { authority: 'ACRA', retrieve: async () => ({
       candidates: result.records,
@@ -222,15 +251,129 @@ async function assessDiscoveredPages(result) {
       evidenceQualityTrace: result.trace
     }) } }
   });
-  return governedResult.workstreams.flatMap(stream => stream.issues)[0];
+  return governedResult.workstreams.flatMap(stream => stream.issues);
 }
-const admittedDeadline = await assessDiscoveredPages(reminderThenDeadline);
+const [admittedDeadline] = await assessDiscoveredPages(reminderThenDeadline);
 assert.equal(admittedDeadline.evidenceStatus, 'VERIFIED');
 assert.equal(admittedDeadline.lifecycle.admitted, true);
 assert.equal(admittedDeadline.sources[0].officialSourceUrl, annualReturnsPage.url);
+assert.equal(admittedDeadline.verifiedClaims.length, 1,
+  'A deadline-specific issue retains only its complete deadline-table quote.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(admittedDeadline.verifiedClaims[0].quote), true);
+assert.equal(supportsAcraAnnualReturnDeadlineEvidence(admittedDeadline.sources[0].sourceText), true,
+  'The complete table and operative annual-return duty remain in the same admitted source.');
+const [dueDateSubjectDeadline] = await assessDiscoveredPages(reminderThenDeadline, queryForDeadline, {
+  ...deadlineIssue, id: 'acra-annual-return-due-date', subject: 'annual return due date'
+});
+assert.equal(dueDateSubjectDeadline.evidenceStatus, 'VERIFIED');
+assert.equal(dueDateSubjectDeadline.verifiedClaims.length, 1,
+  'A scoped complete table quote remains verifiable when the issue uses a due-date subject label.');
+const caseSpecificDeadlineCalculation = await assessDiscoveredPages(reminderThenDeadline,
+  'Calculate when my annual return is due using FYE ending 31 March 2025.', {
+    ...deadlineIssue, id: 'acra-case-specific-deadline-calculation', operation: 'CALCULATE',
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS'
+  });
+assert.equal(caseSpecificDeadlineCalculation[0].applicationStatus, 'UNRESOLVED',
+  'A company-specific calendar calculation remains unresolved even when the official deadline rule is verified.');
+const capturedTablePassage = getAcraAnnualReturnDeadlineTablePassage(admittedDeadline.sources[0].sourceText);
+assert.ok(capturedTablePassage, 'The exact official capture preserves the table as one quote block.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(
+  capturedTablePassage.replace(/^Listed companies \|/m, 'Other companies |')
+), false, 'A table missing a required company category cannot support the deadline relation.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(
+  capturedTablePassage.replace(/^Non-listed companies \|/m, 'Listed companies |')
+), false, 'A deadline moved to the wrong company-category row leaves the table incomplete.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(capturedTablePassage.split('\n')[1].split('|')[1].trim()), false,
+  'An isolated deadline cell cannot support a company-category relation.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(
+  capturedTablePassage.replace('Within five months', 'Within several months')
+), false, 'A vague quantifier is not a numerically expressed month count.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(
+  capturedTablePassage.replace('Within five months', 'Within banana months')
+), false, 'Arbitrary words cannot stand in for a numeric deadline.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(
+  capturedTablePassage.replace('Company type | Filing deadline', 'Company type | Filing requirements')
+), false, 'An unrelated table header cannot satisfy deadline evidence.');
+assert.equal(supportsAcraAnnualReturnDeadlineTable(`${capturedTablePassage}\n\n${capturedTablePassage}`), true,
+  'Harmless identical repeated source text preserves the same complete table relation.');
+const strictDeadlineExpectation = {
+  ...bannerExpectation,
+  preferMainContent: true,
+  requireSubstantiveBody: true,
+  requireAcraAnnualReturnDeadlineTable: true
+};
+assert.equal(defaultExternalSourceValidator.validateTopicContent(capturedDeadlineHtml, strictDeadlineExpectation).isValid, true,
+  'The exact saved ACRA deadline page passes opt-in simple-table preservation.');
+const deadlineTableMarkup = [...capturedDeadlineHtml.matchAll(/<table\b[^>]*>[\s\S]*?<\/table\s*>/gi)]
+  .map(match => match[0]).find(table => {
+    const header = /<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/i.exec(table)?.[1] || '';
+    const cells = [...header.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th\s*>/gi)]
+      .map(cell => cell[1].replace(/<[^>]+>/g, ' ').toLowerCase().replace(/\s+/g, ' ').trim());
+    return cells.length === 2 && cells[0] === 'company type' && cells[1] === 'filing deadline';
+  });
+assert.ok(deadlineTableMarkup, 'The exact source table can be selected by its two header cells.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  capturedDeadlineHtml.replace(deadlineTableMarkup, `${deadlineTableMarkup}${deadlineTableMarkup}`), strictDeadlineExpectation
+).isValid, true, 'An identical repeated source table does not create conflicting deadline evidence.');
+const invalidDeadlineTables = [
+  ['stray closing row tag', deadlineTableMarkup.replace('</tbody>', '</tr></tbody>')],
+  ['mismatched table section close', deadlineTableMarkup.replace('</tbody>', '</thead>')],
+  ['duplicate row-span attributes', deadlineTableMarkup.replace(/<td\b([^>]*)>/i, '<td$1 rowspan="2">')],
+  ['nested table', deadlineTableMarkup.replace(/<td\b([^>]*)>/i, '<td$1><table><tr><td>Nested</td></tr></table>')],
+  ['caption qualification lost by cleanup', deadlineTableMarkup.replace(/<table\b([^>]*)>/i,
+    '<table$1><caption>Applicable only to financial years ending before 1 January 2020.</caption>')],
+  ['nonnumeric deadline', deadlineTableMarkup.replace('Within <b>five months</b>', 'Within <b>several months</b>')],
+  ['conflicting repeated table', `${deadlineTableMarkup}${deadlineTableMarkup.replace('Within <b>five months</b>', 'Within <b>thirty months</b>')}`]
+];
+for (const [description, invalidTable] of invalidDeadlineTables) {
+  const mutatedHtml = capturedDeadlineHtml.replace(deadlineTableMarkup, invalidTable);
+  assert.equal(defaultExternalSourceValidator.validateTopicContent(mutatedHtml, strictDeadlineExpectation).isValid, false,
+    `${description} is rejected by the bounded ACRA deadline-table path.`);
+}
+const longPage = `${'Unrelated company services and organisation information. '.repeat(150)}\n\n` +
+  `All Singapore companies must file annual returns with ACRA each year.\n\n${capturedTablePassage}`;
+const longExcerpt = selectRelevantFetchedText(longPage, ['annual return', 'filing deadline'], 1_000,
+  queryForDeadline, [capturedTablePassage]);
+assert.equal(getAcraAnnualReturnDeadlineTablePassage(longExcerpt), capturedTablePassage,
+  'Long-page relevance selection retains the entire qualified table atomically.');
+const genericAnnualRuleQuery = 'What annual return filing duty applies to Singapore companies?';
+const dutyOnlyHtml = `<html><head><title>${capturedDeadlineTitle}</title></head><body><main>
+  <p>All Singapore companies must file annual returns with ACRA each year.</p>
+  <p>Companies may face penalties for late annual returns.</p>
+</main></body></html>`;
+const dutyOnlyMap = new Map(discoveryByUrl);
+dutyOnlyMap.set(annualReturnsPage.url, { html: dutyOnlyHtml, title: capturedDeadlineTitle });
+const deadlineDutyOnlyDiscovery = await runDiscoveredPages([annualReturnsPage.url], queryForDeadline, dutyOnlyMap);
+assert.equal(deadlineDutyOnlyDiscovery.records.length, 0,
+  'A filing-duty-only page cannot stop discovery for an annual-return deadline question.');
+const generalDutyOnlyDiscovery = await runDiscoveredPages([annualReturnsPage.url], genericAnnualRuleQuery, dutyOnlyMap);
+assert.equal(generalDutyOnlyDiscovery.records.length, 1,
+  'A filing-duty-only page remains discoverable for a general annual-return rule question.');
+const dutyOnlyForDeadline = await assessDiscoveredPages(generalDutyOnlyDiscovery, queryForDeadline);
+assert.equal(dutyOnlyForDeadline[0].evidenceStatus, 'INSUFFICIENT',
+  'A duty-only candidate fetched for a general query cannot be admitted to a deadline query.');
+assert.equal(dutyOnlyForDeadline[0].sources.length, 0);
+const competingAcraDeadlineIssues = [deadlineIssue, {
+  ...deadlineIssue, id: 'acra-deadline-secondary', subject: 'annual return deadline and company filing deadline'
+}];
+const dutyOnlyForCompetingDeadlines = await assessDiscoveredPages(
+  generalDutyOnlyDiscovery, queryForDeadline, competingAcraDeadlineIssues
+);
+assert.equal(dutyOnlyForCompetingDeadlines.length, 2);
+assert.ok(dutyOnlyForCompetingDeadlines.every(item => item.evidenceStatus === 'INSUFFICIENT' &&
+  item.sources.length === 0 && item.verifiedClaims.length === 0),
+'Competing ACRA company issues still require deadline table evidence even when unique concept ownership is unavailable.');
+const unknownPopulationDeadline = await assessDiscoveredPages(generalDutyOnlyDiscovery, queryForDeadline, {
+  ...deadlineIssue, id: 'acra-deadline-unknown-population', population: 'UNKNOWN'
+});
+assert.equal(unknownPopulationDeadline[0].evidenceStatus, 'INSUFFICIENT',
+  'An unknown-population issue mapped to the annual-return topic still requires deadline evidence.');
+const dutyOnlyForGeneralRule = await assessDiscoveredPages(generalDutyOnlyDiscovery, genericAnnualRuleQuery);
+assert.equal(dutyOnlyForGeneralRule[0].evidenceStatus, 'VERIFIED',
+  'The same duty-only evidence still supports the general annual-return rule.');
 const insufficientReminders = await assessDiscoveredPages(allReminders);
-assert.equal(insufficientReminders.evidenceStatus, 'INSUFFICIENT');
-assert.equal(insufficientReminders.sources.length, 0);
+assert.equal(insufficientReminders[0].evidenceStatus, 'INSUFFICIENT');
+assert.equal(insufficientReminders[0].sources.length, 0);
 const cardsOnly = await run(...cases[0], 'sitemap', { html: `<html><head><title>Deadline &amp; requirements for annual returns | Accounting and Corporate Regulatory Authority</title></head><body><main><p>This guide helps readers find official company resources and understand the available services for businesses and their officers.</p><a href="${pages.find(page => page.name === 'annual').url}"><div><h3>Annual returns</h3><p>Companies must file annual returns each year.</p></div></a></main></body></html>` });
 assert.equal(cardsOnly.records.length, 0, 'Related-page cards cannot substitute for fetched article rule text.');
 for (const breadcrumb of [

@@ -1,4 +1,5 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import { supportsAcraAnnualReturnDeadlineTable } from './acraAnnualReturnFilingRule';
 import { cleanHtmlText } from './sourceAdapters';
 
 /**
@@ -66,6 +67,8 @@ export interface TopicContentExpectation {
   allowIrasTopicTokenEquivalence?: boolean;
   /** Requires topic evidence in substantive paragraphs, list items, or table cells, excluding page metadata. */
   requireSubstantiveBody?: boolean;
+  /** Preserves and requires one complete, qualified ACRA annual-return deadline table. */
+  requireAcraAnnualReturnDeadlineTable?: boolean;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -173,6 +176,115 @@ function removeCorporateNavigationMarkup(document: string): string {
 }
 
 const RULE_METADATA_CONTAINER_MARKER = /\b(?:cards?|tiles?|teasers?|quick[-_ ]?links?|related[-_ ]?(?:content|links?)|popular[-_ ]?(?:content|links?)|featured[-_ ]?(?:content|links?)|link[-_ ]?list|page[-_ ]?index)\b/i;
+
+function simpleTableCellText(cellHtml: string): string {
+  return cleanHtmlText(cellHtml
+    .replace(/<li\b[^>]*>/gi, ' ')
+    .replace(/<\/li\s*>/gi, '; ')
+    .replace(/<\/?(?:ul|ol)\b[^>]*>/gi, ' '))
+    .replace(/\s*;\s*/g, '; ')
+    .replace(/\s+/g, ' ')
+    .replace(/;$/, '')
+    .trim();
+}
+
+function tableSpanAttributesAreSimple(attributes: string): boolean {
+  for (const name of ['colspan', 'rowspan']) {
+    const attributePattern = new RegExp(`(?:^|\\s)${name}(?=\\s|=|$)`, 'gi');
+    const matches = [...attributes.matchAll(attributePattern)];
+    if (matches.length === 0) continue;
+    if (matches.length !== 1) return false;
+    const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'));
+    if (!match || (match[1] ?? match[2] ?? match[3]) !== '1') return false;
+  }
+  return true;
+}
+
+function simpleTableMarkupIsBalanced(rawTable: string): boolean {
+  const allowedTags = new Set([
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'p', 'ul', 'ol', 'li',
+    'b', 'strong', 'i', 'em', 'u', 'sub', 'sup', 'a', 'span', 'br'
+  ]);
+  const stack: string[] = [];
+  for (const match of rawTable.matchAll(/<\/?([a-z][\w:-]*)\b([^>]*)>/gi)) {
+    const token = match[0];
+    const closing = token.startsWith('</');
+    const tagName = match[1].toLowerCase();
+    if (!allowedTags.has(tagName) || !tableSpanAttributesAreSimple(match[2])) return false;
+    if (tagName === 'br') {
+      if (closing) return false;
+      continue;
+    }
+    if (closing) {
+      if (stack.pop() !== tagName) return false;
+    } else if (!/\/\s*>$/.test(token)) {
+      stack.push(tagName);
+    }
+  }
+  return stack.length === 0;
+}
+
+function parseSimpleAcraDeadlineTable(rawTable: string): string | undefined {
+  const tableOpen = /^<table\b([^>]*)>/i.exec(rawTable);
+  const tableClose = /<\/table\s*>$/i.exec(rawTable);
+  if (!tableOpen || !tableClose || !simpleTableMarkupIsBalanced(rawTable)) return undefined;
+  const inner = rawTable.slice(tableOpen[0].length, tableClose.index);
+  if (/<table\b/i.test(inner)) return undefined;
+
+  const rows = [...inner.matchAll(/<tr\b([^>]*)>([\s\S]*?)<\/tr\s*>/gi)];
+  if (rows.length !== 5 || !tableSpanAttributesAreSimple(tableOpen[1])) return undefined;
+  const withoutRows = inner.replace(/<tr\b[^>]*>[\s\S]*?<\/tr\s*>/gi, ' ')
+    .replace(/<\/?(?:thead|tbody)\b[^>]*>/gi, ' ');
+  if (cleanHtmlText(withoutRows).trim()) return undefined;
+
+  const textRows: string[][] = [];
+  for (const [rowIndex, row] of rows.entries()) {
+    if (!tableSpanAttributesAreSimple(row[1])) return undefined;
+    const rowHtml = row[2];
+    const cells = [...rowHtml.matchAll(/<(th|td)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi)];
+    if (cells.length !== 2 || cells.some(cell => !tableSpanAttributesAreSimple(cell[2]) ||
+        /<(?:table|tr|td|th)\b/i.test(cell[3]))) return undefined;
+    const residual = rowHtml.replace(/<(th|td)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    if (cleanHtmlText(residual).trim()) return undefined;
+    const expectedCellTag = rowIndex === 0 ? 'th' : 'td';
+    if (cells.some(cell => cell[1].toLowerCase() !== expectedCellTag)) return undefined;
+    const textCells = cells.map(cell => simpleTableCellText(cell[3]));
+    if (textCells.some(cell => !cell)) return undefined;
+    textRows.push(textCells);
+  }
+
+  const text = textRows.map(row => row.join(' | ')).join('\n');
+  return supportsAcraAnnualReturnDeadlineTable(text) ? text : undefined;
+}
+
+function findSimpleAcraDeadlineTable(markup: string): { rawHtml: string[]; text: string } | undefined {
+  const tables = [...markup.matchAll(/<table\b[^>]*>[\s\S]*?<\/table\s*>/gi)];
+  const matching: Array<{ rawHtml: string; text: string }> = [];
+  for (const table of tables) {
+    const firstRow = /<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/i.exec(table[0])?.[1];
+    if (!firstRow) continue;
+    const headerCells = [...firstRow.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th\s*>/gi)].map(cell => simpleTableCellText(cell[1]));
+    const isDeadlineHeader = headerCells.length === 2 &&
+      normalizeVisibleText(headerCells[0]) === 'company type' && normalizeVisibleText(headerCells[1]) === 'filing deadline';
+    if (!isDeadlineHeader) continue;
+    const text = parseSimpleAcraDeadlineTable(table[0]);
+    if (!text) return undefined;
+    matching.push({ rawHtml: table[0], text });
+  }
+  if (matching.length === 0 || matching.some(table => table.text !== matching[0].text)) return undefined;
+  return { rawHtml: matching.map(table => table.rawHtml), text: matching[0].text };
+}
+
+function hasAcraDeadlineTableHeader(markup: string): boolean {
+  return [...markup.matchAll(/<table\b[^>]*>[\s\S]*?<\/table\s*>/gi)].some(table => {
+    const firstRow = /<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/i.exec(table[0])?.[1];
+    if (!firstRow) return false;
+    const headerCells = [...firstRow.matchAll(/<th\b[^>]*>([\s\S]*?)<\/th\s*>/gi)]
+      .map(cell => simpleTableCellText(cell[1]));
+    return headerCells.length === 2 && normalizeVisibleText(headerCells[0]) === 'company type' &&
+      normalizeVisibleText(headerCells[1]) === 'filing deadline';
+  });
+}
 
 function hasRuleMetadataClassOrId(attributes: string): boolean {
   return [...attributes.matchAll(/(?:^|\s)(?:class|id)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi)]
@@ -390,7 +502,7 @@ function removeNavigationalSummaryLead(markup: string, rawDocument: string): str
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
 function extractVisiblePageText(
   rawDocument: string,
-  options: { preferMainContent?: boolean; requireSubstantiveBody?: boolean } = {}
+  options: { preferMainContent?: boolean; requireSubstantiveBody?: boolean; requireAcraAnnualReturnDeadlineTable?: boolean } = {}
 ): string {
   const withoutChrome = (options.preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
     .replace(/<!--[\s\S]*?-->/g, ' ')
@@ -401,6 +513,15 @@ function extractVisiblePageText(
     withoutChrome.match(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
+  const deadlineTable = options.requireAcraAnnualReturnDeadlineTable
+    ? findSimpleAcraDeadlineTable(visibleMarkup) : undefined;
+  if (options.requireAcraAnnualReturnDeadlineTable && !deadlineTable && hasAcraDeadlineTableHeader(visibleMarkup)) return '';
+  const tableMarker = '\uE100ACRA_DEADLINE_TABLE\uE101';
+  if (deadlineTable) {
+    for (const tableMarkup of deadlineTable.rawHtml) {
+      visibleMarkup = visibleMarkup.replace(tableMarkup, `<p>${tableMarker}</p>`);
+    }
+  }
   if (options.requireSubstantiveBody) {
     visibleMarkup = removeNavigationalSummaryLead(visibleMarkup, rawDocument);
     visibleMarkup = visibleMarkup
@@ -412,7 +533,8 @@ function extractVisiblePageText(
   // can exclude a dangling introduction and every child item. Bullet markers
   // are visible list formatting, not added tax-rule text.
   const listAwareMarkup = preserveListItemBoundaries(visibleMarkup);
-  return cleanHtmlText(listAwareMarkup);
+  const visibleText = cleanHtmlText(listAwareMarkup);
+  return deadlineTable ? visibleText.replaceAll(tableMarker, deadlineTable.text) : visibleText;
 }
 
 const TOPIC_TERM_STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the']);
@@ -596,7 +718,8 @@ export class ExternalSourceValidator {
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
     const substantiveText = extractVisiblePageText(rawDocument, {
       preferMainContent: expectation.preferMainContent,
-      requireSubstantiveBody: expectation.requireSubstantiveBody
+      requireSubstantiveBody: expectation.requireSubstantiveBody,
+      requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable
     });
     if (!pageTitle || /^(?:home(?:page)?|search(?: results)?|sign in|log in|login|access denied|not found|error)(?:\s*[-|:].*)?$/i.test(pageTitle)) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has a generic, unavailable, or login title', pageTitle, substantiveText };
@@ -620,6 +743,10 @@ export class ExternalSourceValidator {
     });
     if (!titleSpecificity || !identityMatched) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page title or content does not identify the mapped standard/source', pageTitle, substantiveText };
+    }
+
+    if (expectation.requireAcraAnnualReturnDeadlineTable && !supportsAcraAnnualReturnDeadlineTable(substantiveText)) {
+      return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched ACRA annual-return page does not contain one complete, unambiguous deadline table', pageTitle, substantiveText };
     }
 
     const terms = [...new Set(expectation.topicTerms.map(normalize).filter(term => term.length > 2))];

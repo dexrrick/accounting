@@ -36,7 +36,12 @@ import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targ
 import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
-import { supportsAcraAnnualReturnFilingRule } from '../retrieval/acraAnnualReturnFilingRule';
+import {
+  getAcraAnnualReturnDeadlineTablePassage,
+  isAcraAnnualReturnDeadlineQuestion,
+  supportsAcraAnnualReturnDeadlineEvidence,
+  supportsAcraAnnualReturnFilingRule
+} from '../retrieval/acraAnnualReturnFilingRule';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import type { AuthorityEvidenceScope } from '../types/authorityEvidence';
@@ -907,9 +912,13 @@ function completeScopedRulePassage(
 export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = '', preferredPassages: string[] = []): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
-  const completePageBlocks = new Set(text.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()));
-  const preferred = preferredPassages.find(passage => passage.trim().length > 0 && passage.trim().length <= maxChars &&
-    completePageBlocks.has(passage.trim()))?.trim() || '';
+  const pageBlocks = text.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean);
+  const preferred = preferredPassages.map(passage => passage.trim()).find(passage => {
+    if (!passage || passage.length > maxChars) return false;
+    const blocks = passage.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean);
+    return blocks.length > 0 && pageBlocks.some((_, start) =>
+      pageBlocks.slice(start, start + blocks.length).join('\n\n') === blocks.join('\n\n'));
+  }) || '';
   const prefixLength = preferred ? preferred.length + 2 : 0;
   const sentences: Array<{ text: string; paragraphIndex: number }> = [];
   let paragraphIndex = 0;
@@ -1338,6 +1347,7 @@ export async function resolveMappedOfficialSourceFallback(
       minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
         topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1,
       allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_'),
+      requireAcraAnnualReturnDeadlineTable: topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query),
       requireSubstantiveBody: topic.domainId.startsWith('CPF_') || topic.domainId === 'ACRA_COMPANIES' ||
         topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')
     };
@@ -1430,9 +1440,19 @@ export async function resolveMappedOfficialSourceFallback(
     const preferredRulePassage = completeScopedRulePassage(
       contentValidation.substantiveText || '', topic, scopedSubject, scopedPopulation, requestedConcepts, 5_000
     );
+    const acraDeadlineTablePassage = topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query)
+      ? getAcraAnnualReturnDeadlineTablePassage(contentValidation.substantiveText || '')
+      : undefined;
+    const acraDeadlineDutyPassage = acraDeadlineTablePassage
+      ? (contentValidation.substantiveText || '').split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim())
+        .find(block => block !== acraDeadlineTablePassage && supportsAcraAnnualReturnFilingRule(block))
+      : undefined;
+    const preferredAcraDeadlinePassages = acraDeadlineTablePassage
+      ? [acraDeadlineDutyPassage ? `${acraDeadlineDutyPassage}\n\n${acraDeadlineTablePassage}` : '', acraDeadlineTablePassage]
+      : [];
     const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '',
       [...expectation.topicTerms, ...requiredContentTerms], 5_000, query,
-      preferredRulePassage ? [preferredRulePassage] : []);
+      [...preferredAcraDeadlinePassages, ...(preferredRulePassage ? [preferredRulePassage] : [])]);
     const requiredContentPresent = containsRequiredContentTermsInOneBlock(contentValidation.substantiveText || '', requiredContentTerms) &&
       containsRequiredContentTermsInOneBlock(excerpt, requiredContentTerms);
     const excerptTopicMatches = expectation.topicTerms.filter(term => matchesTopicContentTerm(
@@ -1448,7 +1468,15 @@ export async function resolveMappedOfficialSourceFallback(
         : 'Fetched page does not contain all required topic-specific section phrases for grounding.';
       return undefined;
     }
-    if (topic.id === 'acra_annual-returns' && !supportsAcraAnnualReturnFilingRule(excerpt)) {
+    if (topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query) &&
+        !supportsAcraAnnualReturnDeadlineEvidence(excerpt)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA annual-return page lacks the filing context and complete company-category deadline table requested.';
+      return undefined;
+    }
+    if (topic.id === 'acra_annual-returns' && !isAcraAnnualReturnDeadlineQuestion(query) &&
+        !supportsAcraAnnualReturnFilingRule(excerpt)) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = 'Fetched ACRA annual-return page lacks an operative company filing rule.';
@@ -1540,6 +1568,8 @@ export async function resolveMappedOfficialSourceFallback(
     const irasTopics = registeredTopics.filter(topic => topic.domainId.startsWith('IRAS_'));
     const nonIrasTopics = registeredTopics.filter(topic => !topic.domainId.startsWith('IRAS_'));
     const nonIrasCovered = nonIrasTopics.every(topic => records.some(record => record.tags.includes(topic.id) &&
+        (topic.id !== 'acra_annual-returns' || !isAcraAnnualReturnDeadlineQuestion(query) ||
+          supportsAcraAnnualReturnDeadlineEvidence(record.sourceText)) &&
         attempts.some(attempt => attempt.topicId === topic.id && attempt.fetchStatus === 'SUCCESS' &&
           attempt.titleMatched && attempt.contentMatched && attempt.finalUrl === record.canonicalSourceUrl)));
     if (!nonIrasCovered) return false;

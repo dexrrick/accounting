@@ -29,7 +29,14 @@ import {
   matchesRequestedQuestionConcept
 } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
-import { supportsAcraAnnualReturnFilingRule } from '../retrieval/acraAnnualReturnFilingRule';
+import {
+  isAcraAnnualReturnDeadlineIssue,
+  supportsAcraAnnualReturnDeadlineConcept,
+  supportsAcraAnnualReturnDeadlineEvidence,
+  supportsAcraAnnualReturnDeadlineTable,
+  supportsAcraAnnualReturnFilingRule,
+  requiresAcraAnnualReturnDeadlineEvidence
+} from '../retrieval/acraAnnualReturnFilingRule';
 import {
   findRecordEligibilityRejection,
   verifyEvidenceClaims,
@@ -442,6 +449,9 @@ function topiclessConceptBelongsToIssue(
   candidateIssues: ReconciledSemanticQuestionIssue[] = [],
   query = ''
 ): boolean {
+  if (concept.id.startsWith('acra_annual_return_')) {
+    return isAcraAnnualReturnDeadlineIssue(query, authority, issue, candidateIssues);
+  }
   if (authority !== 'IRAS') return false;
   const normalizedLabel = normalizeEvidenceText(concept.label);
   if (isRelatedSubsidiaryDescriptor(concept)) {
@@ -565,16 +575,22 @@ function requestedConceptsForIssue(
   authority: SemanticAuthority,
   topicIds: string[],
   understanding: SemanticQuestionUnderstanding | undefined,
-  candidateIssues: ReconciledSemanticQuestionIssue[]
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  acraCandidateIssues: ReconciledSemanticQuestionIssue[] = candidateIssues
 ): RequestedQuestionConcept[] {
   const topicSet = new Set(topicIds);
-  return getRequestedQuestionConcepts(query, understanding).filter(concept =>
-    concept.topicIds.some(topicId => topicSet.has(topicId)) ||
+  return getRequestedQuestionConcepts(query, understanding).filter(concept => {
+    if (concept.id.startsWith('acra_annual_return_')) {
+      return topicSet.has('acra_annual-returns') && isAcraAnnualReturnDeadlineIssue(
+        query, authority, issue, acraCandidateIssues
+      );
+    }
+    return concept.topicIds.some(topicId => topicSet.has(topicId)) ||
     concept.topicIds.length === 0 && !isCorporateIncomeTaxTreatmentConcept(concept) && !isGenericIncomeTaxConcept(concept) &&
       !isIssueDescriptorConcept(concept) &&
       !boundedForeignDividendSubsidiaryDescriptorBelongsToIssue(concept, issue, authority, candidateIssues, query) &&
       topiclessConceptBelongsToIssue(concept, issue, authority, candidateIssues, query)
-  );
+  });
 }
 
 function sourceQueryDomain(topicIds: string[]): QueryDomain | undefined {
@@ -726,15 +742,21 @@ function defaultOfficialStatutoryProvider(
       const local = await localProvider.retrieve(request);
       if (options.localOnly || options.groundingOptions?.localOnly) return local;
       const topics = getCoverageTopicsByIds(request.retrievalIntent.topicIds);
+      const requireAcraDeadlineEvidence = requiresAcraAnnualReturnDeadlineEvidence(
+        request.originalQuery, authority, request.issue
+      );
       const targetDate = defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate).targetDate;
       const versioningManager = versioningManagerFor(retriever);
       const localAdmission = eligibleLocalRecords(
         local.candidates, request.issue, authority, topics,
-        request.retrievalIntent.requestedConcepts, targetDate, referenceDate, undefined, versioningManager
+        request.retrievalIntent.requestedConcepts, targetDate, referenceDate, undefined, versioningManager,
+        requireAcraDeadlineEvidence
       );
       const localCoverage = localAdmission.admitted.length > 0 && topics.every(topic =>
         localAdmission.admitted.some(record => topicBoundToRecord(record, topic))
-      ) && request.retrievalIntent.requestedConcepts.every(concept =>
+      ) && (!requireAcraDeadlineEvidence || localAdmission.admitted.some(record =>
+        supportsAcraAnnualReturnDeadlineEvidence(record.sourceText)
+      )) && request.retrievalIntent.requestedConcepts.every(concept =>
         localAdmission.admitted.some(record => [concept.label, ...concept.terms]
           .some(term => term.trim() && textSupportsPhrase(record.sourceText, term)))
       );
@@ -903,8 +925,11 @@ function supportsIssueSubject(
   return textSupportsPhrase(text, issue.subject);
 }
 
-function textSupportsTopic(text: string, topic: SingaporeCoverageTopic): boolean {
-  if (topic.id === 'acra_annual-returns' && !supportsAcraAnnualReturnFilingRule(text)) return false;
+function textSupportsTopic(text: string, topic: SingaporeCoverageTopic, requireAcraDeadlineTable = false): boolean {
+  if (topic.id === 'acra_annual-returns') {
+    if (requireAcraDeadlineTable) return supportsAcraAnnualReturnDeadlineTable(text);
+    if (!supportsAcraAnnualReturnFilingRule(text)) return false;
+  }
   const sourceFacingHints = topic.domainId.startsWith('IRAS_')
     ? [...(topic.paragraphHints || []), ...(topic.sectionHints || [])]
     : [];
@@ -938,7 +963,8 @@ function eligibleLocalRecords(
   targetDate: string | undefined,
   referenceDate: string,
   officialRetrievalTrace?: SourceMapFallbackTrace,
-  versioningManager: SourceVersioningManager = defaultSourceVersioningManager
+  versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
+  requireAcraDeadlineEvidence = false
 ): { admitted: AuthoritativeSourceRecord[]; rejectedCount: number } {
   const admitted: AuthoritativeSourceRecord[] = [];
   let rejectedCount = 0;
@@ -977,6 +1003,7 @@ function eligibleLocalRecords(
     const isApprovedManagedDocument = Boolean(managedAdmission?.required && managedAdmission.admitted);
     if ((!isReviewedLocal && !isValidatedLive && !isApprovedManagedDocument) ||
         record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false ||
+        requireAcraDeadlineEvidence && !supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
         !record.sourceText?.trim() || findRecordEligibilityRejection(record, targetDate, referenceDate,
           versioningManager, authority === 'MAS' ? 'MAS' : undefined,
           exactManagedTopic?.legacyDomains[0])) {
@@ -1012,7 +1039,8 @@ function issueClaimCoverage(
   records: AuthoritativeSourceRecord[],
   topics: SingaporeCoverageTopic[],
   concepts: RequestedQuestionConcept[],
-  issue: ReconciledSemanticQuestionIssue
+  issue: ReconciledSemanticQuestionIssue,
+  requireAcraDeadlineTable = false
 ): { covered: boolean; missing: string[] } {
   const missing: string[] = [];
   const recordById = new Map(records.map(record => [record.id, record]));
@@ -1026,13 +1054,19 @@ function issueClaimCoverage(
   for (const topic of topics) {
     const topicClaim = claims.some(claim => {
       const record = recordById.get(claim.recordId);
+      const tableOwnsDeadlineIssue = requireAcraDeadlineTable && topic.id === 'acra_annual-returns' &&
+        supportsAcraAnnualReturnDeadlineTable(claim.quote);
       return Boolean(record && topicBoundToRecord(record, topic) &&
-        textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts));
+        (tableOwnsDeadlineIssue || textSupportsTopic(claim.quote, topic, requireAcraDeadlineTable) &&
+          supportsIssueSubject(claim.quote, issue, topic, concepts)));
     });
     if (!topicClaim) missing.push(`topic:${topic.id}`);
   }
   for (const concept of concepts) {
     const conceptClaim = claims.some(claim => {
+      if (concept.id.startsWith('acra_annual_return_')) {
+        return supportsAcraAnnualReturnDeadlineConcept(claim.quote, concept.id);
+      }
       const ruleSupport = generalIrasRuleConceptSupport(claim.quote, issue, topics, [concept]);
       if (ruleSupport !== undefined) return ruleSupport;
       return issue.domain === 'IRAS_INCOME_TAX'
@@ -1157,14 +1191,16 @@ async function evaluateIssue(
   retriever: ISourceRetriever,
   understanding: SemanticQuestionUnderstanding,
   referenceDate: string,
-  candidateIssues: ReconciledSemanticQuestionIssue[]
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  acraCandidateIssues: ReconciledSemanticQuestionIssue[]
 ): Promise<AuthorityIssueEvidence> {
   const issue = plannedIssue.issue;
   const topicIds = plannedIssue.topicIds;
   const topics = getCoverageTopicsByIds(topicIds);
   const evidenceTopics = plan.authority === 'IRAS' ? topics.filter(topic => !topic.routingOnly) : topics;
   const evidenceTopicIds = evidenceTopics.map(topic => topic.id);
-  const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding, candidateIssues);
+  const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding, candidateIssues, acraCandidateIssues);
+  const requireAcraDeadlineEvidence = requiresAcraAnnualReturnDeadlineEvidence(query, plan.authority, issue);
   const mapped = topicIds.length > 0 && plan.domain !== 'UNKNOWN';
   const lifecycle = initialLifecycle(issue, mapped);
   const application = applicationForIssue(issue);
@@ -1269,7 +1305,7 @@ async function evaluateIssue(
   } else {
     const versioningManager = versioningManagerFor(retriever);
     const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, targetDate, referenceDate,
-      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace), versioningManager);
+      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace), versioningManager, requireAcraDeadlineEvidence);
     admitted = result.admitted;
     localRejectedCount = result.rejectedCount;
   }
@@ -1295,6 +1331,12 @@ async function evaluateIssue(
   const verifiedClaims = acceptedClaims.filter(claim => {
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
+    if (requireAcraDeadlineEvidence && (!supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
+        !supportsAcraAnnualReturnDeadlineTable(claim.quote))) return false;
+    const tableOwnsDeadlineIssue = requireAcraDeadlineEvidence &&
+      supportsAcraAnnualReturnDeadlineTable(claim.quote) && evidenceTopics.some(topic =>
+        topic.id === 'acra_annual-returns' && topicBoundToRecord(record, topic));
+    if (tableOwnsDeadlineIssue) return true;
     const supportsTopic = evidenceTopics.some(topic => topicBoundToRecord(record, topic) &&
       textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts));
     const supportsConcept = concepts.some(concept => {
@@ -1319,7 +1361,7 @@ async function evaluateIssue(
   if (!lifecycle.verified) gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'NO_VERIFIED_CLAIM',
     'No complete source quotation passed claim verification for this issue.'));
 
-  const coverage = issueClaimCoverage(verifiedClaims, admitted, evidenceTopics, concepts, issue);
+  const coverage = issueClaimCoverage(verifiedClaims, admitted, evidenceTopics, concepts, issue, requireAcraDeadlineEvidence);
   lifecycle.covered = coverage.covered && !(plan.authority === 'IRAS' && irasQuality &&
     (evidenceTopicIds.some(topicId => irasQuality!.uncoveredTopicIds.includes(topicId)) || (irasQuality.uncoveredConcepts?.length || 0) > 0));
   for (const missing of coverage.missing) gaps.push(makeGap(issue, plan.authority, plan.domain, 'covered', 'ISSUE_CONCEPT_UNCOVERED',
@@ -1359,6 +1401,9 @@ export async function buildAuthorityWorkstreams(
     // validated semantic issues for ownership of a descriptive concept.
     .filter(issue => issue.governingAuthorities.includes('IRAS') && issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC')
     .map(issue => [issue.id, issue])).values()];
+  const acraCandidateIssues = [...new Map(issuePlan.issues
+    .filter(issue => issue.governingAuthorities.includes('ACRA') && issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC')
+    .map(issue => [issue.id, issue])).values()];
   const plannedIssueIds = new Set(internalPlans.flatMap(plan => plan.issueIds));
   const plannedIssueCount = internalPlans.reduce((count, plan) => count + plan.issuePlans.length, 0);
   const workstreams: AuthorityWorkstreamResult[] = [];
@@ -1376,7 +1421,7 @@ export async function buildAuthorityWorkstreams(
 
   for (const plan of internalPlans) {
     const results = await Promise.all(plan.issuePlans.map(issuePlanItem => evaluateIssue(
-      query, plan, issuePlanItem, options, retriever, understanding, referenceDate, candidateIssues
+      query, plan, issuePlanItem, options, retriever, understanding, referenceDate, candidateIssues, acraCandidateIssues
     )));
     const verifiedClaims = [...new Map(results.flatMap(item => item.verifiedClaims).map(claim =>
       [`${claim.recordId}\n${claim.quote}`, claim]
@@ -1418,6 +1463,17 @@ export async function buildAuthorityWorkstreams(
       issueId: 'issue-plan', authority: scope.authority, domain: scope.domain, subject: concept.label,
       operation: 'OTHER', stage: 'mapped', code: 'UNROUTED_MATERIAL_CONCEPT',
       reason: 'A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.'
+      });
+    }
+  }
+  for (const concept of getRequestedQuestionConcepts(query, understanding).filter(item => item.id.startsWith('acra_annual_return_'))) {
+    const owners = issuePlan.issues.filter(issue => issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
+      isAcraAnnualReturnDeadlineIssue(query, 'ACRA', issue, acraCandidateIssues));
+    if (owners.length !== 1) {
+      topLevelGaps.push({
+        issueId: 'issue-plan', authority: 'ACRA', domain: 'ACRA_CORPORATE', subject: concept.label,
+        operation: 'OTHER', stage: 'mapped', code: 'UNROUTED_MATERIAL_CONCEPT',
+        reason: 'An ACRA annual-return deadline concept was not assigned to one uniquely matching company issue.'
       });
     }
   }
