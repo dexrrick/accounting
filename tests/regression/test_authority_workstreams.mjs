@@ -3,12 +3,29 @@ import { buildAuthorityWorkstreams, planAuthorityWorkstreams } from '../../src/s
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { getRequestedQuestionConcepts } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { matchesRequestedQuestionConcept } from '../../src/retrieval/evidenceQualityGate.ts';
+import { supportsAcraAnnualReturnFilingRule } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 
 const referenceDate = '2026-09-29';
 const cpfCeiling = UNIFIED_SOURCE_REGISTRY.CPF_WAGE_CEILINGS_2026;
 const section14 = UNIFIED_SOURCE_REGISTRY.ITA_SEC14_GENERAL_DEDUCTION;
 const irasPointer = UNIFIED_SOURCE_REGISTRY.IRAS_CIT_EXPENSES_SOURCE_MAP;
 assert.ok(cpfCeiling && section14 && irasPointer, 'Expected reviewed source registry records are available.');
+
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'ACRA provides reminder notifications to help you comply with annual return deadlines. ACRA only sends notifications for annual returns and declarations.'
+), false, 'Reminder content about annual returns does not state the filing duty.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'All Singapore companies must file annual returns with ACRA each year.'
+), true, 'The ACRA filing-duty guard retains operative company rule text.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'All companies registered in Singapore must file an annual return with ACRA each year.'
+), true, 'The ACRA guard recognizes the official registered-in-Singapore subject wording.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'Are all companies registered in Singapore required to file an annual return?'
+), false, 'A question about the filing duty is not an operative source rule.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'Variable capital companies must file annual returns with ACRA each year.'
+), false, 'The ACRA annual-return guard excludes VCC rules.');
 
 const issue = (id, overrides = {}) => ({
   id,

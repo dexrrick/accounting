@@ -36,6 +36,7 @@ import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targ
 import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { supportsAcraAnnualReturnFilingRule } from '../retrieval/acraAnnualReturnFilingRule';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import type { AuthorityEvidenceScope } from '../types/authorityEvidence';
@@ -1445,6 +1446,12 @@ export async function resolveMappedOfficialSourceFallback(
       attempt.error = requiredContentPresent
         ? 'Validated page did not yield a relevant topic section for grounding.'
         : 'Fetched page does not contain all required topic-specific section phrases for grounding.';
+      return undefined;
+    }
+    if (topic.id === 'acra_annual-returns' && !supportsAcraAnnualReturnFilingRule(excerpt)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA annual-return page lacks an operative company filing rule.';
       return undefined;
     }
     const fetchedRecord = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);

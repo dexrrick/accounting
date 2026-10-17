@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
@@ -166,6 +167,70 @@ const inlineRule = await run(...cases[0], 'sitemap', { html: `<html><head><title
 assert.equal(inlineRule.records.length, 1);
 assert.ok(inlineRule.records[0].sourceText.includes('must file an annual return with ACRA each year'),
   'Inline links must not truncate legal instructions in source excerpts.');
+
+const reminderPageUrl = 'https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/filing-reminders-and-notifications/';
+const reminderPageTitle = 'Filing reminders and notifications for annual returns & declarations | Accounting and Corporate Regulatory Authority';
+// Minimal visible-body excerpt from the saved ACRA reminders capture
+// (upstream SHA-256 7c572e3fcfd2e614cd057f27e403dd48b78af998be955b4fe04758cd117f2fd6).
+const remindersHtml = `<html><head><title>${reminderPageTitle}</title>
+  <meta name="description" content="ACRA provides reminder notifications to help you comply with annual return (AR) and annual declaration (AD) deadlines."></head><body><main>
+  <h1>Filing reminders and notifications for annual returns &amp; declarations</h1>
+  <p>ACRA provides reminder notifications to help you comply with annual return (AR) and annual declaration (AD) deadlines.</p>
+  <p>ACRA only sends notifications (pop-up alerts and emails) for annual returns and declarations.</p>
+</main></body></html>`;
+const annualReturnsPage = pages.find(page => page.name === 'annual');
+const discoveryByUrl = new Map([
+  [reminderPageUrl, { html: remindersHtml, title: reminderPageTitle }],
+  [annualReturnsPage.url, { html: annualReturnsPage.html, title: 'Deadline & requirements for annual returns | Accounting and Corporate Regulatory Authority' }]
+]);
+const queryForDeadline = 'Under current ACRA rules, how many months after financial year end must a non-listed Singapore company without an overseas branch register file its annual return? Cite the official rule.';
+async function runDiscoveredPages(candidateUrls) {
+  return run('annual', 'acra_annual-returns', queryForDeadline, 'sitemap', { options: {
+    discoveryAdapter: { async discoverOfficialSourceCandidates() { return candidateUrls; } },
+    officialDomainSearchAdapter: { async searchOfficialDomainCandidates() { return []; } },
+    webRetriever: { async fetchOfficialSource(url) {
+      const page = discoveryByUrl.get(url);
+      if (!page) return { status: 'NOT_FOUND', finalUrl: url };
+      return { status: 'SUCCESS', content: page.html, finalUrl: url, topicMatched: true,
+        titleMatched: true, contentMatched: true, pageTitle: page.title,
+        contentHash: createHash('sha256').update(page.html).digest('hex'), retrievedAt: '2026-10-17T13:36:39.783Z' };
+    } }
+  } });
+}
+const reminderThenDeadline = await runDiscoveredPages([reminderPageUrl, annualReturnsPage.url]);
+assert.equal(reminderThenDeadline.trace.attempts.find(attempt => attempt.candidateUrl === reminderPageUrl)?.fetchStatus, 'TOPIC_MISMATCH',
+  'A topical ACRA reminders page without an operative annual-return filing rule cannot satisfy discovery coverage.');
+assert.equal(reminderThenDeadline.trace.attempts.find(attempt => attempt.candidateUrl === annualReturnsPage.url)?.fetchStatus, 'SUCCESS',
+  'Bounded discovery continues to the later official page that states the annual-return filing duty.');
+assert.equal(reminderThenDeadline.records.length, 1);
+assert.equal(reminderThenDeadline.records[0].officialSourceUrl, annualReturnsPage.url);
+assert.ok(reminderThenDeadline.records[0].sourceText.includes('Within seven months after FYE'));
+const allReminders = await runDiscoveredPages([reminderPageUrl]);
+assert.equal(allReminders.records.length, 0, 'Reminder-only discovery remains insufficient when no operative rule page is found.');
+assert.equal(allReminders.trace.attempts.find(attempt => attempt.candidateUrl === reminderPageUrl)?.fetchStatus, 'TOPIC_MISMATCH');
+const deadlineIssue = { id: 'acra-filing-deadline', subject: 'annual return filing deadline for non-listed company',
+  population: 'COMPANY', domain: 'ACRA_CORPORATE', governingAuthorities: ['ACRA'], contextualAuthorities: [],
+  operation: 'EXPLAIN_RULE', mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+  confidence: 0.98, status: 'MAPPED' };
+async function assessDiscoveredPages(result) {
+  const governedResult = await buildAuthorityWorkstreams(queryForDeadline, {
+    source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false, issues: [deadlineIssue]
+  }, {
+    referenceDate: '2026-10-17', providers: { ACRA: { authority: 'ACRA', retrieve: async () => ({
+      candidates: result.records,
+      trace: { stages: [], attempts: result.trace.attempts },
+      evidenceQualityTrace: result.trace
+    }) } }
+  });
+  return governedResult.workstreams.flatMap(stream => stream.issues)[0];
+}
+const admittedDeadline = await assessDiscoveredPages(reminderThenDeadline);
+assert.equal(admittedDeadline.evidenceStatus, 'VERIFIED');
+assert.equal(admittedDeadline.lifecycle.admitted, true);
+assert.equal(admittedDeadline.sources[0].officialSourceUrl, annualReturnsPage.url);
+const insufficientReminders = await assessDiscoveredPages(allReminders);
+assert.equal(insufficientReminders.evidenceStatus, 'INSUFFICIENT');
+assert.equal(insufficientReminders.sources.length, 0);
 const cardsOnly = await run(...cases[0], 'sitemap', { html: `<html><head><title>Deadline &amp; requirements for annual returns | Accounting and Corporate Regulatory Authority</title></head><body><main><p>This guide helps readers find official company resources and understand the available services for businesses and their officers.</p><a href="${pages.find(page => page.name === 'annual').url}"><div><h3>Annual returns</h3><p>Companies must file annual returns each year.</p></div></a></main></body></html>` });
 assert.equal(cardsOnly.records.length, 0, 'Related-page cards cannot substitute for fetched article rule text.');
 for (const breadcrumb of [
