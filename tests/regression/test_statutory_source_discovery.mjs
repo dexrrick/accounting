@@ -354,6 +354,40 @@ for (const sample of cases) {
     assert.ok(claim.recordId === record.id);
     assert.ok(record.sourceText.includes(claim.quote), 'Every verified quote is an exact substring of the fetched official page.');
   }
+  if (sample.authority === 'ACRA') {
+    assert.ok(issueEvidence.verifiedClaims.some(claim => /companies in singapore must file annual returns/i.test(claim.quote)),
+      'an operative company filing rule remains sufficient exact-quote support for annual returns');
+    const nonOperativeHtml = html(sample.title, [
+      'ACRA provides reminder notifications to help you comply with annual return (AR) and annual declaration (AD) deadlines.',
+      'Meet their annual filing deadlines.',
+      'ACRA only sends notifications (pop-up alerts and emails) for annual returns and declarations.',
+      'Find out whether companies must file annual returns.',
+      'Do companies need to file annual returns?',
+      'Companies must sign up for reminders to file annual returns.',
+      'Companies must not file annual returns.',
+      'Variable capital companies must file annual returns.'
+    ].join(' '));
+    const nonOperative = await runWorkstreams([sample], {
+      query: sample.query,
+      pageOverrides: { ACRA: nonOperativeHtml }
+    });
+    const nonOperativeIssue = nonOperative.workstreams.find(item => item.authority === 'ACRA').issues[0];
+    assert.equal(nonOperativeIssue.evidenceStatus, 'INSUFFICIENT',
+      'reminders, questions, navigation text, indirect objects, negation and VCC-only duties do not prove company filing requirements');
+    assert.deepEqual(nonOperativeIssue.verifiedClaims, [],
+      'non-operative and VCC-only passages produce no verified filing-rule quote');
+
+    const passiveRule = await runWorkstreams([sample], {
+      query: sample.query,
+      pageOverrides: { ACRA: html(sample.title,
+        'Annual returns must be filed by companies in Singapore. This is the annual return filing requirement.') }
+    });
+    const passiveIssue = passiveRule.workstreams.find(item => item.authority === 'ACRA').issues[0];
+    assert.equal(passiveIssue.evidenceStatus, 'VERIFIED',
+      'an operative passive filing rule is sufficient exact-quote support');
+    assert.ok(passiveIssue.verifiedClaims.some(claim => /annual returns must be filed by companies/i.test(claim.quote)),
+      'the passive-rule verification retains its exact source quote');
+  }
 
   const metadataOnlyHtml = `<html><head><title>${sample.title}</title></head><body><main>
     <h1>${sample.subject}</h1><nav><a href="/topic">${sample.subject}</a></nav>
