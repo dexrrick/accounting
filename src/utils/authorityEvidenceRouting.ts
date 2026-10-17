@@ -1,6 +1,13 @@
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
-import type { SemanticIssueReconciliation } from '../services/semanticQuestionUnderstanding';
+import type { SemanticAuthority, SemanticIssueReconciliation } from '../services/semanticQuestionUnderstanding';
 import { planAuthorityWorkstreams } from '../services/authorityWorkstreams';
+import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
+
+const NON_IRAS_STATUTORY_AUTHORITIES = new Set(['ACRA', 'CPF', 'MOM', 'MAS']);
+
+function isNonIrasStatutoryAuthority(authority: SemanticAuthority): authority is 'ACRA' | 'CPF' | 'MOM' | 'MAS' {
+  return NON_IRAS_STATUTORY_AUTHORITIES.has(authority);
+}
 
 function requestedScopeCount(issuePlan: SemanticIssueReconciliation): number {
   // Canonical domains are retained even for unmapped issues when their
@@ -29,6 +36,31 @@ function scopesAgreeWithClassification(issuePlan: SemanticIssueReconciliation, c
   );
 }
 
+function hasMappedGovernedStatutoryWorkstream(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  const classifiedDomains = new Set<string>(classification.domains);
+  return planAuthorityWorkstreams(issuePlan).some(workstream => {
+    const authority = workstream.authority;
+    if (!isNonIrasStatutoryAuthority(authority) ||
+        workstream.domain === 'UNKNOWN' ||
+        workstream.domain === 'ACCOUNTING' ||
+        !classifierIncludesAuthority(classification, workstream.authority) ||
+        ![workstream.domain, ...workstream.sourceSections].some(domain => classifiedDomains.has(domain))) {
+      return false;
+    }
+
+    return issuePlan.issues.some(issue => issue.status === 'MAPPED' &&
+      workstream.issueIds.includes(issue.id) &&
+      issue.governingAuthorities.includes(authority) &&
+      getCoverageTopicsByIds(issue.mappedTopicIds).some(topic =>
+        topic.authorities.includes(authority) &&
+        !topic.domainId.startsWith('ACCOUNTING_') &&
+        workstream.sourceSections.includes(topic.domainId)));
+  });
+}
+
 const FOCUSED_MAS_DOCUMENT_TOPICS = new Set([
   'mas-fund-management-licensing-admission-criteria',
   'mas-vcc-substantive-fund-management-activity'
@@ -49,6 +81,19 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
 }): boolean {
   const { issuePlan, classification } = input;
   if (input.hasImages) return false;
+
+  // Standalone non-IRAS statutory questions can use the same evidence-backed
+  // response path when both classification and a governed mapped topic agree.
+  // This does not treat classifier metadata or contextual authorities as
+  // sufficient evidence of a requested authority scope.
+  if (!input.explicitIrasEvidenceRequest &&
+      classification.intent === 'STATUTORY_ADVISORY' &&
+      classification.regulatoryAnalysisRequired &&
+      !classification.accountingAnalysisRequired &&
+      !classification.journalEntryRequired &&
+      hasMappedGovernedStatutoryWorkstream(issuePlan, classification)) {
+    return true;
+  }
 
   // These two manually reviewed document topics use the usual per-issue
   // evidence pipeline even when a question contains only one MAS workstream.

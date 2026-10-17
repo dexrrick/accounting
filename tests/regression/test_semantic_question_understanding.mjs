@@ -594,6 +594,78 @@ assert.equal(normalizedCompanyResidency.interpretation.issues[0].evidenceRequire
 const normalizedResidencyConcepts = getRequestedQuestionConcepts(generalCompanyResidencyQuery, normalizedCompanyResidency);
 assert.deepEqual(normalizedResidencyConcepts.map(concept => concept.id), ['company_tax_residency_rule']);
 assert.deepEqual(normalizedResidencyConcepts[0].topicIds, ['iras-corporate-tax-residency']);
+const acraDeadlineRuleQuery = 'Under current ACRA rules, how many months after financial year end must a non-listed Singapore company without an overseas branch register file its annual return? Cite the official rule.';
+const acraDeadlineRuleMeaning = interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing deadline',
+  concepts: [
+    { concept: 'financial year end', role: 'RELATED' },
+    { concept: 'non-listed company', role: 'RELATED' },
+    { concept: 'overseas branch register', role: 'RELATED' },
+    { concept: 'financial year end change approval', role: 'RELATED' }
+  ],
+  requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true,
+  issues: [{ subject: 'annual return filing deadline', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'DETERMINE_TREATMENT',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const normalizedAcraDeadlineRule = await interpretSemanticQuestion(acraDeadlineRuleQuery, provider,
+  async () => JSON.stringify(acraDeadlineRuleMeaning));
+assert.equal(normalizedAcraDeadlineRule.interpretation.requestedOperation, 'EXPLAIN_RULE');
+assert.equal(normalizedAcraDeadlineRule.interpretation.requiresUserSpecificFacts, false);
+assert.equal(normalizedAcraDeadlineRule.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedAcraDeadlineRule.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE');
+const acraDeadlineConcepts = getRequestedQuestionConcepts(acraDeadlineRuleQuery, normalizedAcraDeadlineRule);
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_financial_year_end'));
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_listing_status'));
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_branch_register_qualification'));
+assert.equal(acraDeadlineConcepts.some(concept => concept.id === 'semantic_non_listed_company'), false,
+  'An exact ACRA listing qualifier does not duplicate its canonical requested concept.');
+assert.ok(acraDeadlineConcepts.some(concept => concept.id === 'semantic_financial_year_end_change_approval'),
+  'An unrelated material label mentioning financial year end remains an uncovered concept.');
+assert.equal(getRequestedQuestionConcepts('How many months after FYE are annual returns due for corporate income tax?',
+  interpretation()).some(concept => concept.id.startsWith('acra_annual_return_')), false,
+'An IRAS interpretation does not inherit ACRA annual-return deadline concepts from shared timing words.');
+const mixedRootDeadlineMeaning = {
+  ...acraDeadlineRuleMeaning,
+  authorityCandidates: ['IRAS', 'ACRA'], domain: 'IRAS_INCOME_TAX',
+  primarySubject: 'company income-tax treatment and annual return deadline',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: false, calculationRequested: false,
+  issues: [acraDeadlineRuleMeaning.issues[0], {
+    subject: 'corporate income-tax treatment', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['iras-cit-deductibility'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95
+  }]
+};
+const mixedRootDeadlineConcepts = getRequestedQuestionConcepts(
+  'How many months after FYE must a non-listed company without an overseas branch register file annual returns, and what is its corporate income tax treatment?',
+  mixedRootDeadlineMeaning
+);
+assert.ok(mixedRootDeadlineConcepts.some(concept => concept.id === 'acra_annual_return_listing_status'),
+  'An explicit mapped ACRA issue retains its concepts when the root semantic domain is IRAS.');
+assert.equal(mixedRootDeadlineConcepts.some(concept => concept.id === 'semantic_non_listed_company'), false,
+  'An exact ACRA qualifier remains canonical in a mixed-authority interpretation.');
+const caseSpecificAcraDeadline = await interpretSemanticQuestion(
+  'How many months after FYE is our annual return due for FYE ending 31 March 2025?', provider,
+  async () => JSON.stringify(acraDeadlineRuleMeaning));
+assert.equal(caseSpecificAcraDeadline.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'A date-specific company question remains case-specific.');
+assert.equal(caseSpecificAcraDeadline.interpretation.requiresUserSpecificFacts, true);
+const explicitAcraCalculationMeaning = {
+  ...acraDeadlineRuleMeaning,
+  requestedOperation: 'CALCULATE', calculationRequested: true, requiresUserSpecificFacts: true,
+  issues: [{ ...acraDeadlineRuleMeaning.issues[0], operation: 'CALCULATE', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' }]
+};
+const explicitAcraCalculation = await interpretSemanticQuestion(
+  'Calculate how many months after FYE our annual return is due.', provider,
+  async () => JSON.stringify(explicitAcraCalculationMeaning));
+assert.equal(explicitAcraCalculation.interpretation.requestedOperation, 'CALCULATE',
+  'An explicit calculation request is not normalized into a rule-only explanation.');
+const mixedAcraDeadline = await interpretSemanticQuestion(
+  'How many months after FYE must annual returns be filed, and when is our income tax due?', provider,
+  async () => JSON.stringify(acraDeadlineRuleMeaning));
+assert.equal(mixedAcraDeadline.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
+  'A separate mixed issue clause prevents month-count rule normalization.');
 const conditionalCompanyResidencyQuery = 'How do Singapore tax rules determine whether a company is tax resident here if its board meetings are held in Thailand?';
 const conditionalCompanyResidencyMeaning = interpretation({
   domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'corporate tax residence determination',

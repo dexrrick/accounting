@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { mock } from 'node:test';
 import { gunzipSync } from 'node:zlib';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
@@ -12,8 +13,10 @@ import { SourceVersioningManager } from '../../src/standards/sourceVersioning.ts
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { CitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
+import { getSingaporeDateString } from '../../src/utils/dateUtils.ts';
 
 const CAPTURE_DAY = '2026-10-16';
+const POST_CAPTURE_DAY = '2026-10-17';
 const CONTEXT_ROOT = new URL('../fixtures/mas-reviewed/transport-investigation-20261016-context-live/', import.meta.url);
 const RECAPTURE_ROOT = new URL('../fixtures/mas-reviewed/transport-investigation-20261016-genuine-recapture/', import.meta.url);
 const acceptanceReport = JSON.parse(await readFile(new URL('../fixtures/mas-reviewed/transport-investigation-20261016-acceptance.json', import.meta.url), 'utf8'));
@@ -26,6 +29,15 @@ const htmlDoc = contextManifest.documents[0];
 const htmlReplacementDoc = recaptureManifest.documents.find(item => item.recordId === HTML_ID);
 const pdfDoc = contextManifest.documents[1];
 const registryBefore = structuredClone(UNIFIED_SOURCE_REGISTRY);
+
+function getSourceByIdAtDate(retriever, recordId, date) {
+  mock.timers.enable({ apis: ['Date'], now: new Date(`${date}T04:00:00.000Z`) });
+  try {
+    return retriever.getSourceById(recordId);
+  } finally {
+    mock.timers.reset();
+  }
+}
 
 function readCapture(root, doc) {
   return readFile(new URL(doc.bodyFile, root)).then(compressed => {
@@ -49,6 +61,12 @@ const pdfBytes = await readCapture(CONTEXT_ROOT, pdfDoc);
 
 assert.equal(htmlDoc.fetch.contentType, 'text/html; charset=utf-8');
 assert.equal(pdfDoc.fetch.contentType, 'application/pdf');
+  assert.equal(getSingaporeDateString(htmlDoc.fetch.retrievedAt), CAPTURE_DAY,
+    'the immutable HTML retrieval timestamp remains on its declared capture day');
+  assert.equal(getSingaporeDateString(pdfDoc.fetch.retrievedAt), CAPTURE_DAY,
+    'the immutable PDF retrieval timestamp remains on its declared capture day');
+  assert.equal(getSingaporeDateString(htmlReplacementDoc.fetch.retrievedAt), CAPTURE_DAY,
+    'the immutable replacement retrieval timestamp remains on its declared capture day');
 assert.equal(pdfDoc.fetch.lastModified, 'Thu, 26 Jun 2025 09:14:46 GMT');
 assert.equal(pdfDoc.fetch.etag, null);
 assert.equal(htmlDoc.fetch.etag, null);
@@ -246,7 +264,8 @@ function bindingAndCitation(record, retriever, versioning) {
   const quote = quoteFor(record);
   const claim = { kind: 'RULE', text: quote, quote, recordId: record.id, citationUrl: record.officialSourceUrl };
   const claims = verifyEvidenceClaims([claim], [record], {
-    missingFacts: [], expectedAuthority: 'MAS', expectedDomain: 'MAS_FUNDS', versioningManager: versioning
+    missingFacts: [], expectedAuthority: 'MAS', expectedDomain: 'MAS_FUNDS',
+    targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY, versioningManager: versioning
   });
   assert.equal(claims.accepted.length, 1, claims.rejected[0]?.reason);
   const binding = claims.accepted[0].sourceBinding;
@@ -320,9 +339,13 @@ try {
     'Isolated engineering acceptance receipt only; not human legal or production approval'), true);
   assert.equal((await service.activateUpdatePackage(firstPackage.packageId)).success, true);
 
-  const firstHtmlActive = answerRetriever.getSourceById(HTML_ID);
-  const firstPdfActive = answerRetriever.getSourceById(PDF_ID);
+  const firstHtmlActive = getSourceByIdAtDate(answerRetriever, HTML_ID, CAPTURE_DAY);
+  const firstPdfActive = getSourceByIdAtDate(answerRetriever, PDF_ID, CAPTURE_DAY);
   assert.ok(firstHtmlActive && firstPdfActive);
+  assert.equal(getSourceByIdAtDate(answerRetriever, HTML_ID, POST_CAPTURE_DAY), undefined,
+    'the active HTML source remains capture-day-only and is refused on the later current-day replay date');
+  assert.equal(getSourceByIdAtDate(answerRetriever, PDF_ID, POST_CAPTURE_DAY), undefined,
+    'the active PDF source remains capture-day-only and is refused on the later current-day replay date');
   assert.equal(firstHtmlActive.documentHash, htmlDoc.fetch.contentHash);
   assert.equal(firstHtmlActive.effectiveDate, undefined);
   assert.equal(firstPdfActive.documentHash, pdfDoc.fetch.contentHash);
@@ -388,8 +411,8 @@ try {
     'Reviewed captured same-page response as an environmental snapshot; not a substantive statutory amendment'), true);
   assert.equal((await service.activateUpdatePackage(replacementPackage.packageId)).success, true);
 
-  const replacementActive = answerRetriever.getSourceById(HTML_ID);
-  const replacementPdfActive = answerRetriever.getSourceById(PDF_ID);
+  const replacementActive = getSourceByIdAtDate(answerRetriever, HTML_ID, CAPTURE_DAY);
+  const replacementPdfActive = getSourceByIdAtDate(answerRetriever, PDF_ID, CAPTURE_DAY);
   assert.ok(replacementActive && replacementPdfActive);
   assert.notEqual(replacementActive.versionId, firstHtmlActive.versionId);
   assert.equal(replacementActive.documentHash, htmlReplacementDoc.fetch.contentHash);
@@ -407,8 +430,8 @@ try {
   assert.equal(replacementProof.binding.provisionHash, firstHtmlProof.binding.provisionHash);
 
   assert.equal((await service.rollbackUpdatePackage(replacementPackage.packageId)).success, true);
-  const restoredHtml = answerRetriever.getSourceById(HTML_ID);
-  const restoredPdf = answerRetriever.getSourceById(PDF_ID);
+  const restoredHtml = getSourceByIdAtDate(answerRetriever, HTML_ID, CAPTURE_DAY);
+  const restoredPdf = getSourceByIdAtDate(answerRetriever, PDF_ID, CAPTURE_DAY);
   assert.equal(restoredHtml.versionId, firstHtmlProof.binding.versionId);
   assert.equal(restoredHtml.documentHash, firstHtmlProof.binding.documentHash);
   assert.equal(restoredPdf.versionId, firstPdfProof.binding.versionId,

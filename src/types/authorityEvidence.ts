@@ -164,7 +164,7 @@ export interface AuthorityEvidenceProvider {
 
 /** Internal per-authority issue scope passed into the shared official-source grounding pipeline. */
 export interface AuthorityEvidenceScope {
-  authority: 'IRAS' | 'CPF' | 'MOM' | 'MAS';
+  authority: 'IRAS' | 'ACRA' | 'CPF' | 'MOM' | 'MAS';
   domain: AuthorityWorkstreamDomain;
   topicIds: string[];
   requestedConcepts: RequestedQuestionConcept[];

@@ -1197,12 +1197,32 @@ export async function parseAccountingQuery(
   )) {
     const matchedRules = querySingaporeStatutes(query);
     if (matchedRules.length > 0) {
-      const primaryRule = matchedRules[0];
+      const isVccQuery = /\b(?:vccs?|variable\s+capital\s+compan(?:y|ies))\b/i.test(query);
+      const isVccAuditApplicabilityQuery = isVccQuery &&
+        /\b(?:audit\s+exemption|small[-\s]+compan(?:y|ies)|small\s+group|section\s*205c|thirteenth\s+schedule)\b/i.test(query);
+      const explicitlyRequestsCompanyTreatment =
+        /\b(?:compare|comparison|versus|vs\.?|difference|distinguish)\b/i.test(query) ||
+        /\bseparately[,:]?\s+(?:(?:what|which|how)\b[^.!?]{0,45}\b(?:(?:private|ordinary|non[-\s]?vcc)\s+)?compan(?:y|ies)\b|(?:for|about)\s+(?:a\s+|the\s+)?(?:(?:private|ordinary|non[-\s]?vcc)\s+)?compan(?:y|ies)\b|(?:address|explain|cover|assess|consider)\s+(?:the\s+)?(?:(?:private|ordinary|non[-\s]?vcc)\s+)?compan(?:y|ies)\b)/i.test(query) ||
+        /\b(?:what|how)\s+about\s+(?:a\s+)?(?:(?:private|ordinary|non[-\s]?vcc)\s+)?compan(?:y|ies)\b/i.test(query) ||
+        /\b(?:also|and\s+for|as\s+well\s+as)\s+(?:a\s+|the\s+)?(?:(?:private|ordinary|non[-\s]?vcc)\s+)?compan(?:y|ies)\b/i.test(query) ||
+        /\b(?:vccs?|variable\s+capital\s+compan(?:y|ies))\s+and\s+(?:a\s+)?(?:(?:small|private|ordinary|non[-\s]?vcc)\s+)?compan(?:y|ies)\b/i.test(query) ||
+        /\b(?:(?:small|private|ordinary|non[-\s]?vcc)\s+)?compan(?:y|ies)\s+and\s+(?:a\s+)?(?:vccs?|variable\s+capital\s+compan(?:y|ies))\b/i.test(query);
+      const scopedMatchedRules = isVccAuditApplicabilityQuery && !explicitlyRequestsCompanyTreatment
+        ? matchedRules.filter(rule => rule.id !== 'ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION')
+        : matchedRules;
+      const vccRule = SINGAPORE_STATUTORY_REPOSITORY.ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE;
+      if (isVccAuditApplicabilityQuery && vccRule && !scopedMatchedRules.some(rule => rule.id === vccRule.id)) {
+        scopedMatchedRules.unshift(vccRule);
+      }
+      const primaryRule = isVccAuditApplicabilityQuery &&
+        matchedRules[0].id === 'ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION'
+        ? vccRule
+        : matchedRules[0];
       // In multi-topic queries, retain matched rules covering distinct statutory sections within the primary authority/domain
       const distinctSections = new Set<string>();
       const relevantRules: SingaporeStatuteRule[] = [];
 
-      for (const rule of matchedRules) {
+      for (const rule of [primaryRule, ...scopedMatchedRules.filter(rule => rule !== primaryRule)]) {
         const hasDirectTagMatch = rule.tags.some(t => q.includes(t)) || q.includes(rule.sectionOrSchedule.toLowerCase());
         if (rule !== primaryRule && !hasDirectTagMatch) continue;
 
@@ -1234,9 +1254,18 @@ export async function parseAccountingQuery(
       let effDate = 'Current Singapore Legislation';
 
       if (primaryRule.category === 'ACRA_COMPLIANCE') {
-        acctSummary = 'Eligible private companies are exempt from statutory audit and prepare unaudited financial statements compliant with SFRS.';
-        taxSummary = 'Tax filing (Form C-S / Form C) remains mandatory with IRAS regardless of ACRA audit exemption.';
-        effDate = 'Companies Act 1967 Section 205C & Thirteenth Schedule active.';
+        if (primaryRule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE') {
+          acctSummary = isVccAuditApplicabilityQuery
+            ? 'The available VCC-specific rule states that a VCC must have a required auditor. It does not establish that the Companies Act small-company audit exemption applies to a VCC; verify any claimed exemption against current VCC-specific official provisions.'
+            : 'A VCC is a Singapore corporate structure governed by the Variable Capital Companies Act 2018. The available VCC-specific rule states that a VCC must have a required auditor.';
+          if (isVccAuditApplicabilityQuery) {
+            taxSummary = 'Tax filing treatment is not determined by this VCC audit-scope response; assess IRAS obligations separately.';
+          }
+        } else {
+          acctSummary = 'Eligible private companies are exempt from statutory audit and prepare unaudited financial statements compliant with SFRS.';
+          taxSummary = 'Tax filing (Form C-S / Form C) remains mandatory with IRAS regardless of ACRA audit exemption.';
+          effDate = 'Companies Act 1967 Section 205C & Thirteenth Schedule active.';
+        }
       } else if (primaryRule.category === 'CPF_PAYROLL') {
         acctSummary = 'Employer mandatory CPF contributions and employee gross wages are debited to Operating Expenses (Staff Costs) under SFRS(I) 1-1 §28.';
         taxSummary = 'Employer mandatory CPF contributions are 100% tax-deductible under Section 14(1)(e) of the Income Tax Act up to statutory ceilings. Excess voluntary contributions are disallowed.';
@@ -1285,7 +1314,9 @@ export async function parseAccountingQuery(
         singaporeTaxTreatmentSummary: taxSummary,
         regulatoryMandatesSummary: `${primaryRule.authority} compliance mandated under Singapore statutory law.`,
         effectiveDateOrTiming: effDate,
-        uncertaintyDisclaimer: 'Grounded in current Singapore statutory provisions and regulatory guidelines. Review specific corporate facts or engage a licensed Singapore tax agent / public accountant for complex situations.',
+        uncertaintyDisclaimer: isVccAuditApplicabilityQuery && primaryRule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE'
+          ? 'The available VCC rule does not establish whether the Companies Act small-company audit exemption applies to a VCC. Confirm the current VCC-specific audit requirements and relevant facts against authoritative official sources before relying on an exemption.'
+          : 'Grounded in current Singapore statutory provisions and regulatory guidelines. Review specific corporate facts or engage a licensed Singapore tax agent / public accountant for complex situations.',
         statutoryAdvisory: advisories,
         keyParameters: keyParams,
         directGroups: [

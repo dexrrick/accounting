@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import { handleOfficialSourceProxyRequest, OFFICIAL_SOURCE_PROXY_PATH } from '../../src/retrieval/officialSourceProxy.ts';
@@ -107,6 +108,48 @@ for (const hostname of ['www.mas.gov.sg', 'mas.gov.sg']) {
   }
 }
 
+const acraIdentifyingUserAgent = 'AccountingOfficialSourceRetriever/1.0';
+const acraSampleDocument = Uint8Array.from({ length: 551_511 }, (_value, index) => index % 251);
+const acraSampleDocumentHash = createHash('sha256').update(acraSampleDocument).digest('hex');
+for (const hostname of ['www.acra.gov.sg', 'acra.gov.sg']) {
+  for (const responseMode of ['text', 'document']) {
+    const url = `https://${hostname}/official-source/${responseMode}`;
+    let acraUpstreamHeaders;
+    const acraResponse = await handleOfficialSourceProxyRequest(endpointRequest(url, {
+      headers: {
+        cookie: 'private-cookie',
+        authorization: 'private-token',
+        referer: 'https://attacker.example/',
+        'user-agent': 'Client supplied agent'
+      },
+      payload: { url, ...(responseMode === 'document' ? { responseMode } : {}) }
+    }), async (_input, init) => {
+      acraUpstreamHeaders = new Headers(init.headers);
+      if (acraUpstreamHeaders.get('user-agent') !== acraIdentifyingUserAgent) {
+        return new Response('Forbidden: identifying user agent required', { status: 403 });
+      }
+      return new Response(responseMode === 'document' ? acraSampleDocument : html, {
+        headers: { 'content-type': responseMode === 'document' ? 'application/pdf' : 'text/html' }
+      });
+    });
+    const acraEnvelope = await decodeEnvelope(acraResponse);
+    assert.equal(acraResponse.status, 200, `${hostname} ${responseMode} request succeeds with the identifying user agent`);
+    assert.equal(acraUpstreamHeaders.get('user-agent'), acraIdentifyingUserAgent,
+      `${hostname} ${responseMode} request receives the fixed ACRA identifying profile`);
+    assert.equal(acraUpstreamHeaders.has('cookie'), false, 'client cookies are not forwarded to ACRA');
+    assert.equal(acraUpstreamHeaders.has('authorization'), false, 'client authorization is not forwarded to ACRA');
+    assert.equal(acraUpstreamHeaders.has('referer'), false, 'client referrer is not forwarded to ACRA');
+    if (responseMode === 'document') {
+      const returnedBytes = Uint8Array.from(atob(acraEnvelope.bodyBase64), character => character.charCodeAt(0));
+      assert.deepEqual(returnedBytes, acraSampleDocument, 'ACRA document bytes are returned unchanged');
+      assert.equal(createHash('sha256').update(returnedBytes).digest('hex'), acraSampleDocumentHash,
+        'ACRA document SHA-256 remains unchanged through the proxy envelope');
+    } else {
+      assert.equal(acraEnvelope.body, html, 'ACRA text body remains unchanged');
+    }
+  }
+}
+
 assert.equal((await handleOfficialSourceProxyRequest(endpointRequest(irasUrl, {
   payload: { url: irasUrl, headers: { 'user-agent': 'forbidden' } }
 }))).status, 400, 'client payload cannot provide arbitrary upstream headers');
@@ -118,6 +161,18 @@ assert.equal((await handleOfficialSourceProxyRequest(endpointRequest(masSpoofUrl
   return new Response('unexpected');
 })).status, 400, 'MAS profile does not accept a spoofed MAS subdomain');
 assert.equal(masSpoofFetched, false, 'spoofed MAS subdomain is rejected before fetch');
+
+for (const spoofedAcraUrl of [
+  'https://acra.gov.sg.evil.example/page',
+  'https://www.acra.gov.sg.evil.example/page'
+]) {
+  let acraSpoofFetched = false;
+  assert.equal((await handleOfficialSourceProxyRequest(endpointRequest(spoofedAcraUrl), async () => {
+    acraSpoofFetched = true;
+    return new Response('unexpected');
+  })).status, 400, `ACRA profile does not accept a spoofed host: ${spoofedAcraUrl}`);
+  assert.equal(acraSpoofFetched, false, 'spoofed ACRA host is rejected before fetch');
+}
 
 const rejectedRedirect = await handleOfficialSourceProxyRequest(endpointRequest(irasUrl), async () => new Response(null, {
   status: 302,
@@ -138,13 +193,20 @@ const masRedirect = await handleOfficialSourceProxyRequest(endpointRequest('http
 });
 assert.equal((await decodeEnvelope(masRedirect)).headers.location, irasUrl,
   'redirect from MAS to another approved authority remains validated and explicit');
+const acraRedirect = await handleOfficialSourceProxyRequest(endpointRequest('https://www.acra.gov.sg/redirect-start'), async (_input, init) => {
+  assert.equal(new Headers(init.headers).get('user-agent'), acraIdentifyingUserAgent,
+    'ACRA profile applies only to the ACRA redirect hop');
+  return new Response(null, { status: 302, headers: { location: irasUrl } });
+});
+assert.equal((await decodeEnvelope(acraRedirect)).headers.location, irasUrl,
+  'redirect from ACRA to another approved authority remains validated and explicit');
 let redirectedAuthorityHeaders;
 await handleOfficialSourceProxyRequest(endpointRequest(irasUrl), async (_input, init) => {
   redirectedAuthorityHeaders = new Headers(init.headers);
   return new Response(html);
 });
 assert.equal(redirectedAuthorityHeaders.has('user-agent'), false,
-  'a redirected request to another approved authority uses its own profile');
+  'the follow-up IRAS request does not inherit the ACRA User-Agent profile');
 
 const notModified = await handleOfficialSourceProxyRequest(endpointRequest(irasUrl), async () => new Response(null, {
   status: 304,

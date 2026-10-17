@@ -113,6 +113,7 @@ const testSuites = [
   { name: 'IRAS Verified Source Map and Fallback', file: 'test_iras_source_map.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Mapped Source Diagnostic V3 Safety', file: 'test_iras_mapped_source_diagnostic.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'CPF Sitemap Discovery', file: 'test_cpf_sitemap_discovery.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'ACRA Sitemap Discovery', file: 'test_acra_sitemap_discovery.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'MOM and MAS Official Sitemap Discovery', file: 'test_statutory_source_discovery.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Authority-level Discovery Progression', file: 'test_iras_authority_discovery.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS End-to-End Routing and Retrieval', file: 'test_iras_e2e_routing.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

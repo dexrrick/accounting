@@ -2,6 +2,7 @@ import { isExplicitForeignTaxOnlyQuestion, type QuestionClassificationResult } f
 import type { SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
+import { isAcraAnnualReturnDeadlineQuestion } from '../retrieval/acraAnnualReturnFilingRule';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
 import {
@@ -692,7 +693,8 @@ export async function interpretSemanticQuestion(
     };
     return {
       mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', transportAttempts,
-      interpretation: normalizeGeneralCompanyTaxResidencyRuleInterpretation(query, interpretation)
+      interpretation: normalizeAcraAnnualReturnDeadlineRuleInterpretation(query,
+        normalizeGeneralCompanyTaxResidencyRuleInterpretation(query, interpretation))
     };
   } catch (error) {
     // aiTransport deliberately withholds provider bodies and includes only the HTTP status.
@@ -797,6 +799,46 @@ function normalizeGeneralCompanyTaxResidencyRuleInterpretation(
     ...interpretation,
     requestedOperation: 'EXPLAIN_RULE',
     requiresUserSpecificFacts: false,
+    issues: [{ ...issue, operation: 'EXPLAIN_RULE' }]
+  }, query) || interpretation;
+}
+
+function isGeneralAcraAnnualReturnMonthCountRuleQuestion(query: string): boolean {
+  const ruleQuestion = query.replace(/[,.;?]?\s*(?:please\s+)?cite\s+(?:the\s+)?(?:official\s+)?(?:rule|source|reference)\s*[.!?]*$/i, '');
+  const clauses = ruleQuestion.split(/[?!;]+|\b(?:however|whereas|but also|also)\b|\band\s+(?=(?:what|how|who|explain|compare|whether|do|does|is|are|can|could|may)\b)/i)
+    .map(clause => clause.trim()).filter(Boolean);
+  return clauses.length === 1 && /\bhow many months?\b/i.test(query) &&
+    /\bafter\s+(?:the\s+)?(?:financial year end|fye)\b/i.test(query) &&
+    /\bannual returns?\b/i.test(query) &&
+    !/\b(?:calculate|compute|work out|exact date|calendar date|by what date|what date)\b/i.test(query) &&
+    !/\b(?:19|20)\d{2}\b|\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/i.test(query) &&
+    !/\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i.test(query);
+}
+
+function normalizeAcraAnnualReturnDeadlineRuleInterpretation(
+  query: string,
+  interpretation: SemanticQuestionInterpretation
+): SemanticQuestionInterpretation {
+  const issue = interpretation.issues?.length === 1 ? interpretation.issues[0] : undefined;
+  if (!isGeneralAcraAnnualReturnMonthCountRuleQuestion(query) ||
+      !isAcraAnnualReturnDeadlineQuestion(query) || interpretation.domain !== 'ACRA_CORPORATE' ||
+      !interpretation.authorityCandidates.includes('ACRA') || interpretation.factsExplicitlyProvided.length > 0 ||
+      interpretation.requestedOperation !== 'DETERMINE_TREATMENT' ||
+      interpretation.population !== 'COMPANY' || !issue || issue.domain !== 'ACRA_CORPORATE' ||
+      issue.population !== 'COMPANY' || issue.governingAuthorities.length !== 1 ||
+      issue.governingAuthorities[0] !== 'ACRA' || issue.operation !== 'DETERMINE_TREATMENT' ||
+      issue.mappedTopicIds.length !== 1 || issue.mappedTopicIds[0] !== 'acra_annual-returns' ||
+      !/\bannual returns?\b/i.test(issue.subject) || hasExplicitCaseReference(query) ||
+      hasCaseLinkedCircumstances(query) || hasFirstPersonOutcomeApplication(query) ||
+      /\b[A-Z][\p{L}\p{N}&.'’-]*(?:\s+[A-Z][\p{L}\p{N}&.'’-]*){0,3}\s+(?:Pte\.?\s+Ltd\.?|Private\s+Limited|Limited|Ltd\.?|LLP|LLC|Inc\.?|Corporation|Corp\.?)\b/u.test(query)) {
+    return interpretation;
+  }
+
+  return validateSemanticQuestionInterpretation({
+    ...interpretation,
+    requestedOperation: 'EXPLAIN_RULE',
+    requiresUserSpecificFacts: false,
+    calculationRequested: false,
     issues: [{ ...issue, operation: 'EXPLAIN_RULE' }]
   }, query) || interpretation;
 }
@@ -1005,6 +1047,31 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
     'role' | 'semanticDomain' | 'semanticPopulation' | 'semanticAuthorities'>) => {
     if (!concepts.some(item => item.id === id)) concepts.push({ id, label, terms, topicIds, ...(metadata || {}) });
   };
+  const acraCompanySemanticScope = Boolean(semantic && (
+    semantic.domain === 'ACRA_CORPORATE' && semantic.population === 'COMPANY' && semantic.authorityCandidates.includes('ACRA') ||
+    semantic.issues?.some(issue => issue.domain === 'ACRA_CORPORATE' && issue.population === 'COMPANY' &&
+      issue.governingAuthorities.includes('ACRA') && issue.mappedTopicIds.includes('acra_annual-returns'))
+  ));
+  const acraAnnualReturnScope = semantic
+    ? acraCompanySemanticScope
+    : /\b(?:acra|compan(?:y|ies))\b/i.test(query) && !/\b(?:income tax|tax returns?|gst)\b/i.test(query);
+  if (acraAnnualReturnScope && isAcraAnnualReturnDeadlineQuestion(query)) {
+    const topicIds = ['acra_annual-returns'];
+    add('acra_annual_return_filing_deadline', 'Annual return filing deadline',
+      ['filing deadline', 'annual return deadline', 'due date'], topicIds);
+    if (/\b(?:financial\s+year\s+end|fye)\b/i.test(query)) {
+      add('acra_annual_return_financial_year_end', 'Annual return deadline after financial year end',
+        ['financial year end', 'FYE'], topicIds);
+    }
+    if (/\b(?:listed|non[\s-]?listed|unlisted)\s+(?:singapore\s+)?compan(?:y|ies)\b/i.test(query)) {
+      add('acra_annual_return_listing_status', 'Annual return deadline by company listing status',
+        ['listed companies', 'non-listed companies'], topicIds);
+    }
+    if (/\boverseas\s+branch\s+register\b/i.test(query)) {
+      add('acra_annual_return_branch_register_qualification', 'Overseas branch register qualification for annual return deadlines',
+        ['overseas branch register'], topicIds);
+    }
+  }
   const personalReliefContext = /\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\b|\bpersonal\s+relief\b/i.test(text) ||
     /\b(?:srs|cpf)\b/i.test(text) && /\b(?:relief|tax\s+cap|relief\s+cap)\b/i.test(text);
   const asksReliefCap = personalReliefContext && /\b(?:relief\s+cap|cap\s+of\s+(?:sgd\s*)?\$?\s*80,?000|overall\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|aggregate\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|total\s+(?:personal\s+)?relief\s+limit)\b/i.test(text);
@@ -1095,6 +1162,12 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
     const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     if (normalized.length < 5 || concepts.some(item => item.label.toLowerCase().includes(normalized) || normalized.includes(item.label.toLowerCase()))) continue;
     const hasCanonical = (id: string) => concepts.some(concept => concept.id === id);
+    const coveredAcraDeadlineQualifier = acraCompanySemanticScope && isAcraAnnualReturnDeadlineQuestion(query) && (
+      hasCanonical('acra_annual_return_financial_year_end') && /^(?:fye|financial year end|financial year end fye|financial year end date)$/.test(normalized) ||
+      hasCanonical('acra_annual_return_listing_status') && /^(?:(?:listed|non listed|unlisted) (?:singapore )?compan(?:y|ies)|(?:company )?listing status)$/.test(normalized) ||
+      hasCanonical('acra_annual_return_branch_register_qualification') && /^overseas branch register(?: qualification)?$/.test(normalized)
+    );
+    if (coveredAcraDeadlineQualifier) continue;
     const isAlreadyCoveredCanonicalConcept =
       hasCanonical('cpf_relief') && /\b(?:cpf|central provident fund)\b/.test(normalized) && /\b(?:reliefs?|contributions?)\b/.test(normalized) ||
       hasCanonical('srs_relief') && /\b(?:srs|supplementary retirement scheme)\b/.test(normalized) && /\breliefs?\b/.test(normalized) ||
