@@ -41,7 +41,10 @@ import {
 } from './semanticQuestionUnderstanding';
 import { buildAuthorityWorkstreams } from './authorityWorkstreams';
 import { createAuthorityEvidencePresentation, type AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
-import { shouldUseAuthorityEvidenceRuntime } from '../utils/authorityEvidenceRouting';
+import {
+  shouldUseAuthorityEvidenceRuntime,
+  shouldUseUnmappedAccountingRuleExplanationRuntime
+} from '../utils/authorityEvidenceRouting';
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 import { createRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
 
@@ -639,12 +642,22 @@ export async function processAccountingQuery(
   profiler.setQuestionUnderstanding(projectQuestionUnderstandingDiagnostics(questionUnderstanding));
   if (questionUnderstanding.mode === 'DETERMINISTIC_FALLBACK' && rawQuestionUnderstanding.mode !== 'DETERMINISTIC_FALLBACK') profiler.recordFallback();
   const explicitIrasEvidenceRequest = usesIrasEvidencePolicy(classification, userInput);
+  const unsupportedAccountingRuleExplanationRuntimeEnabled = shouldUseUnmappedAccountingRuleExplanationRuntime({
+    issuePlan: reconciledQuestionUnderstanding.issuePlan,
+    classification,
+    semanticRequestedOperation: questionUnderstanding.interpretation?.requestedOperation,
+    explicitIrasEvidenceRequest,
+    explicitJournalRequest: journalRequested,
+    outputJournalRequest: Boolean(outputPreference?.journal),
+    hasImages,
+    isShortSemanticFollowUp: isShortSemanticFollowUp(userInput)
+  });
   const authorityEvidenceRuntimeEnabled = shouldUseAuthorityEvidenceRuntime({
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
     classification,
     explicitIrasEvidenceRequest,
     hasImages
-  });
+  }) || unsupportedAccountingRuleExplanationRuntimeEnabled;
   if (authorityEvidenceRuntimeEnabled) {
     authorityEvidenceQueryIntent = classification.intent;
     const authorityResult = await buildAuthorityWorkstreams(userInput, reconciledQuestionUnderstanding.issuePlan, {
@@ -662,8 +675,8 @@ export async function processAccountingQuery(
       issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
       (issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')
     );
-    const standaloneAuthorityQuestion = !materialPlanRequestsAccounting &&
-      !journalRequested && !outputPreference?.journal && !isShortSemanticFollowUp(userInput);
+    const standaloneAuthorityQuestion = unsupportedAccountingRuleExplanationRuntimeEnabled ||
+      (!materialPlanRequestsAccounting && !journalRequested && !outputPreference?.journal && !isShortSemanticFollowUp(userInput));
     if (standaloneAuthorityQuestion) {
       activeScenario = null;
       amendmentResolution = resolveFactAmendment(userInput, null);

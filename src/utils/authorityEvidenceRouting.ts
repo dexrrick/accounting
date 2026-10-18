@@ -1,5 +1,5 @@
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
-import type { SemanticAuthority, SemanticIssueReconciliation } from '../services/semanticQuestionUnderstanding';
+import type { SemanticAuthority, SemanticIssueReconciliation, SemanticQuestionOperation } from '../services/semanticQuestionUnderstanding';
 import { planAuthorityWorkstreams } from '../services/authorityWorkstreams';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 
@@ -146,4 +146,44 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
     !classification.authorities.includes('IRAS') &&
     classification.authorities.length > 1 &&
     classification.domains.length > 1;
+}
+
+/** Routes only one validated, unmapped accounting-standard rule explanation to the explicit gap renderer. */
+export function shouldUseUnmappedAccountingRuleExplanationRuntime(input: {
+  issuePlan: SemanticIssueReconciliation;
+  classification: QuestionClassificationResult;
+  semanticRequestedOperation?: SemanticQuestionOperation;
+  explicitIrasEvidenceRequest: boolean;
+  explicitJournalRequest: boolean;
+  outputJournalRequest: boolean;
+  hasImages: boolean;
+  isShortSemanticFollowUp: boolean;
+}): boolean {
+  const { issuePlan, classification } = input;
+  if (input.semanticRequestedOperation !== 'EXPLAIN_RULE' ||
+      input.explicitIrasEvidenceRequest || input.explicitJournalRequest || input.outputJournalRequest ||
+      input.hasImages || input.isShortSemanticFollowUp ||
+      issuePlan.source !== 'SEMANTIC_ISSUES' || issuePlan.coverageEstablished || !issuePlan.hasUnmappedResidual ||
+      issuePlan.issues.length !== 1) {
+    return false;
+  }
+
+  const issue = issuePlan.issues[0];
+  if (!issue || issue.domain !== 'ACCOUNTING' || issue.operation !== 'EXPLAIN_RULE' ||
+      issue.status !== 'UNRESOLVED' || issue.unresolvedReason !== 'NO_COVERAGE_TOPIC' || issue.mappedTopicIds.length !== 0 ||
+      issue.governingAuthorities.length !== 1 ||
+      !['ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(issue.governingAuthorities[0])) {
+    return false;
+  }
+
+  const classifierConfirmsAccountingStandards = classification.primaryDomain === 'ACCOUNTING' &&
+    classification.domains.length === 1 && classification.domains.includes('ACCOUNTING_SFRS') &&
+    classification.authorities.length === 1 &&
+    ['ACRA', 'ASC', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(classification.authorities[0]);
+  return classifierConfirmsAccountingStandards &&
+    classification.intent === 'STATUTORY_ADVISORY' &&
+    classification.accountingAnalysisRequired &&
+    !classification.taxAnalysisRequired &&
+    !classification.calculationRequired &&
+    !classification.journalEntryRequired;
 }

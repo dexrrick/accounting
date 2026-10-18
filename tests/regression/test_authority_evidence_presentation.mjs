@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createAuthorityEvidencePresentation, hasCurrentAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
-import { shouldUseAuthorityEvidenceRuntime } from '../../src/utils/authorityEvidenceRouting.ts';
+import {
+  shouldUseAuthorityEvidenceRuntime,
+  shouldUseUnmappedAccountingRuleExplanationRuntime
+} from '../../src/utils/authorityEvidenceRouting.ts';
 import { createChatPreview } from '../../src/utils/chatPresentation.ts';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
@@ -731,5 +734,119 @@ assert.ok(standaloneIrasResponse.scenarioState.irasEvidencePresentation,
   'the standalone IRAS renderer attaches query-bound representation diagnostics');
 assert.equal(standaloneIrasResponse.scenarioState.authorityEvidencePresentation, undefined,
   'a single IRAS route remains on its established response path');
+
+const unsupportedAccountingRuleQuery = 'Explain the SFRS(I) 6 accounting treatment for exploration and evaluation assets.';
+const unsupportedAccountingRuleInterpretation = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [],
+  domain: 'ACCOUNTING', population: 'COMPANY', primarySubject: 'SFRS(I) 6 exploration and evaluation assets',
+  concepts: [{ concept: 'SFRS(I) 6', role: 'PRIMARY' }], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
+  issues: [{ subject: 'SFRS(I) 6 exploration and evaluation assets', population: 'COMPANY', domain: 'ACCOUNTING',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
+};
+let unsupportedAccountingSemanticCalls = 0;
+const unsupportedAccountingBlockedRequests = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  const payload = JSON.parse(init?.body || '{}');
+  const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+  if (url.hostname === 'generativelanguage.googleapis.com' && prompt.includes('Return a V2 JSON object')) {
+    unsupportedAccountingSemanticCalls++;
+    if (unsupportedAccountingSemanticCalls === 1) {
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(unsupportedAccountingRuleInterpretation) }] } }] }), {
+        status: 200, headers: { 'content-type': 'application/json' }
+      });
+    }
+  }
+  unsupportedAccountingBlockedRequests.push({ hostname: url.hostname, prompt });
+  throw new Error(`Blocked non-semantic dispatch in offline unsupported-accounting regression: ${url.hostname}`);
+};
+let unsupportedAccountingRuleResponse;
+let unsupportedAccountingRuleError;
+try {
+  unsupportedAccountingRuleResponse = await processAccountingQuery(
+    unsupportedAccountingRuleQuery, null, 'SFRS_I', 'test-key-1234567890'
+  );
+} catch (error) {
+  unsupportedAccountingRuleError = error;
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.ifError(unsupportedAccountingRuleError, 'unsupported accounting explanation returns an explicit evidence gap');
+assert.equal(unsupportedAccountingSemanticCalls, 1, 'unsupported accounting explanation makes exactly one semantic request');
+assert.deepEqual(unsupportedAccountingBlockedRequests, [],
+  'unsupported accounting explanation does not dispatch source, extraction, or legacy answer requests');
+const unsupportedAccountingPresentation = unsupportedAccountingRuleResponse.scenarioState.authorityEvidencePresentation;
+assert.ok(unsupportedAccountingPresentation, 'unsupported accounting explanation uses the authority evidence renderer');
+assert.equal(unsupportedAccountingPresentation.status, 'INSUFFICIENT', 'unmapped accounting standards remain explicitly insufficient');
+assert.equal(unsupportedAccountingRuleResponse.scenarioState.isComplete, false);
+assert.deepEqual(unsupportedAccountingRuleResponse.scenarioState.directGroups, [], 'rule explanations do not create journals');
+const unsupportedAccountingWorkstream = unsupportedAccountingPresentation.workstreams.find(stream =>
+  stream.authority === 'ACCOUNTING_STANDARDS' && stream.domain === 'ACCOUNTING');
+assert.ok(unsupportedAccountingWorkstream, 'the gap stays with the accounting-standards owner');
+assert.equal(unsupportedAccountingWorkstream.evidenceStatus, 'INSUFFICIENT');
+assert.ok(unsupportedAccountingWorkstream.issues.some(issue => issue.evidenceStatus === 'INSUFFICIENT'),
+  'the accounting-standards issue remains explicitly insufficient');
+assert.ok(unsupportedAccountingPresentation.workstreams.every(stream =>
+  stream.authority !== 'IRAS' && stream.domain !== 'ACRA_CORPORATE'),
+'an accounting classifier alias does not create IRAS or corporate ACRA evidence');
+assert.deepEqual(unsupportedAccountingPresentation.workstreams.flatMap(stream => stream.sources), [],
+  'unsupported accounting explanation has no admitted source citations');
+assert.deepEqual(unsupportedAccountingPresentation.workstreams.flatMap(stream => stream.issues.flatMap(issue => issue.claims)), [],
+  'unsupported accounting explanation has no verified claims');
+assert.doesNotMatch(unsupportedAccountingRuleResponse.messageText, /IRAS|ACRA Companies Act|companies registry/i,
+  'the response does not substitute corporate ACRA or IRAS material');
+
+const narrowAccountingRuleIssue = plannedIssue({
+  id: 'unmapped-accounting-rule', authority: 'ACCOUNTING_STANDARDS', domain: 'ACCOUNTING',
+  subject: 'SFRS(I) 6 exploration and evaluation assets', status: 'UNRESOLVED', mappedTopicIds: []
+});
+const narrowAccountingRuleRoute = {
+  issuePlan: semanticIssues([narrowAccountingRuleIssue], { coverageEstablished: false, hasUnmappedResidual: true }),
+  classification: classification({
+    primaryDomain: 'ACCOUNTING', domains: ['ACCOUNTING_SFRS'], authorities: ['ACRA'], multiAuthority: false,
+    intent: 'STATUTORY_ADVISORY', accountingAnalysisRequired: true, taxAnalysisRequired: false,
+    regulatoryAnalysisRequired: false, calculationRequired: false, journalEntryRequired: false
+  }),
+  semanticRequestedOperation: 'EXPLAIN_RULE',
+  explicitIrasEvidenceRequest: false,
+  explicitJournalRequest: false,
+  outputJournalRequest: false,
+  hasImages: false,
+  isShortSemanticFollowUp: false
+};
+const canRouteUnmappedAccountingRule = (overrides = {}) =>
+  shouldUseUnmappedAccountingRuleExplanationRuntime({ ...narrowAccountingRuleRoute, ...overrides });
+assert.equal(canRouteUnmappedAccountingRule(), true, 'a single classifier-confirmed unmapped standards explanation can show its explicit gap');
+assert.equal(canRouteUnmappedAccountingRule({
+  issuePlan: semanticIssues([plannedIssue({
+    id: 'mapped-accounting-rule', authority: 'ACCOUNTING_STANDARDS', domain: 'ACCOUNTING',
+    subject: 'Mapped accounting rule', status: 'MAPPED', mappedTopicIds: ['sfrsi_leases']
+  })])
+}), false, 'mapped standards keep their established path');
+assert.equal(canRouteUnmappedAccountingRule({ explicitJournalRequest: true }), false,
+  'explicit journal requests keep their established path');
+assert.equal(canRouteUnmappedAccountingRule({ outputJournalRequest: true }), false,
+  'output-preference journal requests keep their established path');
+assert.equal(canRouteUnmappedAccountingRule({ hasImages: true }), false,
+  'image requests keep their established extraction path');
+assert.equal(canRouteUnmappedAccountingRule({
+  classification: classification({ ...narrowAccountingRuleRoute.classification, calculationRequired: true })
+}), false, 'calculation requests keep their established path');
+assert.equal(canRouteUnmappedAccountingRule({ semanticRequestedOperation: 'CALCULATE' }), false,
+  'a semantic calculation request cannot use the rule-explanation gap route');
+assert.equal(canRouteUnmappedAccountingRule({ isShortSemanticFollowUp: true }), false,
+  'short semantic follow-ups keep their established path');
+assert.equal(canRouteUnmappedAccountingRule({
+  issuePlan: semanticIssues([
+    narrowAccountingRuleIssue,
+    plannedIssue({ id: 'mixed-tax-issue', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: 'Tax issue', status: 'UNRESOLVED', mappedTopicIds: [] })
+  ], { coverageEstablished: false, hasUnmappedResidual: true })
+}), false, 'mixed material issues keep their established path');
+assert.equal(canRouteUnmappedAccountingRule({
+  classification: classification({ ...narrowAccountingRuleRoute.classification, taxAnalysisRequired: true })
+}), false, 'tax questions keep their established path');
+assert.equal(canRouteUnmappedAccountingRule({ explicitIrasEvidenceRequest: true }), false,
+  'explicit IRAS evidence requests keep their established path');
 
 console.log('Authority evidence presentation and routing regressions passed.');
