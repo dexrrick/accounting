@@ -717,6 +717,8 @@ function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRe
   };
 }
 
+export { defaultLocalProvider as createLocalAuthorityEvidenceProvider };
+
 function versioningManagerFor(retriever: ISourceRetriever): SourceVersioningManager {
   return retriever.getVersioningManager?.() || defaultSourceVersioningManager;
 }

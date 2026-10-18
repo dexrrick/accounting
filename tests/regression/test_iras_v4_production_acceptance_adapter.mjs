@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import { readV4Contract } from '../evaluation/singapore/iras-first-targeted-acceptance-v4.mjs';
 import { bindProductionControlledRetriever } from '../../scripts/iras_v4_capture_replay_runner.mjs';
@@ -13,6 +14,7 @@ assert.ok(privateCase && unsupportedCase, 'The isolated adapter controls use fix
 const PRIVATE_URL = 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses';
 const SITEMAP_URL = 'https://www.iras.gov.sg/sitemap';
 const ROBOTS_URL = 'https://www.iras.gov.sg/robots.txt';
+const CPF_RELIEF_URL = 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund(cpf)-relief-for-employees';
 const SYNTHETIC_PRIVATE_HTML = '<html><head><title>Business Expenses | IRAS</title></head><body>' +
   '<!-- SYNTHETIC API-FREE FIXTURE; this is not current IRAS content. -->' +
   '<main><h1>Business Expenses</h1><p>For income tax, companies may deduct expenses wholly and exclusively incurred in producing income under the general deduction rule in section 14. This explains whether a company expense is tax deductible and whether it is deductible for tax purposes. Private and domestic expenses are not deductible under section 15, subject to the statutory exceptions and qualifications. This guidance explains the treatment of business expenses for corporate income tax.</p></main></body></html>';
@@ -21,6 +23,11 @@ const SYNTHETIC_SITEMAP_XML = '<?xml version="1.0"?><urlset><url>' +
   '<lastmod>2026-10-04</lastmod></url></urlset>';
 const SYNTHETIC_RESPONSE_BYTES = Buffer.byteLength(SYNTHETIC_PRIVATE_HTML, 'utf8');
 const SYNTHETIC_RESPONSE_SHA256 = createHash('sha256').update(SYNTHETIC_PRIVATE_HTML).digest('hex');
+const SYNTHETIC_CPF_RELIEF_HTML = '<html><head><title>Central Provident Fund (CPF) Relief for employees | IRAS</title></head><body>' +
+  '<!-- SYNTHETIC API-FREE FIXTURE; this is not current IRAS content. -->' +
+  '<main><h1>Central Provident Fund (CPF) Relief for employees</h1><p>Individuals may claim personal income tax relief for compulsory CPF contributions made by employees. CPF relief is based on the employee share of compulsory contributions. Employer CPF contributions are not the employee personal CPF relief amount.</p></main></body></html>';
+const SYNTHETIC_CPF_RELIEF_SITEMAP = '<?xml version="1.0"?><urlset><url>' +
+  `<loc>${CPF_RELIEF_URL}</loc><lastmod>2026-09-29</lastmod></url></urlset>`;
 
 function makeSemanticWire({ subject, domain, population, authority, operation, concepts, facts = [] }) {
   return {
@@ -71,6 +78,9 @@ const unsupportedSemanticWire = makeSemanticWire({
   operation: 'EXPLAIN_RULE',
   concepts: [{ concept: 'mineral exploration and evaluation expenditure', role: 'PRIMARY' }]
 });
+const retainedMixedSemanticWire = JSON.parse(await readFile(
+  new URL('../fixtures/iras-v4-a-paraphrase-2-semantic-response.json', import.meta.url), 'utf8'
+));
 
 function makeFixtureTransport() {
   const fixtureResponses = new Map([
@@ -79,6 +89,22 @@ function makeFixtureTransport() {
     [ROBOTS_URL, ['User-agent: *\nDisallow:', 'text/plain']]
   ]);
   return async url => {
+    const response = fixtureResponses.get(String(url));
+    return new Response(response?.[0] || 'SYNTHETIC_API_FREE_FIXTURE_MISSING', {
+      status: response ? 200 : 404,
+      headers: { 'content-type': response?.[1] || 'text/plain' }
+    });
+  };
+}
+
+function makeMixedFixtureTransport(requestedUrls = []) {
+  const fixtureResponses = new Map([
+    [CPF_RELIEF_URL, [SYNTHETIC_CPF_RELIEF_HTML, 'text/html']],
+    [SITEMAP_URL, [SYNTHETIC_CPF_RELIEF_SITEMAP, 'application/xml']],
+    [ROBOTS_URL, ['User-agent: *\nDisallow:', 'text/plain']]
+  ]);
+  return async url => {
+    requestedUrls.push(String(url));
     const response = fixtureResponses.get(String(url));
     return new Response(response?.[0] || 'SYNTHETIC_API_FREE_FIXTURE_MISSING', {
       status: response ? 200 : 404,
@@ -219,6 +245,63 @@ async function runCase({ caseId, wire, referenceDate, evidenceTransport, sendSem
   assert.equal(result.productionDiagnostics.governed.governedIssueObservations[0].coverageStatus,
     'NO_COVERAGE_TOPIC');
   assert.equal(result.productionDiagnostics.governed.governedIssueObservations[0].claimCount, 0);
+}
+
+// Replay the retained mixed semantic response through real local CPF records and
+// the controlled IRAS evidence path. Only the IRAS side uses this labeled fixture.
+{
+  const requestedUrls = [];
+  const evidenceTransport = makeMixedFixtureTransport(requestedUrls);
+  const result = await runCase({
+    caseId: 'A-paraphrase-2',
+    wire: retainedMixedSemanticWire,
+    referenceDate: '2026-10-04',
+    evidenceTransport
+  });
+  assert.equal(result.issuePlan.coverageEstablished, true,
+    'The retained mixed request has two independently owned topics.');
+  assert.equal(result.issuePlan.issues.length, 2);
+  assert.deepEqual(result.issuePlan.issues.find(issue => issue.domain === 'IRAS_INCOME_TAX')?.routingTopicIds,
+    ['iras-individual-reliefs']);
+
+  const localCpf = result.productionDiagnostics.local.issues.find(issue => issue.domain === 'CPF_PAYROLL');
+  assert.ok(localCpf, 'The real local CPF candidate path is exercised.');
+  assert.equal(localCpf.evidenceStatus, 'INSUFFICIENT');
+  assert.equal(localCpf.applicationStatus, 'UNRESOLVED');
+  assert.equal(localCpf.verifiedClaims.length, 0);
+  assert.ok(localCpf.gaps.includes('CANDIDATE_REJECTED'));
+  const localCpfTopic = result.productionDiagnostics.local.topicObservations.find(row => row.topicId === 'cpf_contribution_rates');
+  assert.equal(localCpfTopic?.needsReviewCandidate, true,
+    'The registered NEEDS_REVIEW CPF source is observed and rejected through production admission.');
+
+  const governed = result.productionDiagnostics.governed;
+  assert.equal(governed.available, true);
+  assert.deepEqual(governed.workstreams.map(stream => stream.authority).sort(), ['CPF', 'IRAS']);
+  const irasObservation = governed.governedIssueObservations.find(row => row.authority === 'IRAS');
+  const cpfObservation = governed.governedIssueObservations.find(row => row.authority === 'CPF');
+  assert.ok(irasObservation && cpfObservation, 'The governed runtime preserves separate IRAS and CPF workstreams.');
+  assert.equal(irasObservation.ruleEvidenceStatus, 'VERIFIED');
+  assert.equal(cpfObservation.ruleEvidenceStatus, 'INSUFFICIENT');
+  const governedCpfIssue = governed.workstreams.find(stream => stream.authority === 'CPF')?.issues[0];
+  assert.equal(governedCpfIssue?.applicationStatus, 'UNRESOLVED');
+  assert.equal(cpfObservation.verifiedClaimCount, 0);
+  assert.equal(requestedUrls.some(url => new URL(url).hostname.endsWith('cpf.gov.sg')), false,
+    'The IRAS-only evidence transport never receives a CPF request.');
+  assert.equal(governed.fetchValidationObservations.some(row => row.url && new URL(row.url).hostname.endsWith('cpf.gov.sg')), false,
+    'The governed IRAS runtime does not attempt CPF discovery.');
+
+  let guardLatch;
+  const guardedRetriever = bindProductionControlledRetriever({
+    transport: {
+      async fetch() { throw new Error('CPF URL reached the evidence transport'); },
+      trip(reason) { guardLatch = reason; },
+      assertHealthy() {}
+    }
+  });
+  await assert.rejects(guardedRetriever.fetchOfficialSource('https://www.cpf.gov.sg/employer/sitemap'),
+    /V4_CAPTURE_URL_BLOCKED/);
+  assert.equal(guardLatch, 'V4_PRODUCTION_REQUEST_URL_BLOCKED',
+    'A direct forbidden CPF URL still trips the canonical runner guard.');
 }
 
 // Missing either the source reference date or controlled evidence transport must fail closed.
