@@ -16,6 +16,7 @@ import {
   FRESH_ACCEPTANCE_EXPECTED_BRANCH,
   ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE,
   MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE,
+  TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE,
   ACTIVATION_PROFILE,
   CASE_EVIDENCE_FAMILY,
   EVIDENCE_FAMILIES,
@@ -164,6 +165,109 @@ async function testProviderEnvelopeFailureRetention() {
     });
     assert.equal(stalledFetchCalls, 1);
     assert.equal(stalledCancelCalls, 1, 'Already-aborted provider reads cancel without awaiting a stalled body cancel.');
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = originalApiKey;
+  }
+}
+
+async function testSemanticDeadlineRetainsProviderReceipt() {
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.GEMINI_API_KEY;
+  const prefix = Buffer.from('{"candidates":', 'utf8');
+  let fetchCalls = 0;
+  let bodyCancellations = 0;
+  process.env.GEMINI_API_KEY = 'offline-fixture-key-only';
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(new ReadableStream({
+      start(controller) { controller.enqueue(prefix); },
+      cancel() { bodyCancellations += 1; return new Promise(() => {}); }
+    }), { status: 200 });
+  };
+  try {
+    const freshTransport = await import(new URL(
+      '../../scripts/iras_v4_capture_transports.mjs?outer-deadline-receipt=1', import.meta.url).href);
+    const progress = [];
+    const result = await runOfflineSyntheticV4CaseLoop({
+      synthetic: true,
+      timeoutMs: 40,
+      semanticTransport: freshTransport.sendV4SemanticRequest,
+      executeCase: async ({ caseId, sendSemantic }) => await sendSemantic({
+        caseId,
+        prompt: 'offline deadline receipt fixture',
+        system: 'offline fixture',
+        provider: { activeProvider: 'gemini', gemini: { model: 'gemini-3.5-flash-lite' } },
+        options: { jsonMode: true, responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+          timeoutMs: 8_000, temperature: 0 }
+      }),
+      writeProgress: async row => progress.push(row)
+    });
+    assert.equal(fetchCalls, 1, 'the reviewed provider transport makes exactly one mocked physical request');
+    assert.equal(bodyCancellations, 1, 'the deadline cancels the stalled body without awaiting its cancel promise');
+    assert.equal(result.rows[0].failure.stage, 'SEMANTIC_TRANSPORT');
+    assert.equal(result.rows[0].failure.code, 'V4_SEMANTIC_DEADLINE_EXCEEDED');
+    assert.deepEqual(result.rows[0].providerResponsePartial, {
+      kind: 'GEMINI_HTTP_ENVELOPE',
+      status: 200,
+      failureCode: 'V4_SEMANTIC_DEADLINE_EXCEEDED',
+      truncated: false,
+      bodyBase64: prefix.toString('base64'),
+      bodySha256: sha256(prefix),
+      bodyBytes: prefix.length
+    });
+    assert.equal(Object.isFrozen(result.rows[0].providerResponsePartial), true,
+      'the persisted provider receipt cannot be mutated after the deadline');
+    const failedEvent = progress.find(row => row.event === 'SEMANTIC_RESPONSE_FAILED');
+    assert.deepEqual(failedEvent.partialProviderResponse, result.rows[0].providerResponsePartial,
+      'the failure event persists the same bounded provider receipt as the failed row');
+    assert.equal(failedEvent.partialSemanticResponseBase64, undefined,
+      'provider HTTP bytes remain separate from semantic response bytes');
+    assert.equal(result.rows[0].failureDiagnostics.providerOutcome, 'TIMEOUT');
+    assert.equal(result.rows[0].failureDiagnostics.providerStatus, 200,
+      'the observed status remains available without being classified as an HTTP failure');
+    assert.equal(result.rows[0].failureDiagnostics.assessmentStatus, 'NOT_ASSESSED');
+    assert.equal(result.rows[1].status, 'NOT_RUN_AFTER_PRIOR_FAILURE');
+
+    let noHeaderCalls = 0;
+    const noHeaderProgress = [];
+    globalThis.fetch = async (_url, init) => {
+      noHeaderCalls += 1;
+      return await new Promise((_, reject) => {
+        init.signal.addEventListener('abort', () => {
+          const error = new Error('aborted before response headers');
+          error.name = 'AbortError';
+          reject(error);
+        }, { once: true });
+      });
+    };
+    const noHeaderTransport = await import(new URL(
+      '../../scripts/iras_v4_capture_transports.mjs?outer-deadline-no-headers=1', import.meta.url).href);
+    const noHeader = await runOfflineSyntheticV4CaseLoop({
+      synthetic: true,
+      timeoutMs: 30,
+      semanticTransport: noHeaderTransport.sendV4SemanticRequest,
+      executeCase: async ({ caseId, sendSemantic }) => await sendSemantic({
+        caseId,
+        prompt: 'offline no-header timeout fixture',
+        system: 'offline fixture',
+        provider: { activeProvider: 'gemini', gemini: { model: 'gemini-3.5-flash-lite' } },
+        options: { jsonMode: true, responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+          timeoutMs: 8_000, temperature: 0 }
+      }),
+      writeProgress: async row => noHeaderProgress.push(row)
+    });
+    assert.equal(noHeaderCalls, 1);
+    assert.equal(noHeader.rows[0].failure.code, 'V4_SEMANTIC_DEADLINE_EXCEEDED');
+    assert.equal(noHeader.rows[0].providerResponsePartial, undefined,
+      'a timeout before headers does not manufacture a provider receipt');
+    assert.equal(noHeader.rows[0].failureDiagnostics.providerOutcome, 'TIMEOUT');
+    assert.equal(noHeader.rows[0].failureDiagnostics.providerStatus, undefined);
+    assert.equal(noHeader.rows[0].failureDiagnostics.assessmentStatus, 'NOT_ASSESSED');
+    assert.equal(noHeader.rows[1].status, 'NOT_RUN_AFTER_PRIOR_FAILURE');
+    const noHeaderFailureEvent = noHeaderProgress.find(row => row.event === 'SEMANTIC_RESPONSE_FAILED');
+    assert.equal(noHeaderFailureEvent.partialProviderResponse, null);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -618,6 +722,7 @@ async function testReviewedSemanticNamespaces() {
   const canonicalNamespace = CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE;
   const freshAlignmentNamespace = ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE;
   const mixedRepairNamespace = MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE;
+  const timeoutReceiptNamespace = TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE;
   const root = await temporaryDirectory('iras-v4-semantic-namespace-');
   try {
     assert.equal(assertReviewedSemanticNamespace(legacyNamespace), legacyNamespace,
@@ -634,6 +739,8 @@ async function testReviewedSemanticNamespaces() {
       'the fresh alignment namespace is explicitly accepted');
     assert.equal(assertReviewedSemanticNamespace(mixedRepairNamespace), mixedRepairNamespace,
       'the new mixed repair namespace is explicitly accepted');
+    assert.equal(assertReviewedSemanticNamespace(timeoutReceiptNamespace), timeoutReceiptNamespace,
+      'the timeout receipt acceptance uses its own exact namespace');
     assert.equal(expectedBranchForSemanticNamespace(legacyNamespace), EXPECTED_BRANCH);
     assert.equal(expectedBranchForSemanticNamespace(freshNamespace), EXPECTED_BRANCH);
     assert.equal(expectedBranchForSemanticNamespace(canonicalNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH);
@@ -641,6 +748,8 @@ async function testReviewedSemanticNamespaces() {
       'fresh alignment acceptance is bound to the ACRA branch');
     assert.equal(expectedBranchForSemanticNamespace(mixedRepairNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH,
       'mixed repair acceptance is bound to the ACRA branch');
+    assert.equal(expectedBranchForSemanticNamespace(timeoutReceiptNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+      'timeout receipt acceptance is bound to the ACRA branch');
     assert.notEqual(freshAlignmentNamespace, canonicalNamespace,
       'fresh alignment acceptance uses its own immutable namespace');
     assert.throws(() => expectedBranchForSemanticNamespace('artifacts/unreviewed/semantic-run-v4'),
@@ -662,6 +771,9 @@ async function testReviewedSemanticNamespaces() {
       mixedRepairNamespace + '/nested',
       mixedRepairNamespace + '-extra',
       'artifacts/canonical-acceptance-mixed-repair-2026-10-18-sibling/semantic-run-v4',
+      timeoutReceiptNamespace + '/nested',
+      timeoutReceiptNamespace + '-sibling',
+      'artifacts/canonical-timeout-receipt-acceptance-2026-10-18/../canonical-acceptance-mixed-repair-2026-10-18/semantic-run-v4',
       'artifacts/canonical-acceptance-2026-10-17/semantic-run-v4-sibling',
       'artifacts/canonical-acceptance-2026-10-16/other-semantic-run-v4',
       'artifacts/canonical-acceptance-2026-10-17/../canonical-acceptance-2026-10-16/semantic-run-v4',
@@ -688,6 +800,7 @@ async function testReviewedSemanticNamespaces() {
     const canonicalBinding = makeBinding(canonicalNamespace);
     const freshAlignmentBinding = makeBinding(freshAlignmentNamespace);
     const mixedRepairBinding = makeBinding(mixedRepairNamespace);
+    const timeoutReceiptBinding = makeBinding(timeoutReceiptNamespace);
     const legacyPath = path.join(root, ...legacyNamespace.split('/'));
     const freshPath = path.join(root, ...freshNamespace.split('/'));
     const retryPath = path.join(root, ...retryNamespace.split('/'));
@@ -695,6 +808,7 @@ async function testReviewedSemanticNamespaces() {
     const canonicalPath = path.join(root, ...canonicalNamespace.split('/'));
     const freshAlignmentPath = path.join(root, ...freshAlignmentNamespace.split('/'));
     const mixedRepairPath = path.join(root, ...mixedRepairNamespace.split('/'));
+    const timeoutReceiptPath = path.join(root, ...timeoutReceiptNamespace.split('/'));
     assert.notEqual(path.resolve(root), path.resolve('.'), 'fixture root must differ from the process working directory');
     assert.equal(assertRunnerConfigurationBodyMatches(legacyBinding, legacyBinding), true,
       'the consumed legacy binding remains valid');
@@ -712,6 +826,8 @@ async function testReviewedSemanticNamespaces() {
       'the exact fresh alignment namespace is included in the integrity binding');
     assert.equal(assertRunnerConfigurationBodyMatches(mixedRepairBinding, mixedRepairBinding), true,
       'the exact mixed repair namespace is included in the integrity binding');
+    assert.equal(assertRunnerConfigurationBodyMatches(timeoutReceiptBinding, timeoutReceiptBinding), true,
+      'the exact timeout receipt namespace is included in the integrity binding');
     assert.equal(assertCanonicalNamespace(legacyPath, legacyBinding, root), legacyPath);
     assert.equal(assertCanonicalNamespace(freshPath, freshBinding, root), freshPath,
       'the frozen fresh binding selects its exact acceptance slot');
@@ -725,6 +841,8 @@ async function testReviewedSemanticNamespaces() {
       'the fresh alignment binding selects only its exact slot');
     assert.equal(assertCanonicalNamespace(mixedRepairPath, mixedRepairBinding, root), mixedRepairPath,
       'the mixed repair binding selects only its exact slot');
+    assert.equal(assertCanonicalNamespace(timeoutReceiptPath, timeoutReceiptBinding, root), timeoutReceiptPath,
+      'the timeout receipt binding selects only its exact slot');
     assert.throws(() => assertCanonicalNamespace(freshPath, retryBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
     assert.throws(() => assertCanonicalNamespace(retryNamespace, retryBinding, root),
@@ -742,12 +860,21 @@ async function testReviewedSemanticNamespaces() {
     assert.throws(() => assertCanonicalNamespace(canonicalPath, freshAlignmentBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
       'the fresh alignment binding cannot select the prior canonical slot');
+    assert.throws(() => assertCanonicalNamespace(timeoutReceiptPath, mixedRepairBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the mixed repair binding cannot select the timeout receipt slot');
+    assert.throws(() => assertCanonicalNamespace(mixedRepairPath, timeoutReceiptBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the timeout receipt binding cannot select the mixed repair slot');
     assert.throws(() => assertRunnerConfigurationBodyMatches(freshBinding, legacyBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
     assert.throws(() => assertRunnerConfigurationBodyMatches(retryBinding, freshBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
     assert.throws(() => assertRunnerConfigurationBodyMatches(postRepairBinding, retryBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
+    assert.throws(() => assertRunnerConfigurationBodyMatches(timeoutReceiptBinding, mixedRepairBinding),
+      /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/,
+      'a timeout receipt request cannot be rebound to the mixed repair namespace');
     assert.throws(() => assertCanonicalNamespace(
       root + '/' + FRESH_ACCEPTANCE_ROOT + '/../' + ARTIFACT_ROOT + '/semantic-run-v4', freshBinding, root),
     /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
@@ -1752,6 +1879,7 @@ async function main() {
   assert.equal(path.resolve(TEST_ROOT), TEST_ROOT);
   await testActivationControls();
   await testProviderEnvelopeFailureRetention();
+  await testSemanticDeadlineRetainsProviderReceipt();
   await testActualAdapterInFixedCaseLoop();
   testFrozenConfigurationGuards();
   await testReviewedSemanticNamespaces();

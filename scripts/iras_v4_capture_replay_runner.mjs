@@ -110,12 +110,15 @@ const FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/iras-v4-acceptance-repair
 const CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-acceptance-2026-10-16/';
 const FRESH_ALIGNMENT_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-acceptance-2026-10-17/';
 const MIXED_REPAIR_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-acceptance-mixed-repair-2026-10-18/';
+const TIMEOUT_RECEIPT_ACCEPTANCE_ARTIFACT_NAMESPACE = 'artifacts/canonical-timeout-receipt-acceptance-2026-10-18/';
 export const CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE =
   CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
 export const ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE =
   FRESH_ALIGNMENT_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
 export const MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE =
   MIXED_REPAIR_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
+export const TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE =
+  TIMEOUT_RECEIPT_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4';
 const RETRY_ACCEPTANCE_SEMANTIC_NAMESPACE =
   FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE + 'semantic-run-v4-retry-2026-10-08';
 const POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE =
@@ -125,7 +128,8 @@ const APPROVED_ARTIFACT_NAMESPACES = Object.freeze([
   FRESH_ACCEPTANCE_ARTIFACT_NAMESPACE,
   CANONICAL_ACCEPTANCE_ARTIFACT_NAMESPACE,
   FRESH_ALIGNMENT_ACCEPTANCE_ARTIFACT_NAMESPACE,
-  MIXED_REPAIR_ACCEPTANCE_ARTIFACT_NAMESPACE
+  MIXED_REPAIR_ACCEPTANCE_ARTIFACT_NAMESPACE,
+  TIMEOUT_RECEIPT_ACCEPTANCE_ARTIFACT_NAMESPACE
 ]);
 const EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE = Object.freeze({
   [ARTIFACT_NAMESPACE + 'semantic-run-v4']: EXPECTED_BRANCH,
@@ -134,7 +138,8 @@ const EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE = Object.freeze({
   [POST_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE]: EXPECTED_BRANCH,
   [CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH,
   [ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH,
-  [MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH
+  [MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+  [TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE]: FRESH_ACCEPTANCE_EXPECTED_BRANCH
 });
 const APPROVED_SEMANTIC_NAMESPACES = Object.freeze([
   ...Object.keys(EXPECTED_BRANCH_BY_SEMANTIC_NAMESPACE)
@@ -2509,15 +2514,36 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
   let retainedBytes = 0;
   let semanticResponseObserved = false;
   let reader;
+  let providerResponseSnapshot;
+  let providerSnapshotOpen = true;
+  const retainProviderSnapshot = snapshot => {
+    if (!providerSnapshotOpen || snapshot?.kind !== 'GEMINI_HTTP_ENVELOPE' ||
+        !Number.isInteger(snapshot.status) || !Number.isSafeInteger(snapshot.bodyBytes) ||
+        snapshot.bodyBytes < 0 || snapshot.bodyBytes > maximumBytes ||
+        typeof snapshot.bodyBase64 !== 'string' || typeof snapshot.bodySha256 !== 'string') return;
+    providerResponseSnapshot = Object.freeze({ ...snapshot });
+  };
+  const attachProviderSnapshot = error => {
+    if (!error?.partialProviderResponse && providerResponseSnapshot) {
+      error.partialProviderResponse = Object.freeze({
+        ...providerResponseSnapshot,
+        failureCode: providerResponseSnapshot.failureCode || String(error?.message || error).slice(0, 120)
+      });
+    }
+  };
   const timeout = new Promise((_, reject) => {
     timeoutId = setTimeout(() => {
+      const error = new Error('V4_SEMANTIC_DEADLINE_EXCEEDED');
+      attachProviderSnapshot(error);
+      providerSnapshotOpen = false;
       controller.abort();
-      reject(new Error('V4_SEMANTIC_DEADLINE_EXCEEDED'));
+      reject(error);
     }, timeoutMs);
   });
   try {
     const value = await Promise.race([
-      Promise.resolve().then(() => explicitTransportCall(() => sendSemantic({ ...args, signal: controller.signal, timeoutMs }))),
+      Promise.resolve().then(() => explicitTransportCall(() => sendSemantic({ ...args,
+        signal: controller.signal, timeoutMs, onProviderResponseSnapshot: retainProviderSnapshot }))),
       timeout
     ]);
     semanticResponseObserved = true;
@@ -2557,6 +2583,8 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
     return { text: value, bytes };
   } catch (error) {
     void reader?.cancel(error).catch(() => {});
+    attachProviderSnapshot(error);
+    providerSnapshotOpen = false;
     if (semanticResponseObserved) {
       const partial = Buffer.concat(chunks);
       error.partialResponse = {
@@ -2568,6 +2596,7 @@ async function boundedSemanticSend(sendSemantic, args, { timeoutMs, maximumBytes
     }
     throw error;
   } finally {
+    providerSnapshotOpen = false;
     clearTimeout(timeoutId);
     signal?.removeEventListener('abort', relayAbort);
   }
@@ -2690,7 +2719,8 @@ async function runFixedV4CaseLoop({
           } catch (error) {
             semanticState.failureStage = 'SEMANTIC_TRANSPORT';
             semanticState.failureCode = String(error?.message || error).slice(0, 160);
-            semanticState.providerResponsePartial = error?.partialProviderResponse || null;
+            semanticState.providerResponsePartial = error?.partialProviderResponse
+              ? Object.freeze({ ...error.partialProviderResponse }) : null;
             throw error;
           }
         });
@@ -2709,7 +2739,7 @@ async function runFixedV4CaseLoop({
           partialSemanticResponseBase64: error?.partialResponse?.bodyBase64,
           partialSemanticResponseSha256: error?.partialResponse?.bodySha256,
           partialSemanticResponseBytes: error?.partialResponse?.bodyBytes,
-          partialProviderResponse: error?.partialProviderResponse
+          partialProviderResponse: semanticState.providerResponsePartial
         });
       }).catch(() => {});
       semanticState.journalPromises.push(journalPromise);
