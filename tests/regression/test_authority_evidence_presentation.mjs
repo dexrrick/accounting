@@ -609,6 +609,7 @@ assert.equal(noProviderMulti.scenarioState.requestCompletenessContext.rawQuery, 
 assert.equal(noProviderMulti.scenarioState.requestCompletenessContext.evaluation.structuralAcceptance, 'REJECTED');
 assert.ok(noProviderMulti.scenarioState.requestCompletenessContext.evaluation.findings.some(item => item.code === 'OBSERVATION_WRAPPER_FAILED'));
 
+const b1AnnualReturnQuery = 'For a Singapore-incorporated non-listed company with no overseas branch register, what is the general annual-return filing deadline in months after financial year end? Explain the rule only; do not prepare a journal.';
 const acraDeadlineQuery = 'For a Singapore private company with a 31 December financial year end, when must it file its annual return?';
 const acraDeadlineTopics = defaultQueryTopicResolver.decomposeQuery(acraDeadlineQuery).topics.map(topic => topic.id);
 assert.ok(acraDeadlineTopics.includes('acra_annual-returns'),
@@ -644,6 +645,40 @@ const mixedAcraAnnualReturnQuery = 'For a Singapore VCC and private company, whe
 const mixedAcraAnnualReturnTopics = defaultQueryTopicResolver.decomposeQuery(mixedAcraAnnualReturnQuery).topics.map(topic => topic.id);
 assert.ok(mixedAcraAnnualReturnTopics.includes('acra_vcc') && mixedAcraAnnualReturnTopics.includes('acra_annual-returns'),
   'mixed VCC/company questions retain both distinct filing scopes');
+const b1AnnualReturnTopics = defaultQueryTopicResolver.decomposeQuery(b1AnnualReturnQuery).topics.map(topic => topic.id);
+assert.ok(b1AnnualReturnTopics.includes('acra_annual-returns'),
+  'the hyphenated annual-return deadline wording resolves to ACRA company filing coverage');
+const b1Classification = classifyQuestion(b1AnnualReturnQuery);
+assert.equal(b1Classification.primaryDomain, 'CORPORATE_REGULATORY', 'a negated journal mention does not override the ACRA subject');
+assert.ok(b1Classification.domains.includes('ACRA_COMPANIES'), 'the classified annual-return question retains ACRA corporate scope');
+assert.equal(b1Classification.intent, 'STATUTORY_ADVISORY', 'the rule-only question remains statutory advisory');
+assert.equal(b1Classification.accountingAnalysisRequired, false, 'a negated journal instruction does not create accounting analysis');
+assert.equal(b1Classification.journalEntryRequired, false, 'a negated journal instruction does not request an entry');
+const vccHyphenatedAnnualReturnQuery = 'For a Singapore company structured as a VCC, what is its annual-return filing deadline in months after financial year end?';
+assert.ok(!defaultQueryTopicResolver.decomposeQuery(vccHyphenatedAnnualReturnQuery).topics.some(topic => topic.id === 'acra_annual-returns'),
+  'hyphenated company filing wording does not let a VCC inherit company annual-return scope');
+for (const query of [
+  'For a Singapore variable-capital company, what is its annual-return filing deadline in months after financial year end?',
+  'For a Singapore VCC company, what is its annual-return filing deadline in months after financial year end?',
+  'For a Singapore company structured as a variable-capital company, what is its annual-return filing deadline in months after financial year end?',
+  'For a Singapore company structured as a variable capital company, what is its annual-return filing deadline in months after financial year end?'
+]) {
+  assert.ok(!defaultQueryTopicResolver.decomposeQuery(query).topics.some(topic => topic.id === 'acra_annual-returns'),
+    `hyphenated annual-return routing does not match a VCC noun phrase: ${query}`);
+}
+for (const query of [
+  b1AnnualReturnQuery.replace('do not prepare a journal', "don't prepare a journal-entry"),
+  b1AnnualReturnQuery.replace('do not prepare a journal', 'do not prepare a double-entry journal')
+]) {
+  const negativeJournalClassification = classifyQuestion(query);
+  assert.equal(negativeJournalClassification.journalEntryRequired, false,
+    `explicitly negated journal wording does not request an entry: ${query}`);
+}
+const mixedJournalPolarityQuery = 'We paid the annual return filing fee. Do not prepare a journal for the filing deadline, but prepare a journal-entry to record the fee.';
+const mixedJournalPolarityClassification = classifyQuestion(mixedJournalPolarityQuery);
+assert.equal(mixedJournalPolarityClassification.primaryDomain, 'ACCOUNTING');
+assert.equal(mixedJournalPolarityClassification.journalEntryRequired, true,
+  'a separate positive fee journal remains active beside a negative journal instruction');
 const companyThenVccQuery = 'For a private company, when must it file its annual return? Separately, for a VCC, when must it file its annual return?';
 const companyThenVccTopics = defaultQueryTopicResolver.decomposeQuery(companyThenVccQuery).topics.map(topic => topic.id);
 assert.ok(companyThenVccTopics.includes('acra_vcc') && companyThenVccTopics.includes('acra_annual-returns'),
@@ -656,27 +691,72 @@ const acraDeadlineFetch = globalThis.fetch;
 globalThis.fetch = async input => {
   throw new Error(`Blocked network request in offline ACRA deadline regression: ${String(input)}`);
 };
-let acraDeadlineResponse;
 try {
-  acraDeadlineResponse = await processAccountingQuery(acraDeadlineQuery, null, 'SFRS_I');
+  for (const query of [acraDeadlineQuery, b1AnnualReturnQuery]) {
+    const response = await processAccountingQuery(query, null, 'SFRS_I');
+    const presentation = response.scenarioState.authorityEvidencePresentation;
+    assert.ok(presentation, `the standalone company deadline request uses authority evidence presentation: ${query}`);
+    assert.equal(presentation.status, 'INSUFFICIENT',
+      `without a provider or successful source retrieval the deadline remains unverified: ${query}`);
+    assert.equal(presentation.query, query, 'the evidence projection retains the exact original query');
+    assert.equal(response.scenarioState.rawQuery, query, 'the standalone response retains the original scope');
+    assert.equal(response.scenarioState.requestCompletenessContext.rawQuery, query);
+    assert.equal(response.scenarioState.isComplete, false, 'missing evidence cannot produce a complete statutory answer');
+    assert.deepEqual(response.scenarioState.directGroups, [], 'a statutory deadline question does not create a journal');
+    assert.ok(presentation.workstreams.some(stream => stream.authority === 'ACRA' && stream.domain === 'ACRA_CORPORATE' &&
+      stream.issues.length > 0), 'the preserved issue remains in ACRA corporate scope');
+    assert.doesNotMatch(response.messageText, /variable capital company|\bVCC\b/i,
+      'the company deadline answer does not inherit unrelated VCC editorial material');
+    assert.doesNotMatch(response.messageText, /\b(?:within|no later than)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:days?|weeks?|months?)\b|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\b/i,
+      'the offline response does not invent a filing deadline');
+  }
 } finally {
   globalThis.fetch = acraDeadlineFetch;
 }
-const acraDeadlinePresentation = acraDeadlineResponse.scenarioState.authorityEvidencePresentation;
-assert.ok(acraDeadlinePresentation, 'the standalone company deadline request uses authority evidence presentation');
-assert.equal(acraDeadlinePresentation.status, 'INSUFFICIENT',
-  'without a provider or successful source retrieval the deadline remains explicitly unverified');
-assert.equal(acraDeadlinePresentation.query, acraDeadlineQuery, 'the evidence projection retains the exact original query');
-assert.equal(acraDeadlineResponse.scenarioState.rawQuery, acraDeadlineQuery, 'the standalone response retains the original scope');
-assert.equal(acraDeadlineResponse.scenarioState.requestCompletenessContext.rawQuery, acraDeadlineQuery);
-assert.equal(acraDeadlineResponse.scenarioState.isComplete, false, 'missing evidence cannot produce a complete statutory answer');
-assert.deepEqual(acraDeadlineResponse.scenarioState.directGroups, [], 'a statutory deadline question does not create a journal');
-assert.ok(acraDeadlinePresentation.workstreams.some(stream => stream.authority === 'ACRA' && stream.domain === 'ACRA_CORPORATE' &&
-  stream.issues.length > 0), 'the preserved issue remains in ACRA corporate scope');
-assert.doesNotMatch(acraDeadlineResponse.messageText, /variable capital company|\bVCC\b/i,
-  'the company deadline answer does not inherit unrelated VCC editorial material');
-assert.doesNotMatch(acraDeadlineResponse.messageText, /\b(?:within|no later than)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:days?|weeks?|months?)\b|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\b/i,
-  'the offline response does not invent a filing deadline');
+
+const b1SemanticInterpretation = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACRA'], contextualAuthorities: [],
+  domain: 'ACRA_CORPORATE', population: 'COMPANY', primarySubject: 'general company annual return filing deadline',
+  concepts: [{ concept: 'annual return filing deadline', role: 'PRIMARY' }], requestedOperation: 'EXPLAIN_RULE',
+  factsExplicitlyProvided: [], confidence: 0.96,
+  issues: [{ subject: 'general company annual return filing deadline', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
+};
+const b1ProviderCalls = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  if (url.hostname === 'generativelanguage.googleapis.com') {
+    const payload = JSON.parse(init?.body || '{}');
+    const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+    if (prompt.includes('Return a V2 JSON object')) {
+      b1ProviderCalls.push('semantic');
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(b1SemanticInterpretation) }] } }] }), {
+        status: 200, headers: { 'content-type': 'application/json' }
+      });
+    }
+  }
+  b1ProviderCalls.push(url.hostname);
+  throw new Error(`Blocked network request in mocked B1 provider test: ${url.hostname}`);
+};
+let b1ProviderResponse;
+try {
+  b1ProviderResponse = await processAccountingQuery(b1AnnualReturnQuery, null, 'SFRS_I', 'test-key-1234567890');
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(b1ProviderCalls.filter(host => host === 'semantic').length, 1,
+  'the B1 provider path uses one valid mocked semantic interpretation');
+const b1ProviderPresentation = b1ProviderResponse.scenarioState.authorityEvidencePresentation;
+assert.ok(b1ProviderPresentation, 'the valid provider interpretation uses authority evidence presentation');
+assert.equal(b1ProviderPresentation.status, 'INSUFFICIENT',
+  'without admitted ACRA evidence the valid provider path remains explicitly insufficient');
+assert.equal(b1ProviderPresentation.query, b1AnnualReturnQuery, 'the provider response preserves the exact original B1 query');
+assert.equal(b1ProviderResponse.scenarioState.rawQuery, b1AnnualReturnQuery);
+assert.deepEqual(b1ProviderResponse.scenarioState.directGroups, [], 'the provider path does not create a journal for B1');
+assert.equal(b1ProviderResponse.scenarioState.isComplete, false);
+assert.doesNotMatch(b1ProviderResponse.messageText, /\b(?:within|no later than)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:days?|weeks?|months?)\b|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\b/i,
+  'the valid provider path does not supply a definite filing deadline without admitted evidence');
 
 globalThis.fetch = async input => {
   const url = new URL(String(input));

@@ -1,6 +1,7 @@
 import { getCoverageTopicsByIds, type SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import { hasUnresolvedSection14NBasisPeriod } from '../retrieval/statutoryDateScope';
+import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -100,6 +101,7 @@ export function isExplicitForeignTaxOnlyQuestion(query: string): boolean {
  */
 export function classifyQuestion(query: string): QuestionClassificationResult {
   const q = query.toLowerCase();
+  const entryIntentQuery = removeNegatedJournalDirectives(query).toLowerCase();
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
   const allTopicIds = decomposition.topics.map(topic => topic.id);
   const allTopicMetadata = getCoverageTopicsByIds(allTopicIds);
@@ -125,8 +127,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   );
   const foreignTaxOnlyContext = isExplicitForeignTaxOnlyQuestion(query);
   const employerComplianceContext = /\b(?:employer|payroll|ir8a|ir21|ais submission|report employee|withhold monies)\b/i.test(query);
-  const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(q) ||
-    /\bdouble entr\w*/i.test(q);
+  const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(entryIntentQuery) ||
+    /\bdouble entr\w*/i.test(entryIntentQuery);
   const taxCreditWithoutAccountingIntent = /\b(?:foreign tax credit|tax credit|double tax relief foreign tax credit)\b/i.test(q) && !explicitAccountingIntent;
   const passengerCarTaxOnlyContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
     /\b(?:deduct\w*|running costs?|capital allowances?|income tax|corporate tax)\b/i.test(q) &&
@@ -168,8 +170,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('amorti') ||
     q.includes('debit') ||
     (/\bcredit\b/i.test(q) && !taxCreditWithoutAccountingIntent) ||
-    q.includes('journal') ||
-    q.includes('double entr') ||
+    entryIntentQuery.includes('journal') ||
+    entryIntentQuery.includes('double entr') ||
     q.includes('bookkeeping') ||
     q.includes('accrual') ||
     /\bleases?\b/i.test(q) ||
@@ -404,16 +406,16 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   // 5. Intent and Calculation / Journal Requirements
   // Guard against numbers in statutory advisory queries falsely triggering journal entries
   const asksForEntries =
-    q.includes('double entr') ||
-    q.includes('journal') ||
-    q.includes('accounting entr') ||
-    q.includes('how to record') ||
-    q.includes('how do i record') ||
-    q.includes('debit and credit') ||
-    q.includes('dr and cr') ||
-    q.includes('show entries') ||
-    q.includes('bookkeeping entry') ||
-    q.includes('post entry');
+    entryIntentQuery.includes('double entr') ||
+    entryIntentQuery.includes('journal') ||
+    entryIntentQuery.includes('accounting entr') ||
+    entryIntentQuery.includes('how to record') ||
+    entryIntentQuery.includes('how do i record') ||
+    entryIntentQuery.includes('debit and credit') ||
+    entryIntentQuery.includes('dr and cr') ||
+    entryIntentQuery.includes('show entries') ||
+    entryIntentQuery.includes('bookkeeping entry') ||
+    entryIntentQuery.includes('post entry');
 
   const isConceptualOrAdvisory =
     /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize|can i|can we|do we qualify|does it qualify|is it allowed|is it deductible|is it claimable|must we|must i|guidance on|requirements for|criteria for)\b/i.test(q.trim()) ||

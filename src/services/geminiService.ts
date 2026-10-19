@@ -46,6 +46,7 @@ import {
   shouldUseUnmappedAccountingRuleExplanationRuntime
 } from '../utils/authorityEvidenceRouting';
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
+import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import { createRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
 
 export interface GeminiResponse {
@@ -559,7 +560,9 @@ export async function processAccountingQuery(
   // A dated multi-event narrative is complete as a sequence even when it does
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
-  const journalRequested = Boolean(outputPreference?.journal || /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(userInput) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(userInput));
+  const journalIntentQuery = removeNegatedJournalDirectives(userInput);
+  const outputJournalRequested = Boolean(outputPreference?.journal);
+  const journalRequested = Boolean(outputJournalRequested || /\b(?:double[ -]+entr(?:y|ies)|journal[ -]+entr(?:y|ies)|debits? and credits?)\b/i.test(journalIntentQuery) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(journalIntentQuery) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(journalIntentQuery));
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
@@ -648,7 +651,7 @@ export async function processAccountingQuery(
     semanticRequestedOperation: questionUnderstanding.interpretation?.requestedOperation,
     explicitIrasEvidenceRequest,
     explicitJournalRequest: journalRequested,
-    outputJournalRequest: Boolean(outputPreference?.journal),
+    outputJournalRequest: outputJournalRequested,
     hasImages,
     isShortSemanticFollowUp: isShortSemanticFollowUp(userInput)
   });
@@ -676,7 +679,7 @@ export async function processAccountingQuery(
       (issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')
     );
     const standaloneAuthorityQuestion = unsupportedAccountingRuleExplanationRuntimeEnabled ||
-      (!materialPlanRequestsAccounting && !journalRequested && !outputPreference?.journal && !isShortSemanticFollowUp(userInput));
+      (!materialPlanRequestsAccounting && !journalRequested && !outputJournalRequested && !isShortSemanticFollowUp(userInput));
     if (standaloneAuthorityQuestion) {
       activeScenario = null;
       amendmentResolution = resolveFactAmendment(userInput, null);
@@ -737,7 +740,7 @@ export async function processAccountingQuery(
     try {
       const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
       const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
-      aiExtractionRequired = Boolean(!irasEvidenceRequired && outputPreference?.journal && apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
+      aiExtractionRequired = Boolean(!irasEvidenceRequired && outputJournalRequested && apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
       if (!irasEvidenceRequired && apiKey?.trim() && apiKey.trim().length > 10) {
         const extractionStarted = performance.now();
         try {
