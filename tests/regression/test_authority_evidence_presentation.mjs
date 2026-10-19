@@ -645,9 +645,12 @@ const mixedAcraAnnualReturnQuery = 'For a Singapore VCC and private company, whe
 const mixedAcraAnnualReturnTopics = defaultQueryTopicResolver.decomposeQuery(mixedAcraAnnualReturnQuery).topics.map(topic => topic.id);
 assert.ok(mixedAcraAnnualReturnTopics.includes('acra_vcc') && mixedAcraAnnualReturnTopics.includes('acra_annual-returns'),
   'mixed VCC/company questions retain both distinct filing scopes');
-const b1AnnualReturnTopics = defaultQueryTopicResolver.decomposeQuery(b1AnnualReturnQuery).topics.map(topic => topic.id);
+const b1AnnualReturnDecomposition = defaultQueryTopicResolver.decomposeQuery(b1AnnualReturnQuery);
+const b1AnnualReturnTopics = b1AnnualReturnDecomposition.topics.map(topic => topic.id);
 assert.ok(b1AnnualReturnTopics.includes('acra_annual-returns'),
   'the hyphenated annual-return deadline wording resolves to ACRA company filing coverage');
+assert.deepEqual(b1AnnualReturnDecomposition.unresolvedTopics, [],
+  'a standalone negative journal instruction does not remain as unresolved query scope');
 const b1Classification = classifyQuestion(b1AnnualReturnQuery);
 assert.equal(b1Classification.primaryDomain, 'CORPORATE_REGULATORY', 'a negated journal mention does not override the ACRA subject');
 assert.ok(b1Classification.domains.includes('ACRA_COMPANIES'), 'the classified annual-return question retains ACRA corporate scope');
@@ -673,7 +676,20 @@ for (const query of [
   const negativeJournalClassification = classifyQuestion(query);
   assert.equal(negativeJournalClassification.journalEntryRequired, false,
     `explicitly negated journal wording does not request an entry: ${query}`);
+  assert.deepEqual(defaultQueryTopicResolver.decomposeQuery(query).unresolvedTopics, [],
+    `a natural negative journal variant does not leave unresolved scope: ${query}`);
 }
+const positiveAfterNegativeQuery = b1AnnualReturnQuery.replace('do not prepare a journal.',
+  'do not prepare a journal, but prepare a journal entry to record the filing fee.');
+assert.ok(defaultQueryTopicResolver.decomposeQuery(positiveAfterNegativeQuery).unresolvedTopics.some(fragment =>
+  /prepare a journal entry to record the filing fee/.test(fragment)),
+'a positive journal request after a negative directive remains substantive unresolved scope');
+const b1WithUnknownSuffixQuery = `${b1AnnualReturnQuery} Also explain the unregistered xylophone regime.`;
+const b1WithUnknownSuffixDecomposition = defaultQueryTopicResolver.decomposeQuery(b1WithUnknownSuffixQuery);
+assert.ok(b1WithUnknownSuffixDecomposition.unresolvedTopics.some(fragment => /xylophone/.test(fragment)),
+  'ignoring a negative journal directive does not hide a substantive unknown suffix');
+assert.ok(!b1WithUnknownSuffixDecomposition.unresolvedTopics.some(fragment => /do not prepare a journal/.test(fragment)),
+  'only the recognized negative directive is removed from unresolved scope');
 const mixedJournalPolarityQuery = 'We paid the annual return filing fee. Do not prepare a journal for the filing deadline, but prepare a journal-entry to record the fee.';
 const mixedJournalPolarityClassification = classifyQuestion(mixedJournalPolarityQuery);
 assert.equal(mixedJournalPolarityClassification.primaryDomain, 'ACCOUNTING');
@@ -740,13 +756,22 @@ globalThis.fetch = async (input, init) => {
   throw new Error(`Blocked network request in mocked B1 provider test: ${url.hostname}`);
 };
 let b1ProviderResponse;
+let b1AuthorityWorkstreams;
 try {
-  b1ProviderResponse = await processAccountingQuery(b1AnnualReturnQuery, null, 'SFRS_I', 'test-key-1234567890');
+  b1ProviderResponse = await processAccountingQuery(
+    b1AnnualReturnQuery, null, 'SFRS_I', 'test-key-1234567890', undefined, [], undefined,
+    { onAuthorityWorkstreams: result => { b1AuthorityWorkstreams = result; } }
+  );
 } finally {
   globalThis.fetch = originalFetch;
 }
 assert.equal(b1ProviderCalls.filter(host => host === 'semantic').length, 1,
   'the B1 provider path uses one valid mocked semantic interpretation');
+assert.ok(b1AuthorityWorkstreams, 'the B1 provider path exposes its authority planning diagnostics');
+assert.equal(b1AuthorityWorkstreams.issuePlan.coverageEstablished, true,
+  'the B1 issue plan is covered after ignoring only the negative journal directive');
+assert.equal(b1AuthorityWorkstreams.issuePlan.hasUnmappedResidual, false,
+  'the negative journal directive does not create an unmapped residual');
 const b1ProviderPresentation = b1ProviderResponse.scenarioState.authorityEvidencePresentation;
 assert.ok(b1ProviderPresentation, 'the valid provider interpretation uses authority evidence presentation');
 assert.equal(b1ProviderPresentation.status, 'INSUFFICIENT',

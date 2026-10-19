@@ -14,6 +14,7 @@ import {
   type TopicSemanticCriteria,
   CANONICAL_TOPIC_SEMANTIC_CRITERIA
 } from '../standards/semanticAccountingRules';
+import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 
 export type { TopicSemanticCriteria };
 
@@ -196,6 +197,7 @@ export class QueryTopicResolver {
     // recording that payment as an expense is factual context for the ask.
     const residualFragments = splitResidualFragments(qLower);
     const unresolvedTopics = residualFragments
+      .filter(fragment => !isNegatedJournalDirectiveOnly(fragment))
       .filter((fragment) => fragment.length > 5 && !matchedTopics.some(topic =>
         !(topic.exclusionKeywords ?? []).some(keyword => fragment.includes(keyword.toLowerCase())) &&
         (topic.keywords.some(keyword => keywordMatches(fragment, keyword)) ||
@@ -217,6 +219,10 @@ export class QueryTopicResolver {
     return !(topic.exclusionKeywords ?? []).some((phrase) => textLower.includes(phrase.toLowerCase())) &&
       topic.keywords.some((kw) => keywordMatches(textLower, kw));
   }
+}
+
+function isNegatedJournalDirectiveOnly(fragment: string): boolean {
+  return /^[\s\p{P}]*$/u.test(removeNegatedJournalDirectives(fragment));
 }
 
 const PRIMARY_REQUEST_START = /(?:^|[.!?;])\s*(?:(?:also|please)\s+)?(?:what|which|how|can|could|should|would|does|do|is|are|must|explain|determine|assess|evaluate|calculate|prepare|identify|list|whether|tell\s+me)\b/i;
