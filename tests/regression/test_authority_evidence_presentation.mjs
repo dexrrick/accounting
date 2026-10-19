@@ -11,6 +11,7 @@ import { ComplianceRationale } from '../../src/components/ComplianceRationale.ts
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { createRequestCompletenessContext, ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
+import { reconcileQuestionUnderstanding } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 
@@ -732,13 +733,71 @@ try {
 
 const b1SemanticInterpretation = {
   schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACRA'], contextualAuthorities: [],
-  domain: 'ACRA_CORPORATE', population: 'COMPANY', primarySubject: 'general company annual return filing deadline',
+  domain: 'ACRA_CORPORATE', population: 'COMPANY', primarySubject: 'annual-return filing deadline',
   concepts: [{ concept: 'annual return filing deadline', role: 'PRIMARY' }], requestedOperation: 'EXPLAIN_RULE',
   factsExplicitlyProvided: [], confidence: 0.96,
-  issues: [{ subject: 'general company annual return filing deadline', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+  issues: [{ subject: 'annual-return filing deadline', population: 'COMPANY', domain: 'ACRA_CORPORATE',
     governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
     mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
 };
+const b1UnderstandingForSubject = (subject, issueOverrides = {}) => ({
+  mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED',
+  interpretation: {
+    ...b1SemanticInterpretation,
+    primarySubject: subject,
+    issues: [{ ...b1SemanticInterpretation.issues[0], subject, ...issueOverrides }]
+  }
+});
+const b1IssuePlanFor = (query, understanding) => reconcileQuestionUnderstanding(
+  query, classifyQuestion(query), understanding
+).issuePlan;
+const spacedB1IssuePlan = b1IssuePlanFor(b1AnnualReturnQuery,
+  b1UnderstandingForSubject('annual return filing deadline'));
+const hyphenatedB1IssuePlan = b1IssuePlanFor(b1AnnualReturnQuery,
+  b1UnderstandingForSubject('annual-return filing deadline'));
+const qualifiedHyphenatedB1IssuePlan = b1IssuePlanFor(b1AnnualReturnQuery,
+  b1UnderstandingForSubject('general Singapore company annual-return filing deadline'));
+for (const [label, plan] of [['spaced', spacedB1IssuePlan], ['hyphenated', hyphenatedB1IssuePlan]]) {
+  assert.equal(plan.coverageEstablished, true, `${label} annual-return subject maps against the raw company topic inventory`);
+  assert.equal(plan.hasUnmappedResidual, false, `${label} annual-return subject leaves no unsupported query scope`);
+  assert.deepEqual(plan.issues[0].mappedTopicIds, ['acra_annual-returns']);
+}
+assert.equal(hyphenatedB1IssuePlan.issues[0].subject, 'annual-return filing deadline',
+  'topic normalization does not rewrite the provider subject in diagnostics');
+assert.deepEqual(hyphenatedB1IssuePlan.issues[0].mappedTopicIds, spacedB1IssuePlan.issues[0].mappedTopicIds,
+  'hyphenated and spaced semantic labels reconcile to the same governed topic');
+assert.deepEqual(qualifiedHyphenatedB1IssuePlan.issues[0].mappedTopicIds, spacedB1IssuePlan.issues[0].mappedTopicIds,
+  'ordinary company and Singapore qualifiers remain within the bounded annual-return label vocabulary');
+
+for (const subject of [
+  'VCC annual-return filing deadline',
+  'variable-capital-company annual-return filing deadline',
+  'foreign-company annual-return filing deadline',
+  'foreign-incorporated company annual-return filing deadline',
+  'overseas incorporated company annual-return filing deadline',
+  'annual-return filing deadline for a company incorporated in Malaysia',
+  'annual-return filing deadline and xylophone statutory regime'
+]) {
+  const plan = b1IssuePlanFor(b1AnnualReturnQuery, b1UnderstandingForSubject(subject));
+  assert.ok(!plan.issues.some(issue => issue.subject === subject && issue.mappedTopicIds.includes('acra_annual-returns')),
+    `the bounded annual-return subject vocabulary does not absorb out-of-scope label words: ${subject}`);
+}
+const mixedVccQuery = 'For a Singapore VCC and private company, when must each file its annual return?';
+const mixedVccPlan = b1IssuePlanFor(mixedVccQuery,
+  b1UnderstandingForSubject('annual-return filing deadline'));
+assert.equal(mixedVccPlan.coverageEstablished, false,
+  'an incomplete semantic issue cannot absorb a competing raw-query VCC scope');
+assert.equal(mixedVccPlan.hasUnmappedResidual, true,
+  'the ambiguous mixed VCC/company query remains fail-closed');
+const wrongAuthorityPlan = b1IssuePlanFor(b1AnnualReturnQuery,
+  b1UnderstandingForSubject('annual-return filing deadline', { governingAuthorities: ['IRAS'] }));
+assert.equal(wrongAuthorityPlan.coverageEstablished, false,
+  'an ACRA annual-return subject with an incompatible governing authority remains fail-closed');
+const unknownSubjectPlan = b1IssuePlanFor(b1AnnualReturnQuery,
+  b1UnderstandingForSubject('xylophone statutory regime', { mappedTopicIds: ['acra_annual-returns', 'not-a-declared-topic'] }));
+assert.ok(!unknownSubjectPlan.issues.some(issue => issue.subject === 'xylophone statutory regime' &&
+  issue.mappedTopicIds.includes('acra_annual-returns')),
+'semantic topic hints alone do not map an unsupported subject');
 const b1ProviderCalls = [];
 globalThis.fetch = async (input, init) => {
   const url = new URL(String(input));
@@ -772,6 +831,10 @@ assert.equal(b1AuthorityWorkstreams.issuePlan.coverageEstablished, true,
   'the B1 issue plan is covered after ignoring only the negative journal directive');
 assert.equal(b1AuthorityWorkstreams.issuePlan.hasUnmappedResidual, false,
   'the negative journal directive does not create an unmapped residual');
+assert.equal(b1AuthorityWorkstreams.issuePlan.issues[0].subject, 'annual-return filing deadline',
+  'the actual mocked provider path preserves the original hyphenated semantic subject');
+assert.deepEqual(b1AuthorityWorkstreams.issuePlan.issues[0].mappedTopicIds, ['acra_annual-returns'],
+  'the actual mocked provider path maps the hyphenated label through ACRA company coverage');
 const b1ProviderPresentation = b1ProviderResponse.scenarioState.authorityEvidencePresentation;
 assert.ok(b1ProviderPresentation, 'the valid provider interpretation uses authority evidence presentation');
 assert.equal(b1ProviderPresentation.status, 'INSUFFICIENT',
