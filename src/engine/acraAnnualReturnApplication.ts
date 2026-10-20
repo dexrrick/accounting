@@ -1,8 +1,12 @@
 import type { AuthorityEvidenceStatus, AuthorityIssueLifecycle } from '../types/authorityEvidence';
-import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import type { AcraFyeCohortApplicability, AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import type { VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
-import { getAcraAnnualReturnDeadlineMonths } from '../retrieval/acraAnnualReturnFilingRule';
-import { formatSingaporeDate } from '../utils/dateUtils';
+import {
+  deriveAcraFyeCohortApplicability,
+  getAcraAnnualReturnDeadlineMonths,
+  supportsAcraAnnualReturnDeadlineEvidence
+} from '../retrieval/acraAnnualReturnFilingRule';
+import { formatSingaporeDate, getSingaporeDateString } from '../utils/dateUtils';
 
 export interface AcraAnnualReturnCompanyFacts {
   financialYearEnd?: string;
@@ -17,7 +21,8 @@ export interface AcraAnnualReturnApplicationEvidence {
   /** The exact date against which the source and claim were admitted. */
   targetDate?: string;
   lifecycle: Pick<AuthorityIssueLifecycle, 'admitted' | 'verified' | 'covered'>;
-  sources: Array<Pick<AuthoritativeSourceRecord, 'id' | 'sourceText' | 'validFrom' | 'validTo' | 'effectiveDate'>>;
+  sources: Array<Pick<AuthoritativeSourceRecord,
+    'id' | 'sourceText' | 'validFrom' | 'validTo' | 'effectiveDate' | 'retrievedAt' | 'acraFyeCohortApplicability'>>;
   verifiedClaims: Array<Pick<VerifiedEvidenceClaim, 'recordId' | 'quote'>>;
 }
 
@@ -224,7 +229,13 @@ export function applyAcraAnnualReturnDeadline(
 
   const eligibleEvidence = evidence?.evidenceStatus === 'VERIFIED' && evidence.lifecycle.admitted &&
     evidence.lifecycle.verified && evidence.lifecycle.covered;
-  const verifiedRows: Array<{ monthCount: number; validFrom?: string; validTo?: string }> = [];
+  const verifiedRows: Array<{
+    monthCount: number;
+    validFrom?: string;
+    validTo?: string;
+    captureDate?: string;
+    cohort?: AcraFyeCohortApplicability;
+  }> = [];
   if (eligibleEvidence) {
     if (evidence.targetDate !== facts.financialYearEnd) {
       return unresolved('The admitted evidence was not verified against the stated financial year end; no date is calculated.', facts);
@@ -235,7 +246,19 @@ export function applyAcraAnnualReturnDeadline(
       const sourceMonths = getAcraAnnualReturnDeadlineMonths(source.sourceText, companyCategory);
       const quoteMonths = getAcraAnnualReturnDeadlineMonths(claim.quote, companyCategory);
       const validFrom = source.validFrom || source.effectiveDate;
-      if (sourceMonths !== undefined && sourceMonths === quoteMonths &&
+      const cohort = source.acraFyeCohortApplicability;
+      if (cohort) {
+        const derived = deriveAcraFyeCohortApplicability(source.sourceText);
+        const captureDate = source.retrievedAt && Number.isFinite(Date.parse(source.retrievedAt))
+          ? getSingaporeDateString(new Date(source.retrievedAt))
+          : undefined;
+        if (sourceMonths !== undefined && sourceMonths === quoteMonths &&
+            JSON.stringify(cohort) === JSON.stringify(derived) && derived &&
+            facts.financialYearEnd >= derived.fyeStartDate &&
+            captureDate && supportsAcraAnnualReturnDeadlineEvidence(source.sourceText) && !validFrom && !source.validTo) {
+          verifiedRows.push({ monthCount: sourceMonths, captureDate, cohort });
+        }
+      } else if (sourceMonths !== undefined && sourceMonths === quoteMonths &&
           (!validFrom || validFrom <= facts.financialYearEnd) &&
           (!source.validTo || source.validTo >= facts.financialYearEnd)) {
         verifiedRows.push({ monthCount: sourceMonths, validFrom, validTo: source.validTo });
@@ -251,7 +274,10 @@ export function applyAcraAnnualReturnDeadline(
   const monthCount = [...verifiedMonthCounts][0];
   const deadlineDate = addMonthsUtc(facts.financialYearEnd, monthCount);
   if (!deadlineDate) return unresolved('The verified ACRA deadline row did not produce a valid calendar date. No due date has been calculated.', facts);
-  if (!verifiedRows.some(row => row.monthCount === monthCount && (!row.validTo || row.validTo >= deadlineDate))) {
+  if (!verifiedRows.some(row => row.monthCount === monthCount &&
+      (row.cohort
+        ? Boolean(row.captureDate && deadlineDate <= row.captureDate)
+        : !row.validTo || row.validTo >= deadlineDate))) {
     return unresolved('The admitted source period does not extend through the calculated filing deadline; no date is calculated.', facts);
   }
   const formattedFye = formatSingaporeDate(facts.financialYearEnd);

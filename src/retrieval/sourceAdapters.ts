@@ -61,6 +61,29 @@ export function cleanHtmlText(htmlSnippet: string): string {
     .trim();
 }
 
+/**
+ * Cleans HTML while preserving native table cell order and empty cells.
+ * This is used only when a source locator declares a structurally preserved
+ * table; ordinary HTML extraction continues to use cleanHtmlText.
+ */
+export function cleanHtmlTextPreservingTableCells(markup: string): string {
+  const rowBoundary = '\uE003';
+  const cellBoundary = '\uE004';
+  const withTables = markup.replace(/<table\b[^>]*>[\s\S]*?<\/table\s*>/gi, table => {
+    const tableBody = /<table\b[^>]*>([\s\S]*?)<\/table\s*>/i.exec(table)?.[1] || '';
+    const rows = [...tableBody.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi)].map(row => {
+      const cells = [...row[1].matchAll(/<(td|th)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi)];
+      return cells.map(cell => cleanHtmlText(cell[2])).join(cellBoundary);
+    });
+    return rows.join(rowBoundary);
+  });
+  return cleanHtmlText(withTables)
+    .replaceAll(cellBoundary, ' | ')
+    .replaceAll(rowBoundary, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export interface BalancedContainerResult {
   outerHtml: string;
   innerHtml: string;

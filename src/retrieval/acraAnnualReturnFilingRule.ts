@@ -1,5 +1,22 @@
+import type { AcraFyeCohortApplicability } from '../standards/unifiedSourceModel';
+
 function normalizeEvidenceText(value: string): string {
   return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9%]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export const ACRA_2022_ANNUAL_RETURN_TIMELINES_URL =
+  'https://www.acra.gov.sg/news-events/news-announcements/665/';
+
+/** Reads only the exact ACRA source-stated FYE cohort; it does not create a validity interval. */
+export function deriveAcraFyeCohortApplicability(text: string): AcraFyeCohortApplicability | undefined {
+  if (!/\bAll Singapore-incorporated companies are required to file their annual returns with ACRA\./i.test(text)) return undefined;
+  const matches = [...text.matchAll(/\bThe timelines for companies with Financial Year End \(FYE\) on or after 31 Aug 2018 are as follows:/gi)];
+  if (matches.length !== 1) return undefined;
+  return {
+    kind: 'ACRA_FYE_ON_OR_AFTER',
+    fyeStartDate: '2018-08-31',
+    sourceQuote: matches[0][0]
+  };
 }
 
 export interface AcraAnnualReturnIssueScope {
@@ -80,6 +97,24 @@ function deadlineTableRows(passage: string): string[][] | undefined {
   const numberWords = `(?:zero|${unitWords}|${compoundNumberWords}|(?:${oneToNine}) hundred(?: and (?:${unitWords}|${compoundNumberWords}))?)`;
   const lines = passage.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
   const rows = lines.map(line => line.split('|').map(cell => cell.trim()));
+  if (rows.some(row => row.some(cell => cell.includes('\n')))) return undefined;
+
+  // Native ACRA matrix: the blank top-left heading and blank non-listed
+  // overseas-branch cell are source data. Retain them as empty cells and do
+  // not infer a numeric deadline for the latter.
+  if (rows.length === 3 && rows.every(row => row.length === 3)) {
+    const [header, allCompanies, branchCompanies] = rows;
+    const numericDeadline = new RegExp(`^within\\s+(?:\\d+|${numberWords})\\s+months?\\s+after\\s+fye\\s*[.!]?\\s*$`, 'i');
+    const isBranchCategory = normalizeEvidenceText(branchCompanies[0]) ===
+      'companies having a share capital and keeping a branch register outside singapore';
+    if (header[0] === '' && normalizeEvidenceText(header[1]) === 'listed companies' &&
+        normalizeEvidenceText(header[2]) === 'non listed companies' &&
+        normalizeEvidenceText(allCompanies[0]) === 'all companies' &&
+        numericDeadline.test(allCompanies[1]) && numericDeadline.test(allCompanies[2]) &&
+        isBranchCategory && numericDeadline.test(branchCompanies[1]) && branchCompanies[2] === '') return rows;
+    return undefined;
+  }
+
   if (rows.some(row => row.length !== 2 || row.some(cell => !cell))) return undefined;
   const [header, ...body] = rows;
   const numericDeadline = new RegExp(`^within\\s+(?:\\d+|${numberWords})\\s+months?\\s+after\\s+fye\\s*[.!]?\\s*$`, 'i');
@@ -155,6 +190,12 @@ export function getAcraAnnualReturnDeadlineMonths(
   if (!passage) return undefined;
   const rows = deadlineTableRows(passage);
   if (!rows) return undefined;
+  if (rows[0].length === 3) {
+    const qualifiedBranchCompany = facts.hasOverseasBranchRegister && facts.hasShareCapital === true;
+    const row = qualifiedBranchCompany ? rows[2] : rows[1];
+    const deadlineColumn = facts.listingStatus === 'LISTED' ? 1 : 2;
+    return parseDeadlineMonthCount(row[deadlineColumn]);
+  }
   const qualifiedBranchCompany = facts.hasOverseasBranchRegister && facts.hasShareCapital === true;
   const expectedType = facts.listingStatus === 'LISTED' ? 'listed companies' : 'non listed companies';
   const matchingRows = rows.slice(1).filter(([companyType]) => {
@@ -179,13 +220,13 @@ export function supportsAcraAnnualReturnDeadlineConcept(text: string, conceptId:
   const normalized = normalizeEvidenceText(table);
   switch (conceptId) {
     case 'acra_annual_return_filing_deadline':
-      return /\bfiling deadline\b/.test(normalized);
+      return /\bfiling deadline\b/.test(normalized) || /\bwithin\s+(?:\d+|[a-z -]+)\s+months?\s+after\s+fye\b/.test(normalized);
     case 'acra_annual_return_financial_year_end':
       return /\bfye\b|\bfinancial year end\b/.test(normalized);
     case 'acra_annual_return_listing_status':
       return /\b(?:listed|non listed) companies\b/.test(normalized);
     case 'acra_annual_return_branch_register_qualification':
-      return /\boverseas branch register\b/.test(normalized);
+      return /\boverseas branch register\b|\bbranch register outside singapore\b/.test(normalized);
     default:
       return false;
   }

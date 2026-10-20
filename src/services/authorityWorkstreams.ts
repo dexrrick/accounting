@@ -17,7 +17,11 @@ import type {
   PlannedAuthorityWorkstream
 } from '../types/authorityEvidence';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { applyAcraAnnualReturnDeadline, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
+import {
+  applyAcraAnnualReturnDeadline,
+  identifyAcraAnnualReturnCompanyFacts,
+  isAcraAnnualReturnApplicationQuestion
+} from '../engine/acraAnnualReturnApplication';
 import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
@@ -37,7 +41,8 @@ import {
   supportsAcraAnnualReturnDeadlineEvidence,
   supportsAcraAnnualReturnDeadlineTable,
   supportsAcraAnnualReturnFilingRule,
-  requiresAcraAnnualReturnDeadlineEvidence
+  requiresAcraAnnualReturnDeadlineEvidence,
+  ACRA_2022_ANNUAL_RETURN_TIMELINES_URL
 } from '../retrieval/acraAnnualReturnFilingRule';
 import {
   findRecordEligibilityRejection,
@@ -705,12 +710,23 @@ function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRe
       const topics = getCoverageTopicsByIds(request.retrievalIntent.topicIds);
       const domain = sourceQueryDomain(request.retrievalIntent.topicIds);
       if (!authority || !retrieverAuthority || topics.length === 0 || !domain) return { candidates: [], trace: getDefaultTrace(false) };
+      const acraFacts = authority === 'ACRA' ? identifyAcraAnnualReturnCompanyFacts(request.originalQuery) : undefined;
+      const resolvedTarget = authority === 'ACRA'
+        ? defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate)
+        : undefined;
+      const applicabilityTarget = authority === 'ACRA' &&
+        requiresAcraAnnualReturnDeadlineEvidence(request.originalQuery, authority, request.issue) &&
+        resolvedTarget?.source === 'EXPLICIT' && acraFacts?.financialYearEnd === resolvedTarget.targetDate
+        ? 'ACRA_FYE' as const
+        : undefined;
       const candidates = await retriever.retrieveSources({
         query: request.originalQuery,
         domain,
         authorities: [retrieverAuthority],
         topicIds: request.retrievalIntent.topicIds,
         requestedConcepts: request.retrievalIntent.requestedConcepts,
+        ...(resolvedTarget?.targetDate ? { targetDate: resolvedTarget.targetDate } : {}),
+        ...(applicabilityTarget ? { applicabilityTarget } : {}),
         maxResults: 40,
         referenceDate
       });
@@ -1011,13 +1027,21 @@ function eligibleLocalRecords(
       MANAGED_MAS_DOCUMENT_RECORD_IDS.has(record.id)
       ? topics.find(topic => topicBoundToRecord(record, topic) &&
         recordMatchesGovernorAndDomain(record, authority, topic))
-      : undefined;
+      : authority === 'ACRA' && record.provenance === 'LIVE_PATCH' && record.documentAdmissionRequired === true &&
+        record.authority === 'ACRA' && record.sourceAuthority === 'ACRA' && record.domain === 'ACRA_CORP' &&
+        record.officialSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL &&
+        record.canonicalSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL &&
+        record.relatedTopicIds?.includes('acra_annual-returns')
+        ? topics.find(topic => topic.id === 'acra_annual-returns' && topicBoundToRecord(record, topic) &&
+          recordMatchesGovernorAndDomain(record, authority, topic))
+        : undefined;
     const managedAdmission = exactManagedTopic
       ? verifySharedDocumentAdmission(record, versioningManager, {
         targetDate,
         referenceDate,
-        expectedAuthority: 'MAS',
-        expectedDomain: exactManagedTopic.legacyDomains[0]
+        expectedAuthority: authority === 'MAS' ? 'MAS' : 'ACRA',
+        expectedDomain: exactManagedTopic.legacyDomains[0],
+        ...(authority === 'ACRA' && requireAcraDeadlineEvidence ? { applicabilityTarget: 'ACRA_FYE' as const } : {})
       })
       : undefined;
     const isApprovedManagedDocument = Boolean(managedAdmission?.required && managedAdmission.admitted);
@@ -1025,8 +1049,9 @@ function eligibleLocalRecords(
         record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false ||
         requireAcraDeadlineEvidence && !supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
         !record.sourceText?.trim() || findRecordEligibilityRejection(record, targetDate, referenceDate,
-          versioningManager, authority === 'MAS' ? 'MAS' : undefined,
-          exactManagedTopic?.legacyDomains[0])) {
+          versioningManager, exactManagedTopic ? (authority === 'MAS' ? 'MAS' : 'ACRA') : undefined,
+          exactManagedTopic?.legacyDomains[0],
+          authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_FYE' : undefined)) {
       rejectedCount += 1;
       continue;
     }
@@ -1362,8 +1387,11 @@ async function evaluateIssue(
   })) || ruleClaimsForRecords(admitted);
   const verification = verifyEvidenceClaims(suggestedClaims, admitted, {
     missingFacts: [], targetDate, referenceDate,
-    expectedAuthority: plan.authority === 'MAS' ? 'MAS' : undefined,
-    expectedDomain: plan.authority === 'MAS' && plan.domain === 'MAS_FUNDS' ? 'MAS_FUNDS' : undefined,
+    expectedAuthority: plan.authority === 'MAS' ? 'MAS' :
+      plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA' : undefined,
+    expectedDomain: plan.authority === 'MAS' && plan.domain === 'MAS_FUNDS' ? 'MAS_FUNDS' :
+      plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_CORP' : undefined,
+    ...(plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? { applicabilityTarget: 'ACRA_FYE' as const } : {}),
     versioningManager: versioningManagerFor(retriever)
   });
   const acceptedClaims = plan.authority === 'IRAS'

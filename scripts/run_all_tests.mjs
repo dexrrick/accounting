@@ -94,6 +94,7 @@ const testSuites = [
   { name: 'Genuine MAS IID 04/2025 PDF Acceptance Checkpoint', file: 'test_mas_genuine_pdf_acceptance.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Genuine MAS HTTP Provenance and Controlled Lifecycle Acceptance', file: 'test_mas_genuine_transport_lifecycle.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Shared Approved Document Admission & Citations', file: 'test_shared_document_admission.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'ACRA B2 Captured Source Admission and Deadline Replay', file: 'test_acra_b2_managed_admission.mjs', layer: 'regulatory-updates', tier: 'smoke' },
   { name: 'Phase 7 Coverage Registry', file: 'test_phase7_coverage_registry.mjs', layer: 'coverage-governance', tier: 'full' },
   { name: 'Singapore Knowledge Routing Benchmark', file: 'test_singapore_knowledge_benchmark.mjs', layer: 'coverage-governance', tier: 'smoke' },
   { name: 'Singapore Knowledge Foundation Registry and Routing', file: 'test_singapore_knowledge_foundation.mjs', layer: 'coverage-governance', tier: 'smoke' },

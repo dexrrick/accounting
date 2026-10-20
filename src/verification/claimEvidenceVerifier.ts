@@ -32,6 +32,7 @@ export interface VerifyEvidenceClaimsOptions {
   referenceDate?: string;
   expectedAuthority?: StatutoryAuthority;
   expectedDomain?: QueryDomain;
+  applicabilityTarget?: 'ACRA_FYE';
   versioningManager?: SourceVersioningManager;
 }
 
@@ -167,7 +168,8 @@ export function findRecordEligibilityRejection(
   referenceDate?: string,
   versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
   expectedAuthority?: StatutoryAuthority,
-  expectedDomain?: QueryDomain
+  expectedDomain?: QueryDomain,
+  applicabilityTarget?: VerifyEvidenceClaimsOptions['applicabilityTarget']
 ): string | undefined {
   if (APPLICATION_SOURCE_TYPES.has(record.sourceType) || record.evidenceTier === 'APPLICATION_RULE') {
     return 'APPLICATION_SOURCE_NOT_ALLOWED';
@@ -177,7 +179,8 @@ export function findRecordEligibilityRejection(
     targetDate,
     referenceDate,
     expectedAuthority,
-    expectedDomain
+    expectedDomain,
+    applicabilityTarget
   });
   if (documentAdmission.required) return documentAdmission.admitted ? undefined : documentAdmission.reason;
 
@@ -369,7 +372,8 @@ export function verifyEvidenceClaims(
       options?.referenceDate,
       versioningManager,
       options?.expectedAuthority,
-      options?.expectedDomain
+      options?.expectedDomain,
+      options?.applicabilityTarget
     );
     if (eligibilityRejection) {
       rejected.push(reject(text, eligibilityRejection));
@@ -408,7 +412,8 @@ export function verifyEvidenceClaims(
       targetDate,
       referenceDate: options?.referenceDate,
       expectedAuthority: options?.expectedAuthority,
-      expectedDomain: options?.expectedDomain
+      expectedDomain: options?.expectedDomain,
+      applicabilityTarget: options?.applicabilityTarget
     });
     accepted.push({
       text,

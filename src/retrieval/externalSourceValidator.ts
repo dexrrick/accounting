@@ -1,6 +1,9 @@
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { supportsAcraAnnualReturnDeadlineTable } from './acraAnnualReturnFilingRule';
-import { cleanHtmlText } from './sourceAdapters';
+import {
+  ACRA_2022_ANNUAL_RETURN_TIMELINES_URL,
+  supportsAcraAnnualReturnDeadlineTable
+} from './acraAnnualReturnFilingRule';
+import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
 
 /**
  * Strict allowlist of authorized Singapore statutory authorities and verified reference APIs.
@@ -995,8 +998,14 @@ export class ExternalSourceValidator {
       return { isValid: true };
     }
 
-    // For HTML/text records: cleanHtmlText of the raw slice must match record.sourceText
-    const reconstructed = cleanHtmlText(rawSlice);
+    // Preserve native table cells only for locators whose extraction recorded
+    // an unambiguous table structure. Other HTML/text records retain the
+    // existing whitespace-normalized boundary contract.
+    const visibleRawSlice = rawSlice.replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
+      .replace(/<(script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    const reconstructed = locator.tableStructure === 'PRESERVED'
+      ? cleanHtmlTextPreservingTableCells(visibleRawSlice)
+      : cleanHtmlText(rawSlice);
     if (reconstructed.trim() !== record.sourceText.trim()) {
       return {
         isValid: false,
@@ -1195,7 +1204,13 @@ export class ExternalSourceValidator {
           reason: `IRAS guidance structural node must identify tax rate/rebate topic (e.g. cit-rate), found '${nodeIdentifier}'`
         };
       }
-      if (doc.authority === 'ACRA' && !nodeIdentifier.includes('small-company')) {
+      const verifiedAcraAnnualReturnSection = doc.authority === 'ACRA' &&
+        doc.officialSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL &&
+        doc.domain === 'ACRA_CORP' &&
+        doc.paragraphOrSection === 'Reminder to file Annual Returns (AR)' &&
+        doc.acraFyeCohortApplicability?.kind === 'ACRA_FYE_ON_OR_AFTER' &&
+        supportsAcraAnnualReturnDeadlineTable(doc.sourceText);
+      if (doc.authority === 'ACRA' && !nodeIdentifier.includes('small-company') && !verifiedAcraAnnualReturnSection) {
         return {
           isValid: false,
           errorCode: 'PROVISION_MAPPING_MISMATCH',
