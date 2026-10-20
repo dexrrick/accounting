@@ -382,7 +382,7 @@ function evidenceProof(record, targetDate, retriever, versioning) {
     assert.equal(binding.provisionHash, ledgerEntry.recordSnapshot.provisionHash);
     assert.deepEqual(binding.sourceLocator, ledgerEntry.recordSnapshot.sourceLocator);
   }
-  return { quote: quotes[0], quotes, binding: bindings[0], citation: citations[0], citations, verifier };
+  return { quote: quotes[0], quotes, binding: bindings[0], verifiedClaim: checked.accepted[0], citation: citations[0], citations, verifier };
 }
 
 function assembleBoundCitation(citation, record) {
@@ -404,13 +404,7 @@ function assembleBoundCitation(citation, record) {
 
 function renderAuthorityEvidenceFor(record, proof) {
   const issueId = `mas-${record.id}`;
-  const claim = {
-    text: proof.quote,
-    quote: proof.quote,
-    recordId: record.id,
-    supportKind: 'EXACT_SOURCE_QUOTE',
-    sourceBinding: proof.binding
-  };
+  const claim = proof.verifiedClaim;
   const issue = {
     issueId,
     subject: 'MAS reviewed-source requirement',

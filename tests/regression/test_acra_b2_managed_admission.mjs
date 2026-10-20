@@ -4,6 +4,8 @@ import { gunzipSync } from 'node:zlib';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { extractOfficialDocumentFromRetrieved } from '../../src/retrieval/officialDocumentExtractor.ts';
 import {
   ACRA_2022_ANNUAL_RETURN_TIMELINES_URL,
@@ -24,6 +26,8 @@ import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.
 import { verifySharedDocumentAdmission } from '../../src/standards/sharedDocumentAdmission.ts';
 import { findRecordEligibilityRejection, verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 import { applyAcraAnnualReturnDeadline } from '../../src/engine/acraAnnualReturnApplication.ts';
+import { AuthorityCompliancePanel } from '../../src/components/AuthorityCompliancePanel.tsx';
+import { createAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const fixtureBytes = gunzipSync(readFileSync(path.join(root, 'tests/fixtures/acra-2022-newsletter-captured.html.gz')));
@@ -229,9 +233,67 @@ assert.equal(b2Claim.sourceBinding.documentHash, documentHash);
 assert.equal(b2Claim.sourceBinding.provisionHash, record.provisionHash);
 assert.match(result.applicationReason || '', /deadline of 31\/07\/2026\./);
 
+const b2Presentation = createAuthorityEvidencePresentation(workstream);
+const panelRetriever = new InMemorySourceRetriever(undefined, manager);
+const renderPanel = presentation => renderToStaticMarkup(React.createElement(AuthorityCompliancePanel, {
+  presentation, sourceRetriever: panelRetriever
+}));
+const panelClaims = presentation => presentation.workstreams.flatMap(stream => [
+  ...stream.issues.flatMap(issue => issue.claims),
+  ...stream.sources.flatMap(sourceGroup => sourceGroup.claims)
+]);
+const alterPanelClaims = mutate => {
+  const presentation = structuredClone(b2Presentation);
+  for (const claim of panelClaims(presentation)) mutate(claim);
+  return presentation;
+};
+const validPanelClaim = panelClaims(b2Presentation).find(claim => claim.sourceBinding);
+assert.deepEqual(validPanelClaim?.sourceAdmissionOptions, {
+  targetDate: '2025-12-31', expectedAuthority: 'ACRA', expectedDomain: 'ACRA_CORP', applicabilityTarget: 'ACRA_FYE'
+});
+assert.equal(Object.hasOwn(validPanelClaim?.sourceAdmissionOptions || {}, 'referenceDate'), false,
+  'display revalidation uses the current reference date rather than freezing the claim date');
+const currentPanelHtml = renderPanel(b2Presentation);
+assert.match(currentPanelHtml, /CURRENT_VERSION_MATCH/,
+  'the real panel keeps the managed cohort claim current when it receives the verifier context and isolated manager');
+for (const mutate of [
+  claim => { claim.sourceBinding.versionId = `${claim.sourceBinding.versionId}-changed`; },
+  claim => { claim.sourceBinding.documentHash = '0'.repeat(64); },
+  claim => { claim.sourceBinding.sourceLocator.heading = 'changed locator'; }
+]) {
+  assert.match(renderPanel(alterPanelClaims(mutate)), /VERSION_BINDING_MISMATCH/,
+    'a changed version, document hash, or locator in the presented binding is rejected by panel revalidation');
+}
+assert.match(renderPanel(alterPanelClaims(claim => { delete claim.sourceAdmissionOptions; })), /SOURCE_ADMISSION_CONTEXT_MISSING/,
+  'a bound managed claim without its admission context fails closed in the panel');
+assert.match(renderPanel(alterPanelClaims(claim => { claim.sourceAdmissionOptions.targetDate = '2018-08-30'; })), /SOURCE_NOT_FOUND/,
+  'the ID lookup applies the claim cohort context and rejects an out-of-cohort FYE');
+
+const renderWithRegistryRecord = replacement => {
+  const previous = UNIFIED_SOURCE_REGISTRY[record.id];
+  UNIFIED_SOURCE_REGISTRY[record.id] = replacement;
+  try {
+    return renderPanel(b2Presentation);
+  } finally {
+    UNIFIED_SOURCE_REGISTRY[record.id] = previous;
+  }
+};
+for (const [label, replacement] of [
+  ['changed version', { ...active, versionId: `${active.versionId}-changed` }],
+  ['changed document hash', { ...active, documentHash: '0'.repeat(64) }],
+  ['changed source locator', { ...active, sourceLocator: { ...active.sourceLocator, heading: 'changed locator' } }],
+  ['inactive source', { ...active, lifecycleState: 'INACTIVE' }],
+  ['invalid cohort metadata', { ...active, acraFyeCohortApplicability: { ...active.acraFyeCohortApplicability, fyeStartDate: '1900-01-01' } }]
+]) {
+  assert.match(renderWithRegistryRecord(replacement), /SOURCE_NOT_FOUND/,
+    `panel ID lookup rejects a managed source with ${label}`);
+}
+
 const managedComposite = new CompositeSourceRetriever(
   new InMemorySourceRetriever(undefined, manager), feed, new ControlledWebRetriever(), manager
 );
+assert.equal(managedComposite.getSourceById(record.id, gateOptions)?.id, record.id,
+  'the composite ID lookup forwards managed admission context');
 const managedQuery = {
   query, domain: 'ACRA_CORP', authorities: ['ACRA'], topicIds: ['acra_annual-returns'],
   targetDate: '2025-12-31', referenceDate: '2026-10-20', applicabilityTarget: 'ACRA_FYE'
@@ -244,6 +306,8 @@ const managedAdvanced = new AdvancedSourceRetriever(
   undefined, undefined, undefined
 );
 assert.equal(managedAdvanced.getVersioningManager(), manager);
+assert.equal(managedAdvanced.getSourceById(record.id, gateOptions)?.id, record.id,
+  'the advanced ID lookup forwards managed admission context');
 const wrongCohortRecords = await managedAdvanced.retrieveSources({ ...managedQuery, targetDate: '2018-08-30' });
 assert.equal(wrongCohortRecords.some(candidate => candidate.id === record.id), false);
 const queryDerivedWrongCohortRecords = await managedAdvanced.retrieveSources({

@@ -14,7 +14,7 @@ import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstrea
 import { renderAuthorityEvidenceResponseText } from '../../src/services/authorityEvidenceResponse.ts';
 import { applyAcraAnnualReturnDeadline, identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../../src/engine/acraAnnualReturnApplication.ts';
 import { createRequestCompletenessContext, ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
-import { reconcileQuestionUnderstanding } from '../../src/services/semanticQuestionUnderstanding.ts';
+import { getRequestedQuestionConcepts, reconcileQuestionUnderstanding } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../../src/retrieval/queryTopicResolver.ts';
 import { getAcraAnnualReturnDeadlineMonths } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
@@ -824,6 +824,16 @@ for (const operation of ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATM
   assert.deepEqual(plan.issues[0].mappedTopicIds, ['acra_annual-returns'],
     `${operation} maps the ordinary-company annual-return label to its independently recognized ACRA topic`);
 }
+const b2FyeAliasUnderstanding = annualReturnUnderstanding();
+b2FyeAliasUnderstanding.interpretation.concepts = [
+  ...b2FyeAliasUnderstanding.interpretation.concepts,
+  { concept: 'financial year end', role: 'RELATED' }
+];
+const b2FyeAliasConcepts = getRequestedQuestionConcepts(b2AnnualReturnQuery, b2FyeAliasUnderstanding);
+assert.ok(b2FyeAliasConcepts.some(concept => concept.id === 'acra_annual_return_financial_year_end'),
+  'the original B2 financial-year-ending date owns its canonical FYE concept');
+assert.ok(!b2FyeAliasConcepts.some(concept => concept.id === 'semantic_financial_year_end'),
+  'the matching plain FYE label is not emitted as an unassigned semantic topic');
 assert.equal(isAcraAnnualReturnApplicationQuestion(b2AnnualReturnQuery, 'EXPLAIN_RULE'), true,
   'an explicit FYE in the raw query still triggers date application when a model labels the request EXPLAIN_RULE');
 const b3AnnualReturnQuery = 'When is my company annual return due? I have not provided its financial year end, listing status or overseas branch register status. Identify the missing facts; do not assume them or prepare a journal.';
@@ -834,6 +844,40 @@ assert.ok(b3RawDecomposition.topics.some(topic => topic.id === 'acra_annual-retu
   'the missing-facts request remains mapped to its ACRA company annual-return issue');
 assert.deepEqual(b3RawDecomposition.unresolvedTopics, [],
   'the explicitly negated assume-or-journal instruction does not create unowned residual scope');
+const b3ObservedSubject = 'company annual return due date filing rules';
+for (const operation of ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATMENT']) {
+  const plan = b1IssuePlanFor(b3AnnualReturnQuery, annualReturnUnderstanding(operation, b3ObservedSubject));
+  assert.equal(plan.coverageEstablished, true,
+    `${operation} maps the bounded ordinary-company due-date subject against the exact B3 query`);
+  assert.deepEqual(plan.issues.map(issue => [issue.operation, issue.mappedTopicIds]), [
+    [operation, ['acra_annual-returns']]
+  ]);
+}
+for (const subject of [
+  'foreign company annual return due date filing rules',
+  'company annual return due date extension rules',
+  'company annual return due date filing rules and xylophone regime'
+]) {
+  const plan = b1IssuePlanFor(b3AnnualReturnQuery, annualReturnUnderstanding('DETERMINE_TREATMENT', subject));
+  assert.ok(!plan.issues.some(issue => issue.subject === subject && issue.mappedTopicIds.includes('acra_annual-returns')),
+    `the bounded due-date vocabulary does not absorb unsupported subject scope: ${subject}`);
+}
+const b3ObservedPlan = b1IssuePlanFor(b3AnnualReturnQuery,
+  annualReturnUnderstanding('DETERMINE_TREATMENT', b3ObservedSubject));
+const b3ObservedWorkstreams = await buildAuthorityWorkstreams(b3AnnualReturnQuery, b3ObservedPlan, {
+  referenceDate: '2026-10-19', localOnly: true,
+  providers: { ACRA: { authority: 'ACRA', retrieve: async () => ({ candidates: [] }) } }
+});
+const b3ObservedPresentation = createAuthorityEvidencePresentation(b3ObservedWorkstreams);
+const b3ObservedIssue = b3ObservedPresentation.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(b3ObservedIssue.subject, b3ObservedSubject,
+  'the full B3 semantic route preserves the observed due-date subject in presentation');
+assert.equal(b3ObservedIssue.applicationStatus, 'UNRESOLVED');
+assert.match(renderAuthorityEvidenceResponseText(b3ObservedPresentation, false),
+  /financial year end, listing status, overseas branch register status/i,
+  'the full B3 route identifies missing facts instead of calculating a date');
+assert.doesNotMatch(renderAuthorityEvidenceResponseText(b3ObservedPresentation, false), /\b\d{1,2}\/\d{1,2}\/\d{4}\b/);
+assert.deepEqual(b3ObservedWorkstreams.workstreams.flatMap(stream => stream.issues.flatMap(issue => issue.verifiedClaims)), []);
 const b3FallbackPlan = b1IssuePlanFor(b3AnnualReturnQuery, { mode: 'DETERMINISTIC_FALLBACK' });
 assert.equal(b3FallbackPlan.coverageEstablished, true,
   'an exact, bounded ACRA missing-facts query stays on its recognized statutory issue after semantic fallback');

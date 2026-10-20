@@ -407,7 +407,7 @@ export function canonicalAccountingWorkstreamAuthority(
 }
 
 const ACRA_ANNUAL_RETURN_SUBJECT_WORDS = new Set([
-  'a', 'the', 'general', 'ordinary', 'annual', 'return', 'filing', 'deadline',
+  'a', 'the', 'general', 'ordinary', 'annual', 'return', 'filing', 'deadline', 'due', 'date',
   'company', 'companies', 'singapore', 'acra', 'rule', 'rules'
 ]);
 
@@ -426,7 +426,7 @@ function canonicalAcraAnnualReturnSubjectIfBounded(
   const boundedOrdinarySubject = subjectWords.length > 0 &&
     subjectWords.every(word => ACRA_ANNUAL_RETURN_SUBJECT_WORDS.has(word));
   const vccScope = /\b(?:vcc|variable[\s-]+capital\s+compan(?:y|ies))\b/i;
-  if (!/\bannual-return\b/i.test(subject) || !boundedOrdinarySubject || domain !== 'ACRA_CORPORATE' || population !== 'COMPANY' ||
+  if (!/\bannual[\s-]+return\b/i.test(subject) || !boundedOrdinarySubject || domain !== 'ACRA_CORPORATE' || population !== 'COMPANY' ||
       !['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATMENT', 'CALCULATE'].includes(operation) ||
       governingAuthorities.length !== 1 || governingAuthorities[0] !== 'ACRA' ||
       issueCount !== 1 || !independentlyRecognizedTopicIds.has('acra_annual-returns') ||
@@ -434,8 +434,9 @@ function canonicalAcraAnnualReturnSubjectIfBounded(
     return subject;
   }
 
-  // Resolve this one hyphenated statutory label through the existing topic resolver.
-  return subject.replace(/\b(annual)-return\b/gi, '$1 return');
+  // Resolve bounded annual-return labels (including due-date wording) through
+  // the existing topic resolver without rewriting the provider's diagnostics.
+  return 'annual return filing deadline';
 }
 
 function resolveIssueTopicIds(
@@ -1096,7 +1097,7 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
     const topicIds = ['acra_annual-returns'];
     add('acra_annual_return_filing_deadline', 'Annual return filing deadline',
       ['filing deadline', 'annual return deadline', 'due date'], topicIds);
-    if (/\b(?:financial\s+year\s+end|fye)\b/i.test(query)) {
+    if (/\b(?:financial\s+year\s+(?:end(?:ing)?|ended|ends?)|fye)\b/i.test(query)) {
       add('acra_annual_return_financial_year_end', 'Annual return deadline after financial year end',
         ['financial year end', 'FYE'], topicIds);
     }

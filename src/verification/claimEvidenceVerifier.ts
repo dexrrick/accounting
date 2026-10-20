@@ -3,6 +3,7 @@ import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '..
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
+import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
 import type { VerifiedDocumentBinding } from '../standards/unifiedSourceModel';
 import type { QueryDomain, StatutoryAuthority } from '../types/accounting';
 
@@ -14,6 +15,9 @@ export type VerifiedEvidenceClaim = {
   canonicalUrl?: string;
   supportKind: 'EXACT_SOURCE_QUOTE' | 'REVIEWED_EDITORIAL_SUMMARY';
   sourceBinding?: VerifiedDocumentBinding;
+  /** Current revalidation scope for an independently admitted managed document. */
+  sourceAdmissionOptions?: Pick<SharedDocumentAdmissionOptions,
+    'targetDate' | 'expectedAuthority' | 'expectedDomain' | 'applicabilityTarget'>;
 };
 
 export type RejectedEvidenceClaim = {
@@ -415,6 +419,14 @@ export function verifyEvidenceClaims(
       expectedDomain: options?.expectedDomain,
       applicabilityTarget: options?.applicabilityTarget
     });
+    const sourceAdmissionOptions = sharedAdmission.required && sharedAdmission.admitted
+      ? {
+        ...(targetDate ? { targetDate } : {}),
+        ...(options?.expectedAuthority ? { expectedAuthority: options.expectedAuthority } : {}),
+        ...(options?.expectedDomain ? { expectedDomain: options.expectedDomain } : {}),
+        ...(options?.applicabilityTarget ? { applicabilityTarget: options.applicabilityTarget } : {})
+      }
+      : undefined;
     accepted.push({
       text,
       recordId: record.id,
@@ -423,7 +435,10 @@ export function verifyEvidenceClaims(
       supportKind: record.provenance === 'LOCAL_STATIC' &&
         (record.sourceType === 'CURATED_SUMMARY' || record.isVerbatimText === false)
         ? 'REVIEWED_EDITORIAL_SUMMARY' : 'EXACT_SOURCE_QUOTE',
-      ...(sharedAdmission.required && sharedAdmission.admitted ? { sourceBinding: sharedAdmission.binding } : {})
+      ...(sharedAdmission.required && sharedAdmission.admitted ? {
+        sourceBinding: sharedAdmission.binding,
+        sourceAdmissionOptions
+      } : {})
     });
   }
 
