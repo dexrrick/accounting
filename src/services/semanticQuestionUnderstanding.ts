@@ -15,6 +15,7 @@ import {
   getRoutingParentIdsForChild,
   proveRequestedTopicOwnership
 } from './requestedTopicOwnership';
+import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 
 export const SEMANTIC_QUESTION_MIN_CONFIDENCE = 0.72;
 export const SEMANTIC_QUESTION_TIMEOUT_MS = 8_000;
@@ -1263,6 +1264,26 @@ export function isShortSemanticFollowUp(query: string): boolean {
   return continuationPrefix || questionWithExplicitAnaphora;
 }
 
+/** Narrow lexical intent check for retaining a rule-only accounting gap after semantic transport failure. */
+export function isConservativeUnmappedAccountingRuleExplanationIntent(query: string): boolean {
+  const standardReferences = [...query.matchAll(/\b(?:SFRS\s*\(\s*I\s*\)|IFRS|IAS)\s*(?:No\.?\s*)?\d+(?:[-.]\d+)*[A-Z]?\b/gi)]
+    .map(match => match[0].toUpperCase().replace(/[\s().]/g, ''));
+  const explicitExplanation = /\b(?:explain|describe|outline|summari[sz]e)\b/i.test(query);
+  const explicitNoCalculation = /\b(?:do\s+not|don't|dont|never)\s+(?:(?:need|want)\s+to\s+)?(?:calculate|compute|estimate|quantify)\b[^.!?;:]{0,45}\b(?:amounts?|totals?|values?|figures?)\b/i.test(query);
+  const withoutNegatedJournals = removeNegatedJournalDirectives(query);
+  const hasJournalOutput = /\b(?:journal|double[ -]+entr(?:y|ies)|accounting[ -]+entr(?:y|ies))\b/i;
+  const explicitNoJournal = hasJournalOutput.test(query) && !hasJournalOutput.test(withoutNegatedJournals);
+  const withoutNegatedCalculations = withoutNegatedJournals.replace(
+    /\b(?:please\s+)?(?:do\s+not|don't|dont|never)\s+(?:(?:need|want)\s+to\s+)?(?:calculate|compute|estimate|quantify)\b[^.!?;:]{0,45}\b(?:amounts?|totals?|values?|figures?)\b/gi,
+    ' '
+  );
+  const activeOutputs = withoutNegatedCalculations;
+  const asksForAnotherOutput = /\b(?:calculat\w*|comput\w*|estimat\w*|quantif\w*|prepar\w*|creat\w*|record\w*|post\w*|compar\w*|contrast\w*|determin\w*|appl\w*|assess\w*|classif\w*|measur\w*)\b/i.test(activeOutputs) ||
+    /\b(?:journal|double[ -]+entr(?:y|ies)|accounting[ -]+entr(?:y|ies))\b/i.test(activeOutputs);
+  return query.length <= 1_000 && explicitExplanation && explicitNoCalculation && explicitNoJournal &&
+    standardReferences.length > 0 && new Set(standardReferences).size === 1 && !asksForAnotherOutput;
+}
+
 export interface ReconciledQuestionUnderstanding {
   classification: QuestionClassificationResult;
   understanding: SemanticQuestionUnderstanding;
@@ -1631,6 +1652,39 @@ function reconcileSemanticIssuePlan(
       coverageEstablished: inventory.topics.length > 0 && !hasUnmappedResidual,
       hasUnmappedResidual,
       ...(routingOwnershipFailure ? { routingOwnershipFailure } : {})
+    };
+  }
+
+  // Semantic transport/contract failure cannot establish an interpretation.
+  // Retain only this explicitly rule-only, single-standard request as an
+  // unresolved inventory gap when the existing topic catalog found no topic.
+  const deterministicRuleOnlyGap = Boolean(understanding.failure && understanding.failure !== 'QUERY_TOO_LONG') &&
+    isConservativeUnmappedAccountingRuleExplanationIntent(query) &&
+    classification.primaryDomain === 'ACCOUNTING' &&
+    classification.domains.length === 1 && classification.domains[0] === 'ACCOUNTING_SFRS' &&
+    classification.authorities.length === 1 && classification.authorities[0] === 'ACRA' &&
+    classification.intent === 'STATUTORY_ADVISORY' &&
+    classification.accountingAnalysisRequired && !classification.taxAnalysisRequired &&
+    !classification.calculationRequired && !classification.journalEntryRequired &&
+    classification.missingFacts.length === 0 && inventory.topics.length === 0;
+  if (deterministicRuleOnlyGap) {
+    const requestedSubject = sanitizeSemanticDiagnosticLabel(query.trim().split(/[.!?]/, 1)[0] || 'Requested accounting-standard rule');
+    const gap: SemanticQuestionIssue = {
+      subject: requestedSubject || 'Requested accounting-standard rule',
+      population: 'UNKNOWN',
+      domain: 'ACCOUNTING',
+      governingAuthorities: ['ACCOUNTING_STANDARDS'],
+      contextualAuthorities: [],
+      operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+      confidence: 1
+    };
+    return {
+      source: 'TAXONOMY_FALLBACK',
+      issues: [{ ...gap, id: addId(gap), status: 'UNRESOLVED', unresolvedReason: 'NO_COVERAGE_TOPIC' }],
+      coverageEstablished: false,
+      hasUnmappedResidual: true
     };
   }
 

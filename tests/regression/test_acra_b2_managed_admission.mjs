@@ -12,6 +12,11 @@ import {
   supportsAcraAnnualReturnDeadlineEvidence
 } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 import { LiveRegulatoryFeedService } from '../../src/retrieval/liveRegulatoryFeed.ts';
+import { CompositeSourceRetriever } from '../../src/retrieval/compositeSourceRetriever.ts';
+import { AdvancedSourceRetriever } from '../../src/retrieval/advancedSourceRetriever.ts';
+import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
+import { ProvisionChunker } from '../../src/retrieval/provisionChunker.ts';
+import { DeterministicVectorIndex } from '../../src/retrieval/vectorIndex.ts';
 import { InMemorySourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { SourceVersioningManager, computeSha256Bytes } from '../../src/standards/sourceVersioning.ts';
@@ -90,7 +95,7 @@ strippedCaptureMarkers.packageHash = feed.computePackageHash(strippedCaptureMark
 const strippedStage = await feed.stageUpdatePackage(strippedCaptureMarkers);
 assert.equal(strippedStage.success, false);
 assert.match(strippedStage.error || '', /ACRA annual-return managed source identity/);
-const artifactDir = path.join(root, 'artifacts/acra-b2-admission-2026-10-20');
+const artifactDir = path.join(root, 'artifacts/acra-b2-managed-admission-replay-2026-10-20');
 mkdirSync(artifactDir, { recursive: true });
 const rawDocument = {
   sourceUrl: receipt.url, finalUrl: receipt.finalUrl, contentType: receipt.contentType,
@@ -109,6 +114,15 @@ const staged = await feed.stageUpdatePackage(pkg);
 assert.equal(staged.success, true, staged.error);
 const stagedCandidate = manager.getCandidates().find(candidate => candidate.record.id === record.id);
 assert.equal(stagedCandidate?.record.documentAdmissionRequired, true);
+const stagedComposite = new CompositeSourceRetriever(
+  new InMemorySourceRetriever(undefined, manager), feed, new ControlledWebRetriever(), manager
+);
+const stagedRecords = await stagedComposite.retrieveSources({
+  query: 'ACRA annual return deadline for FYE 31/12/2025', domain: 'ACRA_CORP', authorities: ['ACRA'],
+  topicIds: ['acra_annual-returns'], targetDate: '2025-12-31', referenceDate: '2026-10-20',
+  applicabilityTarget: 'ACRA_FYE'
+});
+assert.equal(stagedRecords.some(candidate => candidate.id === record.id), false);
 const unapproved = verifySharedDocumentAdmission(stagedCandidate.record, manager, {
   targetDate: '2025-12-31', referenceDate: '2026-10-20', expectedAuthority: 'ACRA',
   expectedDomain: 'ACRA_CORP', applicabilityTarget: 'ACRA_FYE'
@@ -214,6 +228,63 @@ assert.equal(b2Claim.sourceBinding.versionId, manager.getActiveVersionId(record.
 assert.equal(b2Claim.sourceBinding.documentHash, documentHash);
 assert.equal(b2Claim.sourceBinding.provisionHash, record.provisionHash);
 assert.match(result.applicationReason || '', /deadline of 31\/07\/2026\./);
+
+const managedComposite = new CompositeSourceRetriever(
+  new InMemorySourceRetriever(undefined, manager), feed, new ControlledWebRetriever(), manager
+);
+const managedQuery = {
+  query, domain: 'ACRA_CORP', authorities: ['ACRA'], topicIds: ['acra_annual-returns'],
+  targetDate: '2025-12-31', referenceDate: '2026-10-20', applicabilityTarget: 'ACRA_FYE'
+};
+const compositeRecords = await managedComposite.retrieveSources(managedQuery);
+assert.ok(compositeRecords.some(candidate => candidate.id === record.id),
+  'Composite retrieval must preserve the active managed ACRA FYE source');
+const managedAdvanced = new AdvancedSourceRetriever(
+  managedComposite, new ProvisionChunker(), undefined, new DeterministicVectorIndex(),
+  undefined, undefined, undefined
+);
+assert.equal(managedAdvanced.getVersioningManager(), manager);
+const wrongCohortRecords = await managedAdvanced.retrieveSources({ ...managedQuery, targetDate: '2018-08-30' });
+assert.equal(wrongCohortRecords.some(candidate => candidate.id === record.id), false);
+const queryDerivedWrongCohortRecords = await managedAdvanced.retrieveSources({
+  ...managedQuery, query: query.replace('31/12/2025', '30/08/2018'), targetDate: undefined
+});
+assert.equal(queryDerivedWrongCohortRecords.some(candidate => candidate.id === record.id), false);
+const futureScopeRecords = await managedAdvanced.retrieveSources({ ...managedQuery, targetDate: '2026-10-21' });
+assert.equal(futureScopeRecords.some(candidate => candidate.id === record.id), false);
+
+let guardedFetchCalls = 0;
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async input => {
+  guardedFetchCalls += 1;
+  throw new Error(`Unexpected network access during local ACRA evidence retrieval: ${String(input)}`);
+};
+let managedWorkstreams;
+try {
+  managedWorkstreams = await buildAuthorityWorkstreams(query, {
+    source: 'SEMANTIC_ISSUES', issues: [issue], coverageEstablished: true, hasUnmappedResidual: false
+  }, { retriever: managedAdvanced, referenceDate: '2026-10-20', localOnly: false });
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(guardedFetchCalls, 0);
+const managedResult = managedWorkstreams.workstreams.flatMap(item => item.issues).find(item => item.issueId === issue.id);
+assert.ok(managedResult);
+assert.equal(managedResult.evidenceStatus, 'VERIFIED', JSON.stringify(managedResult.gaps));
+assert.equal(managedResult.applicationStatus, 'VERIFIED');
+assert.match(managedResult.applicationReason || '', /deadline of 31\/07\/2026\./);
+const managedClaim = managedResult.verifiedClaims.find(claim => claim.recordId === record.id &&
+  getAcraAnnualReturnDeadlineTablePassage(claim.quote));
+assert.ok(managedClaim?.sourceBinding, JSON.stringify(managedResult.verifiedClaims));
+assert.equal(managedClaim.sourceBinding.recordId, record.id);
+assert.equal(managedClaim.sourceBinding.versionId, manager.getActiveVersionId(record.id));
+assert.equal(managedClaim.sourceBinding.documentHash, documentHash);
+assert.equal(managedClaim.sourceBinding.provisionHash, record.provisionHash);
+assert.equal(applyAcraAnnualReturnDeadline(query, {
+  evidenceStatus: managedResult.evidenceStatus, targetDate: '2025-12-31',
+  lifecycle: managedResult.lifecycle, sources: managedResult.sources,
+  verifiedClaims: managedResult.verifiedClaims
+}).deadlineDate, '31/07/2026');
 
 const applicationEvidence = {
   evidenceStatus: 'VERIFIED', targetDate: '2025-12-31',

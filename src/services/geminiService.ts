@@ -648,6 +648,7 @@ export async function processAccountingQuery(
   const unsupportedAccountingRuleExplanationRuntimeEnabled = shouldUseUnmappedAccountingRuleExplanationRuntime({
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
     classification,
+    rawQuery: userInput,
     semanticRequestedOperation: questionUnderstanding.interpretation?.requestedOperation,
     explicitIrasEvidenceRequest,
     explicitJournalRequest: journalRequested,

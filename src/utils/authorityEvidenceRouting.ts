@@ -1,5 +1,10 @@
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
-import type { SemanticAuthority, SemanticIssueReconciliation, SemanticQuestionOperation } from '../services/semanticQuestionUnderstanding';
+import {
+  isConservativeUnmappedAccountingRuleExplanationIntent,
+  type SemanticAuthority,
+  type SemanticIssueReconciliation,
+  type SemanticQuestionOperation
+} from '../services/semanticQuestionUnderstanding';
 import { planAuthorityWorkstreams } from '../services/authorityWorkstreams';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 
@@ -152,6 +157,7 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
 export function shouldUseUnmappedAccountingRuleExplanationRuntime(input: {
   issuePlan: SemanticIssueReconciliation;
   classification: QuestionClassificationResult;
+  rawQuery?: string;
   semanticRequestedOperation?: SemanticQuestionOperation;
   explicitIrasEvidenceRequest: boolean;
   explicitJournalRequest: boolean;
@@ -160,10 +166,13 @@ export function shouldUseUnmappedAccountingRuleExplanationRuntime(input: {
   isShortSemanticFollowUp: boolean;
 }): boolean {
   const { issuePlan, classification } = input;
-  if (input.semanticRequestedOperation !== 'EXPLAIN_RULE' ||
+  const deterministicFallbackRuleRequest = issuePlan.source === 'TAXONOMY_FALLBACK' &&
+    Boolean(input.rawQuery && isConservativeUnmappedAccountingRuleExplanationIntent(input.rawQuery));
+  if ((input.semanticRequestedOperation !== 'EXPLAIN_RULE' && !deterministicFallbackRuleRequest) ||
       input.explicitIrasEvidenceRequest || input.explicitJournalRequest || input.outputJournalRequest ||
       input.hasImages || input.isShortSemanticFollowUp ||
-      issuePlan.source !== 'SEMANTIC_ISSUES' || issuePlan.coverageEstablished || !issuePlan.hasUnmappedResidual ||
+      (issuePlan.source !== 'SEMANTIC_ISSUES' && !deterministicFallbackRuleRequest) ||
+      issuePlan.coverageEstablished || !issuePlan.hasUnmappedResidual ||
       issuePlan.issues.length !== 1) {
     return false;
   }
