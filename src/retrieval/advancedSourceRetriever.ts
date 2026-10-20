@@ -109,8 +109,11 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
     return this.lastTelemetry;
   }
 
-  public getSourceById(id: string): AuthoritativeSourceRecord | undefined {
-    return this.compositeRetriever.getSourceById(id);
+  public getSourceById(
+    id: string,
+    admissionOptions: SharedDocumentAdmissionOptions = {}
+  ): AuthoritativeSourceRecord | undefined {
+    return this.compositeRetriever.getSourceById(id, admissionOptions);
   }
 
   public findSourcesByStandardOrAct(

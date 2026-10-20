@@ -86,9 +86,12 @@ export class CompositeSourceRetriever implements ISourceRetriever {
   /**
    * Retrieves sources by unique ID
    */
-  public getSourceById(id: string): AuthoritativeSourceRecord | undefined {
+  public getSourceById(
+    id: string,
+    admissionOptions: SharedDocumentAdmissionOptions = {}
+  ): AuthoritativeSourceRecord | undefined {
     // 1. Check local active registry
-    const local = this.localRetriever.getSourceById(id);
+    const local = this.localRetriever.getSourceById(id, admissionOptions);
     if (local) return local;
 
     return undefined;

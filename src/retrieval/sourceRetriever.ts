@@ -44,7 +44,7 @@ export interface GroundingEvidence {
 
 export interface ISourceRetriever {
   retrieveSources(query: SourceRetrievalQuery): Promise<AuthoritativeSourceRecord[]>;
-  getSourceById(id: string): AuthoritativeSourceRecord | undefined;
+  getSourceById(id: string, admissionOptions?: SharedDocumentAdmissionOptions): AuthoritativeSourceRecord | undefined;
   findSourcesByStandardOrAct(
     standardOrActCode: string,
     paragraphOrSection?: string,
@@ -100,10 +100,13 @@ export class InMemorySourceRetriever implements ISourceRetriever {
   /**
    * Retrieves sources by unique record ID
    */
-  public getSourceById(id: string): AuthoritativeSourceRecord | undefined {
+  public getSourceById(
+    id: string,
+    admissionOptions: SharedDocumentAdmissionOptions = {}
+  ): AuthoritativeSourceRecord | undefined {
     const record = UNIFIED_SOURCE_REGISTRY[id] || this.getCurrentSources().find((s) => s.id === id);
     if (!record) return undefined;
-    const admission = verifySharedDocumentAdmission(record, this.versioningManager);
+    const admission = verifySharedDocumentAdmission(record, this.versioningManager, admissionOptions);
     return admission.admitted ? record : undefined;
   }
 
