@@ -443,15 +443,15 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // Calculation required ONLY if quantitative computation requested or active quantitative transaction
   const calculationRequired =
-    q.includes('calculat') ||
-    q.includes('compute') ||
-    q.includes('how much') ||
-    q.includes('what is the amount') ||
-    q.includes('fx gain') ||
-    q.includes('foreign exchange') ||
-    q.includes('tax payable') ||
+    entryIntentQuery.toLowerCase().includes('calculat') ||
+    entryIntentQuery.toLowerCase().includes('compute') ||
+    entryIntentQuery.toLowerCase().includes('how much') ||
+    entryIntentQuery.toLowerCase().includes('what is the amount') ||
+    entryIntentQuery.toLowerCase().includes('fx gain') ||
+    entryIntentQuery.toLowerCase().includes('foreign exchange') ||
+    entryIntentQuery.toLowerCase().includes('tax payable') ||
     hasPayrollCalculation ||
-    (intent === 'TRANSACTION' && /\d+/.test(q) && !isConceptualOrAdvisory);
+    (intent === 'TRANSACTION' && /\d+/.test(entryIntentQuery) && !isConceptualOrAdvisory);
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];

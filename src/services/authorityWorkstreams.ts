@@ -17,10 +17,12 @@ import type {
   PlannedAuthorityWorkstream
 } from '../types/authorityEvidence';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import { applyAcraAnnualReturnDeadline, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
+import { isBoundedAcraAnnualReturnMissingFactsQuestion } from '../retrieval/queryTopicResolver';
 import type { ISourceRetriever } from '../retrieval/sourceRetriever';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 import {
@@ -939,6 +941,22 @@ function textSupportsTopic(text: string, topic: SingaporeCoverageTopic, requireA
     .some(phrase => textSupportsPhrase(text, phrase));
 }
 
+function requiresUnverifiedCpfRateSchedule(
+  query: string,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  topics: SingaporeCoverageTopic[]
+): boolean {
+  const hasTightlyBoundCpfRateAsk = (text: string) =>
+    /\bCPF(?:\s+(?:employer|employee|contribution|contributions|payroll)){0,3}\s+rates?\b|\brates?\s+(?:for\s+(?:the\s+)?CPF(?:\s+contributions?)?|apply\s+to\s+(?:the\s+)?CPF(?:\s+contributions?)?)\b/i.test(text);
+  const subjectRequestsRates = /\brates?\b|\bpercentages?\b/i.test(issue.subject);
+  const requestedByScopedText = subjectRequestsRates ||
+    query.split(/[.!?;\n]+/).some(clause => hasTightlyBoundCpfRateAsk(clause));
+  return authority === 'CPF' && issue.domain === 'CPF_PAYROLL' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'CPF' && topics.some(topic => topic.id === 'cpf_contribution_rates') &&
+    requestedByScopedText;
+}
+
 function topicBoundToRecord(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic): boolean {
   return topic.sourceRecordIds.includes(record.id) ||
     (record.tags || []).includes(topic.id) ||
@@ -1093,7 +1111,23 @@ function initialLifecycle(issue: ReconciledSemanticQuestionIssue, mapped: boolea
   };
 }
 
-function applicationForIssue(issue: ReconciledSemanticQuestionIssue): { status: AuthorityApplicationStatus; reason?: string } {
+function isAcraAnnualReturnApplicationIntent(query: string, operation: string): boolean {
+  return ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATMENT', 'CALCULATE'].includes(operation) &&
+    (isAcraAnnualReturnApplicationQuestion(query, operation) ||
+      isBoundedAcraAnnualReturnMissingFactsQuestion(query));
+}
+
+function applicationForIssue(
+  query: string,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  candidateIssues: ReconciledSemanticQuestionIssue[]
+): { status: AuthorityApplicationStatus; reason?: string } {
+  if (isAcraAnnualReturnDeadlineIssue(query, authority, issue, candidateIssues) &&
+      isAcraAnnualReturnApplicationIntent(query, issue.operation)) {
+    const application = applyAcraAnnualReturnDeadline(query);
+    return { status: application.applicationStatus, reason: application.applicationReason };
+  }
   const needsCaseFacts = issue.evidenceRequirement === 'CASE_FACTS' ||
     issue.evidenceRequirement === 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' ||
     issue.evidenceRequirement === 'UNRESOLVED' && ['DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'CALCULATE', 'PREPARE_JOURNAL'].includes(issue.operation);
@@ -1205,7 +1239,8 @@ async function evaluateIssue(
   const requireAcraDeadlineEvidence = requiresAcraAnnualReturnDeadlineEvidence(query, plan.authority, issue);
   const mapped = topicIds.length > 0 && plan.domain !== 'UNKNOWN';
   const lifecycle = initialLifecycle(issue, mapped);
-  const application = applicationForIssue(issue);
+  const application = applicationForIssue(query, issue, plan.authority, acraCandidateIssues);
+  const cpfRateScheduleUnverified = requiresUnverifiedCpfRateSchedule(query, issue, plan.authority, evidenceTopics);
   const base: Omit<AuthorityIssueEvidence, 'evidenceStatus' | 'verifiedClaims' | 'sources' | 'gaps'> = {
     issueId: issue.id,
     subject: issue.subject,
@@ -1220,6 +1255,10 @@ async function evaluateIssue(
     ...(application.reason ? { applicationReason: application.reason } : {})
   };
   const gaps: AuthorityEvidenceGap[] = [];
+  if (cpfRateScheduleUnverified) {
+    gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'CPF_RATE_SCHEDULE_UNVERIFIED',
+      'This runtime has no independently validated CPF rate-schedule parser; numeric contribution rates remain insufficient.'));
+  }
   if (issue.status !== 'MAPPED' || !mapped) {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'mapped', issue.unresolvedReason || (plan.domain === 'UNKNOWN' ? 'CANONICAL_AREA_UNRESOLVED' : 'ISSUE_UNMAPPED'),
       'The issue has no resolved authority and topic mapping for this workstream.'));
@@ -1330,7 +1369,7 @@ async function evaluateIssue(
   const acceptedClaims = plan.authority === 'IRAS'
     ? bindAcceptedIrasQuotesToSiblingPageRecords(verification.accepted, admitted, targetDate)
     : verification.accepted;
-  const verifiedClaims = acceptedClaims.filter(claim => {
+  const verifiedClaims = cpfRateScheduleUnverified ? [] : acceptedClaims.filter(claim => {
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
     if (requireAcraDeadlineEvidence && (!supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
@@ -1370,8 +1409,15 @@ async function evaluateIssue(
     `Verified quotations do not support the requested ${missing.replace(':', ' ')}.`));
   const sourceIds = new Set(verifiedClaims.map(claim => claim.recordId));
   const sources = admitted.filter(record => sourceIds.has(record.id));
+  const acraApplication = plan.authority === 'ACRA' &&
+    isAcraAnnualReturnDeadlineIssue(query, plan.authority, issue, acraCandidateIssues) &&
+    isAcraAnnualReturnApplicationIntent(query, issue.operation)
+    ? applyAcraAnnualReturnDeadline(query, { evidenceStatus: lifecycle.covered && lifecycle.verified && lifecycle.admitted && gaps.length === 0
+      ? 'VERIFIED' : 'INSUFFICIENT', targetDate, lifecycle, sources, verifiedClaims })
+    : undefined;
   return {
     ...base,
+    ...(acraApplication ? { applicationStatus: acraApplication.applicationStatus, applicationReason: acraApplication.applicationReason } : {}),
     evidenceStatus: lifecycle.covered && gaps.length === 0 ? 'VERIFIED' : 'INSUFFICIENT',
     verifiedClaims,
     sources,
@@ -1439,7 +1485,8 @@ export async function buildAuthorityWorkstreams(
       populations: plan.populations,
       issues: results,
       evidenceStatus: results.length > 0 && results.every(item => item.evidenceStatus === 'VERIFIED') ? 'VERIFIED' : 'INSUFFICIENT',
-      applicationStatus: results.some(item => item.applicationStatus === 'UNRESOLVED') ? 'UNRESOLVED' : 'NOT_REQUIRED',
+      applicationStatus: results.some(item => item.applicationStatus === 'UNRESOLVED') ? 'UNRESOLVED'
+        : results.some(item => item.applicationStatus === 'VERIFIED') ? 'VERIFIED' : 'NOT_REQUIRED',
       verifiedClaims,
       sources,
       gaps
@@ -1485,7 +1532,7 @@ export async function buildAuthorityWorkstreams(
     allIssues.length > 0 && allIssues.length === plannedIssueCount && allIssues.every(issue => issue.evidenceStatus === 'VERIFIED')
     ? 'VERIFIED' : 'INSUFFICIENT';
   const applicationStatus: AuthorityApplicationStatus = allIssues.some(issue => issue.applicationStatus === 'UNRESOLVED')
-    ? 'UNRESOLVED' : 'NOT_REQUIRED';
+    ? 'UNRESOLVED' : allIssues.some(issue => issue.applicationStatus === 'VERIFIED') ? 'VERIFIED' : 'NOT_REQUIRED';
   const gaps = [...topLevelGaps, ...workstreams.flatMap(workstream => workstream.gaps)];
   const status: AuthorityOverallStatus = gaps.length > 0 || evidenceStatus !== 'VERIFIED'
     ? 'INSUFFICIENT'

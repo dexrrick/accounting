@@ -10,12 +10,17 @@ import { createChatPreview } from '../../src/utils/chatPresentation.ts';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
+import { renderAuthorityEvidenceResponseText } from '../../src/services/authorityEvidenceResponse.ts';
+import { applyAcraAnnualReturnDeadline, identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../../src/engine/acraAnnualReturnApplication.ts';
 import { createRequestCompletenessContext, ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
 import { reconcileQuestionUnderstanding } from '../../src/services/semanticQuestionUnderstanding.ts';
-import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
+import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../../src/retrieval/queryTopicResolver.ts';
+import { getAcraAnnualReturnDeadlineMonths } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
+import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 
-function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '', domain = authority === 'IRAS' ? 'IRAS_TAX' : 'CPF_PAYROLL' }) {
+function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '', sourceText = 'A complete paragraph from the reviewed source.', domain = authority === 'IRAS' ? 'IRAS_TAX' : 'CPF_PAYROLL' }) {
   return {
     id,
     authority,
@@ -25,7 +30,7 @@ function source({ id, authority, title, validFrom = '2026-01-01', validTo, offic
     documentTitle: title,
     standardOrActCode: `${authority}-GUIDE`,
     paragraphOrSection: 'Guidance',
-    sourceText: 'A complete paragraph from the reviewed source.',
+    sourceText,
     principleSummary: 'Reviewed local guidance summary.',
     effectiveDate: validFrom,
     revisionDate: validFrom,
@@ -43,8 +48,38 @@ function source({ id, authority, title, validFrom = '2026-01-01', validTo, offic
     provenance: 'LOCAL_STATIC',
     lifecycleState: 'ACTIVE',
     recordRole: 'EVIDENCE',
-    groundingEligible: true
+    groundingEligible: true,
+    verificationMethod: 'STATUTORY_LEGISLATION_AUDIT'
   };
+}
+
+function syntheticAcraDeadlineSource({ id = 'TEST_ONLY_ACRA_DEADLINE_TABLE', nonListedMonths = 7, validTo } = {}) {
+  const officialSourceUrl = UNIFIED_SOURCE_REGISTRY.ACRA_SEC175_197_AGM_ANNUAL_RETURN_TIMELINES.officialSourceUrl;
+  const sourceText = [
+    'Companies must file an annual return with ACRA.',
+    '',
+    'Company type | Filing deadline',
+    'Listed companies | Within five months after FYE.',
+    'Listed companies with share capital and an overseas branch register | Within six months after FYE.',
+    `Non-listed companies | Within ${numberAsWord(nonListedMonths)} months after FYE.`,
+    'Non-listed companies with share capital and an overseas branch register | Within eight months after FYE.'
+  ].join('\n');
+  return {
+    ...source({
+      id, authority: 'ACRA', title: 'Synthetic test-only ACRA annual return table', validFrom: '2020-01-01', validTo,
+      sourceText, officialSourceUrl, domain: 'ACRA_CORP'
+    }),
+    sourcePublisher: 'Accounting and Corporate Regulatory Authority',
+    relatedTopicIds: ['acra_annual-returns'],
+    tags: ['acra_annual-returns'],
+    canonicalSourceUrl: officialSourceUrl,
+    urlVerificationStatus: 'VERIFIED'
+  };
+}
+
+function numberAsWord(value) {
+  const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  return words[value] || String(value);
 }
 
 function fetchedLikeLiveSource({ id, authority, title, url, domain, urlVerificationStatus = 'VERIFIED', canonicalSourceUrl = url }) {
@@ -61,17 +96,18 @@ function fetchedLikeLiveSource({ id, authority, title, url, domain, urlVerificat
   };
 }
 
-function plannedIssue({ id, authority, domain, subject, population = 'COMPANY', status = 'MAPPED', mappedTopicIds = ['test-topic'] }) {
+function plannedIssue({ id, authority, domain, subject, population = 'COMPANY', status = 'MAPPED', mappedTopicIds = ['test-topic'],
+  operation = 'EXPLAIN_RULE', evidenceRequirement = 'AUTHORITATIVE_SOURCE', contextualAuthorities = [] }) {
   return {
     id,
     subject,
     population,
     domain,
     governingAuthorities: [authority],
-    contextualAuthorities: [],
-    operation: 'EXPLAIN_RULE',
+    contextualAuthorities,
+    operation,
     mappedTopicIds,
-    evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+    evidenceRequirement,
     confidence: 0.96,
     status,
     ...(status === 'UNRESOLVED' ? { unresolvedReason: 'NO_COVERAGE_TOPIC' } : {})
@@ -748,6 +784,15 @@ const b1UnderstandingForSubject = (subject, issueOverrides = {}) => ({
     issues: [{ ...b1SemanticInterpretation.issues[0], subject, ...issueOverrides }]
   }
 });
+const annualReturnUnderstanding = (operation = 'EXPLAIN_RULE', subject = 'annual-return filing deadline') => ({
+  mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED',
+  interpretation: {
+    ...b1SemanticInterpretation,
+    primarySubject: subject,
+    requestedOperation: operation,
+    issues: [{ ...b1SemanticInterpretation.issues[0], subject, operation }]
+  }
+});
 const b1IssuePlanFor = (query, understanding) => reconcileQuestionUnderstanding(
   query, classifyQuestion(query), understanding
 ).issuePlan;
@@ -768,6 +813,121 @@ assert.deepEqual(hyphenatedB1IssuePlan.issues[0].mappedTopicIds, spacedB1IssuePl
   'hyphenated and spaced semantic labels reconcile to the same governed topic');
 assert.deepEqual(qualifiedHyphenatedB1IssuePlan.issues[0].mappedTopicIds, spacedB1IssuePlan.issues[0].mappedTopicIds,
   'ordinary company and Singapore qualifiers remain within the bounded annual-return label vocabulary');
+const b2AnnualReturnQuery = 'For a Singapore-incorporated non-listed company with no overseas branch register and financial year ending 31/12/2025, what is the annual-return filing deadline? Show the date as DD/MM/YYYY; do not prepare a journal.';
+for (const operation of ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATMENT', 'CALCULATE']) {
+  const subject = operation === 'EXPLAIN_RULE' ? 'annual-return filing deadline' : 'annual return filing deadline';
+  const plan = b1IssuePlanFor(b2AnnualReturnQuery, annualReturnUnderstanding(operation, subject));
+  assert.equal(plan.coverageEstablished, true,
+    `${operation} retains full coverage when the only residuals are bounded ACRA company facts and date formatting`);
+  assert.equal(plan.issues[0].operation, operation, `${operation} remains the requested operation after subject normalization`);
+  assert.equal(plan.issues[0].subject, subject, `${operation} preserves the provider's original subject label`);
+  assert.deepEqual(plan.issues[0].mappedTopicIds, ['acra_annual-returns'],
+    `${operation} maps the ordinary-company annual-return label to its independently recognized ACRA topic`);
+}
+assert.equal(isAcraAnnualReturnApplicationQuestion(b2AnnualReturnQuery, 'EXPLAIN_RULE'), true,
+  'an explicit FYE in the raw query still triggers date application when a model labels the request EXPLAIN_RULE');
+const b3AnnualReturnQuery = 'When is my company annual return due? I have not provided its financial year end, listing status or overseas branch register status. Identify the missing facts; do not assume them or prepare a journal.';
+assert.equal(isBoundedAcraAnnualReturnMissingFactsQuestion(b3AnnualReturnQuery), true,
+  'the complete missing-facts request has a narrow raw-input recognition path');
+const b3RawDecomposition = defaultQueryTopicResolver.decomposeQuery(b3AnnualReturnQuery);
+assert.ok(b3RawDecomposition.topics.some(topic => topic.id === 'acra_annual-returns'),
+  'the missing-facts request remains mapped to its ACRA company annual-return issue');
+assert.deepEqual(b3RawDecomposition.unresolvedTopics, [],
+  'the explicitly negated assume-or-journal instruction does not create unowned residual scope');
+const b3FallbackPlan = b1IssuePlanFor(b3AnnualReturnQuery, { mode: 'DETERMINISTIC_FALLBACK' });
+assert.equal(b3FallbackPlan.coverageEstablished, true,
+  'an exact, bounded ACRA missing-facts query stays on its recognized statutory issue after semantic fallback');
+assert.deepEqual(b3FallbackPlan.issues.map(issue => [issue.domain, issue.population, issue.operation, issue.mappedTopicIds]), [
+  ['ACRA_CORPORATE', 'COMPANY', 'DETERMINE_TREATMENT', ['acra_annual-returns']]
+]);
+const b3MissingFactsParaphrases = [
+  'I have not supplied our FYE, listing status or overseas branch register status. What is the filing deadline for our Singapore-incorporated company annual return? Please list the missing facts.',
+  'We do not know the company financial year end, whether it is listed, or whether it keeps an overseas branch register. When should our company file its annual return? What facts do you need?',
+  'What company information do you need to determine when our company annual return is due? Its FYE, listing status and overseas branch register status are unknown.'
+];
+for (const [index, query] of b3MissingFactsParaphrases.entries()) {
+  assert.equal(isBoundedAcraAnnualReturnMissingFactsQuestion(query), true,
+    `ordinary bounded paraphrase ${index + 1} recognizes annual-return fact requests`);
+  const plan = b1IssuePlanFor(query, { mode: 'DETERMINISTIC_FALLBACK' });
+  assert.equal(plan.coverageEstablished, true,
+    `ordinary bounded paraphrase ${index + 1} remains on the ACRA company annual-return route`);
+  assert.deepEqual(plan.issues.map(issue => [issue.domain, issue.population, issue.operation, issue.mappedTopicIds]), [
+    ['ACRA_CORPORATE', 'COMPANY', 'DETERMINE_TREATMENT', ['acra_annual-returns']]
+  ]);
+}
+const b3UnknownSuffix = `${b3AnnualReturnQuery} Also explain the unregistered xylophone regime.`;
+assert.equal(isBoundedAcraAnnualReturnMissingFactsQuestion(b3UnknownSuffix), false,
+  'an unknown appended issue does not enter the narrow missing-facts fallback');
+assert.ok(defaultQueryTopicResolver.decomposeQuery(b3UnknownSuffix).unresolvedTopics.some(fragment => /xylophone/.test(fragment)),
+  'the unknown appended issue remains visible as unresolved scope');
+for (const query of [
+  b3AnnualReturnQuery.replace('my company', 'my VCC'),
+  b3AnnualReturnQuery.replace('my company', 'my foreign-incorporated company'),
+  `${b3AnnualReturnQuery} Also explain the company tax treatment.`
+]) {
+  assert.equal(isBoundedAcraAnnualReturnMissingFactsQuestion(query), false,
+    `VCC, foreign and mixed scope does not bind into the ordinary-company fallback: ${query}`);
+  assert.equal(b1IssuePlanFor(query, { mode: 'DETERMINISTIC_FALLBACK' }).coverageEstablished, false,
+    'out-of-scope or mixed clauses remain unresolved through fallback routing');
+}
+const companyFreeAnnualReturnQuery = 'When is the annual return due? List the missing facts.';
+assert.equal(isBoundedAcraAnnualReturnMissingFactsQuestion(companyFreeAnnualReturnQuery), false,
+  'a deadline and missing-facts request without company ownership cannot imply an ordinary company');
+assert.equal(b1IssuePlanFor(companyFreeAnnualReturnQuery, { mode: 'DETERMINISTIC_FALLBACK' }).coverageEstablished, false,
+  'the company-free fallback leaves company-specific ownership unresolved');
+const b3Classification = classifyQuestion(b3AnnualReturnQuery);
+assert.equal(b3Classification.primaryDomain, 'CORPORATE_REGULATORY');
+assert.equal(b3Classification.journalEntryRequired, false,
+  'the shared coordinated negation keeps the missing-facts question out of the journal route');
+assert.equal(b3Classification.calculationRequired, false);
+const b4CpfIrasQuery = 'What are the 2026 CPF rates for a Singapore citizen employee aged 45, and can employee CPF contributions qualify for Singapore personal income tax relief? Explain the CPF rates and IRAS relief as separate issues; do not calculate amounts or prepare a journal.';
+const b4Classification = classifyQuestion(b4CpfIrasQuery);
+assert.equal(b4Classification.journalEntryRequired, false,
+  'the coordinated negative calculation-or-journal instruction does not request a journal');
+assert.equal(b4Classification.calculationRequired, false,
+  'a negated calculation phrase remains a non-calculation request');
+assert.ok(b4Classification.authorities.includes('CPF') && b4Classification.authorities.includes('IRAS'),
+  'the mixed query retains the separate CPF and IRAS scopes');
+const b5Classification = classifyQuestion('Explain the SFRS(I) 6 accounting treatment for exploration and evaluation assets. Explain the rule only; do not calculate amounts or prepare a journal.');
+assert.equal(b5Classification.primaryDomain, 'ACCOUNTING');
+assert.equal(b5Classification.journalEntryRequired, false);
+assert.equal(b5Classification.calculationRequired, false,
+  'the negated calculation clause does not block the unsupported-standards evidence guard');
+for (const query of [
+  `${b2AnnualReturnQuery} Also explain the unregistered xylophone regime.`,
+  b2AnnualReturnQuery.replace('annual-return filing deadline?', 'annual-return filing deadline and the extension rules?')
+]) {
+  const plan = b1IssuePlanFor(query, annualReturnUnderstanding('EXPLAIN_RULE'));
+  assert.equal(plan.coverageEstablished, false,
+    `unknown appended or same-clause deadline scope remains an unbound raw-query residual: ${query}`);
+  assert.equal(plan.hasUnmappedResidual, true);
+}
+const negativeBranchFacts = identifyAcraAnnualReturnCompanyFacts(
+  'For a Singapore-incorporated non-listed company that does not have an overseas branch register, financial year end 31/12/2025.'
+);
+assert.equal(negativeBranchFacts.hasOverseasBranchRegister, false,
+  'a grammatically negative branch-register fact is accepted without also matching the positive “have” form');
+assert.ok(!negativeBranchFacts.unresolvedFacts.some(fact => /branch register status.*conflicting/i.test(fact)));
+const unassertedCompanyFactQueries = [
+  'For a Singapore-incorporated non-listed company with no overseas branch register, do not assume financial year end 31/12/2025.',
+  'For a Singapore-incorporated non-listed company with financial year ending 31/12/2025, it may have an overseas branch register.'
+];
+const unassertedCompanyFacts = unassertedCompanyFactQueries.map(query => identifyAcraAnnualReturnCompanyFacts(query));
+assert.ok(unassertedCompanyFacts[0].unresolvedFacts.some(fact => /financial year end.*not assumed/i.test(fact)),
+  'a date in an explicitly unassumed FYE span remains unresolved');
+assert.equal(unassertedCompanyFacts[0].financialYearEnd, undefined);
+assert.ok(unassertedCompanyFacts[1].unresolvedFacts.some(fact => /overseas branch register status.*uncertain/i.test(fact)),
+  'a conditional branch-register mention remains unresolved');
+assert.equal(unassertedCompanyFacts[1].hasOverseasBranchRegister, undefined);
+for (const uncertainQuery of [
+  'For a company with financial year end 31/12/2025, I am not sure whether it is listed.',
+  'For a company with financial year end 31/12/2025, do not assume it is non-listed.'
+]) {
+  const facts = identifyAcraAnnualReturnCompanyFacts(uncertainQuery);
+  assert.ok(facts.unresolvedFacts.some(fact => /listing status.*uncertain|listing status.*not assumed/i.test(fact)),
+    `uncertain or expressly unassumed listing status remains unresolved: ${uncertainQuery}`);
+  assert.equal(facts.listingStatus, undefined);
+}
 
 for (const subject of [
   'VCC annual-return filing deadline',
@@ -846,6 +1006,553 @@ assert.equal(b1ProviderResponse.scenarioState.isComplete, false);
 assert.doesNotMatch(b1ProviderResponse.messageText, /\b(?:within|no later than)\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:days?|weeks?|months?)\b|\b\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\b/i,
   'the valid provider path does not supply a definite filing deadline without admitted evidence');
 
+const withTemporaryRegistrySource = async (record, action) => {
+  const previous = UNIFIED_SOURCE_REGISTRY[record.id];
+  UNIFIED_SOURCE_REGISTRY[record.id] = record;
+  try { return await action(); }
+  finally {
+    if (previous) UNIFIED_SOURCE_REGISTRY[record.id] = previous;
+    else delete UNIFIED_SOURCE_REGISTRY[record.id];
+  }
+};
+const runAcraWorkstreams = (query, operation, candidates, evidenceQualityTrace) => {
+  const understanding = annualReturnUnderstanding(operation);
+  const issuePlan = b1IssuePlanFor(query, understanding);
+  return buildAuthorityWorkstreams(query, issuePlan, {
+    questionUnderstanding: understanding,
+    referenceDate: '2026-10-19',
+    localOnly: true,
+    providers: { ACRA: {
+      authority: 'ACRA',
+      retrieve: async () => ({ candidates, ...(evidenceQualityTrace ? { evidenceQualityTrace } : {}) })
+    } }
+  });
+};
+const b2HistoricalFixture = syntheticAcraDeadlineSource();
+const acceptanceMatrixFailures = [];
+const b1HistoricalFixture = syntheticAcraDeadlineSource({ id: 'TEST_ONLY_ACRA_GENERAL_RULE_TABLE' });
+const b1Workstreams = await withTemporaryRegistrySource(b1HistoricalFixture,
+  () => runAcraWorkstreams(b1AnnualReturnQuery, 'EXPLAIN_RULE', [b1HistoricalFixture]));
+const b1PositiveIssue = b1Workstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(b1Workstreams.issuePlan.coverageEstablished, true, 'the general B1 question retains independently established raw ACRA coverage');
+assert.equal(b1PositiveIssue.evidenceStatus, 'VERIFIED', 'the B1 table passes real local admission and claim verification');
+assert.equal(b1PositiveIssue.applicationStatus, 'NOT_REQUIRED', 'the general rule request remains source-only without a date calculation');
+assert.equal(b1PositiveIssue.applicationReason, undefined);
+const b1PositivePresentation = createAuthorityEvidencePresentation(b1Workstreams);
+assert.equal(b1PositivePresentation.status, 'VERIFIED');
+assert.doesNotMatch(renderAuthorityEvidenceResponseText(b1PositivePresentation, false), /31\/07\/2026/,
+  'B1 reports the rule without calculating a filing deadline date');
+const b2Workstreams = await withTemporaryRegistrySource(b2HistoricalFixture,
+  () => runAcraWorkstreams(b2AnnualReturnQuery, 'EXPLAIN_RULE', [b2HistoricalFixture]));
+if (!b2Workstreams.issuePlan.coverageEstablished || b2Workstreams.issuePlan.hasUnmappedResidual) {
+  acceptanceMatrixFailures.push('B2 exact query leaves raw-input residual text despite its independently mapped ACRA annual-return issue');
+}
+const b2Issue = b2Workstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(b2Issue.operation, 'EXPLAIN_RULE', 'the application result preserves the semantic operation label');
+assert.equal(b2Issue.evidenceStatus, 'VERIFIED', 'the synthetic historical fixture passes the real local admission and claim-verification path');
+assert.equal(b2Issue.applicationStatus, 'VERIFIED', 'a verified historical table and complete explicit facts permit deterministic date application');
+assert.match(b2Issue.applicationReason, /31\/07\/2026/);
+assert.match(b2Issue.applicationReason, /7 months/, 'the application explanation reports the matching table row');
+assert.ok(b2Issue.verifiedClaims.every(claim => !claim.quote.includes('31/07/2026')),
+  'derived date math remains separate from verbatim verified source claims');
+const b2Presentation = createAuthorityEvidencePresentation(b2Workstreams);
+const b2ResponseText = renderAuthorityEvidenceResponseText(b2Presentation, false);
+if (b2Presentation.status !== 'VERIFIED') {
+  acceptanceMatrixFailures.push('B2 evidence presentation is not whole-question VERIFIED');
+}
+assert.match(b2ResponseText, /\*\*Application:\*\* .*31\/07\/2026/,
+  'the text renderer presents the deterministic date as an application result');
+assert.doesNotMatch(b2ResponseText, /Application unresolved/);
+assert.doesNotMatch(b2ResponseText, /journal/i, 'the dated statutory answer does not prepare a journal');
+
+const changedMonthFixture = syntheticAcraDeadlineSource({ id: 'TEST_ONLY_ACRA_DEADLINE_TABLE_NINE_MONTHS', nonListedMonths: 9 });
+const changedMonthWorkstreams = await withTemporaryRegistrySource(changedMonthFixture,
+  () => runAcraWorkstreams(b2AnnualReturnQuery, 'DETERMINE_TREATMENT', [changedMonthFixture]));
+const changedMonthIssue = changedMonthWorkstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(changedMonthIssue.applicationStatus, 'VERIFIED');
+assert.match(changedMonthIssue.applicationReason, /9 months.*30\/09\/2026/,
+  'the computed date follows a deliberately varied verified table value rather than a statutory month constant');
+const actualBranchRowSourceText = syntheticAcraDeadlineSource({ id: 'TEST_ONLY_ACRA_BRANCH_ROWS' }).sourceText
+  .replace('Listed companies with share capital and an overseas branch register',
+    'Listed companies with: A share capital; An overseas branch register')
+  .replace('Non-listed companies with share capital and an overseas branch register',
+    'Non-listed companies with: A share capital; An overseas branch register');
+assert.equal(getAcraAnnualReturnDeadlineMonths(actualBranchRowSourceText, {
+  listingStatus: 'NON_LISTED', hasOverseasBranchRegister: true, hasShareCapital: true
+}), 8, 'the actual qualified row label selects its verified eight-month value');
+assert.equal(getAcraAnnualReturnDeadlineMonths(actualBranchRowSourceText, {
+  listingStatus: 'NON_LISTED', hasOverseasBranchRegister: true
+}), undefined, 'branch status without explicit share-capital status cannot select a deadline row');
+assert.equal(getAcraAnnualReturnDeadlineMonths(actualBranchRowSourceText, {
+  listingStatus: 'NON_LISTED', hasOverseasBranchRegister: false
+}), 7, 'the base row is selected alone when the company has no branch register');
+const explicitQualifiedCompanyQuery = 'For a Singapore-incorporated non-listed company with a share capital and an overseas branch register, financial year ending 31/12/2025.';
+const explicitQualifiedFacts = identifyAcraAnnualReturnCompanyFacts(explicitQualifiedCompanyQuery);
+assert.equal(explicitQualifiedFacts.listingStatus, 'NON_LISTED');
+assert.equal(explicitQualifiedFacts.hasShareCapital, true,
+  'the explicit phrase “with a share capital” supplies the required qualification fact');
+assert.equal(explicitQualifiedFacts.hasOverseasBranchRegister, true,
+  'the coordinated share-capital and branch-register clause supplies branch status');
+assert.deepEqual(explicitQualifiedFacts.unresolvedFacts, []);
+const qualifiedBranchEvidence = {
+  evidenceStatus: 'VERIFIED', targetDate: '2025-12-31',
+  lifecycle: { admitted: true, verified: true, covered: true },
+  sources: [{ id: 'TEST_ONLY_ACRA_ACTUAL_BRANCH_ROWS', sourceText: actualBranchRowSourceText, validFrom: '2020-01-01', effectiveDate: '2020-01-01' }],
+  verifiedClaims: [{ recordId: 'TEST_ONLY_ACRA_ACTUAL_BRANCH_ROWS', quote: actualBranchRowSourceText }]
+};
+const qualifiedBranchApplication = applyAcraAnnualReturnDeadline(explicitQualifiedCompanyQuery, qualifiedBranchEvidence);
+assert.equal(qualifiedBranchApplication.applicationStatus, 'VERIFIED',
+  'the full fact set selects and applies the qualified branch-register row');
+assert.match(qualifiedBranchApplication.applicationReason, /8 months.*31\/08\/2026/,
+  'the calculated deadline uses the qualified row in the admitted table');
+for (const query of unassertedCompanyFactQueries) {
+  const application = applyAcraAnnualReturnDeadline(query, {
+    ...qualifiedBranchEvidence,
+    targetDate: '2025-12-31'
+  });
+  assert.equal(application.applicationStatus, 'UNRESOLVED',
+    `an unasserted fact cannot produce a deadline: ${query}`);
+  assert.equal(application.deadlineDate, undefined);
+  assert.doesNotMatch(application.applicationReason, /\b\d{1,2}\/\d{2}\/\d{4}\b/);
+}
+const leapYearFixture = syntheticAcraDeadlineSource({ id: 'TEST_ONLY_ACRA_DEADLINE_TABLE_SIX_MONTHS', nonListedMonths: 6 });
+const leapYearQuery = b2AnnualReturnQuery.replace('31/12/2025', '31/08/2023');
+const leapYearWorkstreams = await withTemporaryRegistrySource(leapYearFixture,
+  () => runAcraWorkstreams(leapYearQuery, 'CALCULATE', [leapYearFixture]));
+const leapYearIssue = leapYearWorkstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(leapYearIssue.applicationStatus, 'VERIFIED');
+assert.match(leapYearIssue.applicationReason, /29\/02\/2024/,
+  'month-end arithmetic clamps correctly across a leap-year February');
+const tooShortValidityFixture = syntheticAcraDeadlineSource({
+  id: 'TEST_ONLY_ACRA_DEADLINE_TABLE_SHORT_VALIDITY', validTo: '2026-06-30'
+});
+const tooShortValidityWorkstreams = await withTemporaryRegistrySource(tooShortValidityFixture,
+  () => runAcraWorkstreams(b2AnnualReturnQuery, 'CALCULATE', [tooShortValidityFixture]));
+const tooShortValidityIssue = tooShortValidityWorkstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(tooShortValidityIssue.evidenceStatus, 'VERIFIED', 'the source is admitted for the stated FYE within its validity interval');
+assert.equal(tooShortValidityIssue.applicationStatus, 'UNRESOLVED',
+  'a source that expires before the derived filing date cannot support a verified application');
+assert.doesNotMatch(tooShortValidityIssue.applicationReason, /31\/07\/2026/);
+const targetDateMismatch = applyAcraAnnualReturnDeadline(b2AnnualReturnQuery, {
+  evidenceStatus: 'VERIFIED', targetDate: '2024-01-01', lifecycle: b2Issue.lifecycle,
+  sources: b2Issue.sources, verifiedClaims: b2Issue.verifiedClaims
+});
+assert.equal(targetDateMismatch.applicationStatus, 'UNRESOLVED',
+  'a source admitted against a different target date cannot be reused for the FYE calculation');
+assert.doesNotMatch(targetDateMismatch.applicationReason, /31\/07\/2026/);
+const extensionApplication = applyAcraAnnualReturnDeadline(
+  `${b2AnnualReturnQuery} The company has an approved extension of time.`,
+  { evidenceStatus: 'VERIFIED', targetDate: '2025-12-31', lifecycle: b2Issue.lifecycle,
+    sources: b2Issue.sources, verifiedClaims: b2Issue.verifiedClaims }
+);
+assert.equal(extensionApplication.applicationStatus, 'UNRESOLVED',
+  'an ordinary table row does not silently answer a case mentioning an extension');
+assert.doesNotMatch(extensionApplication.applicationReason, /31\/07\/2026/);
+
+const currentSnapshotFixture = {
+  ...fetchedLikeLiveSource({ id: 'TEST_ACRA_CURRENT_SNAPSHOT', authority: 'ACRA',
+    title: 'Current ACRA annual return guidance', url: b2HistoricalFixture.officialSourceUrl, domain: 'ACRA_CORP' }),
+  sourceText: b2HistoricalFixture.sourceText,
+  sourceAuthority: 'ACRA',
+  sourceMapTopicIds: ['acra_annual-returns'],
+  retrievedAt: '2026-10-19T00:00:00.000Z',
+  relatedTopicIds: ['acra_annual-returns'],
+  tags: ['acra_annual-returns']
+};
+const currentSnapshotTrace = {
+  path: 'official-source-map', selectedRecordIds: [currentSnapshotFixture.id],
+  finalVerifiedUrls: [currentSnapshotFixture.officialSourceUrl],
+  attempts: [{ topicId: 'acra_annual-returns', fetchStatus: 'SUCCESS', finalUrl: currentSnapshotFixture.officialSourceUrl,
+    pageTitle: currentSnapshotFixture.documentTitle, titleMatched: true, contentMatched: true }]
+};
+const currentSnapshotWorkstreams = await runAcraWorkstreams(
+  b2AnnualReturnQuery, 'EXPLAIN_RULE', [currentSnapshotFixture], currentSnapshotTrace
+);
+const currentSnapshotIssue = currentSnapshotWorkstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(currentSnapshotIssue.evidenceStatus, 'INSUFFICIENT',
+  'a current live page is not admitted as evidence for the earlier FYE');
+assert.equal(currentSnapshotIssue.applicationStatus, 'UNRESOLVED');
+assert.match(currentSnapshotIssue.applicationReason, /historical applicability/);
+assert.doesNotMatch(currentSnapshotIssue.applicationReason, /31\/07\/2026/,
+  'the historical gap is not bypassed by calculating from a current snapshot');
+
+const b3MissingFactsQuery = 'When is my company annual return due? I have not provided its financial year end, listing status or overseas branch register status. Identify the missing facts; do not assume them or prepare a journal.';
+const b3IssuePlan = semanticIssues([plannedIssue({
+  id: 'b3-acra-deadline', authority: 'ACRA', domain: 'ACRA_CORPORATE', subject: 'annual-return filing deadline',
+  mappedTopicIds: ['acra_annual-returns'], operation: 'EXPLAIN_RULE'
+})]);
+const b3Workstreams = await buildAuthorityWorkstreams(b3MissingFactsQuery, b3IssuePlan, {
+  referenceDate: '2026-10-19', localOnly: true,
+  providers: { ACRA: { authority: 'ACRA', retrieve: async () => ({ candidates: [] }) } }
+});
+const b3Issue = b3Workstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.equal(b3Issue.applicationStatus, 'UNRESOLVED');
+assert.match(b3Issue.applicationReason, /financial year end, listing status, overseas branch register status/,
+  'the missing-facts case names each required company fact and does not assume a default');
+assert.doesNotMatch(b3Issue.applicationReason, /\b\d{1,2}\/\d{2}\/\d{4}\b/);
+assert.deepEqual(b3Issue.sources, []);
+assert.deepEqual(b3Workstreams.workstreams.flatMap(stream => stream.issues.flatMap(issue => issue.verifiedClaims)), []);
+
+const b3Interpretation = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACRA'], contextualAuthorities: [],
+  domain: 'ACRA_CORPORATE', population: 'COMPANY', primarySubject: 'annual-return filing deadline',
+  concepts: [], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
+  issues: [{ subject: 'annual-return filing deadline', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
+};
+let b3SemanticCalls = 0;
+const b3UnexpectedModelCalls = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  if (url.hostname !== 'generativelanguage.googleapis.com') return new Response('', { status: 404 });
+  const payload = JSON.parse(init?.body || '{}');
+  const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+  if (prompt.includes('Return a V2 JSON object')) {
+    b3SemanticCalls++;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(b3Interpretation) }] } }] }), {
+      status: 200, headers: { 'content-type': 'application/json' }
+    });
+  }
+  b3UnexpectedModelCalls.push(prompt);
+  return new Response('', { status: 404 });
+};
+let b3RuntimeResponse;
+let b3RuntimeError;
+try {
+  b3RuntimeResponse = await processAccountingQuery(b3MissingFactsQuery, null, 'SFRS_I', 'test-key-1234567890');
+} catch (error) {
+  b3RuntimeError = error;
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.ifError(b3RuntimeError);
+assert.equal(b3SemanticCalls, 1, 'the exact B3 request receives one mocked semantic interpretation');
+assert.deepEqual(b3UnexpectedModelCalls, [], 'the missing-facts request cannot escape to an ungoverned legacy answer');
+assert.ok(b3RuntimeResponse.scenarioState.authorityEvidencePresentation,
+  'the exact B3 request remains in the whole-question authority renderer');
+assert.equal(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT');
+assert.deepEqual(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.map(stream => stream.authority), ['ACRA'],
+  'the full route does not introduce a VCC or unrelated authority workstream');
+assert.match(b3RuntimeResponse.messageText, /financial year end, listing status, overseas branch register status/i,
+  'the rendered answer explicitly names all missing company facts');
+assert.deepEqual(b3RuntimeResponse.scenarioState.directGroups, [], 'a missing-facts filing question does not prepare a journal');
+
+for (const [index, query] of b3MissingFactsParaphrases.entries()) {
+  let semanticCalls = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.hostname !== 'generativelanguage.googleapis.com') return new Response('', { status: 404 });
+    const payload = JSON.parse(init?.body || '{}');
+    const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+    if (prompt.includes('Return a V2 JSON object')) {
+      semanticCalls++;
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(b3Interpretation) }] } }] }), {
+        status: 200, headers: { 'content-type': 'application/json' }
+      });
+    }
+    return new Response('', { status: 404 });
+  };
+  let response;
+  let error;
+  try {
+    response = await processAccountingQuery(query, null, 'SFRS_I', 'test-key-1234567890');
+  } catch (caught) {
+    error = caught;
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.ifError(error);
+  assert.equal(semanticCalls, 1, `B3 paraphrase ${index + 1} uses one mocked semantic interpretation`);
+  const presentation = response.scenarioState.authorityEvidencePresentation;
+  assert.ok(presentation, `B3 paraphrase ${index + 1} stays on the authority evidence route`);
+  assert.equal(presentation.status, 'INSUFFICIENT');
+  assert.match(response.messageText, /financial year end/i,
+    `B3 paraphrase ${index + 1} names the missing financial year end`);
+  assert.match(response.messageText, /listing status/i,
+    `B3 paraphrase ${index + 1} names the missing listing status`);
+  assert.match(response.messageText, /overseas branch register status/i,
+    `B3 paraphrase ${index + 1} names the missing branch-register status`);
+  assert.doesNotMatch(response.messageText, /\b\d{2}\/\d{2}\/\d{4}\b/,
+    `B3 paraphrase ${index + 1} does not invent a deadline`);
+  assert.deepEqual(response.scenarioState.directGroups, [],
+    `B3 paraphrase ${index + 1} does not produce a journal`);
+}
+
+let companyFreeSemanticCalls = 0;
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  if (url.hostname !== 'generativelanguage.googleapis.com') return new Response('', { status: 404 });
+  const payload = JSON.parse(init?.body || '{}');
+  const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+  if (prompt.includes('Return a V2 JSON object')) {
+    companyFreeSemanticCalls++;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(b3Interpretation) }] } }] }), {
+      status: 200, headers: { 'content-type': 'application/json' }
+    });
+  }
+  return new Response('', { status: 404 });
+};
+let companyFreeAnnualReturnResponse;
+let companyFreeAnnualReturnError;
+try {
+  companyFreeAnnualReturnResponse = await processAccountingQuery(
+    companyFreeAnnualReturnQuery, null, 'SFRS_I', 'test-key-1234567890'
+  );
+} catch (error) {
+  companyFreeAnnualReturnError = error;
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.ifError(companyFreeAnnualReturnError);
+const companyFreePresentation = companyFreeAnnualReturnResponse.scenarioState.authorityEvidencePresentation;
+assert.equal(companyFreeSemanticCalls, 1);
+assert.ok(!companyFreePresentation || companyFreePresentation.status === 'INSUFFICIENT',
+  'a company-free annual-return question does not receive a verified company-specific answer');
+assert.ok(!companyFreePresentation?.workstreams.some(stream => stream.issues.some(issue => issue.applicationStatus === 'VERIFIED')),
+  'missing company ownership cannot activate ordinary-company deadline application');
+assert.doesNotMatch(companyFreeAnnualReturnResponse.messageText, /\b\d{2}\/\d{2}\/\d{4}\b/,
+  'a company-free missing-facts request does not calculate an unsupported deadline');
+assert.ok(companyFreeAnnualReturnResponse.scenarioState.directGroups.every(group => !group.lines?.length),
+  'a company-free missing-facts request does not prepare a journal');
+
+const unassertedAnnualReturnRouteQuery = 'For my Singapore-incorporated non-listed company, what is its annual-return filing deadline if we do not assume a financial year end of 31/12/2025 and it may have an overseas branch register?';
+let unassertedAnnualReturnSemanticCalls = 0;
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  if (url.hostname !== 'generativelanguage.googleapis.com') return new Response('', { status: 404 });
+  const payload = JSON.parse(init?.body || '{}');
+  const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+  if (prompt.includes('Return a V2 JSON object')) {
+    unassertedAnnualReturnSemanticCalls++;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(b3Interpretation) }] } }] }), {
+      status: 200, headers: { 'content-type': 'application/json' }
+    });
+  }
+  return new Response('', { status: 404 });
+};
+let unassertedAnnualReturnResponse;
+let unassertedAnnualReturnError;
+try {
+  unassertedAnnualReturnResponse = await processAccountingQuery(
+    unassertedAnnualReturnRouteQuery, null, 'SFRS_I', 'test-key-1234567890'
+  );
+} catch (error) {
+  unassertedAnnualReturnError = error;
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.ifError(unassertedAnnualReturnError);
+assert.equal(unassertedAnnualReturnSemanticCalls, 1);
+const unassertedAnnualReturnPresentation = unassertedAnnualReturnResponse.scenarioState.authorityEvidencePresentation;
+assert.ok(unassertedAnnualReturnPresentation, 'the unasserted FYE remains on the ACRA issue route');
+const unassertedAnnualReturnIssue = unassertedAnnualReturnPresentation.workstreams
+  .find(stream => stream.authority === 'ACRA')?.issues[0];
+assert.equal(unassertedAnnualReturnIssue?.applicationStatus, 'UNRESOLVED');
+assert.match(unassertedAnnualReturnIssue?.applicationReason || '', /financial year end.*not assumed/i);
+assert.match(unassertedAnnualReturnIssue?.applicationReason || '', /overseas branch register status.*uncertain/i);
+assert.doesNotMatch(unassertedAnnualReturnIssue?.applicationReason || '', /\b\d{1,2}\/\d{2}\/\d{4}\b/);
+assert.deepEqual(unassertedAnnualReturnResponse.scenarioState.directGroups, []);
+
+const b3NoProviderFetch = globalThis.fetch;
+globalThis.fetch = async () => { throw new Error('No-provider B3 regression must stay offline.'); };
+let b3NoProviderResponse;
+try {
+  b3NoProviderResponse = await processAccountingQuery(b3MissingFactsQuery, null, 'SFRS_I');
+} finally {
+  globalThis.fetch = b3NoProviderFetch;
+}
+assert.ok(b3NoProviderResponse.scenarioState.authorityEvidencePresentation,
+  'the raw-input fallback also stays on the ACRA evidence route without a semantic provider');
+assert.equal(b3NoProviderResponse.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT');
+assert.deepEqual(b3NoProviderResponse.scenarioState.authorityEvidencePresentation.workstreams.map(stream => stream.authority), ['ACRA']);
+assert.match(b3NoProviderResponse.messageText, /financial year end, listing status, overseas branch register status/i);
+assert.deepEqual(b3NoProviderResponse.scenarioState.directGroups, []);
+
+const b4IssuePlan = semanticIssues([
+  plannedIssue({ id: 'b4-cpf-rates', authority: 'CPF', domain: 'CPF_PAYROLL', subject: 'employee CPF contribution rates',
+    population: 'EMPLOYEE', mappedTopicIds: ['cpf_contribution_rates'], operation: 'EXPLAIN_RULE' }),
+  plannedIssue({ id: 'b4-iras-relief', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: 'employee CPF personal income tax relief',
+    population: 'INDIVIDUAL', mappedTopicIds: ['iras-individual-cpf-relief'], operation: 'EXPLAIN_RULE',
+    contextualAuthorities: ['CPF'] })
+]);
+const emptyAuthorityProvider = authority => ({ authority, retrieve: async () => ({ candidates: [] }) });
+const b4Workstreams = await buildAuthorityWorkstreams(b4CpfIrasQuery, b4IssuePlan, {
+  referenceDate: '2026-10-19', localOnly: true,
+  providers: { CPF: emptyAuthorityProvider('CPF'), IRAS: emptyAuthorityProvider('IRAS') }
+});
+const b4Presentation = createAuthorityEvidencePresentation(b4Workstreams);
+const b4Issues = b4Presentation.workstreams.flatMap(stream => stream.issues);
+assert.ok(b4Presentation.workstreams.some(stream => stream.authority === 'CPF' && stream.domain === 'CPF_PAYROLL'));
+assert.ok(b4Presentation.workstreams.some(stream => stream.authority === 'IRAS' && stream.domain === 'IRAS_INDIVIDUAL_TAX'));
+assert.ok(b4Issues.every(issue => issue.evidenceStatus === 'INSUFFICIENT'),
+  'the CPF rate and IRAS relief issues remain independently insufficient without their own admitted evidence');
+assert.deepEqual(b4Presentation.workstreams.flatMap(stream => stream.sources), [],
+  'the CPF/IRAS case does not manufacture evidence or borrow sources across authorities');
+assert.deepEqual(b4Presentation.workstreams.flatMap(stream => stream.issues.flatMap(issue => issue.claims)), []);
+assert.equal(b4Presentation.status, 'INSUFFICIENT');
+assert.doesNotMatch(renderAuthorityEvidenceResponseText(b4Presentation, false), /journal/i);
+
+const weakCpfRateQuotes = [
+  'CPF contributions are payable to employees who are Singapore Citizens and Singapore Permanent Residents (SPRs) at current CPF contribution rates. Learn how to calculate the amount of CPF contributions you need to pay.',
+  'Contribution rates from 1 January 2026',
+  "CPF contribution rates vary based on your employee's citizenship status, age group, and total wages. As an employer, you are required to pay CPF contributions for your employees who are Singapore Citizens or Singapore Permanent Residents and who are earning total wages of more than $50 per month."
+];
+const weakCpfRateFixture = {
+  ...UNIFIED_SOURCE_REGISTRY.CPF_WAGE_CEILINGS_2026,
+  id: 'TEST_ONLY_CPF_GENERIC_RATE_EXCERPTS',
+  sourceText: weakCpfRateQuotes.join('\n\n'),
+  relatedTopicIds: ['cpf_contribution_rates'],
+  tags: ['cpf_contribution_rates']
+};
+const weakCpfRateClaims = weakCpfRateQuotes.map(quote => ({
+  text: quote,
+  quote,
+  recordId: weakCpfRateFixture.id,
+  supportKind: 'EXACT_SOURCE_QUOTE'
+}));
+const weakCpfRateWorkstreams = await withTemporaryRegistrySource(weakCpfRateFixture, () => buildAuthorityWorkstreams(
+  b4CpfIrasQuery, b4IssuePlan, {
+    referenceDate: '2026-10-19', localOnly: true,
+    providers: {
+      CPF: { authority: 'CPF', retrieve: async () => ({ candidates: [weakCpfRateFixture], claims: weakCpfRateClaims }) },
+      IRAS: emptyAuthorityProvider('IRAS')
+    }
+  }
+));
+const weakCpfRatePresentation = createAuthorityEvidencePresentation(weakCpfRateWorkstreams);
+const weakCpfIssue = weakCpfRatePresentation.workstreams.find(stream => stream.authority === 'CPF')?.issues[0];
+const weakCpfRuntimeIssue = weakCpfRateWorkstreams.workstreams.find(stream => stream.authority === 'CPF')?.issues[0];
+assert.equal(weakCpfIssue?.evidenceStatus, 'INSUFFICIENT',
+  'generic CPF intro, date heading, and eligibility factors do not cover a numeric rate request');
+assert.equal(weakCpfRuntimeIssue?.lifecycle.admitted, true,
+  'the negative rate result is tested after the weak excerpts pass source admission');
+assert.deepEqual(weakCpfIssue?.claims, [], 'the generic excerpts cannot be presented as verified numeric CPF rate claims');
+assert.ok(weakCpfRateWorkstreams.workstreams.find(stream => stream.authority === 'CPF')?.issues[0].gaps
+  .some(gap => gap.code === 'CPF_RATE_SCHEDULE_UNVERIFIED'),
+  'the rate issue names the absent independently validated schedule mechanism');
+assert.deepEqual(weakCpfRatePresentation.workstreams.find(stream => stream.authority === 'CPF')?.sources, [],
+  'a heading-only CPF source is not presented as support for the rate issue');
+assert.equal(weakCpfRatePresentation.workstreams.find(stream => stream.authority === 'IRAS')?.issues[0].evidenceStatus, 'INSUFFICIENT',
+  'CPF rate evidence cannot satisfy the independently owned IRAS relief question');
+assert.equal(weakCpfRatePresentation.status, 'INSUFFICIENT');
+
+const firstYearSprRateQuery = 'What are the 2026 CPF rates for a first-year Singapore Permanent Resident employee aged 45?';
+const cpfRateOnlyPlan = (query, subjectOverride) => semanticIssues([plannedIssue({ id: 'cpf-rate-only', authority: 'CPF', domain: 'CPF_PAYROLL',
+  subject: subjectOverride || (query.includes('first-year') ? 'first-year SPR employee CPF contribution rates' : 'employee CPF contribution rates'),
+  population: 'EMPLOYEE', mappedTopicIds: ['cpf_contribution_rates'], operation: 'EXPLAIN_RULE' })]);
+const adversarialCpfRateCases = [
+  {
+    query: b4CpfIrasQuery,
+    quote: '2026 CPF contribution rates for Singapore citizens aged 55 and below with total monthly wages apply the citizen age band; for employees aged above 60 to 65 with total monthly wages, employer contributions are 12% and employee contributions are 7%.'
+  },
+  {
+    query: firstYearSprRateQuery,
+    quote: '2026 CPF contribution rates for first-year Singapore Permanent Residents aged 55 and below depend on total monthly wages; for third-year Singapore Permanent Residents aged above 60 to 65, employer contributions are 12% and employee contributions are 7%.'
+  },
+  {
+    query: 'What rates apply to CPF contributions in 2026 for a Singapore citizen aged 45?',
+    subject: 'employer and employee contribution rates',
+    quote: 'Employer and employee contribution rates are part of employer CPF obligations. For Singapore citizens aged 45, 2026 CPF contribution rates depend on the applicable age band; for Singapore citizens aged above 60 to 65 with total monthly wages, employer contributions are 12% and employee contributions are 7%.'
+  },
+  {
+    query: 'What rates apply to CPF contributions in 2026 for a Singapore citizen aged 45?',
+    subject: 'employer CPF obligations',
+    quote: 'Employer and employee contribution rates are part of employer CPF obligations. For Singapore citizens aged 45, 2026 CPF contribution rates depend on the applicable age band; for Singapore citizens aged above 60 to 65 with total monthly wages, employer contributions are 12% and employee contributions are 7%.'
+  }
+];
+for (const [index, adversarial] of adversarialCpfRateCases.entries()) {
+  const recordId = `TEST_ONLY_CPF_ADVERSARIAL_RATE_QUOTE_${index + 1}`;
+  const record = {
+    ...UNIFIED_SOURCE_REGISTRY.CPF_WAGE_CEILINGS_2026,
+    id: recordId,
+    sourceText: adversarial.quote,
+    relatedTopicIds: ['cpf_contribution_rates'],
+    tags: ['cpf_contribution_rates']
+  };
+  const workstreams = await withTemporaryRegistrySource(record, () => buildAuthorityWorkstreams(
+    adversarial.query, cpfRateOnlyPlan(adversarial.query, adversarial.subject), {
+      referenceDate: '2026-10-19', localOnly: true,
+      providers: { CPF: { authority: 'CPF', retrieve: async () => ({ candidates: [record], claims: [{
+        text: adversarial.quote, quote: adversarial.quote, recordId, supportKind: 'EXACT_SOURCE_QUOTE'
+      }] }) } }
+    }
+  ));
+  const rateIssue = workstreams.workstreams.find(stream => stream.authority === 'CPF')?.issues[0];
+  assert.equal(rateIssue?.lifecycle.admitted, true,
+    `the adversarial age/population quote is admitted before rate coverage is withheld (${recordId}): ${JSON.stringify(rateIssue)}`);
+  assert.equal(rateIssue?.evidenceStatus, 'INSUFFICIENT',
+    `cross-band or cross-population percentages cannot verify the requested rate schedule (${recordId})`);
+  assert.deepEqual(rateIssue?.verifiedClaims, [], 'the runtime emits no unvalidated CPF rate claims');
+  assert.deepEqual(rateIssue?.sources, [], 'the rate source is not cited as verified support');
+  assert.ok(rateIssue?.gaps.some(gap => gap.code === 'CPF_RATE_SCHEDULE_UNVERIFIED'));
+}
+const mixedNonRateCpfIrasRateQuery = 'What is the IRAS corporate income tax rate, and what employer CPF obligations apply to this employee?';
+const mixedNonRateCpfIrasRate = await buildAuthorityWorkstreams(mixedNonRateCpfIrasRateQuery, semanticIssues([
+  plannedIssue({ id: 'cpf-obligations-non-rate', authority: 'CPF', domain: 'CPF_PAYROLL',
+    subject: 'employer CPF obligations', population: 'EMPLOYEE', mappedTopicIds: ['cpf_contribution_rates'] }),
+  plannedIssue({ id: 'iras-corporate-rate', authority: 'IRAS', domain: 'IRAS_INCOME_TAX',
+    subject: 'corporate income tax rate', population: 'COMPANY', mappedTopicIds: ['iras-cit-tax-rate'] })
+]), {
+  referenceDate: '2026-10-19', localOnly: true,
+  providers: { CPF: emptyAuthorityProvider('CPF'), IRAS: emptyAuthorityProvider('IRAS') }
+});
+const mixedCpfIssue = mixedNonRateCpfIrasRate.workstreams.find(stream => stream.authority === 'CPF')?.issues[0];
+assert.equal(mixedCpfIssue?.evidenceStatus, 'INSUFFICIENT');
+assert.ok(!mixedCpfIssue?.gaps.some(gap => gap.code === 'CPF_RATE_SCHEDULE_UNVERIFIED'),
+  'an IRAS rate question does not trigger the dedicated CPF rate-schedule gap for a separate CPF-obligations issue');
+
+const b4Interpretation = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['CPF', 'IRAS'], contextualAuthorities: ['CPF'],
+  domain: 'CPF_PAYROLL', population: 'EMPLOYEE', primarySubject: 'CPF contribution rates and IRAS CPF relief',
+  concepts: [], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
+  issues: [
+    { subject: 'employee CPF contribution rates', population: 'EMPLOYEE', domain: 'CPF_PAYROLL',
+      governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: ['cpf_contribution_rates'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 },
+    { subject: 'employee CPF personal income tax relief', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: ['CPF'], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: ['iras-individual-cpf-relief'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }
+  ]
+};
+let b4SemanticCalls = 0;
+const b4UnexpectedModelCalls = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  if (url.hostname !== 'generativelanguage.googleapis.com') return new Response('', { status: 404 });
+  const payload = JSON.parse(init?.body || '{}');
+  const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+  if (prompt.includes('Return a V2 JSON object')) {
+    b4SemanticCalls++;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(b4Interpretation) }] } }] }), {
+      status: 200, headers: { 'content-type': 'application/json' }
+    });
+  }
+  b4UnexpectedModelCalls.push(prompt);
+  return new Response('', { status: 404 });
+};
+let b4RuntimeResponse;
+let b4RuntimeError;
+try {
+  b4RuntimeResponse = await processAccountingQuery(b4CpfIrasQuery, null, 'SFRS_I', 'test-key-1234567890');
+} catch (error) {
+  b4RuntimeError = error;
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.ifError(b4RuntimeError);
+assert.equal(b4SemanticCalls, 1, 'the exact B4 request receives one mocked semantic interpretation');
+assert.deepEqual(b4UnexpectedModelCalls, [], 'the unsupported CPF rate request cannot escape to a legacy answer');
+assert.ok(b4RuntimeResponse.scenarioState.authorityEvidencePresentation);
+assert.equal(b4RuntimeResponse.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT');
+assert.ok(b4RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.some(stream => stream.authority === 'CPF'));
+assert.ok(b4RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.some(stream => stream.authority === 'IRAS'));
+assert.deepEqual(b4RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.flatMap(stream => stream.issues.flatMap(issue => issue.claims)), []);
+assert.ok(b4RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams
+  .find(stream => stream.authority === 'CPF')?.issues.some(issue => issue.gaps.some(gap => /no independently validated CPF rate-schedule parser/i.test(gap))),
+'the displayed CPF issue reports that its rate schedule cannot be independently verified');
+assert.deepEqual(b4RuntimeResponse.scenarioState.directGroups, [], 'the mixed statutory explanation does not produce a journal');
+
 globalThis.fetch = async input => {
   const url = new URL(String(input));
   if (url.hostname === 'generativelanguage.googleapis.com') {
@@ -903,7 +1610,7 @@ assert.ok(standaloneIrasResponse.scenarioState.irasEvidencePresentation,
 assert.equal(standaloneIrasResponse.scenarioState.authorityEvidencePresentation, undefined,
   'a single IRAS route remains on its established response path');
 
-const unsupportedAccountingRuleQuery = 'Explain the SFRS(I) 6 accounting treatment for exploration and evaluation assets.';
+const unsupportedAccountingRuleQuery = 'Explain the SFRS(I) 6 accounting treatment for exploration and evaluation assets. Explain the rule only; do not calculate amounts or prepare a journal.';
 const unsupportedAccountingRuleInterpretation = {
   schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [],
   domain: 'ACCOUNTING', population: 'COMPANY', primarySubject: 'SFRS(I) 6 exploration and evaluation assets',
@@ -1017,4 +1724,6 @@ assert.equal(canRouteUnmappedAccountingRule({
 assert.equal(canRouteUnmappedAccountingRule({ explicitIrasEvidenceRequest: true }), false,
   'explicit IRAS evidence requests keep their established path');
 
+assert.deepEqual(acceptanceMatrixFailures, [],
+  `the offline acceptance matrix has unresolved cases: ${acceptanceMatrixFailures.join('; ')}`);
 console.log('Authority evidence presentation and routing regressions passed.');

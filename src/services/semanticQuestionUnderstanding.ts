@@ -1,8 +1,9 @@
 import { isExplicitForeignTaxOnlyQuestion, type QuestionClassificationResult } from '../classification/questionClassifier';
 import type { SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
-import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
+import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../retrieval/queryTopicResolver';
 import { isAcraAnnualReturnDeadlineQuestion } from '../retrieval/acraAnnualReturnFilingRule';
+import { isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
 import {
@@ -425,7 +426,8 @@ function canonicalAcraAnnualReturnSubjectIfBounded(
     subjectWords.every(word => ACRA_ANNUAL_RETURN_SUBJECT_WORDS.has(word));
   const vccScope = /\b(?:vcc|variable[\s-]+capital\s+compan(?:y|ies))\b/i;
   if (!/\bannual-return\b/i.test(subject) || !boundedOrdinarySubject || domain !== 'ACRA_CORPORATE' || population !== 'COMPANY' ||
-      operation !== 'EXPLAIN_RULE' || governingAuthorities.length !== 1 || governingAuthorities[0] !== 'ACRA' ||
+      !['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATMENT', 'CALCULATE'].includes(operation) ||
+      governingAuthorities.length !== 1 || governingAuthorities[0] !== 'ACRA' ||
       issueCount !== 1 || !independentlyRecognizedTopicIds.has('acra_annual-returns') ||
       independentlyRecognizedTopicIds.has('acra_vcc') || vccScope.test(query) || vccScope.test(subject)) {
     return subject;
@@ -1481,7 +1483,49 @@ function independentlyRecognizedTopics(query: string, classification: QuestionCl
     topic.domainId.startsWith('ACCOUNTING_') || topic.domainId.startsWith('IRAS_') ||
     topic.domainId.startsWith('CPF_') || topic.domainId.startsWith('MOM_') ||
     topic.domainId.startsWith('ACRA_') || topic.domainId.startsWith('MAS_'));
-  return { topics, hasUnparsedText: (decomposition.unresolvedTopics?.length || 0) > 0 };
+  return {
+    topics,
+    rawTopicIds: [...new Set(decomposition.topics.map(topic => topic.id))],
+    unresolvedFragments: [...(decomposition.unresolvedTopics || [])],
+    hasUnparsedText: (decomposition.unresolvedTopics?.length || 0) > 0
+  };
+}
+
+const ACRA_APPLICATION_DATE = String.raw`(?:[0-3]?\d[/-][01]?\d[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|[0-3]?\d(?:st|nd|rd|th)?\s+[a-z]+\s+20\d{2})`;
+
+function isBoundedAcraCompanyFactsFragment(fragment: string): boolean {
+  return /^\s*for\s+(?:a|the)\s+(?:(?:singapore(?:[\s-]+incorporated)?|singapore-incorporated)\s+)?(?:(?:non[\s-]?listed|unlisted|listed|private|public)\s+)?compan(?:y|ies)\s+(?:(?:with|and|that\s+has|which\s+has)\s+)?(?:(?:no|without|not\s+having|does\s+not\s+have|has\s+no)\s+)?(?:an?\s+|the\s+)?overseas\s+branch\s+register\s*$/i.test(fragment);
+}
+
+function isBoundedAcraFyeAndOutputFragment(fragment: string): boolean {
+  const fye = String.raw`(?:financial\s+year\s+(?:end(?:ing)?|ended|ends?)(?:\s+date)?|fye)`;
+  const dateConnector = String.raw`(?:(?:is|of|on|ending|ended)\s+)?`;
+  const deadlineQuestion = String.raw`what\s+(?:is|would\s+be)\s+(?:the\s+)?annual[-\s]+return\s+(?:filing\s+)?(?:filing\s+)?(?:deadline|due\s+date)\?`;
+  const output = String.raw`(?:\s*(?:show|give|provide)\s+(?:the\s+)?date\s+as\s+dd\s*\/\s*mm\s*\/\s*yyyy\s*[.;,]?)?`;
+  const noJournal = String.raw`(?:\s*;?\s*do\s+not\s+prepare\s+(?:a\s+)?(?:journal(?:\s+entry)?|entry)\s*[.!]?)?`;
+  return new RegExp(String.raw`^\s*${fye}\s+${dateConnector}${ACRA_APPLICATION_DATE}\s*,\s*${deadlineQuestion}${output}${noJournal}\s*$`, 'i').test(fragment);
+}
+
+function canBindAcraApplicationInputResiduals(
+  query: string,
+  issues: ReconciledSemanticQuestionIssue[],
+  inventory: ReturnType<typeof independentlyRecognizedTopics>
+): boolean {
+  if (!inventory.hasUnparsedText || issues.length !== 1 || inventory.rawTopicIds.length !== 1 ||
+      inventory.rawTopicIds[0] !== 'acra_annual-returns' || inventory.topics.length !== 1 ||
+      inventory.topics[0].id !== 'acra_annual-returns') return false;
+  const issue = issues[0];
+  if (issue.status !== 'MAPPED' || issue.domain !== 'ACRA_CORPORATE' || issue.population !== 'COMPANY' ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'ACRA' ||
+      issue.mappedTopicIds.length !== 1 || issue.mappedTopicIds[0] !== 'acra_annual-returns' ||
+      !isAcraAnnualReturnDeadlineQuestion(query) || !isAcraAnnualReturnApplicationQuestion(query, issue.operation) ||
+      /\b(?:vcc|variable[\s-]+capital\s+compan(?:y|ies)|foreign(?:[\s-]+incorporated)?|overseas\s+company|incorporated\s+outside\s+singapore|extension|extended\s+deadline|waiver|special\s+order)\b/i.test(query)) {
+    return false;
+  }
+  const fragments = inventory.unresolvedFragments;
+  return fragments.length >= 2 && fragments.some(isBoundedAcraCompanyFactsFragment) &&
+    fragments.some(isBoundedAcraFyeAndOutputFragment) &&
+    fragments.every(fragment => isBoundedAcraCompanyFactsFragment(fragment) || isBoundedAcraFyeAndOutputFragment(fragment));
 }
 
 function reconcileSemanticIssuePlan(
@@ -1578,7 +1622,8 @@ function reconcileSemanticIssuePlan(
         unresolvedReason: 'UNASSIGNED_QUERY_TOPIC'
       });
     }
-    const hasUnmappedResidual = Boolean(routingOwnershipFailure) || inventory.hasUnparsedText || inventory.topics.length === 0 ||
+    const hasUnmappedResidual = Boolean(routingOwnershipFailure) ||
+      inventory.hasUnparsedText && !canBindAcraApplicationInputResiduals(query, issues, inventory) || inventory.topics.length === 0 ||
       issues.some(issue => issue.status === 'UNRESOLVED');
     return {
       source: 'SEMANTIC_ISSUES',
@@ -1592,13 +1637,31 @@ function reconcileSemanticIssuePlan(
   const groups = new Map<SingaporeKnowledgeDomain, typeof inventory.topics>();
   for (const topic of inventory.topics) groups.set(topic.domainId, [...(groups.get(topic.domainId) || []), topic]);
   const issues = [...groups.values()].map(issueFromTaxonomyGroup).map(issue => {
+    if (isBoundedAcraAnnualReturnMissingFactsQuestion(query) && issue.domain === 'ACRA_CORPORATE' &&
+        issue.mappedTopicIds.length === 1 && issue.mappedTopicIds[0] === 'acra_annual-returns') {
+      const boundedFallbackIssue = {
+        ...issue,
+        subject: 'annual-return filing deadline',
+        population: 'COMPANY' as const,
+        operation: 'DETERMINE_TREATMENT' as const,
+        evidenceRequirement: deriveEvidenceRequirement('ACRA_CORPORATE', 'DETERMINE_TREATMENT'),
+        confidence: 1
+      };
+      return { ...boundedFallbackIssue, id: addId(boundedFallbackIssue), status: 'MAPPED' as const };
+    }
     return {
       ...issue,
       id: addId(issue),
       status: 'MAPPED' as const
     };
   });
-  return { source: 'TAXONOMY_FALLBACK', issues, coverageEstablished: false, hasUnmappedResidual: true };
+  const boundedAcraMissingFactsQuestion = isBoundedAcraAnnualReturnMissingFactsQuestion(query) && issues.length === 1 &&
+    issues[0].status === 'MAPPED' && issues[0].domain === 'ACRA_CORPORATE' && issues[0].population === 'COMPANY' &&
+    issues[0].governingAuthorities.length === 1 && issues[0].governingAuthorities[0] === 'ACRA' &&
+    issues[0].mappedTopicIds.length === 1 && issues[0].mappedTopicIds[0] === 'acra_annual-returns';
+  return { source: 'TAXONOMY_FALLBACK', issues,
+    coverageEstablished: boundedAcraMissingFactsQuestion,
+    hasUnmappedResidual: !boundedAcraMissingFactsQuestion };
 }
 
 /** Keeps issue reconciliation separate from the legacy flat classification projection. */

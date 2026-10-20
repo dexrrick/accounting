@@ -104,6 +104,35 @@ function deadlineTableRows(passage: string): string[][] | undefined {
   return rows;
 }
 
+function parseDeadlineMonthCount(deadline: string): number | undefined {
+  const match = deadline.match(/^within\s+(\d+|[a-z -]+)\s+months?\s+after\s+fye\s*[.!]?\s*$/i);
+  if (!match) return undefined;
+  if (/^\d+$/.test(match[1])) {
+    const numeric = Number(match[1]);
+    return Number.isSafeInteger(numeric) ? numeric : undefined;
+  }
+
+  const unitValues: Record<string, number> = {
+    zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+    ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+    seventeen: 17, eighteen: 18, nineteen: 19
+  };
+  const tensValues: Record<string, number> = {
+    twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90
+  };
+  const words = match[1].toLowerCase().replace(/-/g, ' ').split(/\s+/).filter(word => word !== 'and');
+  let total = 0;
+  let current = 0;
+  for (const word of words) {
+    if (Object.hasOwn(unitValues, word)) current += unitValues[word];
+    else if (Object.hasOwn(tensValues, word)) current += tensValues[word];
+    else if (word === 'hundred') current = (current || 1) * 100;
+    else return undefined;
+  }
+  total += current;
+  return Number.isSafeInteger(total) ? total : undefined;
+}
+
 /** Returns one entire, structurally linked ACRA deadline table block, if valid and unambiguous. */
 export function getAcraAnnualReturnDeadlineTablePassage(text: string): string | undefined {
   const matchingPassages = text.split(/\r?\n[\t ]*\r?\n+/).map(passage => passage.trim()).filter(Boolean)
@@ -114,6 +143,29 @@ export function getAcraAnnualReturnDeadlineTablePassage(text: string): string | 
 
 export function supportsAcraAnnualReturnDeadlineTable(text: string): boolean {
   return getAcraAnnualReturnDeadlineTablePassage(text) !== undefined;
+}
+
+/** Reads the explicit month count from the complete verified table row for the supplied company facts. */
+export function getAcraAnnualReturnDeadlineMonths(
+  text: string,
+  facts: { listingStatus: 'LISTED' | 'NON_LISTED'; hasOverseasBranchRegister: boolean; hasShareCapital?: boolean }
+): number | undefined {
+  if (facts.hasOverseasBranchRegister && facts.hasShareCapital === undefined) return undefined;
+  const passage = getAcraAnnualReturnDeadlineTablePassage(text);
+  if (!passage) return undefined;
+  const rows = deadlineTableRows(passage);
+  if (!rows) return undefined;
+  const qualifiedBranchCompany = facts.hasOverseasBranchRegister && facts.hasShareCapital === true;
+  const expectedType = facts.listingStatus === 'LISTED' ? 'listed companies' : 'non listed companies';
+  const matchingRows = rows.slice(1).filter(([companyType]) => {
+    const normalized = normalizeEvidenceText(companyType);
+    const isExpectedType = qualifiedBranchCompany
+      ? normalized.startsWith(`${expectedType} with`) &&
+        /\bshare capital\b/.test(normalized) && /\boverseas branch register\b/.test(normalized)
+      : normalized === expectedType;
+    return isExpectedType;
+  });
+  return matchingRows.length === 1 ? parseDeadlineMonthCount(matchingRows[0][1]) : undefined;
 }
 
 /** Same admitted source must contain both annual-return context and a complete qualified deadline table. */

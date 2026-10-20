@@ -49,6 +49,61 @@ export interface TopicDecompositionResult {
   unresolvedTopics: string[];
 }
 
+function isCompanyAnnualReturnDeadlineClause(clause: string): boolean {
+  const company = "(?:(?:(?:my|our|the)\\s+)?(?:singapore[\\s-]+incorporated\\s+)?company(?:['’]s)?|(?:my|our)\\s+company)";
+  const annualReturn = "annual[-\\s]+returns?";
+  const deadlinePatterns = [
+    new RegExp('^when\\s+(?:is|are)\\s+' + company + '\\s+' + annualReturn + '\\s+(?:(?:filing\\s+)?(?:is\\s+)?(?:due|deadline)(?:\\s+date)?)\\??$', 'i'),
+    new RegExp('^when\\s+(?:does|must|should)\\s+' + company + '\\s+file\\s+(?:(?:its|the)\\s+)?' + annualReturn + '\\??$', 'i'),
+    new RegExp('^what\\s+(?:is|would\\s+be)\\s+(?:the\\s+)?' + company + '\\s+' + annualReturn + '\\s+(?:filing\\s+)?(?:deadline|due\\s+date)\\??$', 'i'),
+    new RegExp('^what\\s+(?:is|would\\s+be)\\s+(?:the\\s+)?' + annualReturn + '\\s+(?:filing\\s+)?(?:deadline|due\\s+date)\\s+for\\s+' + company + '\\??$', 'i'),
+    new RegExp('^what\\s+(?:is|would\\s+be)\\s+the\\s+filing\\s+deadline\\s+for\\s+' + company + '\\s+' + annualReturn + '\\??$', 'i'),
+    new RegExp('^(?:when|what\\s+date)\\s+(?:is\\s+)?(?:the\\s+)?' + annualReturn + '\\s+(?:filing\\s+)?(?:for\\s+' + company + '\\s+)?(?:is\\s+)?due\\??$', 'i')
+  ];
+  return deadlinePatterns.some(pattern => pattern.test(clause));
+}
+
+function isAnnualReturnFactsRequestClause(clause: string): boolean {
+  const direct = /^(?:(?:please\s+)?(?:identify|list|name|specify|tell\s+me|show\s+me)\s+(?:the\s+)?(?:company\s+)?(?:missing|required|necessary)\s+(?:company\s+)?(?:facts|information|details)|what\s+(?:company\s+)?(?:facts|information|details)\s+(?:do\s+you\s+need|required|are\s+needed|must\s+i\s+provide)(?:\s+to\s+(?:determine|work\s+out|calculate)\s+(?:the\s+)?(?:company\s+)?annual[-\s]+returns?(?:\s+(?:filing\s+)?(?:deadline|due\s+date))?)?)\??$/i;
+  const company = "(?:(?:(?:my|our|the)\\s+)?(?:singapore[\\s-]+incorporated\\s+)?company(?:['’]s)?|(?:my|our)\\s+company)";
+  const annualReturn = "annual[-\\s]+returns?";
+  const combined = new RegExp('^what\\s+(?:company\\s+)?(?:facts|information|details)\\s+do\\s+you\\s+need\\s+to\\s+(?:determine|work\\s+out|calculate)\\s+(?:when\\s+' + company + '\\s+' + annualReturn + '\\s+(?:is\\s+)?due|(?:the\\s+)?' + annualReturn + '\\s+(?:filing\\s+)?(?:deadline|due\\s+date)\\s+for\\s+' + company + ')\\??$', 'i');
+  return direct.test(clause) || combined.test(clause);
+}
+
+function isBoundedMissingCompanyFactsStatement(clause: string): boolean {
+  const factPattern = /\b(?:financial\s+year\s+end|FYE|listing\s+status|listed\s+status|whether\s+(?:the\s+)?(?:company|it)\s+is\s+(?:non[-\s]?listed|unlisted|listed)|whether\s+(?:the\s+)?(?:company|it)\s+(?:has|keeps|maintains)\s+(?:an?\s+)?overseas\s+branch\s+register|overseas\s+branch\s+register(?:\s+status)?)\b/i;
+  const missingPattern = /\b(?:not\s+(?:provided|supplied|given|stated|specified|known)|haven['’]?t\s+(?:provided|supplied|given|stated|specified)|have\s+not\s+(?:provided|supplied|given|stated|specified)|did\s+not\s+(?:provide|supply|give|state|specify)|unknown|unspecified|missing|do\s+not\s+know|don['’]?t\s+know|not\s+sure\s+whether)\b/i;
+  if (!factPattern.test(clause) || !missingPattern.test(clause)) return false;
+  const remainder = clause
+    .replace(/\b(?:financial\s+year\s+end|FYE|listing\s+status|listed\s+status|whether\s+(?:the\s+)?(?:company|it)\s+is\s+(?:non[-\s]?listed|unlisted|listed)|whether\s+(?:the\s+)?(?:company|it)\s+(?:has|keeps|maintains)\s+(?:an?\s+)?overseas\s+branch\s+register|overseas\s+branch\s+register(?:\s+status)?)\b/gi, ' ')
+    .replace(/\b(?:not\s+(?:provided|supplied|given|stated|specified|known)|haven['’]?t\s+(?:provided|supplied|given|stated|specified)|have\s+not\s+(?:provided|supplied|given|stated|specified)|did\s+not\s+(?:provide|supply|give|state|specify)|unknown|unspecified|missing|do\s+not\s+know|don['’]?t\s+know|not\s+sure\s+whether)\b/gi, ' ')
+    .replace(/\b(?:i|we|the|our|its|it|company(?:['’]s)?|whether|is|are|has|have|been|and|or|a|an|to|as|of|status)\b/gi, ' ')
+    .replace(/[\s,.;:!?'"’()-]+/g, '');
+  return remainder.length === 0;
+}
+
+/** Binds only fully recognized ordinary-company annual-return fact requests. */
+export function isBoundedAcraAnnualReturnMissingFactsQuestion(query: string): boolean {
+  const normalized = removeNegatedJournalDirectives(query).trim();
+  if (!normalized || /\b(?:vcc|variable[\s-]+capital\s+compan(?:y|ies)|foreign(?:[\s-]+incorporated)?|overseas\s+company|incorporated\s+outside\s+singapore|extension|extended\s+deadline|waiver|special\s+order)\b/i.test(normalized)) return false;
+  if (!/\bcompan(?:y|ies)\b/i.test(normalized)) return false;
+  const clauses = normalized.split(/[.!?;]+/).map(clause => clause.trim()).filter(Boolean);
+  if (!clauses.length) return false;
+  let hasDeadline = false;
+  let hasFactsRequest = false;
+  for (const clause of clauses) {
+    const deadline = isCompanyAnnualReturnDeadlineClause(clause);
+    const factsRequest = isAnnualReturnFactsRequestClause(clause);
+    if (deadline || factsRequest && /\bannual[-\s]+returns?\b/i.test(clause) && /\b(?:when|deadline|due\s+date|is\s+due)\b/i.test(clause)) hasDeadline = true;
+    if (factsRequest) hasFactsRequest = true;
+    if (deadline || factsRequest || isBoundedMissingCompanyFactsStatement(clause) ||
+        /^do\s+not\s+assume\s+(?:them|those\s+facts|these\s+facts|the\s+missing\s+facts)$/i.test(clause)) continue;
+    return false;
+  }
+  return hasDeadline && hasFactsRequest;
+}
+
 export class QueryTopicResolver {
   public static readonly CANONICAL_TOPICS: QueryTopic[] = SINGAPORE_COVERAGE_REGISTRY.map((metadata) => ({
     id: metadata.id,
@@ -149,7 +204,8 @@ export class QueryTopicResolver {
       const hasLexicalMatch =
         !(topic.exclusionKeywords ?? []).some((phrase) => qLower.includes(phrase.toLowerCase())) &&
         (topic.keywords.some((kw) => keywordMatches(qLower, kw)) ||
-          (topic.queryPatterns ?? []).some((pattern) => new RegExp(pattern, 'i').test(query)));
+          (topic.queryPatterns ?? []).some((pattern) => new RegExp(pattern, 'i').test(query)) ||
+          topic.id === 'acra_annual-returns' && isBoundedAcraAnnualReturnMissingFactsQuestion(query));
 
       // 4. Topic Resolution & Attribution
       if (hasSemanticMatch && hasLexicalMatch) {

@@ -166,7 +166,9 @@ function workstreamStatus(stream: AuthorityWorkstreamResult): { evidenceStatus: 
   const evidenceStatus = stream.issues.length > 0 && stream.issues.every(isCovered) && stream.evidenceStatus === 'VERIFIED'
     ? 'VERIFIED' : 'INSUFFICIENT';
   const applicationStatus = stream.applicationStatus === 'UNRESOLVED' ||
-    stream.issues.some(issue => issue.applicationStatus === 'UNRESOLVED') ? 'UNRESOLVED' : 'NOT_REQUIRED';
+    stream.issues.some(issue => issue.applicationStatus === 'UNRESOLVED') ? 'UNRESOLVED'
+    : stream.applicationStatus === 'VERIFIED' || stream.issues.some(issue => issue.applicationStatus === 'VERIFIED')
+      ? 'VERIFIED' : 'NOT_REQUIRED';
   return { evidenceStatus, applicationStatus };
 }
 
