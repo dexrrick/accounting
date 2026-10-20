@@ -117,11 +117,68 @@ assert.equal(g6b.totalDebit, 5250);
 assert.equal(g6b.totalCredit, 5250);
 assert.equal(g6b.isBalanced, true);
 
-// 7. Customer receipt with settlement discount asks for discountBreakdown
-const q7 = "Received SGD 1,900 from customer settling invoice less 5% discount";
-const p7 = await parseAccountingQuery(q7, null);
-assert.equal(p7.isComplete, false);
-assert.ok(p7.missingFields.some(f => f.fieldKey === 'discountBreakdown'), 'Must request discountBreakdown');
+// 7. Customer receipt with settlement discount:
+// a) Unsplit single-amount customer receipt with discount asks for discountBreakdown
+const q7a = "Received SGD 1,900 from customer settling invoice less 5% discount";
+const p7a = await parseAccountingQuery(q7a, null);
+assert.equal(p7a.isComplete, false);
+assert.ok(p7a.missingFields.some(f => f.fieldKey === 'discountBreakdown'), 'Must request discountBreakdown');
+
+// b) Explicit 3-amount settlement discount produces balanced 3-line entry and passes validateJournalGroups
+const q7b = "Received SGD 9,800 from customer by bank transfer to settle an invoice of SGD 10,000 after a settlement discount of SGD 200.";
+const p7b = await parseAccountingQuery(q7b, null);
+assert.equal(p7b.isComplete, true);
+assert.equal(p7b.directGroups?.length, 1);
+const g7b = p7b.directGroups[0];
+assert.equal(g7b.lines.length, 3, 'Must have 3 lines');
+assert.equal(g7b.lines[0].accountName, 'Cash at Bank');
+assert.equal(g7b.lines[0].category, 'ASSET');
+assert.equal(g7b.lines[0].debit, 9800);
+assert.equal(g7b.lines[0].credit, 0);
+assert.equal(g7b.lines[1].accountName, 'Discount Allowed');
+assert.equal(g7b.lines[1].category, 'EXPENSE');
+assert.equal(g7b.lines[1].debit, 200);
+assert.equal(g7b.lines[1].credit, 0);
+assert.equal(g7b.lines[2].accountName, 'Trade Receivables');
+assert.equal(g7b.lines[2].category, 'ASSET');
+assert.equal(g7b.lines[2].debit, 0);
+assert.equal(g7b.lines[2].credit, 10000);
+assert.equal(g7b.totalDebit, 10000);
+assert.equal(g7b.totalCredit, 10000);
+assert.equal(g7b.isBalanced, true);
+const v7b = validateJournalGroups([g7b]);
+assert.equal(v7b.isValid, true, 'Explicit 3-amount settlement discount must pass validateJournalGroups');
+
+// c) Explicit 2-amount invoice + discount produces balanced 3-line entry
+const q7c = "Customer settled an outstanding invoice of SGD 5,000 by bank transfer with a discount of SGD 100.";
+const p7c = await parseAccountingQuery(q7c, null);
+assert.equal(p7c.isComplete, true);
+assert.equal(p7c.directGroups?.length, 1);
+const g7c = p7c.directGroups[0];
+assert.equal(g7c.lines.length, 3, 'Must have 3 lines');
+assert.equal(g7c.lines[0].accountName, 'Cash at Bank');
+assert.equal(g7c.lines[0].category, 'ASSET');
+assert.equal(g7c.lines[0].debit, 4900);
+assert.equal(g7c.lines[0].credit, 0);
+assert.equal(g7c.lines[1].accountName, 'Discount Allowed');
+assert.equal(g7c.lines[1].category, 'EXPENSE');
+assert.equal(g7c.lines[1].debit, 100);
+assert.equal(g7c.lines[1].credit, 0);
+assert.equal(g7c.lines[2].accountName, 'Trade Receivables');
+assert.equal(g7c.lines[2].category, 'ASSET');
+assert.equal(g7c.lines[2].debit, 0);
+assert.equal(g7c.lines[2].credit, 5000);
+assert.equal(g7c.totalDebit, 5000);
+assert.equal(g7c.totalCredit, 5000);
+assert.equal(g7c.isBalanced, true);
+const v7c = validateJournalGroups([g7c]);
+assert.equal(v7c.isValid, true, 'Explicit 2-amount settlement discount must pass validateJournalGroups');
+
+// d) Inconsistent 3-amount discount query fails closed
+const q7d = "Received SGD 9,500 from customer by bank transfer to settle an invoice of SGD 10,000 after a settlement discount of SGD 200.";
+const p7d = await parseAccountingQuery(q7d, null);
+assert.equal(p7d.isComplete, false);
+assert.ok(p7d.missingFields.some(f => f.fieldKey === 'discountBreakdown'), 'Must request discountBreakdown when amounts do not reconcile');
 
 // 8. Credit sale with explicit cost records both sale (5000) and cost (3000)
 const q8 = "Sold goods for SGD 5,000 on credit, cost SGD 3,000.";
@@ -172,6 +229,18 @@ assert.equal(p9bResolved.directGroups?.[0]?.lines[0].accountName, 'Rent Expense'
 assert.equal(p9bResolved.directGroups?.[0]?.lines[1].accountName, 'Cash at Bank');
 assert.equal(p9bResolved.directGroups?.[0]?.totalDebit, 2000);
 assert.equal(p9bResolved.directGroups?.[0]?.isBalanced, true);
+
+// c) bare numeric follow-up without "SGD"
+const q9c = "We paid rent by bank transfer.";
+const p9c = await parseAccountingQuery(q9c, null);
+assert.equal(p9c.isComplete, false);
+assert.ok(p9c.missingFields.some(f => f.fieldKey === 'amount'));
+const p9cResolved = await parseAccountingQuery("2,000", p9c);
+assert.equal(p9cResolved.isComplete, true);
+assert.equal(p9cResolved.directGroups?.[0]?.lines[0].accountName, 'Rent Expense');
+assert.equal(p9cResolved.directGroups?.[0]?.lines[1].accountName, 'Cash at Bank');
+assert.equal(p9cResolved.directGroups?.[0]?.totalDebit, 2000);
+assert.equal(p9cResolved.directGroups?.[0]?.isBalanced, true);
 
 // 10. validateJournalGroups and defaultAccountingGuardrails
 // a) Rejects 1-cent imbalance

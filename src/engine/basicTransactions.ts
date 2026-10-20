@@ -97,6 +97,80 @@ function extractSaleAndCostAmounts(query: string): { saleCents: bigint; costCent
   return { saleCents: saleItem.cents, costCents };
 }
 
+function extractCustomerReceiptDiscountAmounts(query: string): { grossCents: bigint; discountCents: bigint; netCents: bigint } | undefined {
+  const all = getAllAmounts(query);
+  if (all.length < 2 || all.length > 3) return undefined;
+
+  const dMatch = query.match(/\b(?:discount(?:\s+allowed)?|rebate)\s+(?:of\s+|is\s+|was\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i)
+    || query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:settlement\s+|cash\s+|early\s+payment\s+)?(?:discount|rebate)\b/i);
+  if (!dMatch) return undefined;
+
+  const dWhole = dMatch[1].replace(/,/g, '');
+  const dFrac = (dMatch[2] || '').padEnd(2, '0');
+  const discountCents = BigInt(dWhole) * 100n + BigInt(dFrac || '0');
+  if (discountCents <= 0n) return undefined;
+
+  if (all.length === 3) {
+    const sorted = [...all].map(a => a.cents).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const grossCents = sorted[2];
+    let netCents: bigint | undefined;
+    if (sorted[0] === discountCents) {
+      netCents = sorted[1];
+    } else if (sorted[1] === discountCents) {
+      netCents = sorted[0];
+    } else {
+      return undefined;
+    }
+    if (grossCents !== netCents + discountCents || grossCents <= 0n || discountCents <= 0n || netCents <= 0n) {
+      return undefined;
+    }
+    return { grossCents, discountCents, netCents };
+  }
+
+  if (all.length === 2) {
+    const otherItem = all.find(a => a.cents !== discountCents) || all[0];
+    const otherCents = otherItem.cents;
+
+    const invMatch = query.match(/\b(?:invoice|receivable|outstanding(?:\s+invoice|\s+balance)?|gross(?:\s+invoice|\s+amount)?)\s+(?:of\s+|for\s+|was\s+|is\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+    const recMatch = query.match(/\b(?:received|collected|paid|net(?:\s+receipt|\s+cash|\s+amount)?)\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+
+    let invCents: bigint | undefined;
+    if (invMatch) {
+      const whole = invMatch[1].replace(/,/g, '');
+      const frac = (invMatch[2] || '').padEnd(2, '0');
+      invCents = BigInt(whole) * 100n + BigInt(frac || '0');
+    }
+
+    let recCents: bigint | undefined;
+    if (recMatch) {
+      const whole = recMatch[1].replace(/,/g, '');
+      const frac = (recMatch[2] || '').padEnd(2, '0');
+      recCents = BigInt(whole) * 100n + BigInt(frac || '0');
+    }
+
+    let grossCents: bigint;
+    let netCents: bigint;
+
+    if (invCents === otherCents && (!recMatch || recCents !== otherCents || invCents !== discountCents)) {
+      grossCents = otherCents;
+      netCents = grossCents - discountCents;
+    } else if (recCents === otherCents) {
+      netCents = otherCents;
+      grossCents = netCents + discountCents;
+    } else {
+      return undefined;
+    }
+
+    if (grossCents <= discountCents || discountCents <= 0n || netCents <= 0n || grossCents !== netCents + discountCents) {
+      return undefined;
+    }
+
+    return { grossCents, discountCents, netCents };
+  }
+
+  return undefined;
+}
+
 function bankAccount(query: string, side: 'from' | 'to'): Account | undefined {
   const expression = side === 'from'
     ? /\bfrom\s+(?:(?:the|our|business)\s+)?(current|savings?|checking|cheque|operating|business)\s+(?:bank\s+)?account\b/i
@@ -220,12 +294,15 @@ const templates: Template[] = [
   },
   {
     id: 'CUSTOMER_RECEIPT', title: 'Receipt of outstanding customer invoice',
-    patterns: [/\b(?:receipt|received|receives|receiving|receive|collect|collected|settling|settlement|paid)\b/i, /\b(?:customer|client)\b/i, /\b(?:invoice|receivable|outstanding)\b/i],
+    patterns: [/\b(?:receipt|received|receives|receiving|receive|collect|collected|settle|settled|settles|settling|settlement|settlements|paid)\b/i, /\b(?:customer|client)\b/i, /\b(?:invoice|receivable|outstanding)\b/i],
     accounts: q => {
       if (/\b(?:discount|rebate|less\s+\d+%)\b/i.test(q)) {
-        return {
-          missing: [need('discountBreakdown', 'Discount and gross invoice amounts', 'What is the gross receivable amount being settled and the discount allowed?')]
-        };
+        const discountSplit = extractCustomerReceiptDiscountAmounts(q);
+        if (!discountSplit) {
+          return {
+            missing: [need('discountBreakdown', 'Discount and gross invoice amounts', 'What is the gross receivable amount being settled and the discount allowed?')]
+          };
+        }
       }
       return { debit: /\b(?:in cash|cash in hand)\b/i.test(q) ? cash() : bank(), credit: receivable() };
     },
@@ -330,11 +407,15 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   const isSale = template.id === 'CREDIT_SALE' || template.id === 'CASH_SALE';
   const saleAndCost = isSale ? extractSaleAndCostAmounts(query) : undefined;
 
+  // 3. Customer receipt with explicit settlement discount
+  const isCustomerDiscount = template.id === 'CUSTOMER_RECEIPT' && /\b(?:discount|rebate|less\s+\d+%)\b/i.test(query);
+  const discountSplit = isCustomerDiscount ? extractCustomerReceiptDiscountAmounts(query) : undefined;
+
   const missingFields: MissingFieldInfo[] = [];
 
   if (allAmounts.length === 0) {
     missingFields.push(need('amount', 'Transaction amount', 'What is the transaction amount in SGD?'));
-  } else if (allAmounts.length > 1 && !loanSplit && !saleAndCost) {
+  } else if (allAmounts.length > 1 && !loanSplit && !saleAndCost && !discountSplit && !isCustomerDiscount) {
     missingFields.push(need('amount', 'Transaction amount', 'Multiple SGD amounts were stated; please clarify which amount applies to each part of the transaction.'));
   }
 
@@ -345,6 +426,7 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   const isComplete = missingFields.length === 0 && (
     Boolean(loanSplit) ||
     Boolean(saleAndCost && pair.debit && pair.credit) ||
+    Boolean(discountSplit && pair.debit && pair.credit) ||
     (allAmounts.length === 1 && Boolean(pair.debit && pair.credit))
   );
 
@@ -507,7 +589,73 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     };
   }
 
-  // Branch C: Standard single-amount transaction
+  // Branch C: Customer receipt with settlement discount
+  if (discountSplit) {
+    const netAmount = Number(discountSplit.netCents) / 100;
+    const discountAmount = Number(discountSplit.discountCents) / 100;
+    const grossAmount = Number(discountSplit.grossCents) / 100;
+    const rationale = template.rationale + ' Settlement discount allowed on early/agreed invoice settlement is recognized as an expense; derecognise the gross trade receivable settled.';
+
+    const lines: JournalLine[] = isComplete && pair.debit && pair.credit ? [
+      {
+        id: 'basic-receipt-cash',
+        accountCode: pair.debit.code,
+        accountName: pair.debit.name,
+        category: pair.debit.category,
+        debit: netAmount,
+        credit: 0,
+        lineExplanation: 'Net cash received from customer after settlement discount.'
+      },
+      {
+        id: 'basic-receipt-discount',
+        accountCode: '4100',
+        accountName: 'Discount Allowed',
+        category: 'EXPENSE',
+        debit: discountAmount,
+        credit: 0,
+        lineExplanation: 'Settlement discount allowed on early/agreed invoice settlement.'
+      },
+      {
+        id: 'basic-receipt-receivable',
+        accountCode: '1100',
+        accountName: 'Trade Receivables',
+        category: 'ASSET',
+        debit: 0,
+        credit: grossAmount,
+        lineExplanation: 'Derecognition of gross customer trade receivable settled.'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: template.title,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: grossAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups: isComplete ? [{
+        id: 'basic-' + template.id.toLowerCase(),
+        eventDate,
+        title: template.title,
+        summary: template.title + ' — SGD ' + grossAmount.toFixed(2),
+        lines,
+        totalDebit: grossAmount,
+        totalCredit: grossAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      }] : [],
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch D: Standard single-amount transaction
   const cents = amountCents(query);
   const amount = cents ? Number(cents) / 100 : undefined;
   const rationale = template.rationale + (/\b(?:WITHDRAWAL|TRANSFER)\b/.test(template.id)
@@ -625,8 +773,7 @@ export function resolveBasicOwnerDrawingsFollowUp(
 
   // amount follow-up
   if (missingKeys.has('amount')) {
-    const amountMatch = answer.match(/^(?:SGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?$/i)
-      || answer.match(/^(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*SGD$/i);
+    const amountMatch = answer.match(/^(?:SGD\s*|S\$\s*|\$\s*)?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?:\s*SGD)?$/i);
     if (amountMatch) {
       const digits = amountMatch[1] + (amountMatch[2] ? '.' + amountMatch[2] : '');
       return matchBasicTransaction(`${baseQuery} for SGD ${digits}`);
