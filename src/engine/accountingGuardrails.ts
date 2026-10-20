@@ -15,6 +15,7 @@
 
 import type { TransactionUnderstanding } from '../services/transactionUnderstandingService';
 import type { JournalEntryGroup, JournalLine } from '../types/accounting';
+import { validateJournalGroups } from '../verification/journalIntegrity';
 
 export interface GuardrailViolation {
   code:
@@ -110,19 +111,24 @@ export class AccountingGuardrailValidator {
 
     // Guardrail D: Double-Entry Equality
     for (const group of groups) {
-      let totalDr = 0;
-      let totalCr = 0;
+      let totalDrCents = 0;
+      let totalCrCents = 0;
       for (const line of group.lines) {
-        totalDr += line.debit || 0;
-        totalCr += line.credit || 0;
+        totalDrCents += Math.round((line.debit || 0) * 100);
+        totalCrCents += Math.round((line.credit || 0) * 100);
       }
-      totalDr = Math.round(totalDr * 100) / 100;
-      totalCr = Math.round(totalCr * 100) / 100;
+      const headerDrCents = Math.round((group.totalDebit || 0) * 100);
+      const headerCrCents = Math.round((group.totalCredit || 0) * 100);
 
-      if (Math.abs(totalDr - totalCr) > 0.01) {
+      if (
+        totalDrCents !== totalCrCents ||
+        headerDrCents !== totalDrCents ||
+        headerCrCents !== totalCrCents ||
+        !group.isBalanced
+      ) {
         violations.push({
           code: 'DOUBLE_ENTRY_IMBALANCE',
-          message: `Group '${group.title}' is imbalanced: Total Dr (${totalDr}) != Total Cr (${totalCr}).`,
+          message: `Group '${group.title}' is imbalanced: Total Dr (${(totalDrCents / 100).toFixed(2)}) != Total Cr (${(totalCrCents / 100).toFixed(2)}).`,
           severity: 'ERROR'
         });
       }
@@ -145,6 +151,18 @@ export class AccountingGuardrailValidator {
         violations.push({
           code: 'SEMANTIC_FACT_CONTRADICTION',
           message: `Transaction specifies unpaid share capital, but journal entry debits Cash at Bank rather than Amount Due from Shareholder / Unpaid Share Capital.`,
+          severity: 'ERROR'
+        });
+      }
+    }
+
+    // Journal Integrity: Account category classification and direction contradictions
+    const integrityResult = validateJournalGroups(groups);
+    for (const issue of integrityResult.issues) {
+      if (issue.code === 'CATEGORY_MISMATCH' || issue.code === 'DIRECTION_CONTRADICTION') {
+        violations.push({
+          code: 'SEMANTIC_FACT_CONTRADICTION',
+          message: issue.message,
           severity: 'ERROR'
         });
       }

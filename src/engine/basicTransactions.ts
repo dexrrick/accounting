@@ -1,4 +1,10 @@
-import type { AccountCategory, AccountingScenarioState, JournalLine, MissingFieldInfo } from '../types/accounting';
+import type {
+  AccountCategory,
+  AccountingScenarioState,
+  JournalEntryGroup,
+  JournalLine,
+  MissingFieldInfo
+} from '../types/accounting';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
 /**
@@ -16,28 +22,79 @@ type Template = {
   rationale: string;
 };
 const asset = (name: string, code = '1010'): Account => ({ name, code, category: 'ASSET' });
-const liability = (name: string): Account => ({ name, code: '2100', category: 'LIABILITY' });
-const expense = (name: string): Account => ({ name, code: '5300', category: 'EXPENSE' });
-const equity = (name: string): Account => ({ name, code: '3100', category: 'EQUITY' });
+const liability = (name: string, code = '2100'): Account => ({ name, code, category: 'LIABILITY' });
+const expense = (name: string, code = '5300'): Account => ({ name, code, category: 'EXPENSE' });
+const equity = (name: string, code = '3100'): Account => ({ name, code, category: 'EQUITY' });
 const revenue = (): Account => ({ name: 'Revenue', code: '4000', category: 'REVENUE' });
 const bank = () => asset('Cash at Bank');
 const cash = () => asset('Cash', '1000');
 const receivable = () => asset('Trade Receivables', '1100');
-const loan = () => liability('Bank Loan');
+const loan = () => liability('Bank Loan', '2100');
 
 const need = (key: string, name: string, prompt: string): MissingFieldInfo => ({
-  fieldKey: key, fieldName: name, prompt,
+  fieldKey: key,
+  fieldName: name,
+  prompt,
   whyNeeded: 'A journal cannot be posted without the stated transaction facts.'
 });
 
+function getAllAmounts(query: string) {
+  return [...query.matchAll(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/gi)].map(m => {
+    const whole = m[1].replace(/,/g, '');
+    const fraction = (m[2] || '').padEnd(2, '0');
+    const cents = BigInt(whole) * 100n + BigInt(fraction || '0');
+    return {
+      raw: m[0],
+      index: m.index ?? 0,
+      whole,
+      fraction,
+      cents,
+      amount: Number(cents) / 100
+    };
+  }).filter(a => a.cents > 0n && a.cents <= BigInt(Number.MAX_SAFE_INTEGER));
+}
+
 /** A single explicit SGD value only. Reject multiple, invalid and unsafe amounts. */
 function amountCents(query: string): bigint | undefined {
-  const amounts = [...query.matchAll(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d,]|\.\d)/gi)];
+  const amounts = getAllAmounts(query);
   if (amounts.length !== 1) return undefined;
-  const whole = amounts[0][1].replace(/,/g, '');
-  const fraction = (amounts[0][2] || '').padEnd(2, '0');
-  const cents = BigInt(whole) * 100n + BigInt(fraction || '0');
-  return cents > 0n && cents <= BigInt(Number.MAX_SAFE_INTEGER) ? cents : undefined;
+  return amounts[0].cents;
+}
+
+function extractLoanRepaymentAmounts(query: string): { principalCents: bigint; interestCents: bigint } | undefined {
+  const pMatch = query.match(/\bprincipal\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i)
+    || query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:of\s+)?principal\b/i);
+  const iMatch = query.match(/\binterest\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i)
+    || query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:of\s+)?interest\b/i);
+
+  if (!pMatch || !iMatch) return undefined;
+  const pWhole = pMatch[1].replace(/,/g, '');
+  const pFrac = (pMatch[2] || '').padEnd(2, '0');
+  const pCents = BigInt(pWhole) * 100n + BigInt(pFrac || '0');
+
+  const iWhole = iMatch[1].replace(/,/g, '');
+  const iFrac = (iMatch[2] || '').padEnd(2, '0');
+  const iCents = BigInt(iWhole) * 100n + BigInt(iFrac || '0');
+
+  if (pCents <= 0n || iCents <= 0n) return undefined;
+  return { principalCents: pCents, interestCents: iCents };
+}
+
+function extractSaleAndCostAmounts(query: string): { saleCents: bigint; costCents: bigint } | undefined {
+  const all = getAllAmounts(query);
+  if (all.length !== 2) return undefined;
+  const costRegex = /\b(?:cost(?:\s+of\s+goods\s+sold)?|carrying\s+(?:cost|amount))\s+(?:is\s+|of\s+|was\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i;
+  const costMatch = query.match(costRegex);
+  if (!costMatch) return undefined;
+
+  const cWhole = costMatch[1].replace(/,/g, '');
+  const cFrac = (costMatch[2] || '').padEnd(2, '0');
+  const costCents = BigInt(cWhole) * 100n + BigInt(cFrac || '0');
+
+  const saleItem = all.find(a => a.cents !== costCents) || all[0];
+  if (!saleItem || saleItem.cents <= 0n || costCents <= 0n) return undefined;
+
+  return { saleCents: saleItem.cents, costCents };
 }
 
 function bankAccount(query: string, side: 'from' | 'to'): Account | undefined {
@@ -67,17 +124,51 @@ function bankTransfer(query: string): Pair {
   return { debit, credit, missing };
 }
 
+function isBankTransfer(query: string): boolean {
+  if (!/\b(?:transfer|transferred|moving|move|moved)\b/i.test(query)) return false;
+  if (!/\b(?:bank|account)\b/i.test(query)) return false;
+  if (/\b(?:rent|rental|utilities|utility|electricity|water\s+bill|office\s+supplies|stationery|deposit|loan|principal|interest|invoice|bill|goods|products|services|merchandise|inventory|salary|salaries|wages|expense|purchase|purchased|bought|sold|sale)\b/i.test(query)) return false;
+  if (/\b(?:by|via|through|using|paid\s+by|pay\s+by)\s+(?:a\s+)?bank\s+transfer\b/i.test(query)) return false;
+  return true;
+}
+
 function expenseAccounts(query: string): Pair {
-  const kind = /\boffice supplies\b|\bstationery\b/i.test(query) ? 'Office Supplies Expense'
-    : /\b(?:rent|rental payment)\b/i.test(query) ? 'Rent Expense'
-    : /\b(?:utilities|utility|electricity|water bill)\b/i.test(query) ? 'Utilities Expense'
-    : 'Operating Expense';
+  let debitAccount: Account;
+  if (/\b(?:refundable|security|rental)\s+deposit\b/i.test(query)) {
+    debitAccount = asset('Refundable Deposits', '1350');
+  } else if (/\b(?:prepaid|paid\s+in\s+advance|in\s+advance)\b/i.test(query)) {
+    debitAccount = /\brent\b/i.test(query) ? asset('Prepaid Rent', '1300') : asset('Prepaid Expenses', '1300');
+  } else if (/\b(?:accrued\s+(?:last|previous)\s+(?:month|period|year)|previously\s+accrued|settling\s+an?\s+accrued)\b/i.test(query)) {
+    debitAccount = liability('Accrued Expenses', '2100');
+  } else {
+    const kind = /\boffice supplies\b|\bstationery\b/i.test(query) ? 'Office Supplies Expense'
+      : /\b(?:rent|rental payment)\b/i.test(query) ? 'Rent Expense'
+      : /\b(?:utilities|utility|electricity|water bill)\b/i.test(query) ? 'Utilities Expense'
+      : 'Operating Expense';
+    debitAccount = expense(kind);
+  }
+
+  const isDeposit = /\b(?:refundable|security|rental)\s+deposit\b/i.test(query);
+  const isAccrualSettlement = /\b(?:accrued\s+(?:last|previous)\s+(?:month|period|year)|previously\s+accrued|settling\s+an?\s+accrued)\b/i.test(query);
+
+  const onCredit = /\b(?:on\s+(?:(?:\d+\s*[-–]?\s*days?\s+)?credit|account)|\d+\s*[-–]?\s*days?\s+(?:credit|payment\s+terms?)|credit\s+terms?)\b/i.test(query) &&
+    !/\b(?:paid|by\s+bank|in\s+cash|with\s+cash)\b/i.test(query);
+
+  if (onCredit && !isDeposit && !isAccrualSettlement) {
+    return { debit: debitAccount, credit: { name: 'Trade Payables', code: '2000', category: 'LIABILITY' } };
+  }
+
   const cashPaid = /\b(?:in cash|with cash|by cash|cash payment|cash paid)\b/i.test(query);
   const bankPaid = /\b(?:by bank|via bank|from (?:the |our )?bank|bank transfer|bank payment|paid (?:online|electronically))\b/i.test(query);
-  if (cashPaid === bankPaid) return { debit: expense(kind), missing: [
-    need('paymentMethod', 'Payment method', 'Was the expense paid in cash or from a bank account?')
-  ] };
-  return { debit: expense(kind), credit: cashPaid ? cash() : bank() };
+
+  if (cashPaid === bankPaid) {
+    return {
+      debit: debitAccount,
+      missing: [need('paymentMethod', 'Payment method', 'Was the payment made in cash or from a bank account?')]
+    };
+  }
+
+  return { debit: debitAccount, credit: cashPaid ? cash() : bank() };
 }
 
 // Owner drawings are an equity transaction for sole proprietors, but "owner"
@@ -130,7 +221,14 @@ const templates: Template[] = [
   {
     id: 'CUSTOMER_RECEIPT', title: 'Receipt of outstanding customer invoice',
     patterns: [/\b(?:receipt|received|receives|receiving|receive|collect|collected|settling|settlement|paid)\b/i, /\b(?:customer|client)\b/i, /\b(?:invoice|receivable|outstanding)\b/i],
-    accounts: q => ({ debit: /\b(?:in cash|cash in hand)\b/i.test(q) ? cash() : bank(), credit: receivable() }),
+    accounts: q => {
+      if (/\b(?:discount|rebate|less\s+\d+%)\b/i.test(q)) {
+        return {
+          missing: [need('discountBreakdown', 'Discount and gross invoice amounts', 'What is the gross receivable amount being settled and the discount allowed?')]
+        };
+      }
+      return { debit: /\b(?:in cash|cash in hand)\b/i.test(q) ? cash() : bank(), credit: receivable() };
+    },
     rationale: 'Settlement of an existing receivable is not a second sale or second revenue recognition.'
   },
   {
@@ -153,9 +251,22 @@ const templates: Template[] = [
   },
   {
     id: 'LOAN_REPAYMENT', title: 'Bank loan principal repayment',
-    patterns: [/\b(?:repay|repaid|repayment|paid)\b/i, /\b(?:bank loan|loan principal|principal of (?:the |a )?loan)\b/i, /\bprincipal\b/i],
-    accounts: () => ({ debit: loan(), credit: bank() }),
-    rationale: 'Principal repayment decreases the loan liability; interest is excluded from this entry.'
+    patterns: [
+      /\b(?:repay|repaid|repayment|paid)\b/i,
+      /\b(?:bank loan|loan principal|principal of (?:the |a )?loan)\b/i
+    ],
+    accounts: query => {
+      if (/\binterest\b/i.test(query)) {
+        const split = extractLoanRepaymentAmounts(query);
+        if (!split) {
+          return {
+            missing: [need('interestSplit', 'Principal and interest breakdown', 'How much of the repayment is loan principal and how much is interest expense?')]
+          };
+        }
+      }
+      return { debit: loan(), credit: bank() };
+    },
+    rationale: 'Principal repayment decreases the loan liability; interest is recognized as interest expense.'
   },
   {
     id: 'LOAN_DRAWDOWN', title: 'Bank loan drawdown',
@@ -165,9 +276,12 @@ const templates: Template[] = [
   },
   {
     id: 'EXPENSE_PAYMENT', title: 'Operating expense payment',
-    patterns: [/\b(?:pay|paid|purchase|purchased|bought|payment|record)\b/i, /\b(?:rent|office supplies|stationery|utilities|utility|electricity|water bill)\b/i],
+    patterns: [
+      /\b(?:pay|paid|prepaid|purchase|purchased|bought|payment|record)\b/i,
+      /\b(?:rent|office supplies|stationery|utilities|utility|electricity|water bill)\b|\b(?:refundable|security|rental)\s+deposit\b|\b(?:prepaid\s+(?:rent|insurance|expenses?)|(?:rent|insurance|expenses?)\s+in\s+advance)\b/i
+    ],
     accounts: expenseAccounts,
-    rationale: 'Recognise the stated operating expense and the immediate reduction in cash or bank.'
+    rationale: 'Recognise the transaction and the corresponding payment or payable liability.'
   },
   {
     id: 'SOLE_PROPRIETOR_CAPITAL', title: 'Sole proprietor capital introduced',
@@ -200,83 +314,324 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   const template = personalOwnerWithdrawal(query) ? ownerDrawingsTemplate :
     templates.find(item => (!externalParty || item.id !== 'BANK_TRANSFER') &&
       (item.id !== 'CUSTOMER_RECEIPT' || customerReceiptAllowed) &&
+      (item.id !== 'BANK_TRANSFER' || isBankTransfer(query)) &&
       item.patterns.every(pattern => pattern.test(query)));
   if (!template) return undefined;
+
+  const allAmounts = getAllAmounts(query);
   const pair = template.accounts(query);
+
+  // Check for specialized multi-amount patterns:
+  // 1. Loan repayment with principal and interest
+  const isLoanWithInterest = template.id === 'LOAN_REPAYMENT' && /\binterest\b/i.test(query);
+  const loanSplit = isLoanWithInterest ? extractLoanRepaymentAmounts(query) : undefined;
+
+  // 2. Sale with explicit inventory carrying cost
+  const isSale = template.id === 'CREDIT_SALE' || template.id === 'CASH_SALE';
+  const saleAndCost = isSale ? extractSaleAndCostAmounts(query) : undefined;
+
+  const missingFields: MissingFieldInfo[] = [];
+
+  if (allAmounts.length === 0) {
+    missingFields.push(need('amount', 'Transaction amount', 'What is the transaction amount in SGD?'));
+  } else if (allAmounts.length > 1 && !loanSplit && !saleAndCost) {
+    missingFields.push(need('amount', 'Transaction amount', 'Multiple SGD amounts were stated; please clarify which amount applies to each part of the transaction.'));
+  }
+
+  if (pair.missing) {
+    missingFields.push(...pair.missing);
+  }
+
+  const isComplete = missingFields.length === 0 && (
+    Boolean(loanSplit) ||
+    Boolean(saleAndCost && pair.debit && pair.credit) ||
+    (allAmounts.length === 1 && Boolean(pair.debit && pair.credit))
+  );
+
+  const eventDate = formatSingaporeDate(new Date());
+
+  // Branch A: Loan repayment with explicit principal and interest breakdown
+  if (loanSplit) {
+    const pAmount = Number(loanSplit.principalCents) / 100;
+    const iAmount = Number(loanSplit.interestCents) / 100;
+    const totalCents = loanSplit.principalCents + loanSplit.interestCents;
+    const totalAmount = Number(totalCents) / 100;
+    const rationale = 'Principal repayment decreases loan liability; interest is recognized as interest expense.';
+
+    const lines: JournalLine[] = isComplete ? [
+      {
+        id: 'basic-loan-principal',
+        accountCode: '2100',
+        accountName: 'Bank Loan',
+        category: 'LIABILITY',
+        debit: pAmount,
+        credit: 0,
+        lineExplanation: 'Principal repayment of bank loan.'
+      },
+      {
+        id: 'basic-loan-interest',
+        accountCode: '5400',
+        accountName: 'Interest Expense',
+        category: 'EXPENSE',
+        debit: iAmount,
+        credit: 0,
+        lineExplanation: 'Interest expense incurred on loan.'
+      },
+      {
+        id: 'basic-loan-bank',
+        accountCode: '1010',
+        accountName: 'Cash at Bank',
+        category: 'ASSET',
+        debit: 0,
+        credit: totalAmount,
+        lineExplanation: 'Settlement of principal and interest from bank account.'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: 'Bank loan principal and interest repayment',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: totalAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups: isComplete ? [{
+        id: 'basic-loan_repayment',
+        eventDate,
+        title: 'Bank loan principal and interest repayment',
+        summary: 'Bank loan principal and interest repayment — SGD ' + totalAmount.toFixed(2),
+        lines,
+        totalDebit: totalAmount,
+        totalCredit: totalAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      }] : [],
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch B: Credit sale or cash sale with explicit inventory carrying cost
+  if (saleAndCost) {
+    const saleAmount = Number(saleAndCost.saleCents) / 100;
+    const costAmount = Number(saleAndCost.costCents) / 100;
+    const rationale = template.rationale + ' No GST has been recorded because GST registration and tax treatment were not established; assess GST separately if applicable.';
+
+    const directGroups: JournalEntryGroup[] = isComplete ? [
+      {
+        id: 'basic-' + template.id.toLowerCase(),
+        eventDate,
+        title: template.title,
+        summary: template.title + ' — SGD ' + saleAmount.toFixed(2),
+        lines: [
+          {
+            id: 'basic-sale-debit',
+            accountCode: pair.debit!.code,
+            accountName: pair.debit!.name,
+            category: pair.debit!.category,
+            debit: saleAmount,
+            credit: 0,
+            lineExplanation: rationale
+          },
+          {
+            id: 'basic-sale-credit',
+            accountCode: pair.credit!.code,
+            accountName: pair.credit!.name,
+            category: pair.credit!.category,
+            debit: 0,
+            credit: saleAmount,
+            lineExplanation: rationale
+          }
+        ],
+        totalDebit: saleAmount,
+        totalCredit: saleAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      },
+      {
+        id: 'basic-' + template.id.toLowerCase() + '-cost',
+        eventDate,
+        title: 'Cost of goods sold',
+        summary: 'Cost of goods sold — SGD ' + costAmount.toFixed(2),
+        lines: [
+          {
+            id: 'basic-cost-debit',
+            accountCode: '5000',
+            accountName: 'Cost of Goods Sold',
+            category: 'EXPENSE',
+            debit: costAmount,
+            credit: 0,
+            lineExplanation: 'Derecognition of inventory carrying cost sold to customer.'
+          },
+          {
+            id: 'basic-cost-credit',
+            accountCode: '1200',
+            accountName: 'Inventory',
+            category: 'ASSET',
+            debit: 0,
+            credit: costAmount,
+            lineExplanation: 'Reduction in inventory asset balance.'
+          }
+        ],
+        totalDebit: costAmount,
+        totalCredit: costAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: ['Derecognise inventory at carrying cost and recognize cost of goods sold.'],
+        authorityStatus: 'DETERMINISTIC'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: template.title,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: saleAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups,
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch C: Standard single-amount transaction
   const cents = amountCents(query);
-  const missingFields: MissingFieldInfo[] = [
-    ...(!cents ? [need('amount', 'Transaction amount', 'What is the transaction amount in SGD?')] : []),
-    ...(pair.missing || [])
-  ];
-  const isComplete = missingFields.length === 0 && Boolean(pair.debit && pair.credit);
   const amount = cents ? Number(cents) / 100 : undefined;
   const rationale = template.rationale + (/\b(?:WITHDRAWAL|TRANSFER)\b/.test(template.id)
     ? '' : ' No GST has been recorded because GST registration and tax treatment were not established; assess GST separately if applicable.');
+
   const lines: JournalLine[] = !isComplete || amount === undefined ? [] : [
     {
-      id: 'basic-debit', accountCode: pair.debit!.code, accountName: pair.debit!.name,
-      category: pair.debit!.category, debit: amount, credit: 0,
+      id: 'basic-debit',
+      accountCode: pair.debit!.code,
+      accountName: pair.debit!.name,
+      category: pair.debit!.category,
+      debit: amount,
+      credit: 0,
       lineExplanation: rationale
     },
     {
-      id: 'basic-credit', accountCode: pair.credit!.code, accountName: pair.credit!.name,
-      category: pair.credit!.category, debit: 0, credit: amount,
+      id: 'basic-credit',
+      accountCode: pair.credit!.code,
+      accountName: pair.credit!.name,
+      category: pair.credit!.category,
+      debit: 0,
+      credit: amount,
       lineExplanation: rationale
     }
   ];
+
   return {
-    scenarioType: 'BASIC_BOOKKEEPING', authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
-    queryIntent: 'TRANSACTION', primaryDomain: 'ACCOUNTING_SFRS',
-    rawQuery: query, transactionTitle: template.title,
-    functionalCurrency: 'SGD', transactionCurrency: 'SGD', amount,
+    scenarioType: 'BASIC_BOOKKEEPING',
+    authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+    queryIntent: 'TRANSACTION',
+    primaryDomain: 'ACCOUNTING_SFRS',
+    rawQuery: query,
+    transactionTitle: template.title,
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD',
+    amount,
     accountingTreatmentSummary: rationale,
     directGroups: isComplete && amount !== undefined ? [{
       id: 'basic-' + template.id.toLowerCase(),
-      eventDate: formatSingaporeDate(new Date()),
-      title: template.title, summary: template.title + ' — SGD ' + amount.toFixed(2),
-      lines, totalDebit: amount, totalCredit: amount, isBalanced: true,
-      citations: [], rationalePoints: [rationale], authorityStatus: 'DETERMINISTIC'
+      eventDate,
+      title: template.title,
+      summary: template.title + ' — SGD ' + amount.toFixed(2),
+      lines,
+      totalDebit: amount,
+      totalCredit: amount,
+      isBalanced: true,
+      citations: [],
+      rationalePoints: [rationale],
+      authorityStatus: 'DETERMINISTIC'
     }] : [],
-    isComplete, missingFields
+    isComplete,
+    missingFields
   };
 }
 
-/** Resolve only short, explicit answers to a pending owner-drawings field. */
+/** Resolve only short, explicit answers to a pending owner-drawings or basic bookkeeping field. */
 export function resolveBasicOwnerDrawingsFollowUp(
   query: string,
   currentScenario?: AccountingScenarioState | null
 ): AccountingScenarioState | undefined {
-  if (currentScenario?.scenarioType !== 'BASIC_BOOKKEEPING' ||
-      !personalOwnerWithdrawal(currentScenario.rawQuery) ||
-      !currentScenario.missingFields?.some(field => field.fieldKey === 'entityType' || field.fieldKey === 'paymentAccount')) {
+  if (currentScenario?.scenarioType !== 'BASIC_BOOKKEEPING' || !currentScenario.missingFields?.length) {
     return undefined;
   }
 
   const answer = query.trim().replace(/[.!?]+$/, '').trim();
-  const missingFields = new Set(currentScenario.missingFields.map(field => field.fieldKey));
+  const missingKeys = new Set(currentScenario.missingFields.map(field => field.fieldKey));
   const original = currentScenario.rawQuery;
-  const originalSoleProprietor = /\bsole propriet(?:or|orship)\b/i.test(original);
-  const originalCompany = /\b(?:company|pte\.?\s*ltd\.?|limited)\b/i.test(original);
-  let confirmedFact: string | undefined;
 
-  const entityAnswer = answer.match(/^(?:(?:it|this|the business)\s+is\s+)?(?:a\s+)?(sole proprietorship|sole proprietor|company)$/i)?.[1];
-  if (missingFields.has('entityType') && entityAnswer) {
-    const isSoleProprietor = /sole proprietor/i.test(entityAnswer);
-    if ((isSoleProprietor && originalCompany) || (!isSoleProprietor && originalSoleProprietor)) {
-      return { ...currentScenario, directGroups: [], isComplete: false };
+  // 1. Existing owner drawings follow-up logic
+  if (personalOwnerWithdrawal(original) && (missingKeys.has('entityType') || missingKeys.has('paymentAccount'))) {
+    const originalSoleProprietor = /\bsole propriet(?:or|orship)\b/i.test(original);
+    const originalCompany = /\b(?:company|pte\.?\s*ltd\.?|limited)\b/i.test(original);
+    let confirmedFact: string | undefined;
+
+    const entityAnswer = answer.match(/^(?:(?:it|this|the business)\s+is\s+)?(?:a\s+)?(sole proprietorship|sole proprietor|company)$/i)?.[1];
+    if (missingKeys.has('entityType') && entityAnswer) {
+      const isSoleProprietor = /sole proprietor/i.test(entityAnswer);
+      if ((isSoleProprietor && originalCompany) || (!isSoleProprietor && originalSoleProprietor)) {
+        return { ...currentScenario, directGroups: [], isComplete: false };
+      }
+      confirmedFact = isSoleProprietor ? 'sole proprietorship' : 'company';
+    } else if (missingKeys.has('paymentAccount')) {
+      const cashAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using|in)\s+)?(?:physical\s+)?(?:petty cash|cash on hand|cash)$/i.test(answer);
+      const bankAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using)\s+)?(?:(?:the|our)\s+)?(?:business\s+)?(?:bank(?:\s+account)?|current\s+account|savings\s+account)$/i.test(answer);
+      if (cashAnswer) confirmedFact = 'physical cash';
+      else if (bankAnswer) confirmedFact = 'business bank account';
     }
-    confirmedFact = isSoleProprietor ? 'sole proprietorship' : 'company';
-  } else if (missingFields.has('paymentAccount')) {
-    const cashAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using|in)\s+)?(?:physical\s+)?(?:petty cash|cash on hand|cash)$/i.test(answer);
-    const bankAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using)\s+)?(?:(?:the|our)\s+)?(?:business\s+)?(?:bank(?:\s+account)?|current\s+account|savings\s+account)$/i.test(answer);
-    if (cashAnswer) confirmedFact = 'physical cash';
-    else if (bankAnswer) confirmedFact = 'business bank account';
+
+    if (!confirmedFact) return undefined;
+    return matchBasicTransaction(`${original} ${confirmedFact}`) ?? {
+      ...currentScenario,
+      directGroups: [],
+      isComplete: false
+    };
   }
 
-  if (!confirmedFact) return undefined;
-  return matchBasicTransaction(`${original} ${confirmedFact}`) ?? {
-    ...currentScenario,
-    directGroups: [],
-    isComplete: false
-  };
+  // 2. Generic BASIC_BOOKKEEPING follow-ups
+  const baseQuery = original.trim().replace(/[.!?]+$/, '');
+
+  // paymentMethod follow-up
+  if (missingKeys.has('paymentMethod')) {
+    const isCash = /^(?:(?:paid\s+)?in\s+cash|(?:with|by)\s+cash|cash)$/i.test(answer);
+    const isBank = /^(?:(?:paid\s+)?(?:by|via|through)\s+(?:a\s+)?bank\s+transfer|bank\s+transfer|from\s+(?:the\s+|our\s+)?bank(?:\s+account)?|bank\s+account|from\s+bank)$/i.test(answer);
+    const isCredit = /^(?:on\s+credit|on\s+account|credit)$/i.test(answer);
+
+    let normalizedPhrase: string | undefined;
+    if (isCash) normalizedPhrase = 'paid in cash';
+    else if (isBank) normalizedPhrase = 'by bank transfer';
+    else if (isCredit) normalizedPhrase = 'on credit';
+
+    if (normalizedPhrase) {
+      return matchBasicTransaction(`${baseQuery} ${normalizedPhrase}`);
+    }
+  }
+
+  // amount follow-up
+  if (missingKeys.has('amount')) {
+    const amountMatch = answer.match(/^(?:SGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?$/i)
+      || answer.match(/^(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*SGD$/i);
+    if (amountMatch) {
+      const digits = amountMatch[1] + (amountMatch[2] ? '.' + amountMatch[2] : '');
+      return matchBasicTransaction(`${baseQuery} for SGD ${digits}`);
+    }
+  }
+
+  return undefined;
 }
