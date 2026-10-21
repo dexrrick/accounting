@@ -3,7 +3,7 @@ import type { SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../retrieval/queryTopicResolver';
 import { isAcraAnnualReturnDeadlineQuestion } from '../retrieval/acraAnnualReturnFilingRule';
-import { isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
+import { identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
 import {
@@ -408,7 +408,7 @@ export function canonicalAccountingWorkstreamAuthority(
 
 const ACRA_ANNUAL_RETURN_SUBJECT_WORDS = new Set([
   'a', 'the', 'general', 'ordinary', 'annual', 'return', 'filing', 'deadline', 'due', 'date',
-  'company', 'companies', 'singapore', 'acra', 'rule', 'rules'
+  'company', 'companies', 'singapore', 'acra', 'rule', 'rules', 'and', 'requirement', 'requirements'
 ]);
 
 function canonicalAcraAnnualReturnSubjectIfBounded(
@@ -1093,6 +1093,9 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
   const acraAnnualReturnScope = semantic
     ? acraCompanySemanticScope
     : /\b(?:acra|compan(?:y|ies))\b/i.test(query) && !/\b(?:income tax|tax returns?|gst)\b/i.test(query);
+  const acraCompanyFacts = acraCompanySemanticScope && isAcraAnnualReturnDeadlineQuestion(query)
+    ? identifyAcraAnnualReturnCompanyFacts(query)
+    : undefined;
   if (acraAnnualReturnScope && isAcraAnnualReturnDeadlineQuestion(query)) {
     const topicIds = ['acra_annual-returns'];
     add('acra_annual_return_filing_deadline', 'Annual return filing deadline',
@@ -1200,9 +1203,23 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
     const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     if (normalized.length < 5 || concepts.some(item => item.label.toLowerCase().includes(normalized) || normalized.includes(item.label.toLowerCase()))) continue;
     const hasCanonical = (id: string) => concepts.some(concept => concept.id === id);
+    const datedFyeLabel = normalized.match(/^(?:financial year (?:end(?:ing)?|ended|ends?)(?: date)?|fye) (?:on )?(\d{1,2}) (\d{1,2}) (20\d{2})$/);
+    const datedFyeMatchesQuery = Boolean(datedFyeLabel && acraCompanyFacts?.financialYearEnd ===
+      `${datedFyeLabel[3]}-${datedFyeLabel[2].padStart(2, '0')}-${datedFyeLabel[1].padStart(2, '0')}`);
+    const singaporeIncorporatedListingLabel = normalized.match(/^singapore incorporated (non listed|unlisted|listed) compan(?:y|ies)$/);
+    const listingLabelMatchesQuery = Boolean(singaporeIncorporatedListingLabel &&
+      /\bsingapore[\s-]+incorporated\b/i.test(query) && acraCompanyFacts?.listingStatus ===
+        (singaporeIncorporatedListingLabel[1] === 'listed' ? 'LISTED' : 'NON_LISTED'));
     const coveredAcraDeadlineQualifier = acraCompanySemanticScope && isAcraAnnualReturnDeadlineQuestion(query) && (
-      hasCanonical('acra_annual_return_financial_year_end') && /^(?:fye|financial year end|financial year end fye|financial year end date)$/.test(normalized) ||
-      hasCanonical('acra_annual_return_listing_status') && /^(?:(?:listed|non listed|unlisted) (?:singapore )?compan(?:y|ies)|(?:company )?listing status)$/.test(normalized) ||
+      hasCanonical('acra_annual_return_filing_deadline') &&
+        /^(?:due date|filing deadline|annual return deadline|annual return due date)$/.test(normalized) ||
+      hasCanonical('acra_annual_return_financial_year_end') && (
+        /^(?:fye|financial year end|financial year end fye|financial year end date)$/.test(normalized) || datedFyeMatchesQuery
+      ) ||
+      hasCanonical('acra_annual_return_listing_status') && (
+        /^(?:(?:listed|non listed|unlisted) (?:singapore )?compan(?:y|ies)|(?:company )?listing status)$/.test(normalized) ||
+        listingLabelMatchesQuery
+      ) ||
       hasCanonical('acra_annual_return_branch_register_qualification') && /^overseas branch register(?: qualification)?$/.test(normalized)
     );
     if (coveredAcraDeadlineQualifier) continue;

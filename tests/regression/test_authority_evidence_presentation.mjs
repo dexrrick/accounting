@@ -1059,8 +1059,8 @@ const withTemporaryRegistrySource = async (record, action) => {
     else delete UNIFIED_SOURCE_REGISTRY[record.id];
   }
 };
-const runAcraWorkstreams = (query, operation, candidates, evidenceQualityTrace) => {
-  const understanding = annualReturnUnderstanding(operation);
+const runAcraWorkstreams = (query, operation, candidates, evidenceQualityTrace, understandingOverride) => {
+  const understanding = understandingOverride || annualReturnUnderstanding(operation);
   const issuePlan = b1IssuePlanFor(query, understanding);
   return buildAuthorityWorkstreams(query, issuePlan, {
     questionUnderstanding: understanding,
@@ -1086,14 +1086,40 @@ const b1PositivePresentation = createAuthorityEvidencePresentation(b1Workstreams
 assert.equal(b1PositivePresentation.status, 'VERIFIED');
 assert.doesNotMatch(renderAuthorityEvidenceResponseText(b1PositivePresentation, false), /31\/07\/2026/,
   'B1 reports the rule without calculating a filing deadline date');
+const b2SemanticUnderstanding = annualReturnUnderstanding('EXPLAIN_RULE');
+b2SemanticUnderstanding.interpretation.concepts = [
+  ...b2SemanticUnderstanding.interpretation.concepts,
+  { concept: 'Singapore-incorporated non-listed company', role: 'RELATED' },
+  { concept: 'financial year ending 31/12/2025', role: 'RELATED' }
+];
+const b2SemanticConcepts = getRequestedQuestionConcepts(b2AnnualReturnQuery, b2SemanticUnderstanding);
+assert.ok(b2SemanticConcepts.some(concept => concept.id === 'acra_annual_return_listing_status'));
+assert.ok(b2SemanticConcepts.some(concept => concept.id === 'acra_annual_return_financial_year_end'));
+assert.ok(!b2SemanticConcepts.some(concept => /semantic_(?:singapore_incorporated_non_listed_company|financial_year_ending_31_12_2025)/.test(concept.id)),
+  'semantic descriptors matching the query facts are covered by their canonical ACRA concepts');
+assert.deepEqual(b2SemanticUnderstanding.interpretation.concepts.slice(-2).map(concept => concept.concept), [
+  'Singapore-incorporated non-listed company', 'financial year ending 31/12/2025'
+], 'covering semantic descriptors preserves the raw provider diagnostics');
+const mismatchedB2LabelUnderstanding = annualReturnUnderstanding('EXPLAIN_RULE');
+mismatchedB2LabelUnderstanding.interpretation.concepts = [
+  ...mismatchedB2LabelUnderstanding.interpretation.concepts,
+  { concept: 'financial year ending 31/12/2024', role: 'RELATED' },
+  { concept: 'Singapore-incorporated non-listed company with an extension', role: 'RELATED' }
+];
+const mismatchedB2Concepts = getRequestedQuestionConcepts(b2AnnualReturnQuery, mismatchedB2LabelUnderstanding);
+assert.ok(mismatchedB2Concepts.some(concept => concept.id === 'semantic_financial_year_ending_31_12_2024'),
+  'a semantic date that disagrees with the asserted FYE remains a material concept');
+assert.ok(mismatchedB2Concepts.some(concept => concept.label === 'Singapore-incorporated non-listed company with an extension'),
+  'an added semantic condition remains material instead of being absorbed by the listing concept');
 const b2Workstreams = await withTemporaryRegistrySource(b2HistoricalFixture,
-  () => runAcraWorkstreams(b2AnnualReturnQuery, 'EXPLAIN_RULE', [b2HistoricalFixture]));
+  () => runAcraWorkstreams(b2AnnualReturnQuery, 'EXPLAIN_RULE', [b2HistoricalFixture], undefined, b2SemanticUnderstanding));
 if (!b2Workstreams.issuePlan.coverageEstablished || b2Workstreams.issuePlan.hasUnmappedResidual) {
   acceptanceMatrixFailures.push('B2 exact query leaves raw-input residual text despite its independently mapped ACRA annual-return issue');
 }
 const b2Issue = b2Workstreams.workstreams.flatMap(stream => stream.issues)[0];
 assert.equal(b2Issue.operation, 'EXPLAIN_RULE', 'the application result preserves the semantic operation label');
 assert.equal(b2Issue.evidenceStatus, 'VERIFIED', 'the synthetic historical fixture passes the real local admission and claim-verification path');
+assert.deepEqual(b2Issue.gaps, [], 'covered B2 semantic descriptors create no spurious whole-question gaps');
 assert.equal(b2Issue.applicationStatus, 'VERIFIED', 'a verified historical table and complete explicit facts permit deterministic date application');
 assert.match(b2Issue.applicationReason, /31\/07\/2026/);
 assert.match(b2Issue.applicationReason, /7 months/, 'the application explanation reports the matching table row');
@@ -1239,12 +1265,16 @@ assert.deepEqual(b3Workstreams.workstreams.flatMap(stream => stream.issues.flatM
 
 const b3Interpretation = {
   schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACRA'], contextualAuthorities: [],
-  domain: 'ACRA_CORPORATE', population: 'COMPANY', primarySubject: 'annual-return filing deadline',
-  concepts: [], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
-  issues: [{ subject: 'annual-return filing deadline', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+  domain: 'ACRA_CORPORATE', population: 'COMPANY', primarySubject: 'company annual return due date and filing requirements',
+  concepts: [{ concept: 'due date', role: 'PRIMARY' }], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
+  issues: [{ subject: 'company annual return due date and filing requirements', population: 'COMPANY', domain: 'ACRA_CORPORATE',
     governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
     mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
 };
+const b3SemanticConcepts = getRequestedQuestionConcepts(b3MissingFactsQuery, b3Interpretation);
+assert.ok(b3SemanticConcepts.some(concept => concept.id === 'acra_annual_return_filing_deadline'));
+assert.ok(!b3SemanticConcepts.some(concept => concept.id === 'semantic_due_date'),
+  'the due-date semantic alias is covered by the canonical annual-return deadline concept');
 let b3SemanticCalls = 0;
 const b3UnexpectedModelCalls = [];
 globalThis.fetch = async (input, init) => {
@@ -1278,6 +1308,8 @@ assert.ok(b3RuntimeResponse.scenarioState.authorityEvidencePresentation,
 assert.equal(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT');
 assert.deepEqual(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.map(stream => stream.authority), ['ACRA'],
   'the full route does not introduce a VCC or unrelated authority workstream');
+assert.equal(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.flatMap(stream => stream.issues)[0].subject,
+  'company annual return due date and filing requirements', 'the full route preserves the original bounded semantic subject');
 assert.match(b3RuntimeResponse.messageText, /financial year end, listing status, overseas branch register status/i,
   'the rendered answer explicitly names all missing company facts');
 assert.deepEqual(b3RuntimeResponse.scenarioState.directGroups, [], 'a missing-facts filing question does not prepare a journal');
