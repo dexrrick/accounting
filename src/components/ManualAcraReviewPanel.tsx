@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Download, FileCheck2, ShieldCheck } from 'lucide-react';
 import { defaultLiveRegulatoryFeedService } from '../retrieval/liveRegulatoryFeed';
-import { notifySourceRegistryChanged } from '../retrieval/sourceRegistryEvents';
+import { notifySourceRegistryChanged, SOURCE_REGISTRY_CHANGE_EVENT } from '../retrieval/sourceRegistryEvents';
+import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
+import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import {
   decodeAcraSourceBytes,
   loadAcraSourceReviewBundle,
@@ -35,6 +37,89 @@ function packageHashMatches(bundle: AcraSourceReviewBundle): boolean {
   return defaultLiveRegulatoryFeedService.computePackageHash(withoutHash).toLowerCase() === pkg.packageHash.toLowerCase();
 }
 
+interface ManualAcraActiveVersionReceiptProps {
+  packageId: string;
+  packageHash: string;
+  record: AuthoritativeSourceRecord;
+  versioningManager?: SourceVersioningManager;
+}
+
+interface CurrentAcraVersionReceipt {
+  versionId: string;
+  locatorHeading: string;
+  locatorSourceType: string;
+  locatorTableStructure: string;
+  locatorStartOffset?: number;
+  locatorEndOffset?: number;
+}
+
+function getCurrentAcraVersionReceipt(
+  packageId: string,
+  packageHash: string,
+  record: AuthoritativeSourceRecord,
+  versioningManager: SourceVersioningManager
+): CurrentAcraVersionReceipt | undefined {
+  const versionId = versioningManager.getActiveVersionId(record.id);
+  if (!versionId || !/^[a-f\d]{64}$/i.test(packageHash)) return undefined;
+
+  const entry = versioningManager.getLedgerEntry(versionId);
+  const snapshot = entry?.recordSnapshot;
+  const metadata = entry?.metadata;
+  const approval = metadata?.reviewApproval;
+  const locator = record.sourceLocator;
+  const matchesHash = (actual?: string, expected?: string) => Boolean(actual && expected &&
+    actual.toLowerCase() === expected.toLowerCase());
+  if (!entry || entry.versionId !== versionId || entry.recordId !== record.id || !entry.isActive ||
+      !snapshot || snapshot.id !== record.id || snapshot.versionId !== versionId ||
+      !metadata || metadata.verificationStatus !== 'VERIFIED' || metadata.documentAdmissionRequired !== true ||
+      snapshot.documentAdmissionRequired !== true || record.authority !== 'ACRA' || snapshot.authority !== 'ACRA' ||
+      metadata.sourceAuthority !== 'ACRA' || metadata.documentAdmissionPackageId !== packageId ||
+      metadata.documentAdmissionPackageHash?.toLowerCase() !== packageHash.toLowerCase() ||
+      approval?.packageId !== packageId || approval.packageHash?.toLowerCase() !== packageHash.toLowerCase() ||
+      !locator || !/^[a-f\d]{64}$/i.test(record.documentHash || '') ||
+      !/^[a-f\d]{64}$/i.test(record.provisionHash || '') ||
+      record.sourceAuthority !== 'ACRA' || record.domain !== 'ACRA_CORP' ||
+      snapshot.sourceAuthority !== 'ACRA' || snapshot.domain !== 'ACRA_CORP' ||
+      metadata.governingAuthority !== 'ACRA' || metadata.domain !== 'ACRA_CORP' ||
+      !matchesHash(metadata.documentHash, record.documentHash) ||
+      !matchesHash(snapshot.documentHash, record.documentHash) ||
+      !matchesHash(metadata.provisionHash, record.provisionHash) ||
+      !matchesHash(snapshot.provisionHash, record.provisionHash) ||
+      !matchesHash(locator.documentHash, record.documentHash) ||
+      !snapshot.sourceLocator || !matchesHash(snapshot.sourceLocator.documentHash, record.documentHash) ||
+      JSON.stringify(snapshot.sourceLocator) !== JSON.stringify(locator) ||
+      JSON.stringify(metadata.sourceLocator) !== JSON.stringify(locator)) return undefined;
+
+  return {
+    versionId,
+    locatorHeading: locator.heading || 'section',
+    locatorSourceType: locator.sourceType || 'unknown',
+    locatorTableStructure: locator.tableStructure || 'unknown',
+    locatorStartOffset: locator.boundary?.startOffset,
+    locatorEndOffset: locator.boundary?.endOffset
+  };
+}
+
+export const ManualAcraActiveVersionReceipt: React.FC<ManualAcraActiveVersionReceiptProps> = ({
+  packageId, packageHash, record, versioningManager = defaultSourceVersioningManager
+}) => {
+  const receipt = getCurrentAcraVersionReceipt(packageId, packageHash, record, versioningManager);
+  if (!receipt) return (
+    <p aria-label="ACRA active version receipt unavailable" className="pt-1 text-amber-700 dark:text-amber-300">
+      <strong>Active ledger receipt:</strong> unavailable. No current active ledger entry matches this package, record, hashes and source locator.
+    </p>
+  );
+
+  return (
+    <div role="status" aria-label="Verified active ACRA source version receipt" data-status="CURRENT_VERSION_MATCH" className="pt-1 space-y-0.5">
+      <p><strong>Active ledger version ID:</strong> <span className="font-mono break-all">{receipt.versionId}</span></p>
+      <p className="break-all"><strong>Package receipt:</strong> {packageId} · SHA-256 {packageHash}</p>
+      <p className="break-all"><strong>Record receipt:</strong> {record.id} · document SHA-256 {record.documentHash} · provision SHA-256 {record.provisionHash}</p>
+      <p><strong>Locator receipt:</strong> {receipt.locatorHeading} · {receipt.locatorSourceType} · table {receipt.locatorTableStructure} · HTML offsets {receipt.locatorStartOffset ?? '—'}–{receipt.locatorEndOffset ?? '—'}</p>
+    </div>
+  );
+};
+
 export const ManualAcraReviewPanel: React.FC<ManualAcraReviewPanelProps> = ({ onWorkflowChange }) => {
   const [bundle, setBundle] = useState<AcraSourceReviewBundle | null>(null);
   const [workflow, setWorkflow] = useState<WorkflowState>('EMPTY');
@@ -43,6 +128,13 @@ export const ManualAcraReviewPanel: React.FC<ManualAcraReviewPanelProps> = ({ on
   const [reviewer, setReviewer] = useState('');
   const [reason, setReason] = useState('');
   const [reviewAcknowledged, setReviewAcknowledged] = useState(false);
+  const [, refreshVersionReceipt] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => refreshVersionReceipt(version => version + 1);
+    window.addEventListener(SOURCE_REGISTRY_CHANGE_EVENT, refresh);
+    return () => window.removeEventListener(SOURCE_REGISTRY_CHANGE_EVENT, refresh);
+  }, []);
 
   const loadBundle = async () => {
     setBusy(true);
@@ -178,6 +270,7 @@ export const ManualAcraReviewPanel: React.FC<ManualAcraReviewPanelProps> = ({ on
             <p className="break-all"><strong>Package:</strong> {bundle.package.packageId} · SHA-256 {bundle.package.packageHash}</p>
             <p className="break-all"><strong>Record:</strong> {record.id} · document SHA-256 {record.documentHash} · provision SHA-256 {record.provisionHash}</p>
             <p><strong>Source locator:</strong> {record.sourceLocator?.heading || 'section'} · {record.sourceLocator?.sourceType || 'unknown'} · table {record.sourceLocator?.tableStructure || 'unknown'} · HTML offsets {record.sourceLocator?.boundary?.startOffset ?? '—'}–{record.sourceLocator?.boundary?.endOffset ?? '—'}</p>
+            <ManualAcraActiveVersionReceipt packageId={bundle.package.packageId} packageHash={bundle.package.packageHash} record={record} />
             {cohort && <div className="pt-1"><strong>Source-stated FYE cohort:</strong> FYE on or after {formatDate(cohort.fyeStartDate)}. This identifies the cohort stated in the quotation; it is not a general effective-date interval.<blockquote className="mt-1 border-l-2 border-workspace-border pl-2 italic">{cohort.sourceQuote}</blockquote></div>}
             <p className="pt-1">Publication date, capture date and the source’s FYE cohort are distinct. Company categories follow the source qualification, and blank table cells remain unknown.</p>
           </div>
@@ -192,7 +285,6 @@ export const ManualAcraReviewPanel: React.FC<ManualAcraReviewPanelProps> = ({ on
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-[11px] font-semibold"><FileCheck2 className="w-3.5 h-3.5" /> Stage for verification</button>}
             {canVerify && <button type="button" onClick={() => void verifyBundle()} disabled={busy}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-[11px] font-semibold"><ShieldCheck className="w-3.5 h-3.5" /> Replay captured bytes and verify</button>}
-            {workflow === 'ACTIVE' && <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300"><CheckCircle2 className="w-4 h-4" /> Active for this browser session</span>}
           </div>
 
           {canApprove && <div className="rounded-lg border border-amber-200 dark:border-amber-900 bg-amber-50/60 dark:bg-amber-950/10 p-3 space-y-2">

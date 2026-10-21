@@ -27,6 +27,7 @@ import { verifySharedDocumentAdmission } from '../../src/standards/sharedDocumen
 import { findRecordEligibilityRejection, verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 import { applyAcraAnnualReturnDeadline } from '../../src/engine/acraAnnualReturnApplication.ts';
 import { AuthorityCompliancePanel } from '../../src/components/AuthorityCompliancePanel.tsx';
+import { ManualAcraActiveVersionReceipt } from '../../src/components/ManualAcraReviewPanel.tsx';
 import { createAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -147,6 +148,30 @@ assert.equal(active.lifecycleState, 'ACTIVE');
 assert.equal(active.documentAdmissionRequired, true);
 assert.equal(active.documentHash, documentHash);
 assert.equal(active.provisionHash, record.provisionHash);
+const renderActiveVersionReceipt = overrides => renderToStaticMarkup(React.createElement(ManualAcraActiveVersionReceipt, {
+  packageId, packageHash: pkg.packageHash, record, versioningManager: manager, ...overrides
+}));
+const activeVersionId = manager.getActiveVersionId(record.id);
+assert.ok(activeVersionId);
+const currentReceiptMarkup = renderActiveVersionReceipt({});
+assert.match(currentReceiptMarkup, /CURRENT_VERSION_MATCH/);
+assert.ok(currentReceiptMarkup.includes(activeVersionId));
+assert.ok(currentReceiptMarkup.includes(pkg.packageHash));
+assert.ok(currentReceiptMarkup.includes(documentHash));
+assert.ok(currentReceiptMarkup.includes(record.provisionHash));
+assert.ok(currentReceiptMarkup.includes(record.sourceLocator.heading));
+for (const mismatch of [
+  { packageId: `${packageId}-mismatch` },
+  { packageHash: 'f'.repeat(64) },
+  { record: { ...record, id: `${record.id}-mismatch` } },
+  { record: { ...record, documentHash: '0'.repeat(64) } },
+  { record: { ...record, sourceLocator: { ...record.sourceLocator, heading: 'mismatched locator' } } }
+]) {
+  const unavailable = renderActiveVersionReceipt(mismatch);
+  assert.match(unavailable, /active version receipt unavailable/i);
+  assert.doesNotMatch(unavailable, /CURRENT_VERSION_MATCH/);
+  assert.equal(unavailable.includes(activeVersionId), false);
+}
 
 // A record ID already used by the managed ACRA source remains protected even
 // if a later package rewrites the source URL and strips the cohort/capture markers.
@@ -383,5 +408,12 @@ writeFileSync(path.join(artifactDir, 'lifecycle-replay.json'), `${JSON.stringify
     afterCapture: 'DOCUMENT_FUTURE_SCOPE_UNVERIFIED', ordinaryLiveHistorical: 'LIVE_HISTORICAL_PAGE_SCOPE_UNVERIFIED',
     unknownNonListedBranchCell: 'UNRESOLVED' }
 }, null, 2)}\n`);
+const rolledBack = manager.rollbackVersion(activeVersionId);
+assert.equal(rolledBack.success, true, rolledBack.error);
+assert.equal(manager.getActiveVersionId(record.id), undefined);
+assert.equal(manager.getLedgerEntry(activeVersionId)?.isActive, false);
+const rolledBackReceiptMarkup = renderActiveVersionReceipt({});
+assert.match(rolledBackReceiptMarkup, /active version receipt unavailable/i);
+assert.equal(rolledBackReceiptMarkup.includes(activeVersionId), false);
 delete UNIFIED_SOURCE_REGISTRY[record.id];
 console.log(`PASS: actual ACRA bytes -> stage -> verify -> TEST_ONLY approval -> activation -> B2 deadline ${applied.deadlineDate}`);
