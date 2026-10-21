@@ -274,17 +274,21 @@ export function applyAcraAnnualReturnDeadline(
   const monthCount = [...verifiedMonthCounts][0];
   const deadlineDate = addMonthsUtc(facts.financialYearEnd, monthCount);
   if (!deadlineDate) return unresolved('The verified ACRA deadline row did not produce a valid calendar date. No due date has been calculated.', facts);
-  if (!verifiedRows.some(row => row.monthCount === monthCount &&
+  const deadlineApplicabilityRow = verifiedRows.find(row => row.monthCount === monthCount &&
       (row.cohort
         ? Boolean(row.captureDate && deadlineDate <= row.captureDate)
-        : !row.validTo || row.validTo >= deadlineDate))) {
+        : !row.validTo || row.validTo >= deadlineDate));
+  if (!deadlineApplicabilityRow) {
     return unresolved('The admitted source period does not extend through the calculated filing deadline; no date is calculated.', facts);
   }
   const formattedFye = formatSingaporeDate(facts.financialYearEnd);
   const formattedDeadline = formatSingaporeDate(deadlineDate);
+  const cohortDisclosure = deadlineApplicabilityRow.cohort && deadlineApplicabilityRow.captureDate
+    ? ` The source states that its timeline applies to financial year ends on or after ${formatSingaporeDate(deadlineApplicabilityRow.cohort.fyeStartDate)} and was captured on ${formatSingaporeDate(deadlineApplicabilityRow.captureDate)}. This is a source-stated FYE cohort, not a general effective-date interval; the capture date does not establish whether the source changed afterward.`
+    : '';
   return {
     applicationStatus: 'VERIFIED',
-    applicationReason: `The verified ACRA table gives ${monthCount} month${monthCount === 1 ? '' : 's'} after FYE for the stated company category. Adding those months to FYE ${formattedFye} gives a filing deadline of ${formattedDeadline}.`,
+    applicationReason: `The verified ACRA table gives ${monthCount} month${monthCount === 1 ? '' : 's'} after FYE for the stated company category. Adding those months to FYE ${formattedFye} gives a filing deadline of ${formattedDeadline}.${cohortDisclosure}`,
     deadlineDate: formattedDeadline,
     monthCount,
     facts

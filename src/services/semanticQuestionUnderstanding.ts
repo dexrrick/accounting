@@ -1212,7 +1212,7 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
         (singaporeIncorporatedListingLabel[1] === 'listed' ? 'LISTED' : 'NON_LISTED'));
     const coveredAcraDeadlineQualifier = acraCompanySemanticScope && isAcraAnnualReturnDeadlineQuestion(query) && (
       hasCanonical('acra_annual_return_filing_deadline') &&
-        /^(?:due date|filing deadline|annual return deadline|annual return due date)$/.test(normalized) ||
+        /^(?:(?:annual return) )?(?:filing )?(?:deadline|due date)$/.test(normalized) ||
       hasCanonical('acra_annual_return_financial_year_end') && (
         /^(?:fye|financial year end|financial year end fye|financial year end date)$/.test(normalized) || datedFyeMatchesQuery
       ) ||

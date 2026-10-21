@@ -29,6 +29,7 @@ import { applyAcraAnnualReturnDeadline } from '../../src/engine/acraAnnualReturn
 import { AuthorityCompliancePanel } from '../../src/components/AuthorityCompliancePanel.tsx';
 import { ManualAcraActiveVersionReceipt } from '../../src/components/ManualAcraReviewPanel.tsx';
 import { createAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
+import { formatSingaporeDate, getSingaporeDateString } from '../../src/utils/dateUtils.ts';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const fixtureBytes = gunzipSync(readFileSync(path.join(root, 'tests/fixtures/acra-2022-newsletter-captured.html.gz')));
@@ -257,6 +258,15 @@ assert.equal(b2Claim.sourceBinding.versionId, manager.getActiveVersionId(record.
 assert.equal(b2Claim.sourceBinding.documentHash, documentHash);
 assert.equal(b2Claim.sourceBinding.provisionHash, record.provisionHash);
 assert.match(result.applicationReason || '', /deadline of 31\/07\/2026\./);
+const expectedCohortStartDate = formatSingaporeDate(active.acraFyeCohortApplicability?.fyeStartDate);
+const expectedCaptureDate = formatSingaporeDate(getSingaporeDateString(active.retrievedAt));
+assert.ok(expectedCohortStartDate && expectedCaptureDate, 'the active managed record retains cohort and capture metadata');
+assert.ok(result.applicationReason?.includes(`financial year ends on or after ${expectedCohortStartDate}`),
+  'the application explains the source-stated cohort using the admitted row metadata');
+assert.ok(result.applicationReason?.includes(`captured on ${expectedCaptureDate}`),
+  'the application explains the evidence capture date using the admitted row metadata');
+assert.match(result.applicationReason || '', /source-stated FYE cohort, not a general effective-date interval/i);
+assert.match(result.applicationReason || '', /capture date does not establish whether the source changed afterward/i);
 
 const b2Presentation = createAuthorityEvidencePresentation(workstream);
 const panelRetriever = new InMemorySourceRetriever(undefined, manager);

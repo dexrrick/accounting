@@ -1266,15 +1266,47 @@ assert.deepEqual(b3Workstreams.workstreams.flatMap(stream => stream.issues.flatM
 const b3Interpretation = {
   schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACRA'], contextualAuthorities: [],
   domain: 'ACRA_CORPORATE', population: 'COMPANY', primarySubject: 'company annual return due date and filing requirements',
-  concepts: [{ concept: 'due date', role: 'PRIMARY' }], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
+  concepts: [{ concept: 'filing due date', role: 'PRIMARY' }], requestedOperation: 'EXPLAIN_RULE', factsExplicitlyProvided: [], confidence: 0.96,
   issues: [{ subject: 'company annual return due date and filing requirements', population: 'COMPANY', domain: 'ACRA_CORPORATE',
     governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
     mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96 }]
 };
 const b3SemanticConcepts = getRequestedQuestionConcepts(b3MissingFactsQuery, b3Interpretation);
 assert.ok(b3SemanticConcepts.some(concept => concept.id === 'acra_annual_return_filing_deadline'));
-assert.ok(!b3SemanticConcepts.some(concept => concept.id === 'semantic_due_date'),
-  'the due-date semantic alias is covered by the canonical annual-return deadline concept');
+assert.ok(!b3SemanticConcepts.some(concept => concept.id === 'semantic_filing_due_date'),
+  'the filing due-date semantic alias is covered by the canonical annual-return deadline concept');
+assert.deepEqual(b3Interpretation.concepts, [{ concept: 'filing due date', role: 'PRIMARY' }],
+  'covering the semantic alias preserves the raw provider diagnostic');
+for (const alias of [
+  'due date', 'filing deadline', 'filing due date', 'annual return deadline',
+  'annual return due date', 'annual return filing deadline', 'annual return filing due date'
+]) {
+  const aliasConcepts = getRequestedQuestionConcepts(b3MissingFactsQuery, {
+    ...b3Interpretation, concepts: [{ concept: alias, role: 'RELATED' }]
+  });
+  assert.ok(!aliasConcepts.some(concept => concept.label === alias),
+    `the bounded annual-return deadline alias is covered: ${alias}`);
+}
+const b3ExtendedDeadlineInterpretation = {
+  ...b3Interpretation, concepts: [{ concept: 'filing due date extension', role: 'PRIMARY' }]
+};
+const b3ExtendedDeadlineUnderstanding = {
+  mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', interpretation: b3ExtendedDeadlineInterpretation
+};
+const b3ExtendedDeadlineConcepts = getRequestedQuestionConcepts(b3MissingFactsQuery, b3ExtendedDeadlineUnderstanding);
+assert.ok(b3ExtendedDeadlineConcepts.some(concept => concept.label === 'filing due date extension'),
+  'a semantic deadline label with an extra condition remains material');
+const b3ExtendedDeadlinePlan = b1IssuePlanFor(b3MissingFactsQuery, b3ExtendedDeadlineUnderstanding);
+const b3ExtendedDeadlineWorkstreams = await buildAuthorityWorkstreams(b3MissingFactsQuery, b3ExtendedDeadlinePlan, {
+  referenceDate: '2026-10-19', localOnly: true,
+  questionUnderstanding: b3ExtendedDeadlineUnderstanding,
+  providers: { ACRA: { authority: 'ACRA', retrieve: async () => ({ candidates: [] }) } }
+});
+const b3ExtendedDeadlinePresentation = createAuthorityEvidencePresentation(b3ExtendedDeadlineWorkstreams);
+assert.ok(b3ExtendedDeadlinePresentation.gaps.some(gap => /filing due date extension.*not assigned/i.test(gap)),
+  'the extra semantic condition remains a whole-question unassigned gap');
+assert.equal(b3ExtendedDeadlinePresentation.workstreams.flatMap(stream => stream.issues)[0].applicationStatus, 'UNRESOLVED',
+  'retaining an extra semantic condition does not invent an annual-return deadline');
 let b3SemanticCalls = 0;
 const b3UnexpectedModelCalls = [];
 globalThis.fetch = async (input, init) => {
@@ -1306,10 +1338,15 @@ assert.deepEqual(b3UnexpectedModelCalls, [], 'the missing-facts request cannot e
 assert.ok(b3RuntimeResponse.scenarioState.authorityEvidencePresentation,
   'the exact B3 request remains in the whole-question authority renderer');
 assert.equal(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT');
+const b3RuntimePresentation = b3RuntimeResponse.scenarioState.authorityEvidencePresentation;
 assert.deepEqual(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.map(stream => stream.authority), ['ACRA'],
   'the full route does not introduce a VCC or unrelated authority workstream');
 assert.equal(b3RuntimeResponse.scenarioState.authorityEvidencePresentation.workstreams.flatMap(stream => stream.issues)[0].subject,
   'company annual return due date and filing requirements', 'the full route preserves the original bounded semantic subject');
+assert.equal(b3RuntimePresentation.workstreams.flatMap(stream => stream.issues)[0].applicationStatus, 'UNRESOLVED',
+  'the missing company facts keep the deadline application unresolved');
+assert.ok(!b3RuntimePresentation.gaps.some(gap => /filing due date|unassigned|unrouted/i.test(gap)),
+  'the covered filing due-date alias does not create a topicless or unassigned gap');
 assert.match(b3RuntimeResponse.messageText, /financial year end, listing status, overseas branch register status/i,
   'the rendered answer explicitly names all missing company facts');
 assert.deepEqual(b3RuntimeResponse.scenarioState.directGroups, [], 'a missing-facts filing question does not prepare a journal');
