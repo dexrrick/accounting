@@ -101,7 +101,10 @@ export class InMemorySourceRetriever implements ISourceRetriever {
   /**
    * Retrieves sources by unique record ID
    */
-  public getSourceById(id: string, admissionOptions: SharedDocumentAdmissionOptions = {}): AuthoritativeSourceRecord | undefined {
+  public getSourceById(
+    id: string,
+    admissionOptions: SharedDocumentAdmissionOptions = {}
+  ): AuthoritativeSourceRecord | undefined {
     const record = UNIFIED_SOURCE_REGISTRY[id] || this.getCurrentSources().find((s) => s.id === id);
     if (!record) return undefined;
     const admission = verifySharedDocumentAdmission(record, this.versioningManager, admissionOptions);

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { mock } from 'node:test';
 import { gunzipSync } from 'node:zlib';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
@@ -11,9 +10,9 @@ import { InMemorySourceRetriever } from '../../src/retrieval/sourceRetriever.ts'
 import { extractOfficialDocumentFromRetrieved } from '../../src/retrieval/officialDocumentExtractor.ts';
 import { SourceVersioningManager } from '../../src/standards/sourceVersioning.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
+import { getSingaporeDateString } from '../../src/utils/dateUtils.ts';
 import { CitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
-import { getSingaporeDateString } from '../../src/utils/dateUtils.ts';
 
 const CAPTURE_DAY = '2026-10-16';
 const POST_CAPTURE_DAY = '2026-10-17';
@@ -29,15 +28,6 @@ const htmlDoc = contextManifest.documents[0];
 const htmlReplacementDoc = recaptureManifest.documents.find(item => item.recordId === HTML_ID);
 const pdfDoc = contextManifest.documents[1];
 const registryBefore = structuredClone(UNIFIED_SOURCE_REGISTRY);
-
-function getSourceByIdAtDate(retriever, recordId, date) {
-  mock.timers.enable({ apis: ['Date'], now: new Date(`${date}T04:00:00.000Z`) });
-  try {
-    return retriever.getSourceById(recordId);
-  } finally {
-    mock.timers.reset();
-  }
-}
 
 function readCapture(root, doc) {
   return readFile(new URL(doc.bodyFile, root)).then(compressed => {
@@ -264,8 +254,8 @@ function bindingAndCitation(record, retriever, versioning) {
   const quote = quoteFor(record);
   const claim = { kind: 'RULE', text: quote, quote, recordId: record.id, citationUrl: record.officialSourceUrl };
   const claims = verifyEvidenceClaims([claim], [record], {
-    missingFacts: [], expectedAuthority: 'MAS', expectedDomain: 'MAS_FUNDS',
-    targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY, versioningManager: versioning
+    missingFacts: [], targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY,
+    expectedAuthority: 'MAS', expectedDomain: 'MAS_FUNDS', versioningManager: versioning
   });
   assert.equal(claims.accepted.length, 1, claims.rejected[0]?.reason);
   const binding = claims.accepted[0].sourceBinding;
@@ -339,13 +329,27 @@ try {
     'Isolated engineering acceptance receipt only; not human legal or production approval'), true);
   assert.equal((await service.activateUpdatePackage(firstPackage.packageId)).success, true);
 
-  const firstHtmlActive = getSourceByIdAtDate(answerRetriever, HTML_ID, CAPTURE_DAY);
-  const firstPdfActive = getSourceByIdAtDate(answerRetriever, PDF_ID, CAPTURE_DAY);
+  const firstHtmlActive = answerRetriever.getSourceById(HTML_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY });
+  const firstPdfActive = answerRetriever.getSourceById(PDF_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY });
   assert.ok(firstHtmlActive && firstPdfActive);
-  assert.equal(getSourceByIdAtDate(answerRetriever, HTML_ID, POST_CAPTURE_DAY), undefined,
+  assert.equal(answerRetriever.getSourceById(HTML_ID, { referenceDate: CAPTURE_DAY })?.id, HTML_ID,
+    'an explicit capture-day reference date admits the undated HTML capture');
+  assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: '2026-10-15' }), undefined,
+    'an undated HTML capture is rejected before its capture day');
+  assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: POST_CAPTURE_DAY }), undefined,
     'the active HTML source remains capture-day-only and is refused on the later current-day replay date');
-  assert.equal(getSourceByIdAtDate(answerRetriever, PDF_ID, POST_CAPTURE_DAY), undefined,
+  assert.equal(answerRetriever.getSourceById(PDF_ID, { targetDate: '2026-10-15' }), undefined,
+    'an undated PDF capture is rejected before its capture day');
+  assert.equal(answerRetriever.getSourceById(PDF_ID, { targetDate: POST_CAPTURE_DAY }), undefined,
     'the active PDF source remains capture-day-only and is refused on the later current-day replay date');
+  assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: 'not-a-date' }), undefined,
+    'an invalid target date is rejected');
+  assert.equal(answerRetriever.getSourceById(HTML_ID, {
+    targetDate: CAPTURE_DAY, referenceDate: POST_CAPTURE_DAY
+  })?.id, HTML_ID, 'targetDate takes precedence over a later referenceDate');
+  assert.equal(answerRetriever.getSourceById(HTML_ID)?.id,
+    getSingaporeDateString() === CAPTURE_DAY ? HTML_ID : undefined,
+    'a lookup without admission options continues to use the current Singapore date');
   assert.equal(firstHtmlActive.documentHash, htmlDoc.fetch.contentHash);
   assert.equal(firstHtmlActive.effectiveDate, undefined);
   assert.equal(firstPdfActive.documentHash, pdfDoc.fetch.contentHash);
@@ -366,13 +370,15 @@ try {
   const wrongAuthorityClaim = verifyEvidenceClaims([{
     kind: 'RULE', text: firstHtmlProof.quote, quote: firstHtmlProof.quote, recordId: HTML_ID
   }], [firstHtmlActive], {
-    missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'MAS_FUNDS', versioningManager: versioning
+    missingFacts: [], targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY,
+    expectedAuthority: 'IRAS', expectedDomain: 'MAS_FUNDS', versioningManager: versioning
   });
   assert.equal(wrongAuthorityClaim.accepted.length, 0);
   const wrongDomainClaim = verifyEvidenceClaims([{
     kind: 'RULE', text: firstHtmlProof.quote, quote: firstHtmlProof.quote, recordId: HTML_ID
   }], [firstHtmlActive], {
-    missingFacts: [], expectedAuthority: 'MAS', expectedDomain: 'IRAS_TAX', versioningManager: versioning
+    missingFacts: [], targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY,
+    expectedAuthority: 'MAS', expectedDomain: 'IRAS_TAX', versioningManager: versioning
   });
   assert.equal(wrongDomainClaim.accepted.length, 0);
   const wrongHashCitation = structuredClone(firstHtmlProof.citation);
@@ -411,8 +417,8 @@ try {
     'Reviewed captured same-page response as an environmental snapshot; not a substantive statutory amendment'), true);
   assert.equal((await service.activateUpdatePackage(replacementPackage.packageId)).success, true);
 
-  const replacementActive = getSourceByIdAtDate(answerRetriever, HTML_ID, CAPTURE_DAY);
-  const replacementPdfActive = getSourceByIdAtDate(answerRetriever, PDF_ID, CAPTURE_DAY);
+  const replacementActive = answerRetriever.getSourceById(HTML_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY });
+  const replacementPdfActive = answerRetriever.getSourceById(PDF_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY });
   assert.ok(replacementActive && replacementPdfActive);
   assert.notEqual(replacementActive.versionId, firstHtmlActive.versionId);
   assert.equal(replacementActive.documentHash, htmlReplacementDoc.fetch.contentHash);
@@ -430,8 +436,8 @@ try {
   assert.equal(replacementProof.binding.provisionHash, firstHtmlProof.binding.provisionHash);
 
   assert.equal((await service.rollbackUpdatePackage(replacementPackage.packageId)).success, true);
-  const restoredHtml = getSourceByIdAtDate(answerRetriever, HTML_ID, CAPTURE_DAY);
-  const restoredPdf = getSourceByIdAtDate(answerRetriever, PDF_ID, CAPTURE_DAY);
+  const restoredHtml = answerRetriever.getSourceById(HTML_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY });
+  const restoredPdf = answerRetriever.getSourceById(PDF_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY });
   assert.equal(restoredHtml.versionId, firstHtmlProof.binding.versionId);
   assert.equal(restoredHtml.documentHash, firstHtmlProof.binding.documentHash);
   assert.equal(restoredPdf.versionId, firstPdfProof.binding.versionId,
@@ -443,8 +449,8 @@ try {
   assert.equal((await service.rollbackUpdatePackage(firstPackage.packageId)).success, true);
   assert.equal(UNIFIED_SOURCE_REGISTRY[HTML_ID], undefined, 'rolling back first activation removes its isolated HTML registry row');
   assert.equal(UNIFIED_SOURCE_REGISTRY[PDF_ID], undefined, 'rolling back first activation removes its isolated PDF registry row');
-  assert.equal(answerRetriever.getSourceById(HTML_ID), undefined);
-  assert.equal(answerRetriever.getSourceById(PDF_ID), undefined);
+  assert.equal(answerRetriever.getSourceById(HTML_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY }), undefined);
+  assert.equal(answerRetriever.getSourceById(PDF_ID, { targetDate: CAPTURE_DAY, referenceDate: CAPTURE_DAY }), undefined);
 } finally {
   for (const id of Object.keys(UNIFIED_SOURCE_REGISTRY)) delete UNIFIED_SOURCE_REGISTRY[id];
   Object.assign(UNIFIED_SOURCE_REGISTRY, registryBefore);

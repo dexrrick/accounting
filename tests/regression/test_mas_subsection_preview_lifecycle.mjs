@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { mock } from 'node:test';
 import { gunzipSync } from 'node:zlib';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
 import { defaultLiveRegulatoryFeedService, LiveRegulatoryFeedService } from '../../src/retrieval/liveRegulatoryFeed.ts';
@@ -63,19 +62,6 @@ assert.equal(defaultLiveRegulatoryFeedService.getAdapters().some(adapter => adap
 const htmlId = recordIds[0];
 const pdfId = recordIds[1];
 const runtimeQuery = 'Using the approved MAS excerpts, what are the fund management licensing admission criteria, and what does MAS Circular IID 04/2025 say about substantive fund management activity for VCC managers?';
-
-function withSimulatedSingaporeDate(date, callback) {
-  mock.timers.enable({ apis: ['Date'], now: new Date(`${date}T04:00:00.000Z`) });
-  try {
-    return callback();
-  } finally {
-    mock.timers.reset();
-  }
-}
-
-function getSourceByIdAtDate(retriever, recordId, date) {
-  return withSimulatedSingaporeDate(date, () => retriever.getSourceById(recordId));
-}
 
 assert.equal(defaultTargetDateResolver.resolveTargetDate('What does MAS Circular IID 04/2025 say?', '2026-06-26').targetDate, undefined,
   'the exact IID 04/2025 identifier alone is not treated as a historical target date');
@@ -145,6 +131,12 @@ const initialHtml = initialById.get(htmlId);
 const replacementHtml = recaptureById.get(htmlId);
 const initialPdf = initialById.get(pdfId);
 const recapturedPdf = recaptureById.get(pdfId);
+const htmlDate = getSingaporeDateString(initialHtml.document.fetch.retrievedAt);
+const pdfDate = getSingaporeDateString(initialPdf.document.fetch.retrievedAt);
+const replacementHtmlDate = getSingaporeDateString(replacementHtml.document.fetch.retrievedAt);
+assert.equal(htmlDate, CAPTURE_DAY, 'the immutable HTML fixture timestamp remains on its declared capture day');
+assert.equal(pdfDate, CAPTURE_DAY, 'the immutable PDF fixture timestamp remains on its declared capture day');
+assert.equal(replacementHtmlDate, CAPTURE_DAY, 'the immutable recapture timestamp retains its declared fixture day');
 assert.notEqual(initialHtml.document.fetch.contentHash, replacementHtml.document.fetch.contentHash,
   'the later genuine HTML response must be a distinct byte snapshot; do not fabricate a replacement if its bytes are identical');
 assert.equal(initialPdf.document.fetch.contentHash, recapturedPdf.document.fetch.contentHash,
@@ -385,21 +377,44 @@ function evidenceProof(record, targetDate, retriever, versioning) {
   return { quote: quotes[0], quotes, binding: bindings[0], verifiedClaim: checked.accepted[0], citation: citations[0], citations, verifier };
 }
 
+function withFixtureDate(targetDate, operation) {
+  const SystemDate = globalThis.Date;
+  class FixtureDate extends SystemDate {
+    constructor(...args) {
+      if (args.length === 0) super(`${targetDate}T00:00:00+08:00`);
+      else super(...args);
+    }
+
+    static now() {
+      return new SystemDate(`${targetDate}T00:00:00+08:00`).getTime();
+    }
+  }
+
+  globalThis.Date = FixtureDate;
+  try {
+    return operation();
+  } finally {
+    globalThis.Date = SystemDate;
+  }
+}
+
 function assembleBoundCitation(citation, record) {
-  const query = 'What does the reviewed MAS fund management source say?';
-  const assembled = withSimulatedSingaporeDate(CAPTURE_DAY, () => assembleDeterministicResponse({
-    directAnswer: 'The source citation is tied to the retrieved, approved document version.',
-    citations: [citation],
-    requiredAccounts: [
-      { accountName: 'Source test debit', category: 'ASSET', debitCredit: 'DEBIT' },
-      { accountName: 'Source test credit', category: 'LIABILITY', debitCredit: 'CREDIT' }
-    ]
-  }, query, null, {
-    classification: classifyQuestion(query),
-    userFacts: [], missingFacts: [], assumptions: [],
-    primaryEvidence: [record], officialGuidance: [], curatedSummaries: [], applicationRules: [], currentInformationRequired: false
-  }, null, 'SFRS_I'));
-  return assembled.scenarioState.directGroups?.flatMap(group => group.citations) || [];
+  return withFixtureDate(getSingaporeDateString(record.retrievedAt), () => {
+    const query = 'What does the reviewed MAS fund management source say?';
+    const assembled = assembleDeterministicResponse({
+      directAnswer: 'The source citation is tied to the retrieved, approved document version.',
+      citations: [citation],
+      requiredAccounts: [
+        { accountName: 'Source test debit', category: 'ASSET', debitCredit: 'DEBIT' },
+        { accountName: 'Source test credit', category: 'LIABILITY', debitCredit: 'CREDIT' }
+      ]
+    }, query, null, {
+      classification: classifyQuestion(query),
+      userFacts: [], missingFacts: [], assumptions: [],
+      primaryEvidence: [record], officialGuidance: [], curatedSummaries: [], applicationRules: [], currentInformationRequired: false
+    }, null, 'SFRS_I');
+    return assembled.scenarioState.directGroups?.flatMap(group => group.citations) || [];
+  });
 }
 
 function renderAuthorityEvidenceFor(record, proof) {
@@ -438,8 +453,10 @@ function renderAuthorityEvidenceFor(record, proof) {
     'authority workstream projection preserves the exact document binding');
   assert.equal(Object.isFrozen(proof.binding), false,
     'freezing the display projection does not freeze the verifier-owned binding');
-  return withSimulatedSingaporeDate(CAPTURE_DAY,
-    () => renderToStaticMarkup(React.createElement(AuthorityCompliancePanel, { presentation })));
+  // These static captures are evaluated as of their Singapore capture day.
+  return withFixtureDate(getSingaporeDateString(record.retrievedAt), () =>
+    renderToStaticMarkup(React.createElement(AuthorityCompliancePanel, { presentation }))
+  );
 }
 
 function renderManualMasReviewPanel() {
@@ -507,7 +524,9 @@ try {
     assert.equal(metadata.finalUrl, capture.document.fetch.finalUrl);
     assert.equal(metadata.retrievedAt, capture.document.fetch.retrievedAt);
     assert.equal(firstPackage.updates.find(record => record.id === id).documentHash, capture.document.fetch.contentHash);
-    assert.equal(answerRetriever.getSourceById(id), undefined, 'a candidate is not answer-retrievable before activation');
+    const captureDate = id === htmlId ? htmlDate : pdfDate;
+    assert.equal(answerRetriever.getSourceById(id, { targetDate: captureDate, referenceDate: captureDate }), undefined,
+      'a candidate is not answer-retrievable before activation');
   }
 
   assert.equal((await service.stageUpdatePackage(firstPackage)).success, true);
@@ -587,18 +606,18 @@ try {
   assert.equal(persistedApproval?.packageHash, firstPackage.packageHash,
     'the active review audit retains the approved package hash as its receipt');
 
-  const htmlDate = getSingaporeDateString(initialHtml.document.fetch.retrievedAt);
-  const pdfDate = getSingaporeDateString(initialPdf.document.fetch.retrievedAt);
-  assert.equal(htmlDate, CAPTURE_DAY, 'the immutable HTML fixture timestamp remains on its declared capture day');
-  assert.equal(pdfDate, CAPTURE_DAY, 'the immutable PDF fixture timestamp remains on its declared capture day');
-  const activeHtml = getSourceByIdAtDate(answerRetriever, htmlId, htmlDate);
-  const activePdf = getSourceByIdAtDate(answerRetriever, pdfId, pdfDate);
+  const activeHtml = answerRetriever.getSourceById(htmlId, { targetDate: htmlDate, referenceDate: htmlDate });
+  const activePdf = answerRetriever.getSourceById(pdfId, { targetDate: pdfDate, referenceDate: pdfDate });
   assert.ok(activeHtml && activePdf);
   assert.equal(activeHtml.effectiveDate, undefined);
   assert.equal(activePdf.effectiveDate, undefined);
-  assert.equal(getSourceByIdAtDate(answerRetriever, htmlId, POST_CAPTURE_DAY), undefined,
+  assert.equal(answerRetriever.getSourceById(htmlId, { targetDate: '2026-10-15' }), undefined,
+    'the undated HTML capture is rejected before its capture day');
+  assert.equal(answerRetriever.getSourceById(htmlId, { targetDate: POST_CAPTURE_DAY }), undefined,
     'the active HTML source remains capture-day-only and is refused on the later current-day replay date');
-  assert.equal(getSourceByIdAtDate(answerRetriever, pdfId, POST_CAPTURE_DAY), undefined,
+  assert.equal(answerRetriever.getSourceById(pdfId, { targetDate: '2026-10-15' }), undefined,
+    'the undated PDF capture is rejected before its capture day');
+  assert.equal(answerRetriever.getSourceById(pdfId, { targetDate: POST_CAPTURE_DAY }), undefined,
     'the active PDF source remains capture-day-only and is refused on the later current-day replay date');
   const htmlResults = await answerRetriever.retrieveSources({
     query: 'MAS fund management licensing admission criteria Securities and Futures Act office controls',
@@ -626,7 +645,8 @@ try {
   for (const recordId of recordIds) {
     const recordClaims = runtimeClaimsByRecord.get(recordId);
     assert.ok(recordClaims.length > 0, `${recordId}: authority runtime verifies a claim from the reviewed excerpt; ${JSON.stringify(runtimeEvidence.workstreams.map(workstream => ({ issues: workstream.issues.map(issue => ({ subject: issue.subject, status: issue.evidenceStatus, gaps: issue.gaps.map(gap => gap.code) })), claims: workstream.verifiedClaims.map(claim => claim.recordId) })))}`);
-    const activeRecord = getSourceByIdAtDate(answerRetriever, recordId, recordId === htmlId ? htmlDate : pdfDate);
+    const recordDate = recordId === htmlId ? htmlDate : pdfDate;
+    const activeRecord = answerRetriever.getSourceById(recordId, { targetDate: recordDate, referenceDate: recordDate });
     const activeVersionId = versioning.getActiveVersionId(recordId);
     const activeEntry = versioning.getLedgerEntry(activeVersionId);
     for (const claim of recordClaims) {
@@ -649,7 +669,7 @@ try {
     `${recordId}: default authority runtime retrieves the activated source and retains its active ledger version binding`);
   }
   const runtimePresentation = createAuthorityEvidencePresentation(runtimeEvidence);
-  const runtimeAuthorityPanel = withSimulatedSingaporeDate(CAPTURE_DAY,
+  const runtimeAuthorityPanel = withFixtureDate(htmlDate,
     () => renderToStaticMarkup(React.createElement(AuthorityCompliancePanel, {
       presentation: runtimePresentation
     })));
@@ -913,10 +933,10 @@ try {
   assert.match(currentReplacementPackageCard, new RegExp(`package version ${replacementOwnedHtmlVersion.versionId} · document ${replacementOwnedHtmlVersion.metadata.documentHash}`));
   assert.doesNotMatch(afterReplacementPanel, /Stage exact candidate/);
 
-  const replacementHtmlDate = getSingaporeDateString(replacementHtml.document.fetch.retrievedAt);
-  assert.equal(replacementHtmlDate, CAPTURE_DAY, 'the immutable recapture timestamp retains its declared fixture day');
-  const replacementActiveHtml = getSourceByIdAtDate(answerRetriever, htmlId, replacementHtmlDate);
-  const replacementActivePdf = getSourceByIdAtDate(answerRetriever, pdfId, pdfDate);
+  const replacementActiveHtml = answerRetriever.getSourceById(htmlId, {
+    targetDate: replacementHtmlDate, referenceDate: replacementHtmlDate
+  });
+  const replacementActivePdf = answerRetriever.getSourceById(pdfId, { targetDate: pdfDate, referenceDate: pdfDate });
   assert.notEqual(replacementActiveHtml.versionId, activeHtml.versionId);
   assert.equal(replacementActiveHtml.documentHash, replacementHtml.document.fetch.contentHash);
   assert.equal(replacementActiveHtml.provisionHash, activeHtml.provisionHash);
@@ -937,8 +957,8 @@ try {
 
   assert.equal((await service.rollbackUpdatePackage(replacementPackage.packageId)).success, true);
   clearManualMasDiscoveryPackage(replacementPackage.packageId);
-  const restoredHtml = getSourceByIdAtDate(answerRetriever, htmlId, htmlDate);
-  const restoredPdf = getSourceByIdAtDate(answerRetriever, pdfId, pdfDate);
+  const restoredHtml = answerRetriever.getSourceById(htmlId, { targetDate: htmlDate, referenceDate: htmlDate });
+  const restoredPdf = answerRetriever.getSourceById(pdfId, { targetDate: pdfDate, referenceDate: pdfDate });
   assert.equal(restoredHtml.versionId, firstHtmlProof.binding.versionId);
   assert.equal(restoredHtml.documentHash, firstHtmlProof.binding.documentHash);
   assert.equal(restoredPdf.versionId, firstPdfProof.binding.versionId, 'HTML rollback preserves the active PDF version');
@@ -970,7 +990,9 @@ try {
   clearManualMasDiscoveryPackage(firstPackage.packageId);
   for (const id of recordIds) {
     assert.equal(UNIFIED_SOURCE_REGISTRY[id], undefined, `${id}: first-package rollback removes the isolated registry row`);
-    assert.equal(answerRetriever.getSourceById(id), undefined, `${id}: first-package rollback removes answer retrieval`);
+    const captureDate = id === htmlId ? htmlDate : pdfDate;
+    assert.equal(answerRetriever.getSourceById(id, { targetDate: captureDate, referenceDate: captureDate }), undefined,
+      `${id}: first-package rollback removes answer retrieval`);
   }
   assert.equal(new CitationVerifier(answerRetriever, htmlDate, versioning).verifyCitation(
     firstHtmlProof.citation, 'MAS', [], {

@@ -6,6 +6,7 @@ import type { AuthorityWorkstreamsResult } from '../types/authorityEvidence';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
 import { calculateDoubleEntries } from '../engine/accountingEngine';
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
+import { validateJournalGroups } from '../verification/journalIntegrity';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
@@ -556,6 +557,7 @@ export async function processAccountingQuery(
   }
 
   // 1. Check if query matches an explicit deterministic test fixture
+  let deterministicScenario: AccountingScenarioState | null = null;
   const isFixture = isDeterministicFixture(userInput);
   // A dated multi-event narrative is complete as a sequence even when it does
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
@@ -566,38 +568,43 @@ export async function processAccountingQuery(
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
-    if (!journalRequested || hasImages) return response;
+    if (hasImages) return response;
     const groups = response.scenarioState.directGroups || [];
-    const validGroup = (group: JournalEntryGroup): boolean => {
-      if (!Array.isArray(group.lines) || group.lines.length < 2) return false;
-      let debitCents = 0;
-      let creditCents = 0;
-      for (const line of group.lines) {
-        if (!line.accountName || !['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE', 'OTHER_COMPREHENSIVE_INCOME'].includes(line.category)) return false;
-        if (!Number.isFinite(line.debit) || !Number.isFinite(line.credit) || line.debit < 0 || line.credit < 0) return false;
-        const debit = Math.round(line.debit * 100);
-        const credit = Math.round(line.credit * 100);
-        if (!Number.isSafeInteger(debit) || !Number.isSafeInteger(credit) || debit / 100 !== line.debit || credit / 100 !== line.credit) return false;
-        if (debit > 0 && credit > 0) return false;
-        debitCents += debit;
-        creditCents += credit;
-        if (!Number.isSafeInteger(debitCents) || !Number.isSafeInteger(creditCents)) return false;
-      }
-      return debitCents > 0 && debitCents === creditCents &&
-        group.totalDebit === debitCents / 100 && group.totalCredit === creditCents / 100 &&
-        group.isBalanced;
-    };
     if (groups.length === 0) return response;
-    if (groups.every(validGroup)) return response;
-    const issue: MissingFieldInfo = {
-      fieldKey: 'journalValidation', fieldName: 'Journal validation',
-      prompt: 'The proposed journal did not pass exact debit/credit and amount validation. Please review the transaction facts.',
-      whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines and totals balance to the cent.'
-    };
+    if (!journalRequested && Boolean(deterministicScenario?.directGroups?.length)) {
+      return response;
+    }
+    const integrity = validateJournalGroups(groups, {
+      rawQuery: userInput,
+      hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length)
+    });
+    if (integrity.isValid) return response;
+
+    const unstatedIssue = integrity.issues.find(i => i.code === 'UNSTATED_AMOUNT');
+    const issue: MissingFieldInfo = unstatedIssue
+      ? {
+          fieldKey: 'amount',
+          fieldName: 'Transaction amount',
+          prompt: 'What is the transaction amount in SGD?',
+          whyNeeded: unstatedIssue.message
+        }
+      : {
+          fieldKey: 'journalValidation',
+          fieldName: 'Journal validation',
+          prompt: 'The proposed journal did not pass exact debit/credit and classification validation: ' + integrity.issues.map(i => i.message).join(' '),
+          whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines, account categories, and totals are valid and balance to the cent.'
+        };
+
     return {
       ...response,
-      messageText: '### AI-Proposed Journal Rejected\\n\\n' + issue.prompt,
-      scenarioState: { ...response.scenarioState, directGroups: [], projectedGroups: [], isComplete: false, missingFields: [issue] },
+      messageText: '### AI-Proposed Journal Rejected\n\n' + issue.prompt,
+      scenarioState: {
+        ...response.scenarioState,
+        directGroups: [],
+        projectedGroups: [],
+        isComplete: false,
+        missingFields: [issue]
+      },
       clarifications: [issue]
     };
   };
@@ -810,7 +817,7 @@ export async function processAccountingQuery(
     }
   }
   const tDet0 = Date.now();
-  const deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
+  deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
   if (deterministicScenario.scenarioType === 'DEFERRED_TAX_IAS12' && !hasImages) {

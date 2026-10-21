@@ -1,4 +1,10 @@
-import type { AccountCategory, AccountingScenarioState, JournalLine, MissingFieldInfo } from '../types/accounting';
+import type {
+  AccountCategory,
+  AccountingScenarioState,
+  JournalEntryGroup,
+  JournalLine,
+  MissingFieldInfo
+} from '../types/accounting';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
 /**
@@ -16,28 +22,238 @@ type Template = {
   rationale: string;
 };
 const asset = (name: string, code = '1010'): Account => ({ name, code, category: 'ASSET' });
-const liability = (name: string): Account => ({ name, code: '2100', category: 'LIABILITY' });
-const expense = (name: string): Account => ({ name, code: '5300', category: 'EXPENSE' });
-const equity = (name: string): Account => ({ name, code: '3100', category: 'EQUITY' });
+const liability = (name: string, code = '2100'): Account => ({ name, code, category: 'LIABILITY' });
+const expense = (name: string, code = '5300'): Account => ({ name, code, category: 'EXPENSE' });
+const equity = (name: string, code = '3100'): Account => ({ name, code, category: 'EQUITY' });
 const revenue = (): Account => ({ name: 'Revenue', code: '4000', category: 'REVENUE' });
 const bank = () => asset('Cash at Bank');
 const cash = () => asset('Cash', '1000');
 const receivable = () => asset('Trade Receivables', '1100');
-const loan = () => liability('Bank Loan');
+const loan = () => liability('Bank Loan', '2100');
 
 const need = (key: string, name: string, prompt: string): MissingFieldInfo => ({
-  fieldKey: key, fieldName: name, prompt,
+  fieldKey: key,
+  fieldName: name,
+  prompt,
   whyNeeded: 'A journal cannot be posted without the stated transaction facts.'
 });
 
+function getAllAmounts(query: string) {
+  return [...query.matchAll(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/gi)].map(m => {
+    const whole = m[1].replace(/,/g, '');
+    const fraction = (m[2] || '').padEnd(2, '0');
+    const cents = BigInt(whole) * 100n + BigInt(fraction || '0');
+    return {
+      raw: m[0],
+      index: m.index ?? 0,
+      whole,
+      fraction,
+      cents,
+      amount: Number(cents) / 100
+    };
+  }).filter(a => a.cents > 0n && a.cents <= BigInt(Number.MAX_SAFE_INTEGER));
+}
+
 /** A single explicit SGD value only. Reject multiple, invalid and unsafe amounts. */
 function amountCents(query: string): bigint | undefined {
-  const amounts = [...query.matchAll(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d,]|\.\d)/gi)];
+  const amounts = getAllAmounts(query);
   if (amounts.length !== 1) return undefined;
-  const whole = amounts[0][1].replace(/,/g, '');
-  const fraction = (amounts[0][2] || '').padEnd(2, '0');
-  const cents = BigInt(whole) * 100n + BigInt(fraction || '0');
-  return cents > 0n && cents <= BigInt(Number.MAX_SAFE_INTEGER) ? cents : undefined;
+  return amounts[0].cents;
+}
+
+function extractLoanRepaymentAmounts(query: string): { principalCents: bigint; interestCents: bigint } | undefined {
+  const pMatch = query.match(/\bprincipal\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i)
+    || query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:of\s+)?principal\b/i);
+  const iMatch = query.match(/\binterest\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i)
+    || query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:of\s+)?interest\b/i);
+
+  if (!pMatch || !iMatch) return undefined;
+  const pWhole = pMatch[1].replace(/,/g, '');
+  const pFrac = (pMatch[2] || '').padEnd(2, '0');
+  const pCents = BigInt(pWhole) * 100n + BigInt(pFrac || '0');
+
+  const iWhole = iMatch[1].replace(/,/g, '');
+  const iFrac = (iMatch[2] || '').padEnd(2, '0');
+  const iCents = BigInt(iWhole) * 100n + BigInt(iFrac || '0');
+
+  if (pCents <= 0n || iCents <= 0n) return undefined;
+  return { principalCents: pCents, interestCents: iCents };
+}
+
+function extractSaleAndCostAmounts(query: string): { saleCents: bigint; costCents: bigint } | undefined {
+  const all = getAllAmounts(query);
+  if (all.length !== 2) return undefined;
+  const costRegex = /\b(?:cost(?:\s+of\s+goods\s+sold)?|carrying\s+(?:cost|amount))\s+(?:is\s+|of\s+|was\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i;
+  const costMatch = query.match(costRegex);
+  if (!costMatch) return undefined;
+
+  const cWhole = costMatch[1].replace(/,/g, '');
+  const cFrac = (costMatch[2] || '').padEnd(2, '0');
+  const costCents = BigInt(cWhole) * 100n + BigInt(cFrac || '0');
+
+  const saleItem = all.find(a => a.cents !== costCents) || all[0];
+  if (!saleItem || saleItem.cents <= 0n || costCents <= 0n) return undefined;
+
+  return { saleCents: saleItem.cents, costCents };
+}
+
+function extractCustomerReceiptDiscountAmounts(query: string): { grossCents: bigint; discountCents: bigint; netCents: bigint } | undefined {
+  const all = getAllAmounts(query);
+  if (all.length < 2 || all.length > 3) return undefined;
+
+  const dMatch = query.match(/\b(?:discount(?:\s+allowed)?|rebate)\s+(?:of\s+|is\s+|was\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i)
+    || query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:settlement\s+|cash\s+|early\s+payment\s+)?(?:discount|rebate)\b/i);
+  if (!dMatch) return undefined;
+
+  const dWhole = dMatch[1].replace(/,/g, '');
+  const dFrac = (dMatch[2] || '').padEnd(2, '0');
+  const discountCents = BigInt(dWhole) * 100n + BigInt(dFrac || '0');
+  if (discountCents <= 0n) return undefined;
+
+  if (all.length === 3) {
+    const sorted = [...all].map(a => a.cents).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const grossCents = sorted[2];
+    let netCents: bigint | undefined;
+    if (sorted[0] === discountCents) {
+      netCents = sorted[1];
+    } else if (sorted[1] === discountCents) {
+      netCents = sorted[0];
+    } else {
+      return undefined;
+    }
+    if (grossCents !== netCents + discountCents || grossCents <= 0n || discountCents <= 0n || netCents <= 0n) {
+      return undefined;
+    }
+    return { grossCents, discountCents, netCents };
+  }
+
+  if (all.length === 2) {
+    const otherItem = all.find(a => a.cents !== discountCents) || all[0];
+    const otherCents = otherItem.cents;
+
+    const invMatch = query.match(/\b(?:invoice|receivable|outstanding(?:\s+invoice|\s+balance)?|gross(?:\s+invoice|\s+amount)?)\s+(?:of\s+|for\s+|was\s+|is\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+    const recMatch = query.match(/\b(?:received|collected|paid|net(?:\s+receipt|\s+cash|\s+amount)?)\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+
+    let invCents: bigint | undefined;
+    if (invMatch) {
+      const whole = invMatch[1].replace(/,/g, '');
+      const frac = (invMatch[2] || '').padEnd(2, '0');
+      invCents = BigInt(whole) * 100n + BigInt(frac || '0');
+    }
+
+    let recCents: bigint | undefined;
+    if (recMatch) {
+      const whole = recMatch[1].replace(/,/g, '');
+      const frac = (recMatch[2] || '').padEnd(2, '0');
+      recCents = BigInt(whole) * 100n + BigInt(frac || '0');
+    }
+
+    let grossCents: bigint;
+    let netCents: bigint;
+
+    if (invCents === otherCents && (!recMatch || recCents !== otherCents || invCents !== discountCents)) {
+      grossCents = otherCents;
+      netCents = grossCents - discountCents;
+    } else if (recCents === otherCents) {
+      netCents = otherCents;
+      grossCents = netCents + discountCents;
+    } else {
+      return undefined;
+    }
+
+    if (grossCents <= discountCents || discountCents <= 0n || netCents <= 0n || grossCents !== netCents + discountCents) {
+      return undefined;
+    }
+
+    return { grossCents, discountCents, netCents };
+  }
+
+  return undefined;
+}
+
+function extractSupplierPaymentDiscountAmounts(query: string): { grossCents: bigint; discountCents: bigint; netCents: bigint } | undefined {
+  const all = getAllAmounts(query);
+  if (all.length < 2 || all.length > 3) return undefined;
+
+  const dMatch = query.match(/\b(?:discount(?:\s+received)?|rebate)\s+(?:of\s+|is\s+|was\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i)
+    || query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:settlement\s+|cash\s+|early\s+(?:payment|settlement)\s+)?(?:discount|rebate)\b/i);
+  if (!dMatch) return undefined;
+
+  const dWhole = dMatch[1].replace(/,/g, '');
+  const dFrac = (dMatch[2] || '').padEnd(2, '0');
+  const discountCents = BigInt(dWhole) * 100n + BigInt(dFrac || '0');
+  if (discountCents <= 0n) return undefined;
+
+  if (all.length === 3) {
+    const sorted = [...all].map(a => a.cents).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const grossCents = sorted[2];
+    let netCents: bigint | undefined;
+    if (sorted[0] === discountCents) {
+      netCents = sorted[1];
+    } else if (sorted[1] === discountCents) {
+      netCents = sorted[0];
+    } else {
+      return undefined;
+    }
+    if (grossCents !== netCents + discountCents || grossCents <= 0n || discountCents <= 0n || netCents <= 0n) {
+      return undefined;
+    }
+    return { grossCents, discountCents, netCents };
+  }
+
+  if (all.length === 2) {
+    const otherItem = all.find(a => a.cents !== discountCents) || all[0];
+    const otherCents = otherItem.cents;
+
+    const invMatch = query.match(/\b(?:invoice|payable|payables|outstanding(?:\s+invoice|\s+balance|\s+payable)?|gross(?:\s+invoice|\s+payable|\s+amount)?|owed)\s+(?:of\s+|for\s+|was\s+|is\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+    const paidMatch = query.match(/\b(?:paid|remitted|transferred|net(?:\s+payment|\s+cash|\s+amount)?)\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+
+    let invCents: bigint | undefined;
+    if (invMatch) {
+      const whole = invMatch[1].replace(/,/g, '');
+      const frac = (invMatch[2] || '').padEnd(2, '0');
+      invCents = BigInt(whole) * 100n + BigInt(frac || '0');
+    }
+
+    let paidCents: bigint | undefined;
+    if (paidMatch) {
+      const whole = paidMatch[1].replace(/,/g, '');
+      const frac = (paidMatch[2] || '').padEnd(2, '0');
+      paidCents = BigInt(whole) * 100n + BigInt(frac || '0');
+    }
+
+    let grossCents: bigint;
+    let netCents: bigint;
+
+    if (invCents === otherCents && (!paidMatch || paidCents !== otherCents || invCents !== discountCents)) {
+      grossCents = otherCents;
+      netCents = grossCents - discountCents;
+    } else if (paidCents === otherCents) {
+      netCents = otherCents;
+      grossCents = netCents + discountCents;
+    } else {
+      return undefined;
+    }
+
+    if (grossCents <= discountCents || discountCents <= 0n || netCents <= 0n || grossCents !== netCents + discountCents) {
+      return undefined;
+    }
+
+    return { grossCents, discountCents, netCents };
+  }
+
+  return undefined;
+}
+
+function isUnearnedRecognition(query: string): boolean {
+  return /\b(?:unearned\s+revenue|deferred\s+revenue|customer\s+advance|advance\s+(?:payment\s+)?from\s+(?:a\s+|the\s+)?customer)\b/i.test(query) &&
+    /\b(?:earn(?:ed|s|ing)?|recogni[sz](?:e|ed|es|ing)|releas(?:e|ed|es|ing)|satisf(?:y|ied|ies|ying)|deliver(?:ed|s|ing)|perform(?:ed|s|ing)|complet(?:e|ed|es|ing)|render(?:ed|s|ing))\b/i.test(query) &&
+    !/\b(?:before\s+(?:delivery|delivering|performing|providing|completing)|to\s+be\s+(?:delivered|performed|provided|rendered)|not\s+yet\s+(?:delivered|performed|earned))\b/i.test(query);
+}
+
+function isExpenseAccrualRecognition(query: string): boolean {
+  return /\b(?:accrue[ds]?|accrual|incurred\s+but\s+(?:not\s+yet\s+(?:paid|billed)|unpaid|unbilled)|unpaid\s+at\s+(?:month|quarter|year|period)[- ]end)\b/i.test(query) &&
+    !/\b(?:accrued\s+(?:last|previous)\s+(?:month|period|year)|previously\s+accrued|settling\s+an?\s+accrued|paid\s+(?:the\s+)?accrued|settle[ds]?\s+(?:the\s+)?accrued)\b/i.test(query);
 }
 
 function bankAccount(query: string, side: 'from' | 'to'): Account | undefined {
@@ -67,17 +283,51 @@ function bankTransfer(query: string): Pair {
   return { debit, credit, missing };
 }
 
+function isBankTransfer(query: string): boolean {
+  if (!/\b(?:transfer|transferred|moving|move|moved)\b/i.test(query)) return false;
+  if (!/\b(?:bank|account)\b/i.test(query)) return false;
+  if (/\b(?:rent|rental|utilities|utility|electricity|water\s+bill|office\s+supplies|stationery|deposit|loan|principal|interest|invoice|bill|goods|products|services|merchandise|inventory|salary|salaries|wages|expense|purchase|purchased|bought|sold|sale|unearned|deferred|advance|payable|payables|receivable|receivables|provision|warranty|return|returned|refund|allowance|bad\s+debt|doubtful|impairment|accrue|accrued|accrual)\b/i.test(query)) return false;
+  if (/\b(?:by|via|through|using|paid\s+by|pay\s+by)\s+(?:a\s+)?bank\s+transfer\b/i.test(query)) return false;
+  return true;
+}
+
 function expenseAccounts(query: string): Pair {
-  const kind = /\boffice supplies\b|\bstationery\b/i.test(query) ? 'Office Supplies Expense'
-    : /\b(?:rent|rental payment)\b/i.test(query) ? 'Rent Expense'
-    : /\b(?:utilities|utility|electricity|water bill)\b/i.test(query) ? 'Utilities Expense'
-    : 'Operating Expense';
+  let debitAccount: Account;
+  if (/\b(?:refundable|security|rental)\s+deposit\b/i.test(query)) {
+    debitAccount = asset('Refundable Deposits', '1350');
+  } else if (/\b(?:prepaid|paid\s+in\s+advance|in\s+advance)\b/i.test(query)) {
+    debitAccount = /\brent\b/i.test(query) ? asset('Prepaid Rent', '1300') : asset('Prepaid Expenses', '1300');
+  } else if (/\b(?:accrued\s+(?:last|previous)\s+(?:month|period|year)|previously\s+accrued|settling\s+an?\s+accrued)\b/i.test(query)) {
+    debitAccount = liability('Accrued Expenses', '2100');
+  } else {
+    const kind = /\boffice supplies\b|\bstationery\b/i.test(query) ? 'Office Supplies Expense'
+      : /\b(?:rent|rental payment)\b/i.test(query) ? 'Rent Expense'
+      : /\b(?:utilities|utility|electricity|water bill)\b/i.test(query) ? 'Utilities Expense'
+      : 'Operating Expense';
+    debitAccount = expense(kind);
+  }
+
+  const isDeposit = /\b(?:refundable|security|rental)\s+deposit\b/i.test(query);
+  const isAccrualSettlement = /\b(?:accrued\s+(?:last|previous)\s+(?:month|period|year)|previously\s+accrued|settling\s+an?\s+accrued)\b/i.test(query);
+
+  const onCredit = /\b(?:on\s+(?:(?:\d+\s*[-–]?\s*days?\s+)?credit|account)|\d+\s*[-–]?\s*days?\s+(?:credit|payment\s+terms?)|credit\s+terms?)\b/i.test(query) &&
+    !/\b(?:paid|by\s+bank|in\s+cash|with\s+cash)\b/i.test(query);
+
+  if (onCredit && !isDeposit && !isAccrualSettlement) {
+    return { debit: debitAccount, credit: { name: 'Trade Payables', code: '2000', category: 'LIABILITY' } };
+  }
+
   const cashPaid = /\b(?:in cash|with cash|by cash|cash payment|cash paid)\b/i.test(query);
   const bankPaid = /\b(?:by bank|via bank|from (?:the |our )?bank|bank transfer|bank payment|paid (?:online|electronically))\b/i.test(query);
-  if (cashPaid === bankPaid) return { debit: expense(kind), missing: [
-    need('paymentMethod', 'Payment method', 'Was the expense paid in cash or from a bank account?')
-  ] };
-  return { debit: expense(kind), credit: cashPaid ? cash() : bank() };
+
+  if (cashPaid === bankPaid) {
+    return {
+      debit: debitAccount,
+      missing: [need('paymentMethod', 'Payment method', 'Was the payment made in cash or from a bank account?')]
+    };
+  }
+
+  return { debit: debitAccount, credit: cashPaid ? cash() : bank() };
 }
 
 // Owner drawings are an equity transaction for sole proprietors, but "owner"
@@ -128,9 +378,174 @@ const templates: Template[] = [
     rationale: 'Internal transfer between two asset accounts; no revenue or expense and no GST arises merely from moving cash.'
   },
   {
+    id: 'UNEARNED_REVENUE_RECOGNITION',
+    title: 'Recognition of earned unearned revenue',
+    patterns: [
+      /\b(?:unearned\s+revenue|deferred\s+revenue|customer\s+advance|advance\s+(?:payment\s+)?from\s+(?:a\s+|the\s+)?customer)\b/i,
+      /\b(?:earn(?:ed|s|ing)?|recogni[sz](?:e|ed|es|ing)|releas(?:e|ed|es|ing)|satisf(?:y|ied|ies|ying)|deliver(?:ed|s|ing)|perform(?:ed|s|ing)|complet(?:e|ed|es|ing)|render(?:ed|s|ing))\b/i
+    ],
+    accounts: () => ({ debit: liability('Unearned Revenue', '2200'), credit: revenue() }),
+    rationale: 'Derecognise the unearned revenue contract liability and recognize revenue in profit or loss as the performance obligation is satisfied under SFRS(I) 15.'
+  },
+  {
+    id: 'UNEARNED_REVENUE_RECEIPT',
+    title: 'Customer advance received (unearned revenue)',
+    patterns: [
+      /\b(?:received?|receives|receiving|receipt|collected|collect|paid|pays|pay|deposited)\b/i,
+      /\b(?:customer|client|unearned\s+revenue|deferred\s+revenue|contract\s+liability)\b/i,
+      /\b(?:in\s+advance|upfront|advance\s+(?:payment|receipt|deposit|fee|billing)|customer\s+(?:advance|deposit)|unearned\s+revenue|deferred\s+revenue|before\s+(?:delivery|delivering|performing|providing|completing)|to\s+be\s+(?:delivered|performed|provided|rendered)\b|not\s+yet\s+(?:delivered|performed|earned))\b/i
+    ],
+    accounts: q => ({
+      debit: /\b(?:in\s+cash|cash\s+in\s+hand|physical\s+cash|received\s+cash)\b/i.test(q) ? cash() : bank(),
+      credit: liability('Unearned Revenue', '2200')
+    }),
+    rationale: 'Consideration received from a customer before transferring promised goods or services is recognized as a contract liability (unearned revenue) under SFRS(I) 15, not immediate revenue.'
+  },
+  {
+    id: 'BAD_DEBT_WRITE_OFF',
+    title: 'Write-off of uncollectible trade receivable',
+    patterns: [
+      /\b(?:writ(?:e|ten|ing)\s+off|write-off)\b/i,
+      /\b(?:bad\s+debts?|doubtful\s+debts?|uncollectible|irrecoverable|bankrupt\s+customer|customer\s+(?:receivable|invoice|balance|debt)|trade\s+receivables?|accounts?\s+receivable)\b/i
+    ],
+    accounts: q => {
+      const againstAllowance = /\b(?:against|using|from)\s+(?:the\s+|an?\s+|existing\s+)?(?:allowance|provision|loss\s+allowance)\b/i.test(q);
+      const directWriteOff = /\b(?:direct(?:ly)?(?:\s+to\s+(?:bad\s+debt\s+)?expense|\s+write[- ]?off)?|to\s+bad\s+debt\s+expense|no\s+(?:prior\s+|existing\s+)?allowance)\b/i.test(q);
+      if (againstAllowance && !directWriteOff) {
+        return { debit: asset('Allowance for Doubtful Debts', '1105'), credit: receivable() };
+      }
+      if (directWriteOff && !againstAllowance) {
+        return { debit: expense('Bad Debt Expense', '5510'), credit: receivable() };
+      }
+      return {
+        missing: [need('writeOffMethod', 'Write-off method', 'Is the uncollectible receivable being written off against an existing allowance for doubtful debts, or directly to bad debt expense?')]
+      };
+    },
+    rationale: 'Derecognise the uncollectible trade receivable against the existing allowance for doubtful debts (or directly to bad debt expense when no allowance exists).'
+  },
+  {
+    id: 'BAD_DEBT_ALLOWANCE',
+    title: 'Expected credit loss / allowance for doubtful debts',
+    patterns: [
+      /\b(?:allowance\s+for\s+(?:doubtful|bad)\s+(?:debts?|accounts?|receivables?)|provision\s+for\s+(?:doubtful|bad)\s+(?:debts?|accounts?|receivables?)|expected\s+credit\s+loss(?:es)?|loss\s+allowance|impairment\s+loss\s+on\s+(?:trade\s+)?receivables?)\b/i,
+      /\b(?:record|recogni[sz](?:e|ed|ing)|create|establish|book|post|increase|adjust|estimate[ds]?|journal|double\s+entry|debit|credit)\b/i
+    ],
+    accounts: () => ({ debit: expense('Impairment Loss on Trade Receivables', '5500'), credit: asset('Allowance for Doubtful Debts', '1105') }),
+    rationale: 'Recognise expected credit loss (impairment loss) in profit or loss and credit the contra-asset allowance for doubtful debts against trade receivables under SFRS(I) 9.'
+  },
+  {
+    id: 'SALES_RETURN',
+    title: 'Sales return / customer credit note',
+    patterns: [
+      /\b(?:sales?\s+returns?|return(?:ed|s)?\s+(?:of\s+)?(?:(?:defective|damaged|faulty|unwanted)\s+)?(?:goods|products|merchandise|inventory|items)?(?:\s+of\s+(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]*)?\s*(?:by|from)\s+(?:a\s+|the\s+|our\s+)?(?:customer|client)|(?:customer|client)\s+returned\s+(?:(?:defective|damaged|faulty|unwanted)\s+)?(?:goods|products|merchandise|inventory|items)|(?:issued?|grant(?:ed)?)\s+(?:a\s+)?credit\s+note\s+to\s+(?:a\s+|the\s+|our\s+)?(?:customer|client))\b/i
+    ],
+    accounts: q => ({
+      debit: { name: 'Sales Returns and Allowances', code: '4050', category: 'REVENUE' as AccountCategory },
+      credit: /\b(?:cash\s+refund|refund(?:ed)?\s+in\s+cash|paid\s+in\s+cash)\b/i.test(q)
+        ? cash()
+        : /\b(?:bank\s+transfer|refund(?:ed)?\s+(?:by|via|from)\s+(?:the\s+|our\s+)?bank)\b/i.test(q)
+          ? bank()
+          : receivable()
+    }),
+    rationale: 'Record the sales return or customer credit note as a contra-revenue reduction and reduce Trade Receivables (or record cash/bank refund).'
+  },
+  {
+    id: 'PURCHASE_RETURN',
+    title: 'Purchase return to supplier',
+    patterns: [
+      /\b(?:purchase\s+returns?|return(?:ed|s)?\s+(?:(?:defective|damaged|faulty|unwanted)\s+)?(?:goods|products|merchandise|inventory|items|office\s+supplies|supplies|stationery)(?:\s+of\s+(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]*)?\s+(?:to|back\s+to)\s+(?:a\s+|the\s+|our\s+)?(?:supplier|vendor)|received?\s+(?:a\s+)?credit\s+note\s+from\s+(?:a\s+|the\s+|our\s+)?(?:supplier|vendor))\b/i
+    ],
+    accounts: q => ({
+      debit: liability('Trade Payables', '2000'),
+      credit: /\b(?:office\s+supplies|stationery)\b/i.test(q)
+        ? expense('Office Supplies Expense', '5300')
+        : asset('Inventory', '1200')
+    }),
+    rationale: 'Returning goods or supplies to a supplier on credit reduces Trade Payables and derecognises the returned Inventory or expense.'
+  },
+  {
+    id: 'SUPPLIER_PAYMENT',
+    title: 'Settlement of supplier payable',
+    patterns: [
+      /\b(?:pay|paid|pays|paying|settle|settled|settles|settling|settlement|remit|remitted)\b/i,
+      /\b(?:supplier|vendor|creditor|trade\s+payables?|accounts?\s+payable)\b/i,
+      /\b(?:invoice|payable|payables|balance|owed|owing|account|bill)\b/i
+    ],
+    accounts: q => {
+      if (/\b(?:discount|rebate|less\s+\d+%)\b/i.test(q)) {
+        const discountSplit = extractSupplierPaymentDiscountAmounts(q);
+        if (!discountSplit) {
+          return {
+            missing: [need('discountBreakdown', 'Discount and gross payable amounts', 'What is the gross payable amount being settled and the discount received?')]
+          };
+        }
+      }
+      return {
+        debit: liability('Trade Payables', '2000'),
+        credit: /\b(?:in\s+cash|with\s+cash|by\s+cash|physical\s+cash|cash\s+payment)\b/i.test(q) ? cash() : bank()
+      };
+    },
+    rationale: 'Settlement of an existing supplier payable reduces Trade Payables and Cash or Cash at Bank.'
+  },
+  {
+    id: 'PROVISION_RECOGNITION',
+    title: 'Provision recognition (SFRS(I) 1-37)',
+    patterns: [
+      /\b(?:warranty\s+provision|provision\s+for\s+(?:warrant(?:y|ies)|legal\s+(?:claims?|disputes?|proceedings?|litigation|settlements?)|restructuring|reinstatement|dilapidations?|decommissioning)|recogni[sz](?:e|ed|ing)\s+(?:a\s+)?provision\s+for)\b/i,
+      /\b(?:record|recogni[sz](?:e|ed|ing)|book|post|create|make|prepare|journal|double\s+entry|debit|credit|SGD|S\$|\$)\b/i
+    ],
+    accounts: q => {
+      if (/\b(?:not\s+probable|possible\s+obligation|contingent\s+liability|remote)\b/i.test(q)) {
+        return {
+          missing: [need('probableOutflow', 'Probable outflow requirement (SFRS(I) 1-37)', 'Under SFRS(I) 1-37, a provision is recognised only when a present obligation makes an outflow of resources probable. Is an outflow of economic benefits probable, or is this a contingent liability for disclosure only?')]
+        };
+      }
+      if (/\bwarrant(?:y|ies)\b/i.test(q)) {
+        return { debit: expense('Warranty Expense', '5600'), credit: liability('Provision for Warranties', '2300') };
+      }
+      if (/\b(?:legal|litigation|lawsuit|claim|dispute)\b/i.test(q)) {
+        return { debit: expense('Legal Claims Expense', '5610'), credit: liability('Provision for Legal Claims', '2310') };
+      }
+      if (/\brestructuring\b/i.test(q)) {
+        return { debit: expense('Restructuring Expense', '5620'), credit: liability('Provision for Restructuring', '2320') };
+      }
+      return { debit: expense('Provision Expense', '5600'), credit: liability('Provisions', '2300') };
+    },
+    rationale: 'Under SFRS(I) 1-37 §14, recognise a provision when the entity has a present obligation from a past event, a probable outflow of economic benefits, and a reliable estimate of the obligation.'
+  },
+  {
+    id: 'ACCRUED_EXPENSE_RECOGNITION',
+    title: 'Accrued expense recognition',
+    patterns: [
+      /\b(?:accrue[ds]?|accrual|incurred\s+but\s+(?:not\s+yet\s+(?:paid|billed)|unpaid|unbilled)|unpaid\s+at\s+(?:month|quarter|year|period)[- ]end)\b/i,
+      /\b(?:rent|office\s+supplies|stationery|utilities|utility|electricity|water\s+bill|audit\s+fees?|professional\s+fees?|interest|operating\s+expenses?|expenses?)\b/i
+    ],
+    accounts: q => {
+      const kind = /\boffice supplies\b|\bstationery\b/i.test(q) ? 'Office Supplies Expense'
+        : /\b(?:rent|rental)\b/i.test(q) ? 'Rent Expense'
+        : /\b(?:utilities|utility|electricity|water bill)\b/i.test(q) ? 'Utilities Expense'
+        : /\baudit fees?\b/i.test(q) ? 'Audit Fees Expense'
+        : /\bprofessional fees?\b/i.test(q) ? 'Professional Fees Expense'
+        : /\binterest\b/i.test(q) ? 'Interest Expense'
+        : 'Operating Expense';
+      return { debit: expense(kind), credit: liability('Accrued Expenses', '2100') };
+    },
+    rationale: 'Under the accrual basis of accounting (SFRS(I) 1-1), expenses are recognized in profit or loss when incurred together with an accrued expense liability before cash settlement.'
+  },
+  {
     id: 'CUSTOMER_RECEIPT', title: 'Receipt of outstanding customer invoice',
-    patterns: [/\b(?:receipt|received|receives|receiving|receive|collect|collected|settling|settlement|paid)\b/i, /\b(?:customer|client)\b/i, /\b(?:invoice|receivable|outstanding)\b/i],
-    accounts: q => ({ debit: /\b(?:in cash|cash in hand)\b/i.test(q) ? cash() : bank(), credit: receivable() }),
+    patterns: [/\b(?:receipt|received|receives|receiving|receive|collect|collected|settle|settled|settles|settling|settlement|settlements|paid)\b/i, /\b(?:customer|client)\b/i, /\b(?:invoice|receivable|outstanding)\b/i],
+    accounts: q => {
+      if (/\b(?:discount|rebate|less\s+\d+%)\b/i.test(q)) {
+        const discountSplit = extractCustomerReceiptDiscountAmounts(q);
+        if (!discountSplit) {
+          return {
+            missing: [need('discountBreakdown', 'Discount and gross invoice amounts', 'What is the gross receivable amount being settled and the discount allowed?')]
+          };
+        }
+      }
+      return { debit: /\b(?:in cash|cash in hand)\b/i.test(q) ? cash() : bank(), credit: receivable() };
+    },
     rationale: 'Settlement of an existing receivable is not a second sale or second revenue recognition.'
   },
   {
@@ -153,9 +568,22 @@ const templates: Template[] = [
   },
   {
     id: 'LOAN_REPAYMENT', title: 'Bank loan principal repayment',
-    patterns: [/\b(?:repay|repaid|repayment|paid)\b/i, /\b(?:bank loan|loan principal|principal of (?:the |a )?loan)\b/i, /\bprincipal\b/i],
-    accounts: () => ({ debit: loan(), credit: bank() }),
-    rationale: 'Principal repayment decreases the loan liability; interest is excluded from this entry.'
+    patterns: [
+      /\b(?:repay|repaid|repayment|paid)\b/i,
+      /\b(?:bank loan|loan principal|principal of (?:the |a )?loan)\b/i
+    ],
+    accounts: query => {
+      if (/\binterest\b/i.test(query)) {
+        const split = extractLoanRepaymentAmounts(query);
+        if (!split) {
+          return {
+            missing: [need('interestSplit', 'Principal and interest breakdown', 'How much of the repayment is loan principal and how much is interest expense?')]
+          };
+        }
+      }
+      return { debit: loan(), credit: bank() };
+    },
+    rationale: 'Principal repayment decreases the loan liability; interest is recognized as interest expense.'
   },
   {
     id: 'LOAN_DRAWDOWN', title: 'Bank loan drawdown',
@@ -165,9 +593,12 @@ const templates: Template[] = [
   },
   {
     id: 'EXPENSE_PAYMENT', title: 'Operating expense payment',
-    patterns: [/\b(?:pay|paid|purchase|purchased|bought|payment|record)\b/i, /\b(?:rent|office supplies|stationery|utilities|utility|electricity|water bill)\b/i],
+    patterns: [
+      /\b(?:pay|paid|prepaid|purchase|purchased|bought|payment|record)\b/i,
+      /\b(?:rent|office supplies|stationery|utilities|utility|electricity|water bill)\b|\b(?:refundable|security|rental)\s+deposit\b|\b(?:prepaid\s+(?:rent|insurance|expenses?)|(?:rent|insurance|expenses?)\s+in\s+advance)\b/i
+    ],
     accounts: expenseAccounts,
-    rationale: 'Recognise the stated operating expense and the immediate reduction in cash or bank.'
+    rationale: 'Recognise the transaction and the corresponding payment or payable liability.'
   },
   {
     id: 'SOLE_PROPRIETOR_CAPITAL', title: 'Sole proprietor capital introduced',
@@ -191,7 +622,9 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   // Never override the specialized GST, salary, lease, investment or FX routes.
   if (/\b(?:GST|CPF|payroll|salar(?:y|ies)|share(?:s|holder)?|FVTPL|FVOCI|forex|foreign exchange|FX|lease|tenancy)\b/i.test(query) ||
       /\brental agreement\b/i.test(query) ||
-      /\b(?:USD|EUR|GBP|AUD|MYR|JPY|CNY)\b/i.test(query)) return undefined;
+      /\b(?:USD|EUR|GBP|AUD|MYR|JPY|CNY)\b/i.test(query) ||
+      /\btransaction\s*[12]\b/i.test(query) ||
+      /\b(?:bond|non[- ]?poci|poci|significant\s+increase\s+in\s+credit\s+risk|sppi|12-month\s+or\s+lifetime)\b/i.test(query)) return undefined;
 
   // Customer invoice settlements take priority over a generic "bank transfer".
   // A third-party payment is not a transfer between the entity's own accounts.
@@ -200,83 +633,587 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   const template = personalOwnerWithdrawal(query) ? ownerDrawingsTemplate :
     templates.find(item => (!externalParty || item.id !== 'BANK_TRANSFER') &&
       (item.id !== 'CUSTOMER_RECEIPT' || customerReceiptAllowed) &&
+      (item.id !== 'BANK_TRANSFER' || isBankTransfer(query)) &&
+      (item.id !== 'UNEARNED_REVENUE_RECOGNITION' || isUnearnedRecognition(query)) &&
+      (item.id !== 'UNEARNED_REVENUE_RECEIPT' || (customerReceiptAllowed && !isUnearnedRecognition(query))) &&
+      (item.id !== 'BAD_DEBT_ALLOWANCE' || !/\b(?:writ(?:e|ten|ing)\s+off|write-off)\b/i.test(query)) &&
+      (item.id !== 'SUPPLIER_PAYMENT' || (!/\b(?:bought|purchased|purchase\s+of|acquired|incurred|return(?:ed|s)?|credit\s+note)\b/i.test(query))) &&
+      (item.id !== 'PROVISION_RECOGNITION' || (!/\b(?:doubtful|bad\s+debt|receivables?|ecl|income\s+tax|corporate\s+tax|deferred\s+tax|mom|employment\s+act|overtime)\b/i.test(query) && !(/^should\s+we\b/i.test(query.trim()) && getAllAmounts(query).length === 0 && !/\b(?:journal|double\s+entry|debit|credit)\b/i.test(query)))) &&
+      (item.id !== 'ACCRUED_EXPENSE_RECOGNITION' || isExpenseAccrualRecognition(query)) &&
       item.patterns.every(pattern => pattern.test(query)));
   if (!template) return undefined;
+
+  const allAmounts = getAllAmounts(query);
   const pair = template.accounts(query);
+
+  // Check for specialized multi-amount patterns:
+  // 1. Loan repayment with principal and interest
+  const isLoanWithInterest = template.id === 'LOAN_REPAYMENT' && /\binterest\b/i.test(query);
+  const loanSplit = isLoanWithInterest ? extractLoanRepaymentAmounts(query) : undefined;
+
+  // 2. Sale with explicit inventory carrying cost
+  const isSale = template.id === 'CREDIT_SALE' || template.id === 'CASH_SALE';
+  const saleAndCost = isSale ? extractSaleAndCostAmounts(query) : undefined;
+
+  // 3. Customer receipt with explicit settlement discount
+  const isCustomerDiscount = template.id === 'CUSTOMER_RECEIPT' && /\b(?:discount|rebate|less\s+\d+%)\b/i.test(query);
+  const discountSplit = isCustomerDiscount ? extractCustomerReceiptDiscountAmounts(query) : undefined;
+
+  // 4. Sales return with inventory cost restoration
+  const isSalesReturn = template.id === 'SALES_RETURN';
+  const salesReturnAndCost = isSalesReturn ? extractSaleAndCostAmounts(query) : undefined;
+
+  // 5. Supplier payment with settlement discount
+  const isSupplierDiscount = template.id === 'SUPPLIER_PAYMENT' && /\b(?:discount|rebate|less\s+\d+%)\b/i.test(query);
+  const supplierDiscountSplit = isSupplierDiscount ? extractSupplierPaymentDiscountAmounts(query) : undefined;
+
+  const missingFields: MissingFieldInfo[] = [];
+
+  if (allAmounts.length === 0) {
+    missingFields.push(need('amount', 'Transaction amount', 'What is the transaction amount in SGD?'));
+  } else if (
+    allAmounts.length > 1 &&
+    !loanSplit &&
+    !saleAndCost &&
+    !discountSplit &&
+    !isCustomerDiscount &&
+    !salesReturnAndCost &&
+    !supplierDiscountSplit &&
+    !isSupplierDiscount
+  ) {
+    missingFields.push(need('amount', 'Transaction amount', 'Multiple SGD amounts were stated; please clarify which amount applies to each part of the transaction.'));
+  }
+
+  if (pair.missing) {
+    missingFields.push(...pair.missing);
+  }
+
+  const isComplete = missingFields.length === 0 && (
+    Boolean(loanSplit) ||
+    Boolean(saleAndCost && pair.debit && pair.credit) ||
+    Boolean(discountSplit && pair.debit && pair.credit) ||
+    Boolean(salesReturnAndCost && pair.debit && pair.credit) ||
+    Boolean(supplierDiscountSplit && pair.debit && pair.credit) ||
+    (allAmounts.length === 1 && Boolean(pair.debit && pair.credit))
+  );
+
+  const eventDate = formatSingaporeDate(new Date());
+
+  // Branch A: Loan repayment with explicit principal and interest breakdown
+  if (loanSplit) {
+    const pAmount = Number(loanSplit.principalCents) / 100;
+    const iAmount = Number(loanSplit.interestCents) / 100;
+    const totalCents = loanSplit.principalCents + loanSplit.interestCents;
+    const totalAmount = Number(totalCents) / 100;
+    const rationale = 'Principal repayment decreases loan liability; interest is recognized as interest expense.';
+
+    const lines: JournalLine[] = isComplete ? [
+      {
+        id: 'basic-loan-principal',
+        accountCode: '2100',
+        accountName: 'Bank Loan',
+        category: 'LIABILITY',
+        debit: pAmount,
+        credit: 0,
+        lineExplanation: 'Principal repayment of bank loan.'
+      },
+      {
+        id: 'basic-loan-interest',
+        accountCode: '5400',
+        accountName: 'Interest Expense',
+        category: 'EXPENSE',
+        debit: iAmount,
+        credit: 0,
+        lineExplanation: 'Interest expense incurred on loan.'
+      },
+      {
+        id: 'basic-loan-bank',
+        accountCode: '1010',
+        accountName: 'Cash at Bank',
+        category: 'ASSET',
+        debit: 0,
+        credit: totalAmount,
+        lineExplanation: 'Settlement of principal and interest from bank account.'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: 'Bank loan principal and interest repayment',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: totalAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups: isComplete ? [{
+        id: 'basic-loan_repayment',
+        eventDate,
+        title: 'Bank loan principal and interest repayment',
+        summary: 'Bank loan principal and interest repayment — SGD ' + totalAmount.toFixed(2),
+        lines,
+        totalDebit: totalAmount,
+        totalCredit: totalAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      }] : [],
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch B: Credit sale or cash sale with explicit inventory carrying cost
+  if (saleAndCost) {
+    const saleAmount = Number(saleAndCost.saleCents) / 100;
+    const costAmount = Number(saleAndCost.costCents) / 100;
+    const rationale = template.rationale + ' No GST has been recorded because GST registration and tax treatment were not established; assess GST separately if applicable.';
+
+    const directGroups: JournalEntryGroup[] = isComplete ? [
+      {
+        id: 'basic-' + template.id.toLowerCase(),
+        eventDate,
+        title: template.title,
+        summary: template.title + ' — SGD ' + saleAmount.toFixed(2),
+        lines: [
+          {
+            id: 'basic-sale-debit',
+            accountCode: pair.debit!.code,
+            accountName: pair.debit!.name,
+            category: pair.debit!.category,
+            debit: saleAmount,
+            credit: 0,
+            lineExplanation: rationale
+          },
+          {
+            id: 'basic-sale-credit',
+            accountCode: pair.credit!.code,
+            accountName: pair.credit!.name,
+            category: pair.credit!.category,
+            debit: 0,
+            credit: saleAmount,
+            lineExplanation: rationale
+          }
+        ],
+        totalDebit: saleAmount,
+        totalCredit: saleAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      },
+      {
+        id: 'basic-' + template.id.toLowerCase() + '-cost',
+        eventDate,
+        title: 'Cost of goods sold',
+        summary: 'Cost of goods sold — SGD ' + costAmount.toFixed(2),
+        lines: [
+          {
+            id: 'basic-cost-debit',
+            accountCode: '5000',
+            accountName: 'Cost of Goods Sold',
+            category: 'EXPENSE',
+            debit: costAmount,
+            credit: 0,
+            lineExplanation: 'Derecognition of inventory carrying cost sold to customer.'
+          },
+          {
+            id: 'basic-cost-credit',
+            accountCode: '1200',
+            accountName: 'Inventory',
+            category: 'ASSET',
+            debit: 0,
+            credit: costAmount,
+            lineExplanation: 'Reduction in inventory asset balance.'
+          }
+        ],
+        totalDebit: costAmount,
+        totalCredit: costAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: ['Derecognise inventory at carrying cost and recognize cost of goods sold.'],
+        authorityStatus: 'DETERMINISTIC'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: template.title,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: saleAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups,
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch C: Customer receipt with settlement discount
+  if (discountSplit) {
+    const netAmount = Number(discountSplit.netCents) / 100;
+    const discountAmount = Number(discountSplit.discountCents) / 100;
+    const grossAmount = Number(discountSplit.grossCents) / 100;
+    const rationale = template.rationale + ' Settlement discount allowed on early/agreed invoice settlement is recognized as an expense; derecognise the gross trade receivable settled.';
+
+    const lines: JournalLine[] = isComplete && pair.debit && pair.credit ? [
+      {
+        id: 'basic-receipt-cash',
+        accountCode: pair.debit.code,
+        accountName: pair.debit.name,
+        category: pair.debit.category,
+        debit: netAmount,
+        credit: 0,
+        lineExplanation: 'Net cash received from customer after settlement discount.'
+      },
+      {
+        id: 'basic-receipt-discount',
+        accountCode: '4100',
+        accountName: 'Discount Allowed',
+        category: 'EXPENSE',
+        debit: discountAmount,
+        credit: 0,
+        lineExplanation: 'Settlement discount allowed on early/agreed invoice settlement.'
+      },
+      {
+        id: 'basic-receipt-receivable',
+        accountCode: '1100',
+        accountName: 'Trade Receivables',
+        category: 'ASSET',
+        debit: 0,
+        credit: grossAmount,
+        lineExplanation: 'Derecognition of gross customer trade receivable settled.'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: template.title,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: grossAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups: isComplete ? [{
+        id: 'basic-' + template.id.toLowerCase(),
+        eventDate,
+        title: template.title,
+        summary: template.title + ' — SGD ' + grossAmount.toFixed(2),
+        lines,
+        totalDebit: grossAmount,
+        totalCredit: grossAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      }] : [],
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch: Sales return with explicit inventory cost restoration
+  if (salesReturnAndCost) {
+    const saleAmount = Number(salesReturnAndCost.saleCents) / 100;
+    const costAmount = Number(salesReturnAndCost.costCents) / 100;
+    const rationale = template.rationale + ' Record sales return contra-revenue and reduce receivable/cash; restore returned inventory at cost and reverse cost of goods sold.';
+
+    const directGroups: JournalEntryGroup[] = isComplete && pair.debit && pair.credit ? [
+      {
+        id: 'basic-sales_return',
+        eventDate,
+        title: template.title,
+        summary: template.title + ' — SGD ' + saleAmount.toFixed(2),
+        lines: [
+          {
+            id: 'basic-return-revenue',
+            accountCode: pair.debit.code,
+            accountName: pair.debit.name,
+            category: pair.debit.category,
+            debit: saleAmount,
+            credit: 0,
+            lineExplanation: 'Sales return / contra-revenue reduction.'
+          },
+          {
+            id: 'basic-return-credit',
+            accountCode: pair.credit.code,
+            accountName: pair.credit.name,
+            category: pair.credit.category,
+            debit: 0,
+            credit: saleAmount,
+            lineExplanation: 'Reduction in trade receivables (or cash refund).'
+          }
+        ],
+        totalDebit: saleAmount,
+        totalCredit: saleAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      },
+      {
+        id: 'basic-sales_return-cost',
+        eventDate,
+        title: 'Inventory return restoration',
+        summary: 'Inventory return restoration — SGD ' + costAmount.toFixed(2),
+        lines: [
+          {
+            id: 'basic-return-inventory',
+            accountCode: '1200',
+            accountName: 'Inventory',
+            category: 'ASSET',
+            debit: costAmount,
+            credit: 0,
+            lineExplanation: 'Restoration of returned inventory asset at carrying cost.'
+          },
+          {
+            id: 'basic-return-cogs',
+            accountCode: '5000',
+            accountName: 'Cost of Goods Sold',
+            category: 'EXPENSE',
+            debit: 0,
+            credit: costAmount,
+            lineExplanation: 'Reversal of cost of goods sold on returned goods.'
+          }
+        ],
+        totalDebit: costAmount,
+        totalCredit: costAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: ['Restore returned inventory to asset at cost and reverse cost of goods sold.'],
+        authorityStatus: 'DETERMINISTIC'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: template.title,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: saleAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups,
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch: Supplier payment with settlement discount
+  if (supplierDiscountSplit) {
+    const netAmount = Number(supplierDiscountSplit.netCents) / 100;
+    const discountAmount = Number(supplierDiscountSplit.discountCents) / 100;
+    const grossAmount = Number(supplierDiscountSplit.grossCents) / 100;
+    const rationale = template.rationale + ' Settlement discount received on prompt payment reduces the payable liability and is recognized as discount received revenue / income.';
+
+    const lines: JournalLine[] = isComplete && pair.debit && pair.credit ? [
+      {
+        id: 'basic-supplier-payable',
+        accountCode: pair.debit.code,
+        accountName: pair.debit.name,
+        category: pair.debit.category,
+        debit: grossAmount,
+        credit: 0,
+        lineExplanation: 'Derecognition of gross supplier trade payable settled.'
+      },
+      {
+        id: 'basic-supplier-cash',
+        accountCode: pair.credit.code,
+        accountName: pair.credit.name,
+        category: pair.credit.category,
+        debit: 0,
+        credit: netAmount,
+        lineExplanation: 'Net payment to supplier from bank/cash account.'
+      },
+      {
+        id: 'basic-supplier-discount',
+        accountCode: '4150',
+        accountName: 'Discount Received',
+        category: 'REVENUE',
+        debit: 0,
+        credit: discountAmount,
+        lineExplanation: 'Settlement discount received on prompt payment of invoice.'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: template.title,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: grossAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups: isComplete ? [{
+        id: 'basic-' + template.id.toLowerCase(),
+        eventDate,
+        title: template.title,
+        summary: template.title + ' — SGD ' + grossAmount.toFixed(2),
+        lines,
+        totalDebit: grossAmount,
+        totalCredit: grossAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      }] : [],
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch D: Standard single-amount transaction
   const cents = amountCents(query);
-  const missingFields: MissingFieldInfo[] = [
-    ...(!cents ? [need('amount', 'Transaction amount', 'What is the transaction amount in SGD?')] : []),
-    ...(pair.missing || [])
-  ];
-  const isComplete = missingFields.length === 0 && Boolean(pair.debit && pair.credit);
   const amount = cents ? Number(cents) / 100 : undefined;
   const rationale = template.rationale + (/\b(?:WITHDRAWAL|TRANSFER)\b/.test(template.id)
     ? '' : ' No GST has been recorded because GST registration and tax treatment were not established; assess GST separately if applicable.');
+
   const lines: JournalLine[] = !isComplete || amount === undefined ? [] : [
     {
-      id: 'basic-debit', accountCode: pair.debit!.code, accountName: pair.debit!.name,
-      category: pair.debit!.category, debit: amount, credit: 0,
+      id: 'basic-debit',
+      accountCode: pair.debit!.code,
+      accountName: pair.debit!.name,
+      category: pair.debit!.category,
+      debit: amount,
+      credit: 0,
       lineExplanation: rationale
     },
     {
-      id: 'basic-credit', accountCode: pair.credit!.code, accountName: pair.credit!.name,
-      category: pair.credit!.category, debit: 0, credit: amount,
+      id: 'basic-credit',
+      accountCode: pair.credit!.code,
+      accountName: pair.credit!.name,
+      category: pair.credit!.category,
+      debit: 0,
+      credit: amount,
       lineExplanation: rationale
     }
   ];
+
   return {
-    scenarioType: 'BASIC_BOOKKEEPING', authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
-    queryIntent: 'TRANSACTION', primaryDomain: 'ACCOUNTING_SFRS',
-    rawQuery: query, transactionTitle: template.title,
-    functionalCurrency: 'SGD', transactionCurrency: 'SGD', amount,
+    scenarioType: 'BASIC_BOOKKEEPING',
+    authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+    queryIntent: 'TRANSACTION',
+    primaryDomain: 'ACCOUNTING_SFRS',
+    rawQuery: query,
+    transactionTitle: template.title,
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD',
+    amount,
     accountingTreatmentSummary: rationale,
     directGroups: isComplete && amount !== undefined ? [{
       id: 'basic-' + template.id.toLowerCase(),
-      eventDate: formatSingaporeDate(new Date()),
-      title: template.title, summary: template.title + ' — SGD ' + amount.toFixed(2),
-      lines, totalDebit: amount, totalCredit: amount, isBalanced: true,
-      citations: [], rationalePoints: [rationale], authorityStatus: 'DETERMINISTIC'
+      eventDate,
+      title: template.title,
+      summary: template.title + ' — SGD ' + amount.toFixed(2),
+      lines,
+      totalDebit: amount,
+      totalCredit: amount,
+      isBalanced: true,
+      citations: [],
+      rationalePoints: [rationale],
+      authorityStatus: 'DETERMINISTIC'
     }] : [],
-    isComplete, missingFields
+    isComplete,
+    missingFields
   };
 }
 
-/** Resolve only short, explicit answers to a pending owner-drawings field. */
+/** Resolve only short, explicit answers to a pending owner-drawings or basic bookkeeping field. */
 export function resolveBasicOwnerDrawingsFollowUp(
   query: string,
   currentScenario?: AccountingScenarioState | null
 ): AccountingScenarioState | undefined {
-  if (currentScenario?.scenarioType !== 'BASIC_BOOKKEEPING' ||
-      !personalOwnerWithdrawal(currentScenario.rawQuery) ||
-      !currentScenario.missingFields?.some(field => field.fieldKey === 'entityType' || field.fieldKey === 'paymentAccount')) {
+  if (currentScenario?.scenarioType !== 'BASIC_BOOKKEEPING' || !currentScenario.missingFields?.length) {
     return undefined;
   }
 
   const answer = query.trim().replace(/[.!?]+$/, '').trim();
-  const missingFields = new Set(currentScenario.missingFields.map(field => field.fieldKey));
+  const missingKeys = new Set(currentScenario.missingFields.map(field => field.fieldKey));
   const original = currentScenario.rawQuery;
-  const originalSoleProprietor = /\bsole propriet(?:or|orship)\b/i.test(original);
-  const originalCompany = /\b(?:company|pte\.?\s*ltd\.?|limited)\b/i.test(original);
-  let confirmedFact: string | undefined;
 
-  const entityAnswer = answer.match(/^(?:(?:it|this|the business)\s+is\s+)?(?:a\s+)?(sole proprietorship|sole proprietor|company)$/i)?.[1];
-  if (missingFields.has('entityType') && entityAnswer) {
-    const isSoleProprietor = /sole proprietor/i.test(entityAnswer);
-    if ((isSoleProprietor && originalCompany) || (!isSoleProprietor && originalSoleProprietor)) {
-      return { ...currentScenario, directGroups: [], isComplete: false };
+  // 1. Existing owner drawings follow-up logic
+  if (personalOwnerWithdrawal(original) && (missingKeys.has('entityType') || missingKeys.has('paymentAccount'))) {
+    const originalSoleProprietor = /\bsole propriet(?:or|orship)\b/i.test(original);
+    const originalCompany = /\b(?:company|pte\.?\s*ltd\.?|limited)\b/i.test(original);
+    let confirmedFact: string | undefined;
+
+    const entityAnswer = answer.match(/^(?:(?:it|this|the business)\s+is\s+)?(?:a\s+)?(sole proprietorship|sole proprietor|company)$/i)?.[1];
+    if (missingKeys.has('entityType') && entityAnswer) {
+      const isSoleProprietor = /sole proprietor/i.test(entityAnswer);
+      if ((isSoleProprietor && originalCompany) || (!isSoleProprietor && originalSoleProprietor)) {
+        return { ...currentScenario, directGroups: [], isComplete: false };
+      }
+      confirmedFact = isSoleProprietor ? 'sole proprietorship' : 'company';
+    } else if (missingKeys.has('paymentAccount')) {
+      const cashAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using|in)\s+)?(?:physical\s+)?(?:petty cash|cash on hand|cash)$/i.test(answer);
+      const bankAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using)\s+)?(?:(?:the|our)\s+)?(?:business\s+)?(?:bank(?:\s+account)?|current\s+account|savings\s+account)$/i.test(answer);
+      if (cashAnswer) confirmedFact = 'physical cash';
+      else if (bankAnswer) confirmedFact = 'business bank account';
     }
-    confirmedFact = isSoleProprietor ? 'sole proprietorship' : 'company';
-  } else if (missingFields.has('paymentAccount')) {
-    const cashAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using|in)\s+)?(?:physical\s+)?(?:petty cash|cash on hand|cash)$/i.test(answer);
-    const bankAnswer = /^(?:(?:it was|taken|withdrawn|paid)\s+)?(?:(?:from|by|via|using)\s+)?(?:(?:the|our)\s+)?(?:business\s+)?(?:bank(?:\s+account)?|current\s+account|savings\s+account)$/i.test(answer);
-    if (cashAnswer) confirmedFact = 'physical cash';
-    else if (bankAnswer) confirmedFact = 'business bank account';
+
+    if (!confirmedFact) return undefined;
+    return matchBasicTransaction(`${original} ${confirmedFact}`) ?? {
+      ...currentScenario,
+      directGroups: [],
+      isComplete: false
+    };
   }
 
-  if (!confirmedFact) return undefined;
-  return matchBasicTransaction(`${original} ${confirmedFact}`) ?? {
-    ...currentScenario,
-    directGroups: [],
-    isComplete: false
-  };
+  // 2. Generic BASIC_BOOKKEEPING follow-ups
+  const baseQuery = original.trim().replace(/[.!?]+$/, '');
+
+  // writeOffMethod follow-up
+  if (missingKeys.has('writeOffMethod')) {
+    const isAgainstAllowance = /^(?:(?:written\s+off\s+)?(?:against|using|from)\s+)?(?:the\s+|an?\s+|existing\s+)?(?:allowance(?:\s+for\s+doubtful\s+debts)?|provision(?:\s+for\s+doubtful\s+debts)?|loss\s+allowance)$/i.test(answer);
+    const isDirectWriteOff = /^(?:direct(?:ly)?(?:\s+to\s+(?:bad\s+debt\s+)?expense|\s+write[- ]?off)?|(?:to\s+)?bad\s+debt\s+expense|no\s+(?:prior\s+|existing\s+)?allowance)$/i.test(answer);
+    if (isAgainstAllowance) {
+      return matchBasicTransaction(`${baseQuery} against the allowance for doubtful debts`);
+    }
+    if (isDirectWriteOff) {
+      return matchBasicTransaction(`${baseQuery} directly to bad debt expense`);
+    }
+  }
+
+  // paymentMethod follow-up
+  if (missingKeys.has('paymentMethod')) {
+    const isCash = /^(?:(?:paid\s+)?in\s+cash|(?:with|by)\s+cash|cash)$/i.test(answer);
+    const isBank = /^(?:(?:paid\s+)?(?:by|via|through)\s+(?:a\s+)?bank\s+transfer|bank\s+transfer|from\s+(?:the\s+|our\s+)?bank(?:\s+account)?|bank\s+account|from\s+bank)$/i.test(answer);
+    const isCredit = /^(?:on\s+credit|on\s+account|credit)$/i.test(answer);
+
+    let normalizedPhrase: string | undefined;
+    if (isCash) normalizedPhrase = 'paid in cash';
+    else if (isBank) normalizedPhrase = 'by bank transfer';
+    else if (isCredit) normalizedPhrase = 'on credit';
+
+    if (normalizedPhrase) {
+      return matchBasicTransaction(`${baseQuery} ${normalizedPhrase}`);
+    }
+  }
+
+  // amount follow-up
+  if (missingKeys.has('amount')) {
+    const amountMatch = answer.match(/^(?:SGD\s*|S\$\s*|\$\s*)?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?:\s*SGD)?$/i);
+    if (amountMatch) {
+      const digits = amountMatch[1] + (amountMatch[2] ? '.' + amountMatch[2] : '');
+      return matchBasicTransaction(`${baseQuery} for SGD ${digits}`);
+    }
+  }
+
+  return undefined;
 }
