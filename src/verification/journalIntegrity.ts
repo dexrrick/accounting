@@ -41,6 +41,9 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   if (n === 'cost of goods sold' || n === 'cost of sales' || (n.includes('depreciation') && !n.includes('accumulated'))) {
     return 'EXPENSE';
   }
+  if (n === 'discount allowed' || n === 'expected credit loss' || n === 'expected credit losses' || n.startsWith('impairment loss')) {
+    return 'EXPENSE';
+  }
 
   // ASSET
   if (n.startsWith('prepaid ') || n === 'prepayments' || n === 'prepayment') {
@@ -53,7 +56,9 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     'rental deposit', 'rental deposits', 'cash', 'cash on hand', 'petty cash',
     'cash at bank', 'current account', 'savings account', 'checking account',
     'cheque account', 'operating account', 'business account', 'inventory',
-    'merchandise inventory', 'right-of-use asset', 'right-of-use assets'
+    'merchandise inventory', 'right-of-use asset', 'right-of-use assets',
+    'allowance for doubtful debts', 'allowance for doubtful accounts',
+    'loss allowance — trade receivables', 'loss allowance - trade receivables'
   ];
   if (assetNames.includes(n)) {
     return 'ASSET';
@@ -71,7 +76,10 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     n.startsWith('accrued ') ||
     n.startsWith('unearned ') ||
     n.startsWith('deferred revenue') ||
-    n === 'contract liability'
+    n === 'contract liability' ||
+    n === 'provisions' ||
+    n === 'warranty provision' ||
+    (n.startsWith('provision for ') && !n.includes('doubtful') && !n.includes('bad debt'))
   ) {
     return 'LIABILITY';
   }
@@ -92,6 +100,14 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     (n === 'revenue' || n === 'sales revenue' || n === 'service revenue') &&
     !n.startsWith('unearned ') &&
     !n.startsWith('deferred ')
+  ) {
+    return 'REVENUE';
+  }
+  if (
+    n === 'sales returns and allowances' ||
+    n === 'sales returns' ||
+    n === 'sales allowances' ||
+    n === 'discount received'
   ) {
     return 'REVENUE';
   }
