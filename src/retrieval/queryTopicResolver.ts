@@ -14,7 +14,11 @@ import {
   type TopicSemanticCriteria,
   CANONICAL_TOPIC_SEMANTIC_CRITERIA
 } from '../standards/semanticAccountingRules';
-import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
+import {
+  hasNegatedCalculationOutput,
+  removeNegatedJournalDirectives,
+  removeNegatedOutputDirectives
+} from '../utils/journalRequestIntent';
 
 export type { TopicSemanticCriteria };
 
@@ -175,7 +179,19 @@ export class QueryTopicResolver {
       return { isMultiTopic: false, topics: [], unresolvedTopics: [] };
     }
 
-    const qLower = query.toLowerCase();
+    const topicQuery = removeNegatedOutputDirectives(query);
+    const qLower = topicQuery.toLowerCase();
+    const hasNegatedCpfRateCalculation = hasNegatedCalculationOutput(query, /\b(?:contribution\s+)?rates?\b/i);
+    const asksOrdinaryWageDefinition = /\b(?:what\s+makes?|what\s+constitutes?|definition|defined|meaning|how\s+are)\b[\s\S]{0,60}\bordinary\s+wages?\b/i.test(topicQuery);
+    const hasAffirmativeCpfRateRequest = (
+      /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:contribution\s+)?(?:rates?|amounts?|percentage|percent|how\s+much)\b/i.test(topicQuery) ||
+      /\b(?:rates?|amounts?|percentage|percent|how\s+much)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i.test(topicQuery) ||
+      /\bcontribution\s+rates?\b/i.test(topicQuery) && /\b(?:cpf|central provident fund)\b/i.test(topicQuery)
+    );
+    const hasAffirmativeCpfCalculationRequest = (
+      /\b(?:calculate|compute|estimate|work\s+out|quantify)\b[\s\S]{0,100}\b(?:cpf|central provident fund)\b/i.test(topicQuery) ||
+      /\b(?:cpf|central provident fund)\b[\s\S]{0,100}\b(?:calculate|compute|estimate|work\s+out|quantify)\b/i.test(topicQuery)
+    );
 
     // Extract structured semantics if provided, ensuring strict neutrality for 'unknown'
     const sem = semanticContext;
@@ -231,10 +247,12 @@ export class QueryTopicResolver {
       // 3. Supporting Lexical Matching
       const hasLexicalMatch =
         !(topic.exclusionKeywords ?? []).some((phrase) => qLower.includes(phrase.toLowerCase())) &&
+        !(topic.id === 'cpf_contribution_rates' && hasNegatedCpfRateCalculation &&
+          asksOrdinaryWageDefinition && !hasAffirmativeCpfRateRequest && !hasAffirmativeCpfCalculationRequest) &&
         (topic.keywords.some((kw) => keywordMatches(qLower, kw)) ||
-          (topic.queryPatterns ?? []).some((pattern) => new RegExp(pattern, 'i').test(query)) ||
-          topic.id === 'iras-individual-cpf-cash-top-up-relief' && isCashTopUpReliefRequest(query) ||
-          topic.id === 'acra_annual-returns' && isBoundedAcraAnnualReturnMissingFactsQuestion(query));
+          (topic.queryPatterns ?? []).some((pattern) => new RegExp(pattern, 'i').test(topicQuery)) ||
+          topic.id === 'iras-individual-cpf-cash-top-up-relief' && isCashTopUpReliefRequest(topicQuery) ||
+          topic.id === 'acra_annual-returns' && isBoundedAcraAnnualReturnMissingFactsQuestion(topicQuery));
 
       // 4. Topic Resolution & Attribution
       if (hasSemanticMatch && hasLexicalMatch) {
@@ -282,9 +300,9 @@ export class QueryTopicResolver {
 
     // Request conjunctions are residual boundaries; a payment followed by
     // recording that payment as an expense is factual context for the ask.
-    const residualFragments = splitResidualFragments(qLower);
+    const residualFragments = splitResidualFragments(query.toLowerCase());
     const unresolvedTopics = residualFragments
-      .filter(fragment => !isNegatedJournalDirectiveOnly(fragment))
+      .filter(fragment => !isNegatedOutputDirectiveOnly(fragment))
       .filter((fragment) => fragment.length > 5 && !matchedTopics.some(topic =>
         !(topic.exclusionKeywords ?? []).some(keyword => fragment.includes(keyword.toLowerCase())) &&
         (topic.keywords.some(keyword => keywordMatches(fragment, keyword)) ||
@@ -308,8 +326,8 @@ export class QueryTopicResolver {
   }
 }
 
-function isNegatedJournalDirectiveOnly(fragment: string): boolean {
-  return /^[\s\p{P}]*$/u.test(removeNegatedJournalDirectives(fragment));
+function isNegatedOutputDirectiveOnly(fragment: string): boolean {
+  return /^[\s\p{P}]*$/u.test(removeNegatedOutputDirectives(fragment));
 }
 
 const PRIMARY_REQUEST_START = /(?:^|[.!?;])\s*(?:(?:also|please)\s+)?(?:what|which|how|can|could|should|would|does|do|is|are|must|explain|determine|assess|evaluate|calculate|prepare|identify|list|whether|tell\s+me)\b/i;

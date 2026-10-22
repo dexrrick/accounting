@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
+import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import {
   getRequestedQuestionConcepts,
   interpretSemanticQuestion,
@@ -10,6 +11,7 @@ import { IRAS_SOURCE_MAP_DEFINITIONS, getCoverageTopicsByIds } from '../../src/s
 import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
 import { matchesRequestedQuestionConcept } from '../../src/retrieval/evidenceQualityGate.ts';
 import { supportGeneralIrasRuleConcept } from '../../src/retrieval/irasRuleConceptSupport.ts';
+import { removeNegatedOutputDirectives } from '../../src/utils/journalRequestIntent.ts';
 
 const residencyQuery = 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.';
 const cpfTopUpQuery = 'Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.';
@@ -17,6 +19,24 @@ const compulsoryCpfQuery = 'Can an employee claim personal income tax relief for
 const mixedCpfReliefQuery = 'Can an employee claim personal income tax relief for compulsory CPF contributions and cash top-ups to the employee’s own Special Account? Explain both general IRAS rules.';
 const passengerCarQuery = 'A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.';
 const acraQuery = 'A Singapore-incorporated private company limited by shares is unlisted, has no overseas branch register, and has financial year end 31/12/2025. What is its ACRA annual return filing deadline? Give the deadline date and official basis. Do not create journal entries.';
+const authorityRuleOnlyQueries = [
+  {
+    authority: 'ACRA', topicId: 'acra_annual-returns',
+    query: 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.'
+  },
+  {
+    authority: 'CPF', topicId: 'cpf-ordinary-wages',
+    query: 'Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.'
+  },
+  {
+    authority: 'MOM', topicId: 'mom-part-iv-overtime',
+    query: 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.'
+  },
+  {
+    authority: 'MAS', topicId: 'mas-cms-licence',
+    query: 'Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.'
+  }
+];
 
 function semanticPayload({ domain, population, authority, subject, operation, topicIds = [] }) {
   return {
@@ -268,6 +288,125 @@ assert.ok(acraReconciliation.issuePlan.issues.some(issue => issue.domain === 'AC
   issue.mappedTopicIds.includes('acra_annual-returns')),
 'the dated ACRA query retains its matched filing topic without asserting unrelated residual coverage');
 
+for (const sample of authorityRuleOnlyQueries) {
+  const classification = classifyQuestion(sample.query);
+  const topicIds = defaultQueryTopicResolver.decomposeQuery(sample.query).topics.map(topic => topic.id);
+  assert.equal(classification.intent, 'STATUTORY_ADVISORY', `${sample.authority} output restrictions remain rule-only.`);
+  assert.equal(classification.calculationRequired, false, `${sample.authority} negative calculation output is inactive.`);
+  assert.equal(classification.journalEntryRequired, false, `${sample.authority} negative journal output is inactive.`);
+  assert.equal(classification.accountingAnalysisRequired, false);
+  assert.equal(classification.regulatoryAnalysisRequired, true);
+  assert.ok(classification.authorities.includes(sample.authority), `${sample.authority} remains the governing authority.`);
+  assert.ok(classification.topicIds.includes(sample.topicId), `${sample.authority} keeps its intended coverage topic.`);
+  assert.ok(topicIds.includes(sample.topicId), `${sample.authority} topic resolution keeps the intended topic.`);
+  if (sample.authority === 'CPF') {
+    assert.deepEqual(classification.authorities, ['CPF'], 'An excluded CPF rate calculation does not invent IRAS or MOM workstreams.');
+    assert.equal(topicIds.includes('cpf_contribution_rates'), false,
+      'An expressly excluded CPF rate calculation does not create a rate topic.');
+  }
+}
+
+const negativeDirectiveOnly = removeNegatedOutputDirectives(
+  'No GST applies. Do not calculate contribution rates or amounts and do not create journal entries.'
+);
+assert.match(negativeDirectiveOnly, /No GST applies\./,
+  'Intent normalization preserves accounting facts and negated accounting conditions.');
+assert.doesNotMatch(negativeDirectiveOnly, /calculate contribution rates|create journal entries/i);
+
+const separateNegativeCalculationThenJournal = classifyQuestion(
+  'Do not calculate tax. Prepare journal entries for the stated transaction.'
+);
+assert.equal(separateNegativeCalculationThenJournal.calculationRequired, false);
+assert.equal(separateNegativeCalculationThenJournal.journalEntryRequired, true,
+  'A separate affirmative journal request survives a negative calculation directive.');
+const coordinatedNegativeCalculationThenJournal = classifyQuestion(
+  'Do not calculate tax but prepare journal entries for the stated transaction.'
+);
+assert.equal(coordinatedNegativeCalculationThenJournal.calculationRequired, false);
+assert.equal(coordinatedNegativeCalculationThenJournal.journalEntryRequired, true,
+  'A positive journal request after “but” remains active.');
+const positiveCpfRatesBesideNegativeCalculation = defaultQueryTopicResolver.decomposeQuery(
+  'Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Do not calculate contribution rates or amounts, but explain which contribution rates apply to ordinary wages.'
+).topics.map(topic => topic.id);
+assert.ok(positiveCpfRatesBesideNegativeCalculation.includes('cpf-ordinary-wages'));
+assert.ok(positiveCpfRatesBesideNegativeCalculation.includes('cpf_contribution_rates'),
+  'A separate affirmative request about applicable CPF rates remains in topic resolution.');
+for (const [query, expectedRateTopic] of [
+  ['Calculate CPF contributions on ordinary wages.', true],
+  ['How do I compute CPF on ordinary wages?', false],
+  ['Calculate employer and employee CPF contributions for SGD 6,000 ordinary wages.', true]
+]) {
+  const classification = classifyQuestion(query);
+  assert.equal(defaultQueryTopicResolver.decomposeQuery(query).topics.some(topic => topic.id === 'cpf_contribution_rates'),
+    expectedRateTopic, `Positive CPF wording preserves its existing rate-topic match: ${query}`);
+  assert.equal(classification.calculationRequired, true, `A genuine CPF calculation remains active: ${query}`);
+  assert.equal(classification.journalEntryRequired, true, `A genuine CPF payroll calculation remains active: ${query}`);
+}
+const qualifiedNegativeCalculationQueries = [
+  'Explain general Singapore income tax residency rules. Do not calculate corporate tax.',
+  'Under MOM guidance, what overtime pay rules apply under the Employment Act? Explain the general rule. Do not calculate overtime pay.',
+  'Explain IFRS 17 general rules for insurance contracts. Do not calculate insurance contract amounts. Do not create journal entries.'
+];
+for (const query of qualifiedNegativeCalculationQueries) {
+  const classification = classifyQuestion(query);
+  assert.equal(classification.calculationRequired, false, `Qualified negative calculation output stays inactive: ${query}`);
+  assert.equal(classification.journalEntryRequired, false, `Qualified negative calculation output does not request a journal: ${query}`);
+}
+for (const query of [
+  'Do not calculate corporate tax, but calculate depreciation.',
+  'Do not calculate overtime pay; instead calculate the benefit amount.',
+  'Do not calculate insurance contract amounts. However, calculate an annual premium.'
+]) {
+  const normalized = removeNegatedOutputDirectives(query);
+  assert.match(normalized, /\bcalculate\b/i, `Positive calculation wording remains available: ${query}`);
+}
+const qualifiedNegativeThenPositiveCalculation = classifyQuestion(
+  'Do not calculate corporate tax, but calculate depreciation for the recognized asset.'
+);
+assert.equal(qualifiedNegativeThenPositiveCalculation.calculationRequired, true,
+  'A positive calculation after “but” survives a qualified negative tax output.');
+const qualifiedNegativeThenJournal = classifyQuestion(
+  'Do not calculate corporate tax, but prepare journal entries for the stated transaction.'
+);
+assert.equal(qualifiedNegativeThenJournal.calculationRequired, false);
+assert.equal(qualifiedNegativeThenJournal.journalEntryRequired, true,
+  'An affirmative journal request after a qualified negative calculation survives.');
+const datedAcraRuleOnly = 'Under ACRA guidance, must Singapore-incorporated companies file annual returns for FYE 31/12/2025? Do not calculate a deadline or create journal entries.';
+const datedAcraClassification = classifyQuestion(datedAcraRuleOnly);
+assert.equal(datedAcraClassification.currentInformationRequired, true,
+  'Date facts remain available to current-information checks after output-intent normalization.');
+assert.ok(datedAcraClassification.topicIds.includes('acra_annual-returns'));
+
+const originalFetch = globalThis.fetch;
+const blockedSourceCalls = [];
+globalThis.fetch = async input => {
+  blockedSourceCalls.push(String(input));
+  throw new Error('Rule-only no-provider regression must remain offline.');
+};
+try {
+  for (const sample of authorityRuleOnlyQueries) {
+    const response = await processAccountingQuery(sample.query, null, 'SFRS_I');
+    assert.equal(response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY',
+      `${sample.authority} stays on the user-visible authority advisory path without a semantic provider.`);
+    assert.equal(response.scenarioState.queryIntent, 'STATUTORY_ADVISORY');
+    assert.deepEqual(response.scenarioState.directGroups, [], `${sample.authority} does not create direct journal groups.`);
+    const presentation = response.scenarioState.authorityEvidencePresentation;
+    assert.ok(presentation, `${sample.authority} retains an authority evidence presentation.`);
+    assert.equal(presentation.status, 'INSUFFICIENT', `${sample.authority} no-provider evidence remains explicitly incomplete.`);
+    assert.ok(presentation.gaps.length > 0, `${sample.authority} keeps honest no-provider or request-completeness gaps.`);
+    assert.ok(presentation.workstreams.some(stream => stream.authority === sample.authority),
+      `${sample.authority} remains the governing presentation stream.`);
+    assert.deepEqual(presentation.workstreams.flatMap(stream => stream.sources), [],
+      `${sample.authority} does not manufacture or fetch evidence in this offline check.`);
+    assert.doesNotMatch(response.messageText, /Clarification Required|journal validation|prepare journal entries/i,
+      `${sample.authority} receives no journal-validation clarification.`);
+    assert.match(response.messageText, /Evidence is incomplete/);
+  }
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.ok(blockedSourceCalls.length > 0, 'Source discovery requests are intercepted by the offline fetch stub.');
+
 const genuineTransaction = defaultTransactionUnderstandingService.understandTransactionSync(
   'We bought machinery.'
 );
@@ -277,5 +416,64 @@ assert.ok(genuineTransaction.factsMissing.some(item => /payment|settlement/i.tes
   'a genuine transaction continues to request missing payment timing');
 assert.ok(genuineTransaction.factsMissing.some(item => /amount/i.test(item)),
   'a genuine transaction continues to request a missing transaction amount when absent');
+
+const unsupportedInsuranceRuleQuery = qualifiedNegativeCalculationQueries[2];
+const unsupportedInsuranceRuleInterpretation = {
+  schemaVersion: 2,
+  jurisdiction: ['International'],
+  authorityCandidates: ['IFRS_FOUNDATION'],
+  contextualAuthorities: [],
+  domain: 'ACCOUNTING',
+  population: 'COMPANY',
+  primarySubject: 'IFRS 17 insurance contracts',
+  concepts: [{ concept: 'IFRS 17', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE',
+  factsExplicitlyProvided: [],
+  confidence: 0.96,
+  issues: [{
+    subject: 'IFRS 17 insurance contracts', population: 'COMPANY', domain: 'ACCOUNTING',
+    governingAuthorities: ['IFRS_FOUNDATION'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96
+  }]
+};
+const originalInsuranceFetch = globalThis.fetch;
+let unsupportedInsuranceSemanticCalls = 0;
+const blockedInsuranceRequests = [];
+globalThis.fetch = async (input, init) => {
+  const url = new URL(String(input));
+  const payload = JSON.parse(init?.body || '{}');
+  const prompt = payload.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+  if (url.hostname === 'generativelanguage.googleapis.com' && prompt.includes('Return a V2 JSON object')) {
+    unsupportedInsuranceSemanticCalls++;
+    return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(unsupportedInsuranceRuleInterpretation) }] } }] }), {
+      status: 200, headers: { 'content-type': 'application/json' }
+    });
+  }
+  blockedInsuranceRequests.push({ hostname: url.hostname, prompt });
+  throw new Error(`Blocked non-semantic dispatch in offline unsupported-standards regression: ${url.hostname}`);
+};
+let unsupportedInsuranceResponse;
+let unsupportedInsuranceError;
+try {
+  unsupportedInsuranceResponse = await processAccountingQuery(
+    unsupportedInsuranceRuleQuery, null, 'SFRS_I', 'test-key-1234567890'
+  );
+} catch (error) {
+  unsupportedInsuranceError = error;
+} finally {
+  globalThis.fetch = originalInsuranceFetch;
+}
+assert.ifError(unsupportedInsuranceError, 'unsupported IFRS 17 explanation returns an explicit evidence gap');
+assert.equal(unsupportedInsuranceSemanticCalls, 1, 'unsupported IFRS 17 explanation uses one validated semantic interpretation');
+assert.deepEqual(blockedInsuranceRequests, [], 'unsupported IFRS 17 explanation dispatches no source or legacy answer requests');
+const unsupportedInsurancePresentation = unsupportedInsuranceResponse.scenarioState.authorityEvidencePresentation;
+assert.ok(unsupportedInsurancePresentation, 'unsupported IFRS 17 explanation retains the shared evidence renderer');
+assert.equal(unsupportedInsurancePresentation.status, 'INSUFFICIENT');
+assert.equal(unsupportedInsuranceResponse.scenarioState.isComplete, false);
+assert.deepEqual(unsupportedInsuranceResponse.scenarioState.directGroups, []);
+assert.ok(unsupportedInsurancePresentation.workstreams.some(stream =>
+  ['ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(stream.authority) && stream.domain === 'ACCOUNTING'),
+'unsupported IFRS 17 scope remains with the accounting-standards owner');
+assert.doesNotMatch(unsupportedInsuranceResponse.messageText, /Clarification Required|journal validation|prepare journal entries/i);
 
 console.log('PASS development live routing regressions');

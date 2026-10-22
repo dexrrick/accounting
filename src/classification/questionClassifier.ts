@@ -1,7 +1,7 @@
 import { getCoverageTopicsByIds, type SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import { hasUnresolvedSection14NBasisPeriod } from '../retrieval/statutoryDateScope';
-import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
+import { removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -101,7 +101,7 @@ export function isExplicitForeignTaxOnlyQuestion(query: string): boolean {
  */
 export function classifyQuestion(query: string): QuestionClassificationResult {
   const q = query.toLowerCase();
-  const entryIntentQuery = removeNegatedJournalDirectives(query).toLowerCase();
+  const entryIntentQuery = removeNegatedOutputDirectives(query).toLowerCase();
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
   const allTopicIds = decomposition.topics.map(topic => topic.id);
   const allTopicMetadata = getCoverageTopicsByIds(allTopicIds);
@@ -329,9 +329,9 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     topicMetadata.some(topic => topic.domainId.startsWith('MAS_'));
 
   const hasPayrollCalculation =
-    (q.includes('salary') || q.includes('earning') || q.includes('earns') || q.includes('payroll') || q.includes('wages') || q.includes('wage')) &&
-    (q.includes('cpf') || q.includes('last day') || q.includes('resignation') || q.includes('prorat') || q.includes('staff') || q.includes('employee')) &&
-    (q.includes('calculat') || q.includes('compute') || q.includes('how much') || /\d+/.test(q));
+    (entryIntentQuery.includes('salary') || entryIntentQuery.includes('earning') || entryIntentQuery.includes('earns') || entryIntentQuery.includes('payroll') || entryIntentQuery.includes('wages') || entryIntentQuery.includes('wage')) &&
+    (entryIntentQuery.includes('cpf') || entryIntentQuery.includes('last day') || entryIntentQuery.includes('resignation') || entryIntentQuery.includes('prorat') || entryIntentQuery.includes('staff') || entryIntentQuery.includes('employee')) &&
+    (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') || /\d+/.test(entryIntentQuery));
 
   // 2. Map Authorities
   const authorities: string[] = [];
@@ -428,10 +428,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const hasTransactionAction =
     (q.includes('bought') || q.includes('sold') || q.includes('purchased') || q.includes('acquired') || q.includes('invested') || q.includes('disposed of')) &&
     (asksForEntries || q.includes('shares') || q.includes('usd') || q.includes('asset') || q.includes('goods'));
-  const calculationIntentQuery = entryIntentQuery.replace(
-    /\b(?:do\s+not|don't|dont|never)\s+(?:(?:need|want)\s+to\s+)?(?:calculate|compute|estimate|work\s+out|quantify)\b[^.!?;:]{0,65}/gi,
-    ' '
-  );
+  const calculationIntentQuery = entryIntentQuery;
 
   let intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID' = 'STATUTORY_ADVISORY';
   if (asksForEntries && isConceptualOrAdvisory) {

@@ -9,6 +9,14 @@ import {
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { resolveMappedOfficialSourceFallback } from '../../src/services/groundingContextBuilder.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
+import {
+  reconcileQuestionUnderstanding,
+  validateSemanticQuestionInterpretation
+} from '../../src/services/semanticQuestionUnderstanding.ts';
+import { shouldUseAuthorityEvidenceRuntime } from '../../src/utils/authorityEvidenceRouting.ts';
+import { createAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
+import { renderAuthorityEvidenceResponseText } from '../../src/services/authorityEvidenceResponse.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 
 const acraAnnualPage = JSON.parse(await readFile(new URL('../fixtures/acra-company-guidance-2026-10-10.json', import.meta.url), 'utf8'))
@@ -18,7 +26,8 @@ const cases = [
     authority: 'ACRA',
     topicId: 'acra_annual-returns',
     query: 'What annual return filing requirements apply to Singapore companies?',
-    subject: 'annual returns',
+    runtimeQuery: 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.',
+    subject: 'annual return filing requirements',
     domain: 'ACRA_CORPORATE',
     population: 'COMPANY',
     url: acraAnnualPage.url,
@@ -31,6 +40,7 @@ const cases = [
     authority: 'CPF',
     topicId: 'cpf-ordinary-wages',
     query: 'How are ordinary wages treated for CPF?',
+    runtimeQuery: 'Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.',
     subject: 'ordinary wages',
     domain: 'CPF_PAYROLL',
     population: 'EMPLOYER',
@@ -44,6 +54,7 @@ const cases = [
     authority: 'MOM',
     topicId: 'mom-part-iv-overtime',
     query: 'What are Part IV overtime eligibility requirements?',
+    runtimeQuery: 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.',
     subject: 'Part IV overtime eligibility',
     domain: 'MOM_EMPLOYMENT',
     population: 'EMPLOYEE',
@@ -56,6 +67,7 @@ const cases = [
     authority: 'MAS',
     topicId: 'mas-cms-licence',
     query: 'What is a Capital Markets Services Licence?',
+    runtimeQuery: 'Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.',
     subject: 'Capital Markets Services Licence',
     domain: 'MAS_FUNDS',
     population: 'COMPANY',
@@ -288,9 +300,39 @@ const makeIssue = sample => ({
 const makeIssuePlan = issues => ({
   source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false, issues
 });
+const oracleUnderstandingFor = samples => {
+  const primary = samples[0];
+  const interpretation = {
+    jurisdiction: ['Singapore'],
+    authorityCandidates: [...new Set(samples.map(sample => sample.authority))],
+    contextualAuthorities: [],
+    domain: primary.domain,
+    population: primary.population,
+    primarySubject: samples.map(sample => sample.subject).join(' and '),
+    concepts: samples.map((sample, index) => ({ concept: sample.subject, role: index === 0 ? 'PRIMARY' : 'RELATED' })),
+    requestedOperation: 'EXPLAIN_RULE',
+    requiresUserSpecificFacts: false,
+    calculationRequested: false,
+    factsExplicitlyProvided: [],
+    confidence: 0.98,
+    issues: samples.map(sample => ({
+      subject: sample.subject,
+      population: sample.population,
+      domain: sample.domain,
+      governingAuthorities: [sample.authority],
+      contextualAuthorities: [],
+      operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [sample.topicId],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+      confidence: 0.98
+    }))
+  };
+  return { mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', interpretation };
+};
 const pageFor = sample => sample.pageHtml || html(sample.title, sample.paragraph);
 const runWorkstreams = async (samples, {
   query = samples.map(sample => sample.query).join(' '),
+  issuePlan = makeIssuePlan(samples.map(makeIssue)),
   pageOverrides = {},
   localOnly = false,
   providers
@@ -307,7 +349,7 @@ const runWorkstreams = async (samples, {
       return new Response('not found', { status: 404 });
     throw Error(`Unexpected workstream fetch ${url}`);
   };
-  const result = await buildAuthorityWorkstreams(query, makeIssuePlan(samples.map(makeIssue)), {
+  const result = await buildAuthorityWorkstreams(query, issuePlan, {
     retriever: offlineRetriever,
     referenceDate: '2026-10-14',
     localOnly,
@@ -323,27 +365,52 @@ const runWorkstreams = async (samples, {
 
 const successfulRuns = new Map();
 const metadataOnlyAdmissionFailures = [];
+// Oracle interpretations and official pages are deterministic fixtures. This
+// verifies the shared offline runtime path; it is not model or live acceptance.
 for (const sample of cases) {
+  const routeQuery = sample.runtimeQuery || sample.query;
   // All four agencies use the same fetched-page, exact-quote and issue-scoped
-  // admission path. Discovery metadata alone never becomes evidence.
-  const success = await runWorkstreams([sample], { query: sample.query });
+  // admission path after classifier reconciliation. Discovery metadata alone
+  // never becomes evidence.
+  const classification = classifyQuestion(routeQuery);
+  const oracleUnderstanding = oracleUnderstandingFor([sample]);
+  assert.ok(validateSemanticQuestionInterpretation(oracleUnderstanding.interpretation, routeQuery),
+    `${sample.authority} oracle interpretation satisfies the validated semantic contract.`);
+  const reconciled = reconcileQuestionUnderstanding(routeQuery, classification, oracleUnderstanding);
+  const reconciledIssue = reconciled.issuePlan.issues.find(issue => issue.governingAuthorities.includes(sample.authority));
+  assert.ok(reconciledIssue, `${sample.authority} governing issue survives reconciliation.`);
+  assert.equal(reconciledIssue.status, 'MAPPED', `${sample.authority} subject maps through the existing topic taxonomy.`);
+  assert.ok(reconciledIssue.mappedTopicIds.includes(sample.topicId),
+    `${sample.authority} subject maps to its registered coverage topic.`);
+  assert.equal(reconciledIssue.operation, 'EXPLAIN_RULE');
+  assert.deepEqual(reconciledIssue.contextualAuthorities || [], []);
+  assert.equal(shouldUseAuthorityEvidenceRuntime({
+    issuePlan: reconciled.issuePlan,
+    classification: reconciled.classification,
+    explicitIrasEvidenceRequest: false,
+    hasImages: false
+  }), true, `${sample.authority} reconciled statutory issue selects the shared authority runtime.`);
+
+  const success = await runWorkstreams([sample], { query: routeQuery, issuePlan: reconciled.issuePlan });
   successfulRuns.set(sample.authority, success);
   const stream = success.workstreams.find(item => item.authority === sample.authority);
   assert.ok(stream, `Expected ${sample.authority} workstream`);
   const issueEvidence = stream.issues[0];
   assert.equal(issueEvidence.evidenceStatus, 'VERIFIED', JSON.stringify(issueEvidence));
-  assert.equal(issueEvidence.sources.length, 1);
-  const record = issueEvidence.sources[0];
-  assert.equal(record.authority, sample.authority);
-  assert.equal(record.sourceAuthority, sample.authority);
-  assert.equal(record.officialSourceUrl, sample.url);
-  assert.equal(record.sourcePublisher, sample.sourcePublisher);
-  assert.equal(record.provenance, 'LIVE_EXTERNAL');
-  assert.equal(record.lifecycleState, 'CANDIDATE', 'Successful retrieval does not auto-approve or persist the candidate.');
-  assert.equal(record.sourceStatus, 'NEEDS_REVIEW');
-  assert.equal(record.verificationMethod, 'LIVE_OFFICIAL_TOPIC_VERIFIED');
-  assert.ok(record.tags.includes(sample.topicId) || record.relatedTopicIds?.includes(sample.topicId) || record.sourceMapTopicIds?.includes(sample.topicId),
-    'The candidate remains bound to the requested coverage topic.');
+  assert.ok(issueEvidence.sources.length > 0, `${sample.authority} admission retains issue-scoped sources.`);
+  for (const record of issueEvidence.sources) {
+    assert.equal(record.authority, sample.authority);
+    assert.equal(record.sourceAuthority, sample.authority);
+    assert.equal(record.officialSourceUrl, sample.url);
+    assert.equal(record.sourcePublisher, sample.sourcePublisher);
+    assert.equal(record.provenance, 'LIVE_EXTERNAL');
+    assert.equal(record.lifecycleState, 'CANDIDATE', 'Successful retrieval does not auto-approve or persist the candidate.');
+    assert.equal(record.sourceStatus, 'NEEDS_REVIEW');
+    assert.equal(record.verificationMethod, 'LIVE_OFFICIAL_TOPIC_VERIFIED');
+  }
+  assert.ok(issueEvidence.sources.some(record => record.tags.includes(sample.topicId) ||
+    record.relatedTopicIds?.includes(sample.topicId) || record.sourceMapTopicIds?.includes(sample.topicId)),
+    'At least one candidate remains bound to the requested coverage topic.');
   assert.ok(success.calls.includes(sample.url), 'The official article is fetched separately from its sitemap entry.');
   assert.ok(issueEvidence.retrievalTrace.stages.some(stage => stage.stage === 'SITEMAP_DISCOVERY' && stage.status === 'SUFFICIENT'));
   assert.ok(issueEvidence.retrievalTrace.attempts.some(attempt => attempt.topicId === sample.topicId && attempt.fetchStatus === 'SUCCESS'));
@@ -351,9 +418,52 @@ for (const sample of cases) {
     attempt.finalUrl === sample.url && attempt.contentMatched && attempt.titleMatched), 'The raw retrieval trace binds the topic to the fetched URL.');
   assert.ok(issueEvidence.verifiedClaims.length > 0);
   for (const claim of issueEvidence.verifiedClaims) {
-    assert.ok(claim.recordId === record.id);
+    const record = issueEvidence.sources.find(source => source.id === claim.recordId);
+    assert.ok(record, 'Every verified claim is bound to an admitted source record.');
     assert.ok(record.sourceText.includes(claim.quote), 'Every verified quote is an exact substring of the fetched official page.');
   }
+  const presentation = createAuthorityEvidencePresentation(success);
+  const renderedResponse = renderAuthorityEvidenceResponseText(presentation, false);
+  const presentedStream = presentation.workstreams.find(item => item.authority === sample.authority);
+  assert.ok(presentedStream);
+  assert.equal(presentedStream.evidenceStatus, 'VERIFIED');
+  assert.ok(presentedStream.sources.some(source => source.officialUrl === sample.url));
+  for (const claim of presentedStream.sources.flatMap(source => source.claims)) {
+    assert.ok(issueEvidence.sources.some(record => record.sourceText.includes(claim.text)),
+      'Rendered evidence remains an exact quote from the fetched official page.');
+    assert.ok(renderedResponse.includes(claim.text));
+  }
+  assert.ok(renderedResponse.includes(sample.url), 'The shared response renders the verified official link.');
+  assert.match(renderedResponse, /Evidence verified/);
+  assert.doesNotMatch(renderedResponse, /\bjournal\b/i,
+    'A generic statutory response does not claim or create a journal.');
+
+  // Without a semantic provider, deterministic taxonomy fallback stays
+  // explicitly incomplete even when it recognizes the authority topic.
+  const noProvider = reconcileQuestionUnderstanding(routeQuery, classification, {
+    mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER'
+  });
+  assert.equal(noProvider.issuePlan.source, 'TAXONOMY_FALLBACK');
+  assert.equal(noProvider.issuePlan.coverageEstablished, false);
+  assert.equal(noProvider.issuePlan.hasUnmappedResidual, true);
+  assert.equal(shouldUseAuthorityEvidenceRuntime({
+    issuePlan: noProvider.issuePlan,
+    classification: noProvider.classification,
+    explicitIrasEvidenceRequest: false,
+    hasImages: false
+  }), true, `${sample.authority} known fallback scope remains reviewable with its incomplete state.`);
+  const fallbackResult = await runWorkstreams([sample], {
+    query: routeQuery,
+    issuePlan: noProvider.issuePlan,
+    localOnly: true
+  });
+  assert.equal(fallbackResult.calls.length, 0, 'The local fallback does not fetch external sources.');
+  const fallbackPresentation = createAuthorityEvidencePresentation(fallbackResult);
+  const fallbackResponse = renderAuthorityEvidenceResponseText(fallbackPresentation, false);
+  assert.equal(fallbackPresentation.status, 'INSUFFICIENT');
+  assert.ok(fallbackPresentation.gaps.length > 0);
+  assert.match(fallbackResponse, /Evidence is incomplete/);
+  assert.doesNotMatch(fallbackResponse, /\bjournal\b/i);
   if (sample.authority === 'ACRA') {
     assert.ok(issueEvidence.verifiedClaims.some(claim => /companies in singapore must file annual returns/i.test(claim.quote)),
       'an operative company filing rule remains sufficient exact-quote support for annual returns');
@@ -394,7 +504,7 @@ for (const sample of cases) {
     <div class="topic-card"><p><a href="/topic">${sample.subject} official guidance</a></p></div>
     <p>This page describes general public services and online information available from this Singapore authority.</p>
   </main></body></html>`;
-  const metadataOnly = await runWorkstreams([sample], { query: sample.query, pageOverrides: { [sample.authority]: metadataOnlyHtml } });
+  const metadataOnly = await runWorkstreams([sample], { query: routeQuery, pageOverrides: { [sample.authority]: metadataOnlyHtml } });
   const metadataEvidence = metadataOnly.workstreams.find(item => item.authority === sample.authority).issues[0];
   if (metadataEvidence.evidenceStatus === 'VERIFIED') {
     metadataOnlyAdmissionFailures.push({ authority: sample.authority, sourceText: metadataEvidence.sources[0]?.sourceText,
@@ -406,13 +516,13 @@ for (const sample of cases) {
 
   // An undated historic request cannot borrow a current page, and local-only
   // mode must not issue any network requests for any configured authority.
-  const historical = await runWorkstreams([sample], { query: `${sample.query} in 2023?` });
+  const historical = await runWorkstreams([sample], { query: `${routeQuery} in 2023?` });
   const historicalEvidence = historical.workstreams.find(item => item.authority === sample.authority).issues[0];
   assert.notEqual(historicalEvidence.evidenceStatus, 'VERIFIED');
   assert.equal(historicalEvidence.sources.length, 0);
   assert.ok(historicalEvidence.retrievalTrace.attempts?.some(attempt => attempt.fetchStatus === 'HISTORICAL_SCOPE_UNVERIFIED'));
   assert.equal(historical.calls.includes(sample.url), false, 'A current page is not fetched for an unverified historical request.');
-  const localOnly = await runWorkstreams([sample], { query: sample.query, localOnly: true });
+  const localOnly = await runWorkstreams([sample], { query: routeQuery, localOnly: true });
   assert.equal(localOnly.calls.length, 0, `${sample.authority} local-only mode must make zero requests.`);
 
   // Even with a real successful trace, authority, domain, and subject mismatches
@@ -421,14 +531,14 @@ for (const sample of cases) {
     .find(item => item.authority === sample.authority).issues[0].sources[0];
   const successTrace = discoveryResults.get(sample.authority).trace;
   const runInjectedCandidate = candidate => runWorkstreams([sample], {
-    query: sample.query,
+    query: routeQuery,
     providers: { [sample.authority]: {
       authority: sample.authority,
       async retrieve() { return { candidates: [candidate], ...(successTrace ? { evidenceQualityTrace: successTrace } : {}) }; }
     } }
   });
   const missingTrace = await runWorkstreams([sample], {
-    query: sample.query,
+    query: routeQuery,
     providers: { [sample.authority]: { authority: sample.authority, async retrieve() { return { candidates: [candidateFromSuccess] }; } } }
   });
   assert.notEqual(missingTrace.workstreams.find(item => item.authority === sample.authority).issues[0].evidenceStatus, 'VERIFIED');
@@ -451,8 +561,27 @@ for (const sample of cases) {
 // authority keeps the whole question insufficient without borrowing the other source.
 const acraSample = cases.find(sample => sample.authority === 'ACRA');
 const momSample = cases.find(sample => sample.authority === 'MOM');
+const mixedQuery = 'What annual return filing requirements apply to Singapore companies, and what are Part IV overtime eligibility requirements?';
+const mixedClassification = classifyQuestion(mixedQuery);
+const mixedUnderstanding = oracleUnderstandingFor([acraSample, momSample]);
+assert.ok(validateSemanticQuestionInterpretation(mixedUnderstanding.interpretation, mixedQuery),
+  'The mixed ACRA/MOM oracle interpretation satisfies the semantic contract.');
+const mixedReconciliation = reconcileQuestionUnderstanding(mixedQuery, mixedClassification, mixedUnderstanding);
+for (const sample of [acraSample, momSample]) {
+  const issue = mixedReconciliation.issuePlan.issues.find(item => item.governingAuthorities.includes(sample.authority));
+  assert.ok(issue, `${sample.authority} issue survives mixed-authority reconciliation.`);
+  assert.equal(issue.status, 'MAPPED');
+  assert.ok(issue.mappedTopicIds.includes(sample.topicId));
+}
+assert.equal(shouldUseAuthorityEvidenceRuntime({
+  issuePlan: mixedReconciliation.issuePlan,
+  classification: mixedReconciliation.classification,
+  explicitIrasEvidenceRequest: false,
+  hasImages: false
+}), true, 'The reconciled mixed-authority question selects the shared runtime.');
 const mixed = await runWorkstreams([acraSample, momSample], {
-  query: 'What annual return filing requirements apply to Singapore companies, and what are Part IV overtime eligibility requirements?',
+  query: mixedQuery,
+  issuePlan: mixedReconciliation.issuePlan,
   pageOverrides: {
     MOM: `<html><head><title>${momSample.title}</title></head><body><main><h1>${momSample.subject}</h1><nav><a>${momSample.subject}</a></nav><p>General government services and public online information.</p></main></body></html>`
   }
@@ -465,6 +594,18 @@ assert.notEqual(mixedMom.issues[0].evidenceStatus, 'VERIFIED');
 assert.equal(mixedMom.issues[0].sources.length, 0);
 assert.ok(mixed.gaps.some(gap => gap.issueId === mixedMom.issues[0].issueId && gap.authority === 'MOM'));
 assert.equal(mixed.status, 'INSUFFICIENT', 'One uncovered authority issue keeps the whole question from being verified.');
+const mixedPresentation = createAuthorityEvidencePresentation(mixed);
+const mixedResponse = renderAuthorityEvidenceResponseText(mixedPresentation, false);
+assert.equal(mixedPresentation.status, 'INSUFFICIENT');
+assert.ok(mixedPresentation.workstreams.some(stream => stream.authority === 'ACRA' && stream.evidenceStatus === 'VERIFIED'));
+const presentedMom = mixedPresentation.workstreams.find(stream => stream.authority === 'MOM');
+assert.ok(presentedMom && presentedMom.evidenceStatus === 'INSUFFICIENT');
+assert.ok(presentedMom.issues.some(issue => issue.subject.includes('Part IV overtime eligibility')),
+  'The uncovered MOM issue remains present in the shared projection.');
+assert.match(mixedResponse, /Whole-question status:\*\* Evidence is incomplete/);
+assert.ok(mixedResponse.includes(acraSample.url), 'The supported authority retains its own official link.');
+assert.ok(mixedResponse.includes('Part IV overtime eligibility'), 'The uncovered MOM issue remains visible in the rendered response.');
+assert.doesNotMatch(mixedResponse, /\bjournal\b/i);
 
 assert.deepEqual(metadataOnlyAdmissionFailures, [],
   `Metadata-only fetched pages must be rejected at workstream admission: ${JSON.stringify(metadataOnlyAdmissionFailures)}`);
