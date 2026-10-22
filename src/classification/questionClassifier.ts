@@ -133,6 +133,15 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const passengerCarTaxOnlyContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
     /\b(?:deduct\w*|running costs?|capital allowances?|income tax|corporate tax)\b/i.test(q) &&
     !explicitAccountingIntent;
+  const passengerCarInputTaxContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
+    /\b(?:gst|goods and services tax|input tax|input gst)\b/i.test(q);
+  const hasAdditionalOrdinaryInputTaxWorkstream = q
+    .split(/[.!?;]|\band\b|\bas well as\b/)
+    .some(clause => /\b(?:input\s+(?:tax|gst)|gst)\b/i.test(clause) &&
+      /\b(?:equipment|office|supplies|asset)\b/i.test(clause) &&
+      !/\b(?:passenger\s+(?:motor\s+)?car|motor\s+car|vehicle)\b/i.test(clause));
+  const hasSeparateGstWorkstream = /\b(?:gst registration|register(?:ed|ing)? for gst|registration threshold|taxable turnover|output tax|tax invoice|invoic\w*|zero[ -]?rated?|exempt supplies?|reverse charge)\b/i.test(q) ||
+    hasAdditionalOrdinaryInputTaxWorkstream;
   const employmentTaxAssessmentContext = /\b(?:bonus|directors?(?:['’]s)? fees?)\b/i.test(q) &&
     /\b(?:employee tax|employment income|tax assessment|assessment year|year of assessment|taxable year)\b/i.test(q) &&
     !/\b(?:acra|companies act|annual return|agm|audit exemption|director duties|conflict of interest|section 156)\b/i.test(q);
@@ -145,6 +154,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     !/\b(?:acra|companies act|share class rights|allotment|annual return|corporate filing)\b/i.test(q);
   const topicMetadata = allTopicMetadata.filter(topic =>
     !(foreignTaxOnlyContext && topic.domainId.startsWith('IRAS_')) &&
+    !(passengerCarInputTaxContext && !hasSeparateGstWorkstream && topic.domainId === 'IRAS_GST' &&
+      !['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id)) &&
     !(individualTaxContext && !corporateTaxContext && topic.domainId === 'IRAS_CORPORATE_TAX') &&
     !(corporateTaxContext && !individualTaxContext && topic.domainId === 'IRAS_INDIVIDUAL_TAX') &&
     !(individualTaxContext && !employerComplianceContext && topic.domainId === 'IRAS_EMPLOYER_TAX' && /\b(?:foreign|overseas|cross[ -]border|tax resident|double tax|tax credit)\b/i.test(query)) &&
@@ -428,6 +439,10 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const hasTransactionAction =
     (q.includes('bought') || q.includes('sold') || q.includes('purchased') || q.includes('acquired') || q.includes('invested') || q.includes('disposed of')) &&
     (asksForEntries || q.includes('shares') || q.includes('usd') || q.includes('asset') || q.includes('goods'));
+  const calculationIntentQuery = entryIntentQuery.replace(
+    /\b(?:do\s+not|don't|dont|never)\s+(?:(?:need|want)\s+to\s+)?(?:calculate|compute|estimate|work\s+out|quantify)\b[^.!?;:]{0,65}/gi,
+    ' '
+  );
 
   let intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID' = 'STATUTORY_ADVISORY';
   if (asksForEntries && isConceptualOrAdvisory) {
@@ -443,20 +458,22 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // Calculation required ONLY if quantitative computation requested or active quantitative transaction
   const calculationRequired =
-    entryIntentQuery.toLowerCase().includes('calculat') ||
-    entryIntentQuery.toLowerCase().includes('compute') ||
-    entryIntentQuery.toLowerCase().includes('how much') ||
-    entryIntentQuery.toLowerCase().includes('what is the amount') ||
-    entryIntentQuery.toLowerCase().includes('fx gain') ||
-    entryIntentQuery.toLowerCase().includes('foreign exchange') ||
-    entryIntentQuery.toLowerCase().includes('tax payable') ||
+    calculationIntentQuery.includes('calculat') ||
+    calculationIntentQuery.includes('compute') ||
+    calculationIntentQuery.includes('how much') ||
+    calculationIntentQuery.includes('what is the amount') ||
+    calculationIntentQuery.includes('fx gain') ||
+    calculationIntentQuery.includes('foreign exchange') ||
+    calculationIntentQuery.includes('tax payable') ||
     hasPayrollCalculation ||
-    (intent === 'TRANSACTION' && /\d+/.test(entryIntentQuery) && !isConceptualOrAdvisory);
+    (intent === 'TRANSACTION' && /\d+/.test(calculationIntentQuery) && !isConceptualOrAdvisory);
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];
   const isPureConceptualQuery =
     /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize)\b/i.test(q.trim());
+  const explicitlyGeneralTaxRuleRequest =
+    /\b(?:as\s+a\s+general\s+rule|general\s+(?:rules?|criteria|conditions|test|restriction|eligibility)|generally\s+(?:claimable|allowed|eligible|qualif\w*))\b/i.test(query);
 
   // Capitalisation missing facts (only for scenario/transactional evaluation, not pure conceptual definitions)
   if (!isPureConceptualQuery && (q.includes('capitalis') || q.includes('capitaliz') || q.includes('development cost') || q.includes('r&d'))) {
@@ -472,7 +489,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   }
 
   // Vehicle purchase missing facts (only when assessing a specific acquisition or claim)
-  if (!isPureConceptualQuery && /\b(?:car|cars|vehicle|vehicles)\b/i.test(q) && (q.includes('bought') || q.includes('purchas') || /\bclaim(?:s|ed|ing)?\b/i.test(q) || q.includes('deduct') || q.includes('entry'))) {
+  if (!isPureConceptualQuery && !explicitlyGeneralTaxRuleRequest && /\b(?:car|cars|vehicle|vehicles)\b/i.test(q) && (q.includes('bought') || q.includes('purchas') || /\bclaim(?:s|ed|ing)?\b/i.test(q) || q.includes('deduct') || q.includes('entry'))) {
     if (!q.includes('s-plate') && !q.includes('g-plate') && !q.includes('passenger') && !q.includes('commercial')) {
       missingFacts.push('Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)');
     }
@@ -480,7 +497,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // Scenario-specific tax conclusions need the facts that determine the
   // applicable IRAS treatment. Keep general explain/definition requests clear.
-  const asksAboutSpecificTaxCase = !isPureConceptualQuery &&
+  const asksAboutSpecificTaxCase = !isPureConceptualQuery && !explicitlyGeneralTaxRuleRequest &&
     /\b(?:our|my|this|we|company|paid|paying|claim\w*|file)\b/i.test(q);
   if (asksAboutSpecificTaxCase && hasTax && /\b(?:deductib\w*|deduct\w*|tax deduction)\b/i.test(q) &&
       /\b(?:expense|cost|payment|fee|meal|entertainment|renovat\w*|fit.out|machinery|equipment|car|vehicle|asset)\b/i.test(q)) {

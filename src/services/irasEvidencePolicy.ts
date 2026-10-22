@@ -12,6 +12,7 @@ import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentatio
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { getRequestedQuestionConcepts } from './semanticQuestionUnderstanding';
 import { ensureRequestCompletenessContext } from './requestCompleteness';
+import { isMalformedAIJsonFallback } from '../utils/jsonRepair';
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
@@ -563,7 +564,9 @@ export function renderIrasEvidenceResponse(
   standard: AccountingStandard = 'SFRS_I',
   mode: 'PROVIDER' | 'LOCAL' | 'BLOCKED' | 'PROVIDER_FAILURE' | 'PROVIDER_NO_CLAIMS' = 'PROVIDER'
 ) {
-  const parsed = parsedValue && typeof parsedValue === 'object' ? parsedValue as Record<string, unknown> : {};
+  const parsed = !isMalformedAIJsonFallback(parsedValue) && parsedValue && typeof parsedValue === 'object'
+    ? parsedValue as Record<string, unknown>
+    : {};
   const quality = context.evidenceQuality!;
   const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE' || mode === 'PROVIDER_NO_CLAIMS'
     ? selectEvidenceOnlyQuotes(context, query)

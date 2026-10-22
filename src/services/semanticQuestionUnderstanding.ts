@@ -812,7 +812,14 @@ function isGeneralCompanyTaxResidencyRuleQuestion(query: string): boolean {
     'i'
   ).test(query);
   const rulesDetermineQuestion = /^\s*how\s+do\s+singapore\s+tax\s+rules\s+determine\s+whether\s+a\s+company\s+is\s+tax\s+resident\s+(?:here|in\s+singapore)\s*[?.!]*\s*$/i.test(query);
-  return (generalRuleQuestion || rulesDetermineQuestion) &&
+  // A common natural-language version states the proposition first, then asks
+  // for the rule in a second sentence (for example, whether Singapore
+  // incorporation alone makes a company tax resident). Treat that as a rule
+  // request when the prompt explicitly asks for the general residency test.
+  const incorporationAloneRuleQuestion =
+    /\b(?:is|does)\s+(?:being\s+)?incorporat(?:ion|ed)\s+(?:in\s+singapore\s+)?alone\s+(?:enough|sufficient)\s+to\s+(?:make|render)\s+(?:a|any)\s+company\s+(?:a\s+)?tax\s+resident\b/i.test(query) &&
+    /\b(?:general(?:ly)?|test|control\s+and\s+management)\b/i.test(query);
+  return (generalRuleQuestion || rulesDetermineQuestion || incorporationAloneRuleQuestion) &&
     !hasExplicitCaseReference(query) && !hasCaseLinkedCircumstances(query) && !hasFirstPersonOutcomeApplication(query);
 }
 
@@ -831,7 +838,8 @@ function normalizeGeneralCompanyTaxResidencyRuleInterpretation(
       interpretation.population !== 'COMPANY' || !interpretation.authorityCandidates.includes('IRAS') ||
       !issue || issue.domain !== 'IRAS_INCOME_TAX' || issue.population !== 'COMPANY' ||
       !issue.governingAuthorities.includes('IRAS') || !hasSemanticCompanyTaxResidencyAnchors(issue.subject) ||
-      issue.operation !== 'DETERMINE_TREATMENT' || interpretation.factsExplicitlyProvided.length > 0) return interpretation;
+      !['DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY'].includes(issue.operation) ||
+      interpretation.factsExplicitlyProvided.length > 0) return interpretation;
 
   return validateSemanticQuestionInterpretation({
     ...interpretation,
@@ -1051,7 +1059,7 @@ function explicitlyRequestsCpfPayrollOutcome(query: string): boolean {
 function isContextualCpfInPersonalReliefQuestion(query: string, semantic: SemanticQuestionInterpretation): boolean {
   return semantic.domain === 'IRAS_INCOME_TAX' &&
     (semantic.population === 'INDIVIDUAL' || semantic.population === 'EMPLOYEE') &&
-    /\b(?:personal\s+(?:income\s+)?tax(?:\s+relief)?|income\s+tax\s+relief|personal\s+relief|relief\s+cap|tax\s+relief\s+cap)\b/i.test(query) &&
+    /\b(?:personal\s+(?:income\s+)?tax(?:\s+relief)?|income\s+tax\s+relief|personal\s+relief|relief\s+cap|tax\s+relief\s+cap|cash\s+top[ -]?ups?)\b/i.test(query) &&
     /\b(?:cpf|central provident fund)\b/i.test(query) &&
     !explicitlyRequestsCpfPayrollOutcome(query);
 }
@@ -1113,12 +1121,30 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
         ['overseas branch register'], topicIds);
     }
   }
+  const blockedPassengerCarInputTaxQuestion =
+    /\b(?:passenger\s+(?:motor\s+)?car|s-plate)\b/i.test(text) &&
+    /\b(?:gst|goods\s+and\s+services\s+tax|input\s+tax|input\s+gst)\b/i.test(text) &&
+    /\b(?:claim\w*|recover\w*|blocked|restriction|exception\w*)\b/i.test(text);
+  if (blockedPassengerCarInputTaxQuestion) {
+    add('gst_blocked_motor_car_input_tax', 'Blocked input tax on passenger motor cars',
+      ['passenger motor car input tax restriction', 'blocked motor-car input tax', 'Regulations 26 and 27', 'motor-car input-tax exceptions'],
+      ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles']);
+  }
   const personalReliefContext = /\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\b|\bpersonal\s+relief\b/i.test(text) ||
     /\b(?:srs|cpf)\b/i.test(text) && /\b(?:relief|tax\s+cap|relief\s+cap)\b/i.test(text);
   const asksReliefCap = personalReliefContext && /\b(?:relief\s+cap|cap\s+of\s+(?:sgd\s*)?\$?\s*80,?000|overall\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|aggregate\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|total\s+(?:personal\s+)?relief\s+limit)\b/i.test(text);
   if (asksReliefCap) add('personal_income_tax_relief_cap', 'Overall personal income tax relief cap',
     ['personal income tax relief cap', 'overall relief cap', 'aggregate relief cap', '80,000 relief cap'], ['iras-individual-relief-cap']);
-  if (personalReliefContext && /\b(?:cpf|central provident fund|mandatory cpf contributions?|compulsory cpf contributions?)\b/i.test(text)) {
+  const cpfCashTopUpRelief = /\b(?:cpf|central provident fund)\b/i.test(text) &&
+    /\bcash\s+top[ -]?ups?\b/i.test(text) && /\b(?:tax\s+)?relief\b/i.test(text);
+  const explicitCompulsoryCpfRelief = /\b(?:mandatory|compulsory)\b[^.!?]{0,80}\b(?:cpf|central provident fund)\b|\b(?:cpf|central provident fund)\b[^.!?]{0,80}\b(?:mandatory|compulsory)\b/i.test(text);
+  if (cpfCashTopUpRelief) {
+    add('cpf_cash_top_up_relief', 'CPF cash top-up tax relief',
+      ['CPF cash top-up relief', 'cash top-up relief', 'cash top ups to CPF Special or Retirement Account'],
+      ['iras-individual-cpf-cash-top-up-relief']);
+  }
+  if (personalReliefContext && (!cpfCashTopUpRelief || explicitCompulsoryCpfRelief) &&
+      /\b(?:cpf|central provident fund|mandatory cpf contributions?|compulsory cpf contributions?)\b/i.test(text)) {
     add('cpf_relief', 'CPF Relief / compulsory CPF contributions', ['cpf relief', 'central provident fund relief', 'compulsory cpf contributions'], ['iras-individual-cpf-relief']);
   }
   if (personalReliefContext && /\b(?:srs|supplementary retirement scheme)\b/i.test(text)) {
@@ -1238,7 +1264,9 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
       hasCanonical('company_tax_residency_rule') && (
         /^(?:(?:company|corporate)\s+)?(?:tax\s+)?residen(?:ce|cy|t)(?:\s+determination)?$/.test(normalized) ||
         normalized === 'control and management'
-      );
+      ) ||
+      hasCanonical('gst_blocked_motor_car_input_tax') &&
+        /\b(?:passenger\s+(?:motor\s+)?car|motor car|s-plate|blocked|regulation 26|regulation 27)\b/i.test(normalized);
     if (isAlreadyCoveredCanonicalConcept) continue;
     const mappedTopics = defaultQueryTopicResolver.decomposeQuery(label).topics
       .filter(topic => topic.domainId.startsWith('IRAS_') && (!requestedDomain || topic.domainId === requestedDomain))
