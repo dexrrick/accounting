@@ -133,15 +133,6 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const passengerCarTaxOnlyContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
     /\b(?:deduct\w*|running costs?|capital allowances?|income tax|corporate tax)\b/i.test(q) &&
     !explicitAccountingIntent;
-  const passengerCarInputTaxContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
-    /\b(?:gst|goods and services tax|input tax|input gst)\b/i.test(q);
-  const hasAdditionalOrdinaryInputTaxWorkstream = q
-    .split(/[.!?;]|\band\b|\bas well as\b/)
-    .some(clause => /\b(?:input\s+(?:tax|gst)|gst)\b/i.test(clause) &&
-      /\b(?:equipment|office|supplies|asset)\b/i.test(clause) &&
-      !/\b(?:passenger\s+(?:motor\s+)?car|motor\s+car|vehicle)\b/i.test(clause));
-  const hasSeparateGstWorkstream = /\b(?:gst registration|register(?:ed|ing)? for gst|registration threshold|taxable turnover|output tax|tax invoice|invoic\w*|zero[ -]?rated?|exempt supplies?|reverse charge)\b/i.test(q) ||
-    hasAdditionalOrdinaryInputTaxWorkstream;
   const employmentTaxAssessmentContext = /\b(?:bonus|directors?(?:['’]s)? fees?)\b/i.test(q) &&
     /\b(?:employee tax|employment income|tax assessment|assessment year|year of assessment|taxable year)\b/i.test(q) &&
     !/\b(?:acra|companies act|annual return|agm|audit exemption|director duties|conflict of interest|section 156)\b/i.test(q);
@@ -154,8 +145,6 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     !/\b(?:acra|companies act|share class rights|allotment|annual return|corporate filing)\b/i.test(q);
   const topicMetadata = allTopicMetadata.filter(topic =>
     !(foreignTaxOnlyContext && topic.domainId.startsWith('IRAS_')) &&
-    !(passengerCarInputTaxContext && !hasSeparateGstWorkstream && topic.domainId === 'IRAS_GST' &&
-      !['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id)) &&
     !(individualTaxContext && !corporateTaxContext && topic.domainId === 'IRAS_CORPORATE_TAX') &&
     !(corporateTaxContext && !individualTaxContext && topic.domainId === 'IRAS_INDIVIDUAL_TAX') &&
     !(individualTaxContext && !employerComplianceContext && topic.domainId === 'IRAS_EMPLOYER_TAX' && /\b(?:foreign|overseas|cross[ -]border|tax resident|double tax|tax credit)\b/i.test(query)) &&

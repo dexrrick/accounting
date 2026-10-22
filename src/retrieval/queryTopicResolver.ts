@@ -83,6 +83,34 @@ function isBoundedMissingCompanyFactsStatement(clause: string): boolean {
   return remainder.length === 0;
 }
 
+function isCashTopUpReliefRequest(query: string): boolean {
+  return /\bcash\s+top[- ]ups?\b/i.test(query) &&
+    /\b(?:cpf|special account|retirement account|medisave account)\b/i.test(query) &&
+    /\b(?:tax\s+)?relief\b/i.test(query);
+}
+
+/** Prunes two cross-caller false positives while retaining separately asked workstreams. */
+function filterContextualTopics<T extends QueryTopic>(query: string, topics: readonly T[]): T[] {
+  const q = query.toLowerCase();
+  const passengerCarInputTaxContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
+    /\b(?:gst|goods and services tax|input tax|input gst)\b/i.test(q);
+  const hasAdditionalOrdinaryInputTaxWorkstream = /\b(?:input\s+(?:tax|gst)|gst)\b/i.test(q) &&
+    /\b(?:equipment|office|supplies|asset|services?|vans?|commercial vehicles?)\b/i.test(
+      q.replace(/\bgoods\s+and\s+services\s+tax\b/gi, ' ')
+    );
+  const hasSeparateGstWorkstream = /\b(?:gst registration|register(?:ed|ing)? for gst|registration threshold|taxable turnover|output tax|tax invoice|invoic\w*|zero[ -]?rated?|exempt supplies?|reverse charge)\b/i.test(q) ||
+    hasAdditionalOrdinaryInputTaxWorkstream;
+  const hasCashTopUpReliefRequest = isCashTopUpReliefRequest(query);
+  const hasSeparateCompulsoryCpfReliefRequest = /\bcpf\s+relief\s+for\s+employees?\b|\bemployee\s+cpf\s+relief\b/i.test(q) ||
+    /\b(?:compulsory|mandatory)\b[^.!?;]{0,80}\bcpf\b/i.test(q) ||
+    /\bcpf\b[^.!?;]{0,80}\b(?:compulsory|mandatory)\b/i.test(q);
+  return topics.filter(topic =>
+    !(passengerCarInputTaxContext && !hasSeparateGstWorkstream && topic.domainId === 'IRAS_GST' &&
+      !['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id)) &&
+    !(hasCashTopUpReliefRequest && !hasSeparateCompulsoryCpfReliefRequest && topic.id === 'iras-individual-cpf-relief')
+  );
+}
+
 /** Binds only fully recognized ordinary-company annual-return fact requests. */
 export function isBoundedAcraAnnualReturnMissingFactsQuestion(query: string): boolean {
   const normalized = removeNegatedJournalDirectives(query).trim();
@@ -205,6 +233,7 @@ export class QueryTopicResolver {
         !(topic.exclusionKeywords ?? []).some((phrase) => qLower.includes(phrase.toLowerCase())) &&
         (topic.keywords.some((kw) => keywordMatches(qLower, kw)) ||
           (topic.queryPatterns ?? []).some((pattern) => new RegExp(pattern, 'i').test(query)) ||
+          topic.id === 'iras-individual-cpf-cash-top-up-relief' && isCashTopUpReliefRequest(query) ||
           topic.id === 'acra_annual-returns' && isBoundedAcraAnnualReturnMissingFactsQuestion(query));
 
       // 4. Topic Resolution & Attribution
@@ -246,6 +275,8 @@ export class QueryTopicResolver {
     } else {
       matchedTopics = [...semMatchedTopics, ...lexicalOnlyTopics];
     }
+
+    matchedTopics = filterContextualTopics(query, matchedTopics);
 
     const isMultiTopic = matchedTopics.length > 1;
 
