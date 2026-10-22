@@ -326,16 +326,24 @@ async function runGit(gitExecutable, root, args, options = {}) {
     const stdout = [];
     const stderr = [];
     let outputSize = 0;
+    let outputTooLarge = false;
+    let inputError;
+    let spawnError;
     child.stdout.on('data', chunk => {
+      if (outputTooLarge) return;
       outputSize += chunk.length;
       if (outputSize > MAX_GIT_OUTPUT_BYTES) {
+        outputTooLarge = true;
         child.kill();
-        reject(new Error('V4_GIT_OUTPUT_TOO_LARGE'));
       } else stdout.push(chunk);
     });
     child.stderr.on('data', chunk => stderr.push(chunk));
-    child.on('error', reject);
+    child.stdin.on('error', error => { inputError ??= error; });
+    child.on('error', error => { spawnError ??= error; });
     child.on('close', code => {
+      if (spawnError) return reject(spawnError);
+      if (outputTooLarge) return reject(new Error('V4_GIT_OUTPUT_TOO_LARGE'));
+      if (inputError) return reject(new Error('V4_GIT_INPUT_FAILED:' + args[0] + ':' + String(inputError.message || inputError).slice(0, 200)));
       const result = {
         code,
         stdout: Buffer.concat(stdout).toString(options.encoding || 'utf8'),
@@ -345,8 +353,12 @@ async function runGit(gitExecutable, root, args, options = {}) {
       else if (code !== 0) reject(new Error('V4_GIT_COMMAND_FAILED:' + args[0] + ':' + result.stderr.slice(0, 300)));
       else resolve(result);
     });
-    if (options.input !== undefined) child.stdin.end(options.input);
-    else child.stdin.end();
+    try {
+      if (options.input !== undefined) child.stdin.end(options.input);
+      else child.stdin.end();
+    } catch (error) {
+      inputError ??= error;
+    }
   });
 }
 
@@ -412,6 +424,56 @@ function parseGitPathBlob(raw, relative) {
   return blob;
 }
 
+function parseGitBatchCheckZ(rawOutput, requests) {
+  assert.equal(typeof rawOutput, 'string', 'V4_GIT_BATCH_CHECK_OUTPUT_REQUIRED');
+  assert.ok(Array.isArray(requests), 'V4_GIT_BATCH_CHECK_REQUESTS_REQUIRED');
+  const framedRecords = rawOutput.split('\0');
+  assert.equal(framedRecords.at(-1), '', 'V4_GIT_BATCH_CHECK_TRUNCATED');
+  framedRecords.pop();
+  assert.equal(framedRecords.length, requests.length, 'V4_GIT_BATCH_CHECK_RESPONSE_COUNT_MISMATCH');
+  assert.ok(framedRecords.every(record => record.length > 0), 'V4_GIT_BATCH_CHECK_EMPTY_RECORD');
+
+  return framedRecords.map((record, index) => {
+    const request = requests[index];
+    const { expression, role, relative, expectedBlob } = request;
+    const prefix = role === 'HEAD' ? 'V4_HEAD_GIT_BLOB' : 'V4_REVIEWED_GIT_BLOB';
+    if (record === expression + ' missing') throw new Error(prefix + '_MISSING:' + relative);
+
+    const fields = record.split(' ');
+    assert.equal(fields.length, 3, 'V4_GIT_BATCH_CHECK_RESPONSE_INVALID:' + relative);
+    const [objectId, objectType, objectSize] = fields;
+    assert.match(objectId, /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/i,
+      'V4_GIT_BATCH_CHECK_OBJECT_ID_INVALID:' + relative);
+    assert.equal(objectType, 'blob', 'V4_GIT_BATCH_CHECK_OBJECT_TYPE_MISMATCH:' + relative);
+    assert.match(objectSize, /^(?:0|[1-9]\d*)$/, 'V4_GIT_BATCH_CHECK_OBJECT_SIZE_INVALID:' + relative);
+    assert.equal(objectId.toLowerCase(), expectedBlob.toLowerCase(), prefix + '_OWNERSHIP_MISMATCH:' + relative);
+    return objectId.toLowerCase();
+  });
+}
+
+async function mapBounded(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  const errors = new Array(items.length);
+  let nextIndex = 0;
+  let stopStarting = false;
+  const workerCount = Math.min(concurrency, items.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (!stopStarting) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      try {
+        results[index] = await mapper(items[index], index);
+      } catch (error) {
+        errors[index] = error instanceof Error ? error : new Error(String(error));
+        stopStarting = true;
+      }
+    }
+  }));
+  const firstError = errors.find(error => error !== undefined);
+  if (firstError) throw firstError;
+  return results;
+}
+
 /**
  * Generic low-level checkout verifier, useful for isolated offline repository tests.
  * Production freezes use collectReviewedRunnerBinding, which supplies the fixed
@@ -470,20 +532,30 @@ export async function collectCheckoutIntegritySnapshot({
     isExecutableInput(entry.path));
   assert.deepEqual(untrackedExecutableInputs, [], 'V4_UNTRACKED_EXECUTABLE_INPUT');
 
-  const fileRows = [];
-  for (const relative of canonicalPaths) {
+  const workingRows = await mapBounded(canonicalPaths, 4, async relative => {
     const absolute = await assertNoSymlinkPath(absoluteRoot, relative);
     const raw = await readFile(absolute);
     const workingGitBlob = parseGitPathBlob((await runGit(gitExecutable, absoluteRoot,
       ['hash-object', '--path=' + relative, '--stdin'], { input: raw })).stdout, relative);
-    const headGitBlob = parseGitPathBlob((await runGit(gitExecutable, absoluteRoot,
-      ['rev-parse', 'HEAD:' + relative])).stdout, relative);
-    const reviewedGitBlob = parseGitPathBlob((await runGit(gitExecutable, absoluteRoot,
-      ['rev-parse', reviewedCommit + ':' + relative])).stdout, relative);
-    assert.equal(workingGitBlob, headGitBlob, 'V4_HEAD_GIT_BLOB_OWNERSHIP_MISMATCH:' + relative);
-    assert.equal(workingGitBlob, reviewedGitBlob, 'V4_REVIEWED_GIT_BLOB_OWNERSHIP_MISMATCH:' + relative);
-    fileRows.push({ path: relative, sha256: sha256(raw), gitBlob: workingGitBlob, reviewedBlob: reviewedGitBlob });
-  }
+    return { path: relative, sha256: sha256(raw), gitBlob: workingGitBlob };
+  });
+  const batchRequests = workingRows.flatMap(row => [
+    { expression: head + ':' + row.path, role: 'HEAD', relative: row.path, expectedBlob: row.gitBlob },
+    { expression: reviewedCommit + ':' + row.path, role: 'REVIEWED', relative: row.path, expectedBlob: row.gitBlob }
+  ]);
+  const batchInputBytes = batchRequests.reduce((total, request) =>
+    total + Buffer.byteLength(request.expression, 'utf8') + 1, 0);
+  assert.ok(batchInputBytes <= MAX_GIT_OUTPUT_BYTES, 'V4_GIT_BATCH_CHECK_INPUT_TOO_LARGE');
+  const batchInput = Buffer.from(batchRequests.map(request => request.expression + '\0').join(''), 'utf8');
+  const batchOutput = await runGit(gitExecutable, absoluteRoot,
+    ['cat-file', '--batch-check', '--buffer', '-Z'], { input: batchInput });
+  const committedBlobs = parseGitBatchCheckZ(batchOutput.stdout, batchRequests);
+  const fileRows = workingRows.map((row, index) => ({
+    path: row.path,
+    sha256: row.sha256,
+    gitBlob: committedBlobs[index * 2],
+    reviewedBlob: committedBlobs[(index * 2) + 1]
+  }));
   return {
     head,
     branch,
