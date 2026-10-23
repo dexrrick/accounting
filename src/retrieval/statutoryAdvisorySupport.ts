@@ -1,5 +1,5 @@
 import { startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
-import { supportMasCmsRule } from './masCmsRuleSupport';
+import { supportMasCmsDefinition, supportMasCmsRule } from './masCmsRuleSupport';
 
 export interface BoundedStatutoryAdvisorySupportInput {
   authority: string;
@@ -278,8 +278,11 @@ function supportsMomPartIvOvertime(text: string): boolean {
 export function supportBoundedStatutoryAdvisory(
   input: BoundedStatutoryAdvisorySupportInput
 ): boolean | undefined {
-  const masSupport = supportMasCmsRule(input);
-  if (masSupport !== undefined) return masSupport;
+  const masDefinitionSupport = supportMasCmsDefinition(input);
+  const masRuleSupport = supportMasCmsRule(input);
+  if (masDefinitionSupport === true || masRuleSupport === true) return true;
+  if (masDefinitionSupport !== undefined) return masDefinitionSupport;
+  if (masRuleSupport !== undefined) return masRuleSupport;
 
   const profile = recognizeProfile(input);
   if (profile === undefined) return undefined;

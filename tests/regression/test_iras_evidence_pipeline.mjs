@@ -14,6 +14,8 @@ import { IRAS_SOURCE_MAP_DEFINITIONS } from '../../src/standards/coverageRegistr
 import { createChatPreview } from '../../src/utils/chatPresentation.ts';
 import { createIrasEvidencePresentation, getIrasDomainDisplayLabel } from '../../src/utils/irasEvidencePresentation.ts';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
+import { ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
+import { getRequestedQuestionConcepts, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const fixture = JSON.parse(await readFile(new URL('../evaluation/singapore/iras-answer-e2e.json', import.meta.url), 'utf8'));
 const datedCase = fixture.cases.find(item => item.id === 'gst-historical-standard-rated-supply-2023');
@@ -316,6 +318,463 @@ try {
   assert.doesNotMatch(ir21Fallback.messageText, /IR21 is always required/i);
 
   const ir21LiveRecord = ir21GroundedContext.evidenceQuality.eligibleRecords.find(record => record.id === ir21SourceRecordId);
+
+  const residencyQuery = 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.';
+  const reliefQuery = 'Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.';
+  const motorCarQuery = 'A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.';
+  const residencySubject = 'company tax residency determination';
+  const reliefSubject = 'CPF cash top-up tax relief eligibility conditions and relief limits';
+  const motorCarSubject = 'GST input tax claimability on private passenger motor car purchase';
+  const mixedCpfQuery = 'For someone earning SGD 6,000 a month, what can they claim for personal tax relief on compulsory CPF, and what does the employer have to pay into CPF?';
+  const mixedCpfSemanticResponse = JSON.parse(await readFile(new URL('../fixtures/iras-v4-a-paraphrase-2-semantic-response.json', import.meta.url), 'utf8'));
+  const mixedCpfInterpretation = validateSemanticQuestionInterpretation(mixedCpfSemanticResponse, mixedCpfQuery);
+  assert.ok(mixedCpfInterpretation, 'The retained mixed CPF response remains a valid semantic interpretation.');
+  const mixedCpfRequestedConcepts = getRequestedQuestionConcepts(mixedCpfQuery, mixedCpfInterpretation);
+  assert.deepEqual(mixedCpfRequestedConcepts.find(concept => concept.id === 'cpf_relief')?.topicIds,
+    ['iras-individual-cpf-relief']);
+  assert.equal(mixedCpfRequestedConcepts.some(concept => concept.id === 'semantic_personal_tax_relief'), false,
+    'The unique issue-local personal tax relief alias is covered by the mapped IRAS CPF relief request.');
+  const employerCpfIssue = mixedCpfInterpretation.issues.find(issue => issue.domain === 'CPF_PAYROLL');
+  assert.deepEqual({ domain: employerCpfIssue?.domain, population: employerCpfIssue?.population,
+    authorities: employerCpfIssue?.governingAuthorities, operation: employerCpfIssue?.operation },
+  { domain: 'CPF_PAYROLL', population: 'EMPLOYER', authorities: ['CPF'], operation: 'CALCULATE' },
+  'The employer numeric contribution request remains a separate CPF payroll calculation.');
+  const unknownCpfInterpretation = validateSemanticQuestionInterpretation({
+    ...mixedCpfSemanticResponse,
+    issues: [
+      { ...mixedCpfSemanticResponse.issues[0], domain: 'UNKNOWN', governingAuthorities: ['UNKNOWN'], mappedTopicIds: [], evidenceRequirement: 'UNRESOLVED' },
+      mixedCpfSemanticResponse.issues[1]
+    ]
+  }, mixedCpfQuery);
+  assert.ok(unknownCpfInterpretation, 'An unknown scoped interpretation remains valid and conservative.');
+  assert.ok(getRequestedQuestionConcepts(mixedCpfQuery, unknownCpfInterpretation)
+    .some(concept => concept.id === 'semantic_personal_tax_relief'),
+  'The personal tax relief label remains requested when no uniquely mapped IRAS relief issue owns it.');
+  const singleCpfReliefQuery = 'What personal tax relief can an employee claim on compulsory CPF?';
+  const singleCpfReliefIssue = {
+    ...mixedCpfSemanticResponse.issues[0],
+    subject: 'employee personal tax relief on compulsory CPF',
+    mappedTopicIds: []
+  };
+  const singleUnknownRootCpfRelief = validateSemanticQuestionInterpretation({
+    ...mixedCpfSemanticResponse,
+    primarySubject: singleCpfReliefIssue.subject,
+    concepts: [{ concept: 'personal tax relief', role: 'PRIMARY' }],
+    factsExplicitlyProvided: [],
+    issues: [singleCpfReliefIssue]
+  }, singleCpfReliefQuery);
+  assert.ok(singleUnknownRootCpfRelief, 'A single scoped issue under an unknown root remains a valid interpretation.');
+  assert.ok(getRequestedQuestionConcepts(singleCpfReliefQuery, singleUnknownRootCpfRelief)
+    .some(concept => concept.id === 'semantic_personal_tax_relief'),
+  'A known issue cannot override the unknown root scope in a single-issue interpretation.');
+  const beyondCpfQuery = 'What personal tax relief can an employee claim beyond compulsory CPF?';
+  const knownEmployeeRootCpfRelief = validateSemanticQuestionInterpretation({
+    ...mixedCpfSemanticResponse,
+    authorityCandidates: ['IRAS'],
+    domain: 'IRAS_INCOME_TAX',
+    population: 'EMPLOYEE',
+    primarySubject: singleCpfReliefIssue.subject,
+    concepts: [{ concept: 'personal tax relief', role: 'PRIMARY' }],
+    factsExplicitlyProvided: [],
+    issues: [singleCpfReliefIssue]
+  }, beyondCpfQuery);
+  assert.ok(knownEmployeeRootCpfRelief, 'The known employee root remains valid for the beyond-CPF query.');
+  assert.ok(getRequestedQuestionConcepts(beyondCpfQuery, knownEmployeeRootCpfRelief)
+    .some(concept => concept.id === 'semantic_personal_tax_relief'),
+  'Personal relief requested beyond compulsory CPF remains a separate generic relief concept.');
+  const residencyIssue = {
+    subject: residencySubject, domain: 'IRAS_INCOME_TAX', population: 'COMPANY',
+    concepts: [residencySubject, 'place of incorporation']
+  };
+  const reliefIssue = { subject: reliefSubject, domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL' };
+  const motorCarIssue = { subject: motorCarSubject, domain: 'IRAS_GST', population: 'COMPANY' };
+  const mixedThreeQuery = `${residencyQuery} Separately, ${reliefQuery} Separately, ${motorCarQuery}`;
+  const makeExplainRuleUnderstanding = (queryText, issueScopes, confidence = 0.95) => {
+    const issues = issueScopes.map(({ subject, domain, population }) => ({
+      subject, population, domain,
+      governingAuthorities: ['IRAS'],
+      contextualAuthorities: [],
+      operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+      confidence
+    }));
+    const interpretation = validateSemanticQuestionInterpretation({
+      schemaVersion: 2,
+      jurisdiction: ['Singapore'],
+      authorityCandidates: ['IRAS'],
+      contextualAuthorities: [],
+      domain: issues.length === 1 ? issues[0].domain : 'UNKNOWN',
+      population: issues.length === 1 ? issues[0].population : 'UNKNOWN',
+      primarySubject: issues.length === 1 ? issueScopes[0].subject : 'IRAS general rule questions',
+      concepts: issueScopes.flatMap((scope, issueIndex) => (scope.concepts || [scope.subject]).map((concept, conceptIndex) => ({
+        concept, role: issueIndex === 0 && conceptIndex === 0 ? 'PRIMARY' : 'RELATED'
+      }))),
+      requestedOperation: issues.length === 1 ? 'EXPLAIN_RULE' : 'OTHER',
+      factsExplicitlyProvided: [],
+      confidence,
+      issues
+    }, queryText);
+    assert.ok(interpretation, `The versioned semantic observation must validate for ${queryText.slice(0, 80)}`);
+    assert.deepEqual(interpretation.issues.map(issue => ({ subject: issue.subject, domain: issue.domain, population: issue.population })),
+      issueScopes.map(({ subject, domain, population }) => ({ subject, domain, population })),
+      'Each standalone and mixed IRAS issue retains its explicit authority domain and affected population.');
+    const questionUnderstanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation };
+    const requestCompletenessContext = ensureRequestCompletenessContext(queryText, undefined, questionUnderstanding);
+    assert.equal(requestCompletenessContext.evaluation.structuralAcceptance, 'ACCEPTED');
+    assert.equal(requestCompletenessContext.evaluation.confidenceAcceptance, confidence >= 0.72 ? 'ACCEPTED' : 'REJECTED');
+    return { questionUnderstanding, requestCompletenessContext };
+  };
+  const assertFreeformSubjectDiagnostic = (requestContext, subjects) => {
+    assert.equal(requestContext.evaluation.status, 'UNCERTAIN', 'A closed-descriptor miss remains a representation diagnostic, separate from semantic specificity.');
+    assert.deepEqual(requestContext.evaluation.findings.map(finding => finding.code), subjects.map(() => 'UNKNOWN_SUBJECT_DESCRIPTOR'));
+    assert.deepEqual(requestContext.evaluation.issues.map(issue => issue.subject), subjects);
+  };
+
+  const residencyClassification = classifyQuestion(residencyQuery);
+  const residencyUrl = 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/tax-residency-of-a-company-certificate-of-residence';
+  const residencyQuotes = [
+    'Your company is a tax resident of Singapore when its control and management is exercised in Singapore.',
+    'Generally, a company is considered a Singapore tax resident for a particular Year of Assessment (YA) if the control and management of its business was exercised in Singapore in the preceding calendar year. For example, a company is a Singapore tax resident for YA 2025 if the control and management of its business was exercised in Singapore for the whole of 2024.',
+    'A company is a non-resident when the control and management of its business is not exercised in Singapore.',
+    // Exact IRAS paragraph from the official page, last updated 23 June 2025.
+    'The place of incorporation of a company is not necessarily indicative of the tax residency of a company.'
+  ];
+  const residencyRecord = {
+    ...ir21LiveRecord,
+    id: 'IRAS_CORPORATE_RESIDENCY_EXPLAIN_RULE_TEST',
+    documentTitle: 'IRAS | Tax Residency of a Company/ Certificate of Residence',
+    legalOrStandardInstrument: 'IRAS corporate income tax residency guidance',
+    officialSourceUrl: residencyUrl,
+    canonicalSourceUrl: residencyUrl,
+    sourceText: residencyQuotes.join('\n\n'),
+    tags: residencyClassification.topicIds,
+    relatedTopicIds: [],
+    retrievalHints: [],
+    sourceMapTopicIds: residencyClassification.topicIds
+  };
+  const residencyTrace = {
+    path: 'DISCOVERED_SOURCE', sourceMapIds: [], selectedRecordIds: [residencyRecord.id],
+    finalVerifiedUrls: [residencyUrl], candidateOnly: true,
+    attempts: residencyClassification.topicIds.map(topicId => ({
+      topicId, fetchStatus: 'SUCCESS', finalUrl: residencyUrl, titleMatched: true, contentMatched: true
+    }))
+  };
+  const residencyUnderstanding = makeExplainRuleUnderstanding(residencyQuery, [residencyIssue]);
+  const residencyRequestedConcepts = getRequestedQuestionConcepts(residencyQuery,
+    residencyUnderstanding.questionUnderstanding.interpretation);
+  const residencyQuality = evaluateEvidenceQuality({
+    query: residencyQuery, topicIds: residencyClassification.topicIds, records: [residencyRecord], missingFacts: [],
+    authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: residencyTrace,
+    requestedConcepts: residencyRequestedConcepts, scopedSubject: residencySubject, scopedPopulation: 'COMPANY'
+  });
+  assert.ok(['LOCAL_SUFFICIENT', 'RETRIEVED_SUFFICIENT'].includes(residencyQuality.status),
+    `The exact residency source passages should cover the general rule: ${JSON.stringify({ status: residencyQuality.status, uncovered: residencyQuality.uncoveredTopicIds, concepts: residencyQuality.uncoveredConcepts })}`);
+  assert.deepEqual(residencyQuality.uncoveredTopicIds, []);
+  assert.deepEqual(residencyQuality.uncoveredConcepts, []);
+  assertFreeformSubjectDiagnostic(residencyUnderstanding.requestCompletenessContext, [residencySubject]);
+  const residencyContext = {
+    ...ir21GroundedContext,
+    classification: residencyClassification,
+    userFacts: [residencyQuery],
+    missingFacts: [],
+    primaryEvidence: [residencyRecord],
+    officialGuidance: [],
+    curatedSummaries: [],
+    applicationRules: [],
+    evidenceQuality: residencyQuality,
+    questionUnderstanding: residencyUnderstanding.questionUnderstanding,
+    requestCompletenessContext: residencyUnderstanding.requestCompletenessContext
+  };
+  const generalResidencyResponse = renderIrasEvidenceResponse({
+    taxClaims: residencyQuotes.map(text => ({ text, quote: text, recordId: residencyRecord.id, kind: 'RULE' }))
+  }, residencyContext, residencyQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(generalResidencyResponse.claimVerification.accepted.length, residencyQuotes.length,
+    'Only the exact admitted IRAS residency paragraphs, including the incorporation qualification, support the general rule answer.');
+  assert.ok(residencyQuotes.every(quote => generalResidencyResponse.messageText.includes(quote)));
+  assert.equal(generalResidencyResponse.scenarioState.requestCompletenessContext.evaluation.status, 'UNCERTAIN');
+  assert.equal(generalResidencyResponse.scenarioState.isComplete, true,
+    'A validated general EXPLAIN_RULE answer can be complete when exact official evidence covers every requested point despite the independent subject-descriptor diagnostic.');
+  assert.equal(generalResidencyResponse.scenarioState.authorityStatus, 'DETERMINISTIC');
+  assert.equal(generalResidencyResponse.scenarioState.irasEvidencePresentation.status, 'VERIFIED');
+  assert.equal(generalResidencyResponse.scenarioState.irasEvidencePresentation.applicationStatus.startsWith('Verified Evidence.'), true);
+  assert.deepEqual(generalResidencyResponse.scenarioState.missingFacts, []);
+  assert.equal(generalResidencyResponse.calculation, undefined, 'An explicitly excluded tax calculation is not activated for a general rule request.');
+  assert.doesNotMatch(generalResidencyResponse.messageText, /does not by itself confirm that every condition is met|Conditional — Facts Required|Output GST:/i);
+
+  const residencyPeriodQuery = residencyQuery.replace(' Do not calculate tax or create journal entries.',
+    ' Also explain which preceding calendar year is used for a Year of Assessment. Do not calculate tax or create journal entries.');
+  const residencyPeriodIssue = {
+    ...residencyIssue,
+    concepts: [residencySubject, 'place of incorporation', 'preceding calendar year for a Year of Assessment']
+  };
+  const residencyPeriodUnderstanding = makeExplainRuleUnderstanding(residencyPeriodQuery, [residencyPeriodIssue]);
+  assertFreeformSubjectDiagnostic(residencyPeriodUnderstanding.requestCompletenessContext, [residencySubject]);
+  const residencyPeriodConcepts = getRequestedQuestionConcepts(residencyPeriodQuery,
+    residencyPeriodUnderstanding.questionUnderstanding.interpretation);
+  assert.ok(residencyPeriodConcepts.some(concept => /preceding calendar year/i.test(concept.label)));
+  const residencyPeriodClassification = classifyQuestion(residencyPeriodQuery);
+  const residencyPeriodQuality = evaluateEvidenceQuality({
+    query: residencyPeriodQuery, topicIds: residencyPeriodClassification.topicIds, records: [residencyRecord],
+    missingFacts: [], authorities: ['IRAS'], domain: 'IRAS_TAX', sourceMapFallbackTrace: residencyTrace,
+    requestedConcepts: residencyPeriodConcepts, scopedSubject: residencySubject, scopedPopulation: 'COMPANY'
+  });
+  assert.ok(['LOCAL_SUFFICIENT', 'RETRIEVED_SUFFICIENT'].includes(residencyPeriodQuality.status),
+    JSON.stringify({ status: residencyPeriodQuality.status, uncoveredTopicIds: residencyPeriodQuality.uncoveredTopicIds,
+      uncoveredConcepts: residencyPeriodQuality.uncoveredConcepts }));
+  assert.deepEqual(residencyPeriodQuality.uncoveredTopicIds, []);
+  assert.deepEqual(residencyPeriodQuality.uncoveredConcepts, [],
+    'The positive source fixture covers the separate incorporation, control-and-management, and YA-period concepts.');
+  const residencyPeriodContext = {
+    ...residencyContext,
+    classification: residencyPeriodClassification,
+    userFacts: [residencyPeriodQuery],
+    evidenceQuality: residencyPeriodQuality,
+    questionUnderstanding: residencyPeriodUnderstanding.questionUnderstanding,
+    requestCompletenessContext: residencyPeriodUnderstanding.requestCompletenessContext
+  };
+  const supplementedResidencyResponse = renderIrasEvidenceResponse({
+    taxClaims: [residencyQuotes[0], residencyQuotes[3]].map(text => ({
+      text, quote: text, recordId: residencyRecord.id, kind: 'RULE'
+    }))
+  }, residencyPeriodContext, residencyPeriodQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(supplementedResidencyResponse.claimVerification.accepted.some(claim => claim.text === residencyQuotes[1]),
+    'When the provider omits the YA period, bounded source selection adds the admitted paragraph that states the preceding-calendar-year point.');
+  assert.equal(supplementedResidencyResponse.scenarioState.isComplete, true,
+    JSON.stringify({ accepted: supplementedResidencyResponse.claimVerification.accepted.map(claim => claim.text),
+      missingFacts: supplementedResidencyResponse.scenarioState.missingFacts,
+      uncovered: supplementedResidencyResponse.scenarioState.irasEvidencePresentation.uncoveredConcepts }));
+  assert.equal(supplementedResidencyResponse.scenarioState.irasEvidencePresentation.status, 'VERIFIED');
+  assert.ok(supplementedResidencyResponse.messageText.includes(residencyQuotes[1]));
+  assert.equal(supplementedResidencyResponse.evidenceQuality.status, residencyPeriodQuality.status,
+    'Answer-level omissions do not rewrite the retrieval quality assessment returned to callers.');
+
+  const incorporationIssue = { ...residencyIssue, concepts: [residencySubject, 'place of incorporation'] };
+  const incorporationUnderstanding = makeExplainRuleUnderstanding(residencyQuery, [incorporationIssue]);
+  const incorporationConcepts = getRequestedQuestionConcepts(residencyQuery,
+    incorporationUnderstanding.questionUnderstanding.interpretation);
+  assert.ok(incorporationConcepts.some(concept => /place of incorporation/i.test(concept.label)));
+  const residencyRecordWithoutIncorporation = {
+    ...residencyRecord,
+    id: 'IRAS_CORPORATE_RESIDENCY_WITHOUT_INCORPORATION_PARAGRAPH_TEST',
+    sourceText: residencyQuotes.slice(0, 3).join('\n\n')
+  };
+  const sourceBundleQualityWithOverbroadCoverage = {
+    ...residencyQuality,
+    eligibleRecords: [residencyRecordWithoutIncorporation],
+    requestedConcepts: incorporationConcepts.map(concept => concept.label),
+    coveredConcepts: incorporationConcepts.map(concept => concept.label),
+    uncoveredConcepts: []
+  };
+  assert.ok(['LOCAL_SUFFICIENT', 'RETRIEVED_SUFFICIENT'].includes(sourceBundleQualityWithOverbroadCoverage.status));
+  const incorporationContext = {
+    ...residencyContext,
+    primaryEvidence: [residencyRecordWithoutIncorporation],
+    evidenceQuality: sourceBundleQualityWithOverbroadCoverage,
+    questionUnderstanding: incorporationUnderstanding.questionUnderstanding,
+    requestCompletenessContext: incorporationUnderstanding.requestCompletenessContext
+  };
+  const unsupportedIncorporationResponse = renderIrasEvidenceResponse({
+    taxClaims: [{ text: residencyQuotes[0], quote: residencyQuotes[0], recordId: residencyRecordWithoutIncorporation.id, kind: 'RULE' }]
+  }, incorporationContext, residencyQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(unsupportedIncorporationResponse.claimVerification.accepted.length, residencyQuotes.length - 1,
+    'The bounded fallback supplements every exact available paragraph but cannot invent the omitted incorporation passage.');
+  assert.equal(unsupportedIncorporationResponse.scenarioState.isComplete, false,
+    'Sufficient source-bundle quality and several accepted quotations cannot cover a requested concept absent from every quoted paragraph.');
+  assert.equal(unsupportedIncorporationResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT');
+  assert.match(unsupportedIncorporationResponse.messageText, /place of incorporation/i);
+  assert.match(unsupportedIncorporationResponse.scenarioState.uncertaintyDisclaimer, /place of incorporation/i);
+
+  const limitedResidencyQuality = {
+    ...residencyQuality,
+    status: 'LIMITED',
+    missingFacts: ['Confirm where the company exercised control and management'],
+    uncoveredConcepts: ['control and management test']
+  };
+  const limitedGeneralResidencyResponse = renderIrasEvidenceResponse({
+    taxClaims: residencyQuotes.map(text => ({ text, quote: text, recordId: residencyRecord.id, kind: 'RULE' }))
+  }, { ...residencyContext, evidenceQuality: limitedResidencyQuality }, residencyQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(limitedGeneralResidencyResponse.scenarioState.isComplete, false);
+  assert.equal(limitedGeneralResidencyResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT',
+    'A LIMITED source result stays incomplete for a general request instead of being labelled as case facts required.');
+  assert.doesNotMatch(limitedGeneralResidencyResponse.scenarioState.irasEvidencePresentation.applicationStatus, /Conditional — Facts Required/);
+  assert.match(limitedGeneralResidencyResponse.messageText, /does not cover the full tax question/i);
+
+  const reliefUnderstanding = makeExplainRuleUnderstanding(reliefQuery, [reliefIssue]);
+  assertFreeformSubjectDiagnostic(reliefUnderstanding.requestCompletenessContext, [reliefSubject]);
+  const cpfReliefQuote = 'CPF Cash Top-up Relief is given to encourage Singaporeans and Permanent Residents to set aside money for retirement needs either in their own CPF accounts or those of family members.';
+  const cpfReliefRecord = {
+    ...residencyRecord,
+    id: 'IRAS_CPF_CASH_TOP_UP_LIMITED_TEST',
+    documentTitle: 'IRAS | Central Provident Fund (CPF) Cash Top-up Relief',
+    legalOrStandardInstrument: 'IRAS individual income tax relief guidance',
+    officialSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief',
+    canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief',
+    sourceText: cpfReliefQuote,
+    tags: ['iras-individual-cpf-cash-top-up-relief'],
+    relatedTopicIds: [], retrievalHints: [], sourceMapTopicIds: ['iras-individual-cpf-cash-top-up-relief']
+  };
+  const reliefClassification = classifyQuestion(reliefQuery);
+  const reliefQuality = {
+    ...residencyQuality,
+    query: reliefQuery,
+    targetTopicIds: reliefClassification.topicIds,
+    coveredTopicIds: reliefClassification.topicIds,
+    uncoveredTopicIds: ['iras-authority-query-concept-semantic-eligibility-conditions', 'iras-authority-query-concept-semantic-relief-limits'],
+    uncoveredConcepts: ['eligibility conditions', 'relief limits'],
+    eligibleRecords: [cpfReliefRecord],
+    missingFacts: ['Facts relevant to individual eligibility and the relevant tax year'],
+    status: 'LIMITED'
+  };
+  const reliefContext = {
+    ...residencyContext,
+    classification: reliefClassification,
+    userFacts: [reliefQuery],
+    primaryEvidence: [cpfReliefRecord],
+    evidenceQuality: reliefQuality,
+    questionUnderstanding: reliefUnderstanding.questionUnderstanding,
+    requestCompletenessContext: reliefUnderstanding.requestCompletenessContext
+  };
+  const generalCpfReliefResponse = renderIrasEvidenceResponse({
+    taxClaims: [{ text: cpfReliefQuote, quote: cpfReliefQuote, recordId: cpfReliefRecord.id, kind: 'RULE' }]
+  }, reliefContext, reliefQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(generalCpfReliefResponse.claimVerification.accepted.some(claim => claim.text === cpfReliefQuote));
+  assert.equal(generalCpfReliefResponse.scenarioState.isComplete, false);
+  assert.equal(generalCpfReliefResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT',
+    'The confirmed IRAS cash-top-up passage does not fill uncovered eligibility and relief-limit concepts.');
+  assert.doesNotMatch(generalCpfReliefResponse.scenarioState.irasEvidencePresentation.applicationStatus, /Conditional — Facts Required/);
+
+  const carUnderstanding = makeExplainRuleUnderstanding(motorCarQuery, [motorCarIssue]);
+  assertFreeformSubjectDiagnostic(carUnderstanding.requestCompletenessContext, [motorCarSubject]);
+  const carQuotes = [
+    'You generally cannot claim the GST incurred on the purchase and running expenses of motor cars, such as petrol and parking charges. This applies to most passenger cars that carry up to 7 passengers, excluding the driver, and weigh 3,000kg or less when empty.',
+    'This input tax restriction applies regardless of whether the motor car is used wholly or partly for business purposes, unless the car is excluded from the definition of a ‘motor car’ under Regulation 25(1).',
+    'You may claim input tax on the purchase and running expenses of a motor vehicle that is not a motor car, subject to the conditions for claiming input tax.'
+  ];
+  const carRecord = {
+    ...residencyRecord,
+    id: 'IRAS_GST_MOTOR_CAR_LIMITED_TEST',
+    documentTitle: 'IRAS | Motor Vehicles Expenses',
+    legalOrStandardInstrument: 'IRAS GST input tax guidance',
+    officialSourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses',
+    canonicalSourceUrl: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses',
+    sourceText: carQuotes.join('\n\n'),
+    tags: ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'],
+    relatedTopicIds: [], retrievalHints: [], sourceMapTopicIds: ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles']
+  };
+  const carClassification = classifyQuestion(motorCarQuery);
+  const carQuality = {
+    ...residencyQuality,
+    query: motorCarQuery,
+    targetTopicIds: carClassification.topicIds,
+    coveredTopicIds: carClassification.topicIds,
+    uncoveredTopicIds: ['iras-authority-query-concept-semantic-iras-restriction'],
+    uncoveredConcepts: ['IRAS restriction'],
+    eligibleRecords: [carRecord],
+    missingFacts: ['Facts needed to assess the relevant Regulation 25 exception'],
+    status: 'LIMITED'
+  };
+  const carContext = {
+    ...residencyContext,
+    classification: carClassification,
+    userFacts: [motorCarQuery],
+    primaryEvidence: [carRecord],
+    evidenceQuality: carQuality,
+    questionUnderstanding: carUnderstanding.questionUnderstanding,
+    requestCompletenessContext: carUnderstanding.requestCompletenessContext
+  };
+  const unsupportedCarException = renderIrasEvidenceResponse({
+    taxClaims: [
+      ...carQuotes.map(text => ({ text, quote: text, recordId: carRecord.id, kind: 'RULE' })),
+      { text: 'The car is an exception because it is used for business, so all input GST is claimable.', quote: carQuotes[1], recordId: carRecord.id, kind: 'APPLICATION' }
+    ]
+  }, carContext, motorCarQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(unsupportedCarException.scenarioState.isComplete, false);
+  assert.equal(unsupportedCarException.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT');
+  assert.ok(unsupportedCarException.claimVerification.rejected.some(claim => /business.*all input GST is claimable/i.test(claim.text)));
+  assert.doesNotMatch(unsupportedCarException.messageText, /The car is an exception because it is used for business/);
+  assert.doesNotMatch(unsupportedCarException.messageText, /Conditional — Facts Required|Output GST:/i,
+    'An uncovered exception and an explicitly excluded calculation remain evidence gaps, not a facts-required verdict or calculation.');
+
+  const mixedUnderstanding = makeExplainRuleUnderstanding(mixedThreeQuery, [residencyIssue, reliefIssue, motorCarIssue]);
+  assertFreeformSubjectDiagnostic(mixedUnderstanding.requestCompletenessContext, [residencySubject, reliefSubject, motorCarSubject]);
+  const mixedThreeClassification = classifyQuestion(mixedThreeQuery);
+  const mixedThreeQuality = {
+    ...residencyQuality,
+    query: mixedThreeQuery,
+    targetTopicIds: mixedThreeClassification.topicIds,
+    uncoveredTopicIds: [...new Set([...reliefQuality.uncoveredTopicIds, ...carQuality.uncoveredTopicIds])],
+    uncoveredConcepts: [...new Set([...reliefQuality.uncoveredConcepts, ...carQuality.uncoveredConcepts])],
+    status: 'INSUFFICIENT'
+  };
+  const mixedThreeResponse = renderIrasEvidenceResponse({
+    taxClaims: residencyQuotes.map(text => ({ text, quote: text, recordId: residencyRecord.id, kind: 'RULE' }))
+  }, {
+    ...residencyContext,
+    classification: mixedThreeClassification,
+    userFacts: [mixedThreeQuery],
+    primaryEvidence: [residencyRecord, cpfReliefRecord, carRecord],
+    evidenceQuality: mixedThreeQuality,
+    questionUnderstanding: mixedUnderstanding.questionUnderstanding,
+    requestCompletenessContext: mixedUnderstanding.requestCompletenessContext
+  }, mixedThreeQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(mixedThreeResponse.claimVerification.accepted.some(claim => claim.text === residencyQuotes[0]));
+  assert.equal(mixedThreeResponse.scenarioState.isComplete, false,
+    'A mixed request remains incomplete when evidence does not cover every independently requested IRAS scope.');
+  assert.equal(mixedThreeResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT');
+  assert.doesNotMatch(mixedThreeResponse.messageText, /Conditional — Facts Required/);
+
+  const unparsedMixedUnderstanding = makeExplainRuleUnderstanding(mixedThreeQuery, [residencyIssue, reliefIssue]);
+  const unparsedMixedResponse = renderIrasEvidenceResponse({
+    taxClaims: residencyQuotes.map(text => ({ text, quote: text, recordId: residencyRecord.id, kind: 'RULE' }))
+  }, {
+    ...residencyContext,
+    classification: mixedThreeClassification,
+    evidenceQuality: { ...residencyQuality, query: mixedThreeQuery, targetTopicIds: mixedThreeClassification.topicIds },
+    questionUnderstanding: unparsedMixedUnderstanding.questionUnderstanding,
+    requestCompletenessContext: unparsedMixedUnderstanding.requestCompletenessContext
+  }, mixedThreeQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(unparsedMixedResponse.scenarioState.isComplete, false,
+    'Explicitly separated raw requests that are missing from the semantic issue list cannot receive the general-rule completion status.');
+  assert.equal(unparsedMixedResponse.scenarioState.irasEvidencePresentation.status, 'CONDITIONAL');
+
+  const companyOutcomeQuery = 'Does Example Pte Ltd qualify as a Singapore tax resident based on where its control and management is exercised?';
+  const companyOutcomeUnderstanding = validateSemanticQuestionInterpretation({
+    schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: [],
+    domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'Singapore company tax residency outcome',
+    concepts: [{ concept: 'company tax residency', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY',
+    factsExplicitlyProvided: [], confidence: 0.95,
+    issues: [{ subject: 'Singapore company tax residency outcome', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+  }, companyOutcomeQuery);
+  assert.ok(companyOutcomeUnderstanding);
+  const companyOutcomeQuestionUnderstanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation: companyOutcomeUnderstanding };
+  const companyOutcomeRequestContext = ensureRequestCompletenessContext(companyOutcomeQuery, undefined, companyOutcomeQuestionUnderstanding);
+  const companyOutcomeClassification = classifyQuestion(companyOutcomeQuery);
+  const companyOutcomeQuality = {
+    ...residencyQuality,
+    query: companyOutcomeQuery,
+    targetTopicIds: companyOutcomeClassification.topicIds,
+    eligibleRecords: [residencyRecord]
+  };
+  const companyOutcomeFacts = ['Where the company exercised control and management during the relevant preceding calendar year'];
+  const companyOutcomeResponse = renderIrasEvidenceResponse({
+    taxClaims: [{ text: residencyQuotes[0], quote: residencyQuotes[0], recordId: residencyRecord.id, kind: 'RULE' }]
+  }, {
+    ...residencyContext,
+    classification: companyOutcomeClassification,
+    userFacts: [companyOutcomeQuery],
+    missingFacts: companyOutcomeFacts,
+    evidenceQuality: companyOutcomeQuality,
+    questionUnderstanding: companyOutcomeQuestionUnderstanding,
+    requestCompletenessContext: companyOutcomeRequestContext
+  }, companyOutcomeQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.equal(companyOutcomeResponse.scenarioState.isComplete, false);
+  assert.deepEqual(companyOutcomeResponse.scenarioState.missingFacts, companyOutcomeFacts,
+    'The general rule path does not erase facts needed to assess a particular company outcome.');
+  assert.equal(companyOutcomeResponse.scenarioState.irasEvidencePresentation.status, 'CONDITIONAL');
+
   const dtrQuote = 'Should your gains from your employment be taxed in the foreign country, you may apply for double taxation relief or tax remission in Singapore, to avoid being taxed twice on the same income.';
   const dtrSourceText = [
     '• You are employed outside of Singapore on behalf of the Government of Singapore.',

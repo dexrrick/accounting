@@ -1,6 +1,6 @@
 import type { BoundedStatutoryAdvisorySupportInput } from './statutoryAdvisorySupport';
 
-type MasRuleProfile = 'MAS_CMS_LICENSE_GENERAL_RULE';
+type MasCmsProfile = 'MAS_CMS_LICENSE_GENERAL_RULE';
 
 function compact(value: string): string {
   return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -45,7 +45,7 @@ function hasOutOfScopeRequest(input: BoundedStatutoryAdvisorySupportInput): bool
     || /\b(?:my|our|this)\s+(?:company|business|entity)\b|\bdo\s+(?:i|we)\s+need\s+(?:a\s+)?(?:cms\s+)?licen[cs]e\b/i.test(request);
 }
 
-function recognizeProfile(input: BoundedStatutoryAdvisorySupportInput): MasRuleProfile | undefined {
+function recognizeProfile(input: BoundedStatutoryAdvisorySupportInput): MasCmsProfile | undefined {
   const authority = compact(input.authority).replace(/ /g, '');
   const topicId = compact(input.topicId).replace(/ /g, '');
   if (!['mas', 'monetaryauthorityofsingapore'].includes(authority) || topicId !== 'mascmslicence') return undefined;
@@ -90,6 +90,42 @@ function sourceParagraphs(sourceText: string): string[] {
     .replace(/[\t\f\v ]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim().toLowerCase()).filter(Boolean);
+}
+
+function normalizeDefinitionText(value: string): string {
+  return decodeHtmlEntities(value.replace(/<[^>]*>/g, ' '))
+    .normalize('NFKD')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/\u00a0/g, ' ')
+    .replace(/[\t\f\v ]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+const CMS_DEFINITION_PATTERN = /\bcapital\s+markets\s+services\s+licence\b["']?\s+means\s+a\s+licence\s+that\s+is\s+granted\s+by\s+the\s+authority\s+under\s+section\s+86\s+to\s+a\s+person\s+to\s+carry\s+on\s+a\s+business\s+in\s+any\s+regulated\s+activity\b/i;
+
+function supportsCmsDefinitionBlock(blockMarkup: string): boolean {
+  const text = normalizeDefinitionText(blockMarkup);
+  if (!CMS_DEFINITION_PATTERN.test(text)) return false;
+
+  // Link text may contain a cross-reference such as “section 86”, but an
+  // entire definition presented as a navigation/link label is not body evidence.
+  const textOutsideLinks = normalizeDefinitionText(blockMarkup.replace(/<a\b[^>]*>[\s\S]*?<\/a\s*>/gi, ' '));
+  return /\bcapital\s+markets\s+services\s+licence\b["']?\s+means\s+a\s+licence\b/i.test(textOutsideLinks)
+    && /\bto\s+carry\s+on\s+a\s+business\s+in\s+any\s+regulated\s+activity\b/i.test(textOutsideLinks);
+}
+
+function supportsMasCmsDefinition(sourceText: string): boolean {
+  if (/<[a-z][\w:-]*\b[^>]*>/i.test(sourceText)) {
+    const visibleMarkup = sourceText
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<(script|style|noscript|svg|template|nav|header|footer|aside|button|form|h[1-6])\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    const bodyBlocks = [...visibleMarkup.matchAll(/<(p|td)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi)];
+    return bodyBlocks.some(match => supportsCmsDefinitionBlock(match[2]));
+  }
+  return CMS_DEFINITION_PATTERN.test(normalizeDefinitionText(sourceText));
 }
 
 function splitSentences(text: string): string[] {
@@ -139,9 +175,9 @@ function supportsCmsGeneralRule(sourceText: string): boolean {
 }
 
 /**
- * Supports only MAS's general CMS licence rule when the question explicitly asks
- * for the CMS definition or general licensing requirement. Provenance, topic
- * admission, complete quotations and user-specific application remain separate gates.
+ * Supports only MAS's general CMS licence duty when the question asks about the
+ * CMS definition or general licensing requirement. Provenance, topic admission,
+ * complete quotations and user-specific application remain separate gates.
  */
 export function supportMasCmsRule(input: BoundedStatutoryAdvisorySupportInput): boolean | undefined {
   const profile = recognizeProfile(input);
@@ -149,4 +185,15 @@ export function supportMasCmsRule(input: BoundedStatutoryAdvisorySupportInput): 
   const paragraphs = sourceParagraphs(input.sourceText);
   if (paragraphs.length === 0) return false;
   return supportsCmsGeneralRule(input.sourceText);
+}
+
+/**
+ * Supports only the statutory definition of a CMS licence in SFA section 2(1).
+ * This is independent of the operative general duty; provenance, exact quote,
+ * section admission, and coverage of other requested concepts remain separate gates.
+ */
+export function supportMasCmsDefinition(input: BoundedStatutoryAdvisorySupportInput): boolean | undefined {
+  const profile = recognizeProfile(input);
+  if (profile === undefined) return undefined;
+  return input.sourceText.length > 0 && supportsMasCmsDefinition(input.sourceText);
 }
