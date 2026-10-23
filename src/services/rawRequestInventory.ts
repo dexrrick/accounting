@@ -409,13 +409,17 @@ function hasBoundedSalaryEmployeeReliefContext(
   operation: string,
   inventory: RawRequestInventory | undefined
 ): boolean {
+  const exactEligibilityDescriptor = descriptor.phrase === 'employee personal tax relief eligibility for compulsory CPF' &&
+    descriptor.allowedOperations?.length === 1 && descriptor.allowedOperations[0] === 'CHECK_ELIGIBILITY';
+  const retainedParaphraseDescriptor = descriptor.phrase === 'employee personal tax relief on compulsory CPF' &&
+    descriptor.allowedOperations === undefined;
   if (!inventory || population !== 'EMPLOYEE' || operation !== 'CHECK_ELIGIBILITY' ||
-      descriptor.phrase !== 'employee personal tax relief eligibility for compulsory CPF' ||
+      (!exactEligibilityDescriptor && !retainedParaphraseDescriptor) ||
       descriptor.identity !== 'CPF_RELIEF' || descriptor.scope !== 'SPECIFIC' ||
       descriptor.population !== 'INDIVIDUAL' || descriptor.beneficiary !== 'INDIVIDUAL' ||
       descriptor.facets.length !== 1 || descriptor.facets[0] !== 'COMPULSORY' ||
       descriptor.actors?.length || descriptor.allowedPopulations?.length ||
-      descriptor.allowedOperations?.length !== 1 || descriptor.allowedOperations[0] !== 'CHECK_ELIGIBILITY') return false;
+      (!exactEligibilityDescriptor && descriptor.allowedOperations !== undefined)) return false;
 
   if (!inventory.fullyConsumed || inventory.outcomes.length !== 2 || inventory.facts.length !== 1 ||
       inventory.findings.length !== 1 || inventory.findings[0].code !== 'AMBIGUOUS_CLAIMABILITY_OR_AMOUNT') return false;

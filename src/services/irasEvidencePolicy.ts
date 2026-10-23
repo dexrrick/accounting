@@ -10,8 +10,10 @@ import { evaluateIrasApplications } from '../engine/irasApplicationEvaluator';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
-import { getRequestedQuestionConcepts } from './semanticQuestionUnderstanding';
-import { ensureRequestCompletenessContext } from './requestCompleteness';
+import { matchesRequestedQuestionConcept } from '../retrieval/evidenceQualityGate';
+import { getRequestedQuestionConcepts, requiresCaseSpecificFacts, type SemanticQuestionInterpretation } from './semanticQuestionUnderstanding';
+import { ensureRequestCompletenessContext, readRequestCompletenessObservation } from './requestCompleteness';
+import { isMalformedAIJsonFallback } from '../utils/jsonRepair';
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
@@ -223,6 +225,47 @@ function requestedRuleConcepts(context: GroundedReasoningContext, query: string)
     .filter(concept => requestedLabels.has(concept.label));
 }
 
+function isValidatedGeneralExplainRuleRequest(
+  query: string,
+  requestContext: ReturnType<typeof ensureRequestCompletenessContext>
+): boolean {
+  const evaluation = requestContext.evaluation;
+  if (evaluation.structuralAcceptance !== 'ACCEPTED' || evaluation.confidenceAcceptance !== 'ACCEPTED' ||
+      evaluation.status === 'INCOMPLETE' || evaluation.issues.length === 0 ||
+      evaluation.issues.some(issue => issue.operation !== 'EXPLAIN_RULE') ||
+      evaluation.findings.some(finding => finding.code !== 'UNKNOWN_SUBJECT_DESCRIPTOR')) return false;
+
+  const observation = readRequestCompletenessObservation(requestContext, query);
+  if (!observation || typeof observation !== 'object' || Array.isArray(observation)) return false;
+  const wrapper = observation as { mode?: unknown; interpretation?: unknown };
+  if (!['SEMANTIC_INTERPRETATION', 'SEMANTIC_PLUS_RULES'].includes(String(wrapper.mode))) return false;
+  if (!wrapper.interpretation || typeof wrapper.interpretation !== 'object' || Array.isArray(wrapper.interpretation)) return false;
+  const interpretation = wrapper.interpretation as SemanticQuestionInterpretation;
+  const issues = interpretation.issues;
+  if (!Array.isArray(issues) || issues.length === 0 || issues.length !== evaluation.issues.length ||
+      (issues.length === 1 && interpretation.requestedOperation !== 'EXPLAIN_RULE') ||
+      (issues.length > 1 && !['EXPLAIN_RULE', 'OTHER'].includes(interpretation.requestedOperation)) ||
+      !issues.every(issue => issue.operation === 'EXPLAIN_RULE' &&
+        issue.evidenceRequirement === 'AUTHORITATIVE_SOURCE' && issue.domain.startsWith('IRAS_') &&
+        issue.governingAuthorities.includes('IRAS'))) return false;
+
+  const explicitIndependentRequestCount = (query.match(/\bseparately\b/gi)?.length || 0) + 1;
+  if (explicitIndependentRequestCount > 1 && issues.length !== explicitIndependentRequestCount) return false;
+  if (requestContext.inventory.outcomes.length > 0 &&
+      (requestContext.inventory.outcomes.length !== issues.length ||
+        requestContext.inventory.outcomes.some(outcome => outcome.operation !== 'EXPLAIN_RULE'))) return false;
+
+  const reportedInterpretation = wrapper.interpretation as {
+    requestedOperation?: unknown;
+    requiresUserSpecificFacts?: unknown;
+    calculationRequested?: unknown;
+    issues?: Array<{ operation?: unknown }>;
+  };
+  return reportedInterpretation.requiresUserSpecificFacts === false &&
+    reportedInterpretation.calculationRequested === false &&
+    !requiresCaseSpecificFacts(query, interpretation);
+}
+
 function recordHasRequestedTopicAssociation(record: AuthoritativeSourceRecord, topicId: string): boolean {
   const topic = getCoverageTopicById(topicId);
   return Boolean(topic && (
@@ -231,6 +274,78 @@ function recordHasRequestedTopicAssociation(record: AuthoritativeSourceRecord, t
     record.sourceMapTopicIds?.includes(topicId) ||
     topic.sourceRecordIds.includes(record.id)
   ));
+}
+
+function semanticDomainForTopic(topicId: string): string | undefined {
+  const topic = getCoverageTopicById(topicId);
+  if (!topic || !topic.domainId.startsWith('IRAS_')) return undefined;
+  if (topic.domainId === 'IRAS_GST') return 'IRAS_GST';
+  if (topic.domainId === 'IRAS_PROPERTY_TAX') return 'IRAS_PROPERTY_TAX';
+  if (topic.domainId === 'IRAS_STAMP_DUTY') return 'IRAS_STAMP_DUTY';
+  if (['IRAS_CORPORATE_TAX', 'IRAS_INDIVIDUAL_TAX', 'IRAS_EMPLOYER_TAX'].includes(topic.domainId)) {
+    return 'IRAS_INCOME_TAX';
+  }
+  return 'IRAS_OTHER';
+}
+
+function generalRuleIssueForTopic(
+  context: GroundedReasoningContext,
+  topicId: string,
+  concept: ReturnType<typeof getRequestedQuestionConcepts>[number]
+) {
+  const interpretation = context.questionUnderstanding?.interpretation;
+  const topic = getCoverageTopicById(topicId);
+  const domain = semanticDomainForTopic(topicId);
+  if (!interpretation || !topic || !domain || concept.semanticAuthorities && !concept.semanticAuthorities.includes('IRAS')) return undefined;
+  const issues = interpretation.issues || [];
+  const candidates = issues.filter(issue => issue.operation === 'EXPLAIN_RULE' && issue.domain === domain &&
+    issue.governingAuthorities.includes('IRAS') && issue.population !== 'UNKNOWN' &&
+    (!concept.semanticDomain || issue.domain === concept.semanticDomain) &&
+    (!concept.semanticPopulation || issue.population === concept.semanticPopulation) &&
+    (issue.mappedTopicIds.length > 0 ? issue.mappedTopicIds.includes(topicId) : true));
+  if (candidates.length !== 1) return undefined;
+  if (issues.length > 1 && candidates[0].mappedTopicIds.length === 0 &&
+      issues.filter(issue => issue.operation === 'EXPLAIN_RULE' && issue.domain === domain &&
+        issue.governingAuthorities.includes('IRAS')).length !== 1) return undefined;
+  return candidates[0];
+}
+
+function generalRuleAnswerCoverage(
+  context: GroundedReasoningContext,
+  query: string,
+  claims: readonly { recordId: string; text: string }[]
+): { uncoveredConcepts: string[]; uncoveredTopicIds: string[] } {
+  const quality = context.evidenceQuality!;
+  const topicIds = [...new Set(context.classification.topicIds.filter(topicId =>
+    getCoverageTopicById(topicId)?.authorities.includes('IRAS')) )];
+  const recordsById = new Map(quality.eligibleRecords.map(record => [record.id, record]));
+  const topicIsSupportedByAcceptedText = (topicId: string): boolean => {
+    const topic = getCoverageTopicById(topicId);
+    return Boolean(topic && quality.coveredTopicIds.includes(topicId) && claims.some(claim => {
+      const record = recordsById.get(claim.recordId);
+      return Boolean(record && record.authority === 'IRAS' && topic.legacyDomains.includes(record.domain) &&
+        recordHasRequestedTopicAssociation(record, topicId) && fallbackExcerptMatchesTopic(topicId, claim.text));
+    }));
+  };
+  const uncoveredTopicIds = topicIds.filter(topicId => !topicIsSupportedByAcceptedText(topicId));
+  const uncoveredConcepts = requestedRuleConcepts(context, query).filter(concept => {
+    const applicableTopicIds = (concept.topicIds.length > 0 ? concept.topicIds : topicIds)
+      .filter(topicId => topicIds.includes(topicId) && quality.coveredTopicIds.includes(topicId));
+    if (applicableTopicIds.length === 0) return true;
+    return !applicableTopicIds.some(topicId => {
+      const topic = getCoverageTopicById(topicId);
+      const issue = generalRuleIssueForTopic(context, topicId, concept);
+      if (!topic || !issue) return false;
+      return claims.some(claim => {
+        const record = recordsById.get(claim.recordId);
+        return Boolean(record && record.authority === 'IRAS' && topic.legacyDomains.includes(record.domain) &&
+          recordHasRequestedTopicAssociation(record, topicId) && matchesRequestedQuestionConcept(claim.text, concept, {
+            domainId: topic.domainId, topicIds: [topicId], subject: issue.subject, population: issue.population
+          }));
+      });
+    });
+  }).map(concept => concept.label);
+  return { uncoveredConcepts, uncoveredTopicIds };
 }
 
 function companyIssueForRequestedTopic(
@@ -563,11 +678,33 @@ export function renderIrasEvidenceResponse(
   standard: AccountingStandard = 'SFRS_I',
   mode: 'PROVIDER' | 'LOCAL' | 'BLOCKED' | 'PROVIDER_FAILURE' | 'PROVIDER_NO_CLAIMS' = 'PROVIDER'
 ) {
-  const parsed = parsedValue && typeof parsedValue === 'object' ? parsedValue as Record<string, unknown> : {};
+  const parsed = !isMalformedAIJsonFallback(parsedValue) && parsedValue && typeof parsedValue === 'object'
+    ? parsedValue as Record<string, unknown>
+    : {};
   const quality = context.evidenceQuality!;
+  const requestCompletenessContext = ensureRequestCompletenessContext(
+    query, context.requestCompletenessContext, context.questionUnderstanding
+  );
+  const validatedGeneralExplainRule = isValidatedGeneralExplainRuleRequest(query, requestCompletenessContext);
+  const providerClaims = Array.isArray(parsed.taxClaims) ? parsed.taxClaims : [];
+  const providerGeneralClaims = [...providerClaims];
+  if (validatedGeneralExplainRule && mode === 'PROVIDER') {
+    const sourceOnlyClaims = selectEvidenceOnlyQuotes(context, query, context.classification.topicIds);
+    const existingKeys = new Set(providerGeneralClaims.map(claim => {
+      const item = claim && typeof claim === 'object' ? claim as Record<string, unknown> : {};
+      return `${String(item.recordId || '')}\n${String(item.text || '').trim().toLowerCase()}`;
+    }));
+    for (const claim of sourceOnlyClaims) {
+      const key = `${claim.recordId}\n${claim.text.trim().toLowerCase()}`;
+      if (!existingKeys.has(key)) {
+        providerGeneralClaims.push(claim);
+        existingKeys.add(key);
+      }
+    }
+  }
   const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE' || mode === 'PROVIDER_NO_CLAIMS'
     ? selectEvidenceOnlyQuotes(context, query)
-    : parsed.taxClaims;
+    : validatedGeneralExplainRule ? providerGeneralClaims : parsed.taxClaims;
   let verification = verifyEvidenceClaims(inputClaims, quality.eligibleRecords, {
     missingFacts: context.missingFacts, targetDate: quality.targetDate
   });
@@ -642,10 +779,41 @@ export function renderIrasEvidenceResponse(
       }))]
     };
   }
-  const calculation = computeVerifiedStandardGst(query, quality.eligibleRecords, quality.targetDate, unresolvedGstFacts(context));
-  const applicationConclusions = quality.uncoveredTopicIds.length === 0
+  const generalRuleCoverage = validatedGeneralExplainRule
+    ? generalRuleAnswerCoverage(context, query, presentationClaims)
+    : { uncoveredConcepts: [] as string[], uncoveredTopicIds: [] as string[] };
+  const presentationQuality = validatedGeneralExplainRule &&
+      (generalRuleCoverage.uncoveredConcepts.length > 0 || generalRuleCoverage.uncoveredTopicIds.length > 0)
+    ? {
+      ...quality,
+      status: quality.status === 'INSUFFICIENT' ? 'INSUFFICIENT' as const : 'LIMITED' as const,
+      uncoveredTopicIds: [...new Set([...quality.uncoveredTopicIds, ...generalRuleCoverage.uncoveredTopicIds])],
+      coveredConcepts: (quality.coveredConcepts || []).filter(label => !generalRuleCoverage.uncoveredConcepts.includes(label)),
+      uncoveredConcepts: [...new Set([...(quality.uncoveredConcepts || []), ...generalRuleCoverage.uncoveredConcepts])]
+    }
+    : quality;
+  const generalRuleGapLabels = validatedGeneralExplainRule
+    ? [...new Set([
+      ...(presentationQuality.uncoveredConcepts || []),
+      ...presentationQuality.uncoveredTopicIds.map(topicId => getCoverageTopicById(topicId)?.title || topicId)
+    ])]
+    : [];
+  const generalRuleGapMessage = generalRuleGapLabels.length > 0
+    ? `The admitted quotations do not establish these requested rule points: ${generalRuleGapLabels.join('; ')}.`
+    : undefined;
+  const calculation = validatedGeneralExplainRule ? undefined
+    : computeVerifiedStandardGst(query, quality.eligibleRecords, quality.targetDate, unresolvedGstFacts(context));
+  const applicationConclusions = !validatedGeneralExplainRule && quality.uncoveredTopicIds.length === 0
     ? evaluateIrasApplications(query, quality.eligibleRecords, quality.targetDate)
     : [];
+  const missingFacts = validatedGeneralExplainRule ? []
+    : [...new Set([...context.missingFacts, ...quality.missingFacts])];
+  const hasCompleteGeneralRuleAnswer = validatedGeneralExplainRule &&
+    (quality.status === 'LOCAL_SUFFICIENT' || quality.status === 'RETRIEVED_SUFFICIENT') &&
+    quality.uncoveredTopicIds.length === 0 && !(quality.uncoveredConcepts?.length) &&
+    presentationClaims.length > 0 &&
+    generalRuleCoverage.uncoveredConcepts.length === 0 && generalRuleCoverage.uncoveredTopicIds.length === 0 &&
+    !applicationConclusions.some(conclusion => conclusion.certainty === 'CONDITIONAL');
   const { treatment, groups } = accountingGroups(parsed, context, query, deterministicScenario, standard);
   const providerStatus: 'SUCCEEDED' | 'FAILED' | 'NOT_ATTEMPTED' =
     mode === 'PROVIDER_FAILURE' ? 'FAILED'
@@ -669,9 +837,13 @@ export function renderIrasEvidenceResponse(
   if (mode === 'PROVIDER_FAILURE') lines.push('The provider could not complete the answer. The available source evidence is shown below.');
   if (mode === 'PROVIDER_NO_CLAIMS') lines.push('The provider returned no verifiable tax claims. Only complete source paragraphs that passed claim verification are shown below.');
   if (answerPath === 'PROVIDER_CLAIMS_REJECTED') lines.push('The provider claims did not pass verification. Independently selected source quotations are shown below if they also pass the evidence checks.');
-  if (quality.status === 'INSUFFICIENT' || quality.uncoveredTopicIds.length > 0) {
+  if (presentationQuality.status === 'INSUFFICIENT' || presentationQuality.uncoveredTopicIds.length > 0 ||
+      (validatedGeneralExplainRule &&
+        ((quality.status !== 'LOCAL_SUFFICIENT' && quality.status !== 'RETRIEVED_SUFFICIENT') ||
+          Boolean(presentationQuality.uncoveredConcepts?.length)))) {
     lines.push('The available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.');
   }
+  if (generalRuleGapMessage) lines.push(generalRuleGapMessage);
   for (const conclusion of applicationConclusions) {
     const record = quality.eligibleRecords.find(item => item.id === conclusion.sourceRecordId)!;
     const verifiedUrl = hasVerifiedSourceUrlProvenance(record) && (record.canonicalSourceUrl || record.officialSourceUrl);
@@ -679,8 +851,8 @@ export function renderIrasEvidenceResponse(
       ? 'Related IRAS guidance page' : 'Supporting rule';
     lines.push(`${conclusion.text}${verifiedUrl ? ` [${linkLabel}](<${verifiedUrl}>).` : ''}`);
   }
-  if (context.missingFacts.length > 0) {
-    lines.push(`Information still needed to complete the question:\n${context.missingFacts.map(fact => `- ${fact}`).join('\n')}`);
+  if (missingFacts.length > 0) {
+    lines.push(`Information still needed to complete the question:\n${missingFacts.map(fact => `- ${fact}`).join('\n')}`);
   }
   if (presentationClaims.length > 0) {
     lines.push('Admitted source evidence and reviewed summaries:');
@@ -701,7 +873,9 @@ export function renderIrasEvidenceResponse(
         lines.push(`> ${claim.text.replace(/\n/g, '\n> ')}\n\n${sourceLabel} — ${record.provenance === 'LIVE_EXTERNAL' ? 'retrieved official evidence' : 'validated local evidence'}${urlNote}${scope}.`);
       }
     }
-    if (!calculation && applicationConclusions.length === 0) lines.push('This evidence states the recorded rules; it does not by itself confirm that every condition is met in this case.');
+    if (!calculation && applicationConclusions.length === 0 && !validatedGeneralExplainRule) {
+      lines.push('This evidence states the recorded rules; it does not by itself confirm that every condition is met in this case.');
+    }
   } else if (omittedGovernmentClaims.length > 0) {
     lines.push('A Government-specific relief quotation was omitted because the question does not establish Government of Singapore employment.');
   } else if (quality.status !== 'INSUFFICIENT') {
@@ -710,17 +884,16 @@ export function renderIrasEvidenceResponse(
   const irasEvidencePresentation = createIrasEvidencePresentation({
     query,
     classification: context.classification,
-    quality,
+    quality: presentationQuality,
     acceptedClaims: presentationClaims,
-    missingFacts: context.missingFacts,
-    existingFactPrompts: deterministicScenario?.missingFields?.map(field => field.prompt) || [],
+    missingFacts,
+    existingFactPrompts: validatedGeneralExplainRule ? [] : deterministicScenario?.missingFields?.map(field => field.prompt) || [],
     applicationConclusions,
     hasVerifiedCalculation: Boolean(calculation),
-    hasApplicationUncertainty: !calculation && applicationConclusions.length === 0,
+    hasApplicationUncertainty: !calculation && applicationConclusions.length === 0 && !hasCompleteGeneralRuleAnswer,
+    isGeneralRuleRequest: validatedGeneralExplainRule,
     calculationLead: calculation ? lines.find(line => line.startsWith('Output GST:')) : undefined
   });
-  const missingFacts = [...context.missingFacts];
-  const requestCompletenessContext = ensureRequestCompletenessContext(query, context.requestCompletenessContext);
   const scenarioState: AccountingScenarioState = {
     scenarioType: treatment || groups.length ? (deterministicScenario?.scenarioType || 'UNIVERSAL') : 'SINGAPORE_STATUTORY_ADVISORY',
     queryIntent: treatment || groups.length ? 'HYBRID' : 'STATUTORY_ADVISORY',
@@ -728,13 +901,20 @@ export function renderIrasEvidenceResponse(
     rawQuery: query, transactionTitle: 'IRAS evidence review',
     functionalCurrency: deterministicScenario?.functionalCurrency || 'SGD',
     transactionCurrency: deterministicScenario?.transactionCurrency || 'SGD',
-    authorityStatus: calculation && missingFacts.length === 0 ? 'DETERMINISTIC' : 'CONDITIONAL', isComplete: Boolean(calculation && quality.uncoveredTopicIds.length === 0 && missingFacts.length === 0), missingFacts,
+    authorityStatus: (calculation && missingFacts.length === 0) || hasCompleteGeneralRuleAnswer ? 'DETERMINISTIC' : 'CONDITIONAL',
+    isComplete: Boolean((calculation || hasCompleteGeneralRuleAnswer) && presentationQuality.uncoveredTopicIds.length === 0 &&
+      !(presentationQuality.uncoveredConcepts?.length) && missingFacts.length === 0), missingFacts,
     missingFields: deterministicScenario?.missingFields || [],
     accountingTreatmentSummary: treatment || undefined,
     directGroups: groups, keyParameters: [],
     irasEvidencePresentation,
     requestCompletenessContext,
-    uncertaintyDisclaimer: missingFacts.length ? `Required facts remain unresolved: ${missingFacts.join('; ')}.` : calculation ? undefined : 'Only the admitted source evidence and reviewed summaries have been checked; their application is not independently established.',
+    uncertaintyDisclaimer: missingFacts.length ? `Required facts remain unresolved: ${missingFacts.join('; ')}.`
+      : generalRuleGapMessage || (validatedGeneralExplainRule && presentationQuality.status !== 'LOCAL_SUFFICIENT' &&
+          presentationQuality.status !== 'RETRIEVED_SUFFICIENT')
+        ? generalRuleGapMessage || 'Verified source coverage remains insufficient to answer all requested rule points.'
+        : calculation || hasCompleteGeneralRuleAnswer || validatedGeneralExplainRule ? undefined
+        : 'Only the admitted source evidence and reviewed summaries have been checked; their application is not independently established.',
     // Do not spread model/current/offline state: unsupported metadata is not evidence.
     statutoryAdvisory: presentationClaims.map(claim => ({
       authority: 'IRAS' as const, topic: 'Supplied source evidence', summary: claim.text,

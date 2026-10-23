@@ -8,8 +8,14 @@ import {
 } from './externalSourceValidator';
 import {
   cleanHtmlText,
+  cleanHtmlTextPreservingTableCells,
   extractSSOProvision
 } from './sourceAdapters';
+import {
+  ACRA_2022_ANNUAL_RETURN_TIMELINES_URL,
+  deriveAcraFyeCohortApplicability,
+  supportsAcraAnnualReturnDeadlineTable
+} from './acraAnnualReturnFilingRule';
 import {
   ControlledWebRetriever,
   type ControlledFetchResult,
@@ -289,7 +295,7 @@ function exactHtmlElement(html: string, elementId: string): { text: string; star
   if (match.idAttributeCount !== 1 || match.hidden || match.malformed || match.endOffset === undefined ||
       ['a', 'area', 'button', 'img', 'input', 'link', 'meta', 'option'].includes(match.tagName)) return undefined;
   const visibleMarkup = html.slice(match.startOffset, match.endOffset);
-  const text = cleanHtmlText(visibleMarkup.replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
+  const text = cleanHtmlTextPreservingTableCells(visibleMarkup.replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
     .replace(/<(script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' '));
   const tableStructure = assessHtmlTableStructure(visibleMarkup);
   return text.length > 0
@@ -309,11 +315,15 @@ function assessHtmlTableStructure(markup: string): SourceLocator['tableStructure
     if (rows.length < 2) return 'AMBIGUOUS';
     const parsedRows = rows.map(row => {
       const cells = [...row[2].matchAll(/<(td|th)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi)];
-      if (cells.some(cell => /\b(?:colspan|rowspan)\s*=\s*["']?\d+/i.test(cell[2]))) return undefined;
+      for (const cell of cells) {
+        const spans = [...cell[2].matchAll(/\b(colspan|rowspan)\b(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/gi)];
+        if (new Set(spans.map(span => span[1].toLowerCase())).size !== spans.length ||
+            spans.some(span => (span[2] ?? span[3] ?? span[4]) !== '1')) return undefined;
+      }
       return cells.map(cell => cleanHtmlText(cell[3]));
     });
     const expectedCount = parsedRows[0]?.length ?? 0;
-    if (expectedCount < 2 || parsedRows.some(row => !row || row.length !== expectedCount || row.some(cell => !cell))) return 'AMBIGUOUS';
+    if (expectedCount < 2 || parsedRows.some(row => !row || row.length !== expectedCount)) return 'AMBIGUOUS';
   }
   return 'PRESERVED';
 }
@@ -353,7 +363,7 @@ function extractHtmlHeadingSection(html: string, requestedHeading: string): Sele
   const visibleMarkup = html.slice(selected.start, endOffset)
     .replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
     .replace(/<(script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
-  const text = cleanHtmlText(visibleMarkup);
+  const text = cleanHtmlTextPreservingTableCells(visibleMarkup);
   const tableStructure = assessHtmlTableStructure(visibleMarkup);
   return text.length > 0 ? {
     text,
@@ -696,6 +706,11 @@ function buildRecord(
     (pageCount ? `Whole document, ${pageCount} pages` : 'Whole document');
   const provisionHash = computeProvisionHash(request.standardOrActCode, paragraphOrSection, sourceText);
   const validDates = extractApplicabilityDates(sourceText);
+  const acraFyeCohortApplicability = request.authority === 'ACRA' &&
+    request.domain === 'ACRA_CORP' && request.url === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL &&
+    request.topicIds?.includes('acra_annual-returns') && supportsAcraAnnualReturnDeadlineTable(sourceText)
+    ? deriveAcraFyeCohortApplicability(sourceText)
+    : undefined;
   const version = `sha256:${documentHash}:${provisionHash}`;
   return {
     id: `LIVE_${request.authority}_${documentHash.slice(0, 12)}_${provisionHash.slice(0, 12)}`,
@@ -711,6 +726,7 @@ function buildRecord(
     ...(validDates.effectiveDate ? { effectiveDate: validDates.effectiveDate } : {}),
     ...(validDates.validFrom ? { validFrom: validDates.validFrom } : {}),
     ...(validDates.validTo ? { validTo: validDates.validTo } : {}),
+    ...(acraFyeCohortApplicability ? { acraFyeCohortApplicability } : {}),
     officialSourceUrl: finalUrl,
     canonicalSourceUrl: finalUrl,
     domain: request.domain,

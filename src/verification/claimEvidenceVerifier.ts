@@ -3,8 +3,12 @@ import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '..
 import { defaultSourceFreshnessManager, SourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
+import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
 import type { VerifiedDocumentBinding } from '../standards/unifiedSourceModel';
 import type { QueryDomain, StatutoryAuthority } from '../types/accounting';
+import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisorySupport';
+import { normalizeEvidenceText, startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
+export { startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
 
 export type VerifiedEvidenceClaim = {
   text: string;
@@ -14,6 +18,9 @@ export type VerifiedEvidenceClaim = {
   canonicalUrl?: string;
   supportKind: 'EXACT_SOURCE_QUOTE' | 'REVIEWED_EDITORIAL_SUMMARY';
   sourceBinding?: VerifiedDocumentBinding;
+  /** Current revalidation scope for an independently admitted managed document. */
+  sourceAdmissionOptions?: Pick<SharedDocumentAdmissionOptions,
+    'targetDate' | 'expectedAuthority' | 'expectedDomain' | 'applicabilityTarget'>;
 };
 
 export type RejectedEvidenceClaim = {
@@ -32,20 +39,12 @@ export interface VerifyEvidenceClaimsOptions {
   referenceDate?: string;
   expectedAuthority?: StatutoryAuthority;
   expectedDomain?: QueryDomain;
+  applicabilityTarget?: 'ACRA_FYE';
   versioningManager?: SourceVersioningManager;
 }
 
 const APPLICATION_SOURCE_TYPES = new Set(['APPLICATION_RULE']);
-const ATTACHED_QUALIFICATION_START = /^(?:however\b|except(?:ions?)?\b|provided\b|unless\b|but\b|subject to\b|notwithstanding\b|nevertheless\b|in contrast\b)/i;
 const COMMON_ABBREVIATIONS = /\b(?:e\.g|i\.e|etc|mr|mrs|ms|dr|prof|no|nos|sec|secs|s|para|paras|art|arts|pt|ltd|pte|co)\.$/i;
-
-function normalizeEvidenceText(value: string): string {
-  return value.normalize('NFC').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
-export function startsAttachedEvidenceQualification(value: string): boolean {
-  return ATTACHED_QUALIFICATION_START.test(normalizeEvidenceText(value));
-}
 
 function isIncompleteColonEndedQuote(value: string): boolean {
   const normalized = normalizeEvidenceText(value);
@@ -167,7 +166,8 @@ export function findRecordEligibilityRejection(
   referenceDate?: string,
   versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
   expectedAuthority?: StatutoryAuthority,
-  expectedDomain?: QueryDomain
+  expectedDomain?: QueryDomain,
+  applicabilityTarget?: VerifyEvidenceClaimsOptions['applicabilityTarget']
 ): string | undefined {
   if (APPLICATION_SOURCE_TYPES.has(record.sourceType) || record.evidenceTier === 'APPLICATION_RULE') {
     return 'APPLICATION_SOURCE_NOT_ALLOWED';
@@ -177,7 +177,8 @@ export function findRecordEligibilityRejection(
     targetDate,
     referenceDate,
     expectedAuthority,
-    expectedDomain
+    expectedDomain,
+    applicabilityTarget
   });
   if (documentAdmission.required) return documentAdmission.admitted ? undefined : documentAdmission.reason;
 
@@ -300,6 +301,100 @@ function quoteIsWholeSourceSpan(sourceText: string, quote: string): 'MATCH' | 'N
   return 'NO_MATCH';
 }
 
+type BoundedAdvisoryProfile = 'CPF_ORDINARY_WAGES' | 'MOM_PART_IV_OVERTIME';
+
+function boundedAdvisoryProfileForRecord(record: AuthoritativeSourceRecord): BoundedAdvisoryProfile | undefined {
+  if (record.provenance !== 'LIVE_EXTERNAL' || record.lifecycleState !== 'CANDIDATE' ||
+      record.sourceStatus !== 'NEEDS_REVIEW') {
+    return undefined;
+  }
+
+  const topicBindings = new Set([
+    ...(record.sourceMapTopicIds || []),
+    ...(record.relatedTopicIds || []),
+    ...(record.tags || [])
+  ]);
+  if (record.authority === 'CPF' && record.sourceAuthority === 'CPF' && record.domain === 'CPF_BOARD' &&
+      topicBindings.has('cpf-ordinary-wages')) {
+    return 'CPF_ORDINARY_WAGES';
+  }
+  if (record.authority === 'MOM' && record.sourceAuthority === 'MOM' && record.domain === 'MOM_EMPLOYMENT' &&
+      topicBindings.has('mom-part-iv-overtime')) {
+    return 'MOM_PART_IV_OVERTIME';
+  }
+  return undefined;
+}
+
+function isAdvisoryListItem(block: string): boolean {
+  return /^(?:\|\s*)*[•◦▪]\s+/u.test(block);
+}
+
+function advisoryListHeaderIndex(blocks: string[], profile: BoundedAdvisoryProfile): number {
+  const header = profile === 'CPF_ORDINARY_WAGES'
+    ? /\bfor wages to be classified as ordinary wages for the month\b.{0,140}\bthey must meet both (?:(?:of )?the )?following (?:criteria|conditions):/i
+    : /\byou can claim overtime if you are:/i;
+  return blocks.findIndex(block => header.test(block));
+}
+
+/**
+ * Accepts only a bounded, exact, contiguous quotation that includes the complete
+ * native list and passes the substantive CPF/MOM support check. Generic quote
+ * matching remains unchanged for every other record and request.
+ */
+function quoteIsCompleteBoundedAdvisorySpan(record: AuthoritativeSourceRecord, quote: string): boolean {
+  const profile = boundedAdvisoryProfileForRecord(record);
+  if (!profile || record.sourceText.length > 100_000) return false;
+
+  const normalizedQuote = normalizeEvidenceText(quote);
+  if (!normalizedQuote || normalizedQuote.length > 5_000) return false;
+
+  const blocks = record.sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  if (blocks.length > 300) return false;
+  const normalizedBlocks = blocks.map(normalizeEvidenceText);
+  const headerIndex = advisoryListHeaderIndex(normalizedBlocks, profile);
+  if (headerIndex < 0) return false;
+
+  let listEnd = headerIndex;
+  let listItemCount = 0;
+  while (listEnd + 1 < blocks.length && isAdvisoryListItem(normalizedBlocks[listEnd + 1])) {
+    listEnd += 1;
+    listItemCount += 1;
+  }
+  if (listItemCount < 2) return false;
+
+  let requiredEnd = listEnd;
+  while (requiredEnd + 1 < blocks.length && startsAttachedEvidenceQualification(blocks[requiredEnd + 1])) {
+    requiredEnd += 1;
+  }
+
+  let supportChecks = 0;
+  for (let start = 0; start <= headerIndex && supportChecks < 2_000; start += 1) {
+    if (isAdvisoryListItem(normalizedBlocks[start])) continue;
+    let span = '';
+    for (let end = start; end < blocks.length && supportChecks < 2_000; end += 1) {
+      span = span ? `${span} ${normalizedBlocks[end]}` : normalizedBlocks[end];
+      if (span.length > normalizedQuote.length) break;
+      if (span !== normalizedQuote) continue;
+      supportChecks += 1;
+      if (end < requiredEnd || end < listEnd) continue;
+
+      const subject = profile === 'CPF_ORDINARY_WAGES' ? 'ordinary wages definition' : 'Part IV overtime eligibility';
+      if (supportBoundedStatutoryAdvisory({
+        authority: profile === 'CPF_ORDINARY_WAGES' ? 'CPF' : 'MOM',
+        topicId: profile === 'CPF_ORDINARY_WAGES' ? 'cpf-ordinary-wages' : 'mom-part-iv-overtime',
+        subject,
+        sourceText: blocks.slice(start, end + 1).join('\n\n')
+      }) === true) return true;
+    }
+  }
+  return false;
+}
+
 function reject(text: string, reason: string): RejectedEvidenceClaim {
   return { text, reason };
 }
@@ -369,7 +464,8 @@ export function verifyEvidenceClaims(
       options?.referenceDate,
       versioningManager,
       options?.expectedAuthority,
-      options?.expectedDomain
+      options?.expectedDomain,
+      options?.applicabilityTarget
     );
     if (eligibilityRejection) {
       rejected.push(reject(text, eligibilityRejection));
@@ -394,7 +490,10 @@ export function verifyEvidenceClaims(
       }
     }
 
-    const quoteResult = quoteIsWholeSourceSpan(record.sourceText, quote);
+    const sourceSpanResult = quoteIsWholeSourceSpan(record.sourceText, quote);
+    const quoteResult = sourceSpanResult === 'NO_MATCH' && quoteIsCompleteBoundedAdvisorySpan(record, quote)
+      ? 'MATCH'
+      : sourceSpanResult;
     if (quoteResult === 'OMITS_ATTACHED_QUALIFICATION') {
       rejected.push(reject(text, 'QUOTE_OMITS_ATTACHED_QUALIFICATION'));
       continue;
@@ -408,8 +507,17 @@ export function verifyEvidenceClaims(
       targetDate,
       referenceDate: options?.referenceDate,
       expectedAuthority: options?.expectedAuthority,
-      expectedDomain: options?.expectedDomain
+      expectedDomain: options?.expectedDomain,
+      applicabilityTarget: options?.applicabilityTarget
     });
+    const sourceAdmissionOptions = sharedAdmission.required && sharedAdmission.admitted
+      ? {
+        ...(targetDate ? { targetDate } : {}),
+        ...(options?.expectedAuthority ? { expectedAuthority: options.expectedAuthority } : {}),
+        ...(options?.expectedDomain ? { expectedDomain: options.expectedDomain } : {}),
+        ...(options?.applicabilityTarget ? { applicabilityTarget: options.applicabilityTarget } : {})
+      }
+      : undefined;
     accepted.push({
       text,
       recordId: record.id,
@@ -418,7 +526,10 @@ export function verifyEvidenceClaims(
       supportKind: record.provenance === 'LOCAL_STATIC' &&
         (record.sourceType === 'CURATED_SUMMARY' || record.isVerbatimText === false)
         ? 'REVIEWED_EDITORIAL_SUMMARY' : 'EXACT_SOURCE_QUOTE',
-      ...(sharedAdmission.required && sharedAdmission.admitted ? { sourceBinding: sharedAdmission.binding } : {})
+      ...(sharedAdmission.required && sharedAdmission.admitted ? {
+        sourceBinding: sharedAdmission.binding,
+        sourceAdmissionOptions
+      } : {})
     });
   }
 

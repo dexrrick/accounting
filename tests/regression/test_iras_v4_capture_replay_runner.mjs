@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import childProcess from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { syncBuiltinESMExports } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
@@ -6,11 +9,18 @@ import http, { request as namedHttpRequest } from 'node:http';
 import net, { connect as namedNetConnect } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { PassThrough, Writable } from 'node:stream';
 import tls from 'node:tls';
 import { fileURLToPath } from 'node:url';
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import {
   BASELINE_COMMIT,
+  CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE,
+  EXPECTED_BRANCH,
+  FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+  ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE,
+  MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE,
+  TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE,
   ACTIVATION_PROFILE,
   CASE_EVIDENCE_FAMILY,
   EVIDENCE_FAMILIES,
@@ -26,6 +36,7 @@ import {
   captureInventoryDigest,
   collectTrackedExecutablePaths,
   collectCheckoutIntegritySnapshot,
+  expectedBranchForSemanticNamespace,
   createCaptureTransport,
   createReplayTransport,
   runBoundedCapture,
@@ -158,6 +169,109 @@ async function testProviderEnvelopeFailureRetention() {
     });
     assert.equal(stalledFetchCalls, 1);
     assert.equal(stalledCancelCalls, 1, 'Already-aborted provider reads cancel without awaiting a stalled body cancel.');
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = originalApiKey;
+  }
+}
+
+async function testSemanticDeadlineRetainsProviderReceipt() {
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = process.env.GEMINI_API_KEY;
+  const prefix = Buffer.from('{"candidates":', 'utf8');
+  let fetchCalls = 0;
+  let bodyCancellations = 0;
+  process.env.GEMINI_API_KEY = 'offline-fixture-key-only';
+  globalThis.fetch = async () => {
+    fetchCalls += 1;
+    return new Response(new ReadableStream({
+      start(controller) { controller.enqueue(prefix); },
+      cancel() { bodyCancellations += 1; return new Promise(() => {}); }
+    }), { status: 200 });
+  };
+  try {
+    const freshTransport = await import(new URL(
+      '../../scripts/iras_v4_capture_transports.mjs?outer-deadline-receipt=1', import.meta.url).href);
+    const progress = [];
+    const result = await runOfflineSyntheticV4CaseLoop({
+      synthetic: true,
+      timeoutMs: 40,
+      semanticTransport: freshTransport.sendV4SemanticRequest,
+      executeCase: async ({ caseId, sendSemantic }) => await sendSemantic({
+        caseId,
+        prompt: 'offline deadline receipt fixture',
+        system: 'offline fixture',
+        provider: { activeProvider: 'gemini', gemini: { model: 'gemini-3.5-flash-lite' } },
+        options: { jsonMode: true, responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+          timeoutMs: 8_000, temperature: 0 }
+      }),
+      writeProgress: async row => progress.push(row)
+    });
+    assert.equal(fetchCalls, 1, 'the reviewed provider transport makes exactly one mocked physical request');
+    assert.equal(bodyCancellations, 1, 'the deadline cancels the stalled body without awaiting its cancel promise');
+    assert.equal(result.rows[0].failure.stage, 'SEMANTIC_TRANSPORT');
+    assert.equal(result.rows[0].failure.code, 'V4_SEMANTIC_DEADLINE_EXCEEDED');
+    assert.deepEqual(result.rows[0].providerResponsePartial, {
+      kind: 'GEMINI_HTTP_ENVELOPE',
+      status: 200,
+      failureCode: 'V4_SEMANTIC_DEADLINE_EXCEEDED',
+      truncated: false,
+      bodyBase64: prefix.toString('base64'),
+      bodySha256: sha256(prefix),
+      bodyBytes: prefix.length
+    });
+    assert.equal(Object.isFrozen(result.rows[0].providerResponsePartial), true,
+      'the persisted provider receipt cannot be mutated after the deadline');
+    const failedEvent = progress.find(row => row.event === 'SEMANTIC_RESPONSE_FAILED');
+    assert.deepEqual(failedEvent.partialProviderResponse, result.rows[0].providerResponsePartial,
+      'the failure event persists the same bounded provider receipt as the failed row');
+    assert.equal(failedEvent.partialSemanticResponseBase64, undefined,
+      'provider HTTP bytes remain separate from semantic response bytes');
+    assert.equal(result.rows[0].failureDiagnostics.providerOutcome, 'TIMEOUT');
+    assert.equal(result.rows[0].failureDiagnostics.providerStatus, 200,
+      'the observed status remains available without being classified as an HTTP failure');
+    assert.equal(result.rows[0].failureDiagnostics.assessmentStatus, 'NOT_ASSESSED');
+    assert.equal(result.rows[1].status, 'NOT_RUN_AFTER_PRIOR_FAILURE');
+
+    let noHeaderCalls = 0;
+    const noHeaderProgress = [];
+    globalThis.fetch = async (_url, init) => {
+      noHeaderCalls += 1;
+      return await new Promise((_, reject) => {
+        init.signal.addEventListener('abort', () => {
+          const error = new Error('aborted before response headers');
+          error.name = 'AbortError';
+          reject(error);
+        }, { once: true });
+      });
+    };
+    const noHeaderTransport = await import(new URL(
+      '../../scripts/iras_v4_capture_transports.mjs?outer-deadline-no-headers=1', import.meta.url).href);
+    const noHeader = await runOfflineSyntheticV4CaseLoop({
+      synthetic: true,
+      timeoutMs: 30,
+      semanticTransport: noHeaderTransport.sendV4SemanticRequest,
+      executeCase: async ({ caseId, sendSemantic }) => await sendSemantic({
+        caseId,
+        prompt: 'offline no-header timeout fixture',
+        system: 'offline fixture',
+        provider: { activeProvider: 'gemini', gemini: { model: 'gemini-3.5-flash-lite' } },
+        options: { jsonMode: true, responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+          timeoutMs: 8_000, temperature: 0 }
+      }),
+      writeProgress: async row => noHeaderProgress.push(row)
+    });
+    assert.equal(noHeaderCalls, 1);
+    assert.equal(noHeader.rows[0].failure.code, 'V4_SEMANTIC_DEADLINE_EXCEEDED');
+    assert.equal(noHeader.rows[0].providerResponsePartial, undefined,
+      'a timeout before headers does not manufacture a provider receipt');
+    assert.equal(noHeader.rows[0].failureDiagnostics.providerOutcome, 'TIMEOUT');
+    assert.equal(noHeader.rows[0].failureDiagnostics.providerStatus, undefined);
+    assert.equal(noHeader.rows[0].failureDiagnostics.assessmentStatus, 'NOT_ASSESSED');
+    assert.equal(noHeader.rows[1].status, 'NOT_RUN_AFTER_PRIOR_FAILURE');
+    const noHeaderFailureEvent = noHeaderProgress.find(row => row.event === 'SEMANTIC_RESPONSE_FAILED');
+    assert.equal(noHeaderFailureEvent.partialProviderResponse, null);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) delete process.env.GEMINI_API_KEY;
@@ -327,30 +441,167 @@ async function initGitFixture(root) {
   await mkdir(path.join(root, 'src'), { recursive: true });
   await mkdir(path.join(root, 'tests', 'regression'), { recursive: true });
   await mkdir(path.join(root, 'scripts'), { recursive: true });
+  await writeFile(path.join(root, '.gitattributes'), '*.txt text eol=crlf\n*.bin -text\n');
   await writeFile(path.join(root, 'src', 'sample.ts'), 'export const value = 1;\n');
+  await writeFile(path.join(root, 'src', 'crlf.txt'), Buffer.from('first\r\nsecond\r\n'));
+  await writeFile(path.join(root, 'src', 'raw.bin'), Buffer.from([0, 0xff, 13, 10, 0x41, 0]));
   await writeFile(path.join(root, 'tests', 'regression', 'sample.mjs'), 'export const test = true;\n');
   await writeFile(path.join(root, 'scripts', 'sample.mjs'), 'process.exit(0);\n');
   git(root, ['init', '-b', 'fixture']);
+  git(root, ['config', 'core.autocrlf', 'false']);
   git(root, ['config', 'user.email', 'runner-fixture@example.invalid']);
   git(root, ['config', 'user.name', 'V4 Runner Fixture']);
-  git(root, ['add', '--', 'src/sample.ts', 'tests/regression/sample.mjs', 'scripts/sample.mjs']);
+  git(root, ['add', '--', '.gitattributes', 'src/sample.ts', 'src/crlf.txt', 'src/raw.bin',
+    'tests/regression/sample.mjs', 'scripts/sample.mjs']);
   git(root, ['commit', '-m', 'fixture baseline']);
   return git(root, ['rev-parse', 'HEAD']);
+}
+
+function gitBlobId(bytes) {
+  return createHash('sha1').update(Buffer.from('blob ' + bytes.length + '\0')).update(bytes).digest('hex');
+}
+
+async function withGitSpawnInterceptor(interceptor, operation) {
+  const originalSpawn = childProcess.spawn;
+  childProcess.spawn = function (executable, args, options) {
+    return interceptor(executable, args, options, originalSpawn);
+  };
+  syncBuiltinESMExports();
+  try {
+    return await operation();
+  } finally {
+    childProcess.spawn = originalSpawn;
+    syncBuiltinESMExports();
+  }
+}
+
+function fakeGitChild(stdoutText, { inputError = false } = {}) {
+  const child = new EventEmitter();
+  child.stdin = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
+  child.stdout = new PassThrough();
+  child.stderr = new PassThrough();
+  child.kill = () => true;
+  let streamsEnded = 0;
+  const closeWhenReady = () => {
+    streamsEnded += 1;
+    if (streamsEnded === 2) setImmediate(() => child.emit('close', 0));
+  };
+  child.stdout.on('end', closeWhenReady);
+  child.stderr.on('end', closeWhenReady);
+  if (inputError) child.stdin.on('finish', () => {
+    const error = new Error('simulated EPIPE');
+    error.code = 'EPIPE';
+    setImmediate(() => child.stdin.emit('error', error));
+  });
+  setImmediate(() => {
+    child.stdout.end(Buffer.from(stdoutText, 'utf8'));
+    child.stderr.end();
+  });
+  return child;
 }
 
 async function testCheckoutBindings() {
   const root = await temporaryDirectory('iras-v4-git-');
   try {
     const baseline = await initGitFixture(root);
-    const paths = ['src/sample.ts', 'tests/regression/sample.mjs', 'scripts/sample.mjs'];
+    const paths = ['.gitattributes', 'src/crlf.txt', 'src/raw.bin', 'src/sample.ts',
+      'tests/regression/sample.mjs', 'scripts/sample.mjs'];
     const directories = ['src', 'tests/regression', 'scripts'];
-    const initial = await collectCheckoutIntegritySnapshot({
+    const observedGitArgs = [];
+    const initial = await withGitSpawnInterceptor((executable, args, options, originalSpawn) => {
+      observedGitArgs.push([...args]);
+      return originalSpawn(executable, args, options);
+    }, () => collectCheckoutIntegritySnapshot({
       root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline, paths, directories
-    });
+    }));
     assert.equal(initial.baselineAncestor, true);
     assert.equal(initial.reviewedAncestor, true);
-    assert.equal(initial.fileRows.length, 3);
+    assert.equal(initial.fileRows.length, paths.length);
     assert.ok(initial.fileRows.every(row => row.gitBlob === row.reviewedBlob));
+    assert.equal(observedGitArgs.filter(args => args.includes('--batch-check')).length, 1,
+      'all committed blob lookups use one NUL-framed batch process');
+    assert.equal(observedGitArgs.filter(args => args.includes('hash-object')).length, paths.length,
+      'working blobs are still hashed from each exact captured byte buffer');
+    assert.equal(observedGitArgs.filter(args => args.includes('rev-parse') &&
+      args.some(argument => /^(?:HEAD|[a-f0-9]{40,64}):/.test(argument))).length, 0,
+    'per-file committed blob rev-parse processes are eliminated');
+
+    const crlfBytes = Buffer.from('first\r\nsecond\r\n');
+    const crlfRow = initial.fileRows.find(row => row.path === 'src/crlf.txt');
+    assert.equal(crlfRow.sha256, sha256(crlfBytes), 'the captured-byte SHA-256 retains CRLF bytes');
+    assert.equal(crlfRow.gitBlob, gitBlobId(Buffer.from('first\nsecond\n')),
+      'text eol attributes normalize CRLF bytes before Git blob hashing');
+    assert.notEqual(crlfRow.gitBlob, gitBlobId(crlfBytes));
+    const binaryBytes = Buffer.from([0, 0xff, 13, 10, 0x41, 0]);
+    const binaryRow = initial.fileRows.find(row => row.path === 'src/raw.bin');
+    assert.equal(binaryRow.sha256, sha256(binaryBytes));
+    assert.equal(binaryRow.gitBlob, gitBlobId(binaryBytes), '-text attributes preserve raw binary bytes');
+    assert.equal(git(root, ['show', 'HEAD:src/crlf.txt']), 'first\nsecond');
+
+    const batchRecords = initial.fileRows.flatMap(row => [row.gitBlob + ' blob 1', row.gitBlob + ' blob 1']);
+    const assertMalformedBatchRejected = async (output, expectedError, { inputError = false } = {}) => {
+      let batchCalls = 0;
+      await withGitSpawnInterceptor((executable, args, options, originalSpawn) => {
+        if (args.includes('--batch-check')) {
+          batchCalls += 1;
+          return fakeGitChild(output, { inputError });
+        }
+        return originalSpawn(executable, args, options);
+      }, async () => {
+        await assert.rejects(collectCheckoutIntegritySnapshot({
+          root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline, paths, directories
+        }), expectedError);
+      });
+      assert.equal(batchCalls, 1);
+    };
+    await assertMalformedBatchRejected(batchRecords.join('\0'), /V4_GIT_BATCH_CHECK_TRUNCATED/);
+    await assertMalformedBatchRejected(batchRecords.join('\0') + '\0' + batchRecords[0] + '\0',
+      /V4_GIT_BATCH_CHECK_RESPONSE_COUNT_MISMATCH/);
+    const wrongTypeRecords = [...batchRecords];
+    wrongTypeRecords[0] = initial.fileRows[0].gitBlob + ' tree 1';
+    await assertMalformedBatchRejected(wrongTypeRecords.join('\0') + '\0',
+      /V4_GIT_BATCH_CHECK_OBJECT_TYPE_MISMATCH/);
+    const differentBlobRow = initial.fileRows.find(row => row.gitBlob !== initial.fileRows[0].gitBlob);
+    assert.ok(differentBlobRow, 'fixture includes different blobs to detect reordered responses');
+    const reorderedRecords = [...batchRecords];
+    reorderedRecords[0] = differentBlobRow.gitBlob + ' blob 1';
+    await assertMalformedBatchRejected(reorderedRecords.join('\0') + '\0',
+      /V4_HEAD_GIT_BLOB_OWNERSHIP_MISMATCH/);
+    await assertMalformedBatchRejected(batchRecords.join('\0') + '\0', /V4_GIT_INPUT_FAILED:cat-file/,
+      { inputError: true });
+
+    const freshBranch = expectedBranchForSemanticNamespace(CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE);
+    const historicalBranch = expectedBranchForSemanticNamespace(ARTIFACT_ROOT + '/semantic-run-v4');
+    assert.equal(freshBranch, FRESH_ACCEPTANCE_EXPECTED_BRANCH);
+    assert.equal(historicalBranch, EXPECTED_BRANCH);
+    await assert.rejects(collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: freshBranch
+    }), /V4_BRANCH_MISMATCH/, 'a checkout on the fixture branch cannot satisfy the new frozen branch');
+
+    git(root, ['checkout', '-b', freshBranch]);
+    const freshBranchSnapshot = await collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: freshBranch
+    });
+    assert.equal(freshBranchSnapshot.branch, freshBranch);
+    await assert.rejects(collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: historicalBranch
+    }), /V4_BRANCH_MISMATCH/, 'the historical branch binding cannot run on the new branch');
+
+    git(root, ['checkout', '-b', historicalBranch]);
+    const historicalBranchSnapshot = await collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: historicalBranch
+    });
+    assert.equal(historicalBranchSnapshot.branch, historicalBranch,
+      'historical branch bindings remain unchanged');
+    await assert.rejects(collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: baseline,
+      paths, directories, expectedBranch: freshBranch
+    }), /V4_BRANCH_MISMATCH/);
+    git(root, ['checkout', 'fixture']);
 
     await assert.rejects(
       collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline,
@@ -395,12 +646,128 @@ async function testCheckoutBindings() {
         root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: reviewed,
         paths: [...paths, 'src/new-input.cts'], directories
       }),
-      /V4_GIT_COMMAND_FAILED:rev-parse/
+      /V4_REVIEWED_GIT_BLOB_MISSING:src\/new-input\.cts/
     );
+
+    const scalePaths = [
+      ...Array.from({ length: 24 }, (_, index) => 'src/scale-' + String(index).padStart(2, '0') + '.ts'),
+      'src/space [literal].ts'
+    ];
+    for (const relative of scalePaths) {
+      await writeFile(path.join(root, ...relative.split('/')), 'export const scale = true;\n');
+    }
+    git(root, ['add', '--', ...scalePaths]);
+    git(root, ['commit', '-m', 'add process-scale fixture files']);
+    const scaleReviewed = git(root, ['rev-parse', 'HEAD']);
+    const scaleInvocations = [];
+    const scaledPaths = [...paths, ...scalePaths];
+    const scaled = await withGitSpawnInterceptor((executable, args, options, originalSpawn) => {
+      scaleInvocations.push([...args]);
+      return originalSpawn(executable, args, options);
+    }, () => collectCheckoutIntegritySnapshot({
+      root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: scaleReviewed,
+      paths: scaledPaths, directories
+    }));
+    assert.equal(scaled.fileRows.length, scaledPaths.length);
+    assert.deepEqual(scaled.fileRows.map(row => row.path), [...scaledPaths].sort());
+    assert.equal(scaleInvocations.filter(args => args.includes('--batch-check')).length, 1,
+      'a larger inventory still needs only one committed-blob batch process');
+    assert.equal(scaleInvocations.filter(args => args.includes('hash-object')).length, scaledPaths.length,
+      'working hashes scale with file count and remain bounded by the four-worker pool');
+    assert.equal(scaleInvocations.filter(args => args.includes('rev-parse') &&
+      args.some(argument => /^(?:HEAD|[a-f0-9]{40,64}):/.test(argument))).length, 0);
+
+    let activeHashes = 0;
+    let peakActiveHashes = 0;
+    const controlledChildren = [];
+    let resolveFirstFailure;
+    const firstFailure = new Promise(resolve => { resolveFirstFailure = resolve; });
+    let resolvePendingHashes;
+    const pendingHashesReleased = new Promise(resolve => { resolvePendingHashes = resolve; });
+    const concurrencyPaths = scalePaths;
+    let collectionSettled = false;
+    const collectionOutcome = withGitSpawnInterceptor((executable, args, options, originalSpawn) => {
+      if (!args.includes('hash-object')) return originalSpawn(executable, args, options);
+      const ordinal = controlledChildren.length;
+      activeHashes += 1;
+      peakActiveHashes = Math.max(peakActiveHashes, activeHashes);
+      const child = new EventEmitter();
+      child.stdin = new Writable({ write(_chunk, _encoding, callback) { callback(); } });
+      child.stdout = new PassThrough();
+      child.stderr = new PassThrough();
+      child.kill = () => true;
+      let finished = false;
+      const finish = (code, stdoutText, stderrText) => {
+        if (finished) return;
+        finished = true;
+        let streamsEnded = 0;
+        const closeWhenReady = () => {
+          streamsEnded += 1;
+          if (streamsEnded === 2) setImmediate(() => child.emit('close', code));
+        };
+        child.stdout.once('end', closeWhenReady);
+        child.stderr.once('end', closeWhenReady);
+        child.stdout.end(Buffer.from(stdoutText, 'utf8'));
+        child.stderr.end(Buffer.from(stderrText, 'utf8'));
+      };
+      child.once('close', () => {
+        activeHashes -= 1;
+        if (ordinal === 0) resolveFirstFailure();
+      });
+      controlledChildren.push({ finish, ordinal });
+      if (controlledChildren.length === 4) {
+        setImmediate(() => controlledChildren[0].finish(1, '', 'simulated hash failure'));
+      }
+      if (ordinal > 0 && ordinal < 4) {
+        pendingHashesReleased.then(() => finish(0,
+          gitBlobId(Buffer.from('export const scale = true;\n')) + '\n', ''));
+      } else if (ordinal >= 4) {
+        setImmediate(() => finish(0,
+          gitBlobId(Buffer.from('export const scale = true;\n')) + '\n', ''));
+      }
+      return child;
+    }, async () => {
+      try {
+        return { result: await collectCheckoutIntegritySnapshot({
+          root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: scaleReviewed,
+          paths: concurrencyPaths, directories
+        }) };
+      } catch (error) {
+        return { error };
+      } finally {
+        collectionSettled = true;
+      }
+    });
+    let failureObserved = false;
+    let timeout;
+    try {
+      failureObserved = await Promise.race([
+        firstFailure.then(() => true),
+        new Promise(resolve => { timeout = setTimeout(() => resolve(false), 5_000); })
+      ]);
+    } finally {
+      clearTimeout(timeout);
+    }
+    await new Promise(resolve => setImmediate(resolve));
+    const drainState = {
+      started: controlledChildren.length,
+      active: activeHashes,
+      peak: peakActiveHashes,
+      collectionSettled
+    };
+    resolvePendingHashes();
+    controlledChildren[0]?.finish(1, '', 'simulated hash failure');
+    const failedCollection = await collectionOutcome;
+    assert.equal(failureObserved, true, 'the first worker fails after four hashes are active');
+    assert.deepEqual(drainState, { started: 4, active: 3, peak: 4, collectionSettled: false },
+      'a worker failure stops new work, stays under the four-child bound, and waits for in-flight hashes');
+    assert.match(failedCollection.error?.message || '', /V4_GIT_COMMAND_FAILED:hash-object/);
+    assert.equal(activeHashes, 0, 'all started hash children are closed before collection rejects');
+    assert.equal(controlledChildren.length, 4, 'no queued file starts after the first hash failure');
 
     git(root, ['checkout', '--detach', baseline]);
     await assert.rejects(
-      collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: reviewed, paths, directories }),
+      collectCheckoutIntegritySnapshot({ root, gitExecutable: GIT, baselineCommit: baseline, reviewedCommit: scaleReviewed, paths, directories }),
       /V4_REVIEWED_COMMIT_NOT_ANCESTOR_OF_HEAD/
     );
   } finally {
@@ -576,6 +943,10 @@ async function testReviewedSemanticNamespaces() {
   const freshNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4';
   const retryNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-retry-2026-10-08';
   const postRepairNamespace = FRESH_ACCEPTANCE_ROOT + '/semantic-run-v4-post-repair-2026-10-08';
+  const canonicalNamespace = CANONICAL_ACCEPTANCE_SEMANTIC_NAMESPACE;
+  const freshAlignmentNamespace = ALIGNMENT_ACCEPTANCE_SEMANTIC_NAMESPACE;
+  const mixedRepairNamespace = MIXED_REPAIR_ACCEPTANCE_SEMANTIC_NAMESPACE;
+  const timeoutReceiptNamespace = TIMEOUT_RECEIPT_ACCEPTANCE_SEMANTIC_NAMESPACE;
   const root = await temporaryDirectory('iras-v4-semantic-namespace-');
   try {
     assert.equal(assertReviewedSemanticNamespace(legacyNamespace), legacyNamespace,
@@ -586,6 +957,28 @@ async function testReviewedSemanticNamespaces() {
       'the exact retry namespace is accepted');
     assert.equal(assertReviewedSemanticNamespace(postRepairNamespace), postRepairNamespace,
       'the exact post-repair namespace is accepted');
+    assert.equal(assertReviewedSemanticNamespace(canonicalNamespace), canonicalNamespace,
+      'the prior canonical namespace remains explicitly accepted');
+    assert.equal(assertReviewedSemanticNamespace(freshAlignmentNamespace), freshAlignmentNamespace,
+      'the fresh alignment namespace is explicitly accepted');
+    assert.equal(assertReviewedSemanticNamespace(mixedRepairNamespace), mixedRepairNamespace,
+      'the new mixed repair namespace is explicitly accepted');
+    assert.equal(assertReviewedSemanticNamespace(timeoutReceiptNamespace), timeoutReceiptNamespace,
+      'the timeout receipt acceptance uses its own exact namespace');
+    assert.equal(expectedBranchForSemanticNamespace(legacyNamespace), EXPECTED_BRANCH);
+    assert.equal(expectedBranchForSemanticNamespace(freshNamespace), EXPECTED_BRANCH);
+    assert.equal(expectedBranchForSemanticNamespace(canonicalNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH);
+    assert.equal(expectedBranchForSemanticNamespace(freshAlignmentNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+      'fresh alignment acceptance is bound to the ACRA branch');
+    assert.equal(expectedBranchForSemanticNamespace(mixedRepairNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+      'mixed repair acceptance is bound to the ACRA branch');
+    assert.equal(expectedBranchForSemanticNamespace(timeoutReceiptNamespace), FRESH_ACCEPTANCE_EXPECTED_BRANCH,
+      'timeout receipt acceptance is bound to the ACRA branch');
+    assert.notEqual(freshAlignmentNamespace, canonicalNamespace,
+      'fresh alignment acceptance uses its own immutable namespace');
+    assert.throws(() => expectedBranchForSemanticNamespace('artifacts/unreviewed/semantic-run-v4'),
+      /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/,
+      'an unknown namespace cannot select an arbitrary branch');
     assert.throws(() => assertReviewedSemanticNamespace(undefined),
       /V4_SEMANTIC_NAMESPACE_CONFIGURATION_INVALID/, 'a malformed binding cannot inherit the legacy default');
     for (const unauthorized of [
@@ -595,6 +988,19 @@ async function testReviewedSemanticNamespaces() {
       retryNamespace + '-extra',
       postRepairNamespace + '/nested',
       postRepairNamespace + '-extra',
+      canonicalNamespace + '/nested',
+      canonicalNamespace + '-extra',
+      freshAlignmentNamespace + '/nested',
+      freshAlignmentNamespace + '-extra',
+      mixedRepairNamespace + '/nested',
+      mixedRepairNamespace + '-extra',
+      'artifacts/canonical-acceptance-mixed-repair-2026-10-18-sibling/semantic-run-v4',
+      timeoutReceiptNamespace + '/nested',
+      timeoutReceiptNamespace + '-sibling',
+      'artifacts/canonical-timeout-receipt-acceptance-2026-10-18/../canonical-acceptance-mixed-repair-2026-10-18/semantic-run-v4',
+      'artifacts/canonical-acceptance-2026-10-17/semantic-run-v4-sibling',
+      'artifacts/canonical-acceptance-2026-10-16/other-semantic-run-v4',
+      'artifacts/canonical-acceptance-2026-10-17/../canonical-acceptance-2026-10-16/semantic-run-v4',
       FRESH_ACCEPTANCE_ROOT + '/../' + postRepairNamespace.split('/').at(-1),
       freshNamespace.toUpperCase()
     ]) {
@@ -615,10 +1021,18 @@ async function testReviewedSemanticNamespaces() {
     const freshBinding = makeBinding(freshNamespace);
     const retryBinding = makeBinding(retryNamespace);
     const postRepairBinding = makeBinding(postRepairNamespace);
+    const canonicalBinding = makeBinding(canonicalNamespace);
+    const freshAlignmentBinding = makeBinding(freshAlignmentNamespace);
+    const mixedRepairBinding = makeBinding(mixedRepairNamespace);
+    const timeoutReceiptBinding = makeBinding(timeoutReceiptNamespace);
     const legacyPath = path.join(root, ...legacyNamespace.split('/'));
     const freshPath = path.join(root, ...freshNamespace.split('/'));
     const retryPath = path.join(root, ...retryNamespace.split('/'));
     const postRepairPath = path.join(root, ...postRepairNamespace.split('/'));
+    const canonicalPath = path.join(root, ...canonicalNamespace.split('/'));
+    const freshAlignmentPath = path.join(root, ...freshAlignmentNamespace.split('/'));
+    const mixedRepairPath = path.join(root, ...mixedRepairNamespace.split('/'));
+    const timeoutReceiptPath = path.join(root, ...timeoutReceiptNamespace.split('/'));
     assert.notEqual(path.resolve(root), path.resolve('.'), 'fixture root must differ from the process working directory');
     assert.equal(assertRunnerConfigurationBodyMatches(legacyBinding, legacyBinding), true,
       'the consumed legacy binding remains valid');
@@ -630,6 +1044,14 @@ async function testReviewedSemanticNamespaces() {
     assert.equal(assertRunnerConfigurationBodyMatches(retryBinding, retryBinding), true);
     assert.equal(assertRunnerConfigurationBodyMatches(postRepairBinding, postRepairBinding), true,
       'the exact post-repair namespace is included in the integrity binding');
+    assert.equal(assertRunnerConfigurationBodyMatches(canonicalBinding, canonicalBinding), true,
+      'the prior canonical namespace remains included in the integrity binding');
+    assert.equal(assertRunnerConfigurationBodyMatches(freshAlignmentBinding, freshAlignmentBinding), true,
+      'the exact fresh alignment namespace is included in the integrity binding');
+    assert.equal(assertRunnerConfigurationBodyMatches(mixedRepairBinding, mixedRepairBinding), true,
+      'the exact mixed repair namespace is included in the integrity binding');
+    assert.equal(assertRunnerConfigurationBodyMatches(timeoutReceiptBinding, timeoutReceiptBinding), true,
+      'the exact timeout receipt namespace is included in the integrity binding');
     assert.equal(assertCanonicalNamespace(legacyPath, legacyBinding, root), legacyPath);
     assert.equal(assertCanonicalNamespace(freshPath, freshBinding, root), freshPath,
       'the frozen fresh binding selects its exact acceptance slot');
@@ -637,6 +1059,14 @@ async function testReviewedSemanticNamespaces() {
       'the retry binding selects only its exact new slot');
     assert.equal(assertCanonicalNamespace(postRepairPath, postRepairBinding, root), postRepairPath,
       'the post-repair binding selects only its exact new slot');
+    assert.equal(assertCanonicalNamespace(canonicalPath, canonicalBinding, root), canonicalPath,
+      'the prior canonical binding selects only its exact slot');
+    assert.equal(assertCanonicalNamespace(freshAlignmentPath, freshAlignmentBinding, root), freshAlignmentPath,
+      'the fresh alignment binding selects only its exact slot');
+    assert.equal(assertCanonicalNamespace(mixedRepairPath, mixedRepairBinding, root), mixedRepairPath,
+      'the mixed repair binding selects only its exact slot');
+    assert.equal(assertCanonicalNamespace(timeoutReceiptPath, timeoutReceiptBinding, root), timeoutReceiptPath,
+      'the timeout receipt binding selects only its exact slot');
     assert.throws(() => assertCanonicalNamespace(freshPath, retryBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
     assert.throws(() => assertCanonicalNamespace(retryNamespace, retryBinding, root),
@@ -646,12 +1076,29 @@ async function testReviewedSemanticNamespaces() {
       'a root-relative namespace string resolves against cwd, matching downstream filesystem operations');
     assert.throws(() => assertCanonicalNamespace(legacyPath, freshBinding, root),
       /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
+    assert.throws(() => assertCanonicalNamespace(canonicalPath, legacyBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
+    assert.throws(() => assertCanonicalNamespace(freshAlignmentPath, canonicalBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the prior canonical binding cannot select the fresh alignment slot');
+    assert.throws(() => assertCanonicalNamespace(canonicalPath, freshAlignmentBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the fresh alignment binding cannot select the prior canonical slot');
+    assert.throws(() => assertCanonicalNamespace(timeoutReceiptPath, mixedRepairBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the mixed repair binding cannot select the timeout receipt slot');
+    assert.throws(() => assertCanonicalNamespace(mixedRepairPath, timeoutReceiptBinding, root),
+      /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/,
+      'the timeout receipt binding cannot select the mixed repair slot');
     assert.throws(() => assertRunnerConfigurationBodyMatches(freshBinding, legacyBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
     assert.throws(() => assertRunnerConfigurationBodyMatches(retryBinding, freshBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
     assert.throws(() => assertRunnerConfigurationBodyMatches(postRepairBinding, retryBinding),
       /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/);
+    assert.throws(() => assertRunnerConfigurationBodyMatches(timeoutReceiptBinding, mixedRepairBinding),
+      /V4_RUNNER_INTEGRITY_BINDING_MISMATCH/,
+      'a timeout receipt request cannot be rebound to the mixed repair namespace');
     assert.throws(() => assertCanonicalNamespace(
       root + '/' + FRESH_ACCEPTANCE_ROOT + '/../' + ARTIFACT_ROOT + '/semantic-run-v4', freshBinding, root),
     /V4_SEMANTIC_NAMESPACE_NOT_FROZEN/);
@@ -664,6 +1111,15 @@ async function testReviewedSemanticNamespaces() {
       path.join(root, retryNamespace, 'runner-config.json'));
     assert.equal(assertInArtifactNamespace(path.join(root, postRepairNamespace, 'runner-config.json'), root),
       path.join(root, postRepairNamespace, 'runner-config.json'));
+    assert.equal(assertInArtifactNamespace(path.join(root, canonicalNamespace, 'runner-config.json'), root),
+      path.join(root, canonicalNamespace, 'runner-config.json'));
+    assert.equal(assertInArtifactNamespace(path.join(root, freshAlignmentNamespace, 'runner-config.json'), root),
+      path.join(root, freshAlignmentNamespace, 'runner-config.json'));
+    assert.equal(assertInArtifactNamespace(path.join(root, mixedRepairNamespace, 'runner-config.json'), root),
+      path.join(root, mixedRepairNamespace, 'runner-config.json'));
+    assert.throws(() => assertInArtifactNamespace(
+      path.join(root, 'artifacts/canonical-acceptance-2026-10-17-sibling/output.json'), root),
+    /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/);
     assert.throws(() => assertInArtifactNamespace(path.join(root, 'artifacts/unreviewed/output.json'), root),
       /V4_ARTIFACT_OUTSIDE_RUNNER_NAMESPACE/);
     assert.throws(() => assertInArtifactNamespace(
@@ -1647,6 +2103,7 @@ async function main() {
   assert.equal(path.resolve(TEST_ROOT), TEST_ROOT);
   await testActivationControls();
   await testProviderEnvelopeFailureRetention();
+  await testSemanticDeadlineRetainsProviderReceipt();
   await testActualAdapterInFixedCaseLoop();
   testFrozenConfigurationGuards();
   await testReviewedSemanticNamespaces();

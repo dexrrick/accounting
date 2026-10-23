@@ -1,0 +1,12 @@
+{
+  "url": "https://www.acra.gov.sg/news-events/news-announcements/665/",
+  "finalUrl": "https://www.acra.gov.sg/news-events/news-announcements/665/",
+  "httpStatus": 200,
+  "contentType": "text/html",
+  "retrievedAt": "2026-10-20T12:41:21.917842+00:00",
+  "sha256": "bede8845b2eafb8222fc45feaa7151210fe39e98f4edb94e5ae587d72714214d",
+  "bytes": 485818,
+  "fixture": "acra-2022-newsletter-captured.html.gz",
+  "fixtureCompression": "gzip",
+  "note": "Captured first-party ACRA bytes for deterministic regression replay. The fixture is not an approved source record."
+}

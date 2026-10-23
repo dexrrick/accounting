@@ -1,6 +1,18 @@
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
-import type { SemanticIssueReconciliation } from '../services/semanticQuestionUnderstanding';
+import {
+  isConservativeUnmappedAccountingRuleExplanationIntent,
+  type SemanticAuthority,
+  type SemanticIssueReconciliation,
+  type SemanticQuestionOperation
+} from '../services/semanticQuestionUnderstanding';
 import { planAuthorityWorkstreams } from '../services/authorityWorkstreams';
+import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
+
+const NON_IRAS_STATUTORY_AUTHORITIES = new Set(['ACRA', 'CPF', 'MOM', 'MAS']);
+
+function isNonIrasStatutoryAuthority(authority: SemanticAuthority): authority is 'ACRA' | 'CPF' | 'MOM' | 'MAS' {
+  return NON_IRAS_STATUTORY_AUTHORITIES.has(authority);
+}
 
 function requestedScopeCount(issuePlan: SemanticIssueReconciliation): number {
   // Canonical domains are retained even for unmapped issues when their
@@ -29,6 +41,31 @@ function scopesAgreeWithClassification(issuePlan: SemanticIssueReconciliation, c
   );
 }
 
+function hasMappedGovernedStatutoryWorkstream(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  const classifiedDomains = new Set<string>(classification.domains);
+  return planAuthorityWorkstreams(issuePlan).some(workstream => {
+    const authority = workstream.authority;
+    if (!isNonIrasStatutoryAuthority(authority) ||
+        workstream.domain === 'UNKNOWN' ||
+        workstream.domain === 'ACCOUNTING' ||
+        !classifierIncludesAuthority(classification, workstream.authority) ||
+        ![workstream.domain, ...workstream.sourceSections].some(domain => classifiedDomains.has(domain))) {
+      return false;
+    }
+
+    return issuePlan.issues.some(issue => issue.status === 'MAPPED' &&
+      workstream.issueIds.includes(issue.id) &&
+      issue.governingAuthorities.includes(authority) &&
+      getCoverageTopicsByIds(issue.mappedTopicIds).some(topic =>
+        topic.authorities.includes(authority) &&
+        !topic.domainId.startsWith('ACCOUNTING_') &&
+        workstream.sourceSections.includes(topic.domainId)));
+  });
+}
+
 const FOCUSED_MAS_DOCUMENT_TOPICS = new Set([
   'mas-fund-management-licensing-admission-criteria',
   'mas-vcc-substantive-fund-management-activity'
@@ -49,6 +86,19 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
 }): boolean {
   const { issuePlan, classification } = input;
   if (input.hasImages) return false;
+
+  // Standalone non-IRAS statutory questions can use the same evidence-backed
+  // response path when both classification and a governed mapped topic agree.
+  // This does not treat classifier metadata or contextual authorities as
+  // sufficient evidence of a requested authority scope.
+  if (!input.explicitIrasEvidenceRequest &&
+      classification.intent === 'STATUTORY_ADVISORY' &&
+      classification.regulatoryAnalysisRequired &&
+      !classification.accountingAnalysisRequired &&
+      !classification.journalEntryRequired &&
+      hasMappedGovernedStatutoryWorkstream(issuePlan, classification)) {
+    return true;
+  }
 
   // These two manually reviewed document topics use the usual per-issue
   // evidence pipeline even when a question contains only one MAS workstream.
@@ -101,4 +151,48 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
     !classification.authorities.includes('IRAS') &&
     classification.authorities.length > 1 &&
     classification.domains.length > 1;
+}
+
+/** Routes only one validated, unmapped accounting-standard rule explanation to the explicit gap renderer. */
+export function shouldUseUnmappedAccountingRuleExplanationRuntime(input: {
+  issuePlan: SemanticIssueReconciliation;
+  classification: QuestionClassificationResult;
+  rawQuery?: string;
+  semanticRequestedOperation?: SemanticQuestionOperation;
+  explicitIrasEvidenceRequest: boolean;
+  explicitJournalRequest: boolean;
+  outputJournalRequest: boolean;
+  hasImages: boolean;
+  isShortSemanticFollowUp: boolean;
+}): boolean {
+  const { issuePlan, classification } = input;
+  const deterministicFallbackRuleRequest = issuePlan.source === 'TAXONOMY_FALLBACK' &&
+    Boolean(input.rawQuery && isConservativeUnmappedAccountingRuleExplanationIntent(input.rawQuery));
+  if ((input.semanticRequestedOperation !== 'EXPLAIN_RULE' && !deterministicFallbackRuleRequest) ||
+      input.explicitIrasEvidenceRequest || input.explicitJournalRequest || input.outputJournalRequest ||
+      input.hasImages || input.isShortSemanticFollowUp ||
+      (issuePlan.source !== 'SEMANTIC_ISSUES' && !deterministicFallbackRuleRequest) ||
+      issuePlan.coverageEstablished || !issuePlan.hasUnmappedResidual ||
+      issuePlan.issues.length !== 1) {
+    return false;
+  }
+
+  const issue = issuePlan.issues[0];
+  if (!issue || issue.domain !== 'ACCOUNTING' || issue.operation !== 'EXPLAIN_RULE' ||
+      issue.status !== 'UNRESOLVED' || issue.unresolvedReason !== 'NO_COVERAGE_TOPIC' || issue.mappedTopicIds.length !== 0 ||
+      issue.governingAuthorities.length !== 1 ||
+      !['ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(issue.governingAuthorities[0])) {
+    return false;
+  }
+
+  const classifierConfirmsAccountingStandards = classification.primaryDomain === 'ACCOUNTING' &&
+    classification.domains.length === 1 && classification.domains.includes('ACCOUNTING_SFRS') &&
+    classification.authorities.length === 1 &&
+    ['ACRA', 'ASC', 'ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(classification.authorities[0]);
+  return classifierConfirmsAccountingStandards &&
+    classification.intent === 'STATUTORY_ADVISORY' &&
+    classification.accountingAnalysisRequired &&
+    !classification.taxAnalysisRequired &&
+    !classification.calculationRequired &&
+    !classification.journalEntryRequired;
 }

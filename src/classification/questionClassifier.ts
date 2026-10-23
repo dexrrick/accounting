@@ -1,6 +1,7 @@
 import { getCoverageTopicsByIds, type SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import { hasUnresolvedSection14NBasisPeriod } from '../retrieval/statutoryDateScope';
+import { removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -100,6 +101,7 @@ export function isExplicitForeignTaxOnlyQuestion(query: string): boolean {
  */
 export function classifyQuestion(query: string): QuestionClassificationResult {
   const q = query.toLowerCase();
+  const entryIntentQuery = removeNegatedOutputDirectives(query).toLowerCase();
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
   const allTopicIds = decomposition.topics.map(topic => topic.id);
   const allTopicMetadata = getCoverageTopicsByIds(allTopicIds);
@@ -125,8 +127,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   );
   const foreignTaxOnlyContext = isExplicitForeignTaxOnlyQuestion(query);
   const employerComplianceContext = /\b(?:employer|payroll|ir8a|ir21|ais submission|report employee|withhold monies)\b/i.test(query);
-  const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(q) ||
-    /\bdouble entr\w*/i.test(q);
+  const explicitAccountingIntent = /\b(?:accounting|journal|bookkeeping|debit|balance sheet|financial statements?|p&l|sfrs|ifrs|capitalis\w*)\b/i.test(entryIntentQuery) ||
+    /\bdouble entr\w*/i.test(entryIntentQuery);
   const taxCreditWithoutAccountingIntent = /\b(?:foreign tax credit|tax credit|double tax relief foreign tax credit)\b/i.test(q) && !explicitAccountingIntent;
   const passengerCarTaxOnlyContext = /\b(?:s-plate|passenger (?:motor )?car)\b/i.test(q) &&
     /\b(?:deduct\w*|running costs?|capital allowances?|income tax|corporate tax)\b/i.test(q) &&
@@ -168,8 +170,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('amorti') ||
     q.includes('debit') ||
     (/\bcredit\b/i.test(q) && !taxCreditWithoutAccountingIntent) ||
-    q.includes('journal') ||
-    q.includes('double entr') ||
+    entryIntentQuery.includes('journal') ||
+    entryIntentQuery.includes('double entr') ||
     q.includes('bookkeeping') ||
     q.includes('accrual') ||
     /\bleases?\b/i.test(q) ||
@@ -327,9 +329,9 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     topicMetadata.some(topic => topic.domainId.startsWith('MAS_'));
 
   const hasPayrollCalculation =
-    (q.includes('salary') || q.includes('earning') || q.includes('earns') || q.includes('payroll') || q.includes('wages') || q.includes('wage')) &&
-    (q.includes('cpf') || q.includes('last day') || q.includes('resignation') || q.includes('prorat') || q.includes('staff') || q.includes('employee')) &&
-    (q.includes('calculat') || q.includes('compute') || q.includes('how much') || /\d+/.test(q));
+    (entryIntentQuery.includes('salary') || entryIntentQuery.includes('earning') || entryIntentQuery.includes('earns') || entryIntentQuery.includes('payroll') || entryIntentQuery.includes('wages') || entryIntentQuery.includes('wage')) &&
+    (entryIntentQuery.includes('cpf') || entryIntentQuery.includes('last day') || entryIntentQuery.includes('resignation') || entryIntentQuery.includes('prorat') || entryIntentQuery.includes('staff') || entryIntentQuery.includes('employee')) &&
+    (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') || /\d+/.test(entryIntentQuery));
 
   // 2. Map Authorities
   const authorities: string[] = [];
@@ -404,16 +406,16 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   // 5. Intent and Calculation / Journal Requirements
   // Guard against numbers in statutory advisory queries falsely triggering journal entries
   const asksForEntries =
-    q.includes('double entr') ||
-    q.includes('journal') ||
-    q.includes('accounting entr') ||
-    q.includes('how to record') ||
-    q.includes('how do i record') ||
-    q.includes('debit and credit') ||
-    q.includes('dr and cr') ||
-    q.includes('show entries') ||
-    q.includes('bookkeeping entry') ||
-    q.includes('post entry');
+    entryIntentQuery.includes('double entr') ||
+    entryIntentQuery.includes('journal') ||
+    entryIntentQuery.includes('accounting entr') ||
+    entryIntentQuery.includes('how to record') ||
+    entryIntentQuery.includes('how do i record') ||
+    entryIntentQuery.includes('debit and credit') ||
+    entryIntentQuery.includes('dr and cr') ||
+    entryIntentQuery.includes('show entries') ||
+    entryIntentQuery.includes('bookkeeping entry') ||
+    entryIntentQuery.includes('post entry');
 
   const isConceptualOrAdvisory =
     /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize|can i|can we|do we qualify|does it qualify|is it allowed|is it deductible|is it claimable|must we|must i|guidance on|requirements for|criteria for)\b/i.test(q.trim()) ||
@@ -426,6 +428,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const hasTransactionAction =
     (q.includes('bought') || q.includes('sold') || q.includes('purchased') || q.includes('acquired') || q.includes('invested') || q.includes('disposed of')) &&
     (asksForEntries || q.includes('shares') || q.includes('usd') || q.includes('asset') || q.includes('goods'));
+  const calculationIntentQuery = entryIntentQuery;
 
   let intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID' = 'STATUTORY_ADVISORY';
   if (asksForEntries && isConceptualOrAdvisory) {
@@ -441,20 +444,22 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // Calculation required ONLY if quantitative computation requested or active quantitative transaction
   const calculationRequired =
-    q.includes('calculat') ||
-    q.includes('compute') ||
-    q.includes('how much') ||
-    q.includes('what is the amount') ||
-    q.includes('fx gain') ||
-    q.includes('foreign exchange') ||
-    q.includes('tax payable') ||
+    calculationIntentQuery.includes('calculat') ||
+    calculationIntentQuery.includes('compute') ||
+    calculationIntentQuery.includes('how much') ||
+    calculationIntentQuery.includes('what is the amount') ||
+    calculationIntentQuery.includes('fx gain') ||
+    calculationIntentQuery.includes('foreign exchange') ||
+    calculationIntentQuery.includes('tax payable') ||
     hasPayrollCalculation ||
-    (intent === 'TRANSACTION' && /\d+/.test(q) && !isConceptualOrAdvisory);
+    (intent === 'TRANSACTION' && /\d+/.test(calculationIntentQuery) && !isConceptualOrAdvisory);
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];
   const isPureConceptualQuery =
     /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize)\b/i.test(q.trim());
+  const explicitlyGeneralTaxRuleRequest =
+    /\b(?:as\s+a\s+general\s+rule|general\s+(?:rules?|criteria|conditions|test|restriction|eligibility)|generally\s+(?:claimable|allowed|eligible|qualif\w*))\b/i.test(query);
 
   // Capitalisation missing facts (only for scenario/transactional evaluation, not pure conceptual definitions)
   if (!isPureConceptualQuery && (q.includes('capitalis') || q.includes('capitaliz') || q.includes('development cost') || q.includes('r&d'))) {
@@ -470,7 +475,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   }
 
   // Vehicle purchase missing facts (only when assessing a specific acquisition or claim)
-  if (!isPureConceptualQuery && /\b(?:car|cars|vehicle|vehicles)\b/i.test(q) && (q.includes('bought') || q.includes('purchas') || /\bclaim(?:s|ed|ing)?\b/i.test(q) || q.includes('deduct') || q.includes('entry'))) {
+  if (!isPureConceptualQuery && !explicitlyGeneralTaxRuleRequest && /\b(?:car|cars|vehicle|vehicles)\b/i.test(q) && (q.includes('bought') || q.includes('purchas') || /\bclaim(?:s|ed|ing)?\b/i.test(q) || q.includes('deduct') || q.includes('entry'))) {
     if (!q.includes('s-plate') && !q.includes('g-plate') && !q.includes('passenger') && !q.includes('commercial')) {
       missingFacts.push('Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)');
     }
@@ -478,7 +483,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // Scenario-specific tax conclusions need the facts that determine the
   // applicable IRAS treatment. Keep general explain/definition requests clear.
-  const asksAboutSpecificTaxCase = !isPureConceptualQuery &&
+  const asksAboutSpecificTaxCase = !isPureConceptualQuery && !explicitlyGeneralTaxRuleRequest &&
     /\b(?:our|my|this|we|company|paid|paying|claim\w*|file)\b/i.test(q);
   if (asksAboutSpecificTaxCase && hasTax && /\b(?:deductib\w*|deduct\w*|tax deduction)\b/i.test(q) &&
       /\b(?:expense|cost|payment|fee|meal|entertainment|renovat\w*|fit.out|machinery|equipment|car|vehicle|asset)\b/i.test(q)) {

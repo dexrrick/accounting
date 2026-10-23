@@ -13,7 +13,7 @@ import type { VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifie
 import type { RequestCompletenessContext } from '../services/requestCompleteness';
 
 export type AuthorityEvidenceStatus = 'VERIFIED' | 'INSUFFICIENT';
-export type AuthorityApplicationStatus = 'NOT_REQUIRED' | 'UNRESOLVED';
+export type AuthorityApplicationStatus = 'NOT_REQUIRED' | 'VERIFIED' | 'UNRESOLVED';
 export type AuthorityOverallStatus = 'VERIFIED' | 'CONDITIONAL' | 'INSUFFICIENT';
 
 /** Canonical tax/regulatory areas used to group governing-authority workstreams. */
@@ -164,7 +164,7 @@ export interface AuthorityEvidenceProvider {
 
 /** Internal per-authority issue scope passed into the shared official-source grounding pipeline. */
 export interface AuthorityEvidenceScope {
-  authority: 'IRAS' | 'CPF' | 'MOM' | 'MAS';
+  authority: 'IRAS' | 'ACRA' | 'CPF' | 'MOM' | 'MAS';
   domain: AuthorityWorkstreamDomain;
   topicIds: string[];
   requestedConcepts: RequestedQuestionConcept[];

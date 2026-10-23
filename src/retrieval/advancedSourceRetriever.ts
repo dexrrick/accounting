@@ -2,7 +2,8 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
 import {
   type ISourceRetriever,
-  type SourceRetrievalQuery
+  type SourceRetrievalQuery,
+  isAnswerGroundingEligibleSource
 } from './sourceRetriever';
 import { CompositeSourceRetriever, defaultCompositeSourceRetriever } from './compositeSourceRetriever';
 import { ProvisionChunker, defaultProvisionChunker, type VerifiedChunk } from './provisionChunker';
@@ -12,7 +13,9 @@ import { HybridRetriever, type HybridSearchResult } from './hybridRetriever';
 import { DeterministicReranker, defaultDeterministicReranker } from './deterministicReranker';
 import { QueryTopicResolver, defaultQueryTopicResolver } from './queryTopicResolver';
 import { RetrievalTelemetryRecorder, type RetrievalTelemetry } from './retrievalTelemetry';
-import { defaultSourceVersioningManager, SourceVersioningManager } from '../standards/sourceVersioning';
+import type { SourceVersioningManager } from '../standards/sourceVersioning';
+import { SourceFreshnessManager } from '../standards/sourceFreshnessManager';
+import { defaultTargetDateResolver } from './targetDateResolver';
 import { evaluateEvidenceQuality, isIrasEvidenceRequest } from './evidenceQualityGate';
 
 /**
@@ -47,7 +50,7 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
     vectorIndex: DeterministicVectorIndex = defaultVectorIndex,
     reranker: DeterministicReranker = defaultDeterministicReranker,
     topicResolver: QueryTopicResolver = defaultQueryTopicResolver,
-    versioningManager: SourceVersioningManager = defaultSourceVersioningManager
+    versioningManager: SourceVersioningManager = compositeRetriever.getVersioningManager()
   ) {
     this.compositeRetriever = compositeRetriever;
     this.chunker = chunker;
@@ -103,6 +106,10 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
 
   public getSnapshotMetadata(): VectorIndexSnapshotMetadata {
     return this.vectorIndex.getSnapshotMetadata();
+  }
+
+  public getVersioningManager(): SourceVersioningManager {
+    return this.versioningManager;
   }
 
   public getLastTelemetry(): RetrievalTelemetry | undefined {
@@ -274,11 +281,24 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
       }
     }
 
+    const referenceDate = retrievalQuery.referenceDate ?? SourceFreshnessManager.DEFAULT_REFERENCE_DATE;
+    const targetDate = retrievalQuery.targetDate ??
+      defaultTargetDateResolver.resolveTargetDate(retrievalQuery.query, referenceDate).targetDate;
+    const admissionOptions: SharedDocumentAdmissionOptions = {
+      targetDate,
+      referenceDate,
+      expectedAuthority: retrievalQuery.authorities?.length === 1 ? retrievalQuery.authorities[0] : undefined,
+      expectedDomain: retrievalQuery.domain,
+      applicabilityTarget: retrievalQuery.applicabilityTarget
+    };
+    const admittedRecords = records.filter(record =>
+      isAnswerGroundingEligibleSource(record, this.versioningManager, admissionOptions));
+
     if (retrievalQuery.topicIds !== undefined && isIrasEvidenceRequest(retrievalQuery)) {
       const assessment = evaluateEvidenceQuality({
         query: retrievalQuery.query,
         topicIds: retrievalQuery.topicIds || [],
-        records,
+        records: admittedRecords,
         missingFacts: [],
         domain: retrievalQuery.domain,
         authorities: retrievalQuery.authorities,
@@ -287,7 +307,7 @@ export class AdvancedSourceRetriever implements ISourceRetriever {
       });
       return assessment.eligibleRecords.slice(0, retrievalQuery.maxResults || 6);
     }
-    return records.slice(0, retrievalQuery.maxResults || 6);
+    return admittedRecords.slice(0, retrievalQuery.maxResults || 6);
   }
 }
 

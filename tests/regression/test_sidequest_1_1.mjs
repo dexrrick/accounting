@@ -12,6 +12,9 @@ import {
 import { assembleDeterministicResponse } from '../../src/engine/responseAssembler.ts';
 import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async () => { throw new Error('EXTERNAL_FETCH_BLOCKED_BY_TEST'); };
+
 console.log('=== RUNNING SIDE QUEST 1.1: ARCHITECTURAL & GROUNDED VERIFICATION TESTS ===\n');
 
 async function runSideQuestTests() {
@@ -167,7 +170,7 @@ async function runSideQuestTests() {
   console.log('✓ 3A. Proved: Q10 Barter trade has ZERO invented numbers, isBalanced === false, CONDITIONAL, and uncertified proposal callout');
   passed++;
 
-  // 3B. Deterministic Response Fast-Path via processAccountingQuery
+  // 3B. Standalone statutory queries return query-bound evidence, not a deterministic directive
   const fastPathResult = await processAccountingQuery(
     qMomLeave,
     null,
@@ -175,9 +178,20 @@ async function runSideQuestTests() {
     'dummy-api-key-that-would-fail-network-call-if-called'
   );
 
-  assert.ok(fastPathResult.messageText.includes('Statutory Directive'), 'Fast-path result must render statutory directive');
-  assert.strictEqual(fastPathResult.scenarioState.authorityStatus, 'DETERMINISTIC', 'Fast-path authorityStatus must be DETERMINISTIC');
-  console.log('✓ 3B. Fast-path successfully returned structured authoritative response with 0 network calls');
+  const momPresentation = fastPathResult.scenarioState.authorityEvidencePresentation;
+  assert.ok(momPresentation, 'Standalone statutory response must carry an authority evidence presentation');
+  assert.strictEqual(momPresentation.query, qMomLeave, 'Authority evidence presentation must be bound to the exact query');
+  assert.strictEqual(momPresentation.status, 'INSUFFICIENT', 'Offline evidence gaps must leave the whole question insufficient');
+  assert.strictEqual(momPresentation.evidenceStatus, 'INSUFFICIENT', 'Evidence status must reflect the missing admitted sources');
+  const momWorkstream = momPresentation.workstreams.find(workstream => workstream.authority === 'MOM');
+  assert.ok(momWorkstream, 'The presentation must retain the MOM workstream');
+  assert.strictEqual(momWorkstream.sources.length, 0, 'Offline unverified material must not be presented as an admitted source');
+  assert.ok(momPresentation.gaps.length > 0 || momWorkstream.gaps.length > 0 || momWorkstream.issues.some(issue => issue.gaps.length > 0),
+    'The response must expose the unresolved statutory evidence gaps');
+  assert.deepStrictEqual(fastPathResult.scenarioState.directGroups, [], 'A standalone statutory question must not invent a journal');
+  assert.notStrictEqual(fastPathResult.scenarioState.authorityStatus, 'DETERMINISTIC', 'Insufficient evidence must not receive a deterministic authority stamp');
+  assert.ok(!fastPathResult.messageText.includes('Statutory Directive'), 'An unsupported directive must not be rendered');
+  console.log('✓ 3B. Standalone statutory response is query-bound, gap-aware, and carries no invented journal or deterministic authority stamp');
   passed++;
 
   console.log('\n=============================================================');
@@ -187,5 +201,7 @@ async function runSideQuestTests() {
 
 runSideQuestTests().catch(err => {
   console.error('Test failure:', err);
-  process.exit(1);
+  process.exitCode = 1;
+}).finally(() => {
+  globalThis.fetch = originalFetch;
 });

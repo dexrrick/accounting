@@ -141,7 +141,8 @@ export class CompositeSourceRetriever implements ISourceRetriever {
         targetDate: normalizedQuery.targetDate,
         referenceDate: normalizedQuery.referenceDate,
         expectedAuthority: normalizedQuery.authorities?.length === 1 ? normalizedQuery.authorities[0] : undefined,
-        expectedDomain: normalizedQuery.domain
+        expectedDomain: normalizedQuery.domain,
+        applicabilityTarget: normalizedQuery.applicabilityTarget
       });
       if (!documentAdmission.admitted) return false;
       if (r.versionId) {

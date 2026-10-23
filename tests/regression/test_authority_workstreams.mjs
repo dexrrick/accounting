@@ -3,12 +3,47 @@ import { buildAuthorityWorkstreams, planAuthorityWorkstreams } from '../../src/s
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { getRequestedQuestionConcepts } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { matchesRequestedQuestionConcept } from '../../src/retrieval/evidenceQualityGate.ts';
+import {
+  isAcraAnnualReturnDeadlineIssue,
+  isAcraAnnualReturnDeadlineQuestion,
+  requiresAcraAnnualReturnDeadlineEvidence,
+  supportsAcraAnnualReturnFilingRule
+} from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 
 const referenceDate = '2026-09-29';
 const cpfCeiling = UNIFIED_SOURCE_REGISTRY.CPF_WAGE_CEILINGS_2026;
 const section14 = UNIFIED_SOURCE_REGISTRY.ITA_SEC14_GENERAL_DEDUCTION;
 const irasPointer = UNIFIED_SOURCE_REGISTRY.IRAS_CIT_EXPENSES_SOURCE_MAP;
 assert.ok(cpfCeiling && section14 && irasPointer, 'Expected reviewed source registry records are available.');
+
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'ACRA provides reminder notifications to help you comply with annual return deadlines. ACRA only sends notifications for annual returns and declarations.'
+), false, 'Reminder content about annual returns does not state the filing duty.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'All Singapore companies must file annual returns with ACRA each year.'
+), true, 'The ACRA filing-duty guard retains operative company rule text.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'All companies registered in Singapore must file an annual return with ACRA each year.'
+), true, 'The ACRA guard recognizes the official registered-in-Singapore subject wording.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'Are all companies registered in Singapore required to file an annual return?'
+), false, 'A question about the filing duty is not an operative source rule.');
+assert.equal(supportsAcraAnnualReturnFilingRule(
+  'Variable capital companies must file annual returns with ACRA each year.'
+), false, 'The ACRA annual-return guard excludes VCC rules.');
+assert.equal(isAcraAnnualReturnDeadlineQuestion('Do non-listed companies have to file annual returns?'), false,
+  'Listing status alone does not turn a general filing-duty question into a deadline query.');
+assert.equal(isAcraAnnualReturnDeadlineQuestion('When must annual returns be filed?'), true,
+  'An annual-return timing question is recognized even when authority and company words are implicit.');
+assert.equal(isAcraAnnualReturnDeadlineQuestion('What date are annual returns due?'), true);
+assert.equal(isAcraAnnualReturnDeadlineQuestion('How long after FYE are annual returns due?'), true);
+assert.equal(isAcraAnnualReturnDeadlineQuestion(
+  'Do companies have to file annual returns, and when must income tax be paid?'
+), false, 'Timing in a separate tax clause does not upgrade the annual-return duty question.');
+assert.equal(isAcraAnnualReturnDeadlineQuestion(
+  'When must companies file income tax and annual returns?'
+), true, 'A shared timing clause applies when annual returns remain in the same clause.');
+const acraDeadlineOwnershipQuery = 'How many months after FYE must non-listed companies with share capital and an overseas branch register file annual returns?';
 
 const issue = (id, overrides = {}) => ({
   id,
@@ -38,6 +73,38 @@ const exactClaim = record => ({
   supportKind: 'EXACT_SOURCE_QUOTE'
 });
 const provider = (authority, retrieve) => ({ authority, retrieve });
+
+const acraDeadlineScope = {
+  id: 'acra-deadline-unique', subject: 'annual return filing deadline', population: 'COMPANY',
+  domain: 'ACRA_CORPORATE', governingAuthorities: ['ACRA'], mappedTopicIds: ['acra_annual-returns'], status: 'MAPPED'
+};
+assert.equal(isAcraAnnualReturnDeadlineIssue(acraDeadlineOwnershipQuery, 'ACRA', acraDeadlineScope, [acraDeadlineScope]), true,
+  'A uniquely owning mapped ACRA company issue receives annual-return deadline concepts.');
+assert.equal(isAcraAnnualReturnDeadlineIssue(acraDeadlineOwnershipQuery, 'ACRA', acraDeadlineScope,
+  [acraDeadlineScope, { ...acraDeadlineScope, id: 'acra-deadline-competing' }]), false,
+  'Deadline concepts remain unresolved when two ACRA company issues could own them.');
+const mixedAuthorityDeadlineScope = { ...acraDeadlineScope, governingAuthorities: ['ACRA', 'IRAS'] };
+assert.equal(requiresAcraAnnualReturnDeadlineEvidence(acraDeadlineOwnershipQuery, 'ACRA', mixedAuthorityDeadlineScope), true,
+  'The deadline evidence gate applies independently of concept ownership on a mapped ACRA issue.');
+assert.equal(isAcraAnnualReturnDeadlineIssue(acraDeadlineOwnershipQuery, 'ACRA', mixedAuthorityDeadlineScope,
+  [mixedAuthorityDeadlineScope]), false,
+  'Mixed-authority scope cannot uniquely own ACRA deadline concepts.');
+assert.equal(requiresAcraAnnualReturnDeadlineEvidence(acraDeadlineOwnershipQuery, 'ACRA', {
+  ...acraDeadlineScope, population: 'UNKNOWN'
+}), true, 'Unknown population does not let a mapped ACRA deadline issue bypass table evidence.');
+let uniqueAcraRequestedConceptIds = [];
+await buildAuthorityWorkstreams(acraDeadlineOwnershipQuery, issuePlan([issue('acra-unique-owner', {
+  ...acraDeadlineScope, subject: acraDeadlineScope.subject
+})]), {
+  referenceDate,
+  providers: { ACRA: provider('ACRA', async request => {
+    uniqueAcraRequestedConceptIds = request.retrievalIntent.requestedConcepts.map(concept => concept.id);
+    return { candidates: [], claims: [] };
+  }) }
+});
+assert.ok(uniqueAcraRequestedConceptIds.includes('acra_annual_return_financial_year_end'));
+assert.ok(uniqueAcraRequestedConceptIds.includes('acra_annual_return_listing_status'));
+assert.ok(uniqueAcraRequestedConceptIds.includes('acra_annual_return_branch_register_qualification'));
 
 // Mapped IRAS topics determine the canonical tax area before population or the
 // broader legacy income-tax label; source domains remain source-section metadata.

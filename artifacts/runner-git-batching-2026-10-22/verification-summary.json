@@ -1,0 +1,63 @@
+{
+  "status": "OFFLINE_OPTIMIZATION_IMPLEMENTED_REVIEWED_VALIDATED",
+  "date": "2026-10-22",
+  "worktree": "D:/Accounting/.worktrees/acra-main-reconciliation",
+  "delivery": "Reviewed changes prepared for publication on PR #12. Commit and remote-check status are recorded separately in the supervisor handoff.",
+  "filesChanged": [
+    "scripts/iras_v4_capture_replay_runner.mjs",
+    "tests/regression/test_iras_v4_capture_replay_runner.mjs"
+  ],
+  "implementation": {
+    "committedBlobLookups": "One bounded NUL-framed cat-file batch replaces two rev-parse processes per file. HEAD queries use the captured commit ID.",
+    "workingBlobChecks": "Git still hashes each exact captured byte buffer with its original path, preserving clean filters, attributes and line-ending normalization.",
+    "maximumConcurrentWorkingHashes": 4,
+    "failureHandling": "Malformed, missing, reordered or extra batch records fail closed. Hash-worker failures stop queued work and drain active children before rejection.",
+    "snapshotContract": "File rows, inventory digest and every existing verification boundary are preserved; no cross-scan cache was introduced."
+  },
+  "benchmark": {
+    "scope": "One offline snapshot before and after, using the identical clean checkout and historical 648-file inventory. These are local measurements, not end-to-end live-request times.",
+    "nodeVersion": "22.23.3",
+    "gitVersion": "2.53.0.windows.3",
+    "fileCount": 648,
+    "beforeElapsedMs": 104773.6878,
+    "afterElapsedMs": 17677.3595,
+    "speedup": 5.926998757931014,
+    "elapsedReductionPercent": 83.1280545037759,
+    "beforeGitProcesses": 1955,
+    "afterGitProcesses": 660,
+    "gitProcessReductionPercent": 66.24040920716112,
+    "beforePeakConcurrency": 1,
+    "afterPeakConcurrency": 4,
+    "allFileRowsMatchFrozenInventory": true,
+    "fileInventorySha256": "24244fec81e9f23a8d7090188f171d6cb75069596fafef1dd8fd0c24e1114fdc",
+    "productionModuleSha256": "7641e508ca072ce947c04dd04333974a45a836129561908f5e10cd32fe170a2d",
+    "method": "benchmark.mjs intercepts the existing Git child-process launches, records counts/concurrency, and asserts every output file row and inventory hash against the frozen configuration. Git optional index writes and external access were disabled.",
+    "before": "before.json",
+    "after": "after.json",
+    "reusableHarness": "benchmark.mjs"
+  },
+  "validation": {
+    "preflight": "PASS: pinned Node 22.23.3",
+    "focusedRunnerRegression": "PASS after implementation, then PASS after the requested worker-drain and literal-filename test additions",
+    "repositoryLint": "PASS; existing unrelated warnings remain",
+    "changedFilesLint": "PASS after final regression additions",
+    "typeScriptBuild": "PASS",
+    "viteAndWorkerBuild": "PASS; existing build warnings remain",
+    "fullRegression": "PASS: all 136 suites, including smoke coverage, in 157.55 seconds",
+    "fullRegressionLog": "full-tests.log",
+    "independentReview": "NO_MATERIAL_FINDINGS; worker-drain test gap closed and independently reviewed",
+    "reviewRecord": "independent-review.json",
+    "diffWhitespaceCheck": "PASS",
+    "finalRegressionFileSha256": "8d437618369484dfdcf2b3736e01e209ac56fa550ec918721c600a8eb68fa3e5"
+  },
+  "holds": {
+    "liveCapture": "STOPPED; not resumed or retried",
+    "historicalCapture": "Preserved six-response partial capture remains non-canonical. No frozen configuration or stopped capture artifact was rewritten.",
+    "externalSourceRequests": 0,
+    "modelCalls": 0,
+    "sourceActivations": 0,
+    "mainMerge": false,
+    "productionDeployment": false,
+    "futureLiveWork": "Requires a fresh scope and newly reviewed/frozen configuration for the changed runner; do not resume the stopped namespace."
+  }
+}
