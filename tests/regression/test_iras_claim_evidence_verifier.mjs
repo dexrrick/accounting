@@ -5,6 +5,7 @@ import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeSta
 import { CitationVerifier } from '../../src/verification/citationVerifier.ts';
 import { InMemorySourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
+import { supportBoundedStatutoryAdvisory } from '../../src/retrieval/statutoryAdvisorySupport.ts';
 
 const localUrl = 'https://www.iras.gov.sg/taxes/gst/input-tax?topic=claiming';
 const liveUrl = 'https://www.iras.gov.sg/taxes/gst/input-tax?topic=claiming&version=2026';
@@ -55,6 +56,31 @@ const makeLiveRecord = (overrides = {}) => ({
   ...overrides
 });
 
+const makeBoundedAdvisoryRecord = (profile, sourceText, overrides = {}) => {
+  const isCpf = profile === 'CPF';
+  const topicId = isCpf ? 'cpf-ordinary-wages' : 'mom-part-iv-overtime';
+  const url = isCpf
+    ? 'https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions'
+    : 'https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days';
+  return makeLiveRecord({
+    id: `${profile}_BOUNDED_ADVISORY`,
+    authority: profile,
+    sourceAuthority: profile,
+    authorityName: isCpf ? 'Central Provident Fund Board' : 'Ministry of Manpower',
+    sourcePublisher: isCpf ? 'Central Provident Fund Board (CPF Board)' : 'Ministry of Manpower (MOM)',
+    documentTitle: isCpf ? 'What constitutes wages for CPF contributions' : 'Hours of work, overtime and rest days',
+    sourceText,
+    officialSourceUrl: url,
+    canonicalSourceUrl: url,
+    domain: isCpf ? 'CPF_BOARD' : 'MOM_EMPLOYMENT',
+    tags: [topicId],
+    relatedTopicIds: [topicId],
+    extractionStatus: 'PARTIAL',
+    isVerbatimText: false,
+    ...overrides
+  });
+};
+
 const makeClaim = (text, recordId, overrides = {}) => ({
   text,
   recordId,
@@ -100,6 +126,127 @@ const validLive = verifyEvidenceClaims(
 );
 assert.equal(validLive.accepted.length, 1, 'A genuine official live candidate with exact quote and provenance is accepted.');
 assert.equal(validLive.accepted[0].supportKind, 'EXACT_SOURCE_QUOTE');
+
+const cpfDefinitionBlocks = [
+  'Ordinary wages are wages due or granted wholly and exclusively in respect of employment in that month.',
+  'For wages to be classified as Ordinary Wages for the month, they must meet both of the following conditions:',
+  '• They are given to an employee for their employment in that month, and',
+  '• They are payable by the 14th of the following month.',
+  'For example, monthly salary.'
+];
+const cpfDefinitionSource = cpfDefinitionBlocks.join('\n\n');
+const cpfDefinitionQuote = cpfDefinitionBlocks.slice(1, 4).join('\n\n');
+const cpfBoundedRecord = makeBoundedAdvisoryRecord('CPF', cpfDefinitionSource);
+const cpfCompleteBundle = verifyEvidenceClaims(
+  [makeClaim(cpfDefinitionQuote, cpfBoundedRecord.id)], [cpfBoundedRecord], { missingFacts: [] }
+);
+assert.equal(cpfCompleteBundle.accepted.length, 1,
+  'A complete exact CPF definition heading and both native conditions may be cited as one contiguous bundle.');
+for (const incompleteCpfQuote of [
+  cpfDefinitionBlocks.slice(1, 3).join('\n\n'),
+  cpfDefinitionBlocks.slice(2, 4).join('\n\n'),
+  `${cpfDefinitionBlocks[1]}\n\n${cpfDefinitionBlocks[3]}\n\n${cpfDefinitionBlocks[2]}`,
+  `${cpfDefinitionQuote} A payment on the 20th also qualifies.`,
+  cpfDefinitionQuote.replace('the 14th', 'the 15th')
+]) {
+  const incomplete = verifyEvidenceClaims(
+    [makeClaim(incompleteCpfQuote, cpfBoundedRecord.id)], [cpfBoundedRecord], { missingFacts: [] }
+  );
+  assert.equal(incomplete.accepted.length, 0,
+    'An omitted condition, reordered/rephrased condition, or added assertion cannot pass the CPF bundle path.');
+}
+const cpfWithAttachedQualifier = makeBoundedAdvisoryRecord('CPF',
+  `${cpfDefinitionBlocks.slice(1, 4).join('\n\n')}\n\nHowever, the ordinary-wage ceiling is applied separately.`);
+const omittedCpfQualifier = verifyEvidenceClaims(
+  [makeClaim(cpfDefinitionQuote, cpfWithAttachedQualifier.id)], [cpfWithAttachedQualifier], { missingFacts: [] }
+);
+assert.equal(omittedCpfQualifier.accepted.length, 0,
+  'A complete CPF list still cannot omit a directly attached qualification.');
+
+const momCoverageBlocks = [
+  'If you are covered under Part 4 of the Employment Act, your hours of work are regulated and you are entitled to breaks, overtime pay and rest day.',
+  'The hours of work guidelines apply only to those covered under Part 4 of the Employment Act.',
+  'Note: Part 4 of the Employment Act does not cover managers and executives.',
+  'If you are not covered under Part 4 of the Employment Act, your terms and conditions of employment will be according to your employment contract.',
+  'Use this self-assessment tool to assess your coverage under Part 4 of the Employment Act.',
+  'Overtime work is all work in excess of the normal hours of work (excluding breaks).',
+  'You can claim overtime if you are:',
+  '• A non-workman earning a monthly basic salary of $2,600 or less.',
+  '• A workman earning a monthly basic salary of $4,500 or less.'
+];
+const momCoverageSource = momCoverageBlocks.join('\n\n');
+const momBoundedRecord = makeBoundedAdvisoryRecord('MOM', momCoverageSource);
+const momCompleteBundle = verifyEvidenceClaims(
+  [makeClaim(momCoverageSource, momBoundedRecord.id)], [momBoundedRecord], { missingFacts: [] }
+);
+assert.equal(momCompleteBundle.accepted.length, 1,
+  'A complete exact MOM Part 4 anchor, eligibility lead-in, both employee categories and exclusion may be cited together.');
+for (const incompleteMomQuote of [
+  momCoverageBlocks.slice(0, 7).concat(momCoverageBlocks[8]).join('\n\n'),
+  momCoverageBlocks.slice(0, 8).join('\n\n'),
+  [momCoverageBlocks[0], momCoverageBlocks[1], momCoverageBlocks[3], ...momCoverageBlocks.slice(4)].join('\n\n'),
+  momCoverageSource.replace(momCoverageBlocks[6], ''),
+  `${momCoverageBlocks.slice(0, 7).join('\n\n')}\n\n${momCoverageBlocks[8]}\n\n${momCoverageBlocks[7]}`
+]) {
+  const incomplete = verifyEvidenceClaims(
+    [makeClaim(incompleteMomQuote, momBoundedRecord.id)], [momBoundedRecord], { missingFacts: [] }
+  );
+  assert.equal(incomplete.accepted.length, 0,
+    'An omitted Part IV anchor, category, lead-in, or managers/executives exclusion cannot pass the MOM bundle path.');
+}
+const momCoverageWithoutListHeader = [
+  'Part 4 of the Employment Act governs hours of work and overtime.',
+  'Non-workmen eligible for Part 4 overtime earn a monthly basic salary of $2,600 or less.',
+  'Workmen eligible for Part 4 overtime earn a monthly basic salary of $4,500 or less.',
+  'Note: Part 4 of the Employment Act does not cover managers and executives.'
+].join('\n\n');
+const momHeaderlessRecord = makeBoundedAdvisoryRecord('MOM', momCoverageWithoutListHeader);
+assert.equal(supportBoundedStatutoryAdvisory({
+  authority: 'MOM',
+  topicId: 'mom-part-iv-overtime',
+  subject: 'Part IV overtime eligibility',
+  sourceText: momCoverageWithoutListHeader
+}), true, 'The substantive helper recognizes the full MOM category bundle independently of its list heading.');
+const momHeaderlessResult = verifyEvidenceClaims(
+  [makeClaim(momCoverageWithoutListHeader, momHeaderlessRecord.id)], [momHeaderlessRecord], { missingFacts: [] }
+);
+assert.equal(momHeaderlessResult.accepted.length, 0,
+  'A substantively complete but headerless MOM category passage is not a complete native-list quotation.');
+
+const unrelatedMomSource = [
+  'Employers should keep payroll information in their records.',
+  'Working schedules may be arranged according to operational needs.'
+].join('\n\n');
+const unrelatedMomRecord = makeBoundedAdvisoryRecord('MOM', unrelatedMomSource);
+const unrelatedMomQuote = verifyEvidenceClaims(
+  [makeClaim(unrelatedMomSource, unrelatedMomRecord.id)], [unrelatedMomRecord], { missingFacts: [] }
+);
+assert.equal(unrelatedMomQuote.accepted.length, 0,
+  'An exact but unrelated contiguous MOM passage cannot use the bounded coverage verifier path.');
+
+for (const { record: mismatchedRecord, quote } of [
+  { record: makeBoundedAdvisoryRecord('CPF', cpfDefinitionSource, { authority: 'MOM', sourceAuthority: 'MOM' }), quote: cpfDefinitionQuote },
+  { record: makeBoundedAdvisoryRecord('CPF', cpfDefinitionSource, { domain: 'MOM_EMPLOYMENT' }), quote: cpfDefinitionQuote },
+  { record: makeBoundedAdvisoryRecord('CPF', cpfDefinitionSource, {
+    relatedTopicIds: ['cpf-contributions'], sourceMapTopicIds: [], tags: ['cpf-contributions']
+  }), quote: cpfDefinitionQuote },
+  { record: makeBoundedAdvisoryRecord('MOM', momCoverageSource, { authority: 'CPF', sourceAuthority: 'CPF' }), quote: momCoverageSource },
+  { record: makeBoundedAdvisoryRecord('MOM', momCoverageSource, { domain: 'CPF_BOARD' }), quote: momCoverageSource },
+  { record: makeBoundedAdvisoryRecord('MOM', momCoverageSource, {
+    relatedTopicIds: ['mom-employment'], sourceMapTopicIds: [], tags: ['mom-employment']
+  }), quote: momCoverageSource },
+  { record: makeBoundedAdvisoryRecord('CPF', cpfDefinitionSource, { provenance: 'LOCAL_STATIC' }), quote: cpfDefinitionQuote },
+  { record: makeBoundedAdvisoryRecord('CPF', cpfDefinitionSource, { lifecycleState: 'ACTIVE' }), quote: cpfDefinitionQuote },
+  { record: makeBoundedAdvisoryRecord('CPF', cpfDefinitionSource, {
+    officialSourceUrl: 'https://www.cpf.gov.sg/employer/other-page'
+  }), quote: cpfDefinitionQuote }
+]) {
+  const mismatched = verifyEvidenceClaims(
+    [makeClaim(quote, mismatchedRecord.id)], [mismatchedRecord], { missingFacts: [] }
+  );
+  assert.equal(mismatched.accepted.length, 0,
+    'The complete-bundle path is bound to the record authority, canonical domain and exact topic id.');
+}
 
 const remoteText = [
   'Motor vehicle input tax is generally restricted.',

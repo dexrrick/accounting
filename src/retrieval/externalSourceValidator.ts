@@ -3,6 +3,11 @@ import {
   ACRA_2022_ANNUAL_RETURN_TIMELINES_URL,
   supportsAcraAnnualReturnDeadlineTable
 } from './acraAnnualReturnFilingRule';
+import {
+  isBoundedStatutoryAdvisoryRequest,
+  supportBoundedStatutoryAdvisory,
+  type BoundedStatutoryAdvisoryRequest
+} from './statutoryAdvisorySupport';
 import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
 
 /**
@@ -72,6 +77,8 @@ export interface TopicContentExpectation {
   requireSubstantiveBody?: boolean;
   /** Preserves and requires one complete, qualified ACRA annual-return deadline table. */
   requireAcraAnnualReturnDeadlineTable?: boolean;
+  /** Enables one native CPF wage-definition card only for the exact bounded request. */
+  cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -395,6 +402,168 @@ function extractRuleBearingMarkup(markup: string): string {
   return output;
 }
 
+interface BalancedMarkupElement {
+  tagName: string;
+  attributes: string;
+  start: number;
+  contentStart: number;
+  contentEnd?: number;
+  end?: number;
+  parent?: BalancedMarkupElement;
+}
+
+const HTML_VOID_TAGS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+
+/** Fail closed when malformed nesting makes a native rule-card boundary uncertain. */
+function parseBalancedMarkupElements(markup: string, allowOpenAncestors = false): BalancedMarkupElement[] | undefined {
+  const elements: BalancedMarkupElement[] = [];
+  const stack: BalancedMarkupElement[] = [];
+  const tagPattern = /<(\/)?([a-z][\w:-]*)\b([^>]*)>/gi;
+
+  for (const match of markup.matchAll(tagPattern)) {
+    const tagName = match[2].toLowerCase();
+    const start = match.index ?? 0;
+    if (match[1]) {
+      const opening = stack.pop();
+      if (!opening || opening.tagName !== tagName) return undefined;
+      opening.contentEnd = start;
+      opening.end = start + match[0].length;
+      continue;
+    }
+
+    const element: BalancedMarkupElement = {
+      tagName,
+      attributes: match[3],
+      start,
+      contentStart: start + match[0].length,
+      parent: stack.at(-1)
+    };
+    elements.push(element);
+    if (HTML_VOID_TAGS.has(tagName) || /\/\s*>$/.test(match[0])) {
+      element.contentEnd = element.contentStart;
+      element.end = element.contentStart;
+    } else {
+      stack.push(element);
+    }
+  }
+
+  return stack.length === 0 || allowOpenAncestors ? elements : undefined;
+}
+
+function findBalancedDivContainerEnd(markup: string, start: number): number | undefined {
+  const tagPattern = /<(\/)?div\b[^>]*>/gi;
+  tagPattern.lastIndex = start;
+  let depth = 0;
+  for (const match of markup.matchAll(tagPattern)) {
+    if (match[1]) {
+      depth -= 1;
+      if (depth === 0) return (match.index ?? 0) + match[0].length;
+      if (depth < 0) return undefined;
+    } else if (!/\/\s*>$/.test(match[0])) {
+      depth += 1;
+    }
+  }
+  return undefined;
+}
+
+function markupAttribute(attributes: string, name: string): string {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`(?:^|\\s)${escapedName}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(attributes);
+  return match?.[1] ?? match?.[2] ?? match?.[3] ?? '';
+}
+
+function hasMarkupClass(element: BalancedMarkupElement, className: string): boolean {
+  return markupAttribute(element.attributes, 'class').split(/\s+/).includes(className);
+}
+
+function isHiddenMarkupElement(element: BalancedMarkupElement): boolean {
+  return isHiddenMarkupAttributes(element.attributes);
+}
+
+function isHiddenMarkupAttributes(attributes: string): boolean {
+  return /(?:^|\s)hidden(?:\s|=|\/|$)/i.test(attributes)
+    || /(?:^|\s)aria-hidden\s*=\s*(?:"true"|'true'|true)(?:\s|$)/i.test(attributes)
+    || /\bdisplay\s*:\s*none\b|\bvisibility\s*:\s*hidden\b/i.test(markupAttribute(attributes, 'style'))
+    || /\b(?:sr-only|visually-hidden|d-none)\b/i.test(markupAttribute(attributes, 'class'));
+}
+
+function isInsideElement(element: BalancedMarkupElement, ancestor: BalancedMarkupElement): boolean {
+  for (let current = element.parent; current; current = current.parent) {
+    if (current === ancestor) return true;
+  }
+  return false;
+}
+
+/**
+ * Restores only the official CPF page's visible native action-card description,
+ * and only when its complete criteria satisfy the bounded request. The source
+ * card is replaced in place so body order and the source wording stay intact.
+ */
+function preserveSupportedCpfOrdinaryWageCard(
+  mainMarkup: string,
+  request: BoundedStatutoryAdvisoryRequest
+): string {
+  if (!isBoundedStatutoryAdvisoryRequest(request)) return mainMarkup;
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  // Parse only a bounded native card and its enclosing path. This keeps the
+  // extraction scoped to the real action-card description and avoids relying
+  // on unrelated CMS wrappers elsewhere in main.
+  const actionCardPattern = /<div\b([^>]*)>/gi;
+  let inspectedCards = 0;
+  for (const match of markupWithoutComments.matchAll(actionCardPattern)) {
+    const cardStart = match.index ?? 0;
+    const attributes = match[1];
+    const classes = markupAttribute(attributes, 'class').split(/\s+/);
+    if (!classes.includes('action-card') || !classes.includes('carousel')) continue;
+    inspectedCards += 1;
+    if (inspectedCards > 32) break;
+
+    const cardEnd = findBalancedDivContainerEnd(markupWithoutComments, cardStart);
+    if (!cardEnd) continue;
+    const cardMarkup = markupWithoutComments.slice(cardStart, cardEnd);
+    const cardElements = parseBalancedMarkupElements(cardMarkup);
+    const actionCard = cardElements?.find(element => element.start === 0 && element.tagName === 'div');
+    if (!cardElements || !actionCard) continue;
+
+    const prefixElements = parseBalancedMarkupElements(markupWithoutComments.slice(0, cardStart), true);
+    const openAncestors = prefixElements?.filter(element => element.end === undefined) || [];
+    if (!prefixElements || openAncestors.some(ancestor => {
+      const identity = markupAttribute(ancestor.attributes, 'class') + ' ' + markupAttribute(ancestor.attributes, 'id');
+      return !['div', 'section', 'article'].includes(ancestor.tagName) || isHiddenMarkupElement(ancestor) ||
+        RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+        /\b(?:navigation|navbar|breadcrumb|menu|sidebar|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity);
+    })) continue;
+
+    const description = cardElements.find(element => element.tagName === 'div' && hasMarkupClass(element, 'cmp-teaser__description'));
+    const content = description?.parent;
+    const teaser = content?.parent;
+    const actionTeaser = teaser?.parent;
+    if (!description || !content || !teaser || !actionTeaser ||
+        content.tagName !== 'div' || !hasMarkupClass(content, 'cmp-teaser__content') ||
+        teaser.tagName !== 'div' || !hasMarkupClass(teaser, 'cmp-teaser') ||
+        actionTeaser.tagName !== 'div' || !hasMarkupClass(actionTeaser, 'teaser') || !hasMarkupClass(actionTeaser, 'cmp-action-card') ||
+        actionTeaser.parent !== actionCard) continue;
+
+    const cardAncestors: BalancedMarkupElement[] = [];
+    for (let current: BalancedMarkupElement | undefined = description; current; current = current.parent) {
+      cardAncestors.push(current);
+      if (current === actionCard) break;
+    }
+    if (cardAncestors.at(-1) !== actionCard || cardAncestors.some(isHiddenMarkupElement) ||
+        cardAncestors.some(element => element.tagName === 'a')) continue;
+    const descendants = cardElements.filter(element => isInsideElement(element, description));
+    if (descendants.some(element => element.tagName === 'a' || isHiddenMarkupElement(element) ||
+        ['script', 'style', 'noscript', 'svg', 'template', 'iframe', 'object'].includes(element.tagName))) continue;
+
+    const descriptionMarkup = cardMarkup.slice(description.contentStart, description.contentEnd);
+    if (/<(?:table|thead|tbody|tfoot|tr|td|th)\b/i.test(descriptionMarkup)) continue;
+    const ruleMarkup = extractRuleBearingMarkup(descriptionMarkup).trim();
+    if (!/<(?:p|li)\b/i.test(ruleMarkup) ||
+        supportBoundedStatutoryAdvisory({ ...request, sourceText: cleanHtmlText(ruleMarkup) }) !== true) continue;
+    return markupWithoutComments.slice(0, cardStart) + '<div>' + ruleMarkup + '</div>' + markupWithoutComments.slice(cardEnd);
+  }
+  return mainMarkup;
+}
 interface MarkupElementContext {
   tagName: string;
   blockLinkCardStarts: number[];
@@ -505,7 +674,12 @@ function removeNavigationalSummaryLead(markup: string, rawDocument: string): str
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
 function extractVisiblePageText(
   rawDocument: string,
-  options: { preferMainContent?: boolean; requireSubstantiveBody?: boolean; requireAcraAnnualReturnDeadlineTable?: boolean } = {}
+  options: {
+    preferMainContent?: boolean;
+    requireSubstantiveBody?: boolean;
+    requireAcraAnnualReturnDeadlineTable?: boolean;
+    cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  } = {}
 ): string {
   const withoutChrome = (options.preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
     .replace(/<!--[\s\S]*?-->/g, ' ')
@@ -516,6 +690,40 @@ function extractVisiblePageText(
     withoutChrome.match(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
+  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && options.cpfOrdinaryWageDefinitionRequest &&
+      !/<\/?main\b/i.test(contentMatch[1])) {
+    const mainMarkup = rawDocument
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<(head|script|style|noscript|svg|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    const mainOpenings = [...mainMarkup.matchAll(/<main\b([^>]*)>/gi)];
+    const mainClosings = [...mainMarkup.matchAll(/<\/main\s*>/gi)];
+    const mainOpen = mainOpenings[0];
+    const mainOpenIndex = mainOpen?.index ?? -1;
+    const mainCloseIndex = mainClosings[0]?.index ?? -1;
+    const mainPrefix = mainOpen
+      ? parseBalancedMarkupElements(mainMarkup.slice(0, mainOpenIndex), true)
+      : undefined;
+    const outerAncestors = mainPrefix?.filter(element => element.end === undefined) || [];
+    let visibleMain = Boolean(mainOpen && mainOpenings.length === 1 && mainClosings.length === 1 &&
+      mainCloseIndex > mainOpenIndex && mainPrefix && !isHiddenMarkupAttributes(mainOpen[1]));
+    for (const ancestor of outerAncestors) {
+      const identity = `${markupAttribute(ancestor.attributes, 'class')} ${markupAttribute(ancestor.attributes, 'id')}`;
+      if (!['html', 'body', 'div', 'section', 'article'].includes(ancestor.tagName) ||
+          isHiddenMarkupElement(ancestor) || ['nav', 'aside', 'header', 'footer', 'a'].includes(ancestor.tagName) ||
+          RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+          /\b(?:navigation|navbar|breadcrumb|menu|sidebar|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity)) {
+        visibleMain = false;
+        break;
+      }
+    }
+    if (visibleMain && mainOpen && mainClosings[0]) {
+      const mainContentStart = mainOpenIndex + mainOpen[0].length;
+      const originalMainContent = mainMarkup.slice(mainContentStart, mainCloseIndex);
+      visibleMarkup = preserveSupportedCpfOrdinaryWageCard(originalMainContent, options.cpfOrdinaryWageDefinitionRequest)
+        .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
+        .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
+    }
+  }
   const deadlineTable = options.requireAcraAnnualReturnDeadlineTable
     ? findSimpleAcraDeadlineTable(visibleMarkup) : undefined;
   if (options.requireAcraAnnualReturnDeadlineTable && !deadlineTable && hasAcraDeadlineTableHeader(visibleMarkup)) return '';
@@ -722,8 +930,23 @@ export class ExternalSourceValidator {
     const substantiveText = extractVisiblePageText(rawDocument, {
       preferMainContent: expectation.preferMainContent,
       requireSubstantiveBody: expectation.requireSubstantiveBody,
-      requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable
+      requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable,
+      cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest
     });
+    if (expectation.cpfOrdinaryWageDefinitionRequest &&
+        (!isBoundedStatutoryAdvisoryRequest(expectation.cpfOrdinaryWageDefinitionRequest) ||
+         supportBoundedStatutoryAdvisory({
+           ...expectation.cpfOrdinaryWageDefinitionRequest,
+           sourceText: substantiveText
+         }) !== true)) {
+      return {
+        isValid: false,
+        errorCode: 'MALFORMED_DOCUMENT_STRUCTURE',
+        reason: 'Fetched CPF wage-definition page does not contain both complete source-stated ordinary-wage conditions',
+        pageTitle,
+        substantiveText
+      };
+    }
     if (!pageTitle || /^(?:home(?:page)?|search(?: results)?|sign in|log in|login|access denied|not found|error)(?:\s*[-|:].*)?$/i.test(pageTitle)) {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page has a generic, unavailable, or login title', pageTitle, substantiveText };
     }

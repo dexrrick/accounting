@@ -21,6 +21,19 @@ import { defaultExternalSourceValidator } from '../../src/retrieval/externalSour
 
 const acraAnnualPage = JSON.parse(await readFile(new URL('../fixtures/acra-company-guidance-2026-10-10.json', import.meta.url), 'utf8'))
   .find(page => page.name === 'annual');
+// Official CPF wording: https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions
+// The native action-card description contains the complete definition; the earlier introduction remains insufficient alone.
+const cpfIntroOnlyParagraph = 'Ordinary wages are wages due or granted wholly and exclusively in respect of employment in that month. CPF contributions are payable on ordinary wages, subject to the applicable wage ceiling.';
+const cpfCompleteDefinitionParagraph = 'For wages to be classified as Ordinary Wages for the month, they must meet both of the following conditions:';
+const cpfNativeDefinitionCard = `<div class="action-card carousel"><div class="teaser cmp-action-card"><div class="cmp-teaser"><div class="cmp-teaser__content"><div class="cmp-teaser__description">
+  <p>${cpfCompleteDefinitionParagraph}</p>
+  <ul><li>They are given to an employee for their employment in that month, and</li><li>They are payable by the 14th of the following month.</li></ul>
+  <p>For example, monthly salary.</p>
+</div></div></div></div></div>`;
+// Official MOM guidance: https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days
+// This positive fixture includes both covered workman categories, their monthly basic-salary limits, and the managers/executives exclusion.
+const momIntroOnlyParagraph = 'Employees covered by Part IV of the Employment Act are subject to working hours and overtime eligibility rules. Overtime pay is calculated from the hourly basic rate, subject to applicable overtime eligibility requirements.';
+const momCompleteCoverageParagraph = 'Employees covered by Part IV overtime eligibility under the Employment Act include workmen who earn a monthly basic salary of $4,500 or less. Non-workmen who earn a monthly basic salary of $2,600 or less are also covered. Managers and executives are not covered under Part IV.';
 const cases = [
   {
     authority: 'ACRA',
@@ -39,15 +52,15 @@ const cases = [
   {
     authority: 'CPF',
     topicId: 'cpf-ordinary-wages',
-    query: 'How are ordinary wages treated for CPF?',
+    query: 'What makes wages ordinary wages for CPF contributions?',
     runtimeQuery: 'Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.',
     subject: 'ordinary wages',
     domain: 'CPF_PAYROLL',
     population: 'EMPLOYER',
     url: 'https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions',
     title: 'CPF Board | What constitutes wages for CPF contributions',
-    paragraph: 'Ordinary wages are wages due or granted wholly and exclusively in respect of employment in that month. CPF contributions are payable on ordinary wages, subject to the applicable wage ceiling.',
-    pageHtml: '<html><head><title>CPF Board | What constitutes wages for CPF contributions</title></head><body><main><h1>What constitutes wages for CPF contributions</h1><p>Ordinary wages are wages due or granted wholly and exclusively in respect of employment in that month. CPF contributions are payable on ordinary wages, subject to the applicable wage ceiling. The employer must determine the payment period and applicable contribution rates.</p></main></body></html>',
+    paragraph: cpfCompleteDefinitionParagraph,
+    pageHtml: `<html><head><title>CPF Board | What constitutes wages for CPF contributions</title></head><body><main><h1>What constitutes wages for CPF contributions</h1><p>${cpfIntroOnlyParagraph}</p>${cpfNativeDefinitionCard}</main></body></html>`,
     sourcePublisher: 'Central Provident Fund Board (CPF Board)'
   },
   {
@@ -60,7 +73,7 @@ const cases = [
     population: 'EMPLOYEE',
     url: 'https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days',
     title: 'Part IV Working Hours and Overtime Eligibility | Ministry of Manpower',
-    paragraph: 'Employees covered by Part IV of the Employment Act are subject to working hours and overtime eligibility rules. Overtime pay is calculated from the hourly basic rate, subject to applicable overtime eligibility requirements.',
+    paragraph: momCompleteCoverageParagraph,
     sourcePublisher: 'Ministry of Manpower (MOM)'
   },
   {
@@ -73,7 +86,7 @@ const cases = [
     population: 'COMPANY',
     url: 'https://www.mas.gov.sg/regulation/capital-markets-services/capital-markets-services-licence',
     title: 'Capital Markets Services Licence | Monetary Authority of Singapore',
-    paragraph: 'A Capital Markets Services Licence is generally required by a business that carries on a regulated activity under the Securities and Futures Act in Singapore. Capital markets services licence holders must comply with the applicable licensing requirements.',
+    paragraph: 'If your company wishes to conduct regulated activities under the SFA, it must hold a CMS licence. Individuals conducting regulated activities on behalf of CMS licensees or exempt CMS entities (such as banks) need to be appointed as representatives.',
     sourcePublisher: 'Monetary Authority of Singapore (MAS)'
   }
 ];
@@ -127,6 +140,12 @@ for (const sample of cases) {
   assert.ok(record.documentHash?.match(/^[a-f0-9]{64}$/));
   assert.ok(record.sourceText.includes(sample.paragraph.slice(0, 30)));
   assert.ok(record.sourceText.includes(sample.paragraph), 'The selected excerpt contains substantive fetched page text.');
+  if (sample.authority === 'CPF') {
+    assert.ok(record.sourceText.includes('They are given to an employee for their employment in that month,'),
+      'The native CPF rule-card passage retains the employment-month condition in the final record.');
+    assert.ok(record.sourceText.includes('They are payable by the 14th of the following month.'),
+      'The native CPF rule-card passage retains the following-month payment deadline in the final record.');
+  }
   assert.ok(calls.includes(provider.sitemapUrls[0]));
   assert.ok(calls.includes(sample.url), 'Sitemap metadata must be followed by an independently fetched page.');
   assert.ok(!calls.some(url => url.includes('unapproved.example') || url.startsWith('http:')));
@@ -265,6 +284,96 @@ for (const sample of cases) {
   assert.equal(dataAttributeBody.isValid, true,
     'Data attributes named data-class/data-id do not make a substantive paragraph look like card metadata.');
 }
+
+const cpfDefinitionRequest = {
+  authority: 'CPF',
+  topicId: 'cpf-ordinary-wages',
+  subject: 'ordinary wages',
+  originalQuery: 'What makes wages ordinary wages for CPF contributions?'
+};
+const cpfDefinitionExpectation = {
+  standardIdentifiers: ['CPF Board', 'Central Provident Fund Board'],
+  expectedTitles: ['What constitutes wages for CPF contributions'],
+  topicTerms: ['ordinary wages'],
+  requireSubstantiveBody: true,
+  cpfOrdinaryWageDefinitionRequest: cpfDefinitionRequest
+};
+const cpfDefinitionPage = (card, { main = true, title = 'CPF Board | What constitutes wages for CPF contributions', wrapper = '' } = {}) =>
+  `<html><head><title>${title}</title></head><body>${main ? '<main>' : ''}<h1>What constitutes wages for CPF contributions</h1><p>${cpfIntroOnlyParagraph}</p>${wrapper}${card}${main ? '</main>' : ''}</body></html>`;
+const cpfNativePositive = defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard), cpfDefinitionExpectation
+);
+assert.equal(cpfNativePositive.isValid, true, JSON.stringify(cpfNativePositive));
+assert.ok(cpfNativePositive.substantiveText?.includes('They are given to an employee for their employment in that month,'));
+assert.ok(cpfNativePositive.substantiveText?.includes('They are payable by the 14th of the following month.'));
+const defaultCpfCard = defaultExternalSourceValidator.validateTopicContent(cpfDefinitionPage(cpfNativeDefinitionCard), {
+  ...cpfDefinitionExpectation,
+  cpfOrdinaryWageDefinitionRequest: undefined
+});
+assert.equal(defaultCpfCard.substantiveText?.includes('They are payable by the 14th of the following month.'), false,
+  'Without the exact bounded request, default metadata stripping continues to exclude the native card.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard.replace('They are given to an employee for their employment in that month,', '')),
+  cpfDefinitionExpectation
+).isValid, false, 'A card missing the employment-month condition remains insufficient.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard.replace('They are payable by the 14th of the following month.', '')),
+  cpfDefinitionExpectation
+).isValid, false, 'A card missing the following-month payment condition remains insufficient.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard, { main: false }), cpfDefinitionExpectation
+).isValid, false, 'A native-looking card outside the page main is not admitted.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard, { wrapper: '<div class="related-content">' }).replace('</body>', '</div></body>'),
+  cpfDefinitionExpectation
+).isValid, false, 'A card inside a related-content wrapper is not admitted.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard, { wrapper: '<nav>' }).replace('</main>', '</nav></main>'),
+  cpfDefinitionExpectation
+).isValid, false, 'Navigation-wrapped card text is not admitted.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard, { wrapper: '<div class="navigation"><div><p>Menu placeholder</p></div>' })
+    .replace('</main>', '</div></main>'),
+  cpfDefinitionExpectation
+).isValid, false, 'A card nested in a navigation-marked div is not admitted even when other page chrome can be stripped.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard.replace('<div class="cmp-teaser__description">', '<div class="cmp-teaser__description" hidden>')),
+  cpfDefinitionExpectation
+).isValid, false, 'Hidden card descriptions are not admitted.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard.replace(
+    `<p>${cpfCompleteDefinitionParagraph}</p>`,
+    `<p><a href="/criteria">${cpfCompleteDefinitionParagraph}</a></p>`
+  )),
+  cpfDefinitionExpectation
+).isValid, false, 'Link-wrapped card descriptions are not admitted.');
+const cpfTitleAndLinkOnlyCard = cpfNativeDefinitionCard.replace(
+  /<div class="cmp-teaser__description">[\s\S]*?<\/div>/,
+  '<div class="cmp-teaser__description"><h2>Ordinary wage criteria</h2><p><a href="/ordinary-wages">Full ordinary wage definition and both conditions</a></p></div>'
+);
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfTitleAndLinkOnlyCard), cpfDefinitionExpectation
+).isValid, false, 'A heading and linked card summary do not count as description prose.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard.slice(0, cpfNativeDefinitionCard.lastIndexOf('</div>'))),
+  cpfDefinitionExpectation
+).isValid, false, 'Malformed nested card markup cannot leak description text into source evidence.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard, { title: 'CPF Board | General services' }),
+  cpfDefinitionExpectation
+).isValid, false, 'The card exception does not bypass the mapped page-title check.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard), {
+    ...cpfDefinitionExpectation,
+    cpfOrdinaryWageDefinitionRequest: { ...cpfDefinitionRequest, authority: 'MOM' }
+  }
+).isValid, false, 'A request with the wrong authority cannot enable the CPF card exception.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeDefinitionCard), {
+    ...cpfDefinitionExpectation,
+    cpfOrdinaryWageDefinitionRequest: { ...cpfDefinitionRequest, topicId: 'cpf-contributions' }
+  }
+).isValid, false, 'A different CPF topic cannot enable the CPF card exception.');
 
 // Shared generic XML parser must still preserve authority boundaries.
 const provider = OFFICIAL_SOURCE_DISCOVERY_PROVIDERS.MOM;
@@ -465,8 +574,14 @@ for (const sample of cases) {
   assert.match(fallbackResponse, /Evidence is incomplete/);
   assert.doesNotMatch(fallbackResponse, /\bjournal\b/i);
   if (sample.authority === 'ACRA') {
-    assert.ok(issueEvidence.verifiedClaims.some(claim => /companies in singapore must file annual returns/i.test(claim.quote)),
-      'an operative company filing rule remains sufficient exact-quote support for annual returns');
+    assert.ok(issueEvidence.verifiedClaims.some(claim => {
+      const record = issueEvidence.sources.find(source => source.id === claim.recordId);
+      const completeSourceBlock = record?.sourceText.split(/\r?\n[\t ]*\r?\n+/)
+        .map(block => block.trim()).includes(claim.quote.trim());
+      return completeSourceBlock &&
+        /All companies registered in Singapore must file an annual return with ACRA each year\./i.test(claim.quote) &&
+        /This applies as long as your company is listed as [“"]?live[”"]? with us\./i.test(claim.quote);
+    }), 'the complete operative company filing-rule paragraph remains sufficient, including its live-company qualification');
     const nonOperativeHtml = html(sample.title, [
       'ACRA provides reminder notifications to help you comply with annual return (AR) and annual declaration (AD) deadlines.',
       'Meet their annual filing deadlines.',
@@ -499,6 +614,21 @@ for (const sample of cases) {
       'the passive-rule verification retains its exact source quote');
   }
 
+  if (sample.authority === 'CPF' || sample.authority === 'MOM') {
+    const introOnlyParagraph = sample.authority === 'CPF' ? cpfIntroOnlyParagraph : momIntroOnlyParagraph;
+    const introOnly = await runWorkstreams([sample], {
+      query: routeQuery,
+      pageOverrides: { [sample.authority]: html(sample.title, introOnlyParagraph) }
+    });
+    const introOnlyIssue = introOnly.workstreams.find(item => item.authority === sample.authority).issues[0];
+    assert.equal(introOnlyIssue.evidenceStatus, 'INSUFFICIENT',
+      `${sample.authority} introductory rule text cannot support the requested definition or coverage answer.`);
+    assert.deepEqual(introOnlyIssue.verifiedClaims, [],
+      `${sample.authority} introductory text cannot publish a definition or eligibility quote.`);
+    assert.equal(introOnlyIssue.sources.length, 0,
+      `${sample.authority} introductory text fails the substantive source-body admission check.`);
+  }
+
   const metadataOnlyHtml = `<html><head><title>${sample.title}</title></head><body><main>
     <h1>${sample.subject}</h1><nav><a href="/topic">${sample.subject}</a></nav>
     <div class="topic-card"><p><a href="/topic">${sample.subject} official guidance</a></p></div>
@@ -527,9 +657,36 @@ for (const sample of cases) {
 
   // Even with a real successful trace, authority, domain, and subject mismatches
   // fail admission. A live candidate without its exact fetch trace also fails.
-  const candidateFromSuccess = successfulRuns.get(sample.authority).workstreams
-    .find(item => item.authority === sample.authority).issues[0].sources[0];
   const successTrace = discoveryResults.get(sample.authority).trace;
+  const successfulIssue = successfulRuns.get(sample.authority).workstreams
+    .find(item => item.authority === sample.authority).issues[0];
+  const candidateFromSuccess = successfulIssue.sources.find(record => successTrace.selectedRecordIds.includes(record.id)) ||
+    successfulIssue.sources[0];
+  if (sample.authority === 'CPF' || sample.authority === 'MOM') {
+    const partialQuote = sample.authority === 'CPF'
+      ? cpfCompleteDefinitionParagraph.split(' They are payable')[0]
+      : momCompleteCoverageParagraph.split(' Non-workmen')[0];
+    const partialQuoteOnly = await runWorkstreams([sample], {
+      query: routeQuery,
+      providers: { [sample.authority]: {
+        authority: sample.authority,
+        async retrieve() {
+          return {
+            candidates: [candidateFromSuccess],
+            claims: [{ text: partialQuote, quote: partialQuote, recordId: candidateFromSuccess.id }],
+            evidenceQualityTrace: successTrace
+          };
+        }
+      } }
+    });
+    const partialIssue = partialQuoteOnly.workstreams.find(item => item.authority === sample.authority).issues[0];
+    assert.equal(partialIssue.lifecycle.admitted, true,
+      `${sample.authority} full source body can pass admission even when the supplied quote is partial.`);
+    assert.deepEqual(partialIssue.verifiedClaims, [],
+      `${sample.authority} a partial exact quote cannot bypass the per-quote substantive-support guard.`);
+    assert.equal(partialIssue.evidenceStatus, 'INSUFFICIENT');
+    assert.equal(partialIssue.lifecycle.covered, false);
+  }
   const runInjectedCandidate = candidate => runWorkstreams([sample], {
     query: routeQuery,
     providers: { [sample.authority]: {
@@ -561,6 +718,24 @@ for (const sample of cases) {
 // authority keeps the whole question insufficient without borrowing the other source.
 const acraSample = cases.find(sample => sample.authority === 'ACRA');
 const momSample = cases.find(sample => sample.authority === 'MOM');
+// The raw user query must reach substantive-support recognition even when
+// semantic interpretation leaves only a short issue subject.
+const shortMomIssue = { ...makeIssue(momSample), subject: 'Part IV' };
+const shortSubjectComplete = await runWorkstreams([momSample], {
+  query: momSample.runtimeQuery,
+  issuePlan: makeIssuePlan([shortMomIssue])
+});
+assert.equal(shortSubjectComplete.workstreams.find(item => item.authority === 'MOM').issues[0].evidenceStatus, 'VERIFIED',
+  'The complete MOM employee-coverage source supports a short subject when the raw query carries the full ask.');
+const shortSubjectIntroOnly = await runWorkstreams([momSample], {
+  query: momSample.runtimeQuery,
+  issuePlan: makeIssuePlan([shortMomIssue]),
+  pageOverrides: { MOM: html(momSample.title, momIntroOnlyParagraph) }
+});
+assert.equal(shortSubjectIntroOnly.workstreams.find(item => item.authority === 'MOM').issues[0].evidenceStatus, 'INSUFFICIENT',
+  'A short subject cannot conceal the raw query’s full coverage ask from the substantive-support guard.');
+assert.deepEqual(shortSubjectIntroOnly.workstreams.find(item => item.authority === 'MOM').issues[0].verifiedClaims, []);
+
 const mixedQuery = 'What annual return filing requirements apply to Singapore companies, and what are Part IV overtime eligibility requirements?';
 const mixedClassification = classifyQuestion(mixedQuery);
 const mixedUnderstanding = oracleUnderstandingFor([acraSample, momSample]);
@@ -582,9 +757,7 @@ assert.equal(shouldUseAuthorityEvidenceRuntime({
 const mixed = await runWorkstreams([acraSample, momSample], {
   query: mixedQuery,
   issuePlan: mixedReconciliation.issuePlan,
-  pageOverrides: {
-    MOM: `<html><head><title>${momSample.title}</title></head><body><main><h1>${momSample.subject}</h1><nav><a>${momSample.subject}</a></nav><p>General government services and public online information.</p></main></body></html>`
-  }
+  pageOverrides: { MOM: html(momSample.title, momIntroOnlyParagraph) }
 });
 const mixedAcra = mixed.workstreams.find(item => item.authority === 'ACRA');
 const mixedMom = mixed.workstreams.find(item => item.authority === 'MOM');

@@ -37,6 +37,11 @@ import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retr
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import {
+  isBoundedStatutoryAdvisoryRequest,
+  selectBoundedStatutoryAdvisoryPassage,
+  supportBoundedStatutoryAdvisory
+} from '../retrieval/statutoryAdvisorySupport';
+import {
   getAcraAnnualReturnDeadlineTablePassage,
   isAcraAnnualReturnDeadlineQuestion,
   supportsAcraAnnualReturnDeadlineEvidence,
@@ -1337,6 +1342,16 @@ export async function resolveMappedOfficialSourceFallback(
         : acraDiscovery ? ['ACRA', 'Accounting and Corporate Regulatory Authority']
           : momDiscovery ? ['Ministry of Manpower', 'MOM']
             : masDiscovery ? ['Monetary Authority of Singapore', 'MAS'] : [];
+    const boundedAdvisoryRequest = {
+      authority: topic.authorities[0],
+      topicId: topic.id,
+      subject: topic.title,
+      originalQuery: query
+    };
+    const cpfOrdinaryWageDefinitionRequest = topic.domainId.startsWith('CPF_') &&
+      topic.id === 'cpf-ordinary-wages' && isBoundedStatutoryAdvisoryRequest(boundedAdvisoryRequest)
+      ? boundedAdvisoryRequest
+      : undefined;
     const expectation = {
       preferMainContent: topic.domainId === 'ACRA_COMPANIES',
       standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...statutoryIdentifiers],
@@ -1349,7 +1364,8 @@ export async function resolveMappedOfficialSourceFallback(
       allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_'),
       requireAcraAnnualReturnDeadlineTable: topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query),
       requireSubstantiveBody: topic.domainId.startsWith('CPF_') || topic.domainId === 'ACRA_COMPANIES' ||
-        topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_')
+        topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_'),
+      cpfOrdinaryWageDefinitionRequest
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
@@ -1435,6 +1451,25 @@ export async function resolveMappedOfficialSourceFallback(
     }
 
     const requiredContentTerms = topic.requiredContentTerms || [];
+    const boundedAdvisoryRecognized = isBoundedStatutoryAdvisoryRequest(boundedAdvisoryRequest);
+    const boundedAdvisorySupported = boundedAdvisoryRecognized
+      ? supportBoundedStatutoryAdvisory({
+        ...boundedAdvisoryRequest,
+        sourceText: contentValidation.substantiveText || ''
+      })
+      : undefined;
+    const preferredStatutoryAdvisoryPassage = boundedAdvisoryRecognized && boundedAdvisorySupported === true
+      ? selectBoundedStatutoryAdvisoryPassage({
+        ...boundedAdvisoryRequest,
+        sourceText: contentValidation.substantiveText || ''
+      }, 5_000)
+      : undefined;
+    if (boundedAdvisoryRecognized && boundedAdvisorySupported === true && !preferredStatutoryAdvisoryPassage) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Complete bounded statutory guidance and its attached qualifications cannot be retained within the grounding excerpt limit.';
+      return undefined;
+    }
     const scopedSubject = options.evidenceScope?.context.primarySubject || semanticIrasContext?.primarySubject;
     const scopedPopulation = options.evidenceScope?.context.population || semanticIrasContext?.population;
     const preferredRulePassage = completeScopedRulePassage(
@@ -1450,9 +1485,10 @@ export async function resolveMappedOfficialSourceFallback(
     const preferredAcraDeadlinePassages = acraDeadlineTablePassage
       ? [acraDeadlineDutyPassage ? `${acraDeadlineDutyPassage}\n\n${acraDeadlineTablePassage}` : '', acraDeadlineTablePassage]
       : [];
-    const excerpt = selectRelevantFetchedText(contentValidation.substantiveText || '',
+    const excerpt = preferredStatutoryAdvisoryPassage || selectRelevantFetchedText(contentValidation.substantiveText || '',
       [...expectation.topicTerms, ...requiredContentTerms], 5_000, query,
-      [...preferredAcraDeadlinePassages, ...(preferredRulePassage ? [preferredRulePassage] : [])]);
+      [...preferredAcraDeadlinePassages,
+        ...(preferredRulePassage ? [preferredRulePassage] : [])]);
     const requiredContentPresent = containsRequiredContentTermsInOneBlock(contentValidation.substantiveText || '', requiredContentTerms) &&
       containsRequiredContentTermsInOneBlock(excerpt, requiredContentTerms);
     const excerptTopicMatches = expectation.topicTerms.filter(term => matchesTopicContentTerm(
