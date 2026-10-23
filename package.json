@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build && node scripts/build_cloudflare_worker.mjs",
+    "postbuild": "node --import tsx .verify-final-build-live.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "preflight": "node scripts/preflight.mjs",
