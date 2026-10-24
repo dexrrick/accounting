@@ -250,13 +250,21 @@ export function completeIrasCpfCashTopUpLimitQuotes(sourceText: string): string[
     if (tableEnd < lastAccountRowIndex) return [];
     tableText = blocks.slice(tableStart, tableEnd + 1).join(' ');
   }
-  const saAgeMarkers = [...tableText.matchAll(/\bFor recipients below age 55\b/gi)];
-  const raAgeMarkers = [...tableText.matchAll(/\bFor recipients aged 55 years and above\b/gi)];
+  const embeddedTableEndMarkers = [...tableText.matchAll(/\bto check your top[ -]?up limit\b/gi)];
+  if (embeddedTableEndMarkers.length > 1) return [];
+  // A collapsed extractor can place the table-end instruction and following
+  // prose in the same block. Validate every row and qualification only against
+  // the bytes before that boundary while retaining the original exact span.
+  const tableValidationText = embeddedTableEndMarkers.length === 1
+    ? tableText.slice(0, embeddedTableEndMarkers[0].index)
+    : tableText;
+  const saAgeMarkers = [...tableValidationText.matchAll(/\bFor recipients below age 55\b/gi)];
+  const raAgeMarkers = [...tableValidationText.matchAll(/\bFor recipients aged 55 years and above\b/gi)];
   if (saAgeMarkers.length !== 1 || raAgeMarkers.length !== 1 ||
       saAgeMarkers[0].index === undefined || raAgeMarkers[0].index === undefined ||
       saAgeMarkers[0].index >= raAgeMarkers[0].index) return [];
-  const saRowText = tableText.slice(saAgeMarkers[0].index, raAgeMarkers[0].index);
-  const raRowText = tableText.slice(raAgeMarkers[0].index);
+  const saRowText = tableValidationText.slice(saAgeMarkers[0].index, raAgeMarkers[0].index);
+  const raRowText = tableValidationText.slice(raAgeMarkers[0].index);
   // A flattened table block can contain all of the correct phrases while
   // assigning the RA formula and its savings qualification to the wrong age.
   // Keep these conditions inside the age category that governs each account.
@@ -271,15 +279,15 @@ export function completeIrasCpfCashTopUpLimitQuotes(sourceText: string): string[
       !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(raRowText)) return [];
   if (!/\bage of recipients\b/i.test(blocks[tableHeaderIndex]) ||
       !/\blimit on cash top[ -]?up amount for computing tax relief\b/i.test(blocks[tableHeaderIndex]) ||
-      !/\brecipients below age 55\b/i.test(tableText) ||
-      !/\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(tableText) ||
-      !/\brecipients aged 55 years and above\b/i.test(tableText) ||
-      !/\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(tableText) ||
-      !/\b(?:full retirement sum|frs)\b/i.test(tableText) ||
-      !/\bmaximum allowed cash top[ -]?up\b/i.test(tableText)) return [];
-  const mediSaveRows = [...tableText.matchAll(/\(b\)\s*Top-up to MediSave Account\s*\(MA\):[\s\S]*?(?=For recipients aged 55 years and above|To check your top[ -]?up limit|$)/gi)]
+      !/\brecipients below age 55\b/i.test(tableValidationText) ||
+      !/\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(tableValidationText) ||
+      !/\brecipients aged 55 years and above\b/i.test(tableValidationText) ||
+      !/\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(tableValidationText) ||
+      !/\b(?:full retirement sum|frs)\b/i.test(tableValidationText) ||
+      !/\bmaximum allowed cash top[ -]?up\b/i.test(tableValidationText)) return [];
+  const mediSaveRows = [...tableValidationText.matchAll(/\(b\)\s*Top-up to MediSave Account\s*\(MA\):[\s\S]*?(?=For recipients aged 55 years and above|To check your top[ -]?up limit|$)/gi)]
     .map(match => match[0]);
-  const tableDefinesBhs = /\bBasic Healthcare Sum\s*\(BHS\)/i.test(tableText);
+  const tableDefinesBhs = /\bBasic Healthcare Sum\s*\(BHS\)/i.test(tableValidationText);
   if (!tableDefinesBhs || mediSaveRows.length !== 2 || mediSaveRows.some(row =>
     !/(?:\bBasic Healthcare Sum\s*\(BHS\)|\bthe BHS\b)/i.test(row) ||
     !/\bself-employed person\s*\(SEP\)[^.!?]{0,120}must be up-to-date with their MediSave payable/i.test(row) ||

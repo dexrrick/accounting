@@ -961,6 +961,81 @@ assert.ok(generalAcraAnnualFilingMeaning);
 assert.equal(generalAcraAnnualFilingMeaning.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
   'Plural annual-return wording binds the ACRA filing rule to its raw general-duty clause.');
 assert.equal(generalAcraAnnualFilingMeaning.requiresUserSpecificFacts, false);
+const shortSubjectAcraAnnualFilingMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing duty',
+  concepts: [{ concept: 'annual return filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'annual return filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), generalAcraAnnualFilingQuery);
+assert.equal(shortSubjectAcraAnnualFilingMeaning?.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'A short annual-return subject includes its attached general-duty explanation before matching clauses are scored.');
+assert.equal(shortSubjectAcraAnnualFilingMeaning?.requiresUserSpecificFacts, false,
+  'The short general filing-duty subject remains a rule question rather than a case application.');
+const filingDutyOnlyAcraMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'filing duty', concepts: [{ concept: 'filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), generalAcraAnnualFilingQuery);
+assert.equal(filingDutyOnlyAcraMeaning?.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'Terms from an attached ACRA explanation contribute to its preceding filing-duty request before uniqueness scoring.');
+assert.equal(filingDutyOnlyAcraMeaning?.requiresUserSpecificFacts, false);
+const acraDutyWithIrAsQuestion = [
+  'Under ACRA guidance, must Singapore-incorporated companies file annual returns?',
+  'Explain the general filing duty.',
+  'Explain the general IRAS rules for whether my company can claim tax deductions.'
+].join(' ');
+const acraAndIrasMeaning = interpretation({
+  authorityCandidates: ['ACRA', 'IRAS'], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'annual return filing duty and tax deduction eligibility',
+  concepts: [
+    { concept: 'annual return filing duty', role: 'PRIMARY' },
+    { concept: 'tax deduction eligibility', role: 'PRIMARY' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'annual return filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+      governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'tax deduction eligibility', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: ['iras-cit-deductibility'], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+  ]
+});
+const normalizedAcraAndIras = validateSemanticQuestionInterpretation(acraAndIrasMeaning, acraDutyWithIrAsQuestion);
+assert.equal(normalizedAcraAndIras?.issues.find(issue => issue.governingAuthorities[0] === 'ACRA')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE', 'An untagged ACRA explanation stays with the ACRA request across a later IRAS question.');
+assert.equal(normalizedAcraAndIras?.issues.find(issue => issue.governingAuthorities[0] === 'IRAS')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'The separate IRAS company-specific deduction question retains its fact requirement.');
+assert.equal(normalizedAcraAndIras?.requiresUserSpecificFacts, true);
+const acraDutyWithIrAsQuestionAfterNegative = [
+  'Under ACRA guidance, must Singapore-incorporated companies file annual returns?',
+  'Explain the general filing duty.',
+  'Do not calculate a deadline or create journal entries.',
+  'Explain the general IRAS rules for whether my company can claim tax deductions.'
+].join(' ');
+const normalizedAcraAndIrasAfterNegative = validateSemanticQuestionInterpretation(acraAndIrasMeaning,
+  acraDutyWithIrAsQuestionAfterNegative);
+assert.equal(normalizedAcraAndIrasAfterNegative?.issues.find(issue => issue.governingAuthorities[0] === 'ACRA')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE', 'An attached ACRA non-calculation instruction preserves the source-only ACRA requirement.');
+assert.equal(normalizedAcraAndIrasAfterNegative?.issues.find(issue => issue.governingAuthorities[0] === 'IRAS')?.evidenceRequirement,
+  'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', 'An ACRA negative instruction cannot absorb the later IRAS fact-specific question.');
+const repeatedAcraDutyQuestion = `${generalAcraAnnualFilingQuery} ${generalAcraAnnualFilingQuery}`;
+const repeatedAcraDutyMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing duty', concepts: [{ concept: 'annual return filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'annual return filing duty', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), repeatedAcraDutyQuestion);
+assert.equal(repeatedAcraDutyMeaning?.requiresUserSpecificFacts, true,
+  'Repeated same-topic requests remain unresolved under the conservative fallback.');
 const acraDeadlineRuleQuery = 'Under current ACRA rules, how many months after financial year end must a non-listed Singapore company without an overseas branch register file its annual return? Cite the official rule.';
 const acraDeadlineRuleMeaning = interpretation({
   authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',

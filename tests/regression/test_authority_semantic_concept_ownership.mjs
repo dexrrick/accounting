@@ -473,6 +473,21 @@ try {
       `${exactContextCase.authority} exact qualifying context stays local in a mixed question.`);
   }
 
+  const momEmployeeCoverageQuery = 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.';
+  const momEmployeeCoverageIssue = issue({ id: 'mom-employee-coverage', authority: 'MOM',
+    domain: 'MOM_EMPLOYMENT', population: 'EMPLOYEE', subject: 'Part IV employee coverage',
+    topicId: 'mom-part-iv-overtime' });
+  const momEmployeeCoverageUnderstanding = understandingFor({ authorityCandidates: ['MOM'],
+    domain: 'MOM_EMPLOYMENT', population: 'EMPLOYEE', primarySubject: momEmployeeCoverageIssue.subject,
+    concepts: ['employee coverage'] });
+  const momEmployeeCoverageResult = await runBoundedCase({ query: momEmployeeCoverageQuery,
+    issue: momEmployeeCoverageIssue, understanding: momEmployeeCoverageUnderstanding });
+  assert.ok(momEmployeeCoverageResult.requests[0].retrievalIntent.requestedConcepts.some(concept =>
+    concept.label === 'employee coverage'),
+  'The bounded employee-coverage paraphrase is owned by the mapped MOM Part IV issue.');
+  assert.equal(momEmployeeCoverageResult.result.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'), false,
+    'Recognized MOM coverage wording does not remain as an unowned material concept.');
+
   // Exact saved model-response bytes from retained MOM capture "mom" (observed
   // 2026-10-23; source bodies and unavailable original fetch attempts are not
   // embedded in this fixture). This replays semantic ownership only.

@@ -598,18 +598,20 @@ function isBoundedMomPartIvEmploymentActConcept(
   clause: string
 ): boolean {
   const semanticAuthorities = (concept.semanticAuthorities || []).filter(authority => authority !== 'UNKNOWN');
+  const isSupportedCoverageLabel = isGenericMomPartIvCoverageConcept(concept);
   const hasCanonicalMomPartIvTopic = compatibleTopics.some(topic =>
     topic.domainId === 'MOM_EMPLOYMENT' && topic.authorities.includes('MOM') &&
     (topic.id === 'mom-part-iv-overtime' ||
       topic.id === 'mom_overtime' && topic.canonicalConceptId === 'mom-part-iv-overtime'));
-  return normalizeEvidenceText(concept.label) === 'employment act' && concept.role !== 'CONTEXT_ONLY' &&
+  return (normalizeEvidenceText(concept.label) === 'employment act' || isSupportedCoverageLabel) &&
+    concept.role !== 'CONTEXT_ONLY' &&
     (semanticAuthorities.length === 0 || semanticAuthorities.includes('MOM') &&
       semanticAuthorities.every(authority => authority === 'MOM' || authority === 'SSO')) &&
     issue.domain === 'MOM_EMPLOYMENT' && issue.population === 'EMPLOYEE' &&
     issue.operation === 'EXPLAIN_RULE' && issue.status === 'MAPPED' &&
     issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM' &&
     issue.mappedTopicIds.includes('mom-part-iv-overtime') && hasCanonicalMomPartIvTopic &&
-    hasSemanticOwnerAnchor(issue.subject, 'employment act') && hasSemanticOwnerAnchor(issue.subject, 'part iv') &&
+    hasSemanticOwnerAnchor(issue.subject, 'part iv') &&
     hasSemanticOwnerAnchor(issue.subject, 'coverage') &&
     hasSemanticOwnerAnchor(clause, 'employment act') && hasSemanticOwnerAnchor(clause, 'part iv') &&
     /\b(?:coverage|covered)\b/i.test(clause);
@@ -752,11 +754,13 @@ function topiclessSemanticConceptCouldBelongToIssue(
   return hasLocalFollowOn || getSemanticQueryClauses(query).some(clause => {
     const conceptMatches = distinctConceptAnchors.filter(anchor => hasSemanticOwnerAnchor(clause, anchor));
     const issueMatches = issueAnchors.filter(anchor => hasSemanticOwnerAnchor(clause, anchor));
+    const boundedMomPartIvCoverage = authority === 'MOM' &&
+      isBoundedMomPartIvEmploymentActConcept(concept, issue, compatibleTopics, clause);
     // A validated paraphrase can contribute one distinctive content anchor
     // (for example “overtime” for a working-hours concept); the raw clause
     // must still match at least two anchors from the issue's local subject.
-    if (conceptMatches.length < Math.min(2, distinctConceptAnchors.length) ||
-        issueMatches.length < Math.min(2, issueAnchors.length)) return false;
+    if ((conceptMatches.length < Math.min(2, distinctConceptAnchors.length) ||
+        issueMatches.length < Math.min(2, issueAnchors.length)) && !boundedMomPartIvCoverage) return false;
     if (hasPublisherContext && (!hasSemanticOwnerAnchor(clause, 'employment act') ||
         !hasSemanticOwnerAnchor(issue.subject, 'employment act'))) return false;
     if (compatibleTopics.length === 0) return issue.status === 'UNRESOLVED';
@@ -765,12 +769,12 @@ function topiclessSemanticConceptCouldBelongToIssue(
       return conceptMatches.some(anchor => hasSemanticOwnerAnchor(topicText, anchor)) ||
         authority === 'MOM' && conceptMatches.includes('employment act') &&
           hasSemanticOwnerAnchor(topic.actOrStandard || '', 'employment act') ||
-        authority === 'MOM' && isBoundedMomPartIvEmploymentActConcept(concept, issue, compatibleTopics, clause);
+        boundedMomPartIvCoverage;
     });
     // "IRAS restriction" is a generic continuation label, so its local issue
     // subject and independently mapped topic establish the owner while the
     // raw clause must still contain the label itself.
-    return conceptTopicMatches || isGenericIrasRestrictionConcept(concept);
+    return conceptTopicMatches || isGenericIrasRestrictionConcept(concept) || boundedMomPartIvCoverage;
   });
 }
 

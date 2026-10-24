@@ -21,6 +21,9 @@ export function prepareR2VerificationHarness(template, { appSourceSha, expectedA
   replaceOnce("import { processAccountingQuery } from './src/services/geminiService.ts';", [
     "import { createVerificationReceiptExporter } from './scripts/verification_receipt_exporter.mjs';",
     "import { createCloudflareVerificationReceiptSink } from './scripts/cloudflare_verification_receipt_sink.mjs';",
+    "import { summarizeModelCaptureCompleteness, verifyPinnedApplicationRuntime } from './scripts/verification_harness_integrity.mjs';",
+    "import path from 'node:path';",
+    "import { fileURLToPath } from 'node:url';",
     '',
     '// Storage authorization does not authorize a model run. Disabled unless explicitly enabled.',
     "if (process.env.ACCOUNTING_ALLOW_LIVE_MODEL_CALLS !== '1') {",
@@ -30,7 +33,24 @@ export function prepareR2VerificationHarness(template, { appSourceSha, expectedA
   source = source.replace(/^const appSourceSha = '[a-f0-9]{40}';$/m, `const appSourceSha = '${appSourceSha}';`);
   source = source.replace(/^const expectedAppTreeSha256 = '[a-f0-9]{64}';$/m,
     `const expectedAppTreeSha256 = '${expectedAppTreeSha256}';`);
+  replaceOnce("const verificationCommitSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();\n",
+    "const applicationRoot = path.dirname(fileURLToPath(import.meta.url));\nconst verificationCommitSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: applicationRoot, encoding: 'utf8' }).trim();\n");
+  replaceOnce("const commitMetadata = execFileSync('git', ['cat-file', '-p', 'HEAD'], { encoding: 'utf8' });",
+    "const commitMetadata = execFileSync('git', ['cat-file', '-p', 'HEAD'], { cwd: applicationRoot, encoding: 'utf8' });");
+  replaceOnce("const trackedEntries = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], { encoding: 'utf8' })",
+    "const trackedEntries = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], { cwd: applicationRoot, encoding: 'utf8' })");
+  replaceOnce("if (actualAppTreeSha256 !== expectedAppTreeSha256) {\n  throw new Error('Tracked application tree differs from the reviewed app source tree.');\n}\n", [
+    'if (actualAppTreeSha256 !== expectedAppTreeSha256) {',
+    "  throw new Error('Tracked application tree differs from the reviewed app source tree.');",
+    '}',
+    'const verifiedApplicationRuntime = await verifyPinnedApplicationRuntime({ root: applicationRoot, appSourceSha });',
+    ''
+  ].join('\n'));
   replaceOnce('const logPartCharacters = 900;\n', '');
+  replaceOnce("const sourceHash = async path => createHash('sha256').update(await readFile(path)).digest('hex');",
+    "const sourceHash = async filePath => createHash('sha256').update(await readFile(path.join(applicationRoot, filePath))).digest('hex');");
+  replaceOnce('      actualAppTreeSha256,\n      executionEnvironment,',
+    '      actualAppTreeSha256,\n      applicationRuntime: verifiedApplicationRuntime,\n      executionEnvironment,');
   const emitStart = source.indexOf('function emitCase(receipt) {');
   const emitEnd = source.indexOf('\nconst hashes = {', emitStart);
   assert.ok(emitStart > 0 && emitEnd > emitStart);

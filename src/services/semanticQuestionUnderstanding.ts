@@ -999,13 +999,23 @@ const GENERIC_ISSUE_SUBJECT_WORDS = new Set([
   'income', 'issue', 'payment', 'personal', 'question', 'relief', 'rule', 'rules', 'singapore', 'tax', 'treatment'
 ]);
 
+const SEMANTIC_SOURCE_AUTHORITY_PATTERNS: Array<[string, RegExp]> = [
+  ['ACRA', /\b(?:acra|accounting and corporate regulatory authority)(?:['’]s)?\s+(?:official\s+)?(?:guidance|rules?|requirements?|law|act|regulations?)\b/i],
+  ['CPF', /\b(?:cpf(?:\s+board)?|central provident fund board)(?:['’]s)?\s+(?:official\s+)?(?:guidance|rules?|requirements?|law|act|regulations?)\b/i],
+  ['IRAS', /\b(?:iras|inland revenue authority of singapore)(?:['’]s)?\s+(?:official\s+)?(?:guidance|rules?|requirements?|law|act|regulations?)\b/i],
+  ['MAS', /\b(?:mas|monetary authority of singapore)(?:['’]s)?\s+(?:official\s+)?(?:guidance|rules?|requirements?|law|act|regulations?)\b/i],
+  ['MOM', /\b(?:mom|ministry of manpower)(?:['’]s)?\s+(?:official\s+)?(?:guidance|rules?|requirements?|law|act|regulations?)\b/i]
+];
+
+const STANDALONE_SOURCE_AUTHORITY_PREFACE = /^\s*(?:under|according\s+to|based\s+on|using)\s+(?:current\s+)?(?:the\s+)?(?:official\s+)?(?:acra|accounting and corporate regulatory authority|cpf(?:\s+board)?|central provident fund board|iras|inland revenue authority of singapore|mas|monetary authority of singapore|mom|ministry of manpower)(?:['’]s)?\s+(?:guidance|rules?|requirements?|law|act|regulations?)\s*$/i;
+
 function hasCaseLinkedCircumstances(query: string): boolean {
   return /\bfor\s+(?:someone|a person|an individual|a particular (?:employee|company|business|taxpayer))\b[^.!?]{0,100}\b(?:earning|paid|received|incurred|purchased|owned|provided|claimed)\b/i.test(query) ||
     /\b(?:someone|a person|an individual|a particular (?:employee|company|business|taxpayer))\b[^.!?]{0,100}\b(?:earning|paid|received|incurred|purchased|owned|provided|claimed)\b/i.test(query);
 }
 
 function queryClauses(query: string): string[] {
-  return query.split(/[?!;]+|(?<!\d),(?!\d)|\b(?:however|whereas|but also|also|separately)\b|\band\s+(?=(?:what|how|who|explain|compare|whether|do|does|is|are|can|could|may)\b)/i)
+  return query.split(/[?!;]+|\.(?=\s+(?:please\s+)?(?:explain|describe|outline|summari[sz]e|do\s+not|don['’]?t|never|under|according\s+to|based\s+on|using|this\s+is\s+a\s+general|what|which|who|how|can|could|do|does|is|are|will|would|should)\b)|(?<!\d),(?!\d)|\b(?:however|whereas|but also|also|separately)\b|\band\s+(?=(?:what|how|who|explain|compare|whether|do|does|is|are|can|could|may)\b)/i)
     .map(clause => clause.trim()).filter(Boolean);
 }
 
@@ -1016,29 +1026,68 @@ function isBoundedSemanticIssueFollowOn(clause: string): boolean {
     /^(?:please\s+)?(?:do\s+not|don['’]?t|never)\s+(?:calculate|compute|estimate|quantify|create|prepare)\b/i.test(clause);
 }
 
+function semanticIssueFollowOnCanAttach(
+  query: string,
+  clauses: string[],
+  baseIndex: number,
+  followOnIndex: number,
+  subject?: string
+): boolean {
+  const baseClause = clauses[baseIndex];
+  const next = clauses[followOnIndex];
+  if (!baseClause || !next) return false;
+  const previousEnd = query.indexOf(baseClause) + baseClause.length;
+  const nextStart = query.indexOf(next, previousEnd);
+  if (nextStart < 0) return false;
+  const bridge = query.slice(previousEnd, nextStart);
+  if (/\b(?:separately|also|however|whereas|but\s+also|independently)\b/i.test(bridge)) return false;
+  const sourceContextClause = baseIndex > 0 && STANDALONE_SOURCE_AUTHORITY_PREFACE.test(clauses[baseIndex - 1])
+    ? clauses[baseIndex - 1] : baseClause;
+  const baseAuthorities = new Set(SEMANTIC_SOURCE_AUTHORITY_PATTERNS
+    .filter(([, pattern]) => pattern.test(sourceContextClause)).map(([authority]) => authority));
+  const nextAuthorities = SEMANTIC_SOURCE_AUTHORITY_PATTERNS
+    .filter(([, pattern]) => pattern.test(next)).map(([authority]) => authority);
+  if (baseAuthorities.size > 0 && nextAuthorities.some(authority => !baseAuthorities.has(authority))) return false;
+  const continuesIssueQuestion = subject !== undefined && (() => {
+    const issueAnchors = [...new Set(normalizeSemanticAnchorText(subject).split(' ').map(semanticConceptAnchor)
+      .filter(term => term.length >= 3 && !GENERIC_ISSUE_SUBJECT_WORDS.has(term) &&
+        !SEMANTIC_CONCEPT_FILLER_WORDS.has(term)))];
+    const nextAnchors = new Set(normalizeSemanticAnchorText(next).split(' ').map(semanticConceptAnchor));
+    return issueAnchors.some(anchor => nextAnchors.has(anchor)) &&
+      /^(?:when|what|which|how|who|is|are|does|do|can|could|may|might|will|would|should)\b/i.test(next) &&
+      /\band\b/i.test(bridge);
+  })();
+  return isBoundedSemanticIssueFollowOn(next) || continuesIssueQuestion;
+}
+
 function semanticIssueClauseWithFollowOns(query: string, clauses: string[], baseClause: string, subject?: string): string {
   const baseIndex = clauses.indexOf(baseClause);
   if (baseIndex < 0) return baseClause;
-  const issueAnchors = subject
-    ? [...new Set(normalizeSemanticAnchorText(subject).split(' ').map(semanticConceptAnchor)
-      .filter(term => term.length >= 3 && !GENERIC_ISSUE_SUBJECT_WORDS.has(term) && !SEMANTIC_CONCEPT_FILLER_WORDS.has(term)))]
-    : [];
   const bound = [baseClause];
-  let previousEnd = query.indexOf(baseClause) + baseClause.length;
   for (let index = baseIndex + 1; index < clauses.length; index += 1) {
     const next = clauses[index];
-    const nextStart = query.indexOf(next, previousEnd);
-    const bridge = query.slice(previousEnd, nextStart < 0 ? previousEnd : nextStart);
-    const nextAnchors = new Set(normalizeSemanticAnchorText(next).split(' ').map(semanticConceptAnchor));
-    const continuesIssueQuestion = issueAnchors.some(anchor => nextAnchors.has(anchor)) &&
-      /^(?:when|what|which|how|who|is|are|does|do|can|could|may|might|will|would|should)\b/i.test(next) &&
-      /\band\b/i.test(bridge);
-    if (nextStart < 0 || /\b(?:separately|also|however|whereas|but\s+also|independently)\b/i.test(bridge) ||
-        !isBoundedSemanticIssueFollowOn(next) && !continuesIssueQuestion) break;
+    if (!semanticIssueFollowOnCanAttach(query, clauses, baseIndex, index, subject)) break;
     bound.push(next);
-    previousEnd = nextStart + next.length;
   }
   return bound.join('. ');
+}
+
+function semanticIssueClauseGroups(
+  query: string,
+  clauses: string[],
+  subject?: string
+): Array<{ startIndex: number; clauses: string[] }> {
+  const groups: Array<{ startIndex: number; clauses: string[] }> = [];
+  for (let index = 0; index < clauses.length; index += 1) {
+    const current = groups.at(-1);
+    if (current && isBoundedSemanticIssueFollowOn(clauses[index]) &&
+        semanticIssueFollowOnCanAttach(query, clauses, current.startIndex, index, subject)) {
+      current.clauses.push(clauses[index]);
+    } else {
+      groups.push({ startIndex: index, clauses: [clauses[index]] });
+    }
+  }
+  return groups;
 }
 
 /** Punctuation and bounded conjunction clauses used for issue-local concept ownership. */
@@ -1064,8 +1113,10 @@ function queryClauseForSemanticIssue(query: string, subject: string): string | u
   }
   const subjectTerms = semanticConceptAnchors(subject);
   if (subjectTerms.length === 0) return undefined;
-  const scored = clauses.map((clause, index) => {
-    const clauseTerms = new Set(semanticConceptAnchors(clause));
+  const scored = semanticIssueClauseGroups(query, clauses, subject).map((group, index) => {
+    const clause = clauses[group.startIndex];
+    const scopedClause = group.clauses.join('. ');
+    const clauseTerms = new Set(semanticConceptAnchors(scopedClause));
     return {
       clause,
       index,

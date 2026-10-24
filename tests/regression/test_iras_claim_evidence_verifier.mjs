@@ -307,6 +307,29 @@ const collapsedRaQualificationMisassociatedSource = collapsedCpfTopUpSource
   .replace('For recipients aged 55 years and above', `${inlineRaFormulaAndQualification} For recipients aged 55 years and above`);
 assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(collapsedRaQualificationMisassociatedSource), [],
   'A collapsed table cannot use the misplaced RA formula and savings qualification from the below-55 age row.');
+const collapsedSaFormulaAndQualification = 'Maximum allowed cash top-up: FRS – SA savings – Amount withdrawn from SA for investments^{*}^{*}Net SA savings withdrawn under CPF Investment Scheme (CPFIS) for investments that have not been completely disposed of';
+const collapsedSaQualificationMisassociatedSource = collapsedCpfTopUpSource
+  .replace(collapsedSaFormulaAndQualification, '')
+  .replace('For recipients aged 55 years and above',
+    `For recipients aged 55 years and above ${collapsedSaFormulaAndQualification}`);
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(collapsedSaQualificationMisassociatedSource), [],
+  'A collapsed table cannot use the SA formula and withdrawal qualification from the age-55-and-above row.');
+const collapsedTableWithEmbeddedEndMarker = [...cpfCashTopUpLimitBlocks.slice(4)].join(' ');
+const raQualificationAfterEmbeddedEndMarker = collapsedTableWithEmbeddedEndMarker
+  .replace(inlineRaFormulaAndQualification, '')
+  .replace('To check your top-up limit', `To check your top-up limit ${inlineRaFormulaAndQualification}`);
+const cpfQualificationAfterTableEndSource = [
+  ...cpfCashTopUpBlocks, ...cpfCashTopUpLimitBlocks.slice(2, 4), raQualificationAfterEmbeddedEndMarker
+].join('\n\n');
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(cpfQualificationAfterTableEndSource), [],
+  'An embedded table-end instruction cannot be followed by RA evidence that completes the table quote.');
+const cpfQualificationAfterTableEndRecord = { ...cpfCashTopUpRecord, sourceText: cpfQualificationAfterTableEndSource };
+const cpfQualificationAfterTableEndClaim = verifyEvidenceClaims(
+  [makeClaim(raQualificationAfterEmbeddedEndMarker, cpfQualificationAfterTableEndRecord.id)],
+  [cpfQualificationAfterTableEndRecord], { missingFacts: [] }
+);
+assert.equal(cpfQualificationAfterTableEndClaim.accepted.length, 0,
+  'The shared claim verifier rejects RA table evidence supplied only after the embedded end marker.');
 const inlineSaFormulaAndQualification = 'Maximum allowed cash top-up: FRS – SA savings – Amount withdrawn from SA for investments^{*}^{*}Net SA savings withdrawn under CPF Investment Scheme (CPFIS) for investments that have not been completely disposed of';
 const inlineSaQualificationMisassociatedSource = cpfCashTopUpSource
   .replace(inlineSaFormulaAndQualification, '')

@@ -6,8 +6,11 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createVerificationReceiptExporter } from './scripts/verification_receipt_exporter.mjs';
 import { createCloudflareVerificationReceiptSink, downloadCloudflareVerificationReceiptRun } from './scripts/cloudflare_verification_receipt_sink.mjs';
+import { summarizeModelCaptureCompleteness, verifyPinnedApplicationRuntime } from './scripts/verification_harness_integrity.mjs';
 import { rm } from 'node:fs/promises';
 
 // Storage authorization does not authorize a model run. Disabled unless explicitly enabled.
@@ -33,15 +36,16 @@ const expectedAppTreeSha256 = 'ddb105774656c1287af4a896a96386f1b8623f4ecf1600d7b
 if (!/^[0-9a-f]{40}$/i.test(appSourceSha)) throw new Error('Set 630113b74f9ebcec7b3498644645b5ca61a0b73b to the reviewed app commit before dispatch.');
 if (!/^[0-9a-f]{64}$/i.test(expectedAppTreeSha256)) throw new Error('Set 6ab427cdaac791e7b95f33f4561958162c64fac20938cb021d880731c0649474 to the reviewed app tree hash before dispatch.');
 
-const verificationCommitSha = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
-const commitMetadata = execFileSync('git', ['cat-file', '-p', 'HEAD'], { encoding: 'utf8' });
+const applicationRoot = path.dirname(fileURLToPath(import.meta.url));
+const verificationCommitSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: applicationRoot, encoding: 'utf8' }).trim();
+const commitMetadata = execFileSync('git', ['cat-file', '-p', 'HEAD'], { cwd: applicationRoot, encoding: 'utf8' });
 const parentShas = [...commitMetadata.matchAll(/^parent ([0-9a-f]{40})$/gm)].map(match => match[1]);
 if (parentShas.length !== 1 || parentShas[0] !== appSourceSha) {
   throw new Error('Verification commit must have the reviewed app source as its sole parent.');
 }
 
 const excludedHarnessPaths = new Set(['package.json', '.verify-final-build-live.mjs']);
-const trackedEntries = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], { encoding: 'utf8' })
+const trackedEntries = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], { cwd: applicationRoot, encoding: 'utf8' })
   .split('\0').filter(Boolean)
   .filter(entry => !excludedHarnessPaths.has(entry.slice(entry.indexOf('\t') + 1)))
   .sort();
@@ -49,6 +53,7 @@ const actualAppTreeSha256 = createHash('sha256').update(trackedEntries.join('\n'
 if (actualAppTreeSha256 !== expectedAppTreeSha256) {
   throw new Error('Tracked application tree differs from the reviewed app source tree.');
 }
+const verifiedApplicationRuntime = await verifyPinnedApplicationRuntime({ root: applicationRoot, appSourceSha });
 
 const model = 'gemini-3.5-flash-lite';
 const executionEnvironment = 'CLOUDFLARE_BUILD_NODE';
@@ -84,7 +89,7 @@ function scrubDiagnosticText(value) {
 }
 const caseContext = new AsyncLocalStorage();
 const nativeFetch = globalThis.fetch;
-const sourceHash = async path => createHash('sha256').update(await readFile(path)).digest('hex');
+const sourceHash = async filePath => createHash('sha256').update(await readFile(path.join(applicationRoot, filePath))).digest('hex');
 
 function newCaseState(testCase) {
   return {
@@ -463,6 +468,7 @@ try {
       appSourceSha,
       verificationCommitSha,
       actualAppTreeSha256,
+      applicationRuntime: verifiedApplicationRuntime,
       executionEnvironment,
       sourceTransport,
       startedAtUTC,
@@ -552,6 +558,9 @@ for (const item of cases) {
   assert.equal(recovery.manifest.cases[item.id].exportStatus, 'EXPORTED');
   assert.deepEqual(recovery.receipts[item.id].receipt, exportedReceipts.get(item.id));
 }
+const modelCaptureSummary = summarizeModelCaptureCompleteness(
+  Object.values(recovery.receipts).map(item => item.receipt)
+);
 await rm(recovery.runDirectory, { recursive: true, force: true });
 console.log(JSON.stringify({ event: 'R2_FRESH_SINK_RECOVERY_PASS', runId, reconstructedReceipts: Object.keys(recovery.receipts).length, modelRequests: totalModelRequestStarts }));
 
@@ -624,4 +633,4 @@ async function publishPortableReceiptCopy(receiptSink, runId) {
 
 const portableExport = await publishPortableReceiptCopy(receiptSink, runId);
 console.log(JSON.stringify({ event: 'R2_PORTABLE_EXPORT_READY', ...portableExport }));
-console.log(JSON.stringify({ event: 'FRESH_AUTHORITY_ACCEPTANCE_CAPTURE_COMPLETE', runId, applicationCommit: appSourceSha, caseCount: cases.length, modelRequests: totalModelRequestStarts, perCaseModelCap: MAX_MODEL_REQUESTS_PER_CASE, totalModelCap: MAX_MODEL_REQUESTS_PER_RUN, minimumCaseStartIntervalMs: MIN_CASE_START_INTERVAL_MS, allGenerateContentBodiesRetained: true, r2FreshSinkRecovery: 'PASS' }));
+console.log(JSON.stringify({ event: 'FRESH_AUTHORITY_ACCEPTANCE_CAPTURE_COMPLETE', runId, applicationCommit: appSourceSha, applicationRuntime: { manifestSha256: verifiedApplicationRuntime.manifestSha256, fileCount: verifiedApplicationRuntime.files.length }, caseCount: cases.length, modelRequests: totalModelRequestStarts, perCaseModelCap: MAX_MODEL_REQUESTS_PER_CASE, totalModelCap: MAX_MODEL_REQUESTS_PER_RUN, minimumCaseStartIntervalMs: MIN_CASE_START_INTERVAL_MS, modelCaptureSummary, allGenerateContentBodiesRetained: modelCaptureSummary.allGenerateContentBodiesRetained, r2FreshSinkRecovery: 'PASS' }));
