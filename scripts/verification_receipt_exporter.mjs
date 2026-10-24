@@ -125,6 +125,16 @@ function projectObserved(value, depth = 0) {
   if (!asObject(value)) return value;
   const result = {};
   for (const [key, child] of Object.entries(value)) {
+    if (/^quote$/i.test(key) && typeof child === 'string') {
+      const bytes = Buffer.from(child, 'utf8');
+      result.quoteMetadata = {
+        sha256: sha256(bytes),
+        byteLength: bytes.length,
+        characterLength: child.length,
+        redacted: true
+      };
+      continue;
+    }
     if (/(?:hash|digest)$/i.test(key) || /^responseBodySha256$/i.test(key)) {
       result[key] = projectObserved(child, depth + 1);
       continue;
@@ -456,9 +466,22 @@ export async function createVerificationReceiptExporter({
       const next = structuredClone(manifest);
       if (next.cases[caseId].exportStatus === 'UNOBSERVED') {
         next.cases[caseId] = { ...next.cases[caseId], exportStatus: 'EXPORT_FAILED', failureCode: String(code).replace(/[^A-Z0-9_]/gi, '_').slice(0, 64) };
-        await saveManifest(next);
+        try {
+          await saveManifest(next);
+        } catch (error) {
+          // A durable manifest is authoritative even when only its local mirror failed.
+          if (manifest.cases[caseId].exportStatus === 'EXPORT_FAILED' && durableSink) {
+            return { exportStatus: 'EXPORT_FAILED', persistence: 'REMOTE_VERIFIED_LOCAL_MIRROR_FAILED' };
+          }
+          throw error;
+        }
         Object.assign(manifest, next);
+        return { exportStatus: 'EXPORT_FAILED', persistence: durableSink ? 'REMOTE_AND_LOCAL_VERIFIED' : 'LOCAL_VERIFIED' };
       }
+      return {
+        exportStatus: next.cases[caseId].exportStatus,
+        persistence: next.cases[caseId].exportStatus === 'EXPORTED' ? 'PREVIOUSLY_VERIFIED_EXPORT_PRESERVED' : 'PREVIOUSLY_RECORDED'
+      };
     },
     async finish() {
       if (state.finished) return structuredClone(manifest);

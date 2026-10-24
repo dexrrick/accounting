@@ -1,14 +1,14 @@
-import { createHash, randomBytes, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { open, mkdir, realpath, lstat, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { readVerificationReceiptExport } from './verification_receipt_exporter.mjs';
 
-const API_ORIGIN = 'https://api.cloudflare.com/client/v4';
 const ACCOUNT_ID = /^[a-f0-9]{32}$/i;
 const BUCKET_NAME = /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/;
 const SAFE_PATH_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const DEFAULT_TIMEOUT_MS = 20_000;
 const DEFAULT_MAX_ARTIFACT_BYTES = 64 * 1024 * 1024;
+const EMPTY_SHA256 = sha256(Buffer.alloc(0));
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -66,7 +66,8 @@ export function createCloudflareVerificationReceiptSink({
   accountId,
   bucketName,
   runId,
-  token = process.env.ACCOUNTING_RECEIPT_STORE_TOKEN,
+  accessKeyId = process.env.ACCOUNTING_RECEIPT_STORE_ACCESS_KEY_ID,
+  secretAccessKey = process.env.ACCOUNTING_RECEIPT_STORE_SECRET_ACCESS_KEY,
   fetchImpl = globalThis.fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   maxArtifactBytes = DEFAULT_MAX_ARTIFACT_BYTES
@@ -74,7 +75,10 @@ export function createCloudflareVerificationReceiptSink({
   if (typeof accountId !== 'string' || !ACCOUNT_ID.test(accountId)) throw new Error('Invalid Cloudflare account ID.');
   if (typeof bucketName !== 'string' || !BUCKET_NAME.test(bucketName)) throw new Error('Invalid Cloudflare R2 bucket name.');
   const normalizedRunId = safeRunId(runId);
-  if (typeof token !== 'string' || token.trim().length === 0) throw new Error('ACCOUNTING_RECEIPT_STORE_TOKEN is required for the R2 sink.');
+  if (typeof accessKeyId !== 'string' || accessKeyId.trim().length === 0 ||
+      typeof secretAccessKey !== 'string' || secretAccessKey.trim().length === 0) {
+    throw new Error('ACCOUNTING_RECEIPT_STORE_ACCESS_KEY_ID and ACCOUNTING_RECEIPT_STORE_SECRET_ACCESS_KEY are required for the R2 sink.');
+  }
   if (typeof fetchImpl !== 'function') throw new Error('A fetch implementation is required for the R2 sink.');
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 120_000) throw new Error('R2 request timeout must be between 100 and 120000 milliseconds.');
   if (!Number.isSafeInteger(maxArtifactBytes) || maxArtifactBytes < 1024 || maxArtifactBytes > 256 * 1024 * 1024) {
@@ -83,25 +87,57 @@ export function createCloudflareVerificationReceiptSink({
 
   const prefix = `verification-runs/${normalizedRunId}`;
   const manifestKey = `${prefix}/manifest.json`;
+  const writerLockKey = `${prefix}/writer-lock.json`;
   const verifiedArtifacts = new Map();
   let preflight = undefined;
+  let preflightAttempted = false;
   let manifestPublished = false;
+  let publishingManifest = false;
 
   function objectUrl(key) {
     const safeKey = safeRelativePath(key);
-    return `${API_ORIGIN}/accounts/${accountId}/r2/buckets/${bucketName}/objects/${encodeObjectKey(safeKey)}`;
+    return `https://${accountId}.r2.cloudflarestorage.com/${bucketName}/${encodeObjectKey(safeKey)}`;
   }
 
-  async function send(method, key, bytes) {
+  function signRequest(method, key, bytes, extraHeaders = {}) {
+    const url = new URL(objectUrl(key));
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, '');
+    const date = amzDate.slice(0, 8);
+    const payloadHash = sha256(bytes || Buffer.alloc(0));
+    const headers = {
+      host: url.host,
+      'x-amz-content-sha256': payloadHash,
+      'x-amz-date': amzDate,
+      ...extraHeaders
+    };
+    const canonicalHeaders = Object.keys(headers).sort().map(name => `${name}:${String(headers[name]).trim()}\n`).join('');
+    const signedHeaders = Object.keys(headers).sort().join(';');
+    const canonicalRequest = [method, url.pathname, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+    const scope = `${date}/auto/s3/aws4_request`;
+    const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, sha256(Buffer.from(canonicalRequest))].join('\n');
+    const hmac = (keyBytes, value) => createHmac('sha256', keyBytes).update(value).digest();
+    const dateKey = hmac(Buffer.from(`AWS4${secretAccessKey}`, 'utf8'), date);
+    const regionKey = hmac(dateKey, 'auto');
+    const serviceKey = hmac(regionKey, 's3');
+    const signingKey = hmac(serviceKey, 'aws4_request');
+    const signature = hmac(signingKey, stringToSign).toString('hex');
+    return {
+      ...headers,
+      authorization: `AWS4-HMAC-SHA256 Credential=${accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`
+    };
+  }
+
+  async function send(method, key, bytes, extraHeaders = {}) {
     const url = objectUrl(key);
     let response;
     try {
       response = await fetchImpl(url, {
         method,
-        headers: {
-          authorization: `Bearer ${token}`,
-          ...(method === 'PUT' ? { 'content-type': 'application/octet-stream' } : {})
-        },
+        headers: signRequest(method, key, bytes, {
+          ...(method === 'PUT' ? { 'content-type': 'application/octet-stream' } : {}),
+          ...extraHeaders
+        }),
         ...(bytes ? { body: bytes } : {}),
         redirect: 'error',
         signal: AbortSignal.timeout(timeoutMs)
@@ -129,9 +165,9 @@ export function createCloudflareVerificationReceiptSink({
     return readBoundedBody(response, maxArtifactBytes);
   }
 
-  async function putObject(key, bytes) {
+  async function putObject(key, bytes, extraHeaders = {}) {
     if (!Buffer.isBuffer(bytes) || bytes.length > maxArtifactBytes) throw new Error('R2 artifact exceeds the configured upload limit.');
-    const response = await send('PUT', key, bytes);
+    const response = await send('PUT', key, bytes, extraHeaders);
     await response.body?.cancel().catch(() => {});
     if (!response.ok) throw new Error(`R2_PUT_REJECTED_${response.status}`);
   }
@@ -160,7 +196,7 @@ export function createCloudflareVerificationReceiptSink({
     prefix,
     manifestKey,
     async preflight({ runId: requestedRunId, plannedCaseIds }) {
-      if (preflight) throw new Error('R2_PREFLIGHT_ALREADY_COMPLETED');
+      if (preflightAttempted) throw new Error('R2_PREFLIGHT_ALREADY_ATTEMPTED');
       if (requestedRunId !== normalizedRunId || !Array.isArray(plannedCaseIds) || plannedCaseIds.length === 0) {
         throw new Error('R2_PREFLIGHT_SCOPE_MISMATCH');
       }
@@ -168,13 +204,21 @@ export function createCloudflareVerificationReceiptSink({
       if (plannedCaseIds.some(id => typeof id !== 'string' || !SAFE_PATH_SEGMENT.test(id)) || uniquePlannedIds.size !== plannedCaseIds.length) {
         throw new Error('R2_PREFLIGHT_PLAN_INVALID');
       }
+      preflightAttempted = true;
       const existingManifest = await getObject(manifestKey);
       if (existingManifest) throw new Error('R2_RUN_PREFIX_ALREADY_PUBLISHED');
+      const lockBytes = Buffer.from(JSON.stringify({ runId: normalizedRunId, createdAtUTC: new Date().toISOString() }), 'utf8');
+      const lockResponse = await send('PUT', writerLockKey, lockBytes, { 'if-none-match': '*' });
+      await lockResponse.body?.cancel().catch(() => {});
+      if (lockResponse.status === 412 || lockResponse.status === 409) throw new Error('R2_RUN_WRITER_ALREADY_CLAIMED');
+      if (!lockResponse.ok) throw new Error(`R2_WRITER_LOCK_REJECTED_${lockResponse.status}`);
+      const lockReadback = await getObject(writerLockKey);
+      if (!lockReadback || !lockReadback.equals(lockBytes)) throw new Error('R2_WRITER_LOCK_READBACK_MISMATCH');
       const probeKey = `${prefix}/preflight/${randomUUID()}.bin`;
       const probeBytes = randomBytes(32);
       const probe = await putImmutable(probeKey, probeBytes);
       preflight = {
-        type: 'CLOUDFLARE_R2', accountId, bucketName, prefix, manifestKey,
+        type: 'CLOUDFLARE_R2', accountId, bucketName, prefix, manifestKey, writerLockKey,
         verified: true,
         preflightProbe: { key: probe.key, sha256: probe.sha256, byteLength: probe.byteLength, verified: true },
         completedAtUTC: new Date().toISOString()
@@ -185,13 +229,16 @@ export function createCloudflareVerificationReceiptSink({
       if (!preflight) throw new Error('R2_PREFLIGHT_REQUIRED');
       if (immutable !== true) throw new Error('R2_CASE_ARTIFACTS_MUST_BE_IMMUTABLE');
       const safePath = safeRelativePath(relativePath);
-      if (safePath.startsWith('preflight/') || safePath === 'manifest.json' || safePath.startsWith('manifest-history/')) {
+      if (safePath.startsWith('preflight/') || safePath === 'manifest.json' || safePath === 'writer-lock.json' || safePath.startsWith('manifest-history/')) {
         throw new Error('R2_RESERVED_OBJECT_PATH');
       }
       return putImmutable(`${prefix}/${safePath}`, bytes);
     },
     async publishManifest(bytes, { requiredArtifacts = [] } = {}) {
       if (!preflight) throw new Error('R2_PREFLIGHT_REQUIRED');
+      if (publishingManifest) throw new Error('R2_CONCURRENT_MANIFEST_PUBLICATION_REJECTED');
+      publishingManifest = true;
+      try {
       if (!Buffer.isBuffer(bytes)) throw new Error('R2_MANIFEST_MUST_BE_BYTES');
       for (const artifact of requiredArtifacts) {
         const verified = verifiedArtifacts.get(artifact.key);
@@ -231,6 +278,9 @@ export function createCloudflareVerificationReceiptSink({
       }
       manifestPublished = true;
       return { key: manifestKey, sha256: expectedHash, byteLength: bytes.length, verified: true, previousManifestKey };
+      } finally {
+        publishingManifest = false;
+      }
     },
     async getArtifact(key) {
       const safeKey = safeRelativePath(key);

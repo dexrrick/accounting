@@ -50,14 +50,16 @@ See `docs/verification_receipt_export.md` for interfaces and invocation details.
 - With explicit user approval, private R2 bucket `accounting-verification-receipts` was created in APAC. Managed public access is disabled and no custom domains are attached. A small JSON test object was uploaded and retrieved through the connected Cloudflare API. No application Worker deployment was changed.
 - That API probe is distinct from acceptance of the Node R2 adapter with real runtime credentials. No receipt-store runtime token was provisioned or exposed by this task, and no credentialed Node-adapter run or fresh model verification was performed.
 
+An external review of commit `37e314ecdbc1ca0de9a824f820935eddf90078a5` later confirmed four receipt-tooling issues: bucket-scoped R2 credentials cannot use the REST bearer-token contract; attempted exports could remain UNOBSERVED after an error; diagnostics retained verified quotations; and concurrent writers could replace the same manifest. The follow-up changes in this worktree address those findings with SigV4 credentials, explicit failed-export states, quotation hashes and lengths in diagnostics, and an atomic one-writer lock. Focused offline regressions pass. No runtime credentials were present, so real Cloudflare acceptance of the Node adapter remains untested.
+
 Portable validation summary: `docs/evaluation/authority-review-2026-10-24/validation-summary.json`. Full local logs, checkpoints, raw historical exports and generated reference harnesses remain local and are not included in this publication.
 
 ## Remaining work and requested review
 
 1. Review the application ownership/intent changes and the negative evidence boundaries; check that no unrelated sibling or unknown qualifier can inherit coverage.
 2. Review receipt fidelity, manifest consistency, remote/local failure ordering, credential handling and post-process recovery. Passing exporter tests do not establish accounting-answer correctness or live authority parity.
-3. Before any future authorized live run, reconcile with newer main changes as appropriate, freeze the reviewed application commit, and regenerate the harness with that exact commit/tree hash. The locally prepared `630113b` harness is a historical reference, not the repaired application build.
-4. Configure `ACCOUNTING_RECEIPT_STORE_TOKEN`, a unique run ID and an export directory in the isolated verification runtime. Do not enable model calls without explicit authorization.
+3. Before any future authorized live run, freeze the reviewed application commit and regenerate the harness with that exact commit/tree hash. The locally prepared `630113b` harness is a historical reference, not the repaired application build.
+4. Configure `ACCOUNTING_RECEIPT_STORE_ACCESS_KEY_ID` and `ACCOUNTING_RECEIPT_STORE_SECRET_ACCESS_KEY`, a unique run ID and an export directory in the isolated verification runtime. Do not enable model calls without explicit authorization.
 5. Once authorized, verify the same seven standalone and three mixed questions and demonstrate post-build retrieval. Keep Node results, browser results, issue evidence, capture/export status and whole-question acceptance separate.
 
 The precise historical causes of mixed CPF admission failure and MAS candidate rejection remain unknown because the original rejected candidates/body/trace payloads are unavailable. New diagnostics do not retroactively establish those causes. Whole-authority live parity remains unproven.

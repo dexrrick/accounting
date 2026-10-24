@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -11,7 +11,8 @@ import {
 
 const ACCOUNT_ID = '0c07eba7cff6c7a8e3c9356cf0fcc503';
 const BUCKET_NAME = 'accounting-verification-receipts';
-const TOKEN = 'synthetic-test-token-never-log';
+const ACCESS_KEY_ID = 'test-access-key-id';
+const SECRET_ACCESS_KEY = 'test-secret-access-key';
 
 function hash(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -22,18 +23,19 @@ function makeR2({ beforeRequest } = {}) {
   const requests = [];
   const fetchImpl = async (url, init) => {
     const parsedUrl = new URL(url);
-    const objectMarker = '/objects/';
+    const objectMarker = '/' + BUCKET_NAME + '/';
     const markerIndex = parsedUrl.pathname.indexOf(objectMarker);
     if (markerIndex === -1) throw new Error('Test URL did not include an object key.');
     const encodedKey = parsedUrl.pathname.slice(markerIndex + objectMarker.length);
     const key = encodedKey.split('/').map(part => decodeURIComponent(part)).join('/');
     const request = { url: parsedUrl, key, method: init.method, init, objects, requests };
     requests.push(request);
-    assert.equal(parsedUrl.origin, 'https://api.cloudflare.com', 'R2 requests use only the official Cloudflare API origin.');
-    assert.ok(parsedUrl.pathname.startsWith(`/client/v4/accounts/${ACCOUNT_ID}/r2/buckets/${BUCKET_NAME}/objects/`));
+    assert.equal(parsedUrl.origin, `https://${ACCOUNT_ID}.r2.cloudflarestorage.com`, 'R2 requests use the account S3-compatible endpoint.');
+    assert.ok(parsedUrl.pathname.startsWith(`/${BUCKET_NAME}/verification-runs/`));
     assert.equal(init.redirect, 'error', 'R2 requests reject redirects.');
     assert.ok(init.signal instanceof AbortSignal, 'Each R2 request has a timeout signal.');
-    assert.equal(init.headers.authorization, `Bearer ${TOKEN}`);
+    assert.match(init.headers.authorization, /^AWS4-HMAC-SHA256 Credential=test-access-key-id\/\d{8}\/auto\/s3\/aws4_request,/);
+    assert.match(init.headers.authorization, /SignedHeaders=[a-z0-9-;]+/);
     const override = await beforeRequest?.(request);
     if (override) return override;
     if (init.method === 'GET') {
@@ -41,7 +43,8 @@ function makeR2({ beforeRequest } = {}) {
       return bytes ? new Response(Buffer.from(bytes), { status: 200 }) : new Response(null, { status: 404 });
     }
     assert.equal(init.method, 'PUT');
-    assert.equal(init.headers['content-type'], 'application/octet-stream');
+    if (init.headers['if-none-match'] === '*' && objects.has(key)) return new Response(null, { status: 412 });
+    if (!init.headers['if-none-match']) assert.equal(init.headers['content-type'], 'application/octet-stream');
     objects.set(key, Buffer.from(init.body));
     return new Response(null, { status: 200 });
   };
@@ -53,7 +56,8 @@ function createSink(fake, overrides = {}) {
     accountId: ACCOUNT_ID,
     bucketName: BUCKET_NAME,
     runId: 'suite-run-20261024',
-    token: TOKEN,
+    accessKeyId: ACCESS_KEY_ID,
+    secretAccessKey: SECRET_ACCESS_KEY,
     fetchImpl: fake.fetchImpl,
     timeoutMs: 500,
     ...overrides
@@ -80,10 +84,30 @@ const exporter = await createVerificationReceiptExporter({
 
 assert.equal(fake.objects.get(sink.manifestKey) && JSON.parse(fake.objects.get(sink.manifestKey).toString()).status, 'IN_PROGRESS',
   'Construction completes preflight and publishes only an initial manifest before any case dispatch.');
-assert.equal(fake.requests.filter(request => request.method === 'PUT').length, 2,
-  'Preflight writes one probe and one initial manifest before cases.');
+assert.equal(fake.requests.filter(request => request.method === 'PUT').length, 3,
+  'Preflight atomically claims the writer lock, writes one probe and publishes the initial manifest before cases.');
 assert.ok(fake.requests.some(request => request.key.includes('/preflight/')));
-assert.equal(fake.requests.some(request => request.url.hostname !== 'api.cloudflare.com'), false);
+assert.ok(fake.requests.some(request => request.key.endsWith('/writer-lock.json') && request.init.headers['if-none-match'] === '*'),
+  'Preflight atomically claims a permanent single-writer lock before any case dispatch.');
+assert.equal(fake.requests.some(request => request.url.hostname !== `${ACCOUNT_ID}.r2.cloudflarestorage.com`), false);
+{
+  const request = fake.requests.find(item => item.method === 'PUT' && item.key.endsWith('/writer-lock.json'));
+  const amzDate = request.init.headers['x-amz-date'];
+  const date = amzDate.slice(0, 8);
+  const bodyHash = hash(Buffer.from(request.init.body));
+  const path = request.url.pathname;
+  const headers = request.init.headers;
+  const canonicalHeaders = 'content-type:application/octet-stream\nhost:' + request.url.host + '\nif-none-match:*\nx-amz-content-sha256:' + bodyHash + '\nx-amz-date:' + amzDate + '\n';
+  const canonicalRequest = ['PUT', path, '', canonicalHeaders, 'content-type;host;if-none-match;x-amz-content-sha256;x-amz-date', bodyHash].join('\n');
+  const scope = `${date}/auto/s3/aws4_request`;
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, hash(Buffer.from(canonicalRequest))].join('\n');
+  const hmac = (keyBytes, value) => createHmac('sha256', keyBytes).update(value).digest();
+  const dateKey = hmac(Buffer.from(`AWS4${SECRET_ACCESS_KEY}`, 'utf8'), date);
+  const signingKey = hmac(hmac(hmac(dateKey, 'auto'), 's3'), 'aws4_request');
+  const expected = hmac(signingKey, stringToSign).toString('hex');
+  assert.ok(headers.authorization.endsWith('Signature=' + expected),
+    'SigV4 signature independently matches its canonical request (' + headers.authorization.slice(-64) + ' != ' + expected + ').');
+}
 
 const capturedText = 'A retained official-source body with quotation. 測試';
 const capturedBytes = Buffer.from(capturedText, 'utf8');
@@ -124,10 +148,14 @@ await assert.rejects(exporter.exportReceipt({ id: 'case-fail', status: 'VERIFIED
 assert.deepEqual(fake.objects.get(sink.manifestKey), beforeFailureManifest,
   'A failed case upload does not publish or replace the previous manifest.');
 assert.equal(JSON.parse(beforeFailureManifest.toString()).cases['case-fail'].exportStatus, 'UNOBSERVED');
+const recordedFailure = await exporter.recordExportFailure('case-fail', 'R2_PUT_REJECTED_503');
+assert.deepEqual(recordedFailure, { exportStatus: 'EXPORT_FAILED', persistence: 'REMOTE_AND_LOCAL_VERIFIED' });
+assert.equal(JSON.parse(fake.objects.get(sink.manifestKey).toString()).cases['case-fail'].exportStatus, 'EXPORT_FAILED',
+  'An attempted case with a failed export can be recorded without touching earlier verified cases.');
 const finalManifest = await exporter.finish();
 assert.equal(finalManifest.status, 'INCOMPLETE');
 assert.equal(finalManifest.cases['case-metadata'].payloadAvailability, 'METADATA_ONLY');
-assert.equal(finalManifest.cases['case-fail'].exportStatus, 'UNOBSERVED');
+assert.equal(finalManifest.cases['case-fail'].exportStatus, 'EXPORT_FAILED');
 
 const downloadedRoot = path.join(temporaryRoot, 'downloaded');
 await rm(localRoot, { recursive: true });
@@ -139,7 +167,7 @@ assert.equal(fake.requests.filter(request => request.method === 'PUT').length, w
 assert.deepEqual(downloaded.receipts['case-one'].receipt, firstReceipt);
 assert.deepEqual(downloaded.receipts['case-two'].receipt, secondReceipt);
 assert.equal(downloaded.receipts['case-metadata'].diagnostic.payloadAvailability, 'METADATA_ONLY');
-assert.equal(downloaded.manifest.cases['case-fail'].exportStatus, 'UNOBSERVED');
+assert.equal(downloaded.manifest.cases['case-fail'].exportStatus, 'EXPORT_FAILED');
 assert.equal((await readFile(path.join(downloaded.runDirectory, 'bodies', `${hash(capturedBytes)}.gz`))).length,
   fake.objects.get(bodyKey).length);
 assert.ok(stdout.every(line => Buffer.byteLength(line) <= 2048));
@@ -185,6 +213,10 @@ try {
     await mirrorFailureExporter.exportReceipt({ id: 'case-authoritative', status: 'VERIFIED', sourceResponses: [] });
   } catch (error) {
     exportMirrorError = error;
+    const preservedExport = await mirrorFailureExporter.recordExportFailure('case-authoritative', 'LOCAL_MIRROR_FAILED');
+    assert.deepEqual(preservedExport, {
+      exportStatus: 'EXPORTED', persistence: 'PREVIOUSLY_VERIFIED_EXPORT_PRESERVED'
+    }, 'Recording a local mirror failure cannot downgrade an already verified remote export.');
   } finally {
     finishAttempted = true;
     try {
@@ -219,6 +251,41 @@ await assert.rejects(collisionSink.preflight({ runId: 'collision-run', plannedCa
 assert.equal(collision.requests.filter(request => request.method === 'PUT').length, 0,
   'A prefix collision stops before any remote write.');
 
+let releaseLockRequests;
+const bothLockRequests = new Promise(resolve => { releaseLockRequests = resolve; });
+let lockRequestCount = 0;
+const simultaneous = makeR2({ beforeRequest: async request => {
+  if (request.method === 'PUT' && request.key.endsWith('/writer-lock.json')) {
+    lockRequestCount += 1;
+    if (lockRequestCount === 2) releaseLockRequests();
+    await bothLockRequests;
+  }
+  return undefined;
+} });
+const simultaneousWriters = [createSink(simultaneous, { runId: 'simultaneous-writers' }),
+  createSink(simultaneous, { runId: 'simultaneous-writers' })];
+const simultaneousResults = await Promise.allSettled(simultaneousWriters.map(writer =>
+  writer.preflight({ runId: 'simultaneous-writers', plannedCaseIds: ['a'] })));
+assert.equal(simultaneousResults.filter(result => result.status === 'fulfilled').length, 1,
+  'The S3 conditional writer lock admits exactly one simultaneous writer for a run ID.');
+assert.match(simultaneousResults.find(result => result.status === 'rejected').reason.message, /R2_RUN_WRITER_ALREADY_CLAIMED/);
+
+const failureStatusUnavailable = makeR2({ beforeRequest: request => {
+  if (request.method === 'PUT' && request.key.endsWith('/receipts/failed-case.json.gz')) return new Response(null, { status: 503 });
+  if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && request.objects.has(request.key)) return new Response(null, { status: 503 });
+  return undefined;
+} });
+const failureStatusSink = createSink(failureStatusUnavailable, { runId: 'failed-status-not-saved' });
+const failureStatusExporter = await createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'failure-status-not-saved'), runId: 'failed-status-not-saved',
+  plannedCaseIds: ['failed-case'], stdout: () => true, durableSink: failureStatusSink
+});
+await assert.rejects(failureStatusExporter.exportReceipt({ id: 'failed-case', status: 'VERIFIED' }), /R2_PUT_REJECTED_503/);
+await assert.rejects(failureStatusExporter.recordExportFailure('failed-case', 'R2_PUT_REJECTED_503'), /R2_MANIFEST_ROLLBACK_UNVERIFIED/);
+const uncertainFailureStatus = JSON.parse((await readFile(path.join(failureStatusExporter.runDirectory, 'manifest.json'))).toString('utf8'));
+assert.equal(uncertainFailureStatus.cases['failed-case'].exportStatus, 'UNOBSERVED',
+  'When both artifact and failure-status writes fail, the manifest retains uncertainty instead of inventing a saved failure.');
+
 const racedPrefix = makeR2();
 const racedSink = createSink(racedPrefix, { runId: 'raced-prefix-run' });
 await racedSink.preflight({ runId: 'raced-prefix-run', plannedCaseIds: ['a'] });
@@ -231,7 +298,7 @@ assert.deepEqual(racedPrefix.objects.get(racedSink.manifestKey), concurrentlyPub
 const denied = makeR2({ beforeRequest: () => new Response(null, { status: 403 }) });
 const deniedSink = createSink(denied, { runId: 'denied-run' });
 await assert.rejects(deniedSink.preflight({ runId: 'denied-run', plannedCaseIds: ['a'] }), error =>
-  error.message.includes('403') && !error.message.includes(TOKEN));
+  error.message.includes('403') && !error.message.includes(SECRET_ACCESS_KEY));
 assert.equal(denied.requests.filter(request => request.method === 'PUT').length, 0);
 
 const redirects = makeR2({ beforeRequest: () => new Response('do not log this', { status: 302, headers: { location: 'https://evil.invalid/' } }) });

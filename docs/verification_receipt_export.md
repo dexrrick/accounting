@@ -38,8 +38,9 @@ import { createCloudflareVerificationReceiptSink } from './scripts/cloudflare_ve
 const receiptSink = createCloudflareVerificationReceiptSink({
   accountId: configuredCloudflareAccountId,
   bucketName: 'accounting-verification-receipts',
-  runId: verificationRunId
-  // `token` defaults to ACCOUNTING_RECEIPT_STORE_TOKEN from the caller's environment.
+  runId: verificationRunId,
+  // Defaults to the bucket-scoped ACCOUNTING_RECEIPT_STORE_ACCESS_KEY_ID and
+  // ACCOUNTING_RECEIPT_STORE_SECRET_ACCESS_KEY environment variables.
 });
 const exporter = await createVerificationReceiptExporter({
   outputDirectory: localWorkingDirectory,
@@ -49,9 +50,24 @@ const exporter = await createVerificationReceiptExporter({
 });
 ```
 
-Exporter construction awaits R2 preflight before it creates the run manifest or returns to the caller, so the harness must initialize it before importing or dispatching the model. Preflight checks that the run manifest key is unused and stores then retrieves a random probe under that run prefix. Each compressed body, full receipt, and diagnostic is uploaded as an immutable object and retrieved again; only after all case artifacts pass hash and byte-length checks does the sink publish and verify the updated manifest. The previous manifest is retained under a content-addressed history key. A failed case upload or unverified manifest replacement does not promote the case in the local exporter; failed manifest replacement attempts restore and verify the previous remote manifest.
+Exporter construction awaits R2 preflight before it creates the run manifest or returns to the caller, so the harness must initialize it before importing or dispatching the model. Preflight checks that the run manifest key is unused, atomically claims a permanent `writer-lock.json` with `If-None-Match: *`, and stores then retrieves a random probe under that run prefix. The lock permits one writer for each run ID; an interrupted or ambiguous run keeps its lock and requires a fresh run ID. Each compressed body, full receipt, and diagnostic is uploaded as an immutable object and retrieved again; only after all case artifacts pass hash and byte-length checks does the sink publish and verify the updated manifest. The previous manifest is retained under a content-addressed history key. If a case export fails, the harness records `EXPORT_FAILED` when it can persist that status and stops dispatching further cases. If the status write also fails, its terminal error reports that the export status remains unverified. A failure to update the local mirror does not downgrade a remotely verified export.
 
-The token must be supplied by the invoking environment (or an explicitly provided in-memory argument); it is not read from CLI arguments, output files, or source configuration. The adapter uses the fixed Cloudflare API origin and rejects redirects. Its errors contain bounded status codes rather than provider response bodies.
+Use the S3-compatible endpoint with bucket-scoped R2 credentials: set `ACCOUNTING_RECEIPT_STORE_ACCESS_KEY_ID` and `ACCOUNTING_RECEIPT_STORE_SECRET_ACCESS_KEY`, or pass them as `accessKeyId` and `secretAccessKey`. These are the R2 S3 Access Key ID and Secret Access Key, not a Cloudflare REST API bearer token. SigV4 signs requests for region `auto` and service `s3`. Keep both values in the invoking environment or a secret manager; they are not read from CLI arguments, output files, or source configuration. The adapter uses the fixed account R2 origin and rejects redirects. Its errors contain bounded status codes rather than provider response bodies.
+
+To check these credentials with storage calls only, run this in an isolated Node 22 process before enabling any model calls:
+
+```js
+const runId = 'storage-preflight-' + Date.now();
+const sink = createCloudflareVerificationReceiptSink({
+  accountId: configuredCloudflareAccountId,
+  bucketName: 'accounting-verification-receipts',
+  runId
+});
+const result = await sink.preflight({ runId, plannedCaseIds: ['storage-only'] });
+console.log(JSON.stringify({ status: 'R2_STORAGE_PREFLIGHT_PASS', runId, verified: result.verified }));
+```
+
+This writes and reads a small random probe and leaves its immutable probe and writer lock under the one-use run prefix. Use a new run ID for a later verification or live run. This check does not dispatch an accounting query.
 
 To recover a completed run in a later environment with read access, create an adapter for the same `accountId`, `bucketName`, and `runId`, then call `downloadCloudflareVerificationReceiptRun({ sink: receiptSink, outputDirectory: explicitNewLocalDirectory })`. The helper retrieves the remote manifest and indexed artifacts, verifies their hashes, and runs `readVerificationReceiptExport` on the recovered directory. The `outputDirectory` must be an absolute local path and the run directory under it must not already exist.
 
@@ -65,4 +81,4 @@ node scripts/prepare_r2_verification_harness.mjs `
   --app-tree-sha256 <reviewed-app-tree-sha256>
 ```
 
-Preparing the file does not execute it. Any future invocation separately requires `ACCOUNTING_ALLOW_LIVE_MODEL_CALLS=1`, `ACCOUNTING_RECEIPT_STORE_TOKEN`, `ACCOUNTING_VERIFICATION_RUN_ID`, and `ACCOUNTING_VERIFICATION_EXPORT_DIRECTORY` in the process environment. The live-model gate remains held unless the operator explicitly enables it. A future live harness must initialize the approved R2 sink before application import, pass a retrievable bucket/run prefix, and confirm post-build recovery with this reader. Provisioning the bucket or preparing the harness does not establish live-model acceptance; no live model run is performed by these exporter tools or authorized by the storage adapter.
+Preparing the file does not execute it. Any future invocation separately requires `ACCOUNTING_ALLOW_LIVE_MODEL_CALLS=1`, `ACCOUNTING_RECEIPT_STORE_ACCESS_KEY_ID`, `ACCOUNTING_RECEIPT_STORE_SECRET_ACCESS_KEY`, `ACCOUNTING_VERIFICATION_RUN_ID`, and `ACCOUNTING_VERIFICATION_EXPORT_DIRECTORY` in the process environment. The live-model gate remains held unless the operator explicitly enables it. A future live harness must initialize the approved R2 sink before application import, pass a retrievable bucket/run prefix, and confirm post-build recovery with this reader. Provisioning the bucket or preparing the harness does not establish live-model acceptance; no live model run is performed by these exporter tools or authorized by the storage adapter.

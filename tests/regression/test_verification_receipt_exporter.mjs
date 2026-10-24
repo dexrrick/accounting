@@ -10,6 +10,7 @@ import { exportRetainedReceipts } from '../../scripts/export_retained_verificati
 const temporaryRoot = await mkdtemp(path.join(os.tmpdir(), 'verification-export-'));
 const output = path.join(temporaryRoot, 'out');
 const stdout = [];
+const privateQuotation = 'PRIVATE_VERIFIED_QUOTATION_SHOULD_ONLY_EXIST_IN_FULL_RECEIPT_7f4b2b';
 const exporter = await createVerificationReceiptExporter({
   outputDirectory: output,
   runId: 'saved-fixtures',
@@ -36,7 +37,8 @@ const momReceipt = {
       governingAuthorities: ['MOM'], population: 'EMPLOYEE', operation: 'EXPLAIN_RULE', requestedConcepts: ['Part IV coverage', 'overtime'] }] },
     workstreams: [{ issues: [{ id: 'mom-part-iv', operation: 'EXPLAIN_RULE', admissionDiagnostics: {
       candidateId: 'retained-candidate', contentHash: 'c'.repeat(64), predicates: [{ predicate: 'topic', passed: true }]
-    }, verifiedClaims: [{ paragraphId: 'p-1', status: 'VERIFIED' }], rejectedClaims: [], uncoveredPropositions: ['overtime rates'] }] }],
+    }, verifiedClaims: [{ paragraphId: 'p-1', recordId: 'retained-source-record', quote: privateQuotation, status: 'VERIFIED' }],
+      rejectedClaims: [], uncoveredPropositions: ['overtime rates'] }] }],
     gaps: [{ code: 'UNSUPPORTED_PROPOSITION', proposition: 'overtime rates' }]
   },
   finalPresentation: { status: 'INSUFFICIENT', workstreams: [{ issues: [{ id: 'mom-part-iv', selectedParagraphIds: ['p-1'] }] }] },
@@ -82,6 +84,17 @@ assert.equal(recovered.receipts.mom.diagnostic.requestCompletenessContext.rawQue
   'The diagnostic summary omits private query text.');
 assert.equal(recovered.receipts.mom.diagnostic.issues[0].sourceText, undefined,
   'The diagnostic summary omits source bodies and text.');
+assert.deepEqual(recovered.receipts.mom.diagnostic.issues[0].verifiedClaims, [{
+  paragraphId: 'p-1',
+  recordId: 'retained-source-record',
+  quoteMetadata: {
+    sha256: createHashFor(Buffer.from(privateQuotation, 'utf8')),
+    byteLength: Buffer.byteLength(privateQuotation, 'utf8'),
+    characterLength: privateQuotation.length,
+    redacted: true
+  },
+  status: 'VERIFIED'
+}], 'The compact diagnostic preserves quotation identity, length, hash and verification outcome without the quote.');
 assert.equal(recovered.manifest.cases.mom.capturedBodyCount, 1, 'UTF-8 text and base64 views of identical bytes share one blob.');
 assert.equal(recovered.manifest.cases.mas.payloadAvailability, 'METADATA_ONLY');
 assert.equal(recovered.manifest.cases['scope-unknown'].payloadAvailability, 'PRESENT_SCOPE_UNOBSERVED',
@@ -107,6 +120,11 @@ assert.ok(Buffer.byteLength(stdoutText) < 32_768);
 assert.ok(stdout.every(line => Buffer.byteLength(line) <= 2_048));
 assert.equal(stdoutText.includes(unicodeBody), false, 'Stdout contains no raw captured text.');
 assert.equal(stdoutText.includes('Private question text'), false, 'Stdout contains no question text.');
+assert.equal(stdoutText.includes(privateQuotation), false, 'Stdout does not retain the private verified quotation.');
+assert.equal(JSON.stringify(recovered.receipts.mom.diagnostic).includes(privateQuotation), false,
+  'The diagnostic artifact omits the distinctive full quotation.');
+assert.equal(recovered.receipts.mom.receipt.observedAuthorityWorkstreams.workstreams[0].issues[0].verifiedClaims[0].quote,
+  privateQuotation, 'The full receipt exactly retains the original verified quotation.');
 
 async function assertManifestEditRejected(runDirectory, edit, pattern, message) {
   const manifestPath = path.join(runDirectory, 'manifest.json');

@@ -41,7 +41,8 @@ export function prepareR2VerificationHarness(template, { appSourceSha, expectedA
     "  accountId: '0c07eba7cff6c7a8e3c9356cf0fcc503',",
     "  bucketName: 'accounting-verification-receipts',",
     '  runId,',
-    "  token: process.env.ACCOUNTING_RECEIPT_STORE_TOKEN || '',",
+    "  accessKeyId: process.env.ACCOUNTING_RECEIPT_STORE_ACCESS_KEY_ID || '',",
+    "  secretAccessKey: process.env.ACCOUNTING_RECEIPT_STORE_SECRET_ACCESS_KEY || '',",
     '  fetchImpl: nativeFetch',
     '});',
     '// Constructor preflight verifies private durable storage before importing the application.',
@@ -56,9 +57,39 @@ export function prepareR2VerificationHarness(template, { appSourceSha, expectedA
   const beginEnd = source.indexOf('\nfor (const method of Object.keys(originalConsole))', beginStart);
   assert.ok(beginStart > 0 && beginEnd > beginStart);
   source = source.slice(0, beginStart) + source.slice(beginEnd);
-  replaceOnce('    emitCase(receipt);', '    await exporter.exportReceipt(JSON.parse(scrub(JSON.stringify(receipt))));');
+  replaceOnce('    emitCase(receipt);', [
+    '    try {',
+    '      await exporter.exportReceipt(JSON.parse(scrub(JSON.stringify(receipt))));',
+    '    } catch (error) {',
+    "      const failureCode = typeof error?.code === 'string' && /^[A-Z0-9_]{1,64}$/i.test(error.code)",
+    "        ? error.code : (typeof error?.message === 'string' && /^R2_[A-Z0-9_]{1,64}$/i.test(error.message) ? error.message : 'RECEIPT_EXPORT_FAILED');",
+    "      let exportStatus = 'EXPORT_FAILURE_STATUS_UNVERIFIED';",
+    '      try {',
+    '        const failureRecord = await exporter.recordExportFailure(receipt.id, failureCode);',
+    "        exportStatus = failureRecord?.exportStatus === 'EXPORTED' ? 'EXPORTED_PRESERVED' :",
+    "          failureRecord?.persistence === 'REMOTE_VERIFIED_LOCAL_MIRROR_FAILED' ? 'EXPORT_FAILED_REMOTE_VERIFIED_LOCAL_MIRROR_FAILED' :",
+    "            failureRecord?.exportStatus === 'EXPORT_FAILED' ? 'EXPORT_FAILED_RECORDED' : 'EXPORT_FAILURE_STATUS_UNVERIFIED';",
+    '      } catch {',
+    '        // Preserve uncertainty if the status write also failed.',
+    '      }',
+    '      terminalExportFailure = { caseId: receipt.id, exportStatus, failureCode };',
+    '      break;',
+    '    }'
+  ].join('\n'));
+  replaceOnce('let casesWithErrors = 0;\ntry {', 'let casesWithErrors = 0;\nlet terminalExportFailure;\ntry {');
   replaceOnce('  for (const [method, original] of Object.entries(originalConsole)) console[method] = original;\n}',
-    '  for (const [method, original] of Object.entries(originalConsole)) console[method] = original;\n  await exporter.finish();\n}');
+    [
+      '  for (const [method, original] of Object.entries(originalConsole)) console[method] = original;',
+      '  try {',
+      '    await exporter.finish();',
+      '  } catch {',
+      "    terminalExportFailure ||= { caseId: 'RUN', exportStatus: 'FINALIZATION_UNVERIFIED', failureCode: 'RECEIPT_RUN_FINALIZATION_FAILED' };",
+      '  }',
+      '}',
+      'if (terminalExportFailure) {',
+      "  throw new Error(\`RECEIPT_EXPORT_TERMINATED case=\${terminalExportFailure.caseId} status=\${terminalExportFailure.exportStatus} code=\${terminalExportFailure.failureCode}\`);",
+      '}'
+    ].join('\n'));
   const endStart = source.indexOf("\noutput('SHARED_MILESTONE_END '");
   assert.ok(endStart > 0);
   source = source.slice(0, endStart) + '\n';
