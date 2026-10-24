@@ -10,7 +10,7 @@ import { matchesRequestedQuestionConcept } from '../../src/retrieval/evidenceQua
 import { IRAS_SOURCE_MAP_DEFINITIONS, getCoverageTopicsByIds } from '../../src/standards/coverageRegistry.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
-import { buildGroundedReasoningContext } from '../../src/services/groundingContextBuilder.ts';
+import { buildGroundedReasoningContext, completeScopedIrasConceptPassage, selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
 import { renderIrasEvidenceResponse } from '../../src/services/irasEvidencePolicy.ts';
 import { getRequestedQuestionConcepts, reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
@@ -402,6 +402,103 @@ assert.equal(check({
   domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
   subject: 'GST input tax claimability on private passenger motor car purchase', concepts: [motorCarExceptionsConcept], population: 'UNKNOWN'
 }), undefined, 'IRAS motor-car general-rule matching remains scoped to company questions.');
+
+const currentThirdPartyMotorCar = 'From 1 Jan 2023, you can claim input tax on the cost and running expenses of a motor car used by a third party, if you meet the conditions for claiming input tax. A third party does not include you or your employees, or a connected person (as determined in Para 3 of the Third Schedule of the GST Act).';
+const currentConnectedPersonMotorCar = [
+  'Motor car used by a connected person',
+  'From 1 Jan 2023, where a motor car is used by a connected person (e.g. a subsidiary), GST incurred on the motor car expenses is generally not claimable. An exception applies only if you satisfy both of the following conditions, in addition to the conditions for claiming input tax:',
+  '• You recover the motor car expenses from the connected person. Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and',
+  '• The recovery is not ancillary to any primary supply you make to them. To determine whether the recovery is considered as ancillary to a supply, refer to the IRAS guide.',
+  'Where the connected person is GST-registered, the input tax claim on the motor car expenses recovered by you is disallowed under Regulation 27.'
+].join('\n\n');
+const currentMotorCarSource = [
+  'You generally cannot claim the GST incurred on the purchase and running expenses of motor cars, such as petrol and parking charges.',
+  currentThirdPartyMotorCar,
+  currentConnectedPersonMotorCar
+].join('\n\n');
+assert.equal(check({
+  sourceText: currentMotorCarSource, domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
+  subject: 'GST input tax claimability on private passenger motor car purchase', concepts: [motorCarExceptionsConcept]
+}), true, 'Current IRAS wording establishes the third-party exception and both connected-person conditions with the attached GST-registration restriction.');
+for (const incompleteCurrentMotorCar of [
+  currentMotorCarSource.replace('A third party does not include you or your employees, or a connected person (as determined in Para 3 of the Third Schedule of the GST Act).', ''),
+  currentMotorCarSource.replace('Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and', ''),
+  currentMotorCarSource.replace('• The recovery is not ancillary to any primary supply you make to them. To determine whether the recovery is considered as ancillary to a supply, refer to the IRAS guide.', ''),
+  currentMotorCarSource.replace('Where the connected person is GST-registered, the input tax claim on the motor car expenses recovered by you is disallowed under Regulation 27.', '')
+]) {
+  assert.equal(check({ sourceText: incompleteCurrentMotorCar, domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
+    subject: 'GST input tax claimability on private passenger motor car purchase', concepts: [motorCarExceptionsConcept] }), false,
+  'Current connected-person conditions and the third-party/recipient qualifications remain required.');
+}
+
+const knownCpfTopic = getCoverageTopicsByIds(cpfReliefTopicIds)[0];
+const completeCpfReliefSource = [cpfEligibilitySource, cpfLimitSource].join('\n\n');
+const longCpfPage = `${'CPF relief navigation and unrelated tax headings.\n'.repeat(700)}\n\n${completeCpfReliefSource}\n\n${'Other tax guidance.\n'.repeat(700)}`;
+const completeCpfPassage = completeScopedIrasConceptPassage(longCpfPage, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]);
+assert.ok(completeCpfPassage, 'The known CPF relief profile selects a contiguous passage covering introduction, eligibility and limits.');
+assert.ok(completeCpfPassage.length <= 12_000, 'The CPF relief passage stays within its explicit bounded excerpt limit.');
+assert.ok(longCpfPage.includes(completeCpfPassage), 'The CPF excerpt is an exact contiguous substring of the validated page.');
+assert.ok(completeCpfPassage.includes('1. be a Singapore Citizen/Permanent Resident; and'));
+assert.ok(completeCpfPassage.includes('2. have made cash top-ups in 2025 under the CPF Retirement Sum Topping-Up Scheme'));
+assert.ok(completeCpfPassage.includes('personal income tax relief cap of $80,000'));
+assert.ok(completeCpfPassage.includes('For recipients aged 55 years and above'));
+assert.equal(completeCpfPassage.includes('CPF relief navigation'), false,
+  'The selected passage excludes unrelated page content outside the supported source envelope.');
+const selectedCpfExcerpt = selectRelevantFetchedText(longCpfPage, ['CPF cash top-up relief', 'tax relief'], 12_000,
+  'CPF cash top-up relief eligibility and limits', [completeCpfPassage]);
+for (const concept of [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]) {
+  assert.equal(check({ sourceText: selectedCpfExcerpt, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+    subject: 'Individual CPF cash top-up relief', concepts: [concept], population: 'INDIVIDUAL' }), true,
+  `The bounded fetched excerpt retains independently supported CPF concept ${concept.id}.`);
+}
+assert.equal(completeScopedIrasConceptPassage(longCpfPage, knownCpfTopic, 'Individual CPF cash top-up relief',
+  'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept], 1_000), undefined,
+'A requested known-profile passage that exceeds the explicit bound remains incomplete.');
+assert.equal(completeScopedIrasConceptPassage(completeCpfReliefSource.replace('1. be a Singapore Citizen/Permanent Resident; and\n\n', ''),
+  knownCpfTopic, 'Individual CPF cash top-up relief', 'INDIVIDUAL',
+  [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'The full-profile excerpt is not promoted when a numbered eligibility condition is missing.');
+const manyParagraphCpfPage = [completeCpfReliefSource, ...Array.from({ length: 300 }, (_, index) => `Item ${index}.`)].join('\n\n');
+assert.ok(manyParagraphCpfPage.length < 12_000, 'The paragraph-cap control stays inside the content-byte limit.');
+assert.equal(completeScopedIrasConceptPassage(manyParagraphCpfPage, knownCpfTopic, 'Individual CPF cash top-up relief',
+  'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'A relevant but overly fragmented page fails closed at the explicit paragraph cap.');
+const manyParagraphUnsupportedCpfPage = Array.from({ length: 300 }, (_, index) => `Unrelated CPF navigation item ${index}.`).join('\n\n');
+assert.equal(completeScopedIrasConceptPassage(manyParagraphUnsupportedCpfPage, knownCpfTopic, 'Individual CPF cash top-up relief',
+  'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'Many short unsupported paragraphs fail closed at the whole-source concept check.');
+
+const residencyTopic = getCoverageTopicsByIds(residencyTopicIds)[0];
+const residencySource = [
+  'Your company is a tax resident of Singapore when its control and management is exercised in Singapore.',
+  'The place of incorporation of a company is not necessarily indicative of the tax residency of a company.'
+].join('\n\n');
+const residencyPassage = completeScopedIrasConceptPassage(`Navigation text.\n\n${residencySource}\n\nUnrelated tax card.`,
+  residencyTopic, 'Singapore company tax residency rule', 'COMPANY', [residencyRuleConcept, residencyIncorporationConcept]);
+assert.equal(residencyPassage, residencySource,
+  'The company-residency envelope retains both the control-and-management rule and its incorporation qualification.');
+
+const knownMotorCarTopic = getCoverageTopicsByIds(motorCarTopicIds)[0];
+const completeMotorCarSource = [
+  'You generally cannot claim the GST incurred on the purchase and running expenses of motor cars, such as petrol and parking charges.',
+  thirdPartyMotorCar,
+  connectedPersonMotorCar
+].join('\n\n');
+const motorCarPassage = completeScopedIrasConceptPassage(`Navigation.\n\n${completeMotorCarSource}\n\nOther GST topics.`,
+  knownMotorCarTopic, 'GST input tax claimability on private passenger motor car purchase', 'COMPANY',
+  [motorCarRestrictionConcept, motorCarExceptionsConcept]);
+assert.equal(motorCarPassage, completeMotorCarSource,
+  'The motor-car envelope retains the general restriction and both complete exception provisions in their source order.');
+const currentMotorCarPassage = completeScopedIrasConceptPassage(`Navigation.\n\n${currentMotorCarSource}\n\nOther GST topics.`,
+  knownMotorCarTopic, 'GST input tax claimability on private passenger motor car purchase', 'COMPANY',
+  [motorCarRestrictionConcept, motorCarExceptionsConcept]);
+assert.equal(currentMotorCarPassage, currentMotorCarSource,
+  'The bounded current-source excerpt retains the exact restriction and both qualified exception spans contiguously.');
+assert.equal(completeScopedIrasConceptPassage(completeMotorCarSource.replace('2. The recovery is not ancillary to any primary supply made by you to the connected person.', ''),
+  knownMotorCarTopic, 'GST input tax claimability on private passenger motor car purchase', 'COMPANY',
+  [motorCarRestrictionConcept, motorCarExceptionsConcept]), undefined,
+'A missing connected-person exception qualification keeps the profile incomplete.');
 
 for (const extra of ['treaty', 'foreign tax credit', 'exemption conditions', 'tax outcome', 'filing', 'tax rates', 'blocked claim', 'specific eligibility']) {
   const broaderConcept = asConcept(gstSubject, [extra], gstCase.requiredTopicIds);

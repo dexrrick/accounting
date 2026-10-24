@@ -56,6 +56,7 @@ const testSuites = [
   { name: 'IRAS WHT Topicless Concept Ownership', file: 'test_iras_wht_topicless_concept_ownership.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Scoped Concept Coverage', file: 'test_iras_scoped_concept_coverage.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Requested Concept Fallback', file: 'test_iras_requested_concept_fallback.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS Individual CPF Cash Top-up Workstream', file: 'test_iras_cpf_cash_top_up_individual_workstream.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Shared Page Claim Bindings', file: 'test_iras_shared_page_claim_bindings.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Multi-authority Issue Scoring', file: 'test_multi_authority_issue_scoring.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Prospective Multi-authority Issue Scoring V2', file: 'test_multi_authority_issue_scoring_v2.mjs', layer: 'input-understanding', tier: 'smoke' },

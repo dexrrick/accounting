@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { completeIrasCpfCashTopUpLimitQuotes, verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
+import { completeIrasCpfCashTopUpLimitQuotes, completeIrasGstMotorCarConnectedPersonExceptionQuote,
+  verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 import { UNIFIED_SOURCE_REGISTRY, buildUnifiedSourceRegistry } from '../../src/standards/unifiedSourceModel.ts';
 import { SINGAPORE_STATUTORY_REPOSITORY } from '../../src/standards/singaporeStatutesKnowledge.ts';
 import { CitationVerifier } from '../../src/verification/citationVerifier.ts';
@@ -254,6 +255,59 @@ assert.equal(collapsedCpfLimitQuotes[1], [cpfCashTopUpLimitBlocks[4], collapsedC
 assert.equal(verifyEvidenceClaims(collapsedCpfLimitQuotes.map(quote => makeClaim(quote, cpfCashTopUpRecord.id)),
   [{ ...cpfCashTopUpRecord, sourceText: collapsedCpfTopUpSource }], { missingFacts: [] }).accepted.length, 2,
   'The whole-table-block extraction path remains exactly verifiable.');
+const splitCpfOwnAccountRows = [
+  'For recipients below age 55',
+  '(a) Top-up to Special Account (SA) under RSTU scheme:',
+  '(i) is capped at the current year’s Full Retirement Sum (FRS).',
+  '(ii) Maximum allowed cash top-up: FRS – SA savings – Amount withdrawn from SA for investments*',
+  '*Net SA savings withdrawn under CPF Investment Scheme (CPFIS) for investments that have not been completely disposed of',
+  '* * *',
+  cpfCashTopUpLimitBlocks[10],
+  'For recipients aged 55 years and above',
+  '(a) Top-up to Retirement Account (RA) under RSTU scheme:',
+  '(i) is capped at the current year’s Full Retirement Sum (FRS)',
+  '(ii) Maximum allowed cash top-up: FRS – RA**',
+  '**RA savings refers to the cash set aside in the RA (excluding amounts such as interest earned, any government grants received) plus amounts withdrawn',
+  '* * *',
+  cpfCashTopUpLimitBlocks[13].replace('the Basic Healthcare Sum (BHS)', 'the BHS'),
+  cpfCashTopUpLimitBlocks[14]
+];
+const splitCpfTopUpSource = [
+  ...cpfCashTopUpBlocks,
+  ...cpfCashTopUpLimitBlocks.slice(2, 8),
+  ...splitCpfOwnAccountRows
+].join('\n\n');
+const splitCpfLimitQuotes = completeIrasCpfCashTopUpLimitQuotes(splitCpfTopUpSource);
+assert.equal(splitCpfLimitQuotes.length, 2,
+  'Separate visible recipient, condition, calculation and footnote blocks retain the complete split-row table.');
+assert.equal(splitCpfLimitQuotes[1], [
+  ...cpfCashTopUpLimitBlocks.slice(4, 8), ...splitCpfOwnAccountRows.slice(0, -1)
+].join('\n\n'), 'The split-row quote preserves the exact contiguous table span through the SA and RA rows.');
+const splitCpfRecord = { ...cpfCashTopUpRecord, sourceText: splitCpfTopUpSource };
+assert.equal(verifyEvidenceClaims(splitCpfLimitQuotes.map(quote => makeClaim(quote, splitCpfRecord.id)),
+  [splitCpfRecord], { missingFacts: [] }).accepted.length, 2,
+  'Both split-row limit spans remain exact-source verifiable.');
+for (const [label, missingBlock] of [
+  ['SA calculation', splitCpfOwnAccountRows[3]],
+  ['SA withdrawal footnote', splitCpfOwnAccountRows[4]],
+  ['RA calculation', splitCpfOwnAccountRows[10]],
+  ['RA withdrawal footnote', splitCpfOwnAccountRows[11]]
+]) {
+  const incompleteSource = splitCpfTopUpSource.replace(`\n\n${missingBlock}`, '');
+  assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(incompleteSource), [],
+    `A split-row table missing its ${label} remains incomplete.`);
+}
+const splitCpfWithoutBhsDefinition = splitCpfTopUpSource.replace(
+  'the Basic Healthcare Sum (BHS)', 'the healthcare amount'
+);
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(splitCpfWithoutBhsDefinition), [],
+  'The abbreviated second MediSave row requires an explicit Basic Healthcare Sum (BHS) definition in the same table.');
+const duplicateSplitCpfRow = splitCpfTopUpSource.replace(
+  'For recipients aged 55 years and above',
+  'For recipients below age 55\n\nFor recipients aged 55 years and above'
+);
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(duplicateSplitCpfRow), [],
+  'Duplicate split-row markers fail closed.');
 for (const partialQuote of [cpfCashTopUpLimitBlocks[2], cpfCashTopUpLimitBlocks[8]]) {
   const partial = verifyEvidenceClaims([makeClaim(partialQuote, cpfCashTopUpRecord.id)], [cpfCashTopUpRecord], { missingFacts: [] });
   assert.equal(partial.rejected[0].reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION',
@@ -332,6 +386,41 @@ const gstConnectedPersonAltered = verifyEvidenceClaims(
 );
 assert.equal(gstConnectedPersonAltered.accepted.length, 0,
   'Changing the substantive connected-person condition cannot pass the narrow source-span verifier.');
+
+const currentConnectedPersonBlocks = [
+  'Motor car used by a connected person',
+  'From 1 Jan 2023, where a motor car is used by a connected person (e.g. a subsidiary), GST incurred on the motor car expenses is generally not claimable. An exception applies only if you satisfy both of the following conditions, in addition to the conditions for claiming input tax:',
+  '• You recover the motor car expenses from the connected person. Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and',
+  '• The recovery is not ancillary to any primary supply you make to them. To determine whether the recovery is considered as ancillary to a supply, refer to “GST: Guide on Reimbursement and Disbursement of Expenses” (PDF, 584KB).',
+  'Where the connected person is GST-registered, the input tax claim on the motor car expenses recovered by you is disallowed under Regulation 27.'
+];
+const currentConnectedPersonSource = currentConnectedPersonBlocks.join('\n\n');
+assert.equal(completeIrasGstMotorCarConnectedPersonExceptionQuote(currentConnectedPersonSource), currentConnectedPersonSource,
+  'The current IRAS heading and exception wording yield one exact span including the GST-registered recipient restriction.');
+const currentConnectedPersonRecord = makeLocalRecord({
+  id: 'IRAS_GST_MOTOR_CAR_CURRENT_CONNECTED_PERSON',
+  domain: 'IRAS_GST',
+  documentTitle: 'IRAS Motor Vehicles Expenses',
+  sourceText: currentConnectedPersonSource,
+  officialSourceUrl: gstMotorCarUrl,
+  canonicalSourceUrl: gstMotorCarUrl,
+  tags: ['iras-gst-blocked-input-tax', gstMotorCarTopic],
+  relatedTopicIds: [], sourceMapTopicIds: ['iras-gst-blocked-input-tax', gstMotorCarTopic]
+});
+const currentConnectedPersonVerified = verifyEvidenceClaims(
+  [makeClaim(currentConnectedPersonSource, currentConnectedPersonRecord.id)],
+  [currentConnectedPersonRecord], { missingFacts: [] }
+);
+assert.equal(currentConnectedPersonVerified.accepted.length, 1,
+  'The current connected-person source span passes the existing exact-source verifier.');
+for (const omission of [
+  '• You recover the motor car expenses from the connected person. Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and',
+  '• The recovery is not ancillary to any primary supply you make to them. To determine whether the recovery is considered as ancillary to a supply, refer to “GST: Guide on Reimbursement and Disbursement of Expenses” (PDF, 584KB).',
+  'Where the connected person is GST-registered, the input tax claim on the motor car expenses recovered by you is disallowed under Regulation 27.'
+]) {
+  assert.equal(completeIrasGstMotorCarConnectedPersonExceptionQuote(currentConnectedPersonSource.replace(`\n\n${omission}`, '')),
+    undefined, 'Removing a recovery condition or attached recipient restriction keeps the current source exception incomplete.');
+}
 
 const momCoverageBlocks = [
   'If you are covered under Part 4 of the Employment Act, your hours of work are regulated and you are entitled to breaks, overtime pay and rest day.',

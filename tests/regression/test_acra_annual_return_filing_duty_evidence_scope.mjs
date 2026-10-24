@@ -230,6 +230,41 @@ try {
     'ACRA material does not satisfy the separately requested IRAS filing issue.');
   assert.equal(mixed.result.status, 'INSUFFICIENT');
   assert.ok(mixedAcraIssue.verifiedClaims.every(claim => !/\b(?:IRAS|tax(?:es| return| returns| filing))\b/i.test(claim.quote)));
+
+  const lateFilingParagraph = 'Companies are required to file their annual returns under section 197 of the Companies Act. If you have missed the deadline for annual returns, it is important to act quickly. Filing late can lead to enforcement action against your company and its officers.';
+  const mixedLateFiling = await run(replaceDirectDutyParagraphs(lateFilingParagraph));
+  assert.equal(mixedLateFiling.evidence.evidenceStatus, 'VERIFIED',
+    'The exact first sentence remains available for a mixed-authority general-duty issue when the source paragraph continues with separately stated late-filing guidance.');
+  assert.ok(mixedLateFiling.evidence.verifiedClaims.some(claim =>
+    claim.quote === 'Companies are required to file their annual returns under section 197 of the Companies Act.'),
+  'The accepted mixed-case claim is the exact operative source sentence.');
+  assert.ok(mixedLateFiling.evidence.verifiedClaims.every(claim =>
+    !/\b(?:deadline|late|enforcement|penalt(?:y|ies))\b/i.test(claim.quote)),
+  'Separate late-filing information is not added to the general-duty claim.');
+
+  for (const qualifiedAncillary of [
+    'If you have missed the deadline for annual returns, it is important to act quickly, except where an extension has been granted.',
+    'Filing late can lead to enforcement action against your company and its officers unless the company qualifies for an exemption.'
+  ]) {
+    const qualifiedAncillaryResult = await run(replaceDirectDutyParagraphs(
+      `Companies are required to file their annual returns under section 197 of the Companies Act. ${qualifiedAncillary}`
+    ));
+    assert.notEqual(qualifiedAncillaryResult.evidence.evidenceStatus, 'VERIFIED',
+      'A sentence that adds an exception or eligibility qualification is not treated as safely removable ancillary context.');
+    assert.ok(qualifiedAncillaryResult.evidence.verifiedClaims.every(claim =>
+      claim.quote !== 'Companies are required to file their annual returns under section 197 of the Companies Act.'),
+    'The duty sentence is not detached from a potentially applicability-changing ancillary sentence.');
+  }
+
+  const qualifiedDutyParagraph = 'All companies registered in Singapore must file an annual return with ACRA each year. This applies only while your company is listed as live with us.';
+  const qualifiedDuty = await run(replaceDirectDutyParagraphs(qualifiedDutyParagraph));
+  assert.equal(qualifiedDuty.evidence.evidenceStatus, 'VERIFIED');
+  assert.ok(qualifiedDuty.evidence.verifiedClaims.some(claim =>
+    claim.quote === qualifiedDutyParagraph),
+  'A live-status qualification remains attached to its complete source paragraph.');
+  assert.ok(qualifiedDuty.evidence.verifiedClaims.every(claim => claim.quote !==
+    'All companies registered in Singapore must file an annual return with ACRA each year.'),
+  'The qualified duty sentence is not detached from its applicability condition.');
 } finally {
   globalThis.fetch = originalFetch;
 }

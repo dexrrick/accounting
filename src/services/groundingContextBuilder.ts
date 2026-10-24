@@ -36,6 +36,7 @@ import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targ
 import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { completeIrasCpfCashTopUpEligibilityQuote, completeIrasCpfCashTopUpLimitQuotes } from '../verification/claimEvidenceVerifier';
 import {
   isBoundedStatutoryAdvisoryRequest,
   selectBoundedStatutoryAdvisoryPassage,
@@ -923,6 +924,188 @@ function completeScopedRulePassage(
     }) === true);
 }
 
+const IRAS_CONCEPT_PASSAGE_LIMIT_CHARS = 12_000;
+const IRAS_CONCEPT_PASSAGE_MAX_BLOCKS = 256;
+const IRAS_CONCEPT_PASSAGE_MAX_ANCHORS_PER_CONCEPT = 8;
+const IRAS_CONCEPT_PASSAGE_MAX_WINDOW_CHECKS = 160;
+
+function findExactSourceBlockSpan(sourceText: string, quote: string): { start: number; end: number } | undefined {
+  const normalizeBlock = (value: string): string => value.normalize('NFC').replace(/\u00a0/g, ' ').trim();
+  const sourceBlocks: Array<{ text: string; start: number; end: number }> = [];
+  let searchFrom = 0;
+  for (const rawBlock of sourceText.split(/\r?\n[\t ]*\r?\n+/)) {
+    const text = rawBlock.trim();
+    if (!text) continue;
+    const start = sourceText.indexOf(text, searchFrom);
+    if (start < 0) continue;
+    sourceBlocks.push({ text: normalizeBlock(text), start, end: start + text.length });
+    searchFrom = start + text.length;
+  }
+  const quoteBlocks = quote.split(/\r?\n[\t ]*\r?\n+/).map(normalizeBlock).filter(Boolean);
+  if (quoteBlocks.length === 0) return undefined;
+  const matches: Array<{ start: number; end: number }> = [];
+  for (let start = 0; start + quoteBlocks.length <= sourceBlocks.length; start += 1) {
+    if (quoteBlocks.every((block, offset) => sourceBlocks[start + offset].text === block)) {
+      matches.push({ start: sourceBlocks[start].start, end: sourceBlocks[start + quoteBlocks.length - 1].end });
+    }
+  }
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
+const IRAS_CONCEPT_PASSAGE_PROFILES = new Map<string, {
+  domainId: string;
+  population: string;
+  conceptIds: ReadonlySet<string>;
+  anchorPhrases: ReadonlyMap<string, readonly string[]>;
+}>([
+  ['iras-corporate-tax-residency', {
+    domainId: 'IRAS_CORPORATE_TAX', population: 'COMPANY',
+    conceptIds: new Set(['company_tax_residency_rule', 'company_tax_residency_incorporation']),
+    anchorPhrases: new Map([
+      ['company_tax_residency_rule', ['control and management']],
+      ['company_tax_residency_incorporation', ['place of incorporation']]
+    ])
+  }],
+  ['iras-individual-cpf-cash-top-up-relief', {
+    domainId: 'IRAS_INDIVIDUAL_TAX', population: 'INDIVIDUAL',
+    conceptIds: new Set(['cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits']),
+    anchorPhrases: new Map([
+      ['cpf_cash_top_up_relief', ['cpf cash top-up relief is given to encourage']],
+      ['cpf_cash_top_up_relief_eligibility', ['to qualify for the tax relief']],
+      ['cpf_cash_top_up_relief_limits', ['individuals may continue to enjoy tax relief']]
+    ])
+  }],
+  ['iras-gst-blocked-input-tax', {
+    domainId: 'IRAS_GST', population: 'COMPANY',
+    conceptIds: new Set(['gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions']),
+    anchorPhrases: new Map([
+      ['gst_blocked_motor_car_input_tax', ['generally cannot claim']],
+      ['gst_motor_car_input_tax_exceptions', ['motor car used by a third party']]
+    ])
+  }],
+  ['iras-gst-motor-vehicles', {
+    domainId: 'IRAS_GST', population: 'COMPANY',
+    conceptIds: new Set(['gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions']),
+    anchorPhrases: new Map([
+      ['gst_blocked_motor_car_input_tax', ['generally cannot claim']],
+      ['gst_motor_car_input_tax_exceptions', ['motor car used by a third party']]
+    ])
+  }]
+]);
+
+/** Retain one exact contiguous source span that supports every requested concept in a known profile. */
+export function completeScopedIrasConceptPassage(
+  pageText: string,
+  topic: MappedCoverageTopic,
+  subject: string | undefined,
+  population: string | undefined,
+  concepts: RequestedQuestionConcept[],
+  maxChars = IRAS_CONCEPT_PASSAGE_LIMIT_CHARS
+): string | undefined {
+  const profile = IRAS_CONCEPT_PASSAGE_PROFILES.get(topic.id);
+  if (!profile || topic.domainId !== profile.domainId || !subject || population !== profile.population) return undefined;
+  const scopedConcepts = concepts.filter(item => item.topicIds.includes(topic.id));
+  if (scopedConcepts.length === 0 || scopedConcepts.some(item => !profile.conceptIds.has(item.id))) return undefined;
+  const requiredConcepts = scopedConcepts;
+  if (!requiredConcepts.every(concept => supportGeneralIrasRuleConcept({
+    sourceText: pageText,
+    domainId: topic.domainId,
+    topicIds: [topic.id],
+    subject,
+    population,
+    concepts: [concept]
+  }) === true)) return undefined;
+
+  if (topic.id === 'iras-individual-cpf-cash-top-up-relief') {
+    const exactSupportingQuotes = [
+      completeIrasCpfCashTopUpEligibilityQuote(pageText),
+      ...completeIrasCpfCashTopUpLimitQuotes(pageText)
+    ];
+    if (exactSupportingQuotes.length !== 3 || exactSupportingQuotes.some(quote => !quote)) return undefined;
+    const spans = exactSupportingQuotes.map(quote => findExactSourceBlockSpan(pageText, quote!));
+    if (spans.some(span => !span)) return undefined;
+    const endMarkerBlocks = pageText.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim())
+      .filter(block => /^to check your top[ -]?up limit\b/i.test(block));
+    if (endMarkerBlocks.length !== 1) return undefined;
+    const tableEndMarker = findExactSourceBlockSpan(pageText, endMarkerBlocks[0]);
+    const tableQuoteSpan = spans[2]!;
+    if (!tableEndMarker || tableEndMarker.start < tableQuoteSpan.end) return undefined;
+    spans[2] = { ...tableQuoteSpan, end: tableEndMarker.end };
+    const start = Math.min(...spans.map(span => span!.start));
+    const end = Math.max(...spans.map(span => span!.end));
+    if (end - start > maxChars) return undefined;
+    const completePassage = pageText.slice(start, end);
+    return requiredConcepts.every(concept => supportGeneralIrasRuleConcept({
+      sourceText: completePassage,
+      domainId: topic.domainId,
+      topicIds: [topic.id],
+      subject,
+      population,
+      concepts: [concept]
+    }) === true) ? completePassage : undefined;
+  }
+
+  const blocks: Array<{ start: number; end: number }> = [];
+  let searchFrom = 0;
+  for (const block of pageText.split(/\r?\n[\t ]*\r?\n+/)) {
+    const text = block.trim();
+    if (!text) continue;
+    const start = pageText.indexOf(text, searchFrom);
+    if (start < 0) continue;
+    const end = start + text.length;
+    blocks.push({ start, end });
+    searchFrom = end;
+  }
+  if (blocks.length > IRAS_CONCEPT_PASSAGE_MAX_BLOCKS) return undefined;
+
+  const conceptSpans: Array<{ start: number; end: number }> = [];
+  let windowChecks = 0;
+  for (const concept of requiredConcepts) {
+    let bestSpan: { start: number; end: number } | undefined;
+    let bestLength = Infinity;
+    const anchors = profile.anchorPhrases.get(concept.id) || [];
+    const matchingBlocks = blocks.map((block, index) => ({ block, index }))
+      .filter(({ block }) => anchors.some(anchor => pageText.slice(block.start, block.end).toLowerCase().includes(anchor)));
+    if (matchingBlocks.length === 0 || matchingBlocks.length > IRAS_CONCEPT_PASSAGE_MAX_ANCHORS_PER_CONCEPT) return undefined;
+    for (const { index: anchorIndex } of matchingBlocks) {
+      for (const start of [...new Set([Math.max(0, anchorIndex - 1), anchorIndex])]) {
+        for (let end = start; end < blocks.length; end += 1) {
+        const candidate = pageText.slice(blocks[start].start, blocks[end].end);
+          if (candidate.length > maxChars || candidate.length >= bestLength) break;
+          windowChecks += 1;
+          if (windowChecks > IRAS_CONCEPT_PASSAGE_MAX_WINDOW_CHECKS) return undefined;
+        if (supportGeneralIrasRuleConcept({
+          sourceText: candidate,
+          domainId: topic.domainId,
+          topicIds: [topic.id],
+          subject,
+          population,
+          concepts: [concept]
+        }) === true) {
+            bestLength = candidate.length;
+            bestSpan = { start: blocks[start].start, end: blocks[end].end };
+          break;
+        }
+      }
+      }
+    }
+    if (!bestSpan) return undefined;
+    conceptSpans.push(bestSpan);
+  }
+  const start = Math.min(...conceptSpans.map(span => span.start));
+  const end = Math.max(...conceptSpans.map(span => span.end));
+  if (end - start > maxChars) return undefined;
+  const completePassage = pageText.slice(start, end);
+  return requiredConcepts.every(concept => supportGeneralIrasRuleConcept({
+    sourceText: completePassage,
+    domainId: topic.domainId,
+    topicIds: [topic.id],
+    subject,
+    population,
+    concepts: [concept]
+  }) === true) ? completePassage : undefined;
+}
+
 export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = '', preferredPassages: string[] = []): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
@@ -1484,6 +1667,9 @@ export async function resolveMappedOfficialSourceFallback(
     const preferredRulePassage = completeScopedRulePassage(
       contentValidation.substantiveText || '', topic, scopedSubject, scopedPopulation, requestedConcepts, 5_000
     );
+    const preferredIrasConceptPassage = completeScopedIrasConceptPassage(
+      contentValidation.substantiveText || '', topic, scopedSubject, scopedPopulation, requestedConcepts
+    );
     const acraDeadlineTablePassage = topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query)
       ? getAcraAnnualReturnDeadlineTablePassage(contentValidation.substantiveText || '')
       : undefined;
@@ -1494,7 +1680,8 @@ export async function resolveMappedOfficialSourceFallback(
     const preferredAcraDeadlinePassages = acraDeadlineTablePassage
       ? [acraDeadlineDutyPassage ? `${acraDeadlineDutyPassage}\n\n${acraDeadlineTablePassage}` : '', acraDeadlineTablePassage]
       : [];
-    const excerpt = preferredStatutoryAdvisoryPassage || selectRelevantFetchedText(contentValidation.substantiveText || '',
+    const excerpt = preferredStatutoryAdvisoryPassage || preferredIrasConceptPassage ||
+      selectRelevantFetchedText(contentValidation.substantiveText || '',
       [...expectation.topicTerms, ...requiredContentTerms], 5_000, query,
       [...preferredAcraDeadlinePassages,
         ...(preferredRulePassage ? [preferredRulePassage] : [])]);

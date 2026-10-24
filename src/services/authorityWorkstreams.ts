@@ -40,7 +40,7 @@ import {
   matchesReviewedLocalRegistryRecord,
   matchesRequestedQuestionConcept
 } from '../retrieval/evidenceQualityGate';
-import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { getGstMotorCarInputTaxExceptionKinds, supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisorySupport';
 import { supportMasCmsDefinition, supportMasCmsRule } from '../retrieval/masCmsRuleSupport';
 import {
@@ -54,6 +54,9 @@ import {
   ACRA_2022_ANNUAL_RETURN_TIMELINES_URL
 } from '../retrieval/acraAnnualReturnFilingRule';
 import {
+  completeIrasCpfCashTopUpEligibilityQuote,
+  completeIrasCpfCashTopUpLimitQuotes,
+  completeIrasGstMotorCarConnectedPersonExceptionQuote,
   findRecordEligibilityRejection,
   verifyEvidenceClaims,
   type VerifiedEvidenceClaim
@@ -105,6 +108,10 @@ const GENERIC_SUPPORT_WORDS = new Set([
   'must', 'official', 'organization', 'person', 'persons', 'relevant', 'requirement', 'requirements', 'rule',
   'rules', 'singapore', 'source', 'standard', 'standards', 'subject', 'support', 'tax', 'taxes', 'that', 'the',
   'their', 'this', 'treatment', 'under', 'when', 'whether', 'which', 'with', 'work', 'worker', 'workers'
+]);
+const INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID = 'iras-individual-cpf-cash-top-up-relief';
+const INDIVIDUAL_CPF_CASH_TOP_UP_CONCEPT_IDS = new Set([
+  'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
 ]);
 
 export interface AuthorityWorkstreamOptions {
@@ -1360,7 +1367,7 @@ function isAcraAnnualReturnFilingDutyIssue(
       !hasAcraAnnualReturnPenaltyOrFeeAsk(clause, issue);
   });
   return authority === 'ACRA' && issue.domain === 'ACRA_CORPORATE' && issue.population === 'COMPANY' &&
-    issue.operation === 'EXPLAIN_RULE' && issue.status === 'MAPPED' &&
+    ['EXPLAIN_RULE', 'FILING_REQUIREMENT'].includes(issue.operation) && issue.status === 'MAPPED' &&
     issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'ACRA' &&
     issue.mappedTopicIds.includes('acra_annual-returns') && topics.length === 1 &&
     topics[0].id === 'acra_annual-returns' &&
@@ -1391,8 +1398,25 @@ function isExactAcraAnnualReturnDutyParagraph(sourceText: string, quote: string)
   const isIndividualSourceBlock = sourceText.split(/\r?\n[\t ]*\r?\n+/)
     .map(block => block.trim()).filter(Boolean).includes(normalizedQuote);
   const hasSeparateFilingSpecificity = /\b(?:deadlines?|due dates?|filing dates?|filing times?|on time|penalt(?:y|ies)|fines?|fees?|enforcement action|extension of time|within\s+(?:\d+|[a-z -]+)\s+months?|months?\s+after\s+fye|fye)\b/i.test(normalizedQuote);
-  return isIndividualSourceBlock && supportsAcraAnnualReturnFilingRule(normalizedQuote) &&
-    !hasSeparateFilingSpecificity && !hasIrasTaxFilingContentInParagraph(normalizedQuote);
+  if (isIndividualSourceBlock && supportsAcraAnnualReturnFilingRule(normalizedQuote) &&
+      !hasSeparateFilingSpecificity && !hasIrasTaxFilingContentInParagraph(normalizedQuote)) return true;
+
+  // ACRA's live late-filing page puts its operative duty first, followed by
+  // two separately stated sentences about late-filing context. Permit the
+  // exact leading sentence only for those known ancillary sentences. Any
+  // added exception or applicability condition stays attached to the quote.
+  const sourceBlock = sourceText.split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim()).find(block => block.startsWith(`${normalizedQuote} `));
+  if (!sourceBlock || hasIrasTaxFilingContentInParagraph(sourceBlock)) return false;
+  const match = sourceBlock.match(/^(.+?[.!?])\s+([\s\S]+)$/);
+  if (!match || match[1] !== normalizedQuote || !supportsAcraAnnualReturnFilingRule(normalizedQuote)) return false;
+  const ancillarySentences = match[2].split(/(?<=[.!?])\s+/).map(sentence => sentence.trim()).filter(Boolean);
+  const knownAncillarySentences = new Set([
+    'if you have missed the deadline for annual returns it is important to act quickly',
+    'filing late can lead to enforcement action against your company and its officers'
+  ]);
+  return ancillarySentences.length > 0 && ancillarySentences.every(sentence =>
+    knownAncillarySentences.has(normalizeEvidenceText(sentence)));
 }
 
 function hasCompanyTaxResidencyAnchors(text: string): boolean {
@@ -1426,9 +1450,15 @@ function generalIrasRuleConceptSupport(
   topics: SingaporeCoverageTopic[],
   concepts: RequestedQuestionConcept[] = []
 ): boolean | undefined {
-  if (!issue.governingAuthorities.includes('IRAS') || issue.population !== 'COMPANY') return undefined;
-  const expectedDomainId = issue.domain === 'IRAS_INCOME_TAX' ? 'IRAS_CORPORATE_TAX'
-    : issue.domain === 'IRAS_GST' ? 'IRAS_GST' : undefined;
+  if (!issue.governingAuthorities.includes('IRAS')) return undefined;
+  const individualCpfCashTopUpScope = issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'INDIVIDUAL' &&
+    concepts.length > 0 && concepts.every(concept => INDIVIDUAL_CPF_CASH_TOP_UP_CONCEPT_IDS.has(concept.id) &&
+      concept.topicIds.includes(INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID)) &&
+    topics.some(topic => topic.id === INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID && topic.domainId === 'IRAS_INDIVIDUAL_TAX');
+  if (issue.population !== 'COMPANY' && !individualCpfCashTopUpScope) return undefined;
+  const expectedDomainId = individualCpfCashTopUpScope ? 'IRAS_INDIVIDUAL_TAX'
+    : issue.domain === 'IRAS_INCOME_TAX' ? 'IRAS_CORPORATE_TAX'
+      : issue.domain === 'IRAS_GST' ? 'IRAS_GST' : undefined;
   if (!expectedDomainId) return undefined;
   for (const topic of topics) {
     if (topic.domainId !== expectedDomainId) continue;
@@ -1758,16 +1788,129 @@ function eligibleLocalRecords(
   return { admitted, rejectedCount, diagnostics };
 }
 
-function ruleClaimsForRecords(records: AuthoritativeSourceRecord[]): Array<{ kind: 'RULE'; text: string; quote: string; recordId: string; citationUrl?: string }> {
+interface RuleClaimSelectionScope {
+  includeAcraDutySentence?: boolean;
+  issue?: ReconciledSemanticQuestionIssue;
+  topics?: SingaporeCoverageTopic[];
+  concepts?: RequestedQuestionConcept[];
+  originalQuery?: string;
+}
+
+function completeGstMotorCarThirdPartyQuote(sourceText: string): string | undefined {
+  return sourceText.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean)
+    .find(block => block.length <= 3_200 &&
+      getGstMotorCarInputTaxExceptionKinds(block).includes('THIRD_PARTY'));
+}
+
+function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleClaimSelectionScope = {}): Array<{ kind: 'RULE'; text: string; quote: string; recordId: string; citationUrl?: string }> {
   const claims: Array<{ kind: 'RULE'; text: string; quote: string; recordId: string; citationUrl?: string }> = [];
   for (const record of records) {
     const quoteCandidates = [...new Set([record.sourceText.trim(), ...record.sourceText
       .split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean)])];
-    for (const quote of quoteCandidates) claims.push({
+    if (scope.includeAcraDutySentence) {
+      for (const block of quoteCandidates) {
+        const firstSentence = block.match(/^(.+?[.!?])\s+/)?.[1];
+        if (firstSentence && isExactAcraAnnualReturnDutyParagraph(record.sourceText, firstSentence)) {
+          quoteCandidates.push(firstSentence);
+        }
+      }
+    }
+    if (scope.issue && scope.topics && scope.concepts && scope.originalQuery) {
+      if (scope.issue.population === 'INDIVIDUAL' && scope.issue.domain === 'IRAS_INCOME_TAX' &&
+          scope.issue.governingAuthorities.includes('IRAS')) {
+        const cpfTopic = scope.topics.find(topic => topic.id === INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID &&
+          topic.domainId === 'IRAS_INDIVIDUAL_TAX');
+        const requestedCpfConcepts = scope.concepts.some(concept =>
+          INDIVIDUAL_CPF_CASH_TOP_UP_CONCEPT_IDS.has(concept.id) && concept.topicIds.includes(INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID));
+        if (cpfTopic && requestedCpfConcepts && record.authority === 'IRAS' && record.domain === 'IRAS_TAX' &&
+            topicBoundToRecord(record, cpfTopic)) {
+          const eligibilityQuote = completeIrasCpfCashTopUpEligibilityQuote(record.sourceText);
+          if (eligibilityQuote) quoteCandidates.push(eligibilityQuote);
+          quoteCandidates.push(...completeIrasCpfCashTopUpLimitQuotes(record.sourceText));
+        }
+      }
+      const requestedMotorCarException = scope.concepts.some(concept => concept.id === 'gst_motor_car_input_tax_exceptions');
+      const motorCarTopic = scope.topics.find(topic =>
+        ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id) && topic.domainId === 'IRAS_GST');
+      if (scope.issue.governingAuthorities.includes('IRAS') && scope.issue.domain === 'IRAS_GST' &&
+          scope.issue.population === 'COMPANY' && requestedMotorCarException && motorCarTopic &&
+          record.authority === 'IRAS' && record.domain === 'IRAS_GST' && topicBoundToRecord(record, motorCarTopic)) {
+        const connectedPersonQuote = completeIrasGstMotorCarConnectedPersonExceptionQuote(record.sourceText);
+        const thirdPartyQuote = completeGstMotorCarThirdPartyQuote(record.sourceText);
+        if (connectedPersonQuote) quoteCandidates.push(connectedPersonQuote);
+        if (thirdPartyQuote) quoteCandidates.push(thirdPartyQuote);
+      }
+    }
+    for (const quote of new Set(quoteCandidates)) claims.push({
       kind: 'RULE', text: quote, quote, recordId: record.id
     });
   }
   return claims;
+}
+
+function isCpfCashTopUpLimitComponentQuote(record: AuthoritativeSourceRecord, quote: string): boolean {
+  return record.authority === 'IRAS' && record.domain === 'IRAS_TAX' &&
+    [...(record.tags || []), ...(record.relatedTopicIds || []), ...(record.sourceMapTopicIds || [])]
+      .includes(INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID) &&
+    completeIrasCpfCashTopUpLimitQuotes(record.sourceText).includes(quote);
+}
+
+function isGstMotorCarExceptionComponentQuote(
+  record: AuthoritativeSourceRecord,
+  quote: string,
+  kind: 'THIRD_PARTY' | 'CONNECTED_PERSON'
+): boolean {
+  const hasMotorCarTopic = [...(record.tags || []), ...(record.relatedTopicIds || []), ...(record.sourceMapTopicIds || [])]
+    .some(topicId => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId));
+  if (record.authority !== 'IRAS' || record.domain !== 'IRAS_GST' || !hasMotorCarTopic) return false;
+  if (kind === 'CONNECTED_PERSON') {
+    return completeIrasGstMotorCarConnectedPersonExceptionQuote(record.sourceText) === quote &&
+      getGstMotorCarInputTaxExceptionKinds(quote).includes(kind);
+  }
+  return record.sourceText.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean)
+    .some(block => block === quote && getGstMotorCarInputTaxExceptionKinds(block).includes(kind));
+}
+
+function hasCompleteVerifiedCpfCashTopUpLimitEvidence(
+  claims: VerifiedEvidenceClaim[],
+  records: AuthoritativeSourceRecord[],
+  topic: SingaporeCoverageTopic,
+  issue: ReconciledSemanticQuestionIssue,
+  concept: RequestedQuestionConcept,
+  originalQuery: string
+): boolean {
+  return records.some(record => {
+    if (record.authority !== 'IRAS' || record.domain !== 'IRAS_TAX' || !topicBoundToRecord(record, topic) ||
+        generalIrasRuleConceptSupport(record.sourceText, issue, [topic], [concept]) !== true) return false;
+    const completeQuotes = completeIrasCpfCashTopUpLimitQuotes(record.sourceText);
+    return completeQuotes.length === 2 && completeQuotes.every(quote =>
+      claims.some(claim => claim.recordId === record.id && claim.quote === quote &&
+        passesBoundedStatutoryAdvisorySupport(claim.quote, 'IRAS', issue, [topic], originalQuery)));
+  });
+}
+
+function hasCompleteVerifiedGstMotorCarExceptionEvidence(
+  claims: VerifiedEvidenceClaim[],
+  records: AuthoritativeSourceRecord[],
+  topic: SingaporeCoverageTopic,
+  issue: ReconciledSemanticQuestionIssue,
+  concept: RequestedQuestionConcept,
+  originalQuery: string
+): boolean {
+  return records.some(record => {
+    if (record.authority !== 'IRAS' || record.domain !== 'IRAS_GST' || !topicBoundToRecord(record, topic) ||
+        generalIrasRuleConceptSupport(record.sourceText, issue, [topic], [concept]) !== true) return false;
+    const connectedQuote = completeIrasGstMotorCarConnectedPersonExceptionQuote(record.sourceText);
+    const thirdPartyQuote = completeGstMotorCarThirdPartyQuote(record.sourceText);
+    if (!connectedQuote || !thirdPartyQuote) return false;
+    const connectedVerified = claims.some(claim => claim.recordId === record.id && claim.quote === connectedQuote &&
+      isGstMotorCarExceptionComponentQuote(record, claim.quote, 'CONNECTED_PERSON') &&
+      passesBoundedStatutoryAdvisorySupport(claim.quote, 'IRAS', issue, [topic], originalQuery));
+    const thirdPartyVerified = claims.some(claim => claim.recordId === record.id && claim.quote === thirdPartyQuote &&
+      isGstMotorCarExceptionComponentQuote(record, claim.quote, 'THIRD_PARTY') &&
+      passesBoundedStatutoryAdvisorySupport(claim.quote, 'IRAS', issue, [topic], originalQuery));
+    return connectedVerified && thirdPartyVerified;
+  });
 }
 
 function issueClaimCoverage(
@@ -1802,7 +1945,9 @@ function issueClaimCoverage(
       const supportsTopic = acraAnnualReturnDutyScope
         ? isExactAcraAnnualReturnDutyParagraph(record?.sourceText || '', claim.quote)
         : textSupportsTopic(claim.quote, topic, requireAcraDeadlineTable) &&
-          supportsIssueSubject(claim.quote, issue, topic, concepts, originalQuery);
+          supportsIssueSubject(claim.quote, issue, topic, concepts, originalQuery) ||
+          authority === 'IRAS' && concepts.some(concept => concept.topicIds.includes(topic.id) &&
+            generalIrasRuleConceptSupport(claim.quote, issue, [topic], [concept]) === true);
       return Boolean(record && passesBoundedStatutoryAdvisorySupport(claim.quote, authority, issue, topics, originalQuery) &&
         (topicBoundToRecord(record, topic) && (tableOwnsDeadlineIssue || supportsTopic) || momCanonicalAliasClaim));
     });
@@ -1815,6 +1960,14 @@ function issueClaimCoverage(
         const record = recordById.get(claim.recordId);
         return isGenericAcraAnnualReturnDutyConcept(concept) && record !== undefined &&
           isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote);
+      }
+      if (concept.id === 'cpf_cash_top_up_relief_limits') {
+        return topics.some(topic => topic.id === INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID &&
+          hasCompleteVerifiedCpfCashTopUpLimitEvidence(claims, records, topic, issue, concept, originalQuery));
+      }
+      if (concept.id === 'gst_motor_car_input_tax_exceptions') {
+        return topics.some(topic => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id) &&
+          hasCompleteVerifiedGstMotorCarExceptionEvidence(claims, records, topic, issue, concept, originalQuery));
       }
       const masDefinitionSupport = masCmsDefinitionSupport(claim.quote, issue, topics, originalQuery);
       if (isMasCmsDefinitionConcept(concept)) return masDefinitionSupport === true;
@@ -2128,7 +2281,13 @@ async function evaluateIssue(
   const suggestedClaims = providerResult.claims?.map(claim => ({
     kind: 'RULE', text: claim.text, quote: claim.quote, recordId: claim.recordId,
     ...(claim.canonicalUrl ? { citationUrl: claim.canonicalUrl } : {})
-  })) || ruleClaimsForRecords(admitted);
+  })) || ruleClaimsForRecords(admitted, {
+    includeAcraDutySentence: acraAnnualReturnDutyScope,
+    issue,
+    topics: evidenceTopics,
+    concepts,
+    originalQuery: query
+  });
   const verification = verifyEvidenceClaims(suggestedClaims, admitted, {
     missingFacts: [], targetDate, referenceDate,
     expectedAuthority: plan.authority === 'MAS' ? 'MAS' :
@@ -2160,6 +2319,13 @@ async function evaluateIssue(
       if (acraAnnualReturnDutyScope) {
         return isGenericAcraAnnualReturnDutyConcept(concept) &&
           supportsAcraAnnualReturnFilingRule(claim.quote);
+      }
+      if (concept.id === 'cpf_cash_top_up_relief_limits') {
+        return isCpfCashTopUpLimitComponentQuote(record, claim.quote);
+      }
+      if (concept.id === 'gst_motor_car_input_tax_exceptions') {
+        return isGstMotorCarExceptionComponentQuote(record, claim.quote, 'THIRD_PARTY') ||
+          isGstMotorCarExceptionComponentQuote(record, claim.quote, 'CONNECTED_PERSON');
       }
       const masDefinitionSupport = masCmsDefinitionSupport(claim.quote, issue, evidenceTopics, query);
       if (isMasCmsDefinitionConcept(concept)) return masDefinitionSupport === true;

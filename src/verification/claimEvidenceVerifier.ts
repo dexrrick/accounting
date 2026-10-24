@@ -213,21 +213,60 @@ export function completeIrasCpfCashTopUpLimitQuotes(sourceText: string): string[
     /\brecipients aged 55 years and above\b/i.test(block) &&
     /\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(block) &&
     /\b(?:full retirement sum|frs)\b/i.test(block));
-  if (saIndex < 0 || raIndex < 0) return [];
-
-  const lastAccountRowIndex = Math.max(saIndex, raIndex);
-  const tableEndMarkerIndex = blocks.findIndex((block, index) => index > lastAccountRowIndex &&
-    (/^to check your top[ -]?up limit\b/i.test(block) || /^for the yas? 20\d{2}\b/i.test(block)));
-  const tableEndMarkerInLastRow = /\bto check your top[ -]?up limit\b/i.test(blocks[lastAccountRowIndex]);
-  if (tableEndMarkerIndex < 0 && !tableEndMarkerInLastRow) return [];
-  const tableEnd = tableEndMarkerIndex >= 0 ? tableEndMarkerIndex - 1 : lastAccountRowIndex;
-  const tableText = blocks.slice(tableStart, tableEnd + 1).join(' ');
-  if (tableEnd < lastAccountRowIndex) return [];
-  if (!/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*sa savings\b/i.test(tableText) ||
-      !/\bamount withdrawn from sa for investments\b/i.test(tableText) ||
-      !/net sa savings withdrawn under cpf investment scheme\s*\(cpfis\)[^.!?]{0,180}investments that have not been completely disposed of/i.test(tableText) ||
-      !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*ra\b/i.test(tableText) ||
-      !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(tableText)) return [];
+  const hasCompleteInlineAccountRows = saIndex >= 0 && raIndex >= saIndex;
+  let lastAccountRowIndex: number;
+  let tableEnd: number;
+  let tableText: string;
+  if (hasCompleteInlineAccountRows) {
+    // Preserve the reviewed one-block layout exactly. The split-row branch
+    // below handles extracted tables whose cells and list items become separate
+    // source blocks.
+    lastAccountRowIndex = Math.max(saIndex, raIndex);
+    const tableEndMarkerIndex = blocks.findIndex((block, index) => index > lastAccountRowIndex &&
+      (/^to check your top[ -]?up limit\b/i.test(block) || /^for the yas? 20\d{2}\b/i.test(block)));
+    const tableEndMarkerInLastRow = /\bto check your top[ -]?up limit\b/i.test(blocks[lastAccountRowIndex]);
+    if (tableEndMarkerIndex < 0 && !tableEndMarkerInLastRow) return [];
+    tableEnd = tableEndMarkerIndex >= 0 ? tableEndMarkerIndex - 1 : lastAccountRowIndex;
+    if (tableEnd < lastAccountRowIndex) return [];
+    tableText = blocks.slice(tableStart, tableEnd + 1).join(' ');
+    if (!/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*sa savings\b/i.test(tableText) ||
+        !/\bamount withdrawn from sa for investments\b/i.test(tableText) ||
+        !/net sa savings withdrawn under cpf investment scheme\s*\(cpfis\)[^.!?]{0,180}investments that have not been completely disposed of/i.test(tableText) ||
+        !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*ra\b/i.test(tableText) ||
+        !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(tableText)) return [];
+  } else {
+    // Some official-page table extractors retain each recipient, condition,
+    // calculation and footnote as a separate paragraph. Require one ordered
+    // SA row and one ordered RA row, then validate their conditions separately
+    // so one row can never supply another row's missing qualification.
+    const endMarkerIndexes = blocks.flatMap((block, index) => index > tableHeaderIndex &&
+      /^to check your top[ -]?up limit\b/i.test(block) ? [index] : []);
+    if (endMarkerIndexes.length !== 1) return [];
+    const endMarkerIndex = endMarkerIndexes[0];
+    const saMarkerIndexes = blocks.flatMap((block, index) => index >= tableHeaderIndex && index < endMarkerIndex &&
+      /^for recipients below age 55\b/i.test(block) ? [index] : []);
+    const raMarkerIndexes = blocks.flatMap((block, index) => index >= tableHeaderIndex && index < endMarkerIndex &&
+      /^for recipients aged 55 years and above\b/i.test(block) ? [index] : []);
+    if (saMarkerIndexes.length !== 1 || raMarkerIndexes.length !== 1 ||
+        saMarkerIndexes[0] >= raMarkerIndexes[0]) return [];
+    const splitSaIndex = saMarkerIndexes[0];
+    const splitRaIndex = raMarkerIndexes[0];
+    lastAccountRowIndex = splitRaIndex;
+    tableEnd = endMarkerIndex - 1;
+    if (tableEnd < lastAccountRowIndex) return [];
+    const saRowText = blocks.slice(splitSaIndex, splitRaIndex).join(' ');
+    const raRowText = blocks.slice(splitRaIndex, tableEnd + 1).join(' ');
+    if (!/\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(saRowText) ||
+        !/\b(?:full retirement sum|frs)\b/i.test(saRowText) ||
+        !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*sa savings\b/i.test(saRowText) ||
+        !/\bamount withdrawn from sa for investments\b/i.test(saRowText) ||
+        !/net sa savings withdrawn under cpf investment scheme\s*\(cpfis\)[^.!?]{0,180}investments that have not been completely disposed of/i.test(saRowText) ||
+        !/\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(raRowText) ||
+        !/\b(?:full retirement sum|frs)\b/i.test(raRowText) ||
+        !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*ra\b/i.test(raRowText) ||
+        !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(raRowText)) return [];
+    tableText = blocks.slice(tableStart, tableEnd + 1).join(' ');
+  }
   if (!/\bage of recipients\b/i.test(blocks[tableHeaderIndex]) ||
       !/\blimit on cash top[ -]?up amount for computing tax relief\b/i.test(blocks[tableHeaderIndex]) ||
       !/\brecipients below age 55\b/i.test(tableText) ||
@@ -238,8 +277,9 @@ export function completeIrasCpfCashTopUpLimitQuotes(sourceText: string): string[
       !/\bmaximum allowed cash top[ -]?up\b/i.test(tableText)) return [];
   const mediSaveRows = [...tableText.matchAll(/\(b\)\s*Top-up to MediSave Account\s*\(MA\):[\s\S]*?(?=For recipients aged 55 years and above|To check your top[ -]?up limit|$)/gi)]
     .map(match => match[0]);
-  if (mediSaveRows.length !== 2 || mediSaveRows.some(row =>
-    !/\bBasic Healthcare Sum\s*\(BHS\)/i.test(row) ||
+  const tableDefinesBhs = /\bBasic Healthcare Sum\s*\(BHS\)/i.test(tableText);
+  if (!tableDefinesBhs || mediSaveRows.length !== 2 || mediSaveRows.some(row =>
+    !/(?:\bBasic Healthcare Sum\s*\(BHS\)|\bthe BHS\b)/i.test(row) ||
     !/\bself-employed person\s*\(SEP\)[^.!?]{0,120}must be up-to-date with their MediSave payable/i.test(row) ||
     !/\bmaximum allowed cash top[ -]?up:\s*BHS\s*[-–—]\s*MA balance before the top-up\b/i.test(row))) return [];
   let boundedTableEnd = tableEnd;
@@ -259,7 +299,31 @@ export function completeIrasGstMotorCarConnectedPersonExceptionQuote(sourceText:
     .split(/\r?\n[\t ]*\r?\n+/)
     .map(block => block.trim())
     .filter(Boolean);
-  const headingIndex = blocks.findIndex(block => /\bexpenses on motor car used by a connected person\b/i.test(block));
+  const legacyHeadingIndex = blocks.findIndex(block => /\bexpenses on motor car used by a connected person\b/i.test(block));
+  const currentHeadingIndex = blocks.findIndex(block => /^motor car used by a connected person\b/i.test(block));
+  if (legacyHeadingIndex < 0 && currentHeadingIndex >= 0) {
+    const headingIndex = currentHeadingIndex;
+    const ruleIndex = blocks.findIndex((block, index) => index > headingIndex &&
+      /\bfrom 1 jan(?:uary)? 2023\b/i.test(block) &&
+      /\bwhere a motor car is used by a connected person\b/i.test(block) &&
+      /\bgst incurred on the motor car expenses is generally not claimable\b/i.test(block) &&
+      /\ban exception applies only if you satisfy both of the following conditions\b/i.test(block) &&
+      /\bin addition to the conditions for claiming input tax\b/i.test(block));
+    const item1Index = blocks.findIndex((block, index) => index > ruleIndex &&
+      /^\s*•\s*you recover the motor car expenses from the connected person\b/i.test(block));
+    const item2Index = blocks.findIndex((block, index) => index > item1Index &&
+      /^\s*•\s*the recovery is not ancillary to (?:any primary supply made by you to the connected person|any primary supply you make to them)\b/i.test(block));
+    const recipientRestrictionIndex = blocks.findIndex((block, index) => index > item2Index &&
+      /^where the connected person is gst-registered, the input tax claim on the motor car expenses recovered by you is disallowed under regulation 27\b/i.test(block));
+    if (ruleIndex <= headingIndex || item1Index <= ruleIndex || item2Index <= item1Index ||
+        recipientRestrictionIndex <= item2Index ||
+        !/\brecover only a portion\b[^.!?;:]{0,100}\bonly claim input tax to the extent of the portion recovered\b/i.test(blocks[item1Index])) {
+      return undefined;
+    }
+    const currentQuote = blocks.slice(headingIndex, recipientRestrictionIndex + 1).join('\n\n');
+    return currentQuote.length <= 5_000 ? currentQuote : undefined;
+  }
+  const headingIndex = legacyHeadingIndex;
   if (headingIndex < 0) return undefined;
   const item1Index = blocks.findIndex((block, index) => index > headingIndex && /^\s*1[.)]\s+/m.test(block));
   const item2Index = blocks.findIndex((block, index) => index > item1Index && /^\s*2[.)]\s+/m.test(block));

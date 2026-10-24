@@ -747,6 +747,19 @@ function selectEvidenceOnlyQuotes(
   const topicCandidates: typeof selected = [];
   if (localIntent) {
     for (const concept of requestedConcepts) {
+      if (concept.id === 'cpf_cash_top_up_relief') {
+        // The complete eligibility passage starts with the source's introductory
+        // purpose paragraph. Reuse that exact qualified passage for the intro
+        // concept so two separately verified limit spans fit the source quote
+        // budget; do not discard or merge either limit quotation.
+        const eligibilityWithIntroduction = selected.find(item =>
+          item.requestedSupportConceptIds.includes('cpf_cash_top_up_relief_eligibility') &&
+          /\bcpf cash top[ -]?up relief is given to encourage\b/i.test(item.text));
+        if (eligibilityWithIntroduction) {
+          addCandidate(eligibilityWithIntroduction);
+          continue;
+        }
+      }
       if (concept.id === 'gst_motor_car_input_tax_exceptions') {
         const exceptionCandidates = selected.filter(item => item.requestedSupportConceptIds.includes(concept.id));
         const thirdParty = exceptionCandidates.find(item => getGstMotorCarInputTaxExceptionKinds(item.text).includes('THIRD_PARTY'));

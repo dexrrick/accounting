@@ -308,12 +308,19 @@ export function getGstMotorCarInputTaxExceptionKinds(sourceText: string): GstMot
   for (const paragraph of paragraphs) {
     if (paragraph.length > 3_200) continue;
     const sentences = sentenceParts(paragraph);
-    if (sentences.some(text =>
+    const legacyThirdParty = sentences.some(text =>
       /\b(?:from|on or after) 1 jan(?:uary)? 2023\b/i.test(text) &&
       /\bmotor.car costs? incurred for a third party\b|\bmotor car\b[^.!?;:]{0,65}\bused by a third party\b/i.test(text) &&
       /\bcost and running expenses of the motor car incurred\b/i.test(text) &&
       /\b(?:may|can)\s+(?:be\s+)?claimed\b|\bwill be allowed\b[^.!?;:]{0,55}\bclaim(?:s)?\b/i.test(text) &&
-      /\b(?:ordinary )?conditions for claiming input tax\b|\bconditions for input tax claim\b/i.test(text))) {
+      /\b(?:ordinary )?conditions for claiming input tax\b|\bconditions for input tax claim\b/i.test(text));
+    const currentThirdParty = sentences.some(text =>
+      /\bfrom 1 jan(?:uary)? 2023\b/i.test(text) &&
+      /\byou can claim input tax on the cost and running expenses of a motor car used by a third party\b/i.test(text) &&
+      /\bif you meet the conditions for claiming input tax\b/i.test(text)) &&
+      sentences.some(text =>
+        /^a third party does not include you or your employees, or a connected person\b/i.test(text));
+    if (legacyThirdParty || currentThirdParty) {
       kinds.add('THIRD_PARTY');
     }
   }
@@ -328,6 +335,18 @@ export function getGstMotorCarInputTaxExceptionKinds(sourceText: string): GstMot
         /\b1[.)]\s*you recover the motor car expenses from the connected person\b/i.test(boundedPassage) &&
         /\brecover only a portion\b[^.!?;:]{0,100}\bclaim input tax to the extent of the portion recovered\b/i.test(boundedPassage) &&
         /\b2[.)]\s*the recovery is not ancillary to any primary supply made by you to the connected person\b/i.test(boundedPassage)) {
+      kinds.add('CONNECTED_PERSON');
+    }
+    const currentConnectedPersonPassage = paragraphs.slice(index, index + 5).join(' ');
+    if (currentConnectedPersonPassage.length <= 3_200 &&
+        /^motor car used by a connected person\b/i.test(paragraphs[index]) &&
+        /\bfrom 1 jan(?:uary)? 2023\b[^.!?;:]{0,180}\bwhere a motor car is used by a connected person\b/i.test(currentConnectedPersonPassage) &&
+        /\bgst incurred on the motor car expenses is generally not claimable\b/i.test(currentConnectedPersonPassage) &&
+        /\ban exception applies only if you satisfy both of the following conditions\b/i.test(currentConnectedPersonPassage) &&
+        /\byou recover the motor car expenses from the connected person\b/i.test(currentConnectedPersonPassage) &&
+        /\brecover only a portion\b[^.!?;:]{0,100}\bonly claim input tax to the extent of the portion recovered\b/i.test(currentConnectedPersonPassage) &&
+        /\bthe recovery is not ancillary to (?:any primary supply made by you to the connected person|any primary supply you make to them)\b/i.test(currentConnectedPersonPassage) &&
+        /\bwhere the connected person is gst-registered, the input tax claim on the motor car expenses recovered by you is disallowed under regulation 27\b/i.test(currentConnectedPersonPassage)) {
       kinds.add('CONNECTED_PERSON');
     }
   }
