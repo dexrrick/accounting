@@ -194,6 +194,215 @@ assert.equal(check({
   subject: gstSubject, concepts: [gstConcept]
 }), false, 'An isolated rule restricting specified blocked claims does not establish general input-tax recovery conditions.');
 
+const residencyTopicIds = ['iras-corporate-tax-residency'];
+const residencyRuleConcept = {
+  id: 'company_tax_residency_rule', label: 'Company tax residency rule',
+  terms: ['control and management', 'Singapore tax resident'], topicIds: residencyTopicIds
+};
+const residencyIncorporationConcept = {
+  id: 'company_tax_residency_incorporation', label: 'Company tax residency and incorporation',
+  terms: ['place of incorporation', 'tax residency'], topicIds: residencyTopicIds
+};
+assert.equal(check({
+  sourceText: 'Your company is a tax resident of Singapore when its control and management is exercised in Singapore.',
+  domainId: 'IRAS_CORPORATE_TAX', topicIds: residencyTopicIds,
+  subject: 'Singapore company tax residency rule', concepts: [residencyRuleConcept]
+}), true, 'The official control-and-management criterion supports the company tax-residency rule.');
+assert.equal(check({
+  sourceText: 'The board meets in Singapore and manages the business from Singapore.',
+  domainId: 'IRAS_CORPORATE_TAX', topicIds: residencyTopicIds,
+  subject: 'Singapore company tax residency rule', concepts: [residencyRuleConcept]
+}), false, 'Company location and governance wording without a tax-residency criterion is not a residency rule.');
+assert.equal(check({
+  sourceText: 'The place of incorporation of a company is not necessarily indicative of the tax residency of a company.',
+  domainId: 'IRAS_CORPORATE_TAX', topicIds: residencyTopicIds,
+  subject: 'Singapore company tax residency rule', concepts: [residencyIncorporationConcept]
+}), true, 'The incorporation proposition requires the official qualification that incorporation alone is not indicative.');
+assert.equal(check({
+  sourceText: 'A company is incorporated in Singapore.',
+  domainId: 'IRAS_CORPORATE_TAX', topicIds: residencyTopicIds,
+  subject: 'Singapore company tax residency rule', concepts: [residencyIncorporationConcept]
+}), false, 'Incorporation location alone does not establish the requested tax-residency qualification.');
+assert.equal(check({
+  sourceText: 'Your company is a tax resident of Singapore when its control and management is exercised in Singapore.',
+  domainId: 'IRAS_CORPORATE_TAX', topicIds: residencyTopicIds,
+  subject: 'Singapore company tax residency rule', concepts: [residencyRuleConcept], population: 'UNKNOWN'
+}), undefined, 'General IRAS residency support remains population-scoped and does not open for UNKNOWN.');
+assert.equal(check({
+  sourceText: 'Your company is a tax resident of Singapore when its control and management is exercised in Singapore.',
+  domainId: 'IRAS_CORPORATE_TAX', topicIds: residencyTopicIds,
+  subject: 'Singapore company tax residency rule',
+  concepts: [asConcept('Singapore company tax residency rule', ['control and management test'], residencyTopicIds)]
+}), undefined, 'An unknown residency concept cannot inherit the canonical control-and-management proof.');
+assert.equal(check({
+  sourceText: 'Your company is a tax resident of Singapore when its control and management is exercised in Singapore.',
+  domainId: 'IRAS_CORPORATE_TAX', topicIds: residencyTopicIds,
+  subject: 'Singapore company tax residency rule'
+}), undefined, 'Conceptless residency selection remains in the bounded legacy subject path.');
+
+const cpfReliefTopicIds = ['iras-individual-cpf-cash-top-up-relief'];
+const cpfReliefIntroConcept = {
+  id: 'cpf_cash_top_up_relief', label: 'CPF cash top-up tax relief', terms: ['CPF cash top-up relief'], topicIds: cpfReliefTopicIds
+};
+const cpfReliefEligibilityConcept = {
+  id: 'cpf_cash_top_up_relief_eligibility', label: 'Eligibility for CPF cash top-up tax relief',
+  terms: ['Singapore Citizen Permanent Resident', 'cash top-ups', 'RSTU', 'MRSS', 'MMSS'], topicIds: cpfReliefTopicIds
+};
+const cpfReliefLimitsConcept = {
+  id: 'cpf_cash_top_up_relief_limits', label: 'Limits on CPF cash top-up tax relief',
+  terms: ['annual relief cap', 'Full Retirement Sum', 'Special Account', 'Retirement Account'], topicIds: cpfReliefTopicIds
+};
+const cpfReliefIntro = 'CPF Cash Top-up Relief is given to encourage Singaporeans and Permanent Residents to set aside money for retirement needs either in their own CPF accounts or those of family members.';
+const cpfEligibilitySource = [
+  cpfReliefIntro,
+  'To qualify for the tax relief for Year of Assessment (YA) 2026, you must:',
+  '1. be a Singapore Citizen/Permanent Resident; and',
+  '2. have made cash top-ups in 2025 under the CPF Retirement Sum Topping-Up Scheme ("RSTU").',
+  'CPF cash top-ups that attract matching grants under the Matched Retirement Savings Scheme (MRSS) will not be eligible for CPF Cash Top-up Relief from YA 2026 (i.e. CPF cash top-ups received from 1 Jan 2025).',
+  'CPF cash top-ups to eligible members’ MediSave Accounts that attract the Matched MediSave Scheme (MMSS) matching grant will not qualify for CPF Cash Top-up Relief from YA 2027, for cash top-ups made from 1 Jan 2026.'
+].join('\n\n');
+assert.equal(check({
+  sourceText: cpfReliefIntro, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief', concepts: [cpfReliefIntroConcept], population: 'INDIVIDUAL'
+}), true, 'The bounded introduction supports only the general CPF cash-top-up relief concept.');
+assert.equal(check({
+  sourceText: cpfReliefIntro, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'CPF cash top-up tax relief interaction with foreign pension offsets',
+  concepts: [asConcept('Foreign pension offsets', ['CPF cash top-up relief'], cpfReliefTopicIds)], population: 'INDIVIDUAL'
+}), undefined, 'An unknown CPF qualifier cannot inherit the canonical relief-introduction proof.');
+assert.equal(check({
+  sourceText: cpfReliefIntro, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief', population: 'INDIVIDUAL'
+}), undefined, 'Conceptless CPF topic selection does not invoke the canonical concept proof helper.');
+assert.equal(check({
+  sourceText: cpfReliefIntro, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief eligibility', concepts: [cpfReliefEligibilityConcept], population: 'INDIVIDUAL'
+}), false, 'The introduction alone cannot satisfy the requested eligibility proposition.');
+assert.equal(check({
+  sourceText: cpfEligibilitySource, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief eligibility', concepts: [cpfReliefEligibilityConcept], population: 'INDIVIDUAL'
+}), true, 'Eligibility requires both numbered qualifying conditions and the MRSS/MMSS exclusions.');
+assert.equal(check({
+  sourceText: cpfEligibilitySource.replace(/\n\nCPF cash top-ups to eligible members[\s\S]*$/, ''),
+  domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief eligibility', concepts: [cpfReliefEligibilityConcept], population: 'INDIVIDUAL'
+}), false, 'MRSS text without the separate MMSS matching-grant exclusion is incomplete eligibility evidence.');
+const cpfLimitSource = [
+  'Individuals may continue to enjoy tax relief of up to $16,000 (maximum $8,000 for self and maximum $8,000 for family members) a year for eligible CPF cash top-ups that do not attract MRSS and/or MMSS grants.',
+  'For each YA, a personal income tax relief cap of $80,000 applies to the total amount of all tax reliefs claimed (including any relief on cash top-ups made).',
+  'For recipients below age 55 | Top-up to Special Account (SA) under RSTU scheme is capped at the current year’s Full Retirement Sum (FRS). Maximum allowed cash top-up: FRS – SA savings – amount withdrawn from SA for investments.',
+  'For recipients aged 55 years and above | Top-up to Retirement Account (RA) under RSTU scheme is capped at the current year’s Full Retirement Sum (FRS). Maximum allowed cash top-up: FRS – RA savings.'
+].join('\n\n');
+assert.equal(check({
+  sourceText: cpfReliefIntro, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief limits', concepts: [cpfReliefLimitsConcept], population: 'INDIVIDUAL'
+}), false, 'The relief introduction cannot cover annual or recipient-account limits.');
+assert.equal(check({
+  sourceText: cpfLimitSource, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief limits', concepts: [cpfReliefLimitsConcept], population: 'INDIVIDUAL'
+}), true, 'Limits require both annual caps and the own-SA/own-RA FRS-based conditions.');
+const cpfLimitSplitExclusions = cpfLimitSource.replace(
+  'do not attract MRSS and/or MMSS grants.',
+  'do not attract MRSS matching grants. Eligible top-ups must not attract MMSS matching grants.'
+);
+assert.equal(check({
+  sourceText: cpfLimitSplitExclusions, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief limits', concepts: [cpfReliefLimitsConcept], population: 'INDIVIDUAL'
+}), true, 'Separate MRSS and MMSS exclusion wording is sufficient only when both are present.');
+for (const [scheme, omittedScheme] of [['MRSS', 'MMSS'], ['MMSS', 'MRSS']]) {
+  const missingGrantExclusion = cpfLimitSplitExclusions.replace(
+    new RegExp(`(?:Eligible top-ups must not attract\\s+)?${omittedScheme} matching grants?\\.?`, 'gi'), ''
+  );
+  assert.equal(check({
+    sourceText: missingGrantExclusion, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+    subject: 'Individual CPF cash top-up relief limits', concepts: [cpfReliefLimitsConcept], population: 'INDIVIDUAL'
+  }), false, `The ${scheme} exclusion alone cannot substitute for the separate ${omittedScheme} exclusion.`);
+}
+assert.equal(check({
+  sourceText: cpfLimitSource.replace(/\n\nFor recipients aged 55 years and above[\s\S]*$/, ''),
+  domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+  subject: 'Individual CPF cash top-up relief limits', concepts: [cpfReliefLimitsConcept], population: 'INDIVIDUAL'
+}), false, 'The under-55 SA limit alone cannot cover the separate age-55-and-above RA limit.');
+
+for (const population of ['INDIVIDUAL', 'EMPLOYEE']) {
+  const scope = {
+    domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+    subject: 'CPF cash top-up relief eligibility and limits', population
+  };
+  for (const [concept, sourceText] of [
+    [cpfReliefEligibilityConcept, 'CPF cash top-up relief eligibility conditions apply.'],
+    [cpfReliefEligibilityConcept, cpfReliefIntro],
+    [cpfReliefEligibilityConcept, cpfEligibilitySource.split('\n\n').slice(0, -1).join('\n\n')],
+    [cpfReliefLimitsConcept, cpfReliefIntro]
+  ]) {
+    assert.equal(matchesRequestedQuestionConcept(sourceText, concept, scope), false,
+      `${population} scope requires substantive support instead of a generic keyword fallback.`);
+  }
+  assert.equal(check({ ...scope, sourceText: cpfEligibilitySource, concepts: [cpfReliefEligibilityConcept] }), true,
+    `${population} scope accepts the complete eligibility provision without changing the population.`);
+  assert.equal(check({ ...scope, sourceText: cpfLimitSource, concepts: [cpfReliefLimitsConcept] }), true,
+    `${population} scope accepts the same complete limits provision.`);
+}
+for (const population of ['UNKNOWN', 'COMPANY', 'EMPLOYER']) {
+  assert.equal(matchesRequestedQuestionConcept('CPF cash top-up relief eligibility conditions apply.',
+    cpfReliefEligibilityConcept, { domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: cpfReliefTopicIds,
+      subject: 'CPF cash top-up relief eligibility', population }), false,
+  `${population} cannot bypass recognized personal-relief scope through keyword matching.`);
+}
+
+const motorCarTopicIds = ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'];
+const motorCarRestrictionConcept = {
+  id: 'gst_blocked_motor_car_input_tax', label: 'Blocked motor-car input tax',
+  terms: ['motor car', 'GST input tax restriction'], topicIds: motorCarTopicIds
+};
+const motorCarExceptionsConcept = {
+  id: 'gst_motor_car_input_tax_exceptions', label: 'GST motor-car input-tax exceptions',
+  terms: ['third party', 'connected person'], topicIds: motorCarTopicIds
+};
+const thirdPartyMotorCar = 'Expenses on motor car used by a third party | Yes, from 1 Jan 2023, where you incur expenses on a motor car that is used by a third party, you will be allowed input tax claims on the cost and running expenses of the motor car incurred, if the conditions for claiming input tax are met.';
+const connectedPersonMotorCar = [
+  'Expenses on motor car used by a connected person | No, from 1 Jan 2023, where you incur expenses on a motor car used by a person connected to you (e.g. your subsidiary), you cannot claim input tax on the cost and running expenses of the motor car, unless you satisfy both of the following conditions (in addition to the conditions for claiming input tax):',
+  '1. You recover the motor car expenses from the connected person. Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and.',
+  '2. The recovery is not ancillary to any primary supply made by you to the connected person.'
+].join('\n\n');
+assert.equal(check({
+  sourceText: 'You generally cannot claim the GST incurred on the purchase and running expenses of motor cars, such as petrol and parking charges.',
+  domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
+  subject: 'GST input tax claimability on private passenger motor car purchase', concepts: [motorCarRestrictionConcept]
+}), true, 'Motor-car restriction matching takes precedence over generic GST claim/recovery wording.');
+assert.equal(check({
+  sourceText: 'You generally cannot claim the GST incurred on the purchase and running expenses of motor cars, such as petrol and parking charges.',
+  domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
+  subject: 'GST input tax claimability on private passenger motor car purchase',
+  concepts: [asConcept('GST motor-car input-tax interaction with foreign pension offsets', ['blocked motor-car input tax'], motorCarTopicIds)]
+}), undefined, 'An unknown motor-car qualifier cannot inherit the canonical restriction proof.');
+assert.equal(check({
+  sourceText: 'You generally cannot claim the GST incurred on the purchase and running expenses of motor cars, such as petrol and parking charges.',
+  domainId: 'IRAS_GST', topicIds: ['iras-gst-motor-vehicles'],
+  subject: 'GST input tax claimability on private passenger motor car purchase'
+}), undefined, 'Conceptless motor-car topic selection does not invoke the canonical concept proof helper.');
+assert.equal(check({
+  sourceText: `${thirdPartyMotorCar}\n\n${connectedPersonMotorCar}`,
+  domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
+  subject: 'GST input tax claimability on private passenger motor car purchase', concepts: [motorCarExceptionsConcept]
+}), true, 'The exceptions concept requires both the third-party provision and complete connected-person conditions.');
+for (const incompleteMotorCarExceptions of [
+  'The motor-car exception is cross-referenced in Regulation 25(1).',
+  thirdPartyMotorCar,
+  connectedPersonMotorCar.replace('Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and.', ''),
+  connectedPersonMotorCar.replace('2. The recovery is not ancillary to any primary supply made by you to the connected person.', '')
+]) {
+  assert.equal(check({
+    sourceText: incompleteMotorCarExceptions, domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
+    subject: 'GST input tax claimability on private passenger motor car purchase', concepts: [motorCarExceptionsConcept]
+  }), false, 'A cross-reference, one exception, or a connected-person omission cannot cover all requested motor-car exceptions.');
+}
+assert.equal(check({
+  sourceText: `${thirdPartyMotorCar}\n\n${connectedPersonMotorCar}`,
+  domainId: 'IRAS_GST', topicIds: motorCarTopicIds,
+  subject: 'GST input tax claimability on private passenger motor car purchase', concepts: [motorCarExceptionsConcept], population: 'UNKNOWN'
+}), undefined, 'IRAS motor-car general-rule matching remains scoped to company questions.');
+
 for (const extra of ['treaty', 'foreign tax credit', 'exemption conditions', 'tax outcome', 'filing', 'tax rates', 'blocked claim', 'specific eligibility']) {
   const broaderConcept = asConcept(gstSubject, [extra], gstCase.requiredTopicIds);
   assert.equal(check({

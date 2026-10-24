@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { buildAuthorityWorkstreams, planAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
-import { getRequestedQuestionConcepts } from '../../src/services/semanticQuestionUnderstanding.ts';
+import { getRequestedQuestionConcepts, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { matchesRequestedQuestionConcept } from '../../src/retrieval/evidenceQualityGate.ts';
 import {
   isAcraAnnualReturnDeadlineIssue,
@@ -477,6 +477,49 @@ assert.equal(irasResult.workstreams[0].evidenceStatus, 'VERIFIED');
 assert.deepEqual(irasResult.workstreams[0].sources.map(record => record.id), ['ITA_SEC14_GENERAL_DEDUCTION']);
 assert.equal(irasResult.workstreams[0].verifiedClaims[0].supportKind, 'EXACT_SOURCE_QUOTE');
 
+// Exercise the built-in IRAS provider through grounding and rendering with a
+// validated issue-local rule child. The independent CPF sibling has no source,
+// so the IRAS answer cannot mark the complete mixed request as verified.
+const mixedRuleQuery = 'Explain the Section 14 rule for outgoings and expenses wholly and exclusively incurred in production of income. Separately, explain the CPF ordinary wage monthly ceiling.';
+const mixedIrasIssue = {
+  subject: 'outgoings and expenses wholly and exclusively incurred in production of income under Section 14',
+  population: 'COMPANY', domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], contextualAuthorities: [],
+  operation: 'EXPLAIN_RULE', mappedTopicIds: ['cit_section_14'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96
+};
+const mixedCpfIssue = {
+  subject: 'CPF ordinary wage monthly ceiling', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
+  governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+  mappedTopicIds: ['cpf_wage_ceiling'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.96
+};
+const mixedRuleInterpretation = validateSemanticQuestionInterpretation({
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['IRAS', 'CPF'], contextualAuthorities: [],
+  domain: 'UNKNOWN', population: 'UNKNOWN', primarySubject: 'corporate income tax and CPF ordinary wage rules',
+  concepts: [
+    { concept: 'outgoings and expenses wholly and exclusively incurred in production of income', role: 'PRIMARY' },
+    { concept: 'CPF ordinary wage monthly ceiling', role: 'RELATED' }
+  ], requestedOperation: 'OTHER', factsExplicitlyProvided: [], confidence: 0.96,
+  issues: [mixedIrasIssue, mixedCpfIssue]
+}, mixedRuleQuery);
+assert.ok(mixedRuleInterpretation, 'The mixed EXPLAIN_RULE interpretation validates against the original query.');
+assert.equal(mixedRuleInterpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE');
+const mixedRuleIssues = mixedRuleInterpretation.issues.map((semanticIssue, index) => ({
+  ...semanticIssue, id: index === 0 ? 'mixed-rule-iras' : 'mixed-rule-cpf', status: 'MAPPED'
+}));
+const mixedRuleResult = await buildAuthorityWorkstreams(mixedRuleQuery, issuePlan(mixedRuleIssues), {
+  questionUnderstanding: { mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', interpretation: mixedRuleInterpretation },
+  retriever: { retrieveSources: async options => options.authorities?.includes('IRAS') ? [section14] : [] },
+  referenceDate
+});
+const mixedRuleIras = mixedRuleResult.workstreams.find(stream => stream.authority === 'IRAS');
+const mixedRuleCpf = mixedRuleResult.workstreams.find(stream => stream.authority === 'CPF');
+assert.equal(mixedRuleIras.issues[0].evidenceStatus, 'VERIFIED',
+  'The default IRAS provider passes its validated issue-local general-rule intent through grounding and rendering.');
+assert.equal(mixedRuleIras.issues[0].verifiedClaims[0].recordId, section14.id);
+assert.equal(mixedRuleCpf.issues[0].evidenceStatus, 'INSUFFICIENT',
+  'The unrelated CPF child remains incomplete when its provider returns no supporting source.');
+assert.equal(mixedRuleResult.status, 'INSUFFICIENT',
+  'A rendered issue-local IRAS success does not mark the original mixed question complete.');
+
 // A routing-only umbrella topic stays in IRAS retrieval scope, but does not
 // become an additional evidence requirement beside a mapped relief topic.
 const syntheticCpfReliefText = 'TEST-ONLY SYNTHETIC EVIDENCE: Employees may claim CPF relief for their compulsory CPF contributions. This test fixture describes CPF relief for employees.';
@@ -593,6 +636,156 @@ for (const [name, candidate] of [
   assert.equal(rejected.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT', `${name} must be rejected.`);
   assert.equal(rejected.workstreams[0].sources.length, 0, `${name} must not appear as a source.`);
 }
+
+const diagnosticTrace = {
+  path: 'DISCOVERED_SOURCE', sourceMapIds: [], selectedRecordIds: [cpfCeiling.id],
+  finalVerifiedUrls: [cpfCeiling.officialSourceUrl], candidateOnly: true,
+  attempts: [{ topicId: 'cpf_wage_ceiling', fetchStatus: 'SUCCESS', finalUrl: cpfCeiling.officialSourceUrl,
+    pageTitle: cpfCeiling.documentTitle, titleMatched: true, contentMatched: true }]
+};
+async function runAdmissionDiagnostic(diagnosticIssue, candidate, evidenceQualityTrace) {
+  const result = await buildAuthorityWorkstreams(
+    'Explain the CPF ordinary wage monthly ceiling in 2026.', issuePlan([diagnosticIssue]),
+    { providers: { CPF: provider('CPF', async () => ({ candidates: [candidate], claims: [exactClaim(candidate)], evidenceQualityTrace })) }, referenceDate }
+  );
+  return result.workstreams[0].issues[0].admissionDiagnostics;
+}
+const untracedLiveCandidate = {
+  ...cpfCeiling, id: 'TEST_UNTRACED_LIVE_CPF_CANDIDATE', provenance: 'LIVE_EXTERNAL',
+  sourceStatus: 'NEEDS_REVIEW', lifecycleState: 'CANDIDATE', extractionStatus: 'PARTIAL',
+  verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED', sourceAuthority: 'CPF',
+  canonicalSourceUrl: cpfCeiling.officialSourceUrl, urlVerificationStatus: 'VERIFIED',
+  documentHash: 'a'.repeat(64),
+  retrievedAt: '2025-01-01T00:00:00.000Z'
+};
+const provenanceDiagnostics = await runAdmissionDiagnostic(issue('diag-provenance'), untracedLiveCandidate, undefined);
+assert.equal(provenanceDiagnostics.retrievalTraceStatus, 'UNAVAILABLE');
+assert.equal(provenanceDiagnostics.candidates[0].recordId, untracedLiveCandidate.id);
+assert.equal(provenanceDiagnostics.candidates[0].documentHash, untracedLiveCandidate.documentHash);
+assert.equal(provenanceDiagnostics.candidates[0].firstFailedPredicate, 'provenance');
+assert.equal(provenanceDiagnostics.candidates[0].predicates.find(item => item.predicate === 'provenance').passed, false);
+assert.equal(provenanceDiagnostics.candidates[0].provenancePaths.liveExternal.attempted, true);
+assert.equal(provenanceDiagnostics.candidates[0].provenancePaths.liveExternal.firstFailedPredicate, 'selectedRecordId');
+assert.equal(provenanceDiagnostics.candidates[0].provenancePaths.liveExternal.predicates.find(item => item.predicate === 'sourceAuthority').passed, true);
+assert.equal(provenanceDiagnostics.candidates[0].provenancePaths.managedDocument.attempted, false,
+  'A missing live retrieval receipt does not report a managed-document failure on the live path.');
+assert.equal(JSON.stringify(provenanceDiagnostics).includes(untracedLiveCandidate.sourceText), false,
+  'Candidate diagnostics retain identifiers and admission outcomes without copying candidate bodies.');
+
+const acceptedLiveCandidate = { ...untracedLiveCandidate, id: cpfCeiling.id };
+const goodLiveTrace = {
+  ...diagnosticTrace,
+  selectedRecordIds: [acceptedLiveCandidate.id],
+  finalVerifiedUrls: [acceptedLiveCandidate.officialSourceUrl],
+  attempts: [{ topicId: 'cpf_wage_ceiling', fetchStatus: 'SUCCESS', finalUrl: acceptedLiveCandidate.officialSourceUrl,
+    pageTitle: acceptedLiveCandidate.documentTitle, titleMatched: true, contentMatched: true }]
+};
+const acceptedLiveDiagnostics = await runAdmissionDiagnostic(issue('diag-live-accepted'), acceptedLiveCandidate, goodLiveTrace);
+assert.equal(acceptedLiveDiagnostics.candidates[0].admitted, true,
+  `A complete current live-fetch trace satisfies the unchanged live-provenance OR path: ${JSON.stringify(acceptedLiveDiagnostics.candidates[0])}`);
+assert.equal(acceptedLiveDiagnostics.candidates[0].provenancePaths.liveExternal.admitted, true);
+assert.deepEqual(acceptedLiveDiagnostics.candidates[0].provenancePaths.liveExternal.predicates.map(item => item.predicate), [
+  'officialDiscoveryAuthority', 'lifecycleState', 'sourceStatus', 'extractionStatus', 'verificationMethod',
+  'sourceAuthority', 'selectedRecordId', 'finalVerifiedUrl', 'successfulTitleContentFetch'
+]);
+assert.equal(acceptedLiveDiagnostics.candidates[0].provenancePaths.liveExternal.predicates.every(item => item.passed), true,
+  'The diagnostic exposes every evaluated live-provenance check.');
+
+const nonstandardOptionalTrace = {
+  ...goodLiveTrace,
+  path: 'UNRECOGNIZED_PROVIDER_PATH',
+  pageTitle: 42
+};
+const optionalMetadataDiagnostics = await runAdmissionDiagnostic(issue('diag-optional-metadata'),
+  acceptedLiveCandidate, nonstandardOptionalTrace);
+assert.equal(optionalMetadataDiagnostics.retrievalTraceStatus, 'AVAILABLE',
+  'Nonstandard optional trace metadata does not revoke valid admission-critical provenance.');
+assert.equal(optionalMetadataDiagnostics.retrievalTraceOptionalMetadataStatus, 'INVALID',
+  'Nonstandard optional trace metadata remains visible as a diagnostic quality issue.');
+assert.equal(optionalMetadataDiagnostics.candidates[0].admitted, true,
+  'Optional metadata validation does not alter original current-fetch eligibility.');
+assert.deepEqual(optionalMetadataDiagnostics.retrievalEvidenceQualityTrace, nonstandardOptionalTrace,
+  'The original trace, including optional metadata, remains available for diagnosis.');
+
+const invalidTraceDiagnostics = await runAdmissionDiagnostic(issue('diag-invalid-trace'), untracedLiveCandidate, {
+  selectedRecordIds: [untracedLiveCandidate.id],
+  finalVerifiedUrls: [untracedLiveCandidate.officialSourceUrl],
+  attempts: [{ topicId: 'cpf_wage_ceiling', fetchStatus: 'SUCCESS', finalUrl: untracedLiveCandidate.officialSourceUrl,
+    titleMatched: true, contentMatched: 'true' }]
+});
+assert.equal(invalidTraceDiagnostics.retrievalTraceStatus, 'INVALID',
+  'Malformed admission-critical attempt fields are reported without reconstructing provenance.');
+assert.equal(invalidTraceDiagnostics.candidates[0].admitted, false);
+assert.equal(invalidTraceDiagnostics.candidates[0].provenancePaths.liveExternal.firstFailedPredicate, 'selectedRecordId');
+
+const malformedFetchAttempt = {
+  ...goodLiveTrace,
+  attempts: [{ ...goodLiveTrace.attempts[0], contentMatched: false }]
+};
+const malformedFetchDiagnostics = await runAdmissionDiagnostic(issue('diag-malformed-fetch'),
+  acceptedLiveCandidate, malformedFetchAttempt);
+assert.equal(malformedFetchDiagnostics.candidates[0].provenancePaths.liveExternal.firstFailedPredicate, 'successfulTitleContentFetch',
+  'An admission-critical failed content check is the live path failure, not an unrelated managed rejection.');
+assert.equal(malformedFetchDiagnostics.candidates[0].provenancePaths.managedDocument.attempted, false);
+
+const managedCmsCandidate = {
+  ...cpfCeiling,
+  id: 'MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK',
+  authority: 'MAS', authorityName: 'Monetary Authority of Singapore', sourceAuthority: 'MAS',
+  sourcePublisher: 'Monetary Authority of Singapore (MAS)',
+  legalOrStandardInstrument: 'Securities and Futures Act 2001',
+  documentTitle: 'Capital Markets Services Licence | Monetary Authority of Singapore',
+  sourceText: 'If your company wishes to conduct regulated activities under the SFA, it must hold a CMS licence.',
+  officialSourceUrl: 'https://www.mas.gov.sg/regulation/capital-markets-services/capital-markets-services-licence',
+  canonicalSourceUrl: 'https://www.mas.gov.sg/regulation/capital-markets-services/capital-markets-services-licence',
+  domain: 'MAS_FUNDS', jurisdiction: 'Singapore', tags: ['mas-cms-licence'],
+  relatedTopicIds: ['mas-cms-licence'], sourceMapTopicIds: [], retrievalHints: [],
+  sourceStatus: 'NEEDS_REVIEW', provenance: 'LIVE_PATCH', lifecycleState: 'CANDIDATE',
+  extractionStatus: 'PARTIAL', verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
+  documentAdmissionRequired: true, recordRole: 'EVIDENCE', groundingEligible: true
+};
+const managedCmsDiagnosticsResult = await buildAuthorityWorkstreams(
+  'When is a Capital Markets Services Licence generally required under MAS guidance?',
+  issuePlan([issue('diag-managed-cms', {
+    subject: 'Capital Markets Services Licence general requirement', population: 'UNKNOWN', domain: 'MAS_FUNDS',
+    governingAuthorities: ['MAS'], mappedTopicIds: ['mas-cms-licence']
+  })]),
+  { referenceDate, providers: { MAS: provider('MAS', async () => ({
+    candidates: [managedCmsCandidate], claims: [exactClaim(managedCmsCandidate)]
+  })) } }
+);
+const managedCmsCandidateDiagnostics = managedCmsDiagnosticsResult.workstreams[0].issues[0].admissionDiagnostics.candidates[0];
+assert.equal(managedCmsCandidateDiagnostics.provenancePaths.managedDocument.attempted, true);
+assert.equal(managedCmsCandidateDiagnostics.provenancePaths.managedDocument.admissionRequired, true);
+assert.equal(managedCmsCandidateDiagnostics.provenancePaths.managedDocument.admitted, false);
+assert.equal(managedCmsCandidateDiagnostics.provenancePaths.managedDocument.firstFailedPredicate, 'admissionOutcome');
+assert.equal(managedCmsCandidateDiagnostics.provenancePaths.managedDocument.admissionReason,
+  'DOCUMENT_VERSION_NOT_EXPLICITLY_APPROVED_AND_ACTIVE',
+  'Managed-document diagnostics retain the admission result and its bounded rejection reason.');
+
+const topicDiagnostics = await runAdmissionDiagnostic(issue('diag-topic', {
+  subject: 'ordinary wages definition for CPF contributions', mappedTopicIds: ['cpf-ordinary-wages']
+}), cpfCeiling, diagnosticTrace);
+assert.equal(topicDiagnostics.retrievalTraceStatus, 'AVAILABLE');
+assert.deepEqual(topicDiagnostics.retrievalEvidenceQualityTrace, diagnosticTrace,
+  'Admission diagnostics preserve the original current-request retrieval-quality trace.');
+assert.equal(topicDiagnostics.candidates[0].firstFailedPredicate, 'topic:cpf-ordinary-wages.topicBoundToRecord');
+assert.equal(topicDiagnostics.candidates[0].topics[0].predicates[0].passed, false);
+
+const subjectDiagnostics = await runAdmissionDiagnostic(issue('diag-subject', {
+  subject: 'employee overtime eligibility and working time limits'
+}), cpfCeiling, undefined);
+assert.equal(subjectDiagnostics.candidates[0].firstFailedPredicate, 'topic:cpf_wage_ceiling.issueSubjectSupport');
+assert.equal(subjectDiagnostics.candidates[0].topics[0].predicates.find(item => item.predicate === 'issueSubjectSupport').passed, false);
+
+const substantiveIssue = issue('diag-substantive', {
+  subject: 'ordinary wages definition under CPF contributions', mappedTopicIds: ['cpf_wage_ceiling', 'cpf-ordinary-wages']
+});
+const substantiveDiagnostics = await runAdmissionDiagnostic(substantiveIssue,
+  { ...cpfCeiling, id: 'CPF_WAGE_CEILINGS_2026' }, undefined);
+assert.equal(substantiveDiagnostics.candidates[0].firstFailedPredicate, 'topic:cpf_wage_ceiling.boundedSubstantiveSupport');
+assert.equal(substantiveDiagnostics.candidates[0].topics[0].predicates.find(item => item.predicate === 'boundedSubstantiveSupport').passed, false,
+  'The bounded CPF ordinary-wages definition criteria remain a separate substantive admission gate.');
 
 // A source-map pointer and successful-looking search metadata are routing data,
 // not evidence. Malformed providers and failures are isolated to their issue.

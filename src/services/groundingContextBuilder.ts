@@ -57,6 +57,7 @@ import {
   interpretSemanticQuestion,
   isShortSemanticFollowUp,
   reconcileQuestionUnderstanding,
+  type ReconciledSemanticQuestionIssue,
   type RequestedQuestionConcept,
   type SemanticQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
@@ -87,6 +88,12 @@ export interface GroundedReasoningContext {
   currentInformationRequired: boolean;
   semanticUnderstanding?: TransactionUnderstanding;
   questionUnderstanding?: SemanticQuestionUnderstanding;
+  /** Validated issue-local IRAS rule intent; does not change whole-question completeness. */
+  authorityIssue?: {
+    authority: 'IRAS';
+    issue: ReconciledSemanticQuestionIssue;
+    requestedConcepts: RequestedQuestionConcept[];
+  };
   /** Immutable exact-query representation diagnostics, separate from evidence scope. */
   requestCompletenessContext?: RequestCompletenessContext;
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
@@ -262,6 +269,8 @@ export interface MappedFallbackOptions {
   semanticDiscoveryQuery?: string;
   /** Internal per-issue scope. Omitted callers retain the existing full-query behavior. */
   evidenceScope?: AuthorityEvidenceScope;
+  /** Validated issue-local IRAS rule intent; the original user query remains unchanged. */
+  authorityIssue?: GroundedReasoningContext['authorityIssue'];
 }
 
 function topicMatchesEvidenceScope(topic: SingaporeCoverageTopic, scope?: AuthorityEvidenceScope): boolean {
@@ -2310,6 +2319,7 @@ export async function buildGroundedReasoningContext(
     currentInformationRequired: classification.currentInformationRequired,
     semanticUnderstanding,
     questionUnderstanding,
+    authorityIssue: retrievalOptions.authorityIssue,
     requestCompletenessContext,
     evidenceQuality,
     sourceMapFallbackTrace: mappedFallback.trace

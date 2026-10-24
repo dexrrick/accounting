@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { readFile } from 'node:fs/promises';
@@ -15,7 +16,7 @@ import { createChatPreview } from '../../src/utils/chatPresentation.ts';
 import { createIrasEvidencePresentation, getIrasDomainDisplayLabel } from '../../src/utils/irasEvidencePresentation.ts';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
 import { ensureRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
-import { getRequestedQuestionConcepts, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
+import { getRequestedQuestionConcepts, reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const fixture = JSON.parse(await readFile(new URL('../evaluation/singapore/iras-answer-e2e.json', import.meta.url), 'utf8'));
 const datedCase = fixture.cases.find(item => item.id === 'gst-historical-standard-rated-supply-2023');
@@ -384,7 +385,7 @@ try {
   'Personal relief requested beyond compulsory CPF remains a separate generic relief concept.');
   const residencyIssue = {
     subject: residencySubject, domain: 'IRAS_INCOME_TAX', population: 'COMPANY',
-    concepts: [residencySubject, 'place of incorporation']
+    concepts: [residencySubject, 'place of incorporation', 'control and management test']
   };
   const reliefIssue = { subject: reliefSubject, domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL' };
   const motorCarIssue = { subject: motorCarSubject, domain: 'IRAS_GST', population: 'COMPANY' };
@@ -553,7 +554,10 @@ try {
   const incorporationUnderstanding = makeExplainRuleUnderstanding(residencyQuery, [incorporationIssue]);
   const incorporationConcepts = getRequestedQuestionConcepts(residencyQuery,
     incorporationUnderstanding.questionUnderstanding.interpretation);
-  assert.ok(incorporationConcepts.some(concept => /place of incorporation/i.test(concept.label)));
+  assert.ok(incorporationConcepts.some(concept => concept.id === 'company_tax_residency_incorporation' &&
+    /tax residency/i.test(concept.label) && concept.terms.includes('place of incorporation') &&
+    concept.terms.includes('incorporation alone')),
+  'The canonical incorporation concept retains the requested incorporation-alone proposition and its source terms.');
   const residencyRecordWithoutIncorporation = {
     ...residencyRecord,
     id: 'IRAS_CORPORATE_RESIDENCY_WITHOUT_INCORPORATION_PARAGRAPH_TEST',
@@ -582,8 +586,10 @@ try {
   assert.equal(unsupportedIncorporationResponse.scenarioState.isComplete, false,
     'Sufficient source-bundle quality and several accepted quotations cannot cover a requested concept absent from every quoted paragraph.');
   assert.equal(unsupportedIncorporationResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT');
-  assert.match(unsupportedIncorporationResponse.messageText, /place of incorporation/i);
-  assert.match(unsupportedIncorporationResponse.scenarioState.uncertaintyDisclaimer, /place of incorporation/i);
+  assert.match(unsupportedIncorporationResponse.messageText, /company tax residency and incorporation/i,
+    'The missing incorporation-alone proposition is reported using its canonical requested concept.');
+  assert.match(unsupportedIncorporationResponse.scenarioState.uncertaintyDisclaimer, /company tax residency and incorporation/i,
+    'The uncertainty disclaimer preserves the same canonical missing proposition.');
 
   const limitedResidencyQuality = {
     ...residencyQuality,
@@ -635,6 +641,100 @@ try {
     questionUnderstanding: reliefUnderstanding.questionUnderstanding,
     requestCompletenessContext: reliefUnderstanding.requestCompletenessContext
   };
+
+  const foreignPensionCpfQuery = 'Explain the general CPF cash top-up tax relief interaction with foreign pension offsets.';
+  const foreignPensionCpfSubject = 'CPF cash top-up tax relief interaction with foreign pension offsets';
+  const foreignPensionCpfInterpretation = validateSemanticQuestionInterpretation({
+    schemaVersion: 2,
+    jurisdiction: ['Singapore'],
+    authorityCandidates: ['IRAS'],
+    contextualAuthorities: [],
+    domain: 'IRAS_INCOME_TAX',
+    population: 'INDIVIDUAL',
+    primarySubject: foreignPensionCpfSubject,
+    concepts: [{ concept: 'foreign pension offsets', role: 'PRIMARY' }],
+    requestedOperation: 'EXPLAIN_RULE',
+    factsExplicitlyProvided: [],
+    confidence: 0.95,
+    issues: [{
+      subject: foreignPensionCpfSubject,
+      population: 'INDIVIDUAL',
+      domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'],
+      contextualAuthorities: [],
+      operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+      confidence: 0.95
+    }]
+  }, foreignPensionCpfQuery);
+  assert.ok(foreignPensionCpfInterpretation, 'The unrelated pension-offset concept is a valid scoped explain-rule request.');
+  const foreignPensionCpfUnderstanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation: foreignPensionCpfInterpretation };
+  const foreignPensionCpfCompleteness = ensureRequestCompletenessContext(
+    foreignPensionCpfQuery, undefined, foreignPensionCpfUnderstanding
+  );
+  const foreignPensionCpfConcepts = getRequestedQuestionConcepts(foreignPensionCpfQuery, foreignPensionCpfInterpretation);
+  assert.ok(foreignPensionCpfConcepts.some(concept => concept.id === 'semantic_foreign_pension_offsets'));
+  assert.ok(foreignPensionCpfConcepts.some(concept => concept.id === 'cpf_cash_top_up_relief'));
+  const foreignPensionCpfRecord = {
+    ...cpfReliefRecord,
+    id: 'IRAS_CPF_FOREIGN_PENSION_OFFSET_UNKNOWN_CONCEPT_TEST',
+    sourceText: cpfReliefQuote
+  };
+  const foreignPensionCpfTopicId = 'iras-individual-cpf-cash-top-up-relief';
+  const foreignPensionCpfUrl = foreignPensionCpfRecord.canonicalSourceUrl;
+  const foreignPensionCpfTrace = {
+    path: 'DISCOVERED_SOURCE',
+    sourceMapIds: [],
+    selectedRecordIds: [foreignPensionCpfRecord.id],
+    finalVerifiedUrls: [foreignPensionCpfUrl],
+    attempts: [{
+      topicId: foreignPensionCpfTopicId,
+      fetchStatus: 'SUCCESS',
+      finalUrl: foreignPensionCpfUrl,
+      pageTitle: foreignPensionCpfRecord.documentTitle,
+      titleMatched: true,
+      contentMatched: true
+    }]
+  };
+  const foreignPensionCpfClassification = { ...classifyQuestion(foreignPensionCpfQuery), topicIds: [foreignPensionCpfTopicId] };
+  const foreignPensionCpfQuality = evaluateEvidenceQuality({
+    query: foreignPensionCpfQuery,
+    topicIds: [foreignPensionCpfTopicId],
+    records: [foreignPensionCpfRecord],
+    missingFacts: [],
+    authorities: ['IRAS'],
+    domain: 'IRAS_TAX',
+    sourceMapFallbackTrace: foreignPensionCpfTrace,
+    requestedConcepts: foreignPensionCpfConcepts,
+    scopedSubject: foreignPensionCpfSubject,
+    scopedPopulation: 'INDIVIDUAL'
+  });
+  assert.ok(foreignPensionCpfQuality.uncoveredConcepts.some(concept => /foreign pension offsets/i.test(concept)),
+    JSON.stringify({ status: foreignPensionCpfQuality.status, uncovered: foreignPensionCpfQuality.uncoveredConcepts }));
+  assert.ok(!['LOCAL_SUFFICIENT', 'RETRIEVED_SUFFICIENT'].includes(foreignPensionCpfQuality.status),
+    'An introduction to CPF top-up relief does not establish an unrelated foreign-pension-offset proposition.');
+  const foreignPensionCpfContext = {
+    ...residencyContext,
+    classification: foreignPensionCpfClassification,
+    userFacts: [foreignPensionCpfQuery],
+    primaryEvidence: [foreignPensionCpfRecord],
+    evidenceQuality: foreignPensionCpfQuality,
+    questionUnderstanding: foreignPensionCpfUnderstanding,
+    requestCompletenessContext: foreignPensionCpfCompleteness
+  };
+  delete foreignPensionCpfContext.authorityIssue;
+  assert.equal('authorityIssue' in foreignPensionCpfContext, false,
+    'The standalone IRAS explain-rule render has no synthetic issue-local override.');
+  const foreignPensionCpfResponse = renderIrasEvidenceResponse({
+    taxClaims: [{ text: cpfReliefQuote, quote: cpfReliefQuote, recordId: foreignPensionCpfRecord.id, kind: 'RULE' }]
+  }, foreignPensionCpfContext, foreignPensionCpfQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(foreignPensionCpfResponse.claimVerification.accepted.some(claim => claim.text === cpfReliefQuote),
+    'The exact IRAS introduction remains visible for its own tax-relief proposition.');
+  assert.equal(foreignPensionCpfResponse.scenarioState.isComplete, false,
+    'A validated standalone EXPLAIN_RULE request stays incomplete when the only source covers CPF introduction, not pension offsets.');
+  assert.equal(foreignPensionCpfResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT');
+
   const generalCpfReliefResponse = renderIrasEvidenceResponse({
     taxClaims: [{ text: cpfReliefQuote, quote: cpfReliefQuote, recordId: cpfReliefRecord.id, kind: 'RULE' }]
   }, reliefContext, reliefQuery, null, 'SFRS_I', 'PROVIDER');
@@ -643,6 +743,63 @@ try {
   assert.equal(generalCpfReliefResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT',
     'The confirmed IRAS cash-top-up passage does not fill uncovered eligibility and relief-limit concepts.');
   assert.doesNotMatch(generalCpfReliefResponse.scenarioState.irasEvidencePresentation.applicationStatus, /Conditional — Facts Required/);
+
+  const cpfCurrentPageCapture = JSON.parse(await readFile(
+    new URL('../fixtures/iras_cpf_cash_top_up_current_excerpt.json', import.meta.url), 'utf8'
+  ));
+  const cpfCurrentSourceText = cpfCurrentPageCapture.sourceLines.join('\n\n');
+  assert.equal(createHash('sha256').update(cpfCurrentSourceText, 'utf8').digest('hex'), cpfCurrentPageCapture.excerptSha256,
+    'The current IRAS fixture hash covers the bounded page-text excerpt only.');
+  const completeCpfReliefRecord = {
+    ...cpfReliefRecord,
+    id: 'IRAS_CPF_CASH_TOP_UP_CURRENT_EXCERPT_TEST',
+    authority: 'IRAS',
+    domain: 'IRAS_TAX',
+    sourceText: cpfCurrentSourceText,
+    sourceStatus: 'VERIFIED',
+    provenance: 'LOCAL_STATIC',
+    lifecycleState: 'ACTIVE',
+    lastVerifiedDate: '2026-10-24',
+    sourceType: 'OFFICIAL_GUIDANCE',
+    evidenceTier: 'OFFICIAL_GUIDANCE',
+    isVerbatimText: true,
+    verificationMethod: 'STATUTORY_LEGISLATION_AUDIT'
+  };
+  const standaloneCpfRequestedConcepts = getRequestedQuestionConcepts(reliefQuery, reliefUnderstanding.questionUnderstanding);
+  const standaloneCpfQuality = {
+    ...reliefQuality,
+    requestedConcepts: standaloneCpfRequestedConcepts.map(concept => concept.label),
+    coveredConcepts: standaloneCpfRequestedConcepts.map(concept => concept.label),
+    uncoveredConcepts: [],
+    coveredTopicIds: reliefClassification.topicIds,
+    uncoveredTopicIds: [],
+    eligibleRecords: [completeCpfReliefRecord],
+    missingFacts: [],
+    status: 'RETRIEVED_SUFFICIENT'
+  };
+  const standaloneCpfReliefContext = {
+    ...reliefContext,
+    primaryEvidence: [completeCpfReliefRecord],
+    evidenceQuality: standaloneCpfQuality,
+    questionUnderstanding: reliefUnderstanding.questionUnderstanding,
+    requestCompletenessContext: reliefUnderstanding.requestCompletenessContext,
+    authorityIssue: undefined
+  };
+  const standaloneCpfLimitResponse = renderIrasEvidenceResponse({ taxClaims: [] }, standaloneCpfReliefContext,
+    reliefQuery, null, 'SFRS_I', 'PROVIDER');
+  const standaloneCpfAccepted = standaloneCpfLimitResponse.claimVerification.accepted;
+  assert.equal(standaloneCpfAccepted.length, 3,
+    'The standalone global IRAS path fits eligibility, complete annual caps, and the complete FRS table within the three-quote source budget.');
+  assert.ok(standaloneCpfAccepted.some(claim => /Singapore Citizen\/Permanent Resident/.test(claim.text) &&
+    /MRSS/.test(claim.text) && /MMSS/.test(claim.text)));
+  assert.ok(standaloneCpfAccepted.some(claim => /\$16,000/.test(claim.text) && /\$80,000/.test(claim.text) &&
+    /MRSS/.test(claim.text) && /MMSS/.test(claim.text)));
+  assert.ok(standaloneCpfAccepted.some(claim => /Special Account \(SA\)/.test(claim.text) &&
+    /Retirement Account \(RA\)/.test(claim.text) && /Basic Healthcare Sum/.test(claim.text)));
+  assert.ok(standaloneCpfAccepted.every(claim => claim.recordId === completeCpfReliefRecord.id),
+    'The three accepted quotations come from the same admitted IRAS source record.');
+  assert.equal(standaloneCpfReliefContext.authorityIssue, undefined,
+    'The standalone path proves the global validated explanation without a synthesized issue-local handoff.');
 
   const carUnderstanding = makeExplainRuleUnderstanding(motorCarQuery, [motorCarIssue]);
   assertFreeformSubjectDiagnostic(carUnderstanding.requestCompletenessContext, [motorCarSubject]);
@@ -723,6 +880,54 @@ try {
     'A mixed request remains incomplete when evidence does not cover every independently requested IRAS scope.');
   assert.equal(mixedThreeResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT');
   assert.doesNotMatch(mixedThreeResponse.messageText, /Conditional — Facts Required/);
+
+  const issueLocalMixedInterpretation = validateSemanticQuestionInterpretation({
+    ...mixedUnderstanding.questionUnderstanding.interpretation,
+    requestedOperation: 'OTHER',
+    issues: mixedUnderstanding.questionUnderstanding.interpretation.issues.map((issue, index) => index === 1
+      ? { ...issue, operation: 'CHECK_ELIGIBILITY', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' }
+      : issue)
+  }, mixedThreeQuery);
+  assert.ok(issueLocalMixedInterpretation);
+  const issueLocalQuestionUnderstanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation: issueLocalMixedInterpretation };
+  const issueLocalRequestContext = ensureRequestCompletenessContext(mixedThreeQuery, undefined, issueLocalQuestionUnderstanding);
+  assert.equal(issueLocalRequestContext.evaluation.structuralAcceptance, 'ACCEPTED');
+  assert.equal(issueLocalRequestContext.evaluation.confidenceAcceptance, 'ACCEPTED');
+  const mixedThreeReconciled = reconcileQuestionUnderstanding(mixedThreeQuery, mixedThreeClassification,
+    issueLocalQuestionUnderstanding, issueLocalRequestContext);
+  const localResidencyIssue = mixedThreeReconciled.issuePlan.issues.find(issue => issue.subject === residencySubject);
+  assert.ok(localResidencyIssue?.status === 'MAPPED',
+    'The residency child resolves to its own mapped IRAS issue despite incomplete sibling evidence.');
+  const localResidencyConcepts = getRequestedQuestionConcepts(mixedThreeQuery,
+    issueLocalQuestionUnderstanding).filter(concept =>
+    concept.topicIds.some(topicId => localResidencyIssue.mappedTopicIds.includes(topicId)) &&
+    (!concept.semanticAuthorities || concept.semanticAuthorities.includes('IRAS')));
+  assert.ok(localResidencyConcepts.some(concept => concept.id === 'company_tax_residency_rule'));
+  assert.ok(localResidencyConcepts.some(concept => concept.id === 'company_tax_residency_incorporation'));
+  assert.equal(localResidencyConcepts.some(concept => concept.id === 'semantic_control_and_management_test'), false,
+    'The exact retained model label aliases only the uniquely owned company-residency rule.');
+  const issueLocalMixedContext = {
+    ...residencyContext,
+    classification: mixedThreeClassification,
+    userFacts: [mixedThreeQuery],
+    primaryEvidence: [residencyRecord, cpfReliefRecord, carRecord],
+    evidenceQuality: mixedThreeQuality,
+    questionUnderstanding: issueLocalQuestionUnderstanding,
+    requestCompletenessContext: issueLocalRequestContext,
+    authorityIssue: { authority: 'IRAS', issue: localResidencyIssue, requestedConcepts: localResidencyConcepts }
+  };
+  const issueLocalMixedResponse = renderIrasEvidenceResponse({
+    taxClaims: residencyQuotes.map(text => ({ text, quote: text, recordId: residencyRecord.id, kind: 'RULE' }))
+  }, issueLocalMixedContext, mixedThreeQuery, null, 'SFRS_I', 'PROVIDER');
+  assert.ok(issueLocalMixedResponse.claimVerification.accepted.some(claim => claim.text === residencyQuotes[0]),
+    'A validated issue-local residency rule renders beside separately incomplete IRAS siblings.');
+  assert.ok(issueLocalMixedResponse.claimVerification.accepted.some(claim => claim.text === residencyQuotes[3]),
+    'The issue-local selection retains the separately requested incorporation qualification.');
+  assert.ok(issueLocalMixedResponse.messageText.includes(residencyQuotes[3]));
+  assert.equal(issueLocalMixedResponse.scenarioState.isComplete, false,
+    'Rendering complete evidence for one child does not change whole-question completeness.');
+  assert.equal(issueLocalMixedResponse.scenarioState.irasEvidencePresentation.status, 'INSUFFICIENT',
+    'Whole-question presentation remains insufficient while the relief and motor-car siblings are uncovered.');
 
   const unparsedMixedUnderstanding = makeExplainRuleUnderstanding(mixedThreeQuery, [residencyIssue, reliefIssue]);
   const unparsedMixedResponse = renderIrasEvidenceResponse({

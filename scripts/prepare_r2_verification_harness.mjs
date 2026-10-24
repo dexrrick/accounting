@@ -1,0 +1,90 @@
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+export const LEGACY_HARNESS_SHA256 = '1441a80a0fcebe97269364caef84243cf6448b4e94a0222bf9cbcdf3f497c38a';
+
+// Transform only the inspected historical harness. Preparing a file never dispatches it.
+export function prepareR2VerificationHarness(template, { appSourceSha, expectedAppTreeSha256 }) {
+  assert.equal(createHash('sha256').update(template).digest('hex'), LEGACY_HARNESS_SHA256,
+    'The harness template differs from the reviewed historical capture.');
+  assert.match(appSourceSha, /^[a-f0-9]{40}$/);
+  assert.match(expectedAppTreeSha256, /^[a-f0-9]{64}$/);
+  let source = template;
+  const replaceOnce = (before, after) => {
+    assert.equal(source.split(before).length, 2, 'Expected one exact harness integration anchor.');
+    source = source.replace(before, after);
+  };
+  replaceOnce("import { gzipSync } from 'node:zlib';\n", '');
+  replaceOnce("import { processAccountingQuery } from './src/services/geminiService.ts';", [
+    "import { createVerificationReceiptExporter } from './scripts/verification_receipt_exporter.mjs';",
+    "import { createCloudflareVerificationReceiptSink } from './scripts/cloudflare_verification_receipt_sink.mjs';",
+    '',
+    '// Storage authorization does not authorize a model run. Disabled unless explicitly enabled.',
+    "if (process.env.ACCOUNTING_ALLOW_LIVE_MODEL_CALLS !== '1') {",
+    "  throw new Error('LIVE_MODEL_CALLS_HELD: this prepared harness has not been dispatched.');",
+    '}'
+  ].join('\n'));
+  source = source.replace(/^const appSourceSha = '[a-f0-9]{40}';$/m, `const appSourceSha = '${appSourceSha}';`);
+  source = source.replace(/^const expectedAppTreeSha256 = '[a-f0-9]{64}';$/m,
+    `const expectedAppTreeSha256 = '${expectedAppTreeSha256}';`);
+  replaceOnce('const logPartCharacters = 900;\n', '');
+  const emitStart = source.indexOf('function emitCase(receipt) {');
+  const emitEnd = source.indexOf('\nconst hashes = {', emitStart);
+  assert.ok(emitStart > 0 && emitEnd > emitStart);
+  source = source.slice(0, emitStart) + [
+    "const runId = process.env.ACCOUNTING_VERIFICATION_RUN_ID || '';",
+    "const outputDirectory = process.env.ACCOUNTING_VERIFICATION_EXPORT_DIRECTORY || '';",
+    'const receiptSink = createCloudflareVerificationReceiptSink({',
+    "  accountId: '0c07eba7cff6c7a8e3c9356cf0fcc503',",
+    "  bucketName: 'accounting-verification-receipts',",
+    '  runId,',
+    "  token: process.env.ACCOUNTING_RECEIPT_STORE_TOKEN || '',",
+    '  fetchImpl: nativeFetch',
+    '});',
+    '// Constructor preflight verifies private durable storage before importing the application.',
+    'const exporter = await createVerificationReceiptExporter({',
+    '  outputDirectory, runId, plannedCaseIds: cases.map(testCase => testCase.id),',
+    '  durableSink: receiptSink, stdout: output',
+    '});',
+    "const { processAccountingQuery } = await import('./src/services/geminiService.ts');",
+    ''
+  ].join('\n') + source.slice(emitEnd);
+  const beginStart = source.indexOf("output('SHARED_MILESTONE_BEGIN '");
+  const beginEnd = source.indexOf('\nfor (const method of Object.keys(originalConsole))', beginStart);
+  assert.ok(beginStart > 0 && beginEnd > beginStart);
+  source = source.slice(0, beginStart) + source.slice(beginEnd);
+  replaceOnce('    emitCase(receipt);', '    await exporter.exportReceipt(JSON.parse(scrub(JSON.stringify(receipt))));');
+  replaceOnce('  for (const [method, original] of Object.entries(originalConsole)) console[method] = original;\n}',
+    '  for (const [method, original] of Object.entries(originalConsole)) console[method] = original;\n  await exporter.finish();\n}');
+  const endStart = source.indexOf("\noutput('SHARED_MILESTONE_END '");
+  assert.ok(endStart > 0);
+  source = source.slice(0, endStart) + '\n';
+  assert.ok(!source.includes('SHARED_MILESTONE_PART') && !source.includes('gzip-base64'));
+  return source;
+}
+
+export async function prepareHarnessFile(args = process.argv.slice(2)) {
+  const options = {};
+  const names = new Set(['--template', '--output', '--app-source-sha', '--app-tree-sha256']);
+  for (let index = 0; index < args.length; index += 2) {
+    assert.ok(names.has(args[index]) && args[index + 1] && !Object.hasOwn(options, args[index]), 'Invalid or duplicate preparation argument.');
+    options[args[index]] = args[index + 1];
+  }
+  assert.equal(Object.keys(options).length, 4, 'Template, output, reviewed app SHA and app-tree hash are required.');
+  const output = path.resolve(options['--output']);
+  const prepared = prepareR2VerificationHarness(await readFile(path.resolve(options['--template']), 'utf8'), {
+    appSourceSha: options['--app-source-sha'], expectedAppTreeSha256: options['--app-tree-sha256']
+  });
+  await writeFile(output, prepared, { flag: 'wx', mode: 0o600 });
+  return { output, sha256: createHash('sha256').update(prepared).digest('hex'), dispatched: false };
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  prepareHarnessFile().then(result => console.log(JSON.stringify(result))).catch(() => {
+    console.error('Harness preparation failed; no live execution was attempted.');
+    process.exitCode = 1;
+  });
+}

@@ -4,14 +4,26 @@ import type { GroundedReasoningContext } from './groundingContextBuilder';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { getCoverageTopicById, getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
-import { startsAttachedEvidenceQualification, verifyEvidenceClaims } from '../verification/claimEvidenceVerifier';
+import {
+  completeIrasGstMotorCarConnectedPersonExceptionQuote,
+  completeIrasCpfCashTopUpEligibilityQuote,
+  completeIrasCpfCashTopUpLimitQuotes,
+  startsAttachedEvidenceQualification,
+  verifyEvidenceClaims
+} from '../verification/claimEvidenceVerifier';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import { evaluateIrasApplications } from '../engine/irasApplicationEvaluator';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
-import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { getGstMotorCarInputTaxExceptionKinds, supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { matchesRequestedQuestionConcept } from '../retrieval/evidenceQualityGate';
-import { getRequestedQuestionConcepts, requiresCaseSpecificFacts, type SemanticQuestionInterpretation } from './semanticQuestionUnderstanding';
+import {
+  getRequestedQuestionConcepts,
+  requiresCaseSpecificFacts,
+  SEMANTIC_QUESTION_MIN_CONFIDENCE,
+  type SemanticQuestionIssue,
+  type SemanticQuestionInterpretation
+} from './semanticQuestionUnderstanding';
 import { ensureRequestCompletenessContext, readRequestCompletenessObservation } from './requestCompleteness';
 import { isMalformedAIJsonFallback } from '../utils/jsonRepair';
 
@@ -208,6 +220,55 @@ function completeIndividualOverseasIncomeListQuote(record: AuthoritativeSourceRe
     : undefined;
 }
 
+function completeCpfCashTopUpEligibilityQuote(record: AuthoritativeSourceRecord): string | undefined {
+  if (!record.tags?.includes('iras-individual-cpf-cash-top-up-relief')) return undefined;
+  return completeIrasCpfCashTopUpEligibilityQuote(record.sourceText);
+}
+
+function completeCpfCashTopUpLimitPassages(record: AuthoritativeSourceRecord): string[] {
+  if (record.authority !== 'IRAS' || record.domain !== 'IRAS_TAX' ||
+      !record.tags?.includes('iras-individual-cpf-cash-top-up-relief')) return [];
+  const limitConcept = {
+    id: 'cpf_cash_top_up_relief_limits', label: 'CPF cash top-up relief limits',
+    terms: ['annual relief cap', 'Full Retirement Sum', 'Special Account', 'Retirement Account']
+  };
+  if (supportGeneralIrasRuleConcept({
+    sourceText: record.sourceText, domainId: 'IRAS_INDIVIDUAL_TAX', topicIds: ['iras-individual-cpf-cash-top-up-relief'],
+    subject: 'CPF cash top-up relief limits', population: 'INDIVIDUAL', concepts: [limitConcept]
+  }) !== true) return [];
+
+  return completeIrasCpfCashTopUpLimitQuotes(record.sourceText);
+}
+
+function completeGstMotorCarExceptionPassages(record: AuthoritativeSourceRecord): string[] {
+  if (!record.tags?.some(topicId => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId))) return [];
+  const exceptionConcept = {
+    id: 'gst_motor_car_input_tax_exceptions', label: 'GST motor car input tax exceptions',
+    terms: ['motor car input tax exceptions', 'third party', 'connected person']
+  };
+  const supportInput = {
+    domainId: 'IRAS_GST', topicIds: ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'],
+    subject: 'GST input tax claimability on private passenger motor car purchase',
+    population: 'COMPANY', concepts: [exceptionConcept]
+  };
+  if (supportGeneralIrasRuleConcept({ sourceText: record.sourceText, ...supportInput }) !== true) return [];
+
+  const blocks = record.sourceText.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean);
+  const thirdPartyPassage = (): string | undefined => {
+    for (let length = 1; length <= 4; length += 1) {
+      for (let start = 0; start + length <= blocks.length; start += 1) {
+        const quote = blocks.slice(start, start + length).join('\n\n');
+        if (quote.length <= 3_200 && getGstMotorCarInputTaxExceptionKinds(quote).includes('THIRD_PARTY')) return quote;
+      }
+    }
+    return undefined;
+  };
+  const thirdParty = thirdPartyPassage();
+  const connectedPerson = completeIrasGstMotorCarConnectedPersonExceptionQuote(record.sourceText);
+  if (!thirdParty || !connectedPerson) return [];
+  return thirdParty === connectedPerson ? [thirdParty] : [thirdParty, connectedPerson];
+}
+
 function isWhollyOverseasEmploymentRule(text: string): boolean {
   return /full employment services wholly outside singapore/i.test(text) &&
     /not liable to tax in singapore/i.test(text) && /employment income is sourced outside singapore/i.test(text);
@@ -218,7 +279,67 @@ function isIncidentalSingaporeEmploymentRule(text: string): boolean {
     /travel is incidental to (?:your|his|her) singapore employment/i.test(text);
 }
 
-function requestedRuleConcepts(context: GroundedReasoningContext, query: string) {
+function sameStringMembers(left: readonly string[] | undefined, right: readonly string[] | undefined): boolean {
+  const leftValues = [...new Set(left || [])].sort();
+  const rightValues = [...new Set(right || [])].sort();
+  return leftValues.length === rightValues.length && leftValues.every((value, index) => value === rightValues[index]);
+}
+
+function sameOriginalIssue(left: SemanticQuestionIssue, right: SemanticQuestionIssue): boolean {
+  return left.subject === right.subject && left.population === right.population && left.domain === right.domain &&
+    left.operation === right.operation && left.evidenceRequirement === right.evidenceRequirement &&
+    left.confidence === right.confidence && sameStringMembers(left.governingAuthorities, right.governingAuthorities);
+}
+
+/** Recheck the issue-local handoff against the exact validated original request. */
+function validatedIssueLocalRuleIntent(
+  context: GroundedReasoningContext,
+  query: string,
+  requestContext: ReturnType<typeof ensureRequestCompletenessContext>
+): GroundedReasoningContext['authorityIssue'] | undefined {
+  const authorityIssue = context.authorityIssue;
+  const issue = authorityIssue?.issue;
+  if (!authorityIssue || authorityIssue.authority !== 'IRAS' || !issue || issue.status !== 'MAPPED' ||
+      issue.operation !== 'EXPLAIN_RULE' || issue.evidenceRequirement !== 'AUTHORITATIVE_SOURCE' ||
+      !issue.domain.startsWith('IRAS_') || issue.governingAuthorities.length !== 1 ||
+      issue.governingAuthorities[0] !== 'IRAS' || !Number.isFinite(issue.confidence) ||
+      issue.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE ||
+      requestContext.evaluation.structuralAcceptance !== 'ACCEPTED' ||
+      requestContext.evaluation.confidenceAcceptance !== 'ACCEPTED' || authorityIssue.requestedConcepts.length === 0) return undefined;
+
+  const observation = readRequestCompletenessObservation(requestContext, query);
+  if (!observation || typeof observation !== 'object' || Array.isArray(observation)) return undefined;
+  const wrapper = observation as { mode?: unknown; interpretation?: unknown };
+  if (!['SEMANTIC_INTERPRETATION', 'SEMANTIC_PLUS_RULES'].includes(String(wrapper.mode)) ||
+      !wrapper.interpretation || typeof wrapper.interpretation !== 'object' || Array.isArray(wrapper.interpretation)) return undefined;
+  const observedIssues = (wrapper.interpretation as { issues?: SemanticQuestionIssue[] }).issues;
+  const interpretedIssues = context.questionUnderstanding?.interpretation?.issues;
+  if (!Array.isArray(observedIssues) || !Array.isArray(interpretedIssues) ||
+      observedIssues.filter(candidate => sameOriginalIssue(issue, candidate)).length !== 1 ||
+      interpretedIssues.filter(candidate => sameOriginalIssue(issue, candidate)).length !== 1) return undefined;
+
+  const requestedFromOriginalQuery = getRequestedQuestionConcepts(query, context.questionUnderstanding);
+  const conceptsAreOriginal = authorityIssue.requestedConcepts.every(requested =>
+    requestedFromOriginalQuery.some(original => original.id === requested.id && original.label === requested.label &&
+      original.terms.join('\n') === requested.terms.join('\n') && sameStringMembers(original.topicIds, requested.topicIds)) &&
+    (requested.semanticAuthorities === undefined || requested.semanticAuthorities.includes('IRAS')));
+  return conceptsAreOriginal ? authorityIssue : undefined;
+}
+
+function issueLocalTopicIds(authorityIssue: NonNullable<GroundedReasoningContext['authorityIssue']>): string[] {
+  const issue = authorityIssue.issue;
+  return [...new Set(authorityIssue.requestedConcepts.flatMap(concept => concept.topicIds))]
+    .filter(topicId => {
+      const topic = getCoverageTopicById(topicId);
+      return Boolean(topic?.authorities.includes('IRAS') && semanticDomainForTopic(topicId) === issue.domain &&
+        (!issue.mappedTopicIds.length || issue.mappedTopicIds.includes(topicId)));
+    });
+}
+
+function requestedRuleConcepts(context: GroundedReasoningContext, query: string, issueLocal = false) {
+  const issueLocalIntent = issueLocal && validatedIssueLocalRuleIntent(context, query,
+    ensureRequestCompletenessContext(query, context.requestCompletenessContext, context.questionUnderstanding));
+  if (issueLocalIntent) return issueLocalIntent.requestedConcepts;
   const requestedLabels = new Set(context.evidenceQuality?.requestedConcepts || []);
   if (requestedLabels.size === 0) return [];
   return getRequestedQuestionConcepts(query, context.questionUnderstanding)
@@ -291,12 +412,23 @@ function semanticDomainForTopic(topicId: string): string | undefined {
 function generalRuleIssueForTopic(
   context: GroundedReasoningContext,
   topicId: string,
-  concept: ReturnType<typeof getRequestedQuestionConcepts>[number]
+  concept: ReturnType<typeof getRequestedQuestionConcepts>[number],
+  issueLocal = false,
+  query = context.requestCompletenessContext?.rawQuery || ''
 ) {
   const interpretation = context.questionUnderstanding?.interpretation;
   const topic = getCoverageTopicById(topicId);
   const domain = semanticDomainForTopic(topicId);
   if (!interpretation || !topic || !domain || concept.semanticAuthorities && !concept.semanticAuthorities.includes('IRAS')) return undefined;
+  const requestContext = ensureRequestCompletenessContext(query, context.requestCompletenessContext, context.questionUnderstanding);
+  const localIntent = issueLocal ? validatedIssueLocalRuleIntent(context, query, requestContext) : undefined;
+  if (localIntent?.requestedConcepts.some(item => item.id === concept.id)) {
+    const issue = localIntent.issue;
+    if (issue.domain === domain && (!concept.semanticDomain || issue.domain === concept.semanticDomain) &&
+        (!concept.semanticPopulation || issue.population === concept.semanticPopulation || issue.population === 'UNKNOWN') &&
+        (!issue.mappedTopicIds.length || issue.mappedTopicIds.includes(topicId))) return issue;
+    return undefined;
+  }
   const issues = interpretation.issues || [];
   const candidates = issues.filter(issue => issue.operation === 'EXPLAIN_RULE' && issue.domain === domain &&
     issue.governingAuthorities.includes('IRAS') && issue.population !== 'UNKNOWN' &&
@@ -313,36 +445,49 @@ function generalRuleIssueForTopic(
 function generalRuleAnswerCoverage(
   context: GroundedReasoningContext,
   query: string,
-  claims: readonly { recordId: string; text: string }[]
+  claims: readonly { recordId: string; text: string }[],
+  issueLocal = false
 ): { uncoveredConcepts: string[]; uncoveredTopicIds: string[] } {
   const quality = context.evidenceQuality!;
-  const topicIds = [...new Set(context.classification.topicIds.filter(topicId =>
-    getCoverageTopicById(topicId)?.authorities.includes('IRAS')) )];
+  const requestContext = ensureRequestCompletenessContext(query, context.requestCompletenessContext, context.questionUnderstanding);
+  const localIntent = issueLocal ? validatedIssueLocalRuleIntent(context, query, requestContext) : undefined;
+  const topicIds = localIntent
+    ? issueLocalTopicIds(localIntent)
+    : [...new Set(context.classification.topicIds.filter(topicId => getCoverageTopicById(topicId)?.authorities.includes('IRAS')))];
   const recordsById = new Map(quality.eligibleRecords.map(record => [record.id, record]));
   const topicIsSupportedByAcceptedText = (topicId: string): boolean => {
     const topic = getCoverageTopicById(topicId);
-    return Boolean(topic && quality.coveredTopicIds.includes(topicId) && claims.some(claim => {
+    return Boolean(topic && (Boolean(localIntent) || quality.coveredTopicIds.includes(topicId)) && claims.some(claim => {
       const record = recordsById.get(claim.recordId);
       return Boolean(record && record.authority === 'IRAS' && topic.legacyDomains.includes(record.domain) &&
         recordHasRequestedTopicAssociation(record, topicId) && fallbackExcerptMatchesTopic(topicId, claim.text));
     }));
   };
   const uncoveredTopicIds = topicIds.filter(topicId => !topicIsSupportedByAcceptedText(topicId));
-  const uncoveredConcepts = requestedRuleConcepts(context, query).filter(concept => {
+  const uncoveredConcepts = requestedRuleConcepts(context, query, Boolean(localIntent)).filter(concept => {
     const applicableTopicIds = (concept.topicIds.length > 0 ? concept.topicIds : topicIds)
-      .filter(topicId => topicIds.includes(topicId) && quality.coveredTopicIds.includes(topicId));
+      .filter(topicId => topicIds.includes(topicId) && (Boolean(localIntent) || quality.coveredTopicIds.includes(topicId)));
     if (applicableTopicIds.length === 0) return true;
     return !applicableTopicIds.some(topicId => {
       const topic = getCoverageTopicById(topicId);
-      const issue = generalRuleIssueForTopic(context, topicId, concept);
+      const issue = generalRuleIssueForTopic(context, topicId, concept, Boolean(localIntent), query);
       if (!topic || !issue) return false;
-      return claims.some(claim => {
+      const matchingClaims = claims.filter(claim => {
         const record = recordsById.get(claim.recordId);
         return Boolean(record && record.authority === 'IRAS' && topic.legacyDomains.includes(record.domain) &&
-          recordHasRequestedTopicAssociation(record, topicId) && matchesRequestedQuestionConcept(claim.text, concept, {
-            domainId: topic.domainId, topicIds: [topicId], subject: issue.subject, population: issue.population
-          }));
+          recordHasRequestedTopicAssociation(record, topicId));
       });
+      if (matchingClaims.length === 0) return false;
+      const supportInput = {
+        domainId: topic.domainId, topicIds: [topicId], subject: issue.subject,
+        population: issue.population, concepts: [concept]
+      };
+      const boundedSupport = supportGeneralIrasRuleConcept({
+        sourceText: matchingClaims.map(claim => claim.text).join('\n\n'), ...supportInput
+      });
+      return boundedSupport === undefined
+        ? !localIntent && matchingClaims.some(claim => matchesRequestedQuestionConcept(claim.text, concept, supportInput))
+        : boundedSupport === true;
     });
   }).map(concept => concept.label);
   return { uncoveredConcepts, uncoveredTopicIds };
@@ -377,7 +522,10 @@ function requestedRuleSupportForParagraph(
   record: AuthoritativeSourceRecord,
   topicIds: readonly string[],
   concepts: ReturnType<typeof getRequestedQuestionConcepts>,
-  context: GroundedReasoningContext
+  context: GroundedReasoningContext,
+  query: string,
+  issueLocal = false,
+  validatedGeneralRuleIntent = false
 ): { conceptIds: string[]; topicIds: string[] } {
   const conceptIds = new Set<string>();
   const supportedTopicIds = new Set<string>();
@@ -386,7 +534,8 @@ function requestedRuleSupportForParagraph(
     const topic = getCoverageTopicById(topicId);
     if (!topic || record.authority !== 'IRAS' || !topic.legacyDomains.includes(record.domain)) continue;
     for (const concept of concepts) {
-      const issue = companyIssueForRequestedTopic(context, topicId, concept);
+      const issue = generalRuleIssueForTopic(context, topicId, concept, issueLocal, query) ||
+        (issueLocal || validatedGeneralRuleIntent ? undefined : companyIssueForRequestedTopic(context, topicId, concept));
       if (!issue) continue;
       const supportInput = {
         domainId: topic.domainId,
@@ -416,15 +565,23 @@ function selectEvidenceOnlyQuotes(
   context: GroundedReasoningContext,
   query: string,
   topicIds: readonly string[] = context.classification.topicIds,
-  fillRemaining = true
+  fillRemaining = true,
+  issueLocal = false
 ): Array<{ text: string; quote: string; recordId: string; kind: 'RULE' }> {
-  const topics = getCoverageTopicsByIds([...topicIds]);
+  const requestContext = ensureRequestCompletenessContext(query, context.requestCompletenessContext, context.questionUnderstanding);
+  const localIntent = issueLocal ? validatedIssueLocalRuleIntent(context, query, requestContext) : undefined;
+  const validatedGeneralExplainRule = isValidatedGeneralExplainRuleRequest(query, requestContext);
+  const hasValidatedRuleIntent = Boolean(localIntent) || validatedGeneralExplainRule;
+  const selectedTopicIds = localIntent
+    ? issueLocalTopicIds(localIntent).filter(topicId => topicIds.includes(topicId))
+    : [...topicIds];
+  const topics = getCoverageTopicsByIds(selectedTopicIds);
   const topicTerms = new Set(normalizedFallbackTerms(topics.flatMap(topic => [topic.title, ...topic.keywords, ...(topic.aliases || [])]).join(' '))
     .filter(term => term.length >= 4 && !FALLBACK_QUOTE_STOPWORDS.has(term)));
   const queryTerms = new Set(normalizedFallbackTerms(query)
     .filter(term => term.length >= 4 && !FALLBACK_QUOTE_STOPWORDS.has(term)));
-  const requestedConcepts = requestedRuleConcepts(context, query);
-  const bonusTimingRequested = topicIds.includes('iras-employee-bonus-timing');
+  const requestedConcepts = requestedRuleConcepts(context, query, Boolean(localIntent));
+  const bonusTimingRequested = selectedTopicIds.includes('iras-employee-bonus-timing');
   const records = context.evidenceQuality?.eligibleRecords || [];
   const selected: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number; sourceUrl: string; topicIds: string[]; requestedSupportConceptIds: string[]; requestedSupportTopicIds: string[] }> = [];
   const compareCandidates = (
@@ -505,7 +662,8 @@ function selectEvidenceOnlyQuotes(
         if (/\badvance\b|\bcontingent\b/i.test(text)) score += 4;
         if (/\b(?:1\s*mar|form ir8a|auto.inclusion scheme|ais)\b/i.test(text)) score += 3;
       }
-      const requestedSupport = requestedRuleSupportForParagraph(text, record, topicIds, requestedConcepts, context);
+      const requestedSupport = requestedRuleSupportForParagraph(text, record, selectedTopicIds, requestedConcepts, context, query,
+        Boolean(localIntent), validatedGeneralExplainRule);
       if (score > 0 || requestedSupport.conceptIds.length > 0) candidates.push({
         text, quote: text, recordId: record.id, kind: 'RULE', score, recordOrder, paragraphOrder,
         sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
@@ -514,7 +672,7 @@ function selectEvidenceOnlyQuotes(
       });
       paragraphOrder = attachedEnd + 1;
     }
-    if (topicIds.includes('iras-individual-foreign-tax-credit')) {
+    if (selectedTopicIds.includes('iras-individual-foreign-tax-credit')) {
       const conditionsQuote = completeIndividualFtcConditionsQuote(record);
       if (conditionsQuote) {
         candidates.push({ text: conditionsQuote, quote: conditionsQuote, recordId: record.id, kind: 'RULE', score: 100,
@@ -523,7 +681,7 @@ function selectEvidenceOnlyQuotes(
           requestedSupportConceptIds: [], requestedSupportTopicIds: [] });
       }
     }
-    if (topicIds.includes('iras-individual-overseas-employment')) {
+    if (selectedTopicIds.includes('iras-individual-overseas-employment')) {
       const overseasIncomeList = completeIndividualOverseasIncomeListQuote(record);
       if (overseasIncomeList) {
         candidates.push({ text: overseasIncomeList, quote: overseasIncomeList, recordId: record.id, kind: 'RULE', score: 100,
@@ -532,7 +690,40 @@ function selectEvidenceOnlyQuotes(
           requestedSupportConceptIds: [], requestedSupportTopicIds: [] });
       }
     }
-    const topicLimit = bonusTimingRequested
+    if (hasValidatedRuleIntent && selectedTopicIds.includes('iras-individual-cpf-cash-top-up-relief')) {
+      const eligibilityQuote = completeCpfCashTopUpEligibilityQuote(record);
+      if (eligibilityQuote) {
+        const requestedSupport = requestedRuleSupportForParagraph(eligibilityQuote, record, selectedTopicIds,
+          requestedConcepts, context, query, Boolean(localIntent), validatedGeneralExplainRule);
+        if (requestedSupport.conceptIds.length > 0) candidates.push({
+          text: eligibilityQuote, quote: eligibilityQuote, recordId: record.id, kind: 'RULE', score: 120,
+          recordOrder, paragraphOrder: sourceBlocks.findIndex(block => block.includes(eligibilityQuote.split(/\r?\n/)[0])),
+          sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
+          requestedSupportConceptIds: requestedSupport.conceptIds,
+          requestedSupportTopicIds: requestedSupport.topicIds
+        });
+      }
+      if (requestedConcepts.some(concept => concept.id === 'cpf_cash_top_up_relief_limits')) {
+        for (const limitQuote of completeCpfCashTopUpLimitPassages(record)) {
+          const paragraphOrder = sourceBlocks.findIndex(block => limitQuote.startsWith(block));
+          candidates.push({ text: limitQuote, quote: limitQuote, recordId: record.id, kind: 'RULE', score: 110,
+            recordOrder, paragraphOrder, sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '',
+            topicIds: record.tags || [], requestedSupportConceptIds: ['cpf_cash_top_up_relief_limits'],
+            requestedSupportTopicIds: selectedTopicIds.filter(topicId => recordHasRequestedTopicAssociation(record, topicId)) });
+        }
+      }
+    }
+    if (hasValidatedRuleIntent && selectedTopicIds.some(topicId => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId)) &&
+        requestedConcepts.some(concept => concept.id === 'gst_motor_car_input_tax_exceptions')) {
+      for (const exceptionQuote of completeGstMotorCarExceptionPassages(record)) {
+        candidates.push({ text: exceptionQuote, quote: exceptionQuote, recordId: record.id, kind: 'RULE', score: 120,
+          recordOrder, paragraphOrder: sourceBlocks.findIndex(block => block === exceptionQuote),
+          sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
+          requestedSupportConceptIds: ['gst_motor_car_input_tax_exceptions'],
+          requestedSupportTopicIds: selectedTopicIds.filter(topicId => recordHasRequestedTopicAssociation(record, topicId)) });
+      }
+    }
+    const topicLimit = localIntent ? 5 : bonusTimingRequested
       ? record.tags.includes('iras-ais-employment-income') ? 3 : 6
       : 5;
     selected.push(...candidates.sort((a, b) => compareCandidates(a, b)).slice(0, topicLimit));
@@ -541,8 +732,9 @@ function selectEvidenceOnlyQuotes(
   // Cover each registered concept first with a passage from its own admitted
   // topic association, then fill a small remaining budget by relevance. Keep
   // per-source and total bounds so fallback cannot turn into a page dump.
-  const maximumQuotes = bonusTimingRequested ? 9 : Math.min(8, Math.max(5, topicIds.length + 2));
-  const maximumPerSource = bonusTimingRequested ? 6 : 3;
+  const maximumQuotes = localIntent ? Math.min(8, Math.max(5, selectedTopicIds.length + 2))
+    : bonusTimingRequested ? 9 : Math.min(8, Math.max(5, selectedTopicIds.length + 2));
+  const maximumPerSource = localIntent ? 3 : bonusTimingRequested ? 6 : 3;
   const chosen: typeof selected = [];
   const sourceCounts = new Map<string, number>();
   const addCandidate = (candidate: typeof selected[number]): void => {
@@ -553,7 +745,28 @@ function selectEvidenceOnlyQuotes(
     sourceCounts.set(candidate.sourceUrl, (sourceCounts.get(candidate.sourceUrl) || 0) + 1);
   };
   const topicCandidates: typeof selected = [];
-  for (const topicId of topicIds) {
+  if (localIntent) {
+    for (const concept of requestedConcepts) {
+      if (concept.id === 'gst_motor_car_input_tax_exceptions') {
+        const exceptionCandidates = selected.filter(item => item.requestedSupportConceptIds.includes(concept.id));
+        const thirdParty = exceptionCandidates.find(item => getGstMotorCarInputTaxExceptionKinds(item.text).includes('THIRD_PARTY'));
+        const connectedPerson = exceptionCandidates.find(item => getGstMotorCarInputTaxExceptionKinds(item.text).includes('CONNECTED_PERSON'));
+        if (thirdParty) addCandidate(thirdParty);
+        if (connectedPerson) addCandidate(connectedPerson);
+        continue;
+      }
+      if (concept.id === 'cpf_cash_top_up_relief_limits') {
+        const candidatesForLimits = selected.filter(item => item.requestedSupportConceptIds.includes(concept.id))
+          .sort((a, b) => compareCandidates(a, b));
+        for (const candidate of candidatesForLimits.slice(0, 2)) addCandidate(candidate);
+        continue;
+      }
+      const candidate = selected.filter(item => item.requestedSupportConceptIds.includes(concept.id))
+        .sort((a, b) => compareCandidates(a, b))[0];
+      if (candidate) addCandidate(candidate);
+    }
+  }
+  for (const topicId of selectedTopicIds) {
     if (topicId === 'iras-individual-overseas-employment') {
       const passages = selected.filter(item => item.topicIds.includes(topicId));
       const whollyOverseas = passages.filter(item => isWhollyOverseasEmploymentRule(item.text))
@@ -686,6 +899,11 @@ export function renderIrasEvidenceResponse(
     query, context.requestCompletenessContext, context.questionUnderstanding
   );
   const validatedGeneralExplainRule = isValidatedGeneralExplainRuleRequest(query, requestCompletenessContext);
+  const validatedIssueLocalGeneralExplainRule = !validatedGeneralExplainRule &&
+    Boolean(validatedIssueLocalRuleIntent(context, query, requestCompletenessContext));
+  const validatedGeneralRuleForRendering = validatedGeneralExplainRule || validatedIssueLocalGeneralExplainRule;
+  const issueLocalTopics = validatedIssueLocalGeneralExplainRule && context.authorityIssue
+    ? issueLocalTopicIds(context.authorityIssue) : [];
   const providerClaims = Array.isArray(parsed.taxClaims) ? parsed.taxClaims : [];
   const providerGeneralClaims = [...providerClaims];
   if (validatedGeneralExplainRule && mode === 'PROVIDER') {
@@ -702,15 +920,23 @@ export function renderIrasEvidenceResponse(
       }
     }
   }
+  const issueLocalSourceClaims = validatedIssueLocalGeneralExplainRule
+    ? selectEvidenceOnlyQuotes(context, query, issueLocalTopics, true, true)
+    : [];
   const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE' || mode === 'PROVIDER_NO_CLAIMS'
-    ? selectEvidenceOnlyQuotes(context, query)
-    : validatedGeneralExplainRule ? providerGeneralClaims : parsed.taxClaims;
+    ? selectEvidenceOnlyQuotes(context, query, validatedIssueLocalGeneralExplainRule ? issueLocalTopics : context.classification.topicIds,
+      true, validatedIssueLocalGeneralExplainRule)
+    : validatedIssueLocalGeneralExplainRule ? issueLocalSourceClaims
+      : validatedGeneralExplainRule ? providerGeneralClaims : parsed.taxClaims;
   let verification = verifyEvidenceClaims(inputClaims, quality.eligibleRecords, {
     missingFacts: context.missingFacts, targetDate: quality.targetDate
   });
-  let answerPath = mode === 'LOCAL' ? 'VALIDATED_LOCAL' : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode;
+  let answerPath = mode === 'LOCAL' || validatedIssueLocalGeneralExplainRule ? 'VALIDATED_LOCAL'
+    : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode;
   if (mode === 'PROVIDER' && verification.accepted.length === 0) {
-    const sourceOnlyClaims = selectEvidenceOnlyQuotes(context, query);
+    const sourceOnlyClaims = selectEvidenceOnlyQuotes(context, query,
+      validatedIssueLocalGeneralExplainRule ? issueLocalTopics : context.classification.topicIds,
+      true, validatedIssueLocalGeneralExplainRule);
     const sourceOnlyVerification = verifyEvidenceClaims(sourceOnlyClaims, quality.eligibleRecords, {
       missingFacts: context.missingFacts, targetDate: quality.targetDate
     });
@@ -747,10 +973,12 @@ export function renderIrasEvidenceResponse(
     if (overseasEmploymentCoverage.whollyOverseas && overseasEmploymentCoverage.incidental) {
       representedTopics.add('iras-individual-overseas-employment');
     }
-    const missingCoveredTopics = context.classification.topicIds.filter(topicId =>
+    const coverageScopeTopicIds = validatedIssueLocalGeneralExplainRule ? issueLocalTopics : context.classification.topicIds;
+    const missingCoveredTopics = coverageScopeTopicIds.filter(topicId =>
       quality.coveredTopicIds.includes(topicId) && !representedTopics.has(topicId));
     if (missingCoveredTopics.length > 0) {
-      const supplementalClaims = selectEvidenceOnlyQuotes(context, query, missingCoveredTopics, false);
+      const supplementalClaims = selectEvidenceOnlyQuotes(context, query, missingCoveredTopics, false,
+        validatedIssueLocalGeneralExplainRule);
       const supplementalVerification = verifyEvidenceClaims(supplementalClaims, quality.eligibleRecords, {
         missingFacts: context.missingFacts, targetDate: quality.targetDate
       });
@@ -779,10 +1007,10 @@ export function renderIrasEvidenceResponse(
       }))]
     };
   }
-  const generalRuleCoverage = validatedGeneralExplainRule
-    ? generalRuleAnswerCoverage(context, query, presentationClaims)
+  const generalRuleCoverage = validatedGeneralRuleForRendering
+    ? generalRuleAnswerCoverage(context, query, presentationClaims, validatedIssueLocalGeneralExplainRule)
     : { uncoveredConcepts: [] as string[], uncoveredTopicIds: [] as string[] };
-  const presentationQuality = validatedGeneralExplainRule &&
+  const presentationQuality = validatedGeneralRuleForRendering &&
       (generalRuleCoverage.uncoveredConcepts.length > 0 || generalRuleCoverage.uncoveredTopicIds.length > 0)
     ? {
       ...quality,
@@ -792,7 +1020,7 @@ export function renderIrasEvidenceResponse(
       uncoveredConcepts: [...new Set([...(quality.uncoveredConcepts || []), ...generalRuleCoverage.uncoveredConcepts])]
     }
     : quality;
-  const generalRuleGapLabels = validatedGeneralExplainRule
+  const generalRuleGapLabels = validatedGeneralRuleForRendering
     ? [...new Set([
       ...(presentationQuality.uncoveredConcepts || []),
       ...presentationQuality.uncoveredTopicIds.map(topicId => getCoverageTopicById(topicId)?.title || topicId)
@@ -801,12 +1029,12 @@ export function renderIrasEvidenceResponse(
   const generalRuleGapMessage = generalRuleGapLabels.length > 0
     ? `The admitted quotations do not establish these requested rule points: ${generalRuleGapLabels.join('; ')}.`
     : undefined;
-  const calculation = validatedGeneralExplainRule ? undefined
+  const calculation = validatedGeneralRuleForRendering ? undefined
     : computeVerifiedStandardGst(query, quality.eligibleRecords, quality.targetDate, unresolvedGstFacts(context));
-  const applicationConclusions = !validatedGeneralExplainRule && quality.uncoveredTopicIds.length === 0
+  const applicationConclusions = !validatedGeneralRuleForRendering && quality.uncoveredTopicIds.length === 0
     ? evaluateIrasApplications(query, quality.eligibleRecords, quality.targetDate)
     : [];
-  const missingFacts = validatedGeneralExplainRule ? []
+  const missingFacts = validatedGeneralRuleForRendering ? []
     : [...new Set([...context.missingFacts, ...quality.missingFacts])];
   const hasCompleteGeneralRuleAnswer = validatedGeneralExplainRule &&
     (quality.status === 'LOCAL_SUFFICIENT' || quality.status === 'RETRIEVED_SUFFICIENT') &&
@@ -838,7 +1066,7 @@ export function renderIrasEvidenceResponse(
   if (mode === 'PROVIDER_NO_CLAIMS') lines.push('The provider returned no verifiable tax claims. Only complete source paragraphs that passed claim verification are shown below.');
   if (answerPath === 'PROVIDER_CLAIMS_REJECTED') lines.push('The provider claims did not pass verification. Independently selected source quotations are shown below if they also pass the evidence checks.');
   if (presentationQuality.status === 'INSUFFICIENT' || presentationQuality.uncoveredTopicIds.length > 0 ||
-      (validatedGeneralExplainRule &&
+      (validatedGeneralRuleForRendering &&
         ((quality.status !== 'LOCAL_SUFFICIENT' && quality.status !== 'RETRIEVED_SUFFICIENT') ||
           Boolean(presentationQuality.uncoveredConcepts?.length)))) {
     lines.push('The available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.');
@@ -873,7 +1101,7 @@ export function renderIrasEvidenceResponse(
         lines.push(`> ${claim.text.replace(/\n/g, '\n> ')}\n\n${sourceLabel} — ${record.provenance === 'LIVE_EXTERNAL' ? 'retrieved official evidence' : 'validated local evidence'}${urlNote}${scope}.`);
       }
     }
-    if (!calculation && applicationConclusions.length === 0 && !validatedGeneralExplainRule) {
+    if (!calculation && applicationConclusions.length === 0 && !validatedGeneralRuleForRendering) {
       lines.push('This evidence states the recorded rules; it does not by itself confirm that every condition is met in this case.');
     }
   } else if (omittedGovernmentClaims.length > 0) {
@@ -887,11 +1115,12 @@ export function renderIrasEvidenceResponse(
     quality: presentationQuality,
     acceptedClaims: presentationClaims,
     missingFacts,
-    existingFactPrompts: validatedGeneralExplainRule ? [] : deterministicScenario?.missingFields?.map(field => field.prompt) || [],
+    existingFactPrompts: validatedGeneralRuleForRendering ? [] : deterministicScenario?.missingFields?.map(field => field.prompt) || [],
     applicationConclusions,
     hasVerifiedCalculation: Boolean(calculation),
-    hasApplicationUncertainty: !calculation && applicationConclusions.length === 0 && !hasCompleteGeneralRuleAnswer,
-    isGeneralRuleRequest: validatedGeneralExplainRule,
+    hasApplicationUncertainty: !calculation && applicationConclusions.length === 0 &&
+      !validatedGeneralRuleForRendering && !hasCompleteGeneralRuleAnswer,
+    isGeneralRuleRequest: validatedGeneralRuleForRendering,
     calculationLead: calculation ? lines.find(line => line.startsWith('Output GST:')) : undefined
   });
   const scenarioState: AccountingScenarioState = {

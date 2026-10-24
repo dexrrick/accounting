@@ -265,7 +265,7 @@ assert.equal(supportGeneralIrasRuleConcept({
   sourceText: 'Input tax may generally be claimed for purchases used to make taxable supplies when the business holds a valid tax invoice.',
   domainId: 'IRAS_GST', topicIds: ['iras-gst-blocked-input-tax'], subject: blockedCarConcept.label,
   population: 'COMPANY', concepts: [blockedCarConcept]
-}), undefined, 'a generic positive input-tax rule cannot establish the specific blocked-car rule');
+}), false, 'the recognized blocked-car concept rejects a generic positive input-tax rule as support for its specific restriction');
 assert.equal(matchesRequestedQuestionConcept(
   'Input tax may generally be claimed for purchases used to make taxable supplies when the business holds a valid tax invoice.',
   blockedCarConcept,

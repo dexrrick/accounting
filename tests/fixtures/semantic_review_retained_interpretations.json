@@ -1,0 +1,74 @@
+{
+  "provenance": "Extracted parsed interpretations from retained model responses; no provider call is performed by the regression.",
+  "mom": {
+    "sourceReceipt": "artifacts/authority-rollout-2026-10-23/shared-completeness/resume-2217/live-mom.json",
+    "responseBodySha256": "0b3126798049466672e4bb6d353c29aa6bc5d10ad0e16857634e458a35c08368",
+    "question": "Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.",
+    "interpretation": {
+      "schemaVersion": 2,
+      "jurisdiction": ["Singapore"],
+      "authorityCandidates": ["MOM", "SSO"],
+      "contextualAuthorities": [],
+      "domain": "MOM_EMPLOYMENT",
+      "population": "EMPLOYEE",
+      "primarySubject": "Employment Act Part IV coverage for working hours and overtime",
+      "concepts": [
+        { "concept": "Employment Act", "role": "PRIMARY" },
+        { "concept": "Part IV coverage", "role": "PRIMARY" },
+        { "concept": "working hours", "role": "RELATED" },
+        { "concept": "overtime", "role": "RELATED" }
+      ],
+      "requestedOperation": "EXPLAIN_RULE",
+      "factsExplicitlyProvided": [],
+      "confidence": 0.95,
+      "issues": [
+        {
+          "subject": "Employment Act Part IV employee coverage criteria",
+          "population": "EMPLOYEE",
+          "domain": "MOM_EMPLOYMENT",
+          "governingAuthorities": ["MOM"],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.95
+        }
+      ]
+    }
+  },
+  "mas": {
+    "sourceReceipt": "artifacts/authority-rollout-2026-10-23/shared-completeness/resume-2217/live-mas.json",
+    "responseBodySha256": "b9a121391bea27490f157fbc259e2a8ca05c47f98f855514d2f4b8dc926e5ab2",
+    "question": "Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.",
+    "interpretation": {
+      "schemaVersion": 2,
+      "jurisdiction": ["Singapore"],
+      "authorityCandidates": ["MAS"],
+      "contextualAuthorities": [],
+      "domain": "MAS_FUNDS",
+      "population": "UNKNOWN",
+      "primarySubject": "Capital Markets Services Licence general requirement",
+      "concepts": [
+        { "concept": "Capital Markets Services Licence", "role": "PRIMARY" },
+        { "concept": "licensing requirement", "role": "PRIMARY" },
+        { "concept": "MAS guidance", "role": "CONTEXT_ONLY" }
+      ],
+      "requestedOperation": "EXPLAIN_RULE",
+      "factsExplicitlyProvided": [],
+      "confidence": 1,
+      "issues": [
+        {
+          "subject": "Capital Markets Services Licence general requirement",
+          "population": "UNKNOWN",
+          "domain": "MAS_FUNDS",
+          "governingAuthorities": ["MAS"],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 1
+        }
+      ]
+    }
+  }
+}

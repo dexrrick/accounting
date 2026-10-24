@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   buildGroundedReasoningContext,
 } from '../../src/services/groundingContextBuilder.ts';
@@ -244,6 +245,20 @@ const generalMealEligibility = reconcile('What are the general conditions for a 
 });
 assert.deepEqual(generalMealEligibility.classification.missingFacts, [],
   'Explicit general-conditions questions remain conceptual without relying on illustration markers.');
+const provisionIllustrationQuery = 'Outline the general measurement rules for provisions under SFRS(I), using SGD 500 only as an illustration.';
+const provisionIllustrationMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACCOUNTING_STANDARDS'], domain: 'ACCOUNTING', population: 'UNKNOWN',
+  primarySubject: 'general provision measurement',
+  concepts: [{ concept: 'provision measurement', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'general provision measurement', population: 'UNKNOWN', domain: 'ACCOUNTING',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), provisionIllustrationQuery);
+assert.ok(provisionIllustrationMeaning);
+assert.equal(provisionIllustrationMeaning.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'A number confined to an illustration clause does not make the general provisions rule case-specific.');
+assert.equal(provisionIllustrationMeaning.requiresUserSpecificFacts, false);
 
 const caregiverLexical = classifyQuestion('Can caregiver relief reduce the personal income tax I owe?');
 assert.equal(caregiverLexical.missingFacts.some(fact => /vehicle registration|S-plate passenger car/i.test(fact)), false,
@@ -572,12 +587,81 @@ assert.equal(promptCalls.length, 1);
 assert.equal(promptCalls[0].options.timeoutMs, SEMANTIC_QUESTION_TIMEOUT_MS);
 assert.match(promptCalls[0].system, /do not answer/i);
 assert.doesNotMatch(promptCalls[0].prompt, /retrieved evidence|conversation history/i);
+
+// These are extracted interpretations from completed retained receipts. The
+// regression replays only the saved model interpretation; it makes no live call.
+const retainedInterpretations = JSON.parse(readFileSync(
+  new URL('../fixtures/semantic_review_retained_interpretations.json', import.meta.url), 'utf8'));
+assert.equal(retainedInterpretations.provenance,
+  'Extracted parsed interpretations from retained model responses; no provider call is performed by the regression.');
+for (const retained of [retainedInterpretations.mom, retainedInterpretations.mas]) {
+  assert.match(retained.responseBodySha256, /^[a-f0-9]{64}$/);
+  assert.ok(retained.sourceReceipt.startsWith('artifacts/'), 'Retained fixture names its source receipt without depending on it at test time.');
+}
+const replayRetainedInterpretation = async retained => {
+  const replay = await interpretSemanticQuestion(retained.question, provider,
+    async () => JSON.stringify(retained.interpretation));
+  assert.equal(replay.mode, 'SEMANTIC_INTERPRETATION');
+  assert.equal(replay.assessmentStatus, 'PASSED');
+  return replay.interpretation;
+};
+
+const retainedMom = retainedInterpretations.mom;
+const retainedMomMeaning = await replayRetainedInterpretation(retainedMom);
+assert.deepEqual(retainedMomMeaning.authorityCandidates, ['MOM', 'SSO'],
+  'The retained MOM response keeps its root publisher authority candidate.');
+const retainedMomRoute = reconcileQuestionUnderstanding(retainedMom.question, classifyQuestion(retainedMom.question), {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: retainedMomMeaning
+});
+assert.equal(retainedMomRoute.understanding.interpretation.issues.length, 1);
+assert.equal(retainedMomRoute.understanding.interpretation.issues[0].governingAuthorities[0], 'MOM');
+const retainedMomConcepts = getRequestedQuestionConcepts(retainedMom.question, retainedMomRoute.understanding);
+const retainedEmploymentAct = retainedMomConcepts.find(concept => concept.label === 'Employment Act');
+const retainedPartFour = retainedMomConcepts.find(concept => concept.label === 'Part IV coverage');
+assert.deepEqual(retainedEmploymentAct?.semanticAuthorities, ['MOM'],
+  'The Employment Act descriptor binds to the unique MOM Part IV issue, not the root MOM/SSO publisher scope.');
+assert.deepEqual(retainedPartFour?.semanticAuthorities, ['MOM']);
+assert.equal(retainedMomConcepts.some(concept => ['working hours', 'overtime'].includes(concept.label)), false,
+  'Separate working-hours and overtime labels remain coverage context when the user asks only for Part IV coverage.');
+const publisherOnlyMomQuestion = 'Under MOM guidance, which employees are covered by Part IV of the Employment Act published on Singapore Statutes Online for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.';
+assert.deepEqual(getRequestedQuestionConcepts(publisherOnlyMomQuestion, retainedMomMeaning)
+  .find(concept => concept.label === 'Employment Act')?.semanticAuthorities, ['MOM'],
+  'A publisher reference attached to the Employment Act coverage clause remains contextual to the MOM issue.');
+
+const independentSsoQuestion = `${retainedMom.question} Separately, explain how Singapore Statutes Online publishes other statutes and legal requirements.`;
+const independentSsoConcepts = getRequestedQuestionConcepts(independentSsoQuestion, retainedMomMeaning);
+assert.deepEqual(independentSsoConcepts.find(concept => concept.label === 'Employment Act')?.semanticAuthorities, ['MOM', 'SSO'],
+  'A full-name independent Singapore Statutes Online request prevents publisher-only rebinding.');
+const conflictingMomMeaning = { ...retainedMomMeaning, population: 'COMPANY' };
+assert.deepEqual(getRequestedQuestionConcepts(retainedMom.question, conflictingMomMeaning)
+  .find(concept => concept.label === 'Employment Act')?.semanticAuthorities, ['MOM', 'SSO'],
+  'A conflicting single-issue root population is preserved instead of silently rebinding the descriptor to the child.');
+assert.equal(getRequestedQuestionConcepts(retainedMom.question, conflictingMomMeaning)
+  .find(concept => concept.label === 'Employment Act')?.semanticPopulation, 'COMPANY');
+const independentOvertimeQuestion = `${retainedMom.question} Separately, what overtime rates apply?`;
+assert.ok(getRequestedQuestionConcepts(independentOvertimeQuestion, retainedMomMeaning)
+  .some(concept => concept.id === 'semantic_overtime'),
+  'A separate request for overtime rates remains a material concept beside MOM coverage.');
+
+const retainedMas = retainedInterpretations.mas;
+const retainedMasMeaning = await replayRetainedInterpretation(retainedMas);
+assert.equal(retainedMasMeaning.population, 'UNKNOWN', 'The retained MAS interpretation does not invent a company population.');
+const retainedMasRoute = reconcileQuestionUnderstanding(retainedMas.question, classifyQuestion(retainedMas.question), {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: retainedMasMeaning
+});
+assert.equal(retainedMasRoute.understanding.interpretation.issues[0].population, 'UNKNOWN');
+const retainedMasConcepts = getRequestedQuestionConcepts(retainedMas.question, retainedMasRoute.understanding);
+assert.deepEqual(retainedMasConcepts.find(concept => concept.id === 'mas_cms_licence_definition')?.semanticAuthorities, ['MAS']);
+assert.deepEqual(retainedMasConcepts.find(concept => concept.label === 'licensing requirement')?.semanticAuthorities, ['MAS']);
+assert.equal(retainedMasConcepts.find(concept => concept.label === 'licensing requirement')?.semanticPopulation, 'UNKNOWN');
+
 const generalCompanyResidencyQuery = 'How do Singapore tax rules determine whether a company is tax resident here?';
 const generalCompanyResidencyMeaning = interpretation({
   domain: 'IRAS_INCOME_TAX', population: 'COMPANY',
   primarySubject: 'corporate tax residence determination',
   concepts: [
     { concept: 'tax residence', role: 'PRIMARY' },
+    { concept: 'control and management test', role: 'PRIMARY' },
     { concept: 'control and management', role: 'RELATED' }
   ],
   requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: true,
@@ -594,6 +678,289 @@ assert.equal(normalizedCompanyResidency.interpretation.issues[0].evidenceRequire
 const normalizedResidencyConcepts = getRequestedQuestionConcepts(generalCompanyResidencyQuery, normalizedCompanyResidency);
 assert.deepEqual(normalizedResidencyConcepts.map(concept => concept.id), ['company_tax_residency_rule']);
 assert.deepEqual(normalizedResidencyConcepts[0].topicIds, ['iras-corporate-tax-residency']);
+const incorporationResidencyQuery = 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.';
+const incorporationResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'corporate tax residence determination',
+  concepts: [
+    { concept: 'tax residence', role: 'PRIMARY' },
+    { concept: 'incorporation', role: 'RELATED' },
+    { concept: 'place of incorporation', role: 'RELATED' }
+  ],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true,
+  issues: [{ subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const normalizedIncorporationResidency = await interpretSemanticQuestion(incorporationResidencyQuery, provider,
+  async () => JSON.stringify(incorporationResidencyMeaning));
+assert.equal(normalizedIncorporationResidency.interpretation.requestedOperation, 'EXPLAIN_RULE');
+assert.equal(normalizedIncorporationResidency.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedIncorporationResidency.interpretation.requiresUserSpecificFacts, false);
+assert.deepEqual(getRequestedQuestionConcepts(incorporationResidencyQuery, normalizedIncorporationResidency)
+  .map(concept => concept.id), ['company_tax_residency_rule', 'company_tax_residency_incorporation'],
+  'The same-issue place-of-incorporation alias stays covered alongside the general residency and incorporation propositions.');
+
+const qualifiedControlTestLabel = 'control and management test for foreign pension offsets';
+assert.ok(getRequestedQuestionConcepts(`${incorporationResidencyQuery} Explain ${qualifiedControlTestLabel}.`, {
+  ...normalizedIncorporationResidency.interpretation,
+  concepts: [...normalizedIncorporationResidency.interpretation.concepts,
+    { concept: qualifiedControlTestLabel, role: 'PRIMARY' }]
+}).some(concept => concept.label === qualifiedControlTestLabel),
+'An unknown qualification cannot alias the exact retained control-and-management-test concept.');
+
+const mixedAcraIncorporationQuery = `${incorporationResidencyQuery} Separately, explain ACRA incorporation requirements.`;
+const mixedAcraIncorporationMeaning = interpretation({
+  authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'company tax residency and ACRA incorporation requirements',
+  concepts: [
+    { concept: 'place of incorporation', role: 'RELATED' },
+    { concept: 'ACRA incorporation requirements', role: 'PRIMARY' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: false,
+  issues: [
+    { subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'ACRA company incorporation requirements', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+      governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }
+  ]
+});
+const mixedAcraIncorporationConcepts = getRequestedQuestionConcepts(mixedAcraIncorporationQuery, mixedAcraIncorporationMeaning);
+assert.ok(mixedAcraIncorporationConcepts.some(concept => concept.id === 'company_tax_residency_incorporation'));
+assert.ok(mixedAcraIncorporationConcepts.some(concept => concept.id === 'semantic_place_of_incorporation'),
+  'An ACRA incorporation concept cannot alias the separate IRAS company-residency qualification.');
+assert.ok(mixedAcraIncorporationConcepts.some(concept => concept.id === 'semantic_acra_incorporation_requirements'));
+
+const mixedIncorporationResidencyQuery = `${incorporationResidencyQuery} Separately, how should Acme Pte Ltd’s tax residency be assessed?`;
+const mixedIncorporationResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY',
+  primarySubject: 'general company tax residency rule and Acme Pte Ltd residency assessment',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 },
+    { subject: 'Acme Pte Ltd corporate tax residence assessment', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+  ]
+});
+const normalizedMixedIncorporationResidency = await interpretSemanticQuestion(mixedIncorporationResidencyQuery, provider,
+  async () => JSON.stringify(mixedIncorporationResidencyMeaning));
+assert.equal(normalizedMixedIncorporationResidency.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'The incorporation-alone rule remains source-only when a named-company request follows it.');
+assert.equal(normalizedMixedIncorporationResidency.interpretation.issues[1].operation, 'CHECK_ELIGIBILITY',
+  'The named-company request retains its original case-specific operation.');
+assert.equal(normalizedMixedIncorporationResidency.interpretation.requiresUserSpecificFacts, true,
+  'The named-company sibling keeps the mixed request facts-dependent.');
+assert.deepEqual(getRequestedQuestionConcepts(mixedIncorporationResidencyQuery, normalizedMixedIncorporationResidency)
+  .map(concept => concept.id).filter(id => id.startsWith('company_tax_residency_')),
+['company_tax_residency_rule', 'company_tax_residency_incorporation'],
+  'A named-company sibling does not erase either general residency proposition.');
+
+const mixedCompanyResidencyQuery = `${generalCompanyResidencyQuery} Separately, how should Acme Pte Ltd’s tax residency be assessed?`;
+const mixedCompanyResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'company tax residency and named company assessment',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 },
+    { subject: 'Acme Pte Ltd corporate tax residence assessment', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+  ]
+});
+const normalizedMixedCompanyResidency = await interpretSemanticQuestion(mixedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(mixedCompanyResidencyMeaning));
+assert.equal(normalizedMixedCompanyResidency.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A named-company sibling does not prevent normalization of the general residency issue.');
+assert.equal(normalizedMixedCompanyResidency.interpretation.issues[1].operation, 'CHECK_ELIGIBILITY');
+assert.equal(normalizedMixedCompanyResidency.interpretation.requiresUserSpecificFacts, true,
+  'The named-company sibling retains its facts requirement.');
+assert.ok(getRequestedQuestionConcepts(mixedCompanyResidencyQuery, normalizedMixedCompanyResidency)
+  .some(concept => concept.id === 'company_tax_residency_rule'),
+  'A named-company application sibling does not erase the general child proposition.');
+
+const cpfCashTopUpQuery = 'Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.';
+const cpfCashTopUpIssue = {
+  subject: 'CPF cash top-up tax relief eligibility and limits', population: 'UNKNOWN', domain: 'CPF_PAYROLL',
+  governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+  evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95
+};
+const cpfCashTopUpMeaning = interpretation({
+  authorityCandidates: ['CPF'], contextualAuthorities: [], domain: 'CPF_PAYROLL', population: 'UNKNOWN',
+  primarySubject: cpfCashTopUpIssue.subject,
+  concepts: [{ concept: 'CPF cash top-up tax relief', role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true, issues: [cpfCashTopUpIssue]
+});
+const normalizedCpfCashTopUp = await interpretSemanticQuestion(cpfCashTopUpQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedCpfCashTopUp.interpretation.issues[0].domain, 'IRAS_INCOME_TAX');
+assert.equal(normalizedCpfCashTopUp.interpretation.issues[0].population, 'INDIVIDUAL',
+  'The individual claimant scope is inferred only from the explicit own-CPF wording.');
+assert.deepEqual(normalizedCpfCashTopUp.interpretation.issues[0].contextualAuthorities, ['CPF']);
+assert.equal(normalizedCpfCashTopUp.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedCpfCashTopUp.interpretation.requiresUserSpecificFacts, false,
+  'The bounded general eligibility and limits follow-ons make the requested outcome rule-only.');
+assert.deepEqual(getRequestedQuestionConcepts(cpfCashTopUpQuery, normalizedCpfCashTopUp).map(concept => concept.id), [
+  'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
+]);
+
+const mixedCpfPayrollQuery = `${cpfCashTopUpQuery} Separately, how much must the employer contribute to CPF?`;
+const mixedCpfMeaning = interpretation({
+  authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'CPF cash top-up relief and employer contribution amount',
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [cpfCashTopUpIssue, {
+    subject: 'employer CPF contribution amount', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
+    governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'CALCULATE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95
+  }]
+});
+const normalizedMixedCpf = await interpretSemanticQuestion(mixedCpfPayrollQuery, provider,
+  async () => JSON.stringify(mixedCpfMeaning));
+assert.equal(normalizedMixedCpf.interpretation.issues[0].domain, 'IRAS_INCOME_TAX');
+assert.equal(normalizedMixedCpf.interpretation.issues[0].operation, 'EXPLAIN_RULE');
+assert.equal(normalizedMixedCpf.interpretation.issues[1].domain, 'CPF_PAYROLL');
+assert.equal(normalizedMixedCpf.interpretation.issues[1].operation, 'CALCULATE',
+  'A distinct employer contribution outcome stays a CPF payroll issue.');
+
+const separateCpfEligibilityQuery = 'Explain CPF cash top-up tax relief eligibility and limits. Separately, explain CPF contribution eligibility.';
+const separateCpfEligibilityMeaning = interpretation({
+  authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'CPF contribution eligibility',
+  concepts: [
+    { concept: 'CPF cash top-up relief eligibility and limits', role: 'RELATED' },
+    { concept: 'CPF contribution eligibility', role: 'PRIMARY' },
+    { concept: 'Eligibility conditions', role: 'RELATED' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+  issues: [
+    { subject: 'CPF cash top-up tax relief eligibility and limits', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'CPF contribution eligibility', population: 'EMPLOYEE', domain: 'CPF_PAYROLL',
+      governingAuthorities: ['CPF'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }
+  ]
+});
+const separateCpfEligibilityConcepts = getRequestedQuestionConcepts(separateCpfEligibilityQuery, separateCpfEligibilityMeaning);
+assert.ok(separateCpfEligibilityConcepts.some(concept => concept.id === 'semantic_cpf_contribution_eligibility'),
+  'A separate CPF contribution eligibility proposition cannot alias the cash top-up relief owner.');
+assert.ok(separateCpfEligibilityConcepts.some(concept => concept.id === 'semantic_eligibility_conditions'),
+  `A generic eligibility label remains material when cash top-up relief and CPF payroll are both plausible owners: ${separateCpfEligibilityConcepts.map(concept => concept.id).join(', ')}`);
+assert.deepEqual(separateCpfEligibilityConcepts.filter(concept => concept.id.startsWith('cpf_cash_top_up_relief'))
+  .map(concept => concept.id), [
+    'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
+  ]);
+
+const sameIssueCpfEligibilityMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL', primarySubject: 'CPF cash top-up tax relief eligibility and limits',
+  concepts: [
+    { concept: 'Eligibility conditions', role: 'RELATED' },
+    { concept: 'Relief limits', role: 'RELATED' }
+  ],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'CPF cash top-up tax relief eligibility and limits', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+const sameIssueCpfEligibilityConcepts = getRequestedQuestionConcepts(
+  'Explain CPF cash top-up tax relief eligibility and limits.', sameIssueCpfEligibilityMeaning);
+assert.deepEqual(sameIssueCpfEligibilityConcepts.map(concept => concept.id), [
+  'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
+], 'Generic eligibility and relief-limit aliases stay covered when one compatible cash top-up issue owns them.');
+
+const foreignPensionOffsetQuery = 'Explain the general CPF cash top-up tax relief interaction with foreign pension offsets.';
+const foreignPensionOffsetLabel = 'CPF cash top-up tax relief interaction with foreign pension offsets';
+const foreignPensionOffsetMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'INDIVIDUAL', primarySubject: foreignPensionOffsetLabel,
+  concepts: [{ concept: foreignPensionOffsetLabel, role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: foreignPensionOffsetLabel, population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+const foreignPensionOffsetConcepts = getRequestedQuestionConcepts(foreignPensionOffsetQuery, foreignPensionOffsetMeaning);
+assert.ok(foreignPensionOffsetConcepts.some(concept => concept.label === foreignPensionOffsetLabel),
+  'A same-owner CPF label with foreign pension offset anchors remains material beyond the known canonical vocabulary.');
+assert.ok(foreignPensionOffsetConcepts.some(concept => concept.id === 'cpf_cash_top_up_relief'));
+
+const motorCarExceptionQuery = 'Can a GST-registered company claim input tax on a passenger motor car, and what exceptions apply?';
+assert.deepEqual(getRequestedQuestionConcepts(motorCarExceptionQuery).map(concept => concept.id), [
+  'gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions'
+]);
+const motorCarRestrictionQuery = 'Can a GST-registered company claim input tax on a passenger motor car?';
+assert.deepEqual(getRequestedQuestionConcepts(motorCarRestrictionQuery).map(concept => concept.id), [
+  'gst_blocked_motor_car_input_tax'
+], 'The exception proposition is added only when the question asks for it.');
+const mixedMotorCarSrsExceptionQuery = `${motorCarExceptionQuery} Separately, explain SRS withdrawal exceptions.`;
+const mixedMotorCarSrsExceptionMeaning = interpretation({
+  authorityCandidates: ['IRAS'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'SRS withdrawal exceptions',
+  concepts: [
+    { concept: 'Passenger motor car input-tax exceptions', role: 'RELATED' },
+    { concept: 'SRS withdrawal exceptions', role: 'PRIMARY' }
+  ],
+  requestedOperation: 'OTHER', requiresUserSpecificFacts: false,
+  issues: [
+    { subject: 'passenger motor car input tax restriction and exceptions', population: 'COMPANY', domain: 'IRAS_GST',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 },
+    { subject: 'SRS withdrawal exceptions', population: 'INDIVIDUAL', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }
+  ]
+});
+const mixedMotorCarSrsExceptionConcepts = getRequestedQuestionConcepts(
+  mixedMotorCarSrsExceptionQuery, mixedMotorCarSrsExceptionMeaning);
+assert.ok(mixedMotorCarSrsExceptionConcepts.some(concept => concept.id === 'semantic_srs_withdrawal_exceptions'),
+  'SRS withdrawal exceptions stay material beside passenger motor-car input-tax exceptions.');
+assert.ok(mixedMotorCarSrsExceptionConcepts.some(concept => concept.id === 'gst_motor_car_input_tax_exceptions'));
+
+const sameIssueMotorCarExceptionMeaning = interpretation({
+  authorityCandidates: ['IRAS'], domain: 'IRAS_GST', population: 'COMPANY',
+  primarySubject: 'passenger motor car input tax restriction and exceptions',
+  concepts: [{ concept: 'Input tax exceptions', role: 'RELATED' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'passenger motor car input tax restriction and exceptions', population: 'COMPANY', domain: 'IRAS_GST',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+assert.deepEqual(getRequestedQuestionConcepts(motorCarExceptionQuery, sameIssueMotorCarExceptionMeaning)
+  .map(concept => concept.id), ['gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions'],
+  'A motor-car input-tax exception label aliases the canonical exception concept when the unique GST issue owns it.');
+const diplomaticMissionMotorCarQuery = 'Can a GST-registered company claim input tax on a passenger motor car for diplomatic missions?';
+const diplomaticMissionMotorCarLabel = 'Blocked input tax on passenger motor cars for diplomatic missions';
+const diplomaticMissionMotorCarMeaning = interpretation({
+  authorityCandidates: ['IRAS'], domain: 'IRAS_GST', population: 'COMPANY',
+  primarySubject: diplomaticMissionMotorCarLabel,
+  concepts: [{ concept: diplomaticMissionMotorCarLabel, role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true,
+  issues: [{ subject: diplomaticMissionMotorCarLabel, population: 'COMPANY', domain: 'IRAS_GST',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+});
+const diplomaticMissionMotorCarConcepts = getRequestedQuestionConcepts(
+  diplomaticMissionMotorCarQuery, diplomaticMissionMotorCarMeaning);
+assert.ok(diplomaticMissionMotorCarConcepts.some(concept => concept.label === diplomaticMissionMotorCarLabel),
+  'A same-owner GST label with diplomatic-mission qualifiers remains material beyond the canonical vehicle restriction.');
+const generalAcraAnnualFilingQuery = 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.';
+const generalAcraAnnualFilingMeaning = validateSemanticQuestionInterpretation(interpretation({
+  authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
+  primarySubject: 'annual return filing requirements',
+  concepts: [{ concept: 'annual return filing duty', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'annual return filing requirements', population: 'COMPANY', domain: 'ACRA_CORPORATE',
+    governingAuthorities: ['ACRA'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['acra_annual-returns'], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+}), generalAcraAnnualFilingQuery);
+assert.ok(generalAcraAnnualFilingMeaning);
+assert.equal(generalAcraAnnualFilingMeaning.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'Plural annual-return wording binds the ACRA filing rule to its raw general-duty clause.');
+assert.equal(generalAcraAnnualFilingMeaning.requiresUserSpecificFacts, false);
 const acraDeadlineRuleQuery = 'Under current ACRA rules, how many months after financial year end must a non-listed Singapore company without an overseas branch register file its annual return? Cite the official rule.';
 const acraDeadlineRuleMeaning = interpretation({
   authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE', population: 'COMPANY',
@@ -705,6 +1072,28 @@ const namedCompanyResidency = await interpretSemanticQuestion(namedCompanyReside
   async () => JSON.stringify(generalCompanyResidencyMeaning));
 assert.equal(namedCompanyResidency.interpretation.requestedOperation, 'DETERMINE_TREATMENT',
   'A named-company question remains case-dependent even with general-rule wording.');
+const explainNamedCompanyResidencyQuery = 'Explain whether Acme Pte Ltd is tax resident in Singapore.';
+const explainNamedCompanyResidencyMeaning = interpretation({
+  domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'Acme Pte Ltd corporate tax residence determination',
+  concepts: [{ concept: 'tax residence', role: 'PRIMARY' }],
+  requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false,
+  issues: [{ subject: 'Acme Pte Ltd corporate tax residence determination', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+    governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95 }]
+});
+const explainNamedCompanyResidency = await interpretSemanticQuestion(explainNamedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(explainNamedCompanyResidencyMeaning));
+assert.equal(explainNamedCompanyResidency.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'An EXPLAIN_RULE request to determine a named company’s residency still needs case facts.');
+assert.equal(explainNamedCompanyResidency.interpretation.requiresUserSpecificFacts, true,
+  'The named-company residency outcome remains facts-dependent when phrased as “explain whether”.');
+const directNamedCompanyResidencyQuery = 'Is Acme Pte Ltd tax resident in Singapore?';
+const directNamedCompanyResidency = await interpretSemanticQuestion(directNamedCompanyResidencyQuery, provider,
+  async () => JSON.stringify(explainNamedCompanyResidencyMeaning));
+assert.equal(directNamedCompanyResidency.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'A direct named-company residency question needs case facts even when the model labels it EXPLAIN_RULE.');
+assert.equal(directNamedCompanyResidency.interpretation.requiresUserSpecificFacts, true,
+  'A direct named-company residency question remains facts-dependent.');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => '{bad json')).failure, 'INVALID_RESPONSE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => JSON.stringify(interpretation({ confidence: 0.2 })))).failure, 'LOW_CONFIDENCE');
 assert.equal((await interpretSemanticQuestion('Question?', provider, async () => { throw new Error('request timed out'); })).failure, 'TIMEOUT');

@@ -1,16 +1,22 @@
 import type { StatutoryAuthority, QueryDomain } from '../types/accounting';
 import type {
   AuthorityApplicationStatus,
+  AuthorityAdmissionPredicateResult,
+  AuthorityCandidateAdmissionDiagnostic,
   AuthorityEvidenceGap,
+  AuthorityEvidenceQualityTrace,
   AuthorityEvidenceProvider,
   AuthorityEvidenceProviderResult,
   AuthorityEvidenceRequest,
   AuthorityEvidenceScope,
+  AuthorityCandidateProvenancePaths,
+  AuthorityIssueAdmissionDiagnostics,
   AuthorityEvidenceStatus,
   AuthorityIssueEvidence,
   AuthorityIssueLifecycle,
   AuthorityOverallStatus,
   AuthorityRetrievalTrace,
+  AuthorityTopicAdmissionDiagnostic,
   AuthorityWorkstreamDomain,
   AuthorityWorkstreamResult,
   AuthorityWorkstreamsResult,
@@ -70,7 +76,9 @@ import {
   type SemanticIssueReconciliation,
   type SemanticPopulation,
   type SemanticQuestionUnderstanding,
-  type RequestedQuestionConcept
+  type RequestedQuestionConcept,
+  SEMANTIC_QUESTION_MIN_CONFIDENCE,
+  validateSemanticQuestionInterpretation
 } from './semanticQuestionUnderstanding';
 
 const SUPPORTED_LOCAL_AUTHORITIES = new Set<SemanticAuthority>([
@@ -564,6 +572,9 @@ function semanticOwnerAnchors(value: string): string[] {
   }
   // Preserve the legal subpart as a single anchor: "part" alone is too broad.
   if (/\bpart\s+iv\b/.test(normalized)) anchors.push('part iv');
+  // "Employment" and "Act" are individually generic/short, but the exact
+  // instrument name is a useful bounded anchor for the MOM publisher context.
+  if (/\bemployment\s+act\b/.test(normalized)) anchors.push('employment act');
   return [...new Set(anchors)];
 }
 
@@ -573,10 +584,41 @@ function hasSemanticOwnerAnchor(text: string, anchor: string): boolean {
   return new Set(normalized.split(' ').map(semanticOwnerToken)).has(anchor);
 }
 
+function isBoundedMomPartIvEmploymentActConcept(
+  concept: RequestedQuestionConcept,
+  issue: ReconciledSemanticQuestionIssue,
+  compatibleTopics: SingaporeCoverageTopic[],
+  clause: string
+): boolean {
+  const semanticAuthorities = (concept.semanticAuthorities || []).filter(authority => authority !== 'UNKNOWN');
+  const hasCanonicalMomPartIvTopic = compatibleTopics.some(topic =>
+    topic.domainId === 'MOM_EMPLOYMENT' && topic.authorities.includes('MOM') &&
+    (topic.id === 'mom-part-iv-overtime' ||
+      topic.id === 'mom_overtime' && topic.canonicalConceptId === 'mom-part-iv-overtime'));
+  return normalizeEvidenceText(concept.label) === 'employment act' && concept.role !== 'CONTEXT_ONLY' &&
+    (semanticAuthorities.length === 0 || semanticAuthorities.includes('MOM') &&
+      semanticAuthorities.every(authority => authority === 'MOM' || authority === 'SSO')) &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.population === 'EMPLOYEE' &&
+    issue.operation === 'EXPLAIN_RULE' && issue.status === 'MAPPED' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM' &&
+    issue.mappedTopicIds.includes('mom-part-iv-overtime') && hasCanonicalMomPartIvTopic &&
+    hasSemanticOwnerAnchor(issue.subject, 'employment act') && hasSemanticOwnerAnchor(issue.subject, 'part iv') &&
+    hasSemanticOwnerAnchor(issue.subject, 'coverage') &&
+    hasSemanticOwnerAnchor(clause, 'employment act') && hasSemanticOwnerAnchor(clause, 'part iv') &&
+    /\b(?:coverage|covered)\b/i.test(clause);
+}
+
 function isGenericIrasRestrictionConcept(concept: RequestedQuestionConcept): boolean {
   const allowed = new Set(['iras restriction', 'iras restrictions']);
   return allowed.has(normalizeEvidenceText(concept.label)) &&
     concept.terms.every(term => allowed.has(normalizeEvidenceText(term)));
+}
+
+function hasIndependentSsoPublisherRequest(query: string): boolean {
+  return getSemanticQueryClauses(query).some(clause =>
+    /\b(?:sso|singapore\s+statutes\s+online)\b/i.test(clause) &&
+    /\b(?:separately|independently|what|how|which|who|explain|describe|compare|does|do|is|are)\b/i.test(clause) &&
+    !/\b(?:employment\s+act|part\s+(?:iv|4)|working\s+hours?|overtime)\b/i.test(clause));
 }
 
 function topiclessExactSemanticConceptCouldBelongToIssue(
@@ -653,19 +695,28 @@ function topiclessSemanticConceptCouldBelongToIssue(
       : authority === 'MOM'
         ? issue.domain === 'MOM_EMPLOYMENT' && ['EMPLOYEE', 'EMPLOYER'].includes(issue.population)
         : authority === 'MAS'
-          ? issue.domain === 'MAS_FUNDS' && ['COMPANY', 'FUND'].includes(issue.population)
+          ? issue.domain === 'MAS_FUNDS' && (['COMPANY', 'FUND'].includes(issue.population) ||
+            issue.population === 'UNKNOWN' && isNeutralGeneralMasCmsRuleIssue(issue, query))
           : authority === 'IRAS' && issue.domain.startsWith('IRAS_') && issue.population !== 'UNKNOWN';
   if (!issueAuthorityScopeMatches) return false;
   const semanticAuthorities = (concept.semanticAuthorities || []).filter(candidate => candidate !== 'UNKNOWN');
-  if (semanticAuthorities.length > 0 && (semanticAuthorities.length !== 1 || semanticAuthorities[0] !== authority)) return false;
+  const semanticAuthorityScopeMatches = semanticAuthorities.length === 0 ||
+    semanticAuthorities.length === 1 && semanticAuthorities[0] === authority ||
+    authority === 'MOM' && issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM' &&
+      semanticAuthorities.includes('MOM') && semanticAuthorities.every(candidate => candidate === 'MOM' || candidate === 'SSO');
+  if (!semanticAuthorityScopeMatches || authority === 'MOM' &&
+      (issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MOM')) return false;
   if (concept.semanticDomain && concept.semanticDomain !== 'UNKNOWN' && concept.semanticDomain !== issue.domain) return false;
   if (concept.semanticPopulation && concept.semanticPopulation !== 'UNKNOWN' && concept.semanticPopulation !== issue.population) return false;
   const conceptText = [concept.label, ...concept.terms].join(' ');
+  if (authority === 'MOM' && /\b(?:sso|singapore\s+statutes\s+online)\b/i.test(concept.label) &&
+      hasIndependentSsoPublisherRequest(query)) return false;
   const conceptAnchors = semanticOwnerAnchors(conceptText);
   // Support the standard acronym only when it is an alias of the full CMS
   // identity in this concept; authority/domain still come from the issue.
   if (/\bcapital\s+markets\s+services\s+licen[cs]e\b/i.test(conceptText)) conceptAnchors.push('cms');
   const distinctConceptAnchors = [...new Set(conceptAnchors)];
+  const hasPublisherContext = authority === 'MOM' && semanticAuthorities.includes('SSO');
   const issueAnchors = semanticOwnerAnchors(issue.subject);
   if (distinctConceptAnchors.length === 0 || issueAnchors.length === 0) return false;
 
@@ -681,7 +732,9 @@ function topiclessSemanticConceptCouldBelongToIssue(
     const topicText = `${topic.title} ${topic.keywords.join(' ')} ${(topic.paragraphHints || []).join(' ')}`;
     return issueAnchors.filter(anchor => hasSemanticOwnerAnchor(topicText, anchor)).length >= Math.min(2, issueAnchors.length);
   });
-  if (!issueTopicMatches && issue.status !== 'UNRESOLVED') return false;
+  const boundedMomPartIvEmploymentActIssue = authority === 'MOM' && getSemanticQueryClauses(query).some(clause =>
+    isBoundedMomPartIvEmploymentActConcept(concept, issue, compatibleTopics, clause));
+  if (!issueTopicMatches && issue.status !== 'UNRESOLVED' && !boundedMomPartIvEmploymentActIssue) return false;
 
   // Bind a semantic label to one punctuation/conjunction-bounded raw clause.
   // Root-level authorities, populations and the union of mixed query words
@@ -697,10 +750,15 @@ function topiclessSemanticConceptCouldBelongToIssue(
     // must still match at least two anchors from the issue's local subject.
     if (conceptMatches.length < Math.min(2, distinctConceptAnchors.length) ||
         issueMatches.length < Math.min(2, issueAnchors.length)) return false;
+    if (hasPublisherContext && (!hasSemanticOwnerAnchor(clause, 'employment act') ||
+        !hasSemanticOwnerAnchor(issue.subject, 'employment act'))) return false;
     if (compatibleTopics.length === 0) return issue.status === 'UNRESOLVED';
     const conceptTopicMatches = compatibleTopics.some(topic => {
       const topicText = `${topic.title} ${topic.keywords.join(' ')} ${(topic.paragraphHints || []).join(' ')}`;
-      return conceptMatches.some(anchor => hasSemanticOwnerAnchor(topicText, anchor));
+      return conceptMatches.some(anchor => hasSemanticOwnerAnchor(topicText, anchor)) ||
+        authority === 'MOM' && conceptMatches.includes('employment act') &&
+          hasSemanticOwnerAnchor(topic.actOrStandard || '', 'employment act') ||
+        authority === 'MOM' && isBoundedMomPartIvEmploymentActConcept(concept, issue, compatibleTopics, clause);
     });
     // "IRAS restriction" is a generic continuation label, so its local issue
     // subject and independently mapped topic establish the owner while the
@@ -879,14 +937,58 @@ function safeProviderTrace(value: unknown, hasCandidates: boolean): AuthorityRet
   return { stages, ...(attempts ? { attempts } : {}) };
 }
 
-function safeEvidenceQualityTrace(value: unknown): SourceMapFallbackTrace | undefined {
-  if (!value || typeof value !== 'object') return undefined;
-  const trace = value as SourceMapFallbackTrace;
-  if (!Array.isArray(trace.attempts) || trace.attempts.some(attempt =>
-    !attempt || typeof attempt.topicId !== 'string' || typeof attempt.fetchStatus !== 'string' ||
-    typeof attempt.titleMatched !== 'boolean' || typeof attempt.contentMatched !== 'boolean'
-  )) return undefined;
-  return trace;
+function hasAdmissionCriticalTraceShape(value: unknown): value is AuthorityEvidenceQualityTrace {
+  if (!value || typeof value !== 'object') return false;
+  const trace = value as AuthorityEvidenceQualityTrace;
+  return (trace.selectedRecordIds === undefined || Array.isArray(trace.selectedRecordIds) &&
+      trace.selectedRecordIds.every(id => typeof id === 'string')) &&
+    (trace.finalVerifiedUrls === undefined || Array.isArray(trace.finalVerifiedUrls) &&
+      trace.finalVerifiedUrls.every(url => typeof url === 'string')) &&
+    Array.isArray(trace.attempts) && trace.attempts.every(attempt => Boolean(attempt) &&
+      typeof attempt.topicId === 'string' && typeof attempt.fetchStatus === 'string' &&
+      typeof attempt.titleMatched === 'boolean' && typeof attempt.contentMatched === 'boolean' &&
+      (attempt.finalUrl === undefined || typeof attempt.finalUrl === 'string'));
+}
+
+function hasValidOptionalTraceMetadata(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+  const trace = value as AuthorityEvidenceQualityTrace;
+  return Array.isArray(trace.attempts) &&
+    (trace.path === undefined || ['NOT_NEEDED', 'MAPPED_SOURCE', 'DISCOVERED_SOURCE', 'MAPPED_SOURCE_REJECTED', 'NO_VERIFIED_MAP'].includes(trace.path)) &&
+    (trace.sourceMapIds === undefined || Array.isArray(trace.sourceMapIds) && trace.sourceMapIds.every(id => typeof id === 'string')) &&
+    (trace.candidateOnly === undefined || typeof trace.candidateOnly === 'boolean') &&
+    trace.attempts.every(attempt => Boolean(attempt) && typeof attempt === 'object' &&
+      (attempt.sourceMapId === undefined || typeof attempt.sourceMapId === 'string') &&
+      (attempt.candidateUrl === undefined || typeof attempt.candidateUrl === 'string') &&
+      (attempt.discoverySourceUrl === undefined || typeof attempt.discoverySourceUrl === 'string') &&
+      (attempt.pageTitle === undefined || typeof attempt.pageTitle === 'string') &&
+      (attempt.error === undefined || typeof attempt.error === 'string') &&
+      (attempt.discoveryStage === undefined || ['MAPPED_SOURCE', 'SITEMAP_DISCOVERY', 'OFFICIAL_DOMAIN_SEARCH'].includes(attempt.discoveryStage)) &&
+      (attempt.searchQueryVariant === undefined || ['FULL_QUERY', 'TOPIC_HINT_1', 'TOPIC_HINT_2', 'TOPIC_HINT_3'].includes(attempt.searchQueryVariant))
+    );
+}
+
+function safeEvidenceQualityTrace(value: unknown): AuthorityEvidenceQualityTrace | undefined {
+  return hasAdmissionCriticalTraceShape(value) ? value : undefined;
+}
+
+function admissionTraceAssessment(value: unknown): Pick<AuthorityIssueAdmissionDiagnostics,
+  'retrievalTraceStatus' | 'retrievalTraceOptionalMetadataStatus' | 'retrievalEvidenceQualityTrace'> {
+  if (value === undefined || value === null) return {
+    retrievalTraceStatus: 'UNAVAILABLE', retrievalTraceOptionalMetadataStatus: 'NOT_PROVIDED'
+  };
+  const hasOptionalMetadata = Boolean(value && typeof value === 'object' && Object.keys(value).some(key => key !== 'attempts') ||
+    Array.isArray((value as { attempts?: unknown[] } | null)?.attempts) &&
+      (value as { attempts: unknown[] }).attempts.some(attempt => attempt && typeof attempt === 'object' &&
+        Object.keys(attempt).some(key => !['topicId', 'fetchStatus', 'titleMatched', 'contentMatched', 'finalUrl'].includes(key))));
+  const optionalMetadataStatus = !hasOptionalMetadata ? 'NOT_PROVIDED' as const
+    : hasValidOptionalTraceMetadata(value) ? 'VALID' as const : 'INVALID' as const;
+  const trace = safeEvidenceQualityTrace(value);
+  return {
+    retrievalTraceStatus: trace ? 'AVAILABLE' : 'INVALID',
+    retrievalTraceOptionalMetadataStatus: optionalMetadataStatus,
+    ...(trace ? { retrievalEvidenceQualityTrace: trace } : {})
+  };
 }
 
 function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRetriever, referenceDate: string): AuthorityEvidenceProvider {
@@ -1014,6 +1116,7 @@ function defaultIrasProvider(
           questionUnderstanding: understanding,
           requestCompletenessContext: options.requestCompletenessContext,
           evidenceScope: scope,
+          authorityIssue: validatedIrasAuthorityIssue(request.issue, request.retrievalIntent.requestedConcepts, understanding, query),
           fetchOptions: options.groundingOptions?.fetchOptions
         }
       );
@@ -1028,6 +1131,30 @@ function defaultIrasProvider(
       };
     }
   };
+}
+
+/** Carry an IRAS explanation issue to rendering only when it matches one validated raw semantic child. */
+function validatedIrasAuthorityIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  requestedConcepts: RequestedQuestionConcept[],
+  understanding: SemanticQuestionUnderstanding,
+  query: string
+): { authority: 'IRAS'; issue: ReconciledSemanticQuestionIssue; requestedConcepts: RequestedQuestionConcept[] } | undefined {
+  const interpretation = understanding.interpretation;
+  const rawIssues = interpretation?.issues;
+  if (understanding.assessmentStatus !== 'PASSED' || !interpretation || !rawIssues ||
+      !validateSemanticQuestionInterpretation(interpretation, query) || issue.status !== 'MAPPED' ||
+      issue.operation !== 'EXPLAIN_RULE' || issue.domain === 'UNKNOWN' || !issue.domain.startsWith('IRAS_') ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'IRAS' ||
+      !Number.isFinite(issue.confidence) || issue.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return undefined;
+
+  const matchingRawIssues = rawIssues.filter(raw => raw.subject === issue.subject && raw.population === issue.population &&
+    raw.domain === issue.domain && raw.operation === issue.operation && raw.confidence === issue.confidence &&
+    raw.governingAuthorities.length === 1 && raw.governingAuthorities[0] === 'IRAS' &&
+    raw.contextualAuthorities.length === issue.contextualAuthorities.length &&
+    raw.contextualAuthorities.every((authority, index) => authority === issue.contextualAuthorities[index]));
+  if (matchingRawIssues.length !== 1 || matchingRawIssues[0].confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return undefined;
+  return { authority: 'IRAS', issue, requestedConcepts };
 }
 
 function normalizeEvidenceText(value: string): string {
@@ -1066,7 +1193,7 @@ function textSupportsPhrase(text: string, phrase: string): boolean {
 }
 
 const GENERIC_ACRA_ANNUAL_RETURN_DUTY_CONCEPT_LABELS = new Set([
-  'annual return', 'annual returns',
+  'annual return', 'annual returns', 'annual return filing', 'annual returns filing',
   'filing requirement', 'filing requirements', 'filing duty', 'filing duties', 'filing obligation', 'filing obligations',
   'annual return filing requirement', 'annual return filing requirements',
   'annual return filing duty', 'annual return filing duties',
@@ -1136,10 +1263,9 @@ function masCmsGeneralRuleSupport(
   topics: SingaporeCoverageTopic[],
   originalQuery: string
 ): boolean | undefined {
-  if (issue.domain !== 'MAS_FUNDS' || issue.population !== 'COMPANY' || issue.operation !== 'EXPLAIN_RULE' ||
-      issue.status !== 'MAPPED' || issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MAS' ||
-      !issue.mappedTopicIds.includes('mas-cms-licence') ||
-      !topics.some(topic => topic.id === 'mas-cms-licence' && topic.domainId === 'MAS_FUND_MANAGEMENT')) return undefined;
+  if (!isMappedMasCmsRuleIssue(issue, topics)) return undefined;
+  if (issue.population === 'UNKNOWN' && !isNeutralGeneralMasCmsRuleIssue(issue, originalQuery)) return false;
+  if (issue.population !== 'COMPANY' && issue.population !== 'UNKNOWN') return undefined;
   return supportMasCmsRule({
     authority: 'MAS',
     topicId: 'mas-cms-licence',
@@ -1156,10 +1282,9 @@ function masCmsDefinitionSupport(
   topics: SingaporeCoverageTopic[],
   originalQuery: string
 ): boolean | undefined {
-  if (issue.domain !== 'MAS_FUNDS' || issue.population !== 'COMPANY' || issue.operation !== 'EXPLAIN_RULE' ||
-      issue.status !== 'MAPPED' || issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MAS' ||
-      !issue.mappedTopicIds.includes('mas-cms-licence') ||
-      !topics.some(topic => topic.id === 'mas-cms-licence' && topic.domainId === 'MAS_FUND_MANAGEMENT')) return undefined;
+  if (!isMappedMasCmsRuleIssue(issue, topics)) return undefined;
+  if (issue.population === 'UNKNOWN' && !isNeutralGeneralMasCmsRuleIssue(issue, originalQuery)) return false;
+  if (issue.population !== 'COMPANY' && issue.population !== 'UNKNOWN') return undefined;
   return supportMasCmsDefinition({
     authority: 'MAS',
     topicId: 'mas-cms-licence',
@@ -1167,6 +1292,30 @@ function masCmsDefinitionSupport(
     originalQuery,
     sourceText: text
   });
+}
+
+function isMappedMasCmsRuleIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  topics: SingaporeCoverageTopic[]
+): boolean {
+  return issue.domain === 'MAS_FUNDS' && issue.operation === 'EXPLAIN_RULE' && issue.status === 'MAPPED' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MAS' &&
+    issue.mappedTopicIds.includes('mas-cms-licence') &&
+    topics.some(topic => topic.id === 'mas-cms-licence' && topic.domainId === 'MAS_FUND_MANAGEMENT');
+}
+
+/** The bounded MAS recognizer validates neutral request scope without source text. */
+function isNeutralGeneralMasCmsRuleIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  originalQuery: string
+): boolean {
+  if (issue.domain !== 'MAS_FUNDS' || issue.operation !== 'EXPLAIN_RULE' || issue.status !== 'MAPPED' ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MAS' ||
+      !issue.mappedTopicIds.includes('mas-cms-licence')) return false;
+  const request = {
+    authority: 'MAS', topicId: 'mas-cms-licence', subject: issue.subject, originalQuery, sourceText: ''
+  };
+  return supportMasCmsRule(request) !== undefined || supportMasCmsDefinition(request) !== undefined;
 }
 
 function hasAnnualReturnFilingDutyAnchors(text: string): boolean {
@@ -1200,13 +1349,29 @@ function isAcraAnnualReturnFilingDutyIssue(
   issue: ReconciledSemanticQuestionIssue,
   topics: SingaporeCoverageTopic[]
 ): boolean {
+  const issueSubject = normalizeEvidenceText(issue.subject);
+  const issueAnchors = semanticOwnerAnchors(issue.subject);
+  const generalDutyClause = getSemanticQueryClauses(query).some(clause => {
+    const matchingIssueAnchors = issueAnchors.filter(anchor => hasSemanticOwnerAnchor(clause, anchor));
+    return hasAnnualReturnFilingDutyAnchors(clause) && /\bcompan(?:y|ies)\b/i.test(clause) &&
+      matchingIssueAnchors.length >= Math.min(2, issueAnchors.length) &&
+      !hasAcraSpecificAnnualReturnRegimeAsk(clause) &&
+      !hasAffirmativeAcraAnnualReturnDeadlineAsk(clause) &&
+      !hasAcraAnnualReturnPenaltyOrFeeAsk(clause, issue);
+  });
   return authority === 'ACRA' && issue.domain === 'ACRA_CORPORATE' && issue.population === 'COMPANY' &&
     issue.operation === 'EXPLAIN_RULE' && issue.status === 'MAPPED' &&
     issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'ACRA' &&
     issue.mappedTopicIds.includes('acra_annual-returns') && topics.length === 1 &&
-    topics[0].id === 'acra_annual-returns' && !hasAffirmativeAcraAnnualReturnDeadlineAsk(query) &&
-    hasAnnualReturnFilingDutyAnchors(query) && /\bcompan(?:y|ies)\b/i.test(query) &&
-    hasAnnualReturnFilingDutyAnchors(issue.subject) && !hasAcraAnnualReturnPenaltyOrFeeAsk(query, issue);
+    topics[0].id === 'acra_annual-returns' &&
+    generalDutyClause && hasAnnualReturnFilingDutyAnchors(issue.subject) &&
+    !hasAcraSpecificAnnualReturnRegimeAsk(issueSubject) &&
+    !hasAffirmativeAcraAnnualReturnDeadlineAsk(issueSubject) &&
+    !hasAcraAnnualReturnPenaltyOrFeeAsk(issueSubject, issue);
+}
+
+function hasAcraSpecificAnnualReturnRegimeAsk(value: string): boolean {
+  return /\b(?:foreign|overseas|variable\s+capital\s+company|vcc|xbrl)\b/i.test(value);
 }
 
 function isGenericAcraAnnualReturnDutyConcept(concept: RequestedQuestionConcept): boolean {
@@ -1407,14 +1572,17 @@ function eligibleLocalRecords(
   originalQuery: string,
   targetDate: string | undefined,
   referenceDate: string,
-  officialRetrievalTrace?: SourceMapFallbackTrace,
+  officialRetrievalTrace?: AuthorityEvidenceQualityTrace,
   versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
   requireAcraDeadlineEvidence = false
-): { admitted: AuthoritativeSourceRecord[]; rejectedCount: number } {
+): { admitted: AuthoritativeSourceRecord[]; rejectedCount: number; diagnostics: AuthorityCandidateAdmissionDiagnostic[] } {
   const admitted: AuthoritativeSourceRecord[] = [];
+  const diagnostics: AuthorityCandidateAdmissionDiagnostic[] = [];
   let rejectedCount = 0;
   for (const record of new Map(records.map(item => [item.id, item])).values()) {
-    const isReviewedLocal = record.provenance === 'LOCAL_STATIC' && matchesReviewedLocalRegistryRecord(record);
+    const reviewedLocalAttempted = record.provenance === 'LOCAL_STATIC';
+    const reviewedLocalRegistryMatch = reviewedLocalAttempted ? matchesReviewedLocalRegistryRecord(record) : undefined;
+    const isReviewedLocal = reviewedLocalAttempted && reviewedLocalRegistryMatch === true;
     // A live record is acceptable only if this very provider call fetched and
     // validated the exact URL for the same topic. An injected candidate with a
     // plausible URL, labels or hash but no retrieval trace is insufficient.
@@ -1423,14 +1591,24 @@ function eligibleLocalRecords(
       attempt.finalUrl === record.officialSourceUrl && topics.some(topic => attempt.topicId === topic.id &&
         topicBoundToRecord(record, topic))
     );
+    const liveExternalAttempted = record.provenance === 'LIVE_EXTERNAL';
+    const liveAuthorityAllowed = isOfficialDiscoveryAuthority(authority);
+    const liveCandidateLifecycle = record.lifecycleState === 'CANDIDATE';
+    const liveNeedsReview = record.sourceStatus === 'NEEDS_REVIEW';
+    const livePartialExtraction = record.extractionStatus === 'PARTIAL';
+    const liveVerificationMethod = record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED';
+    const liveSourceAuthority = record.sourceAuthority === authority ||
+      (record.sourceAuthority === 'AGC' && record.officialSourceUrl.startsWith('https://sso.agc.gov.sg/'));
+    const liveSelectedRecordId = officialRetrievalTrace?.selectedRecordIds?.includes(record.id) === true;
+    const liveVerifiedUrl = officialRetrievalTrace?.finalVerifiedUrls?.includes(record.officialSourceUrl) === true;
+    const liveSuccessfulTopicFetch = Boolean(matchingFetch);
     const isValidatedLive = record.provenance === 'LIVE_EXTERNAL' &&
-      isOfficialDiscoveryAuthority(authority) &&
-      record.lifecycleState === 'CANDIDATE' && record.sourceStatus === 'NEEDS_REVIEW' &&
-      record.extractionStatus === 'PARTIAL' && record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED' &&
-      (record.sourceAuthority === authority ||
-        (record.sourceAuthority === 'AGC' && record.officialSourceUrl.startsWith('https://sso.agc.gov.sg/'))) &&
-      officialRetrievalTrace?.selectedRecordIds.includes(record.id) === true &&
-      officialRetrievalTrace?.finalVerifiedUrls.includes(record.officialSourceUrl) === true &&
+      liveAuthorityAllowed &&
+      liveCandidateLifecycle && liveNeedsReview &&
+      livePartialExtraction && liveVerificationMethod &&
+      liveSourceAuthority &&
+      liveSelectedRecordId &&
+      liveVerifiedUrl &&
       Boolean(matchingFetch);
     const exactManagedTopic = authority === 'MAS' && record.provenance === 'LIVE_PATCH' &&
       MANAGED_MAS_DOCUMENT_RECORD_IDS.has(record.id)
@@ -1454,27 +1632,130 @@ function eligibleLocalRecords(
       })
       : undefined;
     const isApprovedManagedDocument = Boolean(managedAdmission?.required && managedAdmission.admitted);
-    if ((!isReviewedLocal && !isValidatedLive && !isApprovedManagedDocument) ||
-        record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false ||
-        requireAcraDeadlineEvidence && !supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
-        !record.sourceText?.trim() || findRecordEligibilityRejection(record, targetDate, referenceDate,
-          versioningManager, exactManagedTopic ? (authority === 'MAS' ? 'MAS' : 'ACRA') : undefined,
-          exactManagedTopic?.legacyDomains[0],
-          authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_FYE' : undefined)) {
-      rejectedCount += 1;
-      continue;
+    const managedPathAttempted = authority === 'MAS' && record.provenance === 'LIVE_PATCH' &&
+      MANAGED_MAS_DOCUMENT_RECORD_IDS.has(record.id) ||
+      authority === 'ACRA' && record.provenance === 'LIVE_PATCH' && record.documentAdmissionRequired === true;
+    const reviewedLocalPredicates = reviewedLocalAttempted ? [
+      { predicate: 'reviewedRegistryMatch', passed: reviewedLocalRegistryMatch === true,
+        result: reviewedLocalRegistryMatch ? 'MATCH' : 'NO_MATCH' }
+    ] : [];
+    const liveExternalPredicates: AuthorityAdmissionPredicateResult[] = liveExternalAttempted ? [
+      { predicate: 'officialDiscoveryAuthority', passed: liveAuthorityAllowed },
+      { predicate: 'lifecycleState', passed: liveCandidateLifecycle,
+        result: record.lifecycleState || 'MISSING' },
+      { predicate: 'sourceStatus', passed: liveNeedsReview,
+        result: record.sourceStatus || 'MISSING' },
+      { predicate: 'extractionStatus', passed: livePartialExtraction,
+        result: record.extractionStatus || 'MISSING' },
+      { predicate: 'verificationMethod', passed: liveVerificationMethod,
+        result: record.verificationMethod || 'MISSING' },
+      { predicate: 'sourceAuthority', passed: liveSourceAuthority,
+        result: record.sourceAuthority || 'MISSING' },
+      { predicate: 'selectedRecordId', passed: liveSelectedRecordId },
+      { predicate: 'finalVerifiedUrl', passed: liveVerifiedUrl },
+      { predicate: 'successfulTitleContentFetch', passed: liveSuccessfulTopicFetch,
+        result: matchingFetch?.topicId || 'NO_MATCHING_SUCCESSFUL_TOPIC_FETCH' }
+    ] : [];
+    const managedDocumentPredicates: AuthorityAdmissionPredicateResult[] = managedPathAttempted ? [
+      { predicate: 'exactManagedRecordAndTopic', passed: Boolean(exactManagedTopic),
+        result: exactManagedTopic?.id || 'NO_EXACT_MANAGED_TOPIC' },
+      ...(exactManagedTopic && managedAdmission ? [
+        { predicate: 'admissionRequired', passed: managedAdmission.required,
+          result: managedAdmission.required ? 'REQUIRED' : 'NOT_REQUIRED' },
+        { predicate: 'admissionOutcome', passed: managedAdmission.admitted,
+          result: managedAdmission.admitted ? 'ADMITTED' : 'REJECTED' }
+      ] : [])
+    ] : [];
+    const provenancePaths: AuthorityCandidateProvenancePaths = {
+      reviewedLocal: {
+        attempted: reviewedLocalAttempted,
+        admitted: isReviewedLocal,
+        predicates: reviewedLocalPredicates,
+        ...(!isReviewedLocal && reviewedLocalPredicates.some(predicate => !predicate.passed)
+          ? { firstFailedPredicate: reviewedLocalPredicates.find(predicate => !predicate.passed)!.predicate } : {})
+      },
+      liveExternal: {
+        attempted: liveExternalAttempted,
+        admitted: isValidatedLive,
+        predicates: liveExternalPredicates,
+        ...(!isValidatedLive && liveExternalPredicates.some(predicate => !predicate.passed)
+          ? { firstFailedPredicate: liveExternalPredicates.find(predicate => !predicate.passed)!.predicate } : {})
+      },
+      managedDocument: {
+        attempted: managedPathAttempted,
+        admitted: isApprovedManagedDocument,
+        predicates: managedDocumentPredicates,
+        ...(managedAdmission?.required === true && managedAdmission.admitted === false
+          ? { admissionReason: managedAdmission.reason } : {}),
+        ...(managedAdmission ? { admissionRequired: managedAdmission.required } : {}),
+        ...(!isApprovedManagedDocument && managedDocumentPredicates.some(predicate => !predicate.passed)
+          ? { firstFailedPredicate: managedDocumentPredicates.find(predicate => !predicate.passed)!.predicate } : {})
+      }
+    };
+    const predicates: AuthorityAdmissionPredicateResult[] = [
+      { predicate: 'provenance', passed: isReviewedLocal || isValidatedLive || isApprovedManagedDocument,
+        result: isReviewedLocal ? 'REVIEWED_LOCAL' : isValidatedLive ? 'VALIDATED_CURRENT_FETCH' :
+          isApprovedManagedDocument ? 'APPROVED_MANAGED_DOCUMENT' : 'NO_ADMISSIBLE_PROVENANCE' },
+      { predicate: 'recordRole', passed: record.recordRole !== 'SOURCE_MAP_POINTER',
+        result: record.recordRole === 'SOURCE_MAP_POINTER' ? 'SOURCE_MAP_POINTER' : 'EVIDENCE' },
+      { predicate: 'groundingEligible', passed: record.groundingEligible !== false,
+        result: record.groundingEligible === false ? 'EXPLICITLY_INELIGIBLE' : 'ELIGIBLE' },
+      { predicate: 'requiredDeadlineEvidence', passed: !requireAcraDeadlineEvidence ||
+        supportsAcraAnnualReturnDeadlineEvidence(record.sourceText),
+        result: requireAcraDeadlineEvidence ? 'CHECKED' : 'NOT_REQUIRED' },
+      { predicate: 'sourceTextPresent', passed: Boolean(record.sourceText?.trim()),
+        result: record.sourceText?.trim() ? 'PRESENT' : 'EMPTY' }
+    ];
+    let eligibilityRejection: string | undefined;
+    if (predicates.every(predicate => predicate.passed)) {
+      eligibilityRejection = findRecordEligibilityRejection(record, targetDate, referenceDate,
+        versioningManager, exactManagedTopic ? (authority === 'MAS' ? 'MAS' : 'ACRA') : undefined,
+        exactManagedTopic?.legacyDomains[0],
+        authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_FYE' : undefined);
+      predicates.push({ predicate: 'recordEligibility', passed: !eligibilityRejection,
+        ...(eligibilityRejection ? { result: eligibilityRejection } : { result: 'ELIGIBLE' }) });
     }
-    const matchingTopic = topics.find(topic => topicBoundToRecord(record, topic) &&
-      recordMatchesGovernorAndDomain(record, authority, topic) && textSupportsTopic(record.sourceText, topic) &&
-      passesBoundedStatutoryAdvisorySupport(record.sourceText, authority, issue, topics, originalQuery) &&
-      supportsIssueSubject(record.sourceText, issue, topic, concepts, originalQuery));
-    if (!matchingTopic) {
-      rejectedCount += 1;
-      continue;
+    const firstSharedFailure = predicates.find(predicate => !predicate.passed)?.predicate;
+    const topicDiagnostics: AuthorityTopicAdmissionDiagnostic[] = [];
+    let firstTopicFailure: string | undefined;
+    if (!firstSharedFailure) {
+      const substantiveSupport = passesBoundedStatutoryAdvisorySupport(record.sourceText, authority, issue, topics, originalQuery);
+      for (const topic of topics) {
+        const topicPredicates: AuthorityAdmissionPredicateResult[] = [
+          { predicate: 'topicBoundToRecord', passed: topicBoundToRecord(record, topic) },
+          { predicate: 'governorAndDomain', passed: recordMatchesGovernorAndDomain(record, authority, topic) },
+          { predicate: 'textSupportsTopic', passed: textSupportsTopic(record.sourceText, topic) },
+          { predicate: 'boundedSubstantiveSupport', passed: substantiveSupport },
+          { predicate: 'issueSubjectSupport', passed: supportsIssueSubject(record.sourceText, issue, topic, concepts, originalQuery) }
+        ];
+        const topicFailure = topicPredicates.find(predicate => !predicate.passed)?.predicate;
+        const topicAdmitted = topicFailure === undefined;
+        topicDiagnostics.push({ topicId: topic.id, predicates: topicPredicates, admitted: topicAdmitted,
+          ...(topicFailure ? { firstFailedPredicate: topicFailure } : {}) });
+        if (!firstTopicFailure && topicFailure) firstTopicFailure = `topic:${topic.id}.${topicFailure}`;
+        if (topicAdmitted) {
+          admitted.push(record);
+          break;
+        }
+      }
     }
-    admitted.push(record);
+    const candidateAdmitted = !firstSharedFailure && topicDiagnostics.some(topic => topic.admitted);
+    if (!candidateAdmitted) {
+      rejectedCount += 1;
+    }
+    const firstFailedPredicate = candidateAdmitted ? undefined : firstSharedFailure || firstTopicFailure ||
+      (topics.length === 0 ? 'topicSupport.noTopics' : undefined);
+    diagnostics.push({
+      recordId: record.id,
+      ...(typeof record.documentHash === 'string' ? { documentHash: record.documentHash } : {}),
+      admitted: candidateAdmitted,
+      ...(firstFailedPredicate ? { firstFailedPredicate } : {}),
+      provenancePaths,
+      predicates,
+      topics: topicDiagnostics
+    });
   }
-  return { admitted, rejectedCount };
+  return { admitted, rejectedCount, diagnostics };
 }
 
 function ruleClaimsForRecords(records: AuthoritativeSourceRecord[]): Array<{ kind: 'RULE'; text: string; quote: string; recordId: string; citationUrl?: string }> {
@@ -1775,18 +2056,22 @@ async function evaluateIssue(
     providerResult = { candidates: [], error: 'PROVIDER_ERROR' };
   }
   const retrievalTrace = safeProviderTrace(providerResult.trace, providerResult.candidates.length > 0);
+  const admissionTrace = admissionTraceAssessment(providerResult.evidenceQualityTrace);
+  const officialRetrievalTrace = safeEvidenceQualityTrace(providerResult.evidenceQualityTrace);
   const uniqueCandidates = [...new Map(providerResult.candidates.map(record => [record.id, record])).values()];
   lifecycle.evidenceFound = uniqueCandidates.length > 0;
   if (providerResult.error) {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'retrievalAttempted', 'PROVIDER_ERROR',
       'The evidence provider failed while retrieving this issue.'));
-    return { ...base, evidenceStatus: 'INSUFFICIENT', verifiedClaims: [], sources: [], gaps, retrievalTrace };
+    return { ...base, evidenceStatus: 'INSUFFICIENT', verifiedClaims: [], sources: [], gaps, retrievalTrace,
+      admissionDiagnostics: { ...admissionTrace, candidates: [] } };
   }
   if (uniqueCandidates.length === 0) gaps.push(makeGap(issue, plan.authority, plan.domain, 'evidenceFound', 'NO_CANDIDATE_EVIDENCE',
     'No source evidence was found for this issue.'));
 
   let admitted: AuthoritativeSourceRecord[] = [];
   let localRejectedCount = 0;
+  let candidateDiagnostics: AuthorityCandidateAdmissionDiagnostic[] = [];
   let irasQuality = undefined as ReturnType<typeof evaluateEvidenceQuality> | undefined;
   const targetDate = defaultTargetDateResolver.resolveTargetDate(query, referenceDate).targetDate;
   if (plan.authority === 'IRAS') {
@@ -1801,17 +2086,39 @@ async function evaluateIssue(
       requestedConcepts: concepts,
       scopedSubject: issue.subject,
       scopedPopulation: issue.population,
-      sourceMapFallbackTrace: safeEvidenceQualityTrace(providerResult.evidenceQualityTrace)
+      sourceMapFallbackTrace: officialRetrievalTrace
     });
     admitted = irasQuality.eligibleRecords;
     localRejectedCount = irasQuality.rejectedRecords.length;
+    const admittedIds = new Set(admitted.map(record => record.id));
+    const rejectedById = new Map(irasQuality.rejectedRecords.map(rejection => [rejection.recordId, rejection]));
+    candidateDiagnostics = uniqueCandidates.map(record => {
+      const rejection = rejectedById.get(record.id);
+      const isAdmitted = admittedIds.has(record.id);
+      const predicates: AuthorityAdmissionPredicateResult[] = [{
+        predicate: 'irasEvidenceQualityGate', passed: isAdmitted,
+        result: rejection ? `${rejection.code}: ${rejection.reason}` : isAdmitted ? 'ELIGIBLE' : 'NOT_REPORTED'
+      }];
+      return {
+        recordId: record.id,
+        ...(typeof record.documentHash === 'string' ? { documentHash: record.documentHash } : {}),
+        admitted: isAdmitted,
+        ...(!isAdmitted ? { firstFailedPredicate: 'irasEvidenceQualityGate' } : {}),
+        predicates,
+        // The specialist IRAS gate reports issue-level topic coverage, not a
+        // record-to-topic attribution; do not invent per-record topic results.
+        topics: []
+      };
+    });
   } else {
     const versioningManager = versioningManagerFor(retriever);
     const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, query, targetDate, referenceDate,
-      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace), versioningManager, requireAcraDeadlineEvidence);
+      officialRetrievalTrace, versioningManager, requireAcraDeadlineEvidence);
     admitted = result.admitted;
     localRejectedCount = result.rejectedCount;
+    candidateDiagnostics = result.diagnostics;
   }
+  const admissionDiagnostics: AuthorityIssueAdmissionDiagnostics = { ...admissionTrace, candidates: candidateDiagnostics };
   lifecycle.admitted = admitted.length > 0;
   if (localRejectedCount > 0 && admitted.length === 0) gaps.push(makeGap(issue, plan.authority, plan.domain, 'admitted', 'CANDIDATE_REJECTED',
     'Candidates failed authority, domain, provenance, date, topic, or source-text checks.'));
@@ -1903,7 +2210,8 @@ async function evaluateIssue(
     verifiedClaims,
     sources,
     gaps,
-    retrievalTrace
+    retrievalTrace,
+    admissionDiagnostics
   };
 }
 

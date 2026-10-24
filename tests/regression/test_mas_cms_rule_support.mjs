@@ -295,4 +295,39 @@ assert.ok(completeCmsIssue.verifiedClaims.some(claim => claim.quote === cmsDutyP
 assert.ok(completeCmsIssue.verifiedClaims.some(claim => claim.quote === cmsDefinition),
   'The verified definition claim preserves the exact captured SFA section 2(1) text.');
 
+const unknownPopulationCmsIssue = { ...cmsIssue, id: 'mas-cms-unknown-population', population: 'UNKNOWN' };
+const unknownPopulationCmsWorkstream = await runCmsWorkstream(cmsSourceBody,
+  ['licensing requirement', 'Capital Markets Services Licence definition'], {
+    query: cmsQuery,
+    issue: unknownPopulationCmsIssue,
+    records: [cmsLiveRecord(cmsSourceBody), cmsDefinitionLiveRecord(cmsDefinition)],
+    claims: [
+      { quote: cmsDutyParagraph, recordId: cmsRecordId },
+      { quote: cmsDefinition, recordId: cmsDefinitionRecordId }
+    ],
+    evidenceQualityTrace: completeCmsFetchTrace
+  });
+const unknownPopulationCmsEvidence = unknownPopulationCmsWorkstream.workstreams.find(item => item.authority === 'MAS').issues[0];
+assert.equal(unknownPopulationCmsEvidence.population, 'UNKNOWN', 'A general MAS rule does not relabel an unknown population as a company.');
+assert.equal(unknownPopulationCmsEvidence.evidenceStatus, 'VERIFIED',
+  'A structurally mapped neutral CMS EXPLAIN_RULE with exact duty and definition support remains answerable for UNKNOWN population.');
+
+const cmsApplicationQuery = 'Does my company need a Capital Markets Services Licence?';
+const cmsApplicationIssue = {
+  ...unknownPopulationCmsIssue,
+  id: 'mas-cms-unknown-company-application',
+  subject: 'whether my company needs a Capital Markets Services Licence'
+};
+const cmsApplicationWorkstream = await runCmsWorkstream(cmsSourceBody, ['licensing requirement'], {
+  query: cmsApplicationQuery,
+  issue: cmsApplicationIssue,
+  records: [cmsLiveRecord(cmsSourceBody)],
+  claims: [{ quote: cmsDutyParagraph, recordId: cmsRecordId }]
+});
+const cmsApplicationEvidence = cmsApplicationWorkstream.workstreams.find(item => item.authority === 'MAS').issues[0];
+assert.equal(cmsApplicationEvidence.population, 'UNKNOWN');
+assert.equal(cmsApplicationEvidence.evidenceStatus, 'INSUFFICIENT',
+  'A neutral-source definition or duty does not answer a particular company application while population and facts remain unknown.');
+assert.equal(cmsApplicationEvidence.sources.length, 0);
+
 console.log('MAS CMS general rule support regressions passed.');

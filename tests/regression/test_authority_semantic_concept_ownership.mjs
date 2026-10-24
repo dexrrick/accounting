@@ -68,6 +68,8 @@ function issuePlan(issues, overrides = {}) {
   };
 }
 
+const provider = (authority, retrieve) => ({ authority, retrieve });
+
 async function runBoundedCase(sample, issues = [sample.issue], understanding = sample.understanding, providerResults = {}) {
   const requests = [];
   const result = await buildAuthorityWorkstreams(sample.query, issuePlan(issues), {
@@ -471,11 +473,73 @@ try {
       `${exactContextCase.authority} exact qualifying context stays local in a mixed question.`);
   }
 
+  // Exact saved model-response bytes from retained MOM capture "mom" (observed
+  // 2026-10-23; source bodies and unavailable original fetch attempts are not
+  // embedded in this fixture). This replays semantic ownership only.
+  const momQuestion = 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.';
+  const savedMomResponse = JSON.parse(await readFile(
+    new URL('../fixtures/retained-mom-semantic-response.json', import.meta.url), 'utf8'
+  ));
+  const savedMomInterpretationText = savedMomResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+  assert.equal(typeof savedMomInterpretationText, 'string', 'The retained raw MOM model response contains its original semantic payload.');
+  const savedMomInterpretation = validateSemanticQuestionInterpretation(JSON.parse(savedMomInterpretationText), momQuestion);
+  assert.ok(savedMomInterpretation, 'The exact retained MOM semantic payload passes the current structural validator.');
+  assert.deepEqual(savedMomInterpretation.authorityCandidates, ['MOM', 'SSO']);
+  assert.deepEqual(savedMomInterpretation.issues?.map(item => item.governingAuthorities), [['MOM']],
+    'The SSO authority candidate remains publisher context; the source issue is governed only by MOM.');
+  const savedMomIssue = issue({ id: 'retained-mom-issue', authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    population: 'EMPLOYEE', subject: savedMomInterpretation.issues[0].subject, topicId: 'mom-part-iv-overtime' });
+  const savedMomRequests = [];
+  const savedMomUnderstanding = {
+    mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', interpretation: savedMomInterpretation
+  };
+  const savedMomResult = await buildAuthorityWorkstreams(momQuestion, issuePlan([savedMomIssue]), {
+    referenceDate,
+    questionUnderstanding: savedMomUnderstanding,
+    providers: { MOM: provider('MOM', async request => {
+      savedMomRequests.push(request);
+      return { candidates: [], claims: [] };
+    }) }
+  });
+  assert.equal(savedMomRequests.length, 1, 'The retained semantic replay dispatches one MOM issue only.');
+  const savedMomRequestedLabels = savedMomRequests[0].retrievalIntent.requestedConcepts.map(concept => concept.label);
+  assert.ok(savedMomRequestedLabels.includes('Part IV coverage'),
+    'The source-backed coverage concept is bound to the compatible MOM clause.');
+  assert.equal(savedMomRequestedLabels.some(label => /Singapore Statutes Online|\bSSO\b/i.test(label)), false,
+    'A publisher role is not converted into an independent SSO evidence request.');
+  assert.equal(savedMomResult.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'), false,
+    `The saved Employment Act and working-hours/overtime context stays locally represented without absorbing SSO: ${JSON.stringify(savedMomResult.gaps)}`);
+
+  const fullNameSsoQuery = `${momQuestion} Separately, what does Singapore Statutes Online publish?`;
+  const fullNameSsoInterpretation = validateSemanticQuestionInterpretation({
+    ...savedMomInterpretation,
+    primarySubject: 'Employment Act Part IV coverage and Singapore Statutes Online',
+    concepts: [...savedMomInterpretation.concepts, { concept: 'Singapore Statutes Online', role: 'RELATED' }]
+  }, fullNameSsoQuery);
+  assert.ok(fullNameSsoInterpretation, 'The separate full-name publisher ask remains structurally valid.');
+  const fullNameSsoRequests = [];
+  const fullNameSsoResult = await buildAuthorityWorkstreams(fullNameSsoQuery, issuePlan([savedMomIssue]), {
+    referenceDate,
+    questionUnderstanding: { mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED',
+      interpretation: fullNameSsoInterpretation },
+    providers: { MOM: provider('MOM', async request => {
+      fullNameSsoRequests.push(request);
+      return { candidates: [], claims: [] };
+    }) }
+  });
+  assert.equal(fullNameSsoRequests.length, 1);
+  assert.equal(fullNameSsoRequests[0].retrievalIntent.requestedConcepts.some(concept =>
+    /Singapore Statutes Online/i.test(concept.label)), false,
+  'A separately asked Singapore Statutes Online publisher question cannot be absorbed into the MOM coverage issue.');
+  assert.ok(fullNameSsoResult.gaps.some(gap => gap.code === 'UNROUTED_MATERIAL_CONCEPT'),
+    'Independent publisher content stays explicitly unresolved when no publisher-governed issue exists.');
+
   const acraAnnualDutyQuery = 'Under ACRA guidance, must Singapore companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.';
   const acraAnnualDutyIssue = issue({ id: 'acra-annual-duty', authority: 'ACRA', domain: 'ACRA_CORPORATE',
     population: 'COMPANY', subject: 'annual return filing duty for Singapore companies', topicId: 'acra_annual-returns' });
   const acraAnnualDutyUnderstanding = understandingFor({ authorityCandidates: ['ACRA'], domain: 'ACRA_CORPORATE',
-    population: 'COMPANY', primarySubject: acraAnnualDutyIssue.subject, concepts: ['annual returns'] });
+    population: 'COMPANY', primarySubject: acraAnnualDutyIssue.subject,
+    concepts: ['annual returns', 'annual return filing'] });
   const acraDutyQuote = 'All companies registered in Singapore must file an annual return with ACRA each year. This applies as long as your company is listed as “live” with us.';
   const acraDutyHtml = 'All companies registered in Singapore <b>must file</b> an annual return with ACRA each year. This applies as long as your company is listed as “<b>live</b>” with us.';
   const acraAnnualDocumentTitle = acraAnnualPage.html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]
@@ -512,11 +576,22 @@ try {
   });
   assert.equal(acraDutyResult.requests[0].retrievalIntent.requestedConcepts.some(concept => concept.label === 'annual returns'), true,
     'A plain annual-returns semantic descriptor stays with the uniquely scoped ACRA filing-duty issue.');
+  assert.equal(acraDutyResult.requests[0].retrievalIntent.requestedConcepts.some(concept => concept.label === 'annual return filing'), true,
+    'A plain annual-return-filing label is supported only within the uniquely mapped ACRA filing-duty issue.');
   const acraDutyEvidence = acraDutyResult.result.workstreams[0].issues[0];
   assert.equal(acraDutyEvidence.evidenceStatus, 'VERIFIED',
     `The plain descriptor is covered by the complete qualified official filing-duty quote: ${JSON.stringify({ gaps: acraDutyEvidence.gaps, claims: acraDutyEvidence.verifiedClaims })}`);
   assert.ok(acraDutyEvidence.verifiedClaims.some(claim => claim.quote === acraDutyQuote),
     'Verification retains the full ACRA source quote and its live-company qualification.');
+
+  const capitalizedAcraAnnualDutyQuery = acraAnnualDutyQuery.replace('Singapore companies', 'Singapore Companies');
+  const capitalizedAcraDutyResult = await runBoundedCase({ query: capitalizedAcraAnnualDutyQuery },
+    [acraAnnualDutyIssue], acraAnnualDutyUnderstanding, {
+      ACRA: { candidates: [acraDutyRecord], claims: [{ text: acraDutyQuote, quote: acraDutyQuote, recordId: acraDutyRecordId }],
+        evidenceQualityTrace: acraDutyTrace }
+    });
+  assert.equal(capitalizedAcraDutyResult.result.workstreams[0].issues[0].evidenceStatus, 'VERIFIED',
+    'Capitalization of the company-word check does not break a bounded general ACRA duty issue.');
 } finally {
   globalThis.fetch = originalFetch;
 }

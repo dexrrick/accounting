@@ -15,7 +15,7 @@ import {
   getRoutingParentIdsForChild,
   proveRequestedTopicOwnership
 } from './requestedTopicOwnership';
-import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
+import { removeNegatedJournalDirectives, removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
 
 export const SEMANTIC_QUESTION_MIN_CONFIDENCE = 0.72;
 export const SEMANTIC_QUESTION_TIMEOUT_MS = 8_000;
@@ -590,7 +590,7 @@ export function validateSemanticQuestionInterpretation(value: unknown, query?: s
     if (!derivationQuery && cachedIssue?.operation === issue!.operation && cachedIssue.subject === issue!.subject) {
       return cachedIssue.required;
     }
-    return deriveRequestedIssueSpecificity(derivationQuery, issue!, issues.length > 1);
+    return deriveRequestedIssueSpecificity(derivationQuery, issue!, true);
   });
   const normalizedIssues = issues?.map((issue, index) => {
     return {
@@ -732,7 +732,8 @@ export async function interpretSemanticQuestion(
     return {
       mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', transportAttempts,
       interpretation: normalizeAcraAnnualReturnDeadlineRuleInterpretation(query,
-        normalizeGeneralCompanyTaxResidencyRuleInterpretation(query, interpretation))
+        normalizeGeneralCompanyTaxResidencyRuleInterpretation(query,
+          normalizeIssueLocalCpfTaxOutcome(query, interpretation)))
     };
   } catch (error) {
     // aiTransport deliberately withholds provider bodies and includes only the HTTP status.
@@ -829,24 +830,122 @@ function hasSemanticCompanyTaxResidencyAnchors(value: string): boolean {
     /\btax\b/.test(normalized) && /\b(?:residence|residency|resident)\b/.test(normalized);
 }
 
+function isCompanyResidencyRulePrefaceClause(clause: string): boolean {
+  return /^(?:for|under)\s+singapore(?:['’]s)?\s+(?:(?:corporate|company)\s+)?(?:income\s+)?tax$/i.test(clause.trim());
+}
+
+function companyResidencyGeneralRuleBindings(
+  query: string,
+  interpretation: SemanticQuestionInterpretation
+): Array<{ issueIndex: number; issue: SemanticQuestionIssue; clause: string }> {
+  const issues = interpretation.issues || [];
+  if (issues.length === 0) return [];
+  const clauses = queryClauses(query);
+  const ruleClauses = clauses.filter(hasSemanticCompanyTaxResidencyAnchors)
+    .map(clause => semanticIssueClauseWithFollowOns(query, clauses, clause, 'company tax residency determination'))
+    .filter((clause): clause is string => Boolean(clause) &&
+      hasSemanticCompanyTaxResidencyAnchors(clause) && isGeneralCompanyTaxResidencyRuleQuestion(clause));
+  const bindings: Array<{ issueIndex: number; issue: SemanticQuestionIssue; clause: string }> = [];
+  for (const clause of ruleClauses) {
+    const clauseNeedsFacts = hasExplicitCaseReference(clause) || hasCaseLinkedCircumstances(clause) ||
+      hasFirstPersonOutcomeApplication(clause);
+    const matchingIssues = issues.map((issue, issueIndex) => ({ issue, issueIndex })).filter(({ issue }) =>
+      issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+      issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+      hasSemanticCompanyTaxResidencyAnchors(issue.subject) &&
+      ['DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'EXPLAIN_RULE'].includes(issue.operation) &&
+      (hasExplicitCaseReference(issue.subject) || hasCaseLinkedCircumstances(issue.subject) ||
+        hasFirstPersonOutcomeApplication(issue.subject)) === clauseNeedsFacts &&
+      semanticIssueIsCompatibleWithRoot(issue, query, interpretation));
+    if (matchingIssues.length === 1) bindings.push({ ...matchingIssues[0], clause });
+  }
+  return bindings;
+}
+
 function normalizeGeneralCompanyTaxResidencyRuleInterpretation(
   query: string,
   interpretation: SemanticQuestionInterpretation
 ): SemanticQuestionInterpretation {
-  const issue = interpretation.issues?.length === 1 ? interpretation.issues[0] : undefined;
-  if (!isGeneralCompanyTaxResidencyRuleQuestion(query) || interpretation.domain !== 'IRAS_INCOME_TAX' ||
-      interpretation.population !== 'COMPANY' || !interpretation.authorityCandidates.includes('IRAS') ||
-      !issue || issue.domain !== 'IRAS_INCOME_TAX' || issue.population !== 'COMPANY' ||
-      !issue.governingAuthorities.includes('IRAS') || !hasSemanticCompanyTaxResidencyAnchors(issue.subject) ||
-      !['DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY'].includes(issue.operation) ||
-      interpretation.factsExplicitlyProvided.length > 0) return interpretation;
+  const bindings = companyResidencyGeneralRuleBindings(query, interpretation);
+  if (bindings.length === 0) return interpretation;
 
+  const normalizedIssues = interpretation.issues?.map((issue, index) =>
+    bindings.some(binding => binding.issueIndex === index)
+      ? { ...issue, operation: 'EXPLAIN_RULE' as const }
+      : issue);
+  const singleIssue = interpretation.issues?.length === 1 ? interpretation.issues[0] : undefined;
+  const singleBinding = bindings.length === 1 ? bindings[0] : undefined;
+  const clauses = queryClauses(query);
+  const firstBoundClauseIndex = singleBinding
+    ? clauses.findIndex(clause => singleBinding.clause.includes(clause))
+    : -1;
+  const unmatchedClauses = singleBinding ? clauses.map((clause, index) => ({ clause, index }))
+    .filter(({ clause }) => !singleBinding.clause.includes(clause)) : [];
+  const rootIsOnlyThisRule = Boolean(singleIssue && singleBinding && firstBoundClauseIndex >= 0 &&
+    unmatchedClauses.every(({ clause, index }) => index < firstBoundClauseIndex && isCompanyResidencyRulePrefaceClause(clause)));
+  const singleIssueBinding = rootIsOnlyThisRule && bindings.length === 1;
   return validateSemanticQuestionInterpretation({
     ...interpretation,
-    requestedOperation: 'EXPLAIN_RULE',
-    requiresUserSpecificFacts: false,
-    issues: [{ ...issue, operation: 'EXPLAIN_RULE' }]
+    ...(singleIssueBinding ? { requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false } : {}),
+    ...(normalizedIssues ? { issues: normalizedIssues } : {})
   }, query) || interpretation;
+}
+
+function normalizeIssueLocalCpfTaxOutcome(
+  query: string,
+  interpretation: SemanticQuestionInterpretation
+): SemanticQuestionInterpretation {
+  const issues = interpretation.issues;
+  if (!issues?.length) return interpretation;
+  let changed = false;
+  const normalizedIssues = issues.map(issue => {
+    if (issue.domain !== 'CPF_PAYROLL' || issue.governingAuthorities.length !== 1 ||
+        issue.governingAuthorities[0] !== 'CPF' || !/\b(?:relief|cash\s+top[ -]?ups?)\b/i.test(issue.subject) ||
+        !['INDIVIDUAL', 'EMPLOYEE', 'UNKNOWN'].includes(issue.population)) return issue;
+    const issueQuery = queryWithSemanticIssueFollowOns(query, issue.subject);
+    if (!issueQuery || !/\b(?:cpf|central provident fund)\b/i.test(issueQuery) ||
+        !/\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(issueQuery) ||
+        /\b(?:not|never|no)\b[^.!?]{0,50}\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(issueQuery) ||
+        explicitlyRequestsCpfPayrollOutcome(issues.length === 1 ? query : issueQuery) ||
+        issue.population === 'UNKNOWN' && !/\b(?:personal|individual|my\s+own|own\s+(?:cpf|central provident fund)|employee['’]s\s+own)\b/i.test(issueQuery)) return issue;
+    const generalRuleFollowOn = isBoundedCpfCashTopUpGeneralRuleQuery(issueQuery);
+    if (['COMPANY', 'EMPLOYER'].includes(issue.population)) return issue;
+    changed = true;
+    const normalizedPopulation = issue.population === 'UNKNOWN' ? 'INDIVIDUAL' : issue.population;
+    return {
+      ...issue,
+      population: normalizedPopulation,
+      domain: 'IRAS_INCOME_TAX' as const,
+      governingAuthorities: ['IRAS' as const],
+      contextualAuthorities: [...new Set([...issue.contextualAuthorities, 'CPF' as const])]
+        .filter(authority => authority !== 'IRAS'),
+      ...(generalRuleFollowOn && issue.operation === 'CHECK_ELIGIBILITY' ? { operation: 'EXPLAIN_RULE' as const } : {})
+    };
+  });
+  if (!changed) return interpretation;
+  const singleIssue = issues.length === 1;
+  return validateSemanticQuestionInterpretation({
+    ...interpretation,
+    ...(singleIssue ? {
+      authorityCandidates: ['IRAS'],
+      contextualAuthorities: [...new Set([...interpretation.contextualAuthorities, 'CPF'])].filter(authority => authority !== 'IRAS'),
+      domain: 'IRAS_INCOME_TAX',
+      population: normalizedIssues[0].population,
+      ...(normalizedIssues[0].operation === 'EXPLAIN_RULE' ? {
+        requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: false
+      } : {})
+    } : {}),
+    issues: normalizedIssues
+  }, query) || interpretation;
+}
+
+function isBoundedCpfCashTopUpGeneralRuleQuery(query: string): boolean {
+  return /\b(?:cpf|central provident fund)\b/i.test(query) &&
+    /\bcash\s+top[ -]?ups?\b/i.test(query) &&
+    /\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(query) &&
+    /\b(?:explain|describe|outline|summari[sz]e)\b[^.!?;]{0,100}\b(?:general\s+)?(?:eligib\w*|conditions?|criteria|limits?|caps?|relief)\b/i.test(query) &&
+    /\b(?:this\s+is|this\s+remains)\s+a\s+general\s+rules?\s+question\b/i.test(query) &&
+    /\b(?:do\s+not|don['’]?t|never)\s+(?:calculate|compute|estimate)\b[^.!?;]{0,100}\b(?:my|our|personal)\s+(?:income\s+)?tax\b/i.test(query);
 }
 
 function isGeneralAcraAnnualReturnMonthCountRuleQuestion(query: string): boolean {
@@ -890,7 +989,9 @@ function normalizeAcraAnnualReturnDeadlineRuleInterpretation(
 }
 
 function asksForCaseOutcome(query: string): boolean {
-  return /\b(?:can|could|may|might|do|does|is|are|am|will|would|should)\b[^?]{0,140}\b(?:claim\w*|qualif\w*|eligib\w*|deduct\w*|taxable|subject\s+to\s+tax|liable|tax\s+treatment|apply\s+to)\b/i.test(query);
+  return /\b(?:can|could|may|might|do|does|is|are|am|will|would|should)\b[^?]{0,140}\b(?:claim\w*|qualif\w*|eligib\w*|deduct\w*|taxable|subject\s+to\s+tax|liable|tax\s+treatment|apply\s+to)\b/i.test(query) ||
+    /\b(?:is|are|does|do|will|would)\b[^.!?]{0,140}\b(?:tax\s+)?residen(?:ce|cy|t)\b/i.test(query) ||
+    /\b(?:whether|if)\b[^.!?]{0,100}\b(?:is|are|will|would|does|do|determine|assess)\b[^.!?]{0,60}\b(?:tax\s+)?residen(?:ce|cy|t)\b/i.test(query);
 }
 
 const GENERIC_ISSUE_SUBJECT_WORDS = new Set([
@@ -908,23 +1009,128 @@ function queryClauses(query: string): string[] {
     .map(clause => clause.trim()).filter(Boolean);
 }
 
+function isBoundedSemanticIssueFollowOn(clause: string): boolean {
+  return /^(?:please\s+)?(?:explain|describe|outline|summari[sz]e)\b/i.test(clause) &&
+      /\b(?:general|rules?|eligib\w*|conditions?|criteria|limits?|caps?|requirements?|guidance)\b/i.test(clause) ||
+    /^this\s+(?:is|remains)\s+a\s+general\s+rules?\s+question\b/i.test(clause) ||
+    /^(?:please\s+)?(?:do\s+not|don['’]?t|never)\s+(?:calculate|compute|estimate|quantify|create|prepare)\b/i.test(clause);
+}
+
+function semanticIssueClauseWithFollowOns(query: string, clauses: string[], baseClause: string, subject?: string): string {
+  const baseIndex = clauses.indexOf(baseClause);
+  if (baseIndex < 0) return baseClause;
+  const issueAnchors = subject
+    ? [...new Set(normalizeSemanticAnchorText(subject).split(' ').map(semanticConceptAnchor)
+      .filter(term => term.length >= 3 && !GENERIC_ISSUE_SUBJECT_WORDS.has(term) && !SEMANTIC_CONCEPT_FILLER_WORDS.has(term)))]
+    : [];
+  const bound = [baseClause];
+  let previousEnd = query.indexOf(baseClause) + baseClause.length;
+  for (let index = baseIndex + 1; index < clauses.length; index += 1) {
+    const next = clauses[index];
+    const nextStart = query.indexOf(next, previousEnd);
+    const bridge = query.slice(previousEnd, nextStart < 0 ? previousEnd : nextStart);
+    const nextAnchors = new Set(normalizeSemanticAnchorText(next).split(' ').map(semanticConceptAnchor));
+    const continuesIssueQuestion = issueAnchors.some(anchor => nextAnchors.has(anchor)) &&
+      /^(?:when|what|which|how|who|is|are|does|do|can|could|may|might|will|would|should)\b/i.test(next) &&
+      /\band\b/i.test(bridge);
+    if (nextStart < 0 || /\b(?:separately|also|however|whereas|but\s+also|independently)\b/i.test(bridge) ||
+        !isBoundedSemanticIssueFollowOn(next) && !continuesIssueQuestion) break;
+    bound.push(next);
+    previousEnd = nextStart + next.length;
+  }
+  return bound.join('. ');
+}
+
 /** Punctuation and bounded conjunction clauses used for issue-local concept ownership. */
 export function getSemanticQueryClauses(query: string): string[] {
   return queryClauses(query);
 }
 
-function queryForSemanticIssue(query: string, subject: string): string | undefined {
+/** Selects one raw clause only when its original wording uniquely matches the issue. */
+function queryClauseForSemanticIssue(query: string, subject: string): string | undefined {
   const clauses = queryClauses(query);
   if (clauses.length < 2) return query;
-  const subjectTerms = [...new Set((subject.toLowerCase().match(/[a-z][a-z0-9-]{2,}/g) || [])
-    .filter(term => !GENERIC_ISSUE_SUBJECT_WORDS.has(term)))];
+  if (hasSemanticCompanyTaxResidencyAnchors(subject)) {
+    const issueNeedsFacts = hasExplicitCaseReference(subject) || hasCaseLinkedCircumstances(subject) ||
+      hasFirstPersonOutcomeApplication(subject);
+    const matchingClauses = clauses.filter(hasSemanticCompanyTaxResidencyAnchors).map(clause => ({
+      clause,
+      scoped: semanticIssueClauseWithFollowOns(query, clauses, clause, subject)
+    })).filter(({ scoped }) => scoped !== undefined &&
+      (hasExplicitCaseReference(scoped) || hasCaseLinkedCircumstances(scoped) ||
+        hasFirstPersonOutcomeApplication(scoped)) === issueNeedsFacts);
+    if (matchingClauses.length === 1) return matchingClauses[0].clause;
+    return undefined;
+  }
+  const subjectTerms = semanticConceptAnchors(subject);
   if (subjectTerms.length === 0) return undefined;
-  const scored = clauses.map((clause, index) => ({
-    clause,
-    index,
-    score: subjectTerms.filter(term => new RegExp(`\\b${term}\\b`, 'i').test(clause)).length
-  })).sort((left, right) => right.score - left.score || left.index - right.index);
+  const scored = clauses.map((clause, index) => {
+    const clauseTerms = new Set(semanticConceptAnchors(clause));
+    return {
+      clause,
+      index,
+      score: subjectTerms.filter(term => clauseTerms.has(term)).length
+    };
+  }).sort((left, right) => right.score - left.score || left.index - right.index);
   return scored[0].score >= 2 && scored[0].score > scored[1]?.score ? scored[0].clause : undefined;
+}
+
+/** Bounded issue-local text includes only the selected request and its attached follow-on context. */
+function queryWithSemanticIssueFollowOns(query: string, subject: string): string | undefined {
+  const clauses = queryClauses(query);
+  const requestClause = queryClauseForSemanticIssue(query, subject);
+  return requestClause ? semanticIssueClauseWithFollowOns(query, clauses, requestClause, subject) : undefined;
+}
+
+function semanticCompanyResidencyLabelBelongsToIssue(
+  label: string,
+  query: string,
+  issue: SemanticQuestionIssue
+): boolean {
+  const normalizedLabel = normalizeSemanticAnchorText(label);
+  if (issue.domain !== 'IRAS_INCOME_TAX' || issue.population !== 'COMPANY' ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'IRAS' ||
+      !hasSemanticCompanyTaxResidencyAnchors(issue.subject) ||
+      !(/\b(?:residen(?:ce|cy|t))\b/.test(normalizedLabel) || normalizedLabel === 'control and management')) return false;
+  const clause = queryWithSemanticIssueFollowOns(query, issue.subject);
+  return Boolean(clause && hasSemanticCompanyTaxResidencyAnchors(clause));
+}
+
+function semanticEmploymentActDescriptorBelongsToMomCoverage(
+  label: string,
+  query: string,
+  issue: SemanticQuestionIssue
+): boolean {
+  if (normalizeSemanticAnchorText(label) !== 'employment act' || issue.domain !== 'MOM_EMPLOYMENT' ||
+      issue.population !== 'EMPLOYEE' || issue.governingAuthorities.length !== 1 ||
+      issue.governingAuthorities[0] !== 'MOM' || !/\bpart\s+iv\b/i.test(issue.subject) ||
+      !/\b(?:coverage|covered)\b/i.test(issue.subject)) return false;
+  const clause = queryWithSemanticIssueFollowOns(query, issue.subject);
+  return Boolean(clause && /\bemployment\s+act\b/i.test(clause) && /\bpart\s+iv\b/i.test(clause) &&
+    /\b(?:coverage|covered)\b/i.test(clause));
+}
+
+function semanticMasCmsRequirementBelongsToIssue(
+  label: string,
+  query: string,
+  issue: SemanticQuestionIssue
+): boolean {
+  const normalizedLabel = normalizeSemanticAnchorText(label);
+  if (!/\b(?:licensing|licence|license)\b/.test(normalizedLabel) || !/\brequirement\b/.test(normalizedLabel) ||
+      issue.domain !== 'MAS_FUNDS' || issue.governingAuthorities.length !== 1 ||
+      issue.governingAuthorities[0] !== 'MAS' ||
+      !/\b(?:cms|capital\s+markets\s+services)\b/i.test(issue.subject) ||
+      !/\b(?:licen[cs]e|requirement|required)\b/i.test(issue.subject)) return false;
+  const clauses = queryClauses(query);
+  const definitionClause = clauses.some(clause => /\b(?:cms|capital\s+markets\s+services)\b/i.test(clause) &&
+    (/\b(?:define|definition|meaning)\b/i.test(clause) ||
+      /\bwhat\s+is\s+(?:a\s+|an\s+|the\s+)?(?:cms|capital\s+markets\s+services)\s+licen[cs]e\b/i.test(clause)));
+  const requirementClauses = clauses.filter(clause =>
+    /\b(?:generally|in\s+general|requirement|required|licensing)\b/i.test(clause) &&
+    /\b(?:when|what|which|how|explain|describe|outline|summari[sz]e)\b/i.test(clause));
+  const localClause = queryWithSemanticIssueFollowOns(query, issue.subject);
+  return definitionClause && requirementClauses.length === 1 && Boolean(localClause) &&
+    /\b(?:cms|capital\s+markets\s+services|licen[cs]e|licensing|requirement|required)\b/i.test(localClause || '');
 }
 
 function semanticConceptAnchor(value: string): string {
@@ -951,8 +1157,65 @@ function semanticConceptAnchors(label: string): string[] {
     .filter(term => term.length >= 3 && !GENERIC_ISSUE_SUBJECT_WORDS.has(term) && !SEMANTIC_CONCEPT_FILLER_WORDS.has(term)))];
 }
 
+const SCOPED_CANONICAL_ALIAS_FAMILIES = [
+  {
+    ids: ['gst_blocked_motor_car_input_tax', 'gst_motor_car_input_tax_exceptions'],
+    recognizedAliases: ['iras restriction', 'exceptions', 'input tax exceptions']
+  },
+  {
+    ids: ['cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'],
+    recognizedAliases: ['eligibility conditions', 'qualifying conditions', 'conditions for eligibility',
+      'relief limits', 'limits on relief', 'maximum relief', 'relief cap']
+  },
+  {
+    ids: ['company_tax_residency_incorporation'],
+    recognizedAliases: []
+  }
+];
+
+function semanticLabelMatchesCanonicalFamilyVocabulary(
+  label: string,
+  concepts: RequestedQuestionConcept[],
+  canonicalIds: readonly string[],
+  recognizedAliases: readonly string[] = []
+): boolean {
+  if (recognizedAliases.includes(normalizeSemanticAnchorText(label))) return true;
+  const familyConcepts = concepts.filter(concept => canonicalIds.includes(concept.id));
+  if (familyConcepts.length === 0) return false;
+  const knownAnchors = new Set(familyConcepts.flatMap(concept =>
+    [concept.label, ...concept.terms].flatMap(semanticConceptAnchors)));
+  const labelAnchors = semanticConceptAnchors(label);
+  return labelAnchors.length > 0 && labelAnchors.every(anchor => knownAnchors.has(anchor));
+}
+
+function semanticLabelIsCoveredByCanonicalSubstring(
+  label: string,
+  normalized: string,
+  concepts: RequestedQuestionConcept[],
+  query: string,
+  semantic: SemanticQuestionInterpretation | undefined
+): boolean {
+  return concepts.some(concept => {
+    if (!concept.label.toLowerCase().includes(normalized) && !normalized.includes(concept.label.toLowerCase())) return false;
+    const family = SCOPED_CANONICAL_ALIAS_FAMILIES.find(candidate => candidate.ids.includes(concept.id));
+    if (!family) return true;
+    if (!semanticLabelMatchesCanonicalFamilyVocabulary(label, concepts, family.ids, family.recognizedAliases)) return false;
+    if (family.ids.includes('gst_blocked_motor_car_input_tax')) {
+      return semanticGstMotorCarAliasIsCovered(label, query, semantic, false) ||
+        semanticGstMotorCarAliasIsCovered(label, query, semantic, true) ||
+        semanticIrasRestrictionAliasesCanonicalGst(label, query, semantic);
+    }
+    if (family.ids.includes('cpf_cash_top_up_relief')) {
+      return semanticCpfCashTopUpAliasIsCovered(label, query, semantic, 'base') ||
+        semanticCpfCashTopUpAliasIsCovered(label, query, semantic, 'eligibility') ||
+        semanticCpfCashTopUpAliasIsCovered(label, query, semantic, 'limits');
+    }
+    return semanticCompanyResidencyIncorporationAliasIsCovered(label, query, semantic);
+  });
+}
+
 function semanticConceptMatchesIssueClause(label: string, query: string, subject: string): boolean {
-  const clause = queryForSemanticIssue(query, subject);
+  const clause = queryWithSemanticIssueFollowOns(query, subject);
   const anchors = semanticConceptAnchors(label);
   if (!clause || anchors.length === 0) return false;
   const clauseWords = new Set(normalizeSemanticAnchorText(clause).split(' ').map(semanticConceptAnchor));
@@ -967,14 +1230,14 @@ function semanticIrasRestrictionFollowOnBelongsToIssue(
 ): boolean {
   if (normalizeSemanticAnchorText(label) !== 'iras restriction' || issue.domain !== 'IRAS_GST' ||
       issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'IRAS') return false;
-  const subjectClause = queryForSemanticIssue(query, issue.subject);
+  const subjectClause = queryClauseForSemanticIssue(query, issue.subject);
   if (!subjectClause || !semanticConceptMatchesIssueClause(issue.subject, query, issue.subject)) return false;
   const clauses = queryClauses(query);
-  const subjectIndex = clauses.indexOf(subjectClause);
+  const subjectIndex = clauses.findIndex(clause => subjectClause === clause || subjectClause.startsWith(`${clause}. `));
   if (subjectIndex < 0) return false;
-  const subjectStart = query.indexOf(subjectClause);
+  const subjectStart = query.indexOf(clauses[subjectIndex]);
   if (subjectStart < 0) return false;
-  const subjectEnd = subjectStart + subjectClause.length;
+  const subjectEnd = subjectStart + clauses[subjectIndex].length;
   const followOn = clauses[subjectIndex + 1];
   if (!followOn || !/\b(?:explain|describe|outline|summari[sz]e)\b/i.test(followOn) ||
       !/\biras\b/i.test(followOn) || !/\brestrictions?\b/i.test(followOn) ||
@@ -1000,15 +1263,16 @@ function semanticPersonalTaxReliefLabelBelongsToCpfIssue(
 ): boolean {
   if (normalizeSemanticAnchorText(label) !== 'personal tax relief' ||
       issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'IRAS') return false;
-  const clause = queryForSemanticIssue(query, issue.subject);
+  const clause = queryWithSemanticIssueFollowOns(query, issue.subject);
   if (!clause || !/\bpersonal\s+(?:income\s+)?tax\s+relief\b/i.test(clause) ||
       !/\bpersonal\s+(?:income\s+)?tax\s+relief\b[^.!?]{0,60}\b(?:on|for)\s+(?:compulsory\s+)?(?:cpf|central provident fund)\b/i.test(clause)) return false;
   if (semantic.issues?.length === 1) {
-    const rootScope = semanticOwnerScopeForConceptLabel(label, query, semantic);
-    if (!rootScope || rootScope.domain !== issue.domain ||
-        !['INDIVIDUAL', 'EMPLOYEE'].includes(rootScope.population) ||
-        rootScope.governingAuthorities.length !== 1 || rootScope.governingAuthorities[0] !== 'IRAS' ||
-        toRegistryDomain(rootScope.domain, rootScope.population) !== 'IRAS_INDIVIDUAL_TAX') return false;
+    if (semantic.domain !== 'IRAS_INCOME_TAX' ||
+        !['INDIVIDUAL', 'EMPLOYEE'].includes(semantic.population) ||
+        semantic.authorityCandidates.length !== 1 || semantic.authorityCandidates[0] !== 'IRAS' ||
+        !semanticIssueIsCompatibleWithRoot(issue, query, semantic) ||
+        !['INDIVIDUAL', 'EMPLOYEE'].includes(issue.population) ||
+        toRegistryDomain(issue.domain, issue.population) !== 'IRAS_INDIVIDUAL_TAX') return false;
   }
   return isMappedIndividualCpfReliefIssue(issue, independentlyMappedIssueTopicIds(query, issue, semantic.issues?.length || 1));
 }
@@ -1021,9 +1285,134 @@ function semanticIssueForConceptLabel(
   if (!semantic?.issues?.length) return undefined;
   const owners = semantic.issues.filter(issue =>
     semanticConceptMatchesIssueClause(label, query, issue.subject) ||
+    semanticCompanyResidencyLabelBelongsToIssue(label, query, issue) ||
+    semanticEmploymentActDescriptorBelongsToMomCoverage(label, query, issue) ||
+    semanticMasCmsRequirementBelongsToIssue(label, query, issue) ||
+    semanticCpfCashTopUpReliefBelongsToIssue(label, query, issue) ||
+    semanticMotorCarExceptionBelongsToIssue(label, query, issue) ||
     semanticPersonalTaxReliefLabelBelongsToCpfIssue(label, query, issue, semantic) ||
     semanticIrasRestrictionFollowOnBelongsToIssue(label, query, issue));
   return owners.length === 1 ? owners[0] : undefined;
+}
+
+function semanticIssueForCanonicalAlias(
+  label: string,
+  query: string,
+  semantic: SemanticQuestionInterpretation | undefined,
+  genericLabel: RegExp,
+  isCanonicalOwner: (issue: SemanticQuestionIssue) => boolean,
+  matchesIssueClause: (clause: string) => boolean,
+  matchesGenericIssueClause: (clause: string) => boolean = matchesIssueClause
+): SemanticQuestionIssue | undefined {
+  if (!semantic?.issues?.length) return undefined;
+  if (genericLabel.test(normalizeSemanticAnchorText(label))) {
+    const candidates = semantic.issues.filter(issue => {
+      if (!semanticIssueIsCompatibleWithRoot(issue, query, semantic)) return false;
+      const clause = queryWithSemanticIssueFollowOns(query, issue.subject);
+      return Boolean(clause && matchesGenericIssueClause(clause));
+    });
+    const owner = candidates.length === 1 ? candidates[0] : undefined;
+    if (!owner || !isCanonicalOwner(owner)) return undefined;
+    const clause = queryWithSemanticIssueFollowOns(query, owner.subject);
+    return clause && matchesIssueClause(clause) ? owner : undefined;
+  }
+
+  const owner = semanticIssueForConceptLabel(label, query, semantic);
+  if (!owner || !semanticIssueIsCompatibleWithRoot(owner, query, semantic) || !isCanonicalOwner(owner)) return undefined;
+  const clause = queryWithSemanticIssueFollowOns(query, owner.subject);
+  return clause && matchesIssueClause(clause) ? owner : undefined;
+}
+
+function isIrasGstPassengerMotorCarInputTaxIssue(issue: SemanticQuestionIssue): boolean {
+  return issue.domain === 'IRAS_GST' && issue.population === 'COMPANY' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+    /\b(?:(?:passenger\s+)?motor\s+car|passenger\s+car)\b/i.test(issue.subject) &&
+    /\b(?:input\s+tax|input\s+gst|blocked|restriction)\b/i.test(issue.subject);
+}
+
+function semanticGstMotorCarAliasIsCovered(
+  label: string,
+  query: string,
+  semantic: SemanticQuestionInterpretation | undefined,
+  requiresExceptions: boolean
+): boolean {
+  const genericExceptionLabel = /^(?:(?:input tax|input gst|gst|motor car|passenger car|s plate) )?exceptions?$/;
+  const genericBaseLabel = /^(?:(?:input tax|input gst|gst) )?(?:motor car|passenger car|s plate|blocked input tax|restriction)$/;
+  const owner = semanticIssueForCanonicalAlias(label, query, semantic,
+    requiresExceptions ? genericExceptionLabel : genericBaseLabel,
+    isIrasGstPassengerMotorCarInputTaxIssue,
+    clause => /\b(?:(?:passenger\s+)?motor\s+cars?|passenger\s+cars?)\b/i.test(clause) &&
+      /\b(?:input\s+tax|input\s+gst|blocked|restriction)\b/i.test(clause) &&
+      (!requiresExceptions || /\bexceptions?\b/i.test(clause)),
+    requiresExceptions ? clause => /\bexceptions?\b/i.test(clause) : undefined);
+  return owner !== undefined;
+}
+
+function isIrasIndividualCpfCashTopUpReliefIssue(issue: SemanticQuestionIssue): boolean {
+  return issue.domain === 'IRAS_INCOME_TAX' && ['INDIVIDUAL', 'EMPLOYEE'].includes(issue.population) &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+    /\b(?:cpf|central\s+provident\s+fund)\b/i.test(issue.subject) &&
+    /\bcash\s+top[ -]?ups?\b/i.test(issue.subject) && /\brelief\b/i.test(issue.subject);
+}
+
+function semanticCpfCashTopUpAliasIsCovered(
+  label: string,
+  query: string,
+  semantic: SemanticQuestionInterpretation | undefined,
+  qualifier: 'base' | 'eligibility' | 'limits'
+): boolean {
+  const genericLabel = qualifier === 'eligibility'
+    ? /^(?:eligibility|eligibility conditions?|qualifying conditions?|conditions for eligibility)$/
+    : qualifier === 'limits'
+      ? /^(?:relief limits?|limits on relief|maximum relief|relief cap)$/
+      : /(?!)/;
+  const owner = semanticIssueForCanonicalAlias(label, query, semantic, genericLabel,
+    isIrasIndividualCpfCashTopUpReliefIssue,
+    clause => /\b(?:cpf|central\s+provident\s+fund)\b/i.test(clause) &&
+      /\bcash\s+top[ -]?ups?\b/i.test(clause) &&
+      /\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(clause) &&
+      (qualifier === 'base' || qualifier === 'eligibility'
+        ? qualifier === 'base' || /\b(?:eligib\w*|qualif\w*|conditions?|criteria|requirements?|who\s+(?:can|may)|entitled)\b/i.test(clause)
+        : /\b(?:limits?|maximum|caps?|up\s+to|how\s+much|amount\s+of\s+(?:the\s+)?(?:tax\s+)?relief)\b/i.test(clause)),
+    qualifier === 'eligibility'
+      ? clause => /\b(?:eligib\w*|qualif\w*|conditions?|criteria|requirements?|who\s+(?:can|may)|entitled)\b/i.test(clause)
+      : qualifier === 'limits'
+        ? clause => /\b(?:limits?|maximum|caps?|up\s+to|how\s+much|amount\s+of\s+(?:the\s+)?(?:tax\s+)?relief)\b/i.test(clause)
+        : undefined);
+  return owner !== undefined;
+}
+
+function isIrasCompanyTaxResidencyIssue(issue: SemanticQuestionIssue): boolean {
+  return issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+    hasSemanticCompanyTaxResidencyAnchors(issue.subject);
+}
+
+function semanticCompanyResidencyIncorporationAliasIsCovered(
+  label: string,
+  query: string,
+  semantic: SemanticQuestionInterpretation | undefined
+): boolean {
+  const owner = semanticIssueForCanonicalAlias(label, query, semantic,
+    /^(?:place of incorporation|incorporation(?: alone)?|singapore incorporation)$/,
+    isIrasCompanyTaxResidencyIssue,
+    clause => /\bincorporat(?:ion|ed)\b/i.test(clause) &&
+      /\b(?:alone|place|sufficient|enough|determin\w*|establish\w*|resident|residen(?:ce|cy)|requirements?|qualif\w*|criteria)\b/i.test(clause),
+    clause => /\bincorporat(?:ion|ed)\b/i.test(clause) &&
+      /\b(?:alone|place|sufficient|enough|determin\w*|establish\w*|resident|residen(?:ce|cy)|requirements?|qualif\w*|criteria)\b/i.test(clause));
+  return owner !== undefined;
+}
+
+function semanticCompanyResidencyControlTestAliasIsCovered(
+  label: string,
+  query: string,
+  semantic: SemanticQuestionInterpretation | undefined
+): boolean {
+  return semanticIssueForCanonicalAlias(label, query, semantic,
+    /^control and management test$/,
+    isIrasCompanyTaxResidencyIssue,
+    clause => /\bcontrol and management\b/.test(normalizeSemanticAnchorText(clause)) ||
+      hasSemanticCompanyTaxResidencyAnchors(clause)) !== undefined;
 }
 
 function separateExplicitConceptExplanation(label: string, query: string): boolean | undefined {
@@ -1049,21 +1438,24 @@ function semanticLabelIsOnlyPayrollContext(
 ): boolean {
   const normalizedLabel = normalizeSemanticAnchorText(label);
   if (!semantic?.issues?.length) return false;
-  const momCoverageOwners = normalizedLabel === 'working hours and overtime' ? semantic.issues.filter(issue =>
+  const isMomCoverageDescriptor = ['working hours', 'overtime', 'working hours and overtime'].includes(normalizedLabel);
+  const momCoverageOwners = isMomCoverageDescriptor ? semantic.issues.filter(issue =>
     issue.domain === 'MOM_EMPLOYMENT' && issue.population === 'EMPLOYEE' &&
     issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM' &&
     /\bpart\s+iv\b/i.test(issue.subject) && /\b(?:coverage|covered)\b/i.test(issue.subject)) : [];
   const owner = semanticIssueForConceptLabel(label, query, semantic) ||
     (momCoverageOwners.length === 1 ? momCoverageOwners[0] : undefined);
   if (!owner || owner.governingAuthorities.length !== 1) return false;
-  const localClause = queryForSemanticIssue(query, owner.subject) || (momCoverageOwners.length === 1
+  const localClause = queryWithSemanticIssueFollowOns(query, owner.subject) || (momCoverageOwners.length === 1
     ? queryClauses(query).find(clause => /\b(?:coverage|covered)\b/i.test(clause) &&
       /\bpart\s+iv\b[\s\S]{0,80}\bfor\s+working\s+hours?\s+and\s+overtime\b/i.test(clause))
     : undefined);
   if (!localClause) return false;
-  const otherClauses = queryClauses(query).filter(clause => clause !== localClause)
-    .flatMap(clause => clause.split(/\.(?!\d)|\bbut\b/i)).map(clause => clause.trim())
+  const otherClauses = queryClauses(query).filter(clause => !localClause.includes(clause))
+    .flatMap(clause => clause.split(/\.(?!\d)|\bbut\b/i))
+    .map(clause => removeNegatedOutputDirectives(clause).trim())
     .filter(clause => clause && !/^(?:do\s+not|don['’]?t|never)\s+(?:calculate|compute|create|prepare)\b/i.test(clause));
+  const positiveLocalClause = removeNegatedOutputDirectives(localClause);
 
   if (normalizedLabel === 'cpf contributions' && owner.domain === 'CPF_PAYROLL' &&
       ['EMPLOYER', 'EMPLOYEE'].includes(owner.population) && owner.governingAuthorities[0] === 'CPF' &&
@@ -1071,27 +1463,30 @@ function semanticLabelIsOnlyPayrollContext(
       /\bordinary\s+wages?\b[\s\S]{0,80}\bfor\s+(?:the\s+)?(?:cpf|central provident fund)\s+contributions?\b/i.test(localClause)) {
     const separateExplanation = separateExplicitConceptExplanation(label, query);
     const independentContributionAsk = separateExplanation === true || separateExplanation === undefined && ((
-      /\b(?:cpf|central provident fund)\b/i.test(localClause) &&
-      /\b(?:rates?|amounts?|payable|remit\w*|obligations?|how much)\b|\b(?:must|should|when|how)\b.{0,40}\bpay\b/i.test(localClause)) ||
+      /\b(?:cpf|central provident fund)\b/i.test(positiveLocalClause) &&
+      /\b(?:rates?|amounts?|payable|remit\w*|obligations?|how much)\b|\b(?:must|should|when|how)\b.{0,40}\bpay\b/i.test(positiveLocalClause)) ||
       otherClauses.some(clause => /\b(?:cpf|central provident fund)\b/i.test(clause) &&
         /\b(?:contribut\w*|rates?|amounts?|pay(?:ment|able)?|remit\w*|obligations?)\b/i.test(clause) &&
         /\b(?:what|which|how|calculate|must|should|do|does|is|are|explain|describe|outline|summari[sz]e)\b/i.test(clause)));
     return !independentContributionAsk;
   }
 
-  if (normalizedLabel === 'working hours and overtime' && owner.domain === 'MOM_EMPLOYMENT' &&
+  if (isMomCoverageDescriptor && owner.domain === 'MOM_EMPLOYMENT' &&
       owner.population === 'EMPLOYEE' && owner.governingAuthorities[0] === 'MOM' &&
       /\bpart\s+iv\b/i.test(owner.subject) && /\b(?:coverage|covered)\b/i.test(owner.subject) &&
-      /\b(?:part\s+iv\b[\s\S]{0,80}\bcoverage|covered\s+(?:by|under)\s+part\s+iv)\b[\s\S]{0,80}\bfor\s+working\s+hours?\s+and\s+overtime\b/i.test(localClause)) {
+      /\b(?:part\s+iv\b[\s\S]{0,100}\bcoverage|covered\s+(?:by|under)\s+part\s+iv)\b[\s\S]{0,100}\b(?:for\s+)?(?:working\s+hours?|overtime)\b/i.test(localClause) &&
+      (normalizedLabel === 'overtime' || !/\bovertime\b/i.test(normalizedLabel) ||
+        /\bworking\s+hours?\b[\s\S]{0,35}\bovertime\b/i.test(localClause))) {
     const separateExplanation = separateExplicitConceptExplanation(label, query);
-    const independentOvertimeAsk = separateExplanation === true || separateExplanation === undefined && ((
-      /\b(?:rates?|pay(?:ment|able)?|entitlement|rules?|eligib\w*)\b/i.test(localClause) &&
-      /\bovertime\b/i.test(localClause)) ||
-      otherClauses.some(clause => /\bovertime\b/i.test(clause) &&
-        (/\b(?:rates?|pay(?:ment|able)?|entitlement|rules?|eligib\w*)\b/i.test(clause) ||
-          /\bworking\s+hours?\s+and\s+overtime\b/i.test(clause) && /\b(?:explain|describe|outline|summari[sz]e)\b/i.test(clause)) &&
-        /\b(?:what|which|how|calculate|must|should|do|does|is|are|explain|describe)\b/i.test(clause)));
-    return !independentOvertimeAsk;
+    const independentHoursOrOvertimeAsk = separateExplanation === true || separateExplanation === undefined && (
+      /\b(?:rates?|pay(?:ment|able)?|entitlement|rules?|eligib\w*|limits?|maximum|how\s+many\s+hours?)\b/i.test(positiveLocalClause) &&
+        /\b(?:working\s+hours?|overtime)\b/i.test(positiveLocalClause) ||
+      otherClauses.some(clause => /\b(?:working\s+hours?|overtime)\b/i.test(clause) &&
+        (/\b(?:rates?|pay(?:ment|able)?|entitlement|rules?|eligib\w*|limits?|maximum|how\s+many\s+hours?)\b/i.test(clause) ||
+          /\b(?:working\s+hours?\s+and\s+overtime|overtime)\b/i.test(clause) &&
+            /\b(?:explain|describe|outline|summari[sz]e)\b/i.test(clause)) &&
+        /\b(?:what|which|how|calculate|must|should|do|does|is|are|explain|describe|outline)\b/i.test(clause)));
+    return !independentHoursOrOvertimeAsk;
   }
   return false;
 }
@@ -1103,8 +1498,48 @@ function semanticIrasRestrictionAliasesCanonicalGst(
 ): boolean {
   if (normalizeSemanticAnchorText(label) !== 'iras restriction') return false;
   const owner = semanticIssueForConceptLabel(label, query, semantic);
-  return owner?.domain === 'IRAS_GST' && owner.governingAuthorities.length === 1 &&
-    owner.governingAuthorities[0] === 'IRAS';
+  if (!owner || !semantic || !semanticIssueIsCompatibleWithRoot(owner, query, semantic) ||
+      !isIrasGstPassengerMotorCarInputTaxIssue(owner)) return false;
+  const clause = queryWithSemanticIssueFollowOns(query, owner.subject);
+  return Boolean(clause && /\b(?:(?:passenger\s+)?motor\s+cars?|passenger\s+cars?)\b/i.test(clause) &&
+    /\b(?:input\s+tax|input\s+gst|blocked|restriction)\b/i.test(clause));
+}
+
+function semanticIssueIsCompatibleWithRoot(
+  issue: SemanticQuestionIssue,
+  query: string,
+  semantic: SemanticQuestionInterpretation
+): boolean {
+  const issues = semantic.issues || [];
+  if (issues.length <= 1) {
+    if (semantic.domain !== 'UNKNOWN' && semantic.domain !== issue.domain) return false;
+    if (semantic.population !== 'UNKNOWN' && semantic.population !== issue.population) return false;
+  }
+  if (!semantic.authorityCandidates.includes('UNKNOWN') &&
+      !issue.governingAuthorities.some(authority => semantic.authorityCandidates.includes(authority))) return false;
+
+  const issueAuthorities = new Set(issues.flatMap(item => item.governingAuthorities));
+  for (const issueItem of issues) for (const authority of issueItem.contextualAuthorities) issueAuthorities.add(authority);
+  const unexplainedRootAuthorities = semantic.authorityCandidates.filter(authority =>
+    authority !== 'UNKNOWN' && !issueAuthorities.has(authority) && !semantic.contextualAuthorities.includes(authority));
+  if (unexplainedRootAuthorities.length === 0) return true;
+  if (unexplainedRootAuthorities.length !== 1 || unexplainedRootAuthorities[0] !== 'SSO' ||
+      issue.domain !== 'MOM_EMPLOYMENT' || issue.population !== 'EMPLOYEE' ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MOM' ||
+      !semantic.authorityCandidates.includes('MOM') || issues.filter(item =>
+        item.domain === 'MOM_EMPLOYMENT' && item.governingAuthorities.length === 1 && item.governingAuthorities[0] === 'MOM').length !== 1 ||
+      issues.some(item => item.governingAuthorities.includes('SSO'))) return false;
+
+  const ssoClauses = queryClauses(query).filter(clause =>
+    /\b(?:sso|singapore\s+statutes\s+online)\b/i.test(clause));
+  if (ssoClauses.length === 0) return true;
+  const momClause = queryClauseForSemanticIssue(query, issue.subject);
+  if (!momClause || ssoClauses.length !== 1 || ssoClauses[0] !== momClause) return false;
+  const publisherOnlyReference = /\b(?:employment\s+act|part\s+iv)\b/i.test(momClause) &&
+    (/\b(?:employment\s+act|part\s+iv)\b[\s\S]{0,90}\b(?:on|at|from|published\s+on|available\s+on)\s+(?:the\s+)?(?:singapore\s+statutes\s+online|sso)\b|\b(?:singapore\s+statutes\s+online|sso)\b[\s\S]{0,70}\b(?:publisher|published|official\s+text|statutory\s+text|source\s+for)\b/i.test(momClause));
+  const asksForIndependentStatutoryContent = /\b(?:separately|also|compare|comparison|independently|other\s+(?:acts?|statutes?|regulations?|provisions?))\b/i.test(momClause) ||
+    /\b(?:what|which|how|explain|describe|interpret|apply)\b[^.!?]{0,90}\b(?:statutory\s+provisions?|other\s+(?:acts?|statutes?|regulations?)|legal\s+requirements?)\b/i.test(momClause);
+  return publisherOnlyReference && !asksForIndependentStatutoryContent;
 }
 
 function semanticOwnerScopeForConceptLabel(
@@ -1114,11 +1549,7 @@ function semanticOwnerScopeForConceptLabel(
 ): Pick<SemanticQuestionIssue, 'domain' | 'population' | 'governingAuthorities'> | undefined {
   if (!semantic) return undefined;
   const issues = semantic.issues || [];
-  if (issues.length <= 1) {
-    // Preserve the established root scope for a single-issue interpretation.
-    // Semantic issues may refine it for multi-issue questions, but replacing
-    // known root fields here can silently repair contradictory provider output
-    // and route legacy descriptors that used to remain incompatible.
+  if (issues.length === 0) {
     return {
       domain: semantic.domain,
       population: semantic.population,
@@ -1126,11 +1557,17 @@ function semanticOwnerScopeForConceptLabel(
     };
   }
   const ownerIssue = semanticIssueForConceptLabel(label, query, semantic);
-  return ownerIssue ? {
+  if (ownerIssue && semanticIssueIsCompatibleWithRoot(ownerIssue, query, semantic)) return {
     domain: ownerIssue.domain,
     population: ownerIssue.population,
     governingAuthorities: ownerIssue.governingAuthorities
-  } : undefined;
+  };
+  if (issues.length === 1) return {
+    domain: semantic.domain,
+    population: semantic.population,
+    governingAuthorities: semantic.authorityCandidates
+  };
+  return undefined;
 }
 
 function genericClassEligibilityQuestion(query: string): boolean {
@@ -1145,8 +1582,9 @@ function issueRequiresUserSpecificFacts(
   alignToIssue = true
 ): boolean | undefined {
   if (CASE_FACTS_REQUIRED_OPERATIONS.has(operation)) return true;
-  const issueQuery = alignToIssue ? queryForSemanticIssue(query, subject) : query;
+  const issueQuery = alignToIssue ? queryWithSemanticIssueFollowOns(query, subject) : query;
   if (!issueQuery) return undefined;
+  if (operation === 'EXPLAIN_RULE' && isBoundedCpfCashTopUpGeneralRuleQuery(issueQuery)) return false;
   const explicitApplication = hasExplicitCaseReference(issueQuery) || hasCaseLinkedCircumstances(issueQuery) ||
     hasFirstPersonOutcomeApplication(issueQuery);
   if (operation === 'EXPLAIN_RULE') {
@@ -1296,6 +1734,93 @@ function toRegistryDomain(domain: SemanticQuestionDomain, population: SemanticPo
   }
 }
 
+function explicitCpfCashTopUpReliefClauses(query: string): Array<{ clause: string; index: number; scoped: string }> {
+  const clauses = queryClauses(query);
+  return clauses.flatMap((clause, index) => {
+    if (!/\b(?:cpf|central\s+provident\s+fund)\b/i.test(clause) ||
+        !/\bcash\s+top[ -]?ups?\b/i.test(clause) ||
+        !/\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief|qualif\w*\s+for\s+(?:tax\s+)?relief)\b/i.test(clause)) return [];
+    return [{ clause, index, scoped: semanticIssueClauseWithFollowOns(query, clauses, clause, 'CPF cash top-up tax relief eligibility and limits') }];
+  });
+}
+
+function requestedCpfCashTopUpReliefQualifiers(query: string): { eligibility: boolean; limits: boolean } {
+  const requests = explicitCpfCashTopUpReliefClauses(query);
+  if (!requests.length) return { eligibility: false, limits: false };
+  const independentTopic = /\b(?:gst|goods\s+and\s+services\s+tax|acra|annual\s+returns?|mas|mom|employment\s+act|motor\s+cars?|srs|parent\s+relief|company\s+tax\s+residen(?:ce|cy|t))\b/i;
+  const eligibility = requests.some(({ scoped }) =>
+    /\b(?:eligib\w*|qualif\w*|conditions?|criteria|requirements?|who\s+(?:can|may)|entitled)\b/i.test(scoped) &&
+    !independentTopic.test(scoped));
+  const limits = requests.some(({ scoped }) =>
+    /\b(?:limits?|maximum|caps?|up\s+to|how\s+much|amount\s+of\s+(?:the\s+)?(?:tax\s+)?relief)\b/i.test(scoped) &&
+    !independentTopic.test(scoped));
+  return { eligibility, limits };
+}
+
+function semanticCpfCashTopUpReliefBelongsToIssue(
+  label: string,
+  query: string,
+  issue: SemanticQuestionIssue
+): boolean {
+  if (!/\b(?:cpf|cash\s+top[ -]?up)\b/i.test(label) || !/\brelief\b/i.test(label) ||
+      !/\b(?:cpf|central\s+provident\s+fund)\b/i.test(issue.subject) ||
+      !/\bcash\s+top[ -]?ups?\b/i.test(issue.subject) || !/\brelief\b/i.test(issue.subject) ||
+      !['IRAS_INCOME_TAX', 'CPF_PAYROLL'].includes(issue.domain) ||
+      !issue.governingAuthorities.some(authority => authority === 'IRAS' || authority === 'CPF')) return false;
+  const localQuery = queryWithSemanticIssueFollowOns(query, issue.subject);
+  return Boolean(localQuery && /\b(?:cpf|central\s+provident\s+fund)\b/i.test(localQuery) &&
+    /\bcash\s+top[ -]?ups?\b/i.test(localQuery) &&
+    /\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(localQuery));
+}
+
+function semanticMotorCarExceptionBelongsToIssue(
+  label: string,
+  query: string,
+  issue: SemanticQuestionIssue
+): boolean {
+  if (!/\b(?:passenger\s+)?motor\s+car\b/i.test(label) || !/\bexception/i.test(label) ||
+      issue.domain !== 'IRAS_GST' || issue.governingAuthorities.length !== 1 ||
+      issue.governingAuthorities[0] !== 'IRAS' ||
+      !/\b(?:passenger\s+)?motor\s+car\b/i.test(issue.subject) ||
+      !/\b(?:input\s+tax|input\s+gst|blocked|restriction)\b/i.test(issue.subject)) return false;
+  const localQuery = queryWithSemanticIssueFollowOns(query, issue.subject);
+  return Boolean(localQuery && /\b(?:passenger\s+)?motor\s+car\b/i.test(localQuery) &&
+    /\b(?:input\s+tax|input\s+gst|blocked|restriction)\b/i.test(localQuery) &&
+    /\bexceptions?\b/i.test(localQuery));
+}
+
+function queryExplicitlyRequestsMotorCarInputTaxExceptions(query: string): boolean {
+  const clauses = queryClauses(query);
+  const vehicleRestrictionClauses = clauses.filter(clause =>
+    /\b(?:passenger\s+)?motor\s+cars?\b/i.test(clause) &&
+    /\b(?:gst|goods\s+and\s+services\s+tax|input\s+tax|input\s+gst|restriction|blocked|claim|recover)\b/i.test(clause));
+  if (vehicleRestrictionClauses.length === 0) return false;
+  if (vehicleRestrictionClauses.some(clause => /\bexceptions?\b/i.test(clause))) return true;
+  return vehicleRestrictionClauses.some(baseClause => {
+    const baseIndex = clauses.indexOf(baseClause);
+    const nextClause = clauses[baseIndex + 1];
+    if (!nextClause || !/\bexceptions?\b/i.test(nextClause)) return false;
+    const baseEnd = query.indexOf(baseClause) + baseClause.length;
+    const nextStart = query.indexOf(nextClause, baseEnd);
+    const bridge = query.slice(baseEnd, nextStart < 0 ? baseEnd : nextStart);
+    return /\band\b/i.test(bridge) && !/\b(?:separately|also|however|whereas|independently)\b/i.test(bridge);
+  });
+}
+
+function semanticIssueScopeMetadata(
+  label: string,
+  query: string,
+  semantic?: SemanticQuestionInterpretation
+): Pick<RequestedQuestionConcept, 'semanticDomain' | 'semanticPopulation' | 'semanticAuthorities'> | undefined {
+  const issue = semanticIssueForConceptLabel(label, query, semantic);
+  if (!issue || !semanticIssueIsCompatibleWithRoot(issue, query, semantic!)) return undefined;
+  return {
+    semanticDomain: issue.domain,
+    semanticPopulation: issue.population,
+    semanticAuthorities: issue.governingAuthorities
+  };
+}
+
 function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionInterpretation): RequestedQuestionConcept[] {
   const semanticLabels = semantic?.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => item.concept) || [];
   const text = `${query} ${semantic?.primarySubject || ''} ${semanticLabels.join(' ')}`.toLowerCase();
@@ -1338,21 +1863,43 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
     /\b(?:claim\w*|recover\w*|blocked|restriction|exception\w*)\b/i.test(text);
   if (blockedPassengerCarInputTaxQuestion) {
     add('gst_blocked_motor_car_input_tax', 'Blocked input tax on passenger motor cars',
-      ['passenger motor car input tax restriction', 'blocked motor-car input tax', 'Regulations 26 and 27', 'motor-car input-tax exceptions'],
-      ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles']);
+      ['passenger motor car input tax restriction', 'blocked motor-car input tax'],
+      ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'],
+      semanticIssueScopeMetadata('Blocked input tax on passenger motor cars', query, semantic));
+    const motorCarExceptionRequested = queryExplicitlyRequestsMotorCarInputTaxExceptions(query);
+    if (motorCarExceptionRequested) {
+      add('gst_motor_car_input_tax_exceptions', 'Passenger motor car input-tax exceptions',
+        ['motor-car input-tax exceptions', 'exceptions to blocked passenger motor car input tax',
+          'Regulations 26 and 27'],
+        ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'],
+        semanticIssueScopeMetadata('Passenger motor car input-tax exceptions', query, semantic));
+    }
   }
   const personalReliefContext = /\b(?:personal|individual)\s+(?:income\s+)?tax\s+relief\b|\bpersonal\s+relief\b/i.test(text) ||
     /\b(?:srs|cpf)\b/i.test(text) && /\b(?:relief|tax\s+cap|relief\s+cap)\b/i.test(text);
   const asksReliefCap = personalReliefContext && /\b(?:relief\s+cap|cap\s+of\s+(?:sgd\s*)?\$?\s*80,?000|overall\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|aggregate\s+(?:personal\s+)?(?:income\s+tax\s+)?relief|total\s+(?:personal\s+)?relief\s+limit)\b/i.test(text);
   if (asksReliefCap) add('personal_income_tax_relief_cap', 'Overall personal income tax relief cap',
     ['personal income tax relief cap', 'overall relief cap', 'aggregate relief cap', '80,000 relief cap'], ['iras-individual-relief-cap']);
-  const cpfCashTopUpRelief = /\b(?:cpf|central provident fund)\b/i.test(text) &&
-    /\bcash\s+top[ -]?ups?\b/i.test(text) && /\b(?:tax\s+)?relief\b/i.test(text);
+  const cpfCashTopUpRelief = explicitCpfCashTopUpReliefClauses(query).length > 0;
+  const cashTopUpReliefQualifiers = requestedCpfCashTopUpReliefQualifiers(query);
   const explicitCompulsoryCpfRelief = /\b(?:mandatory|compulsory)\b[^.!?]{0,80}\b(?:cpf|central provident fund)\b|\b(?:cpf|central provident fund)\b[^.!?]{0,80}\b(?:mandatory|compulsory)\b/i.test(text);
   if (cpfCashTopUpRelief) {
     add('cpf_cash_top_up_relief', 'CPF cash top-up tax relief',
       ['CPF cash top-up relief', 'cash top-up relief', 'cash top ups to CPF Special or Retirement Account'],
-      ['iras-individual-cpf-cash-top-up-relief']);
+      ['iras-individual-cpf-cash-top-up-relief'],
+      semanticIssueScopeMetadata('CPF cash top-up tax relief', query, semantic));
+    if (cashTopUpReliefQualifiers.eligibility) {
+      add('cpf_cash_top_up_relief_eligibility', 'Eligibility for CPF cash top-up tax relief',
+        ['CPF cash top-up relief eligibility', 'qualifying CPF cash top-ups', 'eligibility conditions for cash top-up relief'],
+        ['iras-individual-cpf-cash-top-up-relief'],
+        semanticIssueScopeMetadata('CPF cash top-up relief eligibility', query, semantic));
+    }
+    if (cashTopUpReliefQualifiers.limits) {
+      add('cpf_cash_top_up_relief_limits', 'Limits on CPF cash top-up tax relief',
+        ['CPF cash top-up relief limits', 'maximum CPF cash top-up tax relief', 'cash top-up relief cap'],
+        ['iras-individual-cpf-cash-top-up-relief'],
+        semanticIssueScopeMetadata('CPF cash top-up relief limits', query, semantic));
+    }
   }
   if (personalReliefContext && (!cpfCashTopUpRelief || explicitCompulsoryCpfRelief) &&
       /\b(?:cpf|central provident fund|mandatory cpf contributions?|compulsory cpf contributions?)\b/i.test(text)) {
@@ -1418,34 +1965,54 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
     add('foreign_dividend_receipt_tax_treatment', 'Tax treatment of foreign dividend receipt',
       ['foreign dividend receipt', 'foreign-sourced income', 'dividend received in Singapore'], ['iras-foreign-sourced-income']);
   }
-  const residencyIssues = semantic?.issues;
-  const generalCompanyTaxResidencyRequest = semantic?.domain === 'IRAS_INCOME_TAX' && semantic.population === 'COMPANY' &&
-    semantic.authorityCandidates.includes('IRAS') && isGeneralCompanyTaxResidencyRuleQuestion(query) &&
-    (residencyIssues ? residencyIssues.length === 1 && residencyIssues[0].domain === 'IRAS_INCOME_TAX' &&
-      residencyIssues[0].population === 'COMPANY' && residencyIssues[0].governingAuthorities.includes('IRAS') &&
-      hasSemanticCompanyTaxResidencyAnchors(residencyIssues[0].subject)
-      : hasSemanticCompanyTaxResidencyAnchors(semantic.primarySubject));
+  const residencyBindings = semantic ? companyResidencyGeneralRuleBindings(query, semantic) : [];
+  const generalCompanyTaxResidencyRequest = semantic && (semantic.issues?.length
+    ? residencyBindings.length > 0
+    : semantic.domain === 'IRAS_INCOME_TAX' && semantic.population === 'COMPANY' &&
+      semantic.authorityCandidates.includes('IRAS') && isGeneralCompanyTaxResidencyRuleQuestion(query) &&
+      hasSemanticCompanyTaxResidencyAnchors(semantic.primarySubject));
   if (generalCompanyTaxResidencyRequest) {
     add('company_tax_residency_rule', 'Company tax residency rule',
-      ['tax resident in Singapore', 'control and management'], ['iras-corporate-tax-residency']);
+      ['tax resident in Singapore', 'control and management'], ['iras-corporate-tax-residency'],
+      residencyBindings.length === 1
+        ? semanticIssueScopeMetadata('Company tax residency rule', query, semantic)
+        : undefined);
+    const incorporationQualificationRequested = /\bincorporat(?:ion|ed)\b[^.!?]{0,100}\b(?:alone|sufficient|enough|place|determin\w*|establish\w*|resident|residen(?:ce|cy))\b|\b(?:alone|sufficient|enough)\b[^.!?]{0,100}\bincorporat(?:ion|ed)\b/i.test(query) &&
+      /\b(?:company|corporate)\b[^.!?]{0,120}\b(?:tax\s+)?residen(?:ce|cy|t)\b/i.test(query) ||
+      /\b(?:company|corporate)\b[^.!?]{0,90}\b(?:tax\s+)?residen(?:ce|cy|t)\b[^.!?]{0,100}\bincorporat(?:ion|ed)\b/i.test(query) &&
+      /\b(?:alone|sufficient|enough|place|determin\w*|establish\w*)\b/i.test(query);
+    if (incorporationQualificationRequested) {
+      add('company_tax_residency_incorporation', 'Company tax residency and incorporation',
+        ['incorporation alone', 'place of incorporation', 'Singapore incorporation'], ['iras-corporate-tax-residency'],
+        residencyBindings.length === 1
+          ? semanticIssueScopeMetadata('Company tax residency based on incorporation alone', query, semantic)
+          : undefined);
+    }
   }
   const cmsDefinitionClauses = queryClauses(query).filter(clause =>
     /\b(?:cms|capital\s+markets\s+services)\b/i.test(clause) &&
     (/\b(?:define|definition|meaning)\b/i.test(clause) ||
       /\bwhat\s+is\s+(?:a\s+|an\s+|the\s+)?(?:cms|capital\s+markets\s+services)\s+licen[cs]e\b/i.test(clause)) &&
     /\blicen[cs]e\b/i.test(clause));
-  const locallyScopedMasDefinitionIssues = (semantic?.issues || []).filter(issue =>
-    issue.domain === 'MAS_FUNDS' && issue.population === 'COMPANY' &&
-    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MAS' &&
-    /\b(?:cms|capital\s+markets\s+services)\b/i.test(issue.subject) &&
-    cmsDefinitionClauses.includes(queryForSemanticIssue(query, issue.subject) || ''));
+  const locallyScopedMasDefinitionIssues = semantic
+    ? (semantic.issues || []).filter(issue =>
+      issue.domain === 'MAS_FUNDS' && issue.operation === 'EXPLAIN_RULE' &&
+      issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MAS' &&
+      /\b(?:cms|capital\s+markets\s+services)\b/i.test(issue.subject) &&
+      cmsDefinitionClauses.includes(queryClauseForSemanticIssue(query, issue.subject) || '') &&
+      semanticIssueIsCompatibleWithRoot(issue, query, semantic))
+    : [];
   const masIssueEstablished = semantic?.issues?.length
     ? locallyScopedMasDefinitionIssues.length === 1
-    : semantic?.domain === 'MAS_FUNDS' && semantic.authorityCandidates.includes('MAS');
+    : semantic?.domain === 'MAS_FUNDS' && ['COMPANY', 'UNKNOWN'].includes(semantic.population) &&
+      semantic.authorityCandidates.includes('MAS') && semantic.requestedOperation === 'EXPLAIN_RULE';
   const cmsDefinitionRequested = cmsDefinitionClauses.length > 0;
   if (masIssueEstablished && cmsDefinitionRequested) {
     add('mas_cms_licence_definition', 'Capital Markets Services Licence definition',
-      ['Capital Markets Services Licence definition', 'CMS licence definition', 'SFA section 2(1)'], ['mas-cms-licence']);
+      ['Capital Markets Services Licence definition', 'CMS licence definition', 'SFA section 2(1)'], ['mas-cms-licence'],
+      locallyScopedMasDefinitionIssues.length === 1
+        ? semanticIssueScopeMetadata('Capital Markets Services Licence definition', query, semantic)
+        : undefined);
   }
   // Semantic labels are retrieval aids. Keep them in the requested-concept
   // diagnostic and discovery list, while evidence checks still require their
@@ -1454,7 +2021,7 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
     const semanticConcept = semantic?.concepts.find(item => item.concept === label);
     if (semanticConcept?.role === 'CONTEXT_ONLY') continue;
     const normalized = label.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-    if (normalized.length < 5 || concepts.some(item => item.label.toLowerCase().includes(normalized) || normalized.includes(item.label.toLowerCase()))) continue;
+    if (normalized.length < 5 || semanticLabelIsCoveredByCanonicalSubstring(label, normalized, concepts, query, semantic)) continue;
     const hasCanonical = (id: string) => concepts.some(concept => concept.id === id);
     const datedFyeLabel = normalized.match(/^(?:financial year (?:end(?:ing)?|ended|ends?)(?: date)?|fye) (?:on )?(\d{1,2}) (\d{1,2}) (20\d{2})$/);
     const datedFyeMatchesQuery = Boolean(datedFyeLabel && acraCompanyFacts?.financialYearEnd ===
@@ -1499,11 +2066,41 @@ function canonicalRequestedConcepts(query: string, semantic?: SemanticQuestionIn
       ) ||
       hasCanonical('company_tax_residency_rule') && (
         /^(?:(?:company|corporate)\s+)?(?:tax\s+)?residen(?:ce|cy|t)(?:\s+determination)?$/.test(normalized) ||
-        normalized === 'control and management'
+        normalized === 'control and management' ||
+        normalized === 'control and management test' &&
+          semanticCompanyResidencyControlTestAliasIsCovered(label, query, semantic)
       ) ||
+      hasCanonical('company_tax_residency_incorporation') &&
+        semanticLabelMatchesCanonicalFamilyVocabulary(label, concepts,
+          ['company_tax_residency_incorporation']) &&
+        /\bincorporat(?:ion|ed)\b/.test(normalized) && /\b(?:alone|place|sufficient|enough|resident|residen(?:ce|cy))\b/.test(normalized) &&
+        semanticCompanyResidencyIncorporationAliasIsCovered(label, query, semantic) ||
       hasCanonical('gst_blocked_motor_car_input_tax') &&
-        (/\b(?:passenger\s+(?:motor\s+)?car|motor car|s-plate|blocked|regulation 26|regulation 27)\b/i.test(normalized) ||
-          semanticIrasRestrictionAliasesCanonicalGst(label, query, semantic));
+        semanticLabelMatchesCanonicalFamilyVocabulary(label, concepts,
+          SCOPED_CANONICAL_ALIAS_FAMILIES[0].ids, SCOPED_CANONICAL_ALIAS_FAMILIES[0].recognizedAliases) &&
+        (semanticGstMotorCarAliasIsCovered(label, query, semantic, false) ||
+          semanticIrasRestrictionAliasesCanonicalGst(label, query, semantic)) ||
+      hasCanonical('cpf_cash_top_up_relief_eligibility') &&
+        hasCanonical('cpf_cash_top_up_relief') &&
+        semanticLabelMatchesCanonicalFamilyVocabulary(label, concepts,
+          SCOPED_CANONICAL_ALIAS_FAMILIES[1].ids, SCOPED_CANONICAL_ALIAS_FAMILIES[1].recognizedAliases) &&
+        (/(?:\b(?:cpf|cash top ups?)\b[\s\S]*\b(?:eligib\w*|qualif\w*|conditions?|criteria|requirements?)\b|^(?:eligibility|eligibility conditions?|qualifying conditions?|conditions for eligibility)$)/.test(normalized) &&
+          semanticCpfCashTopUpAliasIsCovered(label, query, semantic, 'eligibility')) ||
+      hasCanonical('cpf_cash_top_up_relief') &&
+        semanticLabelMatchesCanonicalFamilyVocabulary(label, concepts,
+          SCOPED_CANONICAL_ALIAS_FAMILIES[1].ids, SCOPED_CANONICAL_ALIAS_FAMILIES[1].recognizedAliases) &&
+        /\b(?:cpf|central provident fund)\b/.test(normalized) && /\bcash top ups?\b/.test(normalized) && /\breliefs?\b/.test(normalized) &&
+        semanticCpfCashTopUpAliasIsCovered(label, query, semantic, 'base') ||
+      hasCanonical('cpf_cash_top_up_relief_limits') &&
+        hasCanonical('cpf_cash_top_up_relief') &&
+        semanticLabelMatchesCanonicalFamilyVocabulary(label, concepts,
+          SCOPED_CANONICAL_ALIAS_FAMILIES[1].ids, SCOPED_CANONICAL_ALIAS_FAMILIES[1].recognizedAliases) &&
+        (/(?:\b(?:cpf|cash top ups?)\b[\s\S]*\b(?:limits?|maximum|caps?|up to)\b|^(?:relief limits?|limits on relief|maximum relief|relief cap)$)/.test(normalized) &&
+          semanticCpfCashTopUpAliasIsCovered(label, query, semantic, 'limits')) ||
+      hasCanonical('gst_motor_car_input_tax_exceptions') &&
+        semanticLabelMatchesCanonicalFamilyVocabulary(label, concepts,
+          SCOPED_CANONICAL_ALIAS_FAMILIES[0].ids, SCOPED_CANONICAL_ALIAS_FAMILIES[0].recognizedAliases) &&
+        semanticGstMotorCarAliasIsCovered(label, query, semantic, true);
     if (isAlreadyCoveredCanonicalConcept) continue;
     const gstRegistrationIsStatusContext = normalized === 'gst registration' &&
       /\b(?:gst|goods\s+and\s+services\s+tax)[-\s]+registered\s+company\b/i.test(query) &&
@@ -1880,7 +2477,7 @@ function reconcileSemanticIssuePlan(
         evidenceRequirement: deriveEvidenceRequirement(
           routedIssue.domain,
           routedIssue.operation,
-          deriveRequestedIssueSpecificity(query, routedIssue, semanticIssues.length > 1)
+          deriveRequestedIssueSpecificity(query, routedIssue, true)
         )
       };
       const unresolvedReason: ReconciledSemanticQuestionIssue['unresolvedReason'] = mappedTopicIds.length > 0

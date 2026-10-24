@@ -107,6 +107,180 @@ function isCompleteIndividualOverseasIncomeListQuote(sourceText: string, quote: 
   return normalizeEvidenceText(section.join(' ')) === normalizedQuote;
 }
 
+/**
+ * IRAS CPF top-up eligibility is one source section: a two-item numbered
+ * qualification list, followed by the current MRSS and MMSS exclusions. Keep
+ * the exact contiguous source span so no list item or attached exclusion can
+ * be omitted while quoting the complete eligibility proposition.
+ */
+export function completeIrasCpfCashTopUpEligibilityQuote(sourceText: string): string | undefined {
+  const blocks = sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  const introIndex = blocks.findIndex(block => /\bcpf cash top[ -]?up relief is given to encourage\b/i.test(block));
+  const qualificationIndex = blocks.findIndex((block, index) => index > introIndex &&
+    /\bto qualify for the tax relief\b/i.test(block) && /:\s*$/.test(block));
+  if (introIndex < 0 || qualificationIndex < 0) return undefined;
+
+  const items: string[] = [];
+  for (let index = qualificationIndex + 1; index < blocks.length; index += 1) {
+    const lines = blocks[index].split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    const numberedLines = lines.filter(line => /^\d+[.)]\s+/.test(line));
+    if (numberedLines.length > 0) {
+      items.push(...numberedLines.map(line => line.replace(/^\d+[.)]\s+/, '')));
+      continue;
+    }
+    if (items.length > 0) break;
+  }
+  if (items.length !== 2 ||
+      !/\bsingapore citizen\s*\/\s*permanent resident\b|\bsingapore citizen or permanent resident\b/i.test(items[0]) ||
+      !/\bcash top[ -]?ups?\b/i.test(items[1]) ||
+      !/\b(?:preceding|previous) year\b|\bin 20\d{2}\b/i.test(items[1]) ||
+      !/\bretirement sum topping[ -]?up scheme\b|\brstu\b/i.test(items[1])) return undefined;
+
+  const mrssIndex = blocks.findIndex((block, index) => index > qualificationIndex &&
+    /\bmatched retirement savings scheme\b/i.test(block) &&
+    /\bmatching grants?\b/i.test(block) && /\bwill not be eligible\b/i.test(block));
+  const mmssIndex = blocks.findIndex((block, index) => index > mrssIndex &&
+    /\bmatched medisave scheme\b/i.test(block) &&
+    /\bmatching grants?\b/i.test(block) && /\bwill not qualify\b/i.test(block));
+  if (mrssIndex < 0 || mmssIndex < 0 || mmssIndex <= mrssIndex) return undefined;
+  const quote = blocks.slice(introIndex, mmssIndex + 1).join('\n\n');
+  return quote.length <= 5_000 ? quote : undefined;
+}
+
+/**
+ * Returns the two complete CPF top-up limit sections as exact contiguous
+ * source spans. The headline annual caps and the own-account FRS table are a
+ * single completeness unit: if either section is absent or cannot be bounded,
+ * callers must keep the limit proposition incomplete.
+ */
+export function completeIrasCpfCashTopUpLimitQuotes(sourceText: string): string[] {
+  const blocks = sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  const headlineIndex = blocks.findIndex(block =>
+    /\$\s*16,?000\b/i.test(block) &&
+    /\$\s*8,?000\b[^.!?;:]{0,80}\bfor self\b/i.test(block) &&
+    /\$\s*8,?000\b[^.!?;:]{0,100}\bfor family members\b/i.test(block) &&
+    /\b(?:eligible )?cpf cash top[ -]?ups?\b/i.test(block)
+  );
+  if (headlineIndex < 0) return [];
+
+  const mrssIndex = blocks.findIndex((block, index) => index < headlineIndex &&
+    /\bmatched retirement savings scheme\b/i.test(block) &&
+    /\bmatching grants?\b/i.test(block) && /\bwill not be eligible\b/i.test(block));
+  const mmssIndex = blocks.findIndex((block, index) => index > mrssIndex && index < headlineIndex &&
+    /\bmatched medisave scheme\b/i.test(block) &&
+    /\bmatching grants?\b/i.test(block) && /\bwill not qualify\b/i.test(block));
+  if (mrssIndex < 0 || mmssIndex < 0 || mmssIndex >= headlineIndex) return [];
+
+  const overallCapIndex = blocks.findIndex((block, index) => index > headlineIndex &&
+    /\bpersonal income tax relief cap of \$\s*80,?000\b/i.test(block) &&
+    /\btotal amount of all tax reliefs claimed\b/i.test(block) &&
+    /\bincluding\b[^.!?]{0,140}\bcash top[ -]?ups?\b/i.test(block));
+  if (overallCapIndex <= headlineIndex) return [];
+  let headlineEnd = overallCapIndex;
+  while (headlineEnd + 1 < blocks.length && startsAttachedEvidenceQualification(blocks[headlineEnd + 1])) {
+    headlineEnd += 1;
+  }
+  const headlineQuote = blocks.slice(mrssIndex, headlineEnd + 1).join('\n\n');
+  if (headlineQuote.length > 3_200) return [];
+
+  const tableHeadingIndex = blocks.findIndex((block, index) => index > overallCapIndex &&
+    /^(?:#{1,6}\s*)?limit on cash top[ -]?up amount for computing tax relief$/i.test(block));
+  const tableIntroductionIndex = blocks.findIndex((block, index) => index > overallCapIndex &&
+    /\bthere is a limit on the amount of cash top[ -]?ups? to self and your family members that qualifies for tax relief\b/i.test(block));
+  const tableHeaderIndex = blocks.findIndex((block, index) => index >= tableIntroductionIndex &&
+    /\bage of recipients\b/i.test(block) && /\blimit on cash top[ -]?up amount for computing tax relief\b/i.test(block));
+  const tableStart = tableHeadingIndex >= 0 && tableIntroductionIndex > tableHeadingIndex
+    ? tableHeadingIndex
+    : tableIntroductionIndex;
+  if (tableStart < 0 || tableHeaderIndex < 0) return [];
+
+  const saIndex = blocks.findIndex((block, index) => index >= tableHeaderIndex &&
+    /\brecipients below age 55\b/i.test(block) &&
+    /\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(block) &&
+    /\b(?:full retirement sum|frs)\b/i.test(block) &&
+    /\bsa savings\b/i.test(block) && /\b(?:withdraw\w*|investment\w*)\b/i.test(block));
+  const raIndex = blocks.findIndex((block, index) => index >= tableHeaderIndex &&
+    /\brecipients aged 55 years and above\b/i.test(block) &&
+    /\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(block) &&
+    /\b(?:full retirement sum|frs)\b/i.test(block));
+  if (saIndex < 0 || raIndex < 0) return [];
+
+  const lastAccountRowIndex = Math.max(saIndex, raIndex);
+  const tableEndMarkerIndex = blocks.findIndex((block, index) => index > lastAccountRowIndex &&
+    (/^to check your top[ -]?up limit\b/i.test(block) || /^for the yas? 20\d{2}\b/i.test(block)));
+  const tableEndMarkerInLastRow = /\bto check your top[ -]?up limit\b/i.test(blocks[lastAccountRowIndex]);
+  if (tableEndMarkerIndex < 0 && !tableEndMarkerInLastRow) return [];
+  const tableEnd = tableEndMarkerIndex >= 0 ? tableEndMarkerIndex - 1 : lastAccountRowIndex;
+  const tableText = blocks.slice(tableStart, tableEnd + 1).join(' ');
+  if (tableEnd < lastAccountRowIndex) return [];
+  if (!/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*sa savings\b/i.test(tableText) ||
+      !/\bamount withdrawn from sa for investments\b/i.test(tableText) ||
+      !/net sa savings withdrawn under cpf investment scheme\s*\(cpfis\)[^.!?]{0,180}investments that have not been completely disposed of/i.test(tableText) ||
+      !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*ra\b/i.test(tableText) ||
+      !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(tableText)) return [];
+  if (!/\bage of recipients\b/i.test(blocks[tableHeaderIndex]) ||
+      !/\blimit on cash top[ -]?up amount for computing tax relief\b/i.test(blocks[tableHeaderIndex]) ||
+      !/\brecipients below age 55\b/i.test(tableText) ||
+      !/\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(tableText) ||
+      !/\brecipients aged 55 years and above\b/i.test(tableText) ||
+      !/\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(tableText) ||
+      !/\b(?:full retirement sum|frs)\b/i.test(tableText) ||
+      !/\bmaximum allowed cash top[ -]?up\b/i.test(tableText)) return [];
+  const mediSaveRows = [...tableText.matchAll(/\(b\)\s*Top-up to MediSave Account\s*\(MA\):[\s\S]*?(?=For recipients aged 55 years and above|To check your top[ -]?up limit|$)/gi)]
+    .map(match => match[0]);
+  if (mediSaveRows.length !== 2 || mediSaveRows.some(row =>
+    !/\bBasic Healthcare Sum\s*\(BHS\)/i.test(row) ||
+    !/\bself-employed person\s*\(SEP\)[^.!?]{0,120}must be up-to-date with their MediSave payable/i.test(row) ||
+    !/\bmaximum allowed cash top[ -]?up:\s*BHS\s*[-–—]\s*MA balance before the top-up\b/i.test(row))) return [];
+  let boundedTableEnd = tableEnd;
+  while (boundedTableEnd + 1 < blocks.length && startsAttachedEvidenceQualification(blocks[boundedTableEnd + 1])) {
+    boundedTableEnd += 1;
+  }
+  const tableQuote = blocks.slice(tableStart, boundedTableEnd + 1).join('\n\n');
+  if (tableQuote.length > 3_200) return [];
+  return [headlineQuote, tableQuote];
+}
+
+/** Complete, contiguous IRAS motor-car connected-person exception and both qualifications. */
+export function completeIrasGstMotorCarConnectedPersonExceptionQuote(sourceText: string): string | undefined {
+  const blocks = sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  const headingIndex = blocks.findIndex(block => /\bexpenses on motor car used by a connected person\b/i.test(block));
+  if (headingIndex < 0) return undefined;
+  const item1Index = blocks.findIndex((block, index) => index > headingIndex && /^\s*1[.)]\s+/m.test(block));
+  const item2Index = blocks.findIndex((block, index) => index > item1Index && /^\s*2[.)]\s+/m.test(block));
+  if (item1Index < 0 || item2Index <= item1Index) return undefined;
+  const headingAndItems = blocks.slice(headingIndex, item2Index + 1).join(' ');
+  if (!/\bconnected person\b/i.test(headingAndItems) ||
+      !/\bunless you satisfy both of the following conditions\b/i.test(headingAndItems) ||
+      !/\brecover the motor car expenses from the connected person\b/i.test(headingAndItems) ||
+      !/\brecover only a portion\b[^.!?;:]{0,100}\bonly claim input tax to the extent of the portion recovered\b/i.test(headingAndItems) ||
+      !/\bthe recovery is not ancillary to any primary supply\b/i.test(headingAndItems)) return undefined;
+
+  let endIndex = item2Index;
+  for (let index = item2Index + 1; index < blocks.length; index += 1) {
+    if (/^other motor vehicles\b/i.test(blocks[index]) || /^goods given away\b/i.test(blocks[index])) break;
+    if (/^(?:to determine whether the recovery|in instances where both conditions)\b/i.test(blocks[index])) endIndex = index;
+    else if (endIndex < index - 1 && /^(?:examples?:|faqs?:|common errors?\b)/i.test(blocks[index])) break;
+  }
+  const quote = blocks.slice(headingIndex, endIndex + 1).join('\n\n');
+  return quote.length <= 5_000 ? quote : undefined;
+}
+
 function normalizeApprovedHttpsUrl(value: unknown): string | undefined {
   if (typeof value !== 'string' || value.trim() === '') return undefined;
   const raw = value.trim();
@@ -242,7 +416,8 @@ function splitParagraphIntoSentences(paragraph: string): string[] {
   return sentences;
 }
 
-function quoteIsWholeSourceSpan(sourceText: string, quote: string): 'MATCH' | 'NO_MATCH' | 'OMITS_ATTACHED_QUALIFICATION' {
+function quoteIsWholeSourceSpan(record: AuthoritativeSourceRecord, quote: string): 'MATCH' | 'NO_MATCH' | 'OMITS_ATTACHED_QUALIFICATION' {
+  const sourceText = record.sourceText;
   const paragraphs = sourceText
     .normalize('NFC')
     .replace(/\u00a0/g, ' ')
@@ -252,6 +427,80 @@ function quoteIsWholeSourceSpan(sourceText: string, quote: string): 'MATCH' | 'N
   const normalizedQuote = normalizeEvidenceText(quote);
   if (isCompleteIndividualFtcConditionsQuote(sourceText, quote)) return 'MATCH';
   if (isCompleteIndividualOverseasIncomeListQuote(sourceText, quote)) return 'MATCH';
+  const cpfEligibilityRecord = record.authority === 'IRAS' && record.domain === 'IRAS_TAX' &&
+    [...(record.tags || []), ...(record.relatedTopicIds || []), ...(record.sourceMapTopicIds || [])]
+      .includes('iras-individual-cpf-cash-top-up-relief');
+  if (cpfEligibilityRecord) {
+    const completeQuote = completeIrasCpfCashTopUpEligibilityQuote(sourceText);
+    if (completeQuote) {
+      const blocks = sourceText
+        .normalize('NFC')
+        .replace(/\u00a0/g, ' ')
+        .split(/\r?\n[\t ]*\r?\n+/)
+        .map(block => block.trim())
+        .filter(Boolean);
+      const completeNormalized = normalizeEvidenceText(completeQuote);
+      if (normalizedQuote === completeNormalized) return 'MATCH';
+      const introIndex = blocks.findIndex(block => /\bcpf cash top[ -]?up relief is given to encourage\b/i.test(block));
+      const endIndex = blocks.findIndex((block, index) => index > introIndex &&
+        /\bmatched medisave scheme\b/i.test(block) && /\bwill not qualify\b/i.test(block));
+      for (let end = introIndex; introIndex >= 0 && end < endIndex; end += 1) {
+        if (normalizeEvidenceText(blocks.slice(introIndex, end + 1).join(' ')) === normalizedQuote) {
+          return 'OMITS_ATTACHED_QUALIFICATION';
+        }
+      }
+    }
+  }
+  const cpfLimitRecord = record.authority === 'IRAS' && record.domain === 'IRAS_TAX' &&
+    [...(record.tags || []), ...(record.relatedTopicIds || []), ...(record.sourceMapTopicIds || [])]
+      .includes('iras-individual-cpf-cash-top-up-relief');
+  if (cpfLimitRecord && /\$\s*(?:16,?000|8,?000|80,?000)\b|\b(?:full retirement sum|frs|special account\s*\(sa\)|retirement account\s*\(ra\)|recipients below age 55|recipients aged 55 years and above)\b/i.test(quote)) {
+    const completeQuotes = completeIrasCpfCashTopUpLimitQuotes(sourceText);
+    if (completeQuotes.length !== 2) return 'NO_MATCH';
+    const normalizedCompleteQuotes = completeQuotes.map(normalizeEvidenceText);
+    if (normalizedCompleteQuotes.includes(normalizedQuote)) return 'MATCH';
+    const quoteIsExactSubspan = completeQuotes.some(completeQuote => {
+      const completeSentences = completeQuote
+        .split(/\r?\n[\t ]*\r?\n+/)
+        .flatMap(paragraph => splitParagraphIntoSentences(paragraph));
+      for (let start = 0; start < completeSentences.length; start += 1) {
+        let span = '';
+        for (let end = start; end < completeSentences.length; end += 1) {
+          span = span ? `${span} ${completeSentences[end]}` : completeSentences[end];
+          const normalizedSpan = normalizeEvidenceText(span);
+          if (normalizedSpan === normalizedQuote) return true;
+          if (normalizedSpan.length > normalizedQuote.length) break;
+        }
+      }
+      return false;
+    });
+    return quoteIsExactSubspan ? 'OMITS_ATTACHED_QUALIFICATION' : 'NO_MATCH';
+  }
+  const carConnectedPersonRecord = record.authority === 'IRAS' && record.domain === 'IRAS_GST' &&
+    [...(record.tags || []), ...(record.relatedTopicIds || []), ...(record.sourceMapTopicIds || [])]
+      .some(topicId => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId));
+  if (carConnectedPersonRecord) {
+    const completeQuote = completeIrasGstMotorCarConnectedPersonExceptionQuote(sourceText);
+    if (completeQuote) {
+      if (normalizeEvidenceText(completeQuote) === normalizedQuote) return 'MATCH';
+      const blocks = sourceText
+        .normalize('NFC')
+        .replace(/\u00a0/g, ' ')
+        .split(/\r?\n[\t ]*\r?\n+/)
+        .map(block => block.trim())
+        .filter(Boolean);
+      const headingIndex = blocks.findIndex(block => /\bexpenses on motor car used by a connected person\b/i.test(block));
+      const item1Index = blocks.findIndex((block, index) => index > headingIndex && /^\s*1[.)]\s+/m.test(block));
+      for (let end = headingIndex; headingIndex >= 0 && end < blocks.length; end += 1) {
+        if (normalizeEvidenceText(blocks.slice(headingIndex, end + 1).join(' ')) === normalizedQuote) {
+          return 'OMITS_ATTACHED_QUALIFICATION';
+        }
+      }
+      if (item1Index > headingIndex && normalizeEvidenceText(blocks.slice(headingIndex, item1Index + 1).join(' ')) === normalizedQuote) {
+        return 'OMITS_ATTACHED_QUALIFICATION';
+      }
+    }
+  }
   if (isIncompleteColonEndedQuote(normalizedQuote)) return 'OMITS_ATTACHED_QUALIFICATION';
 
   for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {
@@ -490,7 +739,7 @@ export function verifyEvidenceClaims(
       }
     }
 
-    const sourceSpanResult = quoteIsWholeSourceSpan(record.sourceText, quote);
+    const sourceSpanResult = quoteIsWholeSourceSpan(record, quote);
     const quoteResult = sourceSpanResult === 'NO_MATCH' && quoteIsCompleteBoundedAdvisorySpan(record, quote)
       ? 'MATCH'
       : sourceSpanResult;

@@ -326,7 +326,9 @@ try {
   assert.deepEqual(corporateFiling.intentAcceptance.caseSpecificity, { expected: false, actual: false });
   assert.equal(corporateFiling.intentAcceptance.caseSpecificityCorrect, true);
   assert.ok(result.cases.every(item => item.intentAcceptance.caseSpecificityCorrect),
-    'every fixed final case has a known boolean fact-gate expectation');
+    `every fixed final case has a known boolean fact-gate expectation: ${JSON.stringify(result.cases
+      .filter(item => !item.intentAcceptance.caseSpecificityCorrect)
+      .map(item => ({ caseId: item.caseId, caseSpecificity: item.intentAcceptance.caseSpecificity })))}`);
   assert.equal(result.sourceHashesConsistent, true);
   assert.equal(result.fixtureHashesConsistent, true);
   assert.equal(typeof result.sourceFingerprints.semanticIntentEvaluationRunner, 'string');
