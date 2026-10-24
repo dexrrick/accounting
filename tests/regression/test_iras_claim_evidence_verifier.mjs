@@ -287,6 +287,32 @@ const splitCpfRecord = { ...cpfCashTopUpRecord, sourceText: splitCpfTopUpSource 
 assert.equal(verifyEvidenceClaims(splitCpfLimitQuotes.map(quote => makeClaim(quote, splitCpfRecord.id)),
   [splitCpfRecord], { missingFacts: [] }).accepted.length, 2,
   'Both split-row limit spans remain exact-source verifiable.');
+const inlineRaFormulaAndQualification = 'Maximum allowed cash top-up: FRS – RA^{**}^{**}RA savings refers to the cash set aside in the RA (excluding amounts such as interest earned, any government grants received) plus amounts withdrawn';
+const inlineRaQualificationMisassociatedSource = cpfCashTopUpSource
+  .replace(inlineRaFormulaAndQualification, '')
+  .replace('For recipients aged 55 years and above', `${inlineRaFormulaAndQualification} For recipients aged 55 years and above`);
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(inlineRaQualificationMisassociatedSource), [],
+  'The inline-row verifier rejects the RA formula and savings qualification when they are moved into the below-55 row.');
+const raFormulaAndQualificationSeparated = [
+  '(ii) Maximum allowed cash top-up: FRS – RA**',
+  '**RA savings refers to the cash set aside in the RA (excluding amounts such as interest earned, any government grants received) plus amounts withdrawn'
+].join('\n\n');
+const raQualificationMisassociatedSource = splitCpfTopUpSource
+  .replace(`\n\n${raFormulaAndQualificationSeparated}`, '')
+  .replace(`\n\nFor recipients aged 55 years and above`, `\n\n${raFormulaAndQualificationSeparated}\n\nFor recipients aged 55 years and above`);
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(raQualificationMisassociatedSource), [],
+  'The RA formula and savings qualification in the below-55 age row cannot complete the age-55-and-above row.');
+const collapsedRaQualificationMisassociatedSource = collapsedCpfTopUpSource
+  .replace(inlineRaFormulaAndQualification, '')
+  .replace('For recipients aged 55 years and above', `${inlineRaFormulaAndQualification} For recipients aged 55 years and above`);
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(collapsedRaQualificationMisassociatedSource), [],
+  'A collapsed table cannot use the misplaced RA formula and savings qualification from the below-55 age row.');
+const inlineSaFormulaAndQualification = 'Maximum allowed cash top-up: FRS – SA savings – Amount withdrawn from SA for investments^{*}^{*}Net SA savings withdrawn under CPF Investment Scheme (CPFIS) for investments that have not been completely disposed of';
+const inlineSaQualificationMisassociatedSource = cpfCashTopUpSource
+  .replace(inlineSaFormulaAndQualification, '')
+  .replace('For recipients aged 55 years and above', `For recipients aged 55 years and above ${inlineSaFormulaAndQualification}`);
+assert.deepEqual(completeIrasCpfCashTopUpLimitQuotes(inlineSaQualificationMisassociatedSource), [],
+  'The inline-row verifier rejects the SA formula and withdrawal qualification when they are moved into the age-55-and-above row.');
 for (const [label, missingBlock] of [
   ['SA calculation', splitCpfOwnAccountRows[3]],
   ['SA withdrawal footnote', splitCpfOwnAccountRows[4]],

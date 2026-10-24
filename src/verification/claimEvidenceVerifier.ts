@@ -229,11 +229,6 @@ export function completeIrasCpfCashTopUpLimitQuotes(sourceText: string): string[
     tableEnd = tableEndMarkerIndex >= 0 ? tableEndMarkerIndex - 1 : lastAccountRowIndex;
     if (tableEnd < lastAccountRowIndex) return [];
     tableText = blocks.slice(tableStart, tableEnd + 1).join(' ');
-    if (!/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*sa savings\b/i.test(tableText) ||
-        !/\bamount withdrawn from sa for investments\b/i.test(tableText) ||
-        !/net sa savings withdrawn under cpf investment scheme\s*\(cpfis\)[^.!?]{0,180}investments that have not been completely disposed of/i.test(tableText) ||
-        !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*ra\b/i.test(tableText) ||
-        !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(tableText)) return [];
   } else {
     // Some official-page table extractors retain each recipient, condition,
     // calculation and footnote as a separate paragraph. Require one ordered
@@ -249,24 +244,31 @@ export function completeIrasCpfCashTopUpLimitQuotes(sourceText: string): string[
       /^for recipients aged 55 years and above\b/i.test(block) ? [index] : []);
     if (saMarkerIndexes.length !== 1 || raMarkerIndexes.length !== 1 ||
         saMarkerIndexes[0] >= raMarkerIndexes[0]) return [];
-    const splitSaIndex = saMarkerIndexes[0];
     const splitRaIndex = raMarkerIndexes[0];
     lastAccountRowIndex = splitRaIndex;
     tableEnd = endMarkerIndex - 1;
     if (tableEnd < lastAccountRowIndex) return [];
-    const saRowText = blocks.slice(splitSaIndex, splitRaIndex).join(' ');
-    const raRowText = blocks.slice(splitRaIndex, tableEnd + 1).join(' ');
-    if (!/\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(saRowText) ||
-        !/\b(?:full retirement sum|frs)\b/i.test(saRowText) ||
-        !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*sa savings\b/i.test(saRowText) ||
-        !/\bamount withdrawn from sa for investments\b/i.test(saRowText) ||
-        !/net sa savings withdrawn under cpf investment scheme\s*\(cpfis\)[^.!?]{0,180}investments that have not been completely disposed of/i.test(saRowText) ||
-        !/\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(raRowText) ||
-        !/\b(?:full retirement sum|frs)\b/i.test(raRowText) ||
-        !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*ra\b/i.test(raRowText) ||
-        !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(raRowText)) return [];
     tableText = blocks.slice(tableStart, tableEnd + 1).join(' ');
   }
+  const saAgeMarkers = [...tableText.matchAll(/\bFor recipients below age 55\b/gi)];
+  const raAgeMarkers = [...tableText.matchAll(/\bFor recipients aged 55 years and above\b/gi)];
+  if (saAgeMarkers.length !== 1 || raAgeMarkers.length !== 1 ||
+      saAgeMarkers[0].index === undefined || raAgeMarkers[0].index === undefined ||
+      saAgeMarkers[0].index >= raAgeMarkers[0].index) return [];
+  const saRowText = tableText.slice(saAgeMarkers[0].index, raAgeMarkers[0].index);
+  const raRowText = tableText.slice(raAgeMarkers[0].index);
+  // A flattened table block can contain all of the correct phrases while
+  // assigning the RA formula and its savings qualification to the wrong age.
+  // Keep these conditions inside the age category that governs each account.
+  if (!/\bspecial account\s*\(sa\)(?![a-z0-9])/i.test(saRowText) ||
+      !/\b(?:full retirement sum|frs)\b/i.test(saRowText) ||
+      !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*sa savings\b/i.test(saRowText) ||
+      !/\bamount withdrawn from sa for investments\b/i.test(saRowText) ||
+      !/net sa savings withdrawn under cpf investment scheme\s*\(cpfis\)[^.!?]{0,180}investments that have not been completely disposed of/i.test(saRowText) ||
+      !/\bretirement account\s*\(ra\)(?![a-z0-9])/i.test(raRowText) ||
+      !/\b(?:full retirement sum|frs)\b/i.test(raRowText) ||
+      !/\bmaximum allowed cash top[ -]?up\s*:\s*frs\s*[-–—]\s*ra\b/i.test(raRowText) ||
+      !/ra savings refers to the cash set aside in the ra[^.!?]{0,220}plus amounts withdrawn/i.test(raRowText)) return [];
   if (!/\bage of recipients\b/i.test(blocks[tableHeaderIndex]) ||
       !/\blimit on cash top[ -]?up amount for computing tax relief\b/i.test(blocks[tableHeaderIndex]) ||
       !/\brecipients below age 55\b/i.test(tableText) ||

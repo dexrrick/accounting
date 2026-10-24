@@ -502,6 +502,19 @@ const missingCpfTableQualification = completeCpfReliefSource.replace(
 assert.equal(completeScopedIrasConceptPassage(missingCpfTableQualification, knownCpfTopic,
   'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
 'A table with a missing account-row footnote remains incomplete.');
+const misplacedRaFormulaAndQualification = '(ii) Maximum allowed cash top-up: FRS – RA^{**}^{**}RA savings refers to the cash set aside in the RA (excluding amounts such as interest earned, any government grants received) plus amounts withdrawn';
+const misplacedRaQualificationSeparateMarkerSource = completeCpfReliefSource
+  .replace(misplacedRaFormulaAndQualification, '')
+  .replace('For recipients aged 55 years and above', `${misplacedRaFormulaAndQualification} For recipients aged 55 years and above`);
+assert.equal(completeScopedIrasConceptPassage(misplacedRaQualificationSeparateMarkerSource, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'The separate-marker passage rejects the RA formula and savings qualification when they are moved into the below-55 row.');
+const misplacedRaQualificationEmbeddedMarkerSource = embeddedMarkerCpfSource
+  .replace(misplacedRaFormulaAndQualification, '')
+  .replace('For recipients aged 55 years and above', `${misplacedRaFormulaAndQualification} For recipients aged 55 years and above`);
+assert.equal(completeScopedIrasConceptPassage(misplacedRaQualificationEmbeddedMarkerSource, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'The embedded-marker passage rejects the RA formula and savings qualification when they are moved into the below-55 row.');
 const selectedCpfExcerpt = selectRelevantFetchedText(longCpfPage, ['CPF cash top-up relief', 'tax relief'], 12_000,
   'CPF cash top-up relief eligibility and limits', [completeCpfPassage]);
 for (const concept of [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]) {
